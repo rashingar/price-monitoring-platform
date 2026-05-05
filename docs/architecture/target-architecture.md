@@ -240,9 +240,8 @@ Contracts should be tested at the boundaries:
 - Contract fixtures should validate web client assumptions.
 - Backend contract tests should verify public API shape.
 
-For documentation-only changes, run markdown/docs checks when configured.
-Otherwise run `git diff --check` and report that no app test suite was
-applicable.
+For mechanical migration changes, run `git diff --check` and the app-local test
+scripts when dependencies are already installed.
 
 ## Phased Migration Roadmap
 
@@ -254,21 +253,24 @@ applicable.
 6. Phase 5: Stabilize tests, local development, and app boundaries.
 7. Phase 6: Perform intentional refactors, including staged package renames.
 
-Product-Agent's old `scraper/` folder should later become `src/` as part of the
-mechanical migration. `ecommerce-api` should temporarily keep its internal
-Python package name `pricefetcher`. Internal package renames are staged after
-the mechanical migration.
+Phase 1 through Phase 4 are complete in the current layout:
+
+- `apps/product-factory-api`
+- `apps/ecommerce-api`
+- `apps/web`
+- `apps/product-factory-api/src`
+
+`ecommerce-api` should temporarily keep its internal Python package name
+`pricefetcher`. Internal package renames are staged after the mechanical
+migration.
 
 ## Explicit Non-Goals
 
-- Do not move folders in the architecture documentation step.
-- Do not rename files from copied apps in the architecture documentation step.
-- Do not refactor code in the architecture documentation step.
-- Do not create app code in the architecture documentation step.
-- Do not introduce Docker in the architecture documentation step.
-- Do not introduce workers in the architecture documentation step.
-- Do not introduce generated clients in the architecture documentation step.
-- Do not introduce database migrations in the architecture documentation step.
+- Do not refactor business logic as part of the mechanical layout migration.
+- Do not introduce Docker in the mechanical layout migration.
+- Do not introduce workers in the mechanical layout migration.
+- Do not introduce generated clients in the mechanical layout migration.
+- Do not introduce database migrations in the mechanical layout migration.
 - Do not merge the two backend runtimes.
 - Do not rename `apps/ecommerce-api/src/pricefetcher` during the first
   migration.

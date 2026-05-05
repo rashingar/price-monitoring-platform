@@ -16,6 +16,8 @@ Price Monitoring Platform monorepo layout.
 
 ## Phase 1: Mechanical Folder Migration
 
+Status: completed in the current layout.
+
 Target moves:
 
 - `Product-Agent` -> `apps/product-factory-api`
@@ -35,6 +37,8 @@ Rules:
 
 ## Phase 2: Root Scripts and README
 
+Status: completed in the current layout.
+
 - Add root scripts that delegate to app-local commands.
 - Keep backend runtimes separate.
 - Add root development and test command documentation.
@@ -42,6 +46,9 @@ Rules:
 - Avoid hiding app boundaries behind root scripts.
 
 ## Phase 3: Contract Snapshot Mirroring
+
+Status: completed in the current layout when both mirrored snapshots exist in
+`packages/contracts`.
 
 - Create `packages/contracts` if it is not already present.
 - Mirror Product Factory OpenAPI snapshots.
@@ -51,6 +58,9 @@ Rules:
   approves it.
 
 ## Phase 4: Path/Doc Cleanup
+
+Status: completed for active setup docs, root scripts, and path references in
+the current layout.
 
 - Update documentation references from legacy paths to target paths.
 - Fix scripts that still point at old folder names.

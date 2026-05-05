@@ -47,5 +47,5 @@ Thumbs.db
 
 # Raw marketplace/vendor captures may contain embedded tokens or session data
 apps/**/tests/fixtures/providers/**/html/*.html
-apps/**/scraper/**/tests/fixtures/providers/**/html/*.html
-apps/Product-Agent/scraper/pipeline/tests/fixtures/providers/skroutz/html/*.html
+apps/**/src/**/tests/fixtures/providers/**/html/*.html
+apps/product-factory-api/src/pipeline/tests/fixtures/providers/skroutz/html/*.html

@@ -5,15 +5,23 @@ and price monitoring, and the operator console that coordinates those workflows.
 
 ## Apps
 
-Target app names:
+Current app folders:
 
-- `apps/product-factory-api`: Product Factory backend.
-- `apps/ecommerce-api`: Ecommerce catalog and monitoring backend.
-- `apps/web`: Operator console frontend.
+- `apps/product-factory-api`: Product Factory backend runtime.
+- `apps/ecommerce-api`: Ecommerce catalog and monitoring backend runtime.
+- `apps/web`: React/Vite/TypeScript operator console frontend.
 
-The app folders may not yet be present under their final names if this
-documentation step is run before the mechanical migration. Legacy folders may
-still exist until the migration runbook is executed.
+These are separate runtimes. The monorepo coordinates source code,
+documentation, scripts, and contracts, but the two Python APIs are not merged
+and the web app remains UI-only.
+
+`apps/product-factory-api/src` contains the old Product-Agent Python pipeline.
+The internal Python package remains `pipeline`.
+
+`apps/ecommerce-api` owns ecommerce catalog, source URL, source capture, price
+monitoring, review/export, alert, and database migration workflows. Its
+internal Python package intentionally remains `src/pricefetcher` until a future
+staged rename.
 
 ## Architecture
 
@@ -27,6 +35,7 @@ still exist until the migration runbook is executed.
 
 ## Migration Status
 
-Architecture documentation is the first step. Mechanical folder migration, root
-scripts, contract snapshot mirroring, generated clients, workers, Docker, and
-database migration changes are intentionally out of scope for this step.
+The mechanical app folder migration is complete. Root helper scripts live under
+`scripts/`, and mirrored OpenAPI snapshots live under `packages/contracts`.
+Generated clients, Dockerization, worker changes, database ownership changes,
+and internal package renames remain out of scope for this migration.
