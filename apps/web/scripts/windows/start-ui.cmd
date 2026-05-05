@@ -15,7 +15,7 @@ cd /d "%UI_ROOT%" || (
   exit /b 1
 )
 
-echo Starting Product-Agent UI from:
+echo Starting web app from:
 echo %UI_ROOT%
 echo.
 

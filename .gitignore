@@ -37,6 +37,7 @@ work/
 output/
 runs/
 logs/
+products/
 *.log
 
 # OS/editor
@@ -45,7 +46,28 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Raw marketplace/vendor captures may contain embedded tokens or session data
+# Raw marketplace/vendor/provider captures may contain embedded tokens or session data
+raw-html/
+raw_html/
+captures/
+source-captures/
+source_captures/
+vendor-captures/
+vendor_captures/
+marketplace-captures/
+marketplace_captures/
+provider-captures/
+provider_captures/
+apps/**/tests/fixtures/**/raw/**/*.html
+apps/**/tests/fixtures/**/captures/**/*.html
+apps/**/tests/fixtures/**/source-captures/**/*.html
+apps/**/tests/fixtures/**/source_captures/**/*.html
+apps/**/tests/fixtures/**/vendor-captures/**/*.html
+apps/**/tests/fixtures/**/vendor_captures/**/*.html
+apps/**/tests/fixtures/**/marketplace-captures/**/*.html
+apps/**/tests/fixtures/**/marketplace_captures/**/*.html
+apps/**/tests/fixtures/**/provider-captures/**/*.html
+apps/**/tests/fixtures/**/provider_captures/**/*.html
 apps/**/tests/fixtures/providers/**/html/*.html
 apps/**/src/**/tests/fixtures/providers/**/html/*.html
 apps/product-factory-api/src/pipeline/tests/fixtures/providers/skroutz/html/*.html

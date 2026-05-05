@@ -2,13 +2,20 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $appRoot = Join-Path $repoRoot "apps\ecommerce-api"
-$python = Join-Path $appRoot ".venv\Scripts\python.exe"
+$srcRoot = Join-Path $appRoot "src"
+$python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 
 if (-not (Test-Path -LiteralPath $python)) {
-    Write-Error "Missing ecommerce-api virtual environment Python: $python. Setup: cd apps\ecommerce-api; py -3.11 -m venv .venv; .\.venv\Scripts\python.exe -m pip install -r requirements.txt; .\.venv\Scripts\python.exe -m pip install -e . --no-deps"
+    Write-Error "Missing root virtual environment Python: $python. Create the monorepo virtual environment from the repository root with: py -3.13 -m venv .venv"
     exit 1
 }
 
 Set-Location $appRoot
-& $python -m pytest -vv -m "not external and not slow"
+if ($env:PYTHONPATH) {
+    $env:PYTHONPATH = "$srcRoot;$appRoot;$env:PYTHONPATH"
+} else {
+    $env:PYTHONPATH = "$srcRoot;$appRoot"
+}
+
+& $python -m pytest -vv -ra -m "not external and not slow"
 exit $LASTEXITCODE

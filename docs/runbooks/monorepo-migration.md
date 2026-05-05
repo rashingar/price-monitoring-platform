@@ -69,6 +69,29 @@ the current layout.
 
 ## Phase 5: Stabilization
 
+- Use a single root virtual environment at `.venv/` for Python root scripts.
+  On Windows, root scripts call `.venv\Scripts\python.exe`.
+- Create the root virtual environment from the repository root with:
+
+  ```powershell
+  py -3.13 -m venv .venv
+  ```
+
+- Install dependencies into the root `.venv` manually from the app-specific
+  dependency files needed for the current task. Do not merge Python dependency
+  files or introduce a new monorepo lockfile during stabilization.
+- Product Factory packaging is not normalized yet; the internal package remains
+  `pipeline` under `apps/product-factory-api/src`.
+- ecommerce-api packaging is not renamed yet; the internal package remains
+  `pricefetcher` under `apps/ecommerce-api/src`.
+- Root scripts should fail clearly when the root `.venv` is missing and should
+  not silently install dependencies.
+- Web scripts should fail clearly when `apps/web/node_modules` is missing and
+  should direct the developer to run `npm ci`.
+- Keep generated `products/`, `work/`, `output/`, `runs/`, and `logs/` outputs
+  ignored. Raw scraped marketplace, vendor, or provider HTML captures must stay
+  out of Git; sanitized examples belong under `docs/examples` or
+  `tests/fixtures`.
 - Run app-local tests with verbose output.
 - Run root checks with verbose output once root scripts exist.
 - Verify backend API startup independently.

@@ -39,3 +39,27 @@ The mechanical app folder migration is complete. Root helper scripts live under
 `scripts/`, and mirrored OpenAPI snapshots live under `packages/contracts`.
 Generated clients, Dockerization, worker changes, database ownership changes,
 and internal package renames remain out of scope for this migration.
+
+## Local Setup
+
+Python tooling uses one monorepo virtual environment at the repository root:
+
+```powershell
+py -3.13 -m venv .venv
+```
+
+Install Python dependencies into that root `.venv` from the app-specific
+requirements files you need. Dependency setup is still app-aware and manual for
+now; there is no unified Python package layout or monorepo lockfile yet.
+Product Factory still keeps the internal `pipeline` package under
+`apps/product-factory-api/src`, and ecommerce-api still keeps the internal
+`pricefetcher` package under `apps/ecommerce-api/src`.
+
+Root scripts fail clearly when `.venv\Scripts\python.exe` is missing. Web
+scripts run from `apps/web` and fail clearly when `node_modules` is missing;
+use `npm ci` in `apps/web` to install frontend dependencies.
+
+Generated runtime outputs stay out of Git, including `work/`, `output/`,
+`runs/`, `logs/`, and `products/`. Raw scraped marketplace, vendor, or provider
+HTML captures must not be committed; future examples should be sanitized under
+`docs/examples` or `tests/fixtures`, not under generated output folders.

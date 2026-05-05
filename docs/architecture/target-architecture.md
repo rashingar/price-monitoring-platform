@@ -223,10 +223,17 @@ architecture documentation step.
 Each app keeps its own runtime configuration during the first migration.
 Configuration should remain explicit and app-scoped.
 
-Root scripts may later coordinate development and test commands, but they
-should delegate to app-local commands rather than hiding runtime boundaries.
+Root scripts coordinate development and test commands while preserving app
+boundaries. Python root scripts use the monorepo virtual environment at
+`.venv/`; on Windows they call `.venv\Scripts\python.exe` and fail clearly when
+it is missing. Dependency setup remains app-aware and manual for now. Product
+Factory packaging is not normalized yet, and ecommerce-api still uses the
+internal package name `pricefetcher`.
+
 Secrets and environment files should not be centralized until the operational
-model is clear.
+model is clear. Generated runtime outputs, generated `products/` folders, raw
+scraped HTML captures, local databases, virtual environments, and dependency
+directories stay ignored by default.
 
 ## Testing Strategy
 
@@ -242,6 +249,10 @@ Contracts should be tested at the boundaries:
 
 For mechanical migration changes, run `git diff --check` and the app-local test
 scripts when dependencies are already installed.
+
+Root test scripts should use verbose output and skip tests marked for live
+external services, live marketplace scraping, browser-live workflows, or other
+slow external dependencies during stabilization.
 
 ## Phased Migration Roadmap
 

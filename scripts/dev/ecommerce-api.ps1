@@ -2,20 +2,21 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $appRoot = Join-Path $repoRoot "apps\ecommerce-api"
-$python = Join-Path $appRoot ".venv\Scripts\python.exe"
+$srcRoot = Join-Path $appRoot "src"
+$python = Join-Path $repoRoot ".venv\Scripts\python.exe"
+
+if (-not (Test-Path -LiteralPath $python)) {
+    Write-Error "Missing root virtual environment Python: $python. Create the monorepo virtual environment from the repository root with: py -3.13 -m venv .venv"
+    exit 1
+}
 
 Set-Location $appRoot
 
-if (Test-Path -LiteralPath $python) {
-    & $python -m pricefetcher.dev.start
-    exit $LASTEXITCODE
+if ($env:PYTHONPATH) {
+    $env:PYTHONPATH = "$srcRoot;$appRoot;$env:PYTHONPATH"
+} else {
+    $env:PYTHONPATH = "$srcRoot;$appRoot"
 }
 
-$cli = Get-Command pricefetcher-api -ErrorAction SilentlyContinue
-if ($null -ne $cli) {
-    & $cli.Source
-    exit $LASTEXITCODE
-}
-
-Write-Error "Missing ecommerce-api dependencies. Setup: cd apps\ecommerce-api; py -3.11 -m venv .venv; .\.venv\Scripts\python.exe -m pip install -r requirements.txt; .\.venv\Scripts\python.exe -m pip install -e . --no-deps"
-exit 1
+& $python -m pricefetcher.dev.start
+exit $LASTEXITCODE

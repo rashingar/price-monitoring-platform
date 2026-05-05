@@ -681,5 +681,5 @@ if (errors.length > 0) {
 }
 
 console.log("Fixture contract comparison passed.");
-console.log(`Checked ${productAgentCritical.length} Product-Agent critical routes.`);
+console.log(`Checked ${productAgentCritical.length} Product Factory critical routes.`);
 console.log(`Checked ${commerceCritical.length} commerce critical routes.`);
