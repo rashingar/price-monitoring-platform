@@ -488,6 +488,7 @@ export const productAgentFixtureRoutes: MockRoute[] = [
   {
     method: "POST",
     path: /\/api\/jobs\/[^/]+\/retry$/,
+    contractPath: "/api/jobs/{job_id}/retry",
     response: { job: { ...productAgentJobs[0], job_id: "005606-prepare-retry", status: "queued" } },
   },
   { method: "GET", path: "/api/authoring/005606", response: productAgentAuthoring },

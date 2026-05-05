@@ -2,7 +2,7 @@
 
 This UI talks to two local HTTP services:
 
-- Product-Agent API through browser path `/api`.
+- Product Factory API through browser path `/api`.
 - Commerce ecommerce-api API through browser path `/commerce-api`.
 
 During local Vite development, `/api` proxies to `VITE_API_PROXY_TARGET` and
@@ -11,13 +11,13 @@ During local Vite development, `/api` proxies to `VITE_API_PROXY_TARGET` and
 
 The TypeScript contract references are:
 
-- Product-Agent types: `src/api/types.ts`
+- Product Factory types: `src/api/types.ts`
 - Commerce types: `src/api/commerceTypes.ts`
-- Product-Agent client: `src/api/client.ts`
+- Product Factory client: `src/api/client.ts`
 - Commerce client: `src/api/commerceClient.ts`
 - Fixture contract notes: `docs/contracts/ui-backend-contract-fixtures.md`
 
-## Product-Agent API
+## Product Factory API
 
 Current browser-facing endpoints:
 
@@ -57,7 +57,7 @@ POST   /api/filters/sync
 GET    /api/filters/sync-report
 ```
 
-### Product-Agent Contracts
+### Product Factory Contracts
 
 `POST /api/jobs/prepare` accepts:
 

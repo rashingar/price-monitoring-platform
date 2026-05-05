@@ -13,7 +13,7 @@ The target apps are:
 - `apps/ecommerce-api`
 - `apps/web`
 
-The old Product-Agent backend becomes `product-factory-api`. The old
+The legacy Product-Agent backend becomes `product-factory-api`. The old
 ecommerce-api backend becomes `ecommerce-api`. The old product-agent-ui
 frontend becomes `web`.
 

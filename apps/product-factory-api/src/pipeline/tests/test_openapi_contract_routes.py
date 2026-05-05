@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-SNAPSHOT_PATH = REPO_ROOT / "docs" / "contracts" / "openapi.product-agent.json"
+SNAPSHOT_PATH = REPO_ROOT / "docs" / "contracts" / "openapi.product-factory.json"
 
 REQUIRED_ENDPOINTS: dict[str, set[str]] = {
     "/api/health": {"get"},
@@ -39,7 +39,7 @@ REQUIRED_ENDPOINTS: dict[str, set[str]] = {
 }
 
 
-def test_openapi_snapshot_contains_ui_facing_product_agent_routes() -> None:
+def test_openapi_snapshot_contains_ui_facing_product_factory_routes() -> None:
     snapshot = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
     paths = snapshot["paths"]
 
@@ -52,4 +52,4 @@ def test_openapi_snapshot_contains_ui_facing_product_agent_routes() -> None:
             if method not in paths[path]:
                 missing.append(f"{method.upper()} {path}")
 
-    assert not missing, f"Missing Product-Agent API contract routes: {missing}"
+    assert not missing, f"Missing Product Factory API contract routes: {missing}"

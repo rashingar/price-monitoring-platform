@@ -1,11 +1,11 @@
-# Product-Agent API Contracts
+# Product Factory API Contracts
 
-The backend OpenAPI snapshot is the canonical Product-Agent API contract. See `docs/api.md` for endpoint groups, request/response summaries, runtime state, and local API startup.
+The backend OpenAPI snapshot is the canonical Product Factory API contract. See `docs/api.md` for endpoint groups, request/response summaries, runtime state, and local API startup.
 
 Snapshot path:
 
 ```text
-docs/contracts/openapi.product-agent.json
+docs/contracts/openapi.product-factory.json
 ```
 
 Prepare also emits a file-based source URL evidence contract for ecommerce-api:
@@ -14,7 +14,7 @@ Prepare also emits a file-based source URL evidence contract for ecommerce-api:
 work/{model}/integrations/ecommerce_source_handoff.json
 ```
 
-See `docs/contracts/ecommerce-api-source-handoff.md`. Product-Agent writes this artifact; ecommerce-api owns importing it and persisting any database records.
+See `docs/contracts/ecommerce-api-source-handoff.md`. Product Factory writes this artifact; ecommerce-api owns importing it and persisting any database records.
 
 Regenerate from `apps/product-factory-api`:
 
@@ -42,7 +42,7 @@ Full suite from `apps/product-factory-api`:
 
 Snapshot diffs should be explained in commit output. There is no separate manual approval gate; the contract change is made explicit by the snapshot diff, backend tests, and commit notes.
 
-Current Product-Agent contract coverage includes health, jobs, filters, filter review, authoring, and settings routes. Contract tests are intentionally fast and do not run full prepare/render/publish workflows.
+Current Product Factory contract coverage includes health, jobs, filters, filter review, authoring, and settings routes. Contract tests are intentionally fast and do not run full prepare/render/publish workflows.
 
 ## Filters Manager Persistence
 

@@ -8,12 +8,12 @@ const parentRoot = path.resolve(uiRoot, "..");
 
 const SNAPSHOTS = {
   commerce: path.join(parentRoot, "ecommerce-api", "docs", "contracts", "openapi.ecommerce.json"),
-  productAgent: path.join(
+  productFactory: path.join(
     parentRoot,
     "product-factory-api",
     "docs",
     "contracts",
-    "openapi.product-agent.json",
+    "openapi.product-factory.json",
   ),
 };
 
@@ -128,7 +128,11 @@ function requestSchema(openapi, operation) {
 }
 
 function routeKey(route) {
-  return `${route.method.toUpperCase()} ${route.path}`;
+  return `${route.method.toUpperCase()} ${route.contractPath ?? route.path}`;
+}
+
+function contractPathFor(route) {
+  return route.contractPath ?? String(route.path ?? "");
 }
 
 function getFixtureResponse(route) {
@@ -217,7 +221,7 @@ function assertSchemaProperties(label, schema, fields) {
   });
 }
 
-const productAgentCritical = [
+const productFactoryCritical = [
   { method: "GET", path: "/api/health", fields: ["status"] },
   {
     method: "GET",
@@ -443,7 +447,7 @@ function compareRoutes({ backend, openapi, routes, critical }) {
 
   routes.forEach((route) => {
     const method = String(route.method ?? "").toUpperCase();
-    const normalizedPath = normalizeFixturePath(backend, String(route.path ?? ""));
+    const normalizedPath = normalizeFixturePath(backend, contractPathFor(route));
     const match = operationFor(openapi, method, normalizedPath);
     if (!match) {
       if (backend === "commerce" && commercePendingOpenApiRoutes.has(`${method} ${normalizedPath}`)) {
@@ -474,7 +478,7 @@ function compareRoutes({ backend, openapi, routes, critical }) {
       if (String(route.method ?? "").toUpperCase() !== method) {
         return false;
       }
-      return compileTemplate(check.path).test(normalizeFixturePath(backend, String(route.path ?? "")));
+      return compileTemplate(check.path).test(normalizeFixturePath(backend, contractPathFor(route)));
     });
 
     if (matchingRoutes.length === 0) {
@@ -624,9 +628,9 @@ function assertCatalogDbImportRequiredErrorFixtures(routes) {
 }
 
 const commerceOpenapi = readJson(SNAPSHOTS.commerce);
-const productAgentOpenapi = readJson(SNAPSHOTS.productAgent);
+const productFactoryOpenapi = readJson(SNAPSHOTS.productFactory);
 
-if (commerceOpenapi && productAgentOpenapi) {
+if (commerceOpenapi && productFactoryOpenapi) {
   const productAgentRoutes = await loadTsFixture(
     path.join(uiRoot, "src", "test", "fixtures", "productAgentApi.ts"),
     "productAgentFixtureRoutes",
@@ -645,10 +649,10 @@ if (commerceOpenapi && productAgentOpenapi) {
   );
 
   compareRoutes({
-    backend: "productAgent",
-    openapi: productAgentOpenapi,
+    backend: "productFactory",
+    openapi: productFactoryOpenapi,
     routes: productAgentRoutes,
-    critical: productAgentCritical,
+    critical: productFactoryCritical,
   });
   compareRoutes({
     backend: "commerce",
@@ -681,5 +685,5 @@ if (errors.length > 0) {
 }
 
 console.log("Fixture contract comparison passed.");
-console.log(`Checked ${productAgentCritical.length} Product Factory critical routes.`);
+console.log(`Checked ${productFactoryCritical.length} Product Factory critical routes.`);
 console.log(`Checked ${commerceCritical.length} commerce critical routes.`);

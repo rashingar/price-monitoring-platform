@@ -6,7 +6,7 @@ $mirrors = @(
     @{
         Name = "Product Factory"
         Mirror = (Join-Path $contractsRoot "openapi.product-factory.json")
-        Source = (Join-Path $repoRoot "apps\product-factory-api\docs\contracts\openapi.product-agent.json")
+        Source = (Join-Path $repoRoot "apps\product-factory-api\docs\contracts\openapi.product-factory.json")
     },
     @{
         Name = "Ecommerce"
@@ -18,9 +18,7 @@ $mirrors = @(
 $expected = @()
 foreach ($mirror in $mirrors) {
     $expected += $mirror.Mirror
-    if (Test-Path -LiteralPath $mirror.Source) {
-        $expected += $mirror.Source
-    }
+    $expected += $mirror.Source
 }
 
 $missing = @($expected | Where-Object { -not (Test-Path -LiteralPath $_) })

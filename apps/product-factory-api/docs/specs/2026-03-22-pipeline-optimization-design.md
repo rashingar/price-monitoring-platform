@@ -7,7 +7,7 @@ Historical note:
 
 ## Context
 
-The Product-Agent pipeline scrapes product pages from Electronet and Skroutz, enriches them via LLM, and outputs OpenCart-ready CSV files. While scraping works, the output quality doesn't match the live catalog standard (222-product sample). Key gaps: inconsistent product naming beyond 4 hardcoded Skroutz families, LLM-dependent CTA text with Greek gender errors, freeform meta_descriptions that miss the catalog's structured pattern, and no tool to measure quality gaps systematically.
+The Product Factory pipeline scrapes product pages from Electronet and Skroutz, enriches them via LLM, and outputs OpenCart-ready CSV files. While scraping works, the output quality doesn't match the live catalog standard (222-product sample). Key gaps: inconsistent product naming beyond 4 hardcoded Skroutz families, LLM-dependent CTA text with Greek gender errors, freeform meta_descriptions that miss the catalog's structured pattern, and no tool to measure quality gaps systematically.
 
 ## Goals
 

@@ -1,6 +1,6 @@
 # UI Backend Contract Fixtures
 
-The UI test suite uses mocked Product-Agent and commerce API responses so contract assumptions and critical page rendering can be checked without running either backend. These tests do not start subprocesses, open browsers, call live sites, read real CSV files, or require PostgreSQL/OpenCart/OpenAI.
+The UI test suite uses mocked Product Factory and commerce API responses so contract assumptions and critical page rendering can be checked without running either backend. These tests do not start subprocesses, open browsers, call live sites, read real CSV files, or require PostgreSQL/OpenCart/OpenAI.
 
 Fixtures live in:
 
@@ -12,7 +12,7 @@ The strict fetch helper in `src/test/mockFetch.ts` maps request method plus path
 Backend OpenAPI snapshots remain canonical. The UI fixture checker normalizes `/commerce-api`
 fixture paths to backend `/api` paths before comparing route coverage.
 
-## Product-Agent Endpoints
+## Product Factory Endpoints
 
 - `GET /api/health`
 - `GET /api/jobs`
@@ -32,7 +32,7 @@ fixture paths to backend `/api` paths before comparing route coverage.
 - `GET /api/filter-review/{model}`
 - `GET /api/authoring/{model}`
 
-Filters Manager fixtures include the Product-Agent backend `revision` token on status,
+Filters Manager fixtures include the Product Factory backend `revision` token on status,
 category detail, write responses, and sync responses. The backend revision is the source
 of truth for category writes. UI write request examples include `expected_revision`, and
 the fixture/OpenAPI comparison checks that the backend request schemas still expose that

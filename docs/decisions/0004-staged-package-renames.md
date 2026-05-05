@@ -17,7 +17,7 @@ risk and make behavior changes harder to isolate.
 
 Stage internal Python package renames after the mechanical monorepo migration.
 
-Product-Agent's old `scraper/` folder is renamed to `src/` as part of the
+The legacy Product-Agent `scraper/` folder is renamed to `src/` as part of the
 mechanical migration.
 
 The internal Python package `pipeline` should not be renamed during the first

@@ -40,7 +40,7 @@ If a browser UI runs on a different local port, proxy `/api` to `http://127.0.0.
 The canonical API contract snapshot is:
 
 ```text
-docs/contracts/openapi.product-agent.json
+docs/contracts/openapi.product-factory.json
 ```
 
 Route implementations live in `src/pipeline/api/routes_*.py`. Public request and response shapes live in `src/pipeline/api/schemas.py`.

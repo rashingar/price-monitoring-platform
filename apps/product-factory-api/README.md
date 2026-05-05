@@ -1,7 +1,7 @@
 # product-factory-api
 
 `product-factory-api` is the Product Factory backend runtime. It contains the
-old Product-Agent Python pipeline under `src/pipeline` and produces
+Product Factory Python pipeline under `src/pipeline` and produces
 OpenCart-ready product CSVs from supported product pages. It captures source
 product data, normalizes taxonomy, specifications, images, and category
 filters, prepares the small LLM-owned copy fields, renders deterministic
@@ -104,6 +104,6 @@ Prefer fixing pipeline behavior over hand-editing generated files.
 ## More Documentation
 
 - `docs/api.md` describes the active local API and contract workflow.
-- `docs/contracts/openapi.product-agent.json` is the canonical OpenAPI snapshot.
+- `docs/contracts/openapi.product-factory.json` is the canonical OpenAPI snapshot.
 - `AGENTS.md` and `RULES.md` define runtime operator behavior for template-triggered pipeline work.
 - `archive/legacy/runtime_legacy.md` preserves old README workflow detail and CLI notes removed from the root README.

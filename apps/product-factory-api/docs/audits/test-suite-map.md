@@ -1,4 +1,4 @@
-# Product-Agent Test Suite Map
+# Product Factory Test Suite Map
 
 Audit date: 2026-05-02
 

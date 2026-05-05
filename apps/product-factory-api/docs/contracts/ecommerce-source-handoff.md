@@ -1,14 +1,14 @@
 # Price-Fetcher Source Handoff
 
-Product-Agent emits a source URL evidence artifact after a successful prepare source acquisition:
+Product Factory emits a source URL evidence artifact after a successful prepare source acquisition:
 
 ```text
 work/{model}/integrations/ecommerce_source_handoff.json
 ```
 
-This artifact is a file-based integration contract. Product-Agent owns fetching supported product URLs, parsing the source page, normalizing source evidence, and writing the JSON handoff. The ecommerce-api service is the importer and database owner: it decides when to read the artifact, how to validate it, and how to persist source URL evidence in its own storage.
+This artifact is a file-based integration contract. Product Factory owns fetching supported product URLs, parsing the source page, normalizing source evidence, and writing the JSON handoff. The ecommerce-api service is the importer and database owner: it decides when to read the artifact, how to validate it, and how to persist source URL evidence in its own storage.
 
-Product-Agent does not connect to the ecommerce-api database, import ecommerce-api code, call ecommerce-api APIs, or change the OpenCart CSV schema for this handoff.
+Product Factory does not connect to the ecommerce-api database, import ecommerce-api code, call ecommerce-api APIs, or change the OpenCart CSV schema for this handoff.
 
 ## Contract
 
@@ -65,6 +65,6 @@ The current `schema_version` is `1.0`. The success payload contains:
 }
 ```
 
-If prepare fails after source acquisition has produced useful fetch and parsed product evidence, Product-Agent writes the same payload shape with additional `status` and `error` fields. Failures before safe source acquisition do not create a handoff.
+If prepare fails after source acquisition has produced useful fetch and parsed product evidence, Product Factory writes the same payload shape with additional `status` and `error` fields. Failures before safe source acquisition do not create a handoff.
 
 The JSON is written as UTF-8 without BOM through the repo JSON writer and is intended to be stable enough for ecommerce-api contract tests.

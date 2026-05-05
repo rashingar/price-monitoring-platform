@@ -19,7 +19,7 @@ cd apps/product-factory-api
 ..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m contract
 ```
 
-Use this when changing Product-Agent API routes, public response schemas, runtime service contracts, or deterministic artifact shapes. The backend OpenAPI snapshot is canonical for the Product-Agent API and lives at `docs/contracts/openapi.product-agent.json`.
+Use this when changing Product Factory API routes, public response schemas, runtime service contracts, or deterministic artifact shapes. The backend OpenAPI snapshot is canonical for the Product Factory API and lives at `docs/contracts/openapi.product-factory.json`.
 
 Regenerate the OpenAPI snapshot from `apps/product-factory-api` after intentional backend API changes:
 

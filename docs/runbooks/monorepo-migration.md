@@ -20,7 +20,7 @@ Status: completed in the current layout.
 
 Target moves:
 
-- `Product-Agent` -> `apps/product-factory-api`
+- legacy `Product-Agent` -> `apps/product-factory-api`
 - `ecommerce-api` -> `apps/ecommerce-api`
 - `product-agent-ui` -> `apps/web`
 - `apps/product-factory-api/scraper` -> `apps/product-factory-api/src`

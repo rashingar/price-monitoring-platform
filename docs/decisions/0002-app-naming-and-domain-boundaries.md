@@ -17,7 +17,7 @@ Use `product-factory-api`, `ecommerce-api`, and `web` as the app names.
 
 | Old name | New monorepo path |
 | --- | --- |
-| Product-Agent | `apps/product-factory-api` |
+| legacy Product-Agent | `apps/product-factory-api` |
 | ecommerce-api | `apps/ecommerce-api` |
 | product-agent-ui | `apps/web` |
 

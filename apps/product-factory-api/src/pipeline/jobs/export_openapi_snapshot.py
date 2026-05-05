@@ -10,7 +10,7 @@ from pipeline.api.app import create_app
 from pipeline.repo_paths import REPO_ROOT
 
 
-DEFAULT_SNAPSHOT_PATH = REPO_ROOT / "docs" / "contracts" / "openapi.product-agent.json"
+DEFAULT_SNAPSHOT_PATH = REPO_ROOT / "docs" / "contracts" / "openapi.product-factory.json"
 
 
 def normalize_openapi_schema(schema: Mapping[str, Any]) -> dict[str, Any]:
@@ -29,7 +29,7 @@ def export_openapi_snapshot(output_path: Path = DEFAULT_SNAPSHOT_PATH) -> Path:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Export the Product-Agent FastAPI OpenAPI snapshot.")
+    parser = argparse.ArgumentParser(description="Export the Product Factory FastAPI OpenAPI snapshot.")
     parser.add_argument(
         "--output",
         type=Path,
