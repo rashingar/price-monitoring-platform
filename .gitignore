@@ -44,3 +44,8 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+
+# Raw marketplace/vendor captures may contain embedded tokens or session data
+apps/**/tests/fixtures/providers/**/html/*.html
+apps/**/scraper/**/tests/fixtures/providers/**/html/*.html
+apps/Product-Agent/scraper/pipeline/tests/fixtures/providers/skroutz/html/*.html
