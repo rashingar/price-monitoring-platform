@@ -1956,8 +1956,15 @@ def resolve_deterministic_mpn(source: SourceProductData, raw_title: str, brand: 
 
 def _matches_runtime_product_code(candidate: str, model: str, product_code: str) -> bool:
     candidate_key = normalize_for_match(candidate)
-    product_keys = {normalize_for_match(value) for value in [model, product_code] if normalize_whitespace(value)}
-    return bool(candidate_key and candidate_key in product_keys)
+    if not candidate_key:
+        return False
+
+    model_key = normalize_for_match(model)
+    if model_key and candidate_key == model_key:
+        return True
+
+    product_code_key = normalize_for_match(product_code)
+    return bool(product_code_key and product_code_key == model_key and candidate_key == product_code_key)
 
 
 def should_preserve_parsed_title(title: str, brand: str, mpn: str, composed_name: str = "") -> bool:

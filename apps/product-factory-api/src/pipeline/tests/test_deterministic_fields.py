@@ -358,6 +358,32 @@ def test_kettle_rule_uses_single_capacity_differentiator() -> None:
     assert fields["seo_keyword"] == "rohnson-r-7616-vrastiras-17lt-2200w-inox"
 
 
+def test_kettle_rule_keeps_explicit_skroutz_mpn_when_title_contains_capacity_token() -> None:
+    source = SourceProductData(
+        source_name="skroutz",
+        brand="Estia",
+        product_code="06-24567",
+        mpn="06-24567",
+        name="Estia Intense Βραστήρας 1.7lt 2200W Luminus Mat",
+        key_specs=[
+            SpecItem(label="Χωρητικότητα σε Λίτρα", value="1,7"),
+            SpecItem(label="Ισχύς σε Watts", value="2200"),
+            SpecItem(label="Χρώμα", value="Λευκό"),
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        leaf_category="Συσκευές Κουζίνας",
+        sub_category="Βραστήρες",
+    )
+
+    fields = build_deterministic_product_fields(source, taxonomy, "341490", derive_seo_keyword)
+
+    assert fields["mpn"] == "06-24567"
+    assert fields["name"] == "Estia 06-24567 – Βραστήρας 1,7Lt 2200W Λευκό Ματ"
+    assert fields["seo_keyword"] == "estia-06-24567-vrastiras-1-7lt-2200w-luminus-mat"
+
+
 def test_egg_boiler_uses_specific_kettle_category_phrase() -> None:
     source = SourceProductData(
         source_name="skroutz",
