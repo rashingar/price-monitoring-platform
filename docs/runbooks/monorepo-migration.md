@@ -1,0 +1,78 @@
+# Monorepo Migration Runbook
+
+This runbook sequences the migration from legacy app folders into the target
+Price Monitoring Platform monorepo layout.
+
+## Phase 0: Architecture Docs
+
+- Add target architecture documentation.
+- Add architecture decision records.
+- Add this migration runbook.
+- Add or update the root README.
+- Do not move folders.
+- Do not rename files from copied apps.
+- Do not refactor code.
+- Do not create app code.
+
+## Phase 1: Mechanical Folder Migration
+
+Target moves:
+
+- `Product-Agent` -> `apps/product-factory-api`
+- `price-fetcher` -> `apps/ecommerce-api`
+- `product-agent-ui` -> `apps/web`
+- `apps/product-factory-api/scraper` -> `apps/product-factory-api/src`
+
+Rules:
+
+- Do not rename `apps/ecommerce-api/src/pricefetcher` yet.
+- Do not rename the `pipeline` package yet.
+- Do not change API routes during the mechanical migration.
+- Do not change browser `/api` and `/commerce-api` routes during the first
+  migration.
+- Keep runtime behavior stable.
+- Keep folder moves mechanical and reviewable.
+
+## Phase 2: Root Scripts and README
+
+- Add root scripts that delegate to app-local commands.
+- Keep backend runtimes separate.
+- Add root development and test command documentation.
+- Document app-local environment setup.
+- Avoid hiding app boundaries behind root scripts.
+
+## Phase 3: Contract Snapshot Mirroring
+
+- Create `packages/contracts` if it is not already present.
+- Mirror Product Factory OpenAPI snapshots.
+- Mirror Ecommerce OpenAPI snapshots.
+- Add contract fixture locations and update docs.
+- Do not introduce generated clients in this phase unless a separate decision
+  approves it.
+
+## Phase 4: Path/Doc Cleanup
+
+- Update documentation references from legacy paths to target paths.
+- Fix scripts that still point at old folder names.
+- Keep compatibility aliases only where needed and document their removal path.
+- Do not rename internal Python packages as incidental cleanup.
+
+## Phase 5: Stabilization
+
+- Run app-local tests with verbose output.
+- Run root checks with verbose output once root scripts exist.
+- Verify backend API startup independently.
+- Verify web development startup against both backend API routes.
+- Verify contract snapshots and fixtures.
+- Record known gaps before refactors start.
+
+## Phase 6: Intentional Refactors
+
+- Rename `src/pricefetcher` to `src/ecommerce` only in a dedicated refactor.
+- Decide whether `product-factory-api` needs durable DB-backed job state.
+- Decide whether Product Factory DB state belongs in a separate schema or
+  separate database.
+- Introduce generated API clients only after contract mirroring is stable.
+- Introduce durable workers/jobs only after ownership and operational model are
+  documented.
+- Consider gateway or browser route redesign only as an intentional follow-up.
