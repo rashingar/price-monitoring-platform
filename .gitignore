@@ -1,5 +1,6 @@
 # Python
 .venv/
+**/.venv/
 venv/
 __pycache__/
 *.py[cod]
@@ -30,6 +31,7 @@ opencart.env
 *.sqlite3
 *.db
 *.dump
+*.backup
 *.bak
 
 # Generated/runtime artifacts
