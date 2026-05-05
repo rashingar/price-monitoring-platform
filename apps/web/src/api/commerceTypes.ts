@@ -1155,8 +1155,8 @@ export interface ArtifactReadResponse {
 }
 
 export interface PathRootsEnv {
-  PRICEFETCHER_ARTIFACT_ROOTS?: string | null;
-  PRICEFETCHER_FILE_ROOTS?: string | null;
+  ECOMMERCE_ARTIFACT_ROOTS?: string | null;
+  ECOMMERCE_FILE_ROOTS?: string | null;
   [key: string]: string | null | undefined;
 }
 

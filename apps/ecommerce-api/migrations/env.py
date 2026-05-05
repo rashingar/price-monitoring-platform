@@ -1,4 +1,4 @@
-"""Alembic environment for PriceFetcher."""
+"""Alembic environment for Ecommerce."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from pricefetcher.db.config import get_database_url
-from pricefetcher.db.models import Base
-from pricefetcher.env import load_local_env_if_present
+from ecommerce.db.config import get_database_url
+from ecommerce.db.models import Base
+from ecommerce.env import load_local_env_if_present
 
 load_local_env_if_present()
 
@@ -28,7 +28,7 @@ def _database_url() -> str:
     configured = config.get_main_option("sqlalchemy.url")
     if configured:
         return configured
-    raise RuntimeError("PRICEFETCHER_DATABASE_URL is not configured.")
+    raise RuntimeError("ECOMMERCE_DATABASE_URL is not configured.")
 
 
 def run_migrations_offline() -> None:

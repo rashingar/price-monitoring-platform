@@ -7,9 +7,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.db.models import Base, PriceObservation, ProductSource, SourceCaptureSnapshot  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.source_capture.product_agent_import import import_product_agent_artifacts  # noqa: E402
+from ecommerce.db.models import Base, PriceObservation, ProductSource, SourceCaptureSnapshot  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.source_capture.product_agent_import import import_product_agent_artifacts  # noqa: E402
 
 
 def _database_url(tmp_path: Path) -> str:
@@ -74,7 +74,7 @@ def _write_product_agent_artifact(
 
 def test_product_agent_artifact_import_preserves_raw_snapshot_and_reliable_price(tmp_path: Path, monkeypatch) -> None:
     database_url = _database_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_SOURCE_CAPTURE_ARTIFACT_DIR", str(tmp_path / "capture-artifacts"))
+    monkeypatch.setenv("ECOMMERCE_SOURCE_CAPTURE_ARTIFACT_DIR", str(tmp_path / "capture-artifacts"))
     root = tmp_path / "product-agent-work"
     _write_product_agent_artifact(root)
 

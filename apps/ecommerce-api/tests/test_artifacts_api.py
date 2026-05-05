@@ -7,10 +7,10 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.artifacts import ARTIFACT_ROOTS_ENV_VAR, artifact_link_payload  # noqa: E402
-from pricefetcher.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.artifacts import ARTIFACT_ROOTS_ENV_VAR, artifact_link_payload  # noqa: E402
+from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 
 
 def _client(tmp_path: Path, monkeypatch) -> TestClient:
@@ -20,8 +20,8 @@ def _client(tmp_path: Path, monkeypatch) -> TestClient:
     monkeypatch.setenv(
         ARTIFACT_ROOTS_ENV_VAR,
         (
-            f"{tmp_path / 'output' / 'bridge' / 'runs'};"
-            f"{tmp_path / 'output' / 'price_monitoring' / 'runs'};"
+            f"{tmp_path / 'output' / 'ecommerce' / 'bridge' / 'runs'};"
+            f"{tmp_path / 'output' / 'ecommerce' / 'monitoring' / 'runs'};"
             f"{tmp_path / 'extra_artifacts'}"
         ),
     )
@@ -29,7 +29,7 @@ def _client(tmp_path: Path, monkeypatch) -> TestClient:
 
 
 def _write_bridge_run(tmp_path: Path, run_id: str = "run-1") -> Path:
-    run_dir = tmp_path / "output" / "bridge" / "runs" / run_id
+    run_dir = tmp_path / "output" / "ecommerce" / "bridge" / "runs" / run_id
     run_dir.mkdir(parents=True)
     (run_dir / "oc_import.csv").write_text("model,quantity\n005606,3\n", encoding="utf-8-sig")
     (run_dir / "summary.csv").write_text("metric,value\nupdated,1\n", encoding="utf-8")
@@ -39,7 +39,7 @@ def _write_bridge_run(tmp_path: Path, run_id: str = "run-1") -> Path:
 
 
 def _write_price_monitoring_run(tmp_path: Path, run_id: str = "pm-1") -> Path:
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / run_id
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / run_id
     run_dir.mkdir(parents=True)
     (run_dir / "review.csv").write_text("model,price\n005606,123.45\n", encoding="utf-8")
     (run_dir / "selection_summary.json").write_text(
@@ -57,7 +57,7 @@ def test_health_endpoint_returns_ok_without_catalog_or_export_files(tmp_path: Pa
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
-    assert payload["service"] == "price-fetcher"
+    assert payload["service"] == "ecommerce-api"
     assert payload["api"] == "commerce"
     assert payload["checks"] == {"app": "ok", "database": "not_configured"}
 
@@ -71,8 +71,8 @@ def test_artifact_roots_endpoint_uses_temp_roots(tmp_path: Path, monkeypatch) ->
 
     assert response.status_code == 200
     roots = response.json()["roots"]
-    assert any(root["path"] == str(Path("output") / "bridge" / "runs") and root["exists"] for root in roots)
-    assert any(root["path"] == str(Path("output") / "price_monitoring" / "runs") and root["exists"] for root in roots)
+    assert any(root["path"] == str(Path("output") / "ecommerce" / "bridge" / "runs") and root["exists"] for root in roots)
+    assert any(root["path"] == str(Path("output") / "ecommerce" / "monitoring" / "runs") and root["exists"] for root in roots)
     assert any(str(tmp_path / "extra_artifacts") == root["path"] for root in roots)
 
 
@@ -205,7 +205,7 @@ def test_path_traversal_is_rejected(tmp_path: Path, monkeypatch) -> None:
 
     response = client.get(
         "/api/artifacts/read",
-        params={"path": str(Path("output") / "bridge" / "runs" / "run-1" / ".." / "run-1" / "oc_import.csv")},
+        params={"path": str(Path("output") / "ecommerce" / "bridge" / "runs" / "run-1" / ".." / "run-1" / "oc_import.csv")},
     )
 
     assert response.status_code == 400

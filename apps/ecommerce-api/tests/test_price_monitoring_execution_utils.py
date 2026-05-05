@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from pricefetcher.price_monitoring import fetch_execution
+from ecommerce.price_monitoring import fetch_execution
 
 
 def install_fake_execution_child(
@@ -26,11 +26,11 @@ from decimal import Decimal
 from datetime import datetime, timezone
 from pathlib import Path
 
-from pricefetcher.db.models import PriceObservation, Product
-from pricefetcher.db.session import session_scope
-from pricefetcher.price_monitoring.fetch_execution import evaluate_alerts_after_persistence
-from pricefetcher.price_monitoring.fetch_run import load_price_monitoring_fetch_result
-from pricefetcher.price_monitoring.persistence import persist_fetch_result_if_configured
+from ecommerce.db.models import PriceObservation, Product
+from ecommerce.db.session import session_scope
+from ecommerce.price_monitoring.fetch_execution import evaluate_alerts_after_persistence
+from ecommerce.price_monitoring.fetch_run import load_price_monitoring_fetch_result
+from ecommerce.price_monitoring.persistence import persist_fetch_result_if_configured
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--run-id", required=True)
@@ -41,7 +41,7 @@ args = parser.parse_args()
 mode = __MODE__
 persist = __PERSIST__
 prices_path = Path(__PRICES_PATH__)
-run_dir = Path("output") / "price_monitoring" / "runs" / args.run_id
+run_dir = Path("output") / "ecommerce" / "monitoring" / "runs" / args.run_id
 execution_path = run_dir / "fetch_executions" / f"{args.execution_id}.json"
 alias_path = run_dir / "fetch_execution.json"
 

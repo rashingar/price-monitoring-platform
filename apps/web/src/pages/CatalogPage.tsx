@@ -415,10 +415,10 @@ function CatalogSetupHint() {
     <div className="setup-hint compact">
       <strong>Catalog setup check</strong>
       <ul>
-        <li>Commerce API must be running: <code>pricefetcher-api</code></li>
-        <li>Database URL: <code>PRICEFETCHER_DATABASE_URL</code></li>
+        <li>Commerce API must be running: <code>ecommerce-api</code></li>
+        <li>Database URL: <code>ECOMMERCE_DATABASE_URL</code></li>
         <li>Run migrations: <code>alembic upgrade head</code></li>
-        <li>Import catalog input: <code>python -m pricefetcher.jobs.ingest_catalog</code></li>
+        <li>Import catalog input: <code>python -m ecommerce.jobs.ingest_catalog</code></li>
         <li>UI endpoint: <code>/commerce-api/catalog/summary</code></li>
         <li>Backend endpoint: <code>http://127.0.0.1:8001/api/catalog/summary</code></li>
       </ul>

@@ -358,14 +358,14 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("Preview does not write database rows.")).toBeInTheDocument();
     expect(screen.getByText("Apply writes source URLs only; capture runs are launched separately.")).toBeInTheDocument();
     expect(screen.getByText("Only import handoff files produced by Product-Agent.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Handoff file path")).toHaveValue("work/{model}/integrations/price_fetcher_source_handoff.json");
+    expect(screen.getByLabelText("Handoff file path")).toHaveValue("work/{model}/integrations/ecommerce_source_handoff.json");
     expect(screen.getByLabelText("catalog_source")).toHaveValue("sourceCata");
     expect(screen.queryByLabelText("Persist initial capture")).not.toBeInTheDocument();
     expect(screen.getByLabelText("report_items_limit")).toHaveValue(200);
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("Handoff file path"), {
-      target: { value: "work/005606/integrations/price_fetcher_source_handoff.json" },
+      target: { value: "work/005606/integrations/ecommerce_source_handoff.json" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
 
@@ -399,7 +399,7 @@ describe("platform mocked page smoke tests", () => {
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&
-          request.body.handoff_path === "work/005606/integrations/price_fetcher_source_handoff.json" &&
+          request.body.handoff_path === "work/005606/integrations/ecommerce_source_handoff.json" &&
           request.body.persist_initial_capture === false,
       ),
     ).toBe(true);
@@ -564,7 +564,7 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findByRole("heading", { name: "Catalog database/import required" })).resolves.toBeInTheDocument();
     expect(screen.getAllByText(/Catalog database\/import required/).length).toBeGreaterThan(0);
     expect(screen.getByText("Run alembic upgrade head.")).toBeInTheDocument();
-    expect(screen.getByText("Run python -m pricefetcher.jobs.ingest_catalog.")).toBeInTheDocument();
+    expect(screen.getByText("Run python -m ecommerce.jobs.ingest_catalog.")).toBeInTheDocument();
     expect(screen.getByText(/CSV\/Bridge, files, paths, artifacts, or general commerce health/)).toBeInTheDocument();
     expect(screen.queryByText(/Commerce API unreachable/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Preview selection" })).toBeDisabled();
@@ -589,7 +589,7 @@ describe("platform mocked page smoke tests", () => {
 
     await expect(screen.findByRole("heading", { name: "Catalog database/import required" })).resolves.toBeInTheDocument();
     expect(screen.getByText("Active catalog is empty or the catalog import is missing.")).toBeInTheDocument();
-    expect(screen.getByText("Run python -m pricefetcher.jobs.ingest_catalog.")).toBeInTheDocument();
+    expect(screen.getByText("Run python -m ecommerce.jobs.ingest_catalog.")).toBeInTheDocument();
   });
 
   it("renders Price Monitoring workflow with DB status and run list", async () => {

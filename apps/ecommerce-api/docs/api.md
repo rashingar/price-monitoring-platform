@@ -1,21 +1,21 @@
-# PriceFetcher API
+# Ecommerce API
 
-This document is the human-readable API map for the PriceFetcher backend. The
+This document is the human-readable API map for the Ecommerce backend. The
 exact machine contract is the OpenAPI snapshot at
-`docs/contracts/openapi.pricefetcher.json`.
+`docs/contracts/openapi.ecommerce.json`.
 
 ## Running The API
 
 Start the local FastAPI service:
 
 ```powershell
-pricefetcher-api
+ecommerce-api
 ```
 
 Development entry point:
 
 ```powershell
-python -m pricefetcher.dev.start
+python -m ecommerce.dev.start
 ```
 
 Default base URL:
@@ -35,13 +35,13 @@ http://127.0.0.1:8001/docs
 Canonical OpenAPI snapshot:
 
 ```text
-docs/contracts/openapi.pricefetcher.json
+docs/contracts/openapi.ecommerce.json
 ```
 
 Regenerate after an intentional API shape change:
 
 ```powershell
-python -m pricefetcher.jobs.export_openapi_snapshot
+python -m ecommerce.jobs.export_openapi_snapshot
 ```
 
 Run contract tests:
@@ -78,14 +78,14 @@ paths directly.
 Important environment variables:
 
 ```text
-PRICEFETCHER_DATABASE_URL
-PRICEFETCHER_ARTIFACT_ROOTS
-PRICEFETCHER_FILE_ROOTS
-PRICEFETCHER_PRICE_IGNORE_PATH
-PRICEFETCHER_SOURCE_CATA_PATH
-PRICEFETCHER_MAX_FETCH_WORKERS
-PRICEFETCHER_FETCH_STALE_AFTER_MINUTES
-PRICEFETCHER_SUBPROCESS_TERMINATE_TIMEOUT_SECONDS
+ECOMMERCE_DATABASE_URL
+ECOMMERCE_ARTIFACT_ROOTS
+ECOMMERCE_FILE_ROOTS
+ECOMMERCE_PRICE_IGNORE_PATH
+ECOMMERCE_SOURCE_CATA_PATH
+ECOMMERCE_MAX_FETCH_WORKERS
+ECOMMERCE_FETCH_STALE_AFTER_MINUTES
+ECOMMERCE_SUBPROCESS_TERMINATE_TIMEOUT_SECONDS
 ```
 
 ## Endpoint Map
@@ -116,7 +116,7 @@ Runs the local OpenCart stock bridge and writes bridge artifacts. Request body:
 ```
 
 When `output_dir` is empty, artifacts are written under
-`output/bridge/runs/{run_id}`.
+`output/ecommerce/bridge/runs/{run_id}`.
 
 ### Paths And Artifacts
 
@@ -213,7 +213,7 @@ POST /api/catalog/source-urls/import/product-agent/apply
 Preview is a dry-run. Apply writes resolved candidates into `source_urls` and is
 intended to be idempotent.
 
-Product-Agent handoff import accepts `price_fetcher_source_handoff.json` files
+Product-Agent handoff import accepts `ecommerce_source_handoff.json` files
 only from allowed artifact roots or configured file editor roots.
 
 ### Vendor Sources
@@ -311,7 +311,7 @@ Selection request:
 ```
 
 Run creation writes `input.csv` and `selection_summary.json` under
-`output/price_monitoring/runs/{run_id}` and records durable run metadata in
+`output/ecommerce/monitoring/runs/{run_id}` and records durable run metadata in
 PostgreSQL. Price Monitoring requires active source URLs. Products without an
 active source URL are skipped with `missing_active_source_url`; run creation
 returns `400` when no selected product remains eligible. Each run must specify

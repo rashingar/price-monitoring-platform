@@ -12,20 +12,20 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.api import routes_price_monitoring  # noqa: E402
-from pricefetcher.db.models import Base, MonitoringRun  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.dev import start as dev_start  # noqa: E402
-from pricefetcher.jobs import run_price_monitoring_execution  # noqa: E402
-from pricefetcher.price_monitoring import fetch_execution  # noqa: E402
-from pricefetcher.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
-from pricefetcher.price_monitoring.fetch_run import (  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.api import routes_price_monitoring  # noqa: E402
+from ecommerce.db.models import Base, MonitoringRun  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.dev import start as dev_start  # noqa: E402
+from ecommerce.jobs import run_price_monitoring_execution  # noqa: E402
+from ecommerce.price_monitoring import fetch_execution  # noqa: E402
+from ecommerce.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
+from ecommerce.price_monitoring.fetch_run import (  # noqa: E402
     PriceMonitoringFetchError,
     PriceMonitoringFetchResult,
     run_price_monitoring_fetch,
 )
-from pricefetcher.vendor_sources.capture import SourceUrlCaptureRunResult  # noqa: E402
+from ecommerce.vendor_sources.capture import SourceUrlCaptureRunResult  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -112,8 +112,8 @@ def test_execution_cli_rejects_unsupported_type(capsys) -> None:
 
 def test_execution_cli_fetch_completes_existing_execution(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    database_url = f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     Base.metadata.create_all(get_engine(database_url))
     run_dir = _run_dir(tmp_path)
     _write_run(run_dir)
@@ -163,7 +163,7 @@ def test_execution_cli_fetch_failure_writes_failed_metadata(tmp_path: Path, monk
 
 
 def test_successful_execution_writes_result_metadata_and_artifacts(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.delenv("PRICEFETCHER_DATABASE_URL", raising=False)
+    monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
     monkeypatch.chdir(tmp_path)
     _write_run(_run_dir(tmp_path))
     _use_fake_child(monkeypatch, tmp_path, mode="success")
@@ -267,7 +267,7 @@ def test_cancel_running_execution_late_completion_does_not_persist_or_overwrite(
 
 
 def test_cancel_running_execution_force_kills_after_timeout(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setenv("PRICEFETCHER_SUBPROCESS_TERMINATE_TIMEOUT_SECONDS", "1")
+    monkeypatch.setenv("ECOMMERCE_SUBPROCESS_TERMINATE_TIMEOUT_SECONDS", "1")
     monkeypatch.chdir(tmp_path)
     run_dir = _run_dir(tmp_path)
     _write_run(run_dir)
@@ -348,7 +348,7 @@ def test_killed_execution_does_not_block_refetch_and_increments_attempt(tmp_path
 
 
 def test_different_runs_execute_concurrently_up_to_worker_cap(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setenv("PRICEFETCHER_MAX_FETCH_WORKERS", "2")
+    monkeypatch.setenv("ECOMMERCE_MAX_FETCH_WORKERS", "2")
     monkeypatch.chdir(tmp_path)
     for run_id in ["run-1", "run-2"]:
         _write_run(_run_dir_named(tmp_path, run_id))
@@ -363,7 +363,7 @@ def test_different_runs_execute_concurrently_up_to_worker_cap(tmp_path: Path, mo
 
 
 def test_worker_cap_queues_extra_runs_and_queue_position_clears_on_start(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setenv("PRICEFETCHER_MAX_FETCH_WORKERS", "1")
+    monkeypatch.setenv("ECOMMERCE_MAX_FETCH_WORKERS", "1")
     monkeypatch.chdir(tmp_path)
     for run_id in ["run-1", "run-2"]:
         _write_run(_run_dir_named(tmp_path, run_id))
@@ -413,7 +413,7 @@ def test_stale_detection_uses_configured_threshold_and_safe_fallback(tmp_path: P
     _write_execution_metadata(run_dir, "old-runner", status="running", queued_at=old, started_at=old, heartbeat_at=old)
     client = TestClient(create_app())
 
-    monkeypatch.setenv("PRICEFETCHER_FETCH_STALE_AFTER_MINUTES", "5")
+    monkeypatch.setenv("ECOMMERCE_FETCH_STALE_AFTER_MINUTES", "5")
     stale_payload = client.get("/api/price-monitoring/runs/run-1/fetch/old-runner").json()
     assert stale_payload["stale"] is True
     assert stale_payload["stale_after_minutes"] == 5
@@ -427,7 +427,7 @@ def test_stale_detection_uses_configured_threshold_and_safe_fallback(tmp_path: P
     owned_fresh_payload = client.get("/api/price-monitoring/runs/run-1/fetch/fresh-runner").json()
     assert owned_fresh_payload["stale"] is False
 
-    monkeypatch.setenv("PRICEFETCHER_FETCH_STALE_AFTER_MINUTES", "bad")
+    monkeypatch.setenv("ECOMMERCE_FETCH_STALE_AFTER_MINUTES", "bad")
     assert client.get("/api/price-monitoring/runs/run-1/fetch/fresh-runner").json()["stale_after_minutes"] == 30
     _write_execution_metadata(run_dir, "done", status="succeeded", queued_at=fresh, completed_at=fresh, heartbeat_at=old)
     assert client.get("/api/price-monitoring/runs/run-1/fetch/done").json()["stale"] is False
@@ -547,8 +547,8 @@ def test_specific_execution_and_logs_endpoints_return_lines(tmp_path: Path, monk
 
 def test_run_listing_latest_fetch_uses_execution_metadata(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    database_url = f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     Base.metadata.create_all(get_engine(database_url))
     run_dir = _run_dir(tmp_path)
     _write_run(run_dir)
@@ -601,7 +601,7 @@ def test_late_child_save_cannot_overwrite_killed_execution(tmp_path: Path, monke
 
 def test_dev_start_prints_urls_and_runs_backend_only(monkeypatch, capsys) -> None:
     run_args: dict[str, object] = {}
-    monkeypatch.delenv("PRICEFETCHER_DATABASE_URL", raising=False)
+    monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
     monkeypatch.setattr(dev_start, "is_database_configured", lambda: False)
     monkeypatch.setattr(dev_start.uvicorn, "run", lambda app, **kwargs: run_args.update({"app": app, **kwargs}))
 
@@ -609,7 +609,7 @@ def test_dev_start_prints_urls_and_runs_backend_only(monkeypatch, capsys) -> Non
     output = capsys.readouterr().out
 
     assert run_args == {
-        "app": "pricefetcher.api.app:app",
+        "app": "ecommerce.api.app:app",
         "host": "127.0.0.2",
         "port": 8123,
         "reload": True,
@@ -618,15 +618,15 @@ def test_dev_start_prints_urls_and_runs_backend_only(monkeypatch, capsys) -> Non
     assert "Health URL: http://127.0.0.2:8123/api/health" in output
     assert "Docs URL: http://127.0.0.2:8123/docs" in output
     assert "Price Monitoring DB status URL: http://127.0.0.2:8123/api/price-monitoring/db/status" in output
-    assert "PRICEFETCHER_DATABASE_URL is not set" in output
+    assert "ECOMMERCE_DATABASE_URL is not set" in output
 
 
 def _run_dir(tmp_path: Path) -> Path:
-    return tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    return tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
 
 
 def _run_dir_named(tmp_path: Path, run_id: str) -> Path:
-    return tmp_path / "output" / "price_monitoring" / "runs" / run_id
+    return tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / run_id
 
 
 def _write_run(run_dir: Path) -> None:
@@ -741,7 +741,7 @@ args = parser.parse_args()
 
 mode = __MODE__
 sleep_seconds = __SLEEP_SECONDS__
-run_dir = Path("output") / "price_monitoring" / "runs" / args.run_id
+run_dir = Path("output") / "ecommerce" / "monitoring" / "runs" / args.run_id
 execution_path = run_dir / "fetch_executions" / f"{args.execution_id}.json"
 alias_path = run_dir / "fetch_execution.json"
 
@@ -929,7 +929,7 @@ def _route_fetch_success(
         observation_batch_id="vendor-capture-route",
     )
     if write_result:
-        from pricefetcher.price_monitoring.fetch_run import write_price_monitoring_fetch_result
+        from ecommerce.price_monitoring.fetch_run import write_price_monitoring_fetch_result
 
         write_price_monitoring_fetch_result(result.fetch_result_path, result)
     return result

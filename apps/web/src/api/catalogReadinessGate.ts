@@ -19,9 +19,9 @@ export const CATALOG_READINESS_REQUIRED_MESSAGE =
   "Catalog database/import required. Configure PostgreSQL, run migrations, and import sourceCata.csv.";
 
 const CATALOG_SETUP_HINTS = [
-  "Configure PRICEFETCHER_DATABASE_URL.",
+  "Configure ECOMMERCE_DATABASE_URL.",
   "Run alembic upgrade head.",
-  "Run python -m pricefetcher.jobs.ingest_catalog.",
+  "Run python -m ecommerce.jobs.ingest_catalog.",
   "Reload the Catalog page.",
 ];
 
@@ -121,7 +121,7 @@ function classifyCatalogReadiness(
   const catalogImported =
     getBoolean(payload, status, "catalog_imported") ?? getBoolean(payload, status, "active_catalog_imported");
 
-  if (configured === false || /not configured|database url is not configured|pricefetcher_database_url/.test(text)) {
+  if (configured === false || /not configured|database url is not configured|ecommerce_database_url/.test(text)) {
     return "database_not_configured";
   }
 
@@ -156,7 +156,7 @@ function classifyCatalogReadiness(
 function reasonDetail(reason: CatalogReadinessReason): string {
   switch (reason) {
     case "database_not_configured":
-      return "Database is not configured. Set PRICEFETCHER_DATABASE_URL.";
+      return "Database is not configured. Set ECOMMERCE_DATABASE_URL.";
     case "database_unreachable":
       return "Database is configured but not reachable. Check PostgreSQL service, credentials, and network reachability.";
     case "required_tables_missing":

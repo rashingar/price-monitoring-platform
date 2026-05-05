@@ -6,7 +6,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.catalog.source_catalog import (  # noqa: E402
+from ecommerce.catalog.source_catalog import (  # noqa: E402
     MissingCatalogColumnsError,
     is_atomic_model,
     load_source_catalog,

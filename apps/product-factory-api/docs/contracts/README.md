@@ -8,13 +8,13 @@ Snapshot path:
 docs/contracts/openapi.product-agent.json
 ```
 
-Prepare also emits a file-based source URL evidence contract for price-fetcher:
+Prepare also emits a file-based source URL evidence contract for ecommerce-api:
 
 ```text
-work/{model}/integrations/price_fetcher_source_handoff.json
+work/{model}/integrations/ecommerce_source_handoff.json
 ```
 
-See `docs/contracts/price-fetcher-source-handoff.md`. Product-Agent writes this artifact; price-fetcher owns importing it and persisting any database records.
+See `docs/contracts/ecommerce-api-source-handoff.md`. Product-Agent writes this artifact; ecommerce-api owns importing it and persisting any database records.
 
 Regenerate from `apps/product-factory-api/src`:
 

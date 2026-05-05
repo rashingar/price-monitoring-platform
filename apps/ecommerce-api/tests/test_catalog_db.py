@@ -6,10 +6,10 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.catalog_db import ingest_source_catalog, list_catalog_products  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.price_monitoring.selection import (  # noqa: E402
+from ecommerce.catalog_db import ingest_source_catalog, list_catalog_products  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.price_monitoring.selection import (  # noqa: E402
     PriceMonitoringSelectionRequest,
     select_price_monitoring_products,
 )
@@ -22,7 +22,7 @@ RAW_COOKWARE = (
 
 
 def _sqlite_url(tmp_path: Path) -> str:
-    return f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
 
 
 def _create_schema(database_url: str) -> None:
@@ -93,7 +93,7 @@ def test_ingest_upserts_duplicate_model_and_marks_missing_inactive(tmp_path: Pat
 
 def test_price_monitoring_selection_uses_db_catalog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)

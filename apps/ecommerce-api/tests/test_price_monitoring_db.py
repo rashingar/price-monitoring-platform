@@ -12,14 +12,14 @@ from sqlalchemy import inspect, text
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_price_monitoring  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.catalog_db import ingest_source_catalog  # noqa: E402
-from pricefetcher.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
-from pricefetcher.db.config import sanitize_database_error  # noqa: E402
-from pricefetcher.db.diagnostics import get_alembic_head_revision  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow, CatalogSnapshot, MonitoringRun, PriceObservation, Product, SourceUrl  # noqa: E402
-from pricefetcher.db.repositories import (  # noqa: E402
+from ecommerce.api import routes_price_monitoring  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
+from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
+from ecommerce.db.config import sanitize_database_error  # noqa: E402
+from ecommerce.db.diagnostics import get_alembic_head_revision  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, CatalogSnapshot, MonitoringRun, PriceObservation, Product, SourceUrl  # noqa: E402
+from ecommerce.db.repositories import (  # noqa: E402
     catalog_snapshot_to_dict,
     list_price_observations,
     monitoring_run_to_dict,
@@ -27,13 +27,13 @@ from pricefetcher.db.repositories import (  # noqa: E402
     replace_price_observations,
     upsert_product_from_catalog_row,
 )
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.jobs.run_price_monitoring_now import main as run_job_main  # noqa: E402
-from pricefetcher.jobs.check_db_setup import main as check_db_setup_main  # noqa: E402
-from pricefetcher.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
-from pricefetcher.price_monitoring.observations import ParsedPriceObservation, parse_price_observations_csv  # noqa: E402
-from pricefetcher.price_monitoring.runs import PriceMonitoringRunRecord  # noqa: E402
-from pricefetcher.price_monitoring.selection import (  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.jobs.run_price_monitoring_now import main as run_job_main  # noqa: E402
+from ecommerce.jobs.check_db_setup import main as check_db_setup_main  # noqa: E402
+from ecommerce.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
+from ecommerce.price_monitoring.observations import ParsedPriceObservation, parse_price_observations_csv  # noqa: E402
+from ecommerce.price_monitoring.runs import PriceMonitoringRunRecord  # noqa: E402
+from ecommerce.price_monitoring.selection import (  # noqa: E402
     PriceMonitoringFilters,
     PriceMonitoringSelectionResult,
     SelectedPriceMonitoringProduct,
@@ -42,7 +42,7 @@ from test_price_monitoring_execution_utils import install_fake_execution_child  
 
 
 def _sqlite_url(tmp_path: Path) -> str:
-    return f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
 
 
 def _create_schema(database_url: str) -> None:
@@ -85,7 +85,7 @@ def _run_record(tmp_path: Path) -> PriceMonitoringRunRecord:
         items=[product],
         skipped=[],
     )
-    output_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    output_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     output_dir.mkdir(parents=True, exist_ok=True)
     input_csv_path = output_dir / "input.csv"
     input_csv_path.write_text("model,mpn,name,price\n005606,MPN-1,Product One,123.45\n", encoding="utf-8")
@@ -180,7 +180,7 @@ def _ingest_test_catalog(database_url: str, path: Path) -> None:
 
 def test_app_import_and_db_status_work_without_database_url(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("PRICEFETCHER_DATABASE_URL", raising=False)
+    monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
 
     response = TestClient(create_app()).get("/api/price-monitoring/db/status")
 
@@ -199,8 +199,8 @@ def test_app_import_and_db_status_work_without_database_url(tmp_path: Path, monk
     assert payload["error"] is None
     assert payload["required_tables_present"] is False
     assert payload["missing_tables"]
-    assert "Set PRICEFETCHER_DATABASE_URL." in payload["setup_hints"]
-    assert "Restart pricefetcher-api." in payload["setup_hints"]
+    assert "Set ECOMMERCE_DATABASE_URL." in payload["setup_hints"]
+    assert "Restart ecommerce-api." in payload["setup_hints"]
 
     observations_response = TestClient(create_app()).get("/api/price-monitoring/observations")
     assert observations_response.status_code == 503
@@ -209,17 +209,17 @@ def test_app_import_and_db_status_work_without_database_url(tmp_path: Path, monk
 
 def test_check_db_setup_exits_nonzero_without_database_url(tmp_path: Path, monkeypatch, capsys) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("PRICEFETCHER_DATABASE_URL", raising=False)
+    monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
 
     assert check_db_setup_main([]) == 1
     output = capsys.readouterr().out
-    assert "PRICEFETCHER_DATABASE_URL configured: False" in output
+    assert "ECOMMERCE_DATABASE_URL configured: False" in output
     assert "Sanitized database URL: (not configured)" in output
 
 
 def test_db_error_sanitization_removes_password(monkeypatch) -> None:
-    raw_url = "postgresql+psycopg://pricefetcher:super-secret@127.0.0.1:5432/pricefetcher"
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", raw_url)
+    raw_url = "postgresql+psycopg://ecommerce:super-secret@127.0.0.1:5432/ecommerce"
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", raw_url)
 
     message = sanitize_database_error(f"could not connect using {raw_url}; password=super-secret")
 
@@ -228,15 +228,15 @@ def test_db_error_sanitization_removes_password(monkeypatch) -> None:
 
 
 def test_db_status_sanitizes_reachability_errors(monkeypatch) -> None:
-    raw_url = "postgresql+psycopg://pricefetcher:super-secret@127.0.0.1:5432/pricefetcher"
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", raw_url)
+    raw_url = "postgresql+psycopg://ecommerce:super-secret@127.0.0.1:5432/ecommerce"
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", raw_url)
 
     def broken_database_status():
         return {
             "configured": True,
             "reachable": False,
             "dialect": None,
-            "sanitized_database_url": "postgresql+psycopg://pricefetcher:***@127.0.0.1:5432/pricefetcher",
+            "sanitized_database_url": "postgresql+psycopg://ecommerce:***@127.0.0.1:5432/ecommerce",
             "alembic_current_revision": None,
             "alembic_head_revision": "20260429_0002",
             "alembic_up_to_date": None,
@@ -247,7 +247,7 @@ def test_db_status_sanitizes_reachability_errors(monkeypatch) -> None:
             "price_monitoring_database_mode": "unreachable",
             "price_monitoring_database_required_future": True,
             "error": sanitize_database_error(f"could not connect using {raw_url}"),
-            "setup_hints": ["Check that PostgreSQL is running and that PRICEFETCHER_DATABASE_URL credentials are correct."],
+            "setup_hints": ["Check that PostgreSQL is running and that ECOMMERCE_DATABASE_URL credentials are correct."],
             "warnings": [],
         }
 
@@ -267,7 +267,7 @@ def test_db_status_sanitizes_reachability_errors(monkeypatch) -> None:
 
 def test_db_status_reports_migrated_empty_database_as_configured_empty(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     _stamp_alembic_head(database_url)
 
@@ -295,7 +295,7 @@ def test_db_status_reports_migrated_empty_database_as_configured_empty(tmp_path:
 
 def test_db_status_detects_missing_required_tables(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     engine = get_engine(database_url)
     Product.__table__.create(engine)
     _stamp_alembic_head(database_url)
@@ -418,7 +418,7 @@ def test_repository_serializes_decimal_and_datetime_safely(tmp_path: Path) -> No
 
 def test_run_creation_api_persists_monitoring_run_and_catalog_snapshot(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
@@ -454,7 +454,7 @@ def test_run_creation_api_reports_db_persistence_failure(tmp_path: Path, monkeyp
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", "postgresql+psycopg://user:secret-password@localhost/db")
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", "postgresql+psycopg://user:secret-password@localhost/db")
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(routes_price_monitoring, "require_database_ready_for_price_monitoring", lambda: None)
     monkeypatch.setattr(routes_price_monitoring, "create_price_monitoring_run", lambda request: _run_record(tmp_path))
@@ -638,13 +638,13 @@ def test_unresolved_product_id_is_allowed_for_observations_and_included_by_defau
 
 def test_fetch_response_includes_observation_count_when_db_configured(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     _ingest_test_catalog(database_url, catalog_path)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     install_fake_execution_child(monkeypatch, tmp_path, mode="success", persist=True)
@@ -671,13 +671,13 @@ def test_fetch_response_includes_observation_count_when_db_configured(tmp_path: 
 
 def test_get_fetch_result_reports_missing_when_db_rows_do_not_exist(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     _ingest_test_catalog(database_url, catalog_path)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     _write_fetch_result(run_dir)
 
@@ -691,13 +691,13 @@ def test_get_fetch_result_reports_missing_when_db_rows_do_not_exist(tmp_path: Pa
 
 def test_get_fetch_result_reports_persisted_when_db_rows_exist(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     _ingest_test_catalog(database_url, catalog_path)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     _write_fetch_result(run_dir)
     with session_scope(database_url) as session:
@@ -737,13 +737,13 @@ def test_get_fetch_result_reports_persisted_when_db_rows_exist(tmp_path: Path, m
 
 def test_run_detail_includes_db_status_without_breaking_file_first_response(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     _ingest_test_catalog(database_url, catalog_path)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     response = TestClient(create_app()).get("/api/price-monitoring/runs/run-1")
@@ -754,13 +754,13 @@ def test_run_detail_includes_db_status_without_breaking_file_first_response(tmp_
 
 def test_run_detail_includes_db_persistence_counts(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     _ingest_test_catalog(database_url, catalog_path)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     with session_scope(database_url) as session:
         run = persist_monitoring_run_creation(session, _run_record(tmp_path))
@@ -805,13 +805,13 @@ def test_run_detail_includes_db_persistence_counts(tmp_path: Path, monkeypatch) 
 
 def test_refetch_appends_observations_for_same_run_id_while_latest_query_matches_previous_behavior(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     _ingest_test_catalog(database_url, catalog_path)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     install_fake_execution_child(monkeypatch, tmp_path, mode="success", persist=True, prices=["119.90", "111.11"])
@@ -842,13 +842,13 @@ def test_refetch_appends_observations_for_same_run_id_while_latest_query_matches
 
 def test_observation_api_serializes_decimal_datetime_and_raw_json(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     _ingest_test_catalog(database_url, catalog_path)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     install_fake_execution_child(monkeypatch, tmp_path, mode="success", persist=True)

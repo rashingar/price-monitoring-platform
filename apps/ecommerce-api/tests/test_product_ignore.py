@@ -7,7 +7,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.ignore.product_ignore import (  # noqa: E402
+from ecommerce.ignore.product_ignore import (  # noqa: E402
     IGNORE_REQUIRED_COLUMNS,
     IgnoredProductInput,
     InvalidIgnoredModelError,

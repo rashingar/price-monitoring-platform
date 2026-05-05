@@ -4,7 +4,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.catalog.category_path import parse_opencart_category  # noqa: E402
+from ecommerce.catalog.category_path import parse_opencart_category  # noqa: E402
 
 
 def test_parse_three_level_serialized_category() -> None:

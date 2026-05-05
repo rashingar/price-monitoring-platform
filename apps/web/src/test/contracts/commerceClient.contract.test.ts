@@ -175,7 +175,7 @@ describe("commerce API client contract fixtures", () => {
     });
 
     const handoffBody = {
-      handoff_path: "work/005606/integrations/price_fetcher_source_handoff.json",
+      handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
       report_items_limit: 200,
@@ -460,7 +460,7 @@ describe("commerce API client contract fixtures", () => {
       ready_for_price_monitoring: false,
       price_monitoring_requires_database: true,
       non_db_workflows_available: true,
-      blocking_reasons: expect.arrayContaining(["PRICEFETCHER_DATABASE_URL is not configured."]),
+      blocking_reasons: expect.arrayContaining(["ECOMMERCE_DATABASE_URL is not configured."]),
     });
   });
 
@@ -685,13 +685,13 @@ describe("commerce API client contract fixtures", () => {
 
     await expect(commerceClient.listCatalogProducts({ page: 1, page_size: 100 })).resolves.toMatchObject({
       items: [],
-      warning: "Active catalog is empty. Run python -m pricefetcher.jobs.ingest_catalog.",
+      warning: "Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog.",
     });
   });
 
   it("does not treat DB-not-ready as the commerce backend being fully down", async () => {
     installMockFetch([
-      { method: "GET", path: "/commerce-api/health", response: { status: "ok", service: "price-fetcher" } },
+      { method: "GET", path: "/commerce-api/health", response: { status: "ok", service: "ecommerce-api" } },
       { method: "GET", path: "/commerce-api/price-monitoring/db/status", response: dbStatusUnavailable },
       {
         method: "GET",

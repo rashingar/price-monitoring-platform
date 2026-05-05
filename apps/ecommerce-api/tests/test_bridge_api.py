@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app
+from ecommerce.api.app import create_app
 
 
 def test_post_bridge_run_uses_temp_paths_and_returns_artifacts(tmp_path: Path) -> None:

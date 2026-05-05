@@ -7,18 +7,18 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow, MonitoringRun, PriceObservation, Product, SourceUrl  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.jobs.import_source_urls import main as import_job_main  # noqa: E402
-from pricefetcher.source_url_import import import_source_urls  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, MonitoringRun, PriceObservation, Product, SourceUrl  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.jobs.import_source_urls import main as import_job_main  # noqa: E402
+from ecommerce.source_url_import import import_source_urls  # noqa: E402
 
 
 NOW = datetime(2026, 4, 29, 12, tzinfo=timezone.utc)
 
 
 def _sqlite_url(tmp_path: Path) -> str:
-    return f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
 
 
 def _create_schema(database_url: str) -> None:

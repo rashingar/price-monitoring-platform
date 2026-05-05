@@ -8,20 +8,20 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_source_url_agent  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, UiViewPreference  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.source_url_agent.evidence import PageEvidence  # noqa: E402
-from pricefetcher.source_url_agent.search import SourceSearchResult  # noqa: E402
+from ecommerce.api import routes_source_url_agent  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, UiViewPreference  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.source_url_agent.evidence import PageEvidence  # noqa: E402
+from ecommerce.source_url_agent.search import SourceSearchResult  # noqa: E402
 
 
 NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
 
 
 def _sqlite_url(tmp_path: Path) -> str:
-    return f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
 
 
 def _client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
@@ -611,7 +611,7 @@ def test_openapi_includes_source_url_agent_candidate_endpoints() -> None:
 
 
 def test_price_monitoring_no_longer_exposes_legacy_marketplace_source_enum() -> None:
-    import pricefetcher.price_monitoring.selection as selection
+    import ecommerce.price_monitoring.selection as selection
 
     assert not hasattr(selection, "PriceMonitoringSource")
     assert not hasattr(selection, "MarketplaceMonitoringSource")

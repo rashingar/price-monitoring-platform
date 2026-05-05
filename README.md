@@ -20,8 +20,7 @@ The internal Python package remains `pipeline`.
 
 `apps/ecommerce-api` owns ecommerce catalog, source URL, source capture, price
 monitoring, review/export, alert, and database migration workflows. Its
-internal Python package intentionally remains `src/pricefetcher` until a future
-staged rename.
+internal Python package is `src/ecommerce`.
 
 ## Architecture
 
@@ -38,7 +37,7 @@ staged rename.
 The mechanical app folder migration is complete. Root helper scripts live under
 `scripts/`, and mirrored OpenAPI snapshots live under `packages/contracts`.
 Generated clients, Dockerization, worker changes, database ownership changes,
-and internal package renames remain out of scope for this migration.
+and Product Factory package renames remain out of scope for this migration.
 
 ## Local Setup
 
@@ -53,7 +52,7 @@ requirements files you need. Dependency setup is still app-aware and manual for
 now; there is no unified Python package layout or monorepo lockfile yet.
 Product Factory still keeps the internal `pipeline` package under
 `apps/product-factory-api/src`, and ecommerce-api still keeps the internal
-`pricefetcher` package under `apps/ecommerce-api/src`.
+`ecommerce` package under `apps/ecommerce-api/src`.
 
 Root scripts fail clearly when `.venv\Scripts\python.exe` is missing. Web
 scripts run from `apps/web` and fail clearly when `node_modules` is missing;

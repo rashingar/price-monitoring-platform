@@ -10,24 +10,24 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.api import routes_price_monitoring, routes_vendor_sources  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow, OfferObservation, PriceObservation, ProductSource, SourceCaptureSnapshot, SourceUrl, Vendor  # noqa: E402
-from pricefetcher.db.product_source_repository import create_product_from_source_urls  # noqa: E402
-from pricefetcher.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.price_monitoring.fetch_run import run_price_monitoring_fetch  # noqa: E402
-from pricefetcher.price_monitoring.selection import SelectedPriceMonitoringProduct  # noqa: E402
-from pricefetcher.vendor_sources.capture import SourceUrlCaptureRunResult, capture_selected_source_urls  # noqa: E402
-from pricefetcher.price_monitoring.source_url_coverage import compute_source_url_coverage  # noqa: E402
-from pricefetcher.source_capture.scheduled import capture_due_product_sources  # noqa: E402
-from pricefetcher.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url  # noqa: E402
-from pricefetcher.source_capture.detect_vendor import detect_vendor_slug  # noqa: E402
-from pricefetcher.source_capture.parsing import parse_electronet_html, parse_skroutz_offers, parse_skroutz_price_summary  # noqa: E402
-from pricefetcher.source_capture.sanitize import sanitize_headers, sanitize_json  # noqa: E402
-from pricefetcher.source_capture.scoring import score_response_candidate  # noqa: E402
-from pricefetcher.source_capture.skroutz_xhr import (  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.api import routes_price_monitoring, routes_vendor_sources  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, OfferObservation, PriceObservation, ProductSource, SourceCaptureSnapshot, SourceUrl, Vendor  # noqa: E402
+from ecommerce.db.product_source_repository import create_product_from_source_urls  # noqa: E402
+from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.price_monitoring.fetch_run import run_price_monitoring_fetch  # noqa: E402
+from ecommerce.price_monitoring.selection import SelectedPriceMonitoringProduct  # noqa: E402
+from ecommerce.vendor_sources.capture import SourceUrlCaptureRunResult, capture_selected_source_urls  # noqa: E402
+from ecommerce.price_monitoring.source_url_coverage import compute_source_url_coverage  # noqa: E402
+from ecommerce.source_capture.scheduled import capture_due_product_sources  # noqa: E402
+from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url  # noqa: E402
+from ecommerce.source_capture.detect_vendor import detect_vendor_slug  # noqa: E402
+from ecommerce.source_capture.parsing import parse_electronet_html, parse_skroutz_offers, parse_skroutz_price_summary  # noqa: E402
+from ecommerce.source_capture.sanitize import sanitize_headers, sanitize_json  # noqa: E402
+from ecommerce.source_capture.scoring import score_response_candidate  # noqa: E402
+from ecommerce.source_capture.skroutz_xhr import (  # noqa: E402
     BLOCKED_OR_CAPTCHA,
     FILTER_PRODUCTS_ACTION,
     NO_CANDIDATE_XHR_FOUND,
@@ -36,7 +36,7 @@ from pricefetcher.source_capture.skroutz_xhr import (  # noqa: E402
     XHR_PARSE_FAILED,
     capture_skroutz_xhr,
 )
-from pricefetcher.source_capture.types import (  # noqa: E402
+from ecommerce.source_capture.types import (  # noqa: E402
     CaptureResult,
     CaptureSnapshotPayload,
     ParsedOfferObservation,
@@ -810,7 +810,7 @@ def test_raw_snapshot_sanitization_helpers_remove_sensitive_metadata() -> None:
 
 def test_raw_capture_text_is_preserved_as_full_artifact(tmp_path: Path, monkeypatch) -> None:
     database_url = _database_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_SOURCE_CAPTURE_ARTIFACT_DIR", str(tmp_path / "capture-artifacts"))
+    monkeypatch.setenv("ECOMMERCE_SOURCE_CAPTURE_ARTIFACT_DIR", str(tmp_path / "capture-artifacts"))
     raw_html = "<html>" + ("x" * 150_000) + "</html>"
 
     def raw_capture(url: str, *, vendor_slug: str | None = None) -> CaptureResult:

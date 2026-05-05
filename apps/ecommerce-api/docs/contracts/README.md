@@ -5,13 +5,13 @@ The backend OpenAPI snapshot is the canonical API contract source for commerce a
 Canonical snapshot:
 
 ```powershell
-docs/contracts/openapi.pricefetcher.json
+docs/contracts/openapi.ecommerce.json
 ```
 
 Regenerate after an intentional backend API contract change:
 
 ```powershell
-python -m pricefetcher.jobs.export_openapi_snapshot
+python -m ecommerce.jobs.export_openapi_snapshot
 ```
 
 Check contract tests:

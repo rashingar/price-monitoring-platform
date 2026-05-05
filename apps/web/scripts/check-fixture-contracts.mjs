@@ -7,7 +7,7 @@ const uiRoot = path.resolve(scriptDir, "..");
 const parentRoot = path.resolve(uiRoot, "..");
 
 const SNAPSHOTS = {
-  commerce: path.join(parentRoot, "ecommerce-api", "docs", "contracts", "openapi.pricefetcher.json"),
+  commerce: path.join(parentRoot, "ecommerce-api", "docs", "contracts", "openapi.ecommerce.json"),
   productAgent: path.join(
     parentRoot,
     "product-factory-api",

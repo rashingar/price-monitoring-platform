@@ -42,7 +42,7 @@ npm run test:smoke
 
 ## Intentional Limits
 
-These tests do not require Product-Agent or price-fetcher to be running. They do not use live network calls, real CSV files, local Windows paths, PostgreSQL, OpenCart, OpenAI, backend subprocesses, or browser end-to-end tooling.
+These tests do not require Product-Agent or ecommerce-api to be running. They do not use live network calls, real CSV files, local Windows paths, PostgreSQL, OpenCart, OpenAI, backend subprocesses, or browser end-to-end tooling.
 
 PostgreSQL is mandatory for live Catalog browsing and Price Monitoring workflows, alerts, and
 execution history. Catalog also requires an active imported catalog. In mocked tests,

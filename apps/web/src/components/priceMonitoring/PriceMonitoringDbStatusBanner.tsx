@@ -48,9 +48,9 @@ function getSetupHints(status: PriceMonitoringDbStatus | null): string[] {
   const hints = new Set<string>(status.setup_hints ?? []);
 
   if (!status.configured) {
-    hints.add("Set PRICEFETCHER_DATABASE_URL.");
-    hints.add("Run alembic upgrade head from the price-fetcher backend repo.");
-    hints.add("Restart pricefetcher-api.");
+    hints.add("Set ECOMMERCE_DATABASE_URL.");
+    hints.add("Run alembic upgrade head from the ecommerce-api backend repo.");
+    hints.add("Restart ecommerce-api.");
   }
 
   if (status.configured && !status.reachable) {

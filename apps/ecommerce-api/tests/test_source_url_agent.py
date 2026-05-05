@@ -7,32 +7,32 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.jobs import source_url_agent as source_url_agent_job  # noqa: E402
-from pricefetcher.source_urls import normalize_source_url  # noqa: E402
-from pricefetcher.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent  # noqa: E402
-from pricefetcher.source_url_agent.artifacts import write_run_artifacts  # noqa: E402
-from pricefetcher.source_url_agent.browser import _blocked_or_captcha  # noqa: E402
-from pricefetcher.source_url_agent.candidate_transfer import export_source_url_candidates, import_source_url_candidates  # noqa: E402
-from pricefetcher.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
-from pricefetcher.source_url_agent.evidence import error_evidence, extract_page_evidence  # noqa: E402
-from pricefetcher.source_url_agent.persistence import (  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.jobs import source_url_agent as source_url_agent_job  # noqa: E402
+from ecommerce.source_urls import normalize_source_url  # noqa: E402
+from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent  # noqa: E402
+from ecommerce.source_url_agent.artifacts import write_run_artifacts  # noqa: E402
+from ecommerce.source_url_agent.browser import _blocked_or_captcha  # noqa: E402
+from ecommerce.source_url_agent.candidate_transfer import export_source_url_candidates, import_source_url_candidates  # noqa: E402
+from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
+from ecommerce.source_url_agent.evidence import error_evidence, extract_page_evidence  # noqa: E402
+from ecommerce.source_url_agent.persistence import (  # noqa: E402
     apply_high_confidence_source_urls,
     write_candidate_source_url,
 )
-from pricefetcher.source_url_agent.products import AgentProduct, read_products_from_csv  # noqa: E402
-from pricefetcher.source_url_agent.review import apply_review_csv  # noqa: E402
-from pricefetcher.source_url_agent.scoring import score_candidate  # noqa: E402
-from pricefetcher.source_url_agent.search import SourceSearchResult, generate_search_queries  # noqa: E402
-from pricefetcher.source_url_agent.sources import load_source_registry  # noqa: E402
+from ecommerce.source_url_agent.products import AgentProduct, read_products_from_csv  # noqa: E402
+from ecommerce.source_url_agent.review import apply_review_csv  # noqa: E402
+from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
+from ecommerce.source_url_agent.search import SourceSearchResult, generate_search_queries  # noqa: E402
+from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
 
 
 NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
 
 
 def _sqlite_url(tmp_path: Path) -> str:
-    return f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
 
 
 def _create_schema(database_url: str) -> None:
@@ -867,7 +867,7 @@ def test_agent_persists_matched_candidates_during_dry_run_without_source_url_wri
 
 
 def test_source_url_agent_csv_run_requires_database_for_direct_persistence(tmp_path: Path, monkeypatch, capsys) -> None:
-    monkeypatch.delenv("PRICEFETCHER_DATABASE_URL", raising=False)
+    monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
     monkeypatch.chdir(tmp_path)
     input_path = tmp_path / "input.csv"
     input_path.write_text("model,mpn,name\n005606,MR25GB,LG Remote\n", encoding="utf-8")
@@ -875,4 +875,4 @@ def test_source_url_agent_csv_run_requires_database_for_direct_persistence(tmp_p
     code = source_url_agent_job.main(["run", "--input", str(input_path), "--source", "skroutz"])
 
     assert code == 1
-    assert "requires PRICEFETCHER_DATABASE_URL" in capsys.readouterr().err
+    assert "requires ECOMMERCE_DATABASE_URL" in capsys.readouterr().err

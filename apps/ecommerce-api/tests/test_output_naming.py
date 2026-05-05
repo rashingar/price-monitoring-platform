@@ -4,7 +4,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.io.paths import resolve_price_output_paths
+from ecommerce.io.paths import resolve_price_output_paths
 
 
 def test_price_output_names_strip_fetch_suffix_before_writing_final_artifacts() -> None:

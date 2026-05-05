@@ -4,8 +4,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.source_url_agent.matching import extract_mpn_evidence, extract_name_evidence
-from pricefetcher.utils.text import build_product_search_queries
+from ecommerce.source_url_agent.matching import extract_mpn_evidence, extract_name_evidence
+from ecommerce.utils.text import build_product_search_queries
 
 
 def test_raw_exact_match_is_accepted() -> None:

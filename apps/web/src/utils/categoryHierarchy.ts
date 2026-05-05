@@ -5,7 +5,7 @@ import type {
 } from "../api/commerceTypes";
 
 export const CATEGORY_HIERARCHY_UNAVAILABLE_MESSAGE =
-  "Category hierarchy endpoint is unavailable. Update price-fetcher backend.";
+  "Category hierarchy endpoint is unavailable. Update ecommerce-api backend.";
 
 export interface HierarchyOption {
   value: string;

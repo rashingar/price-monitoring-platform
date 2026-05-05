@@ -6,13 +6,13 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.catalog_db import ingest_source_catalog  # noqa: E402
-from pricefetcher.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
+from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 RAW_COOKWARE = (
     "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ:::"
@@ -37,7 +37,7 @@ def _write_api_catalog(path: Path) -> None:
 def _client_with_catalog(tmp_path: Path, monkeypatch) -> TestClient:
     catalog_path = tmp_path / "sourceCata.csv"
     _write_api_catalog(catalog_path)
-    database_url = f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "missing-price-ignore.csv"))
@@ -48,7 +48,7 @@ def _client_with_catalog(tmp_path: Path, monkeypatch) -> TestClient:
 
 
 def _client_with_db_catalog_file(tmp_path: Path, monkeypatch, catalog_path: Path, ignore_path: Path | None = None) -> TestClient:
-    database_url = f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(ignore_path or tmp_path / "missing-price-ignore.csv"))
@@ -273,7 +273,7 @@ def test_catalog_missing_file_returns_404(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_catalog_missing_columns_returns_400(tmp_path: Path, monkeypatch) -> None:
-    database_url = f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     Base.metadata.create_all(get_engine(database_url))
 

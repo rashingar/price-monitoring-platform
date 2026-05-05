@@ -3,7 +3,7 @@
 This UI talks to two local HTTP services:
 
 - Product-Agent API through browser path `/api`.
-- Commerce price-fetcher API through browser path `/commerce-api`.
+- Commerce ecommerce-api API through browser path `/commerce-api`.
 
 During local Vite development, `/api` proxies to `VITE_API_PROXY_TARGET` and
 `/commerce-api` proxies to `VITE_COMMERCE_API_PROXY_TARGET`. The commerce proxy rewrites

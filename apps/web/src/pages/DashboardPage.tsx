@@ -160,11 +160,11 @@ export function DashboardPage() {
             <div className="setup-hint">
               <strong>Commerce setup checklist</strong>
               <ul>
-                <li>Start commerce backend: <code>pricefetcher-api</code></li>
+                <li>Start commerce backend: <code>ecommerce-api</code></li>
                 <li>Reinstall/update backend package: <code>python -m pip install -e .</code></li>
-                <li>Configure Catalog database: <code>PRICEFETCHER_DATABASE_URL</code></li>
+                <li>Configure Catalog database: <code>ECOMMERCE_DATABASE_URL</code></li>
                 <li>Run Catalog migrations: <code>alembic upgrade head</code></li>
-                <li>Import catalog input: <code>python -m pricefetcher.jobs.ingest_catalog</code></li>
+                <li>Import catalog input: <code>python -m ecommerce.jobs.ingest_catalog</code></li>
                 <li>Run UI through Vite: <code>npm run dev</code></li>
                 <li>Start local platform: <code>scripts\windows\start-all.cmd</code></li>
                 <li>Terminal diagnostics: <code>scripts\windows\diagnose.cmd</code></li>

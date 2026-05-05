@@ -12,23 +12,23 @@ from sqlalchemy import inspect
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_price_monitoring  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.db.alerts import (  # noqa: E402
+from ecommerce.api import routes_price_monitoring  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.db.alerts import (  # noqa: E402
     acknowledge_alert_event,
     create_alert_rule,
     evaluate_alert_rules_for_run,
     list_alert_events,
     resolve_alert_event,
 )
-from pricefetcher.db.models import AlertEvent, AlertRule, Base, CatalogProductRow, MonitoringRun, PriceObservation, Product  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
+from ecommerce.db.models import AlertEvent, AlertRule, Base, CatalogProductRow, MonitoringRun, PriceObservation, Product  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
 from test_price_monitoring_execution_utils import install_fake_execution_child  # noqa: E402
 
 
 def _sqlite_url(tmp_path: Path) -> str:
-    return f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
 
 
 def _create_schema(database_url: str) -> None:
@@ -125,7 +125,7 @@ def test_alert_metadata_and_migration_create_tables(tmp_path: Path, monkeypatch)
     assert any(index.name == "uq_alert_events_dedupe_key" and index.unique for index in AlertEvent.__table__.indexes)
 
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     config = Config(str(PROJECT_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(PROJECT_ROOT / "migrations"))
     config.set_main_option("sqlalchemy.url", database_url)
@@ -292,13 +292,13 @@ def test_direct_vendor_observation_can_trigger_alert(tmp_path: Path) -> None:
 
 def test_alert_api_crud_events_and_not_configured(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("PRICEFETCHER_DATABASE_URL", raising=False)
+    monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
     not_configured = TestClient(create_app()).get("/api/price-monitoring/alerts/rules")
     assert not_configured.status_code == 503
     assert not_configured.json()["detail"]["code"] == "price_monitoring_database_required"
 
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     with session_scope(database_url) as session:
         run, product = _seed_run(session)
@@ -333,10 +333,10 @@ def test_alert_api_crud_events_and_not_configured(tmp_path: Path, monkeypatch) -
 
 def test_fetch_integration_evaluates_active_alert_rules(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     with session_scope(database_url) as session:
         run, product = _seed_run(session)
@@ -363,10 +363,10 @@ def test_fetch_integration_evaluates_active_alert_rules(tmp_path: Path, monkeypa
 
 def test_fetch_integration_skips_when_no_active_rules(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
-    monkeypatch.setenv("PRICEFETCHER_DATABASE_URL", database_url)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     with session_scope(database_url) as session:
         _seed_active_catalog(session)

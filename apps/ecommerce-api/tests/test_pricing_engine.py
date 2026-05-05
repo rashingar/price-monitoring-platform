@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.pricing.engine import PricingContext, PricingRule, compute_new_price
+from ecommerce.pricing.engine import PricingContext, PricingRule, compute_new_price
 
 
 def test_fixed_offset_rule() -> None:

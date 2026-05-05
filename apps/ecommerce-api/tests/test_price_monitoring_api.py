@@ -10,14 +10,14 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_price_monitoring  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.catalog_db import ingest_source_catalog  # noqa: E402
-from pricefetcher.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow, MonitoringRun, SourceUrl  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
+from ecommerce.api import routes_price_monitoring  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
+from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, MonitoringRun, SourceUrl  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 RAW_COOKWARE = (
     "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ:::"
@@ -68,7 +68,7 @@ def _client(tmp_path: Path, monkeypatch, *, ignored: bool = True, seed_source_ur
     _write_catalog(catalog_path)
     if ignored:
         _write_ignore(ignore_path)
-    database_url = f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(ignore_path))
@@ -82,14 +82,14 @@ def _client(tmp_path: Path, monkeypatch, *, ignored: bool = True, seed_source_ur
 
 
 def _setup_empty_db(tmp_path: Path, monkeypatch) -> str:
-    database_url = f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     Base.metadata.create_all(get_engine(database_url))
     return database_url
 
 
 def _database_url(tmp_path: Path) -> str:
-    return f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
 
 
 def _catalog_products_by_model(database_url: str) -> dict[str, CatalogProductRow]:
@@ -446,7 +446,7 @@ def test_preview_default_all_excludes_ineligible_source_url_statuses(tmp_path: P
 def test_run_list_returns_items_newest_first(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     database_url = _setup_empty_db(tmp_path, monkeypatch)
-    runs_dir = tmp_path / "output" / "price_monitoring" / "runs"
+    runs_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs"
     old_run = runs_dir / "20260429-110000-oldrun"
     new_run = runs_dir / "20260429-120000-newrun"
     _write_run_metadata(old_run, created_at="2026-04-29T11:00:00+00:00", selected_models=["111111"])
@@ -466,7 +466,7 @@ def test_run_list_returns_items_newest_first(tmp_path: Path, monkeypatch) -> Non
 def test_old_file_only_run_is_ignored_by_db_backed_listing(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     _setup_empty_db(tmp_path, monkeypatch)
-    _write_run_metadata(tmp_path / "output" / "price_monitoring" / "runs" / "legacy-file-only")
+    _write_run_metadata(tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "legacy-file-only")
 
     response = TestClient(create_app()).get("/api/price-monitoring/runs")
 
@@ -477,7 +477,7 @@ def test_old_file_only_run_is_ignored_by_db_backed_listing(tmp_path: Path, monke
 def test_run_detail_returns_one_run_with_latest_fetch(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     database_url = _setup_empty_db(tmp_path, monkeypatch)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "20260429-120000-abcd1234"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-120000-abcd1234"
     _write_run_metadata(run_dir, selected_models=["005606"])
     _insert_db_run(database_url, run_dir, selected_count=1)
     fetch_result_path = run_dir / "fetch_result.json"

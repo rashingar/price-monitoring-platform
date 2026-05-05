@@ -2,7 +2,7 @@ import type { MockRequest, MockRoute } from "../mockFetch";
 
 export const commerceHealth = {
   status: "ok",
-  service: "price-fetcher",
+  service: "ecommerce-api",
   version: "test-fixture",
 };
 
@@ -554,7 +554,7 @@ export const productAgentHandoffImportPreview = {
   applied: false,
   apply: false,
   handoff_summary: {
-    handoff_path: "work/005606/integrations/price_fetcher_source_handoff.json",
+    handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
     source_url_count: 2,
     capture_count: 1,
   },
@@ -592,7 +592,7 @@ export const productAgentHandoffImportPreview = {
       mpn: "MD-20L",
       url: "https://www.electronet.gr/midea-md-20l",
       evidence_source: "product_agent_handoff",
-      evidence_detail: "work/005606/integrations/price_fetcher_source_handoff.json",
+      evidence_detail: "work/005606/integrations/ecommerce_source_handoff.json",
       reason: null,
       confidence: "high",
       catalog_product_id: 1,
@@ -1081,7 +1081,7 @@ export const catalogProductsEmptyImportWarning = {
   page_size: 100,
   total: 0,
   filtered_total: 0,
-  warning: "Active catalog is empty. Run python -m pricefetcher.jobs.ingest_catalog.",
+  warning: "Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog.",
 };
 
 export const catalogDbImportRequiredError = {
@@ -1096,12 +1096,12 @@ export const catalogDbImportRequiredError = {
     required_tables_present: true,
     alembic_up_to_date: true,
     active_catalog_empty: true,
-    blocking_reasons: ["Active catalog is empty. Run python -m pricefetcher.jobs.ingest_catalog."],
+    blocking_reasons: ["Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog."],
     non_catalog_workflows_available: true,
     setup_hints: [
-      "Set PRICEFETCHER_DATABASE_URL.",
+      "Set ECOMMERCE_DATABASE_URL.",
       "Run alembic upgrade head.",
-      "Run python -m pricefetcher.jobs.ingest_catalog.",
+      "Run python -m ecommerce.jobs.ingest_catalog.",
     ],
   },
 };
@@ -1128,14 +1128,14 @@ export const dbStatusNotConfigured = {
   reachable: false,
   price_monitoring_requires_database: true,
   ready_for_price_monitoring: false,
-  blocking_reasons: ["PRICEFETCHER_DATABASE_URL is not configured."],
+  blocking_reasons: ["ECOMMERCE_DATABASE_URL is not configured."],
   non_db_workflows_available: true,
   required_for: ["price-monitoring", "price-monitoring-alerts", "price-monitoring-history"],
   dialect: null,
   error: "database URL is not configured",
   required_tables_present: null,
   alembic_up_to_date: null,
-  setup_hints: ["Set PRICEFETCHER_DATABASE_URL.", "Run alembic upgrade head.", "Restart pricefetcher-api."],
+  setup_hints: ["Set ECOMMERCE_DATABASE_URL.", "Run alembic upgrade head.", "Restart ecommerce-api."],
 };
 
 export const dbStatusUnavailable = {
@@ -1550,7 +1550,7 @@ export const pathRoots = {
   },
   file_roots: { roots: [] },
   output_roots: { roots: [] },
-  env: { PRICEFETCHER_ARTIFACT_ROOTS: "D:/mock/artifacts" },
+  env: { ECOMMERCE_ARTIFACT_ROOTS: "D:/mock/artifacts" },
   path_separator: "\\",
   platform: "Windows",
 };
@@ -2062,7 +2062,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
     method: "POST",
     path: "/commerce-api/catalog/source-urls/import/product-agent/preview",
     requestExample: {
-      handoff_path: "work/005606/integrations/price_fetcher_source_handoff.json",
+      handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
       limit: null,
@@ -2074,7 +2074,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
     method: "POST",
     path: "/commerce-api/catalog/source-urls/import/product-agent/apply",
     requestExample: {
-      handoff_path: "work/005606/integrations/price_fetcher_source_handoff.json",
+      handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
       limit: null,

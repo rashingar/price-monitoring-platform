@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 
 def _client_with_ignore_path(tmp_path: Path, monkeypatch) -> tuple[TestClient, Path]:

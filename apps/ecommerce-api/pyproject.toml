@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pricefetcher"
+name = "ecommerce"
 version = "0.1.0"
 description = "Local CSV pipeline scaffolding for Skroutz fetch and pricing workflows."
 readme = "README.md"
@@ -20,8 +20,8 @@ dependencies = [
 ]
 
 [project.scripts]
-pricefetcher = "pricefetcher.cli.main:main"
-pricefetcher-api = "pricefetcher.api.app:main"
+ecommerce = "ecommerce.cli.main:main"
+ecommerce-api = "ecommerce.api.app:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

@@ -6,10 +6,10 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.core.price_workflow import run_price
-from pricefetcher.core.validation import validate_input_rows
-from pricefetcher.io.csv_reader import load_csv
-from pricefetcher.schemas import INPUT_REQUIRED_COLUMNS, get_fetch_source_contract
+from ecommerce.core.price_workflow import run_price
+from ecommerce.core.validation import validate_input_rows
+from ecommerce.io.csv_reader import load_csv
+from ecommerce.schemas import INPUT_REQUIRED_COLUMNS, get_fetch_source_contract
 
 
 def test_case_insensitive_required_columns_and_row_validation(tmp_path: Path) -> None:

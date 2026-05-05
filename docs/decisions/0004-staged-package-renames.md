@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; Ecommerce API package rename completed in a dedicated follow-up.
 
 ## Context
 
@@ -23,15 +23,15 @@ mechanical migration.
 The internal Python package `pipeline` should not be renamed during the first
 migration.
 
-`ecommerce-api` should keep `src/pricefetcher` initially. `src/pricefetcher` may
-later become `src/ecommerce` in a dedicated refactor.
+`ecommerce-api` now uses `src/ecommerce` after the dedicated follow-up rename.
 
-Do not combine folder migration with Python import/package rename.
+Do not combine future Product Factory folder migration work with Python
+import/package renames.
 
 ## Consequences
 
-- The first migration can focus on filesystem placement and app naming.
-- Runtime behavior stays stable before semantic package renames.
-- Import path changes can be reviewed and tested in dedicated follow-up work.
-- The repository may temporarily contain legacy internal package names under
-  new app names.
+- The first migration focused on filesystem placement and app naming.
+- Ecommerce import path changes were reviewed and tested in a dedicated
+  follow-up.
+- Product Factory can keep `pipeline` until a separate refactor justifies a
+  package rename.

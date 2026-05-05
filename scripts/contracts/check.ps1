@@ -11,7 +11,7 @@ $mirrors = @(
     @{
         Name = "Ecommerce"
         Mirror = (Join-Path $contractsRoot "openapi.ecommerce.json")
-        Source = (Join-Path $repoRoot "apps\ecommerce-api\docs\contracts\openapi.pricefetcher.json")
+        Source = (Join-Path $repoRoot "apps\ecommerce-api\docs\contracts\openapi.ecommerce.json")
     }
 )
 

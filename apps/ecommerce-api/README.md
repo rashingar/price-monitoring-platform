@@ -6,9 +6,9 @@ product catalog, prepares monitoring runs, fetches competitor prices from
 supported marketplaces, stores price observations, exposes alert and review
 data, and writes manual export artifacts for downstream commerce tools.
 
-The app folder is `apps/ecommerce-api`. Its internal Python package remains
-`src/pricefetcher` during this staged migration; do not rename imports or
-console scripts as part of the mechanical layout change.
+The app folder is `apps/ecommerce-api`. Its internal Python package is
+`src/ecommerce`, and its local console scripts are `ecommerce` and
+`ecommerce-api`.
 
 The current repo is API-first. The root README intentionally stays focused on
 what the repo is and how to run it. Endpoint details, request contracts, and
@@ -21,7 +21,7 @@ historical CLI/file-first notes live in separate docs:
 
 ## What This Service Does
 
-PriceFetcher provides a local backend for:
+Ecommerce provides a local backend for:
 
 - importing `sourceCata.csv` into PostgreSQL as the active product catalog
 - browsing catalog products, categories, brands, and known source URLs
@@ -77,21 +77,21 @@ Copy-Item .env.example .env
 
 Do not commit `.env` or any file containing real credentials.
 
-PriceFetcher loads `.env` automatically for local commands. If the same setting
+Ecommerce loads `.env` automatically for local commands. If the same setting
 exists in both `.env` and the real Windows/PowerShell environment, the
 OS environment value wins over `.env`.
 
 Important variables:
 
 ```powershell
-$env:PRICEFETCHER_DATABASE_URL = "postgresql+psycopg://pricefetcher:pricefetcher@127.0.0.1:5432/pricefetcher"
-$env:PRICEFETCHER_SOURCE_CATA_PATH = "C:\path\to\sourceCata.csv"
-$env:PRICEFETCHER_PRICE_IGNORE_PATH = "C:\path\to\price_ignore.csv"
-$env:PRICEFETCHER_ARTIFACT_ROOTS = "D:\PriceFetcher\price_monitoring\runs"
-$env:PRICEFETCHER_FILE_ROOTS = "C:\Users\user\Downloads;C:\Exports;output"
+$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
+$env:ECOMMERCE_SOURCE_CATA_PATH = "C:\path\to\sourceCata.csv"
+$env:ECOMMERCE_PRICE_IGNORE_PATH = "C:\path\to\price_ignore.csv"
+$env:ECOMMERCE_ARTIFACT_ROOTS = "D:\Ecommerce\output\ecommerce\monitoring\runs"
+$env:ECOMMERCE_FILE_ROOTS = "C:\Users\user\Downloads;C:\Exports;output"
 ```
 
-`PRICEFETCHER_DATABASE_URL` is required before Catalog import, Catalog browsing,
+`ECOMMERCE_DATABASE_URL` is required before Catalog import, Catalog browsing,
 Price Monitoring runs, observations, history, or alerts are ready.
 
 ## Native Windows PostgreSQL setup and first-run verification
@@ -107,23 +107,23 @@ Keep port `5432` unless another local PostgreSQL instance already uses it.
 Create a local role and database from `psql` as the `postgres` admin user:
 
 ```sql
-CREATE USER pricefetcher WITH PASSWORD 'pricefetcher';
-CREATE DATABASE pricefetcher OWNER pricefetcher;
-GRANT ALL PRIVILEGES ON DATABASE pricefetcher TO pricefetcher;
+CREATE USER ecommerce WITH PASSWORD 'ecommerce';
+CREATE DATABASE ecommerce OWNER ecommerce;
+GRANT ALL PRIVILEGES ON DATABASE ecommerce TO ecommerce;
 ```
 
 For the current PowerShell terminal:
 
 ```powershell
-$env:PRICEFETCHER_DATABASE_URL = "postgresql+psycopg://pricefetcher:pricefetcher@127.0.0.1:5432/pricefetcher"
+$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
 ```
 
 To persist it for the current Windows user:
 
 ```powershell
 [Environment]::SetEnvironmentVariable(
-  "PRICEFETCHER_DATABASE_URL",
-  "postgresql+psycopg://pricefetcher:pricefetcher@127.0.0.1:5432/pricefetcher",
+  "ECOMMERCE_DATABASE_URL",
+  "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce",
   "User"
 )
 ```
@@ -139,14 +139,30 @@ This repo also includes a helper script for local Windows setup:
 The script creates or reuses the local role/database, prints only a sanitized
 connection URL, and can optionally write a local `.env` with `-WriteDotEnv`.
 
+### Renaming an older local PostgreSQL database
+
+If an older local PostgreSQL setup still uses the previous application
+database and role names, stop the Ecommerce API before renaming. Close active
+database sessions first, back up the database if the data matters, and run the
+commands from a `postgres` admin PowerShell or `psql` session.
+
+```sql
+ALTER DATABASE <previous_database_name> RENAME TO ecommerce;
+ALTER ROLE <previous_role_name> RENAME TO ecommerce;
+ALTER ROLE ecommerce WITH PASSWORD 'ecommerce';
+```
+
+If the previous role or database does not exist, use the fresh setup above to
+create `ecommerce` directly.
+
 Verify configuration, apply migrations, import the active catalog, and verify
 again:
 
 ```powershell
-python -m pricefetcher.jobs.check_db_setup
+python -m ecommerce.jobs.check_db_setup
 .\.venv\Scripts\python.exe -m alembic upgrade head
-python -m pricefetcher.jobs.ingest_catalog
-python -m pricefetcher.jobs.check_db_setup
+python -m ecommerce.jobs.ingest_catalog
+python -m ecommerce.jobs.check_db_setup
 ```
 
 You can also run migrations with `alembic upgrade head` when the virtual
@@ -170,13 +186,13 @@ after the catalog has been imported and before the first Price Monitoring run.
 Start the local API:
 
 ```powershell
-pricefetcher-api
+ecommerce-api
 ```
 
 Or run the development entry point directly:
 
 ```powershell
-python -m pricefetcher.dev.start
+python -m ecommerce.dev.start
 ```
 
 The default server URL is:
@@ -194,16 +210,16 @@ Useful local URLs:
 If the default port is already used by another service, start on a free port:
 
 ```powershell
-python -m pricefetcher.dev.start --port 8002
+python -m ecommerce.dev.start --port 8002
 ```
 
 ## First Useful Workflow
 
 1. Install dependencies and Playwright Chromium.
-2. Configure `PRICEFETCHER_DATABASE_URL`.
+2. Configure `ECOMMERCE_DATABASE_URL`.
 3. Run `alembic upgrade head`.
-4. Import the catalog with `python -m pricefetcher.jobs.ingest_catalog`.
-5. Start the backend with `pricefetcher-api`.
+4. Import the catalog with `python -m ecommerce.jobs.ingest_catalog`.
+5. Start the backend with `ecommerce-api`.
 6. Check `GET /api/price-monitoring/db/status`.
 7. Use the API or frontend to create a monitoring run, launch fetch, review
    results, and export a manual price update CSV.
@@ -215,36 +231,36 @@ public product URLs across marketplaces and direct vendors. It reads products
 from a CSV or the DB-backed catalog, searches configured public pages with the
 manufacturer + MPN query only, extracts page evidence, scores candidates
 conservatively, and writes repeatable artifacts under
-`output/source_url_agent/runs/{run_id}`.
+`output/ecommerce/source-url-agent/runs/{run_id}`.
 
 Dry-run from CSV:
 
 ```powershell
-python -m pricefetcher.jobs.source_url_agent run --input input/test-1.csv --source all --limit 20 --dry-run
+python -m ecommerce.jobs.source_url_agent run --input input/test-1.csv --source all --limit 20 --dry-run
 ```
 
 Dry-run from the DB catalog:
 
 ```powershell
-python -m pricefetcher.jobs.source_url_agent from-catalog --source all --missing-only --limit 20 --dry-run
+python -m ecommerce.jobs.source_url_agent from-catalog --source all --missing-only --limit 20 --dry-run
 ```
 
 Write only high-confidence matches to `source_urls`:
 
 ```powershell
-python -m pricefetcher.jobs.source_url_agent run --input input/test-1.csv --source all --apply-high-confidence --limit 20
+python -m ecommerce.jobs.source_url_agent run --input input/test-1.csv --source all --apply-high-confidence --limit 20
 ```
 
 Review weak matches by editing:
 
 ```text
-output/source_url_agent/runs/{run_id}/needs_review_source_urls.csv
+output/ecommerce/source-url-agent/runs/{run_id}/needs_review_source_urls.csv
 ```
 
 Then apply the reviewed file:
 
 ```powershell
-python -m pricefetcher.jobs.source_url_agent apply-review --review-file output/source_url_agent/runs/{run_id}/needs_review_source_urls_reviewed.csv --apply
+python -m ecommerce.jobs.source_url_agent apply-review --review-file output/ecommerce/source-url-agent/runs/{run_id}/needs_review_source_urls_reviewed.csv --apply
 ```
 
 Accepted reviewed URLs use `url_type = discovered` and `trust_level = manual`.
@@ -256,15 +272,15 @@ URLs are not overwritten by automatic discovery.
 Analyze a completed run:
 
 ```powershell
-python -m pricefetcher.jobs.source_url_agent analyze --run-id {run_id}
+python -m ecommerce.jobs.source_url_agent analyze --run-id {run_id}
 ```
 
 Move DB-backed candidate review to another machine:
 
 ```powershell
-python -m pricefetcher.jobs.source_url_agent export-candidates --output output/source_url_agent/source_url_candidates_export.json
-python -m pricefetcher.jobs.source_url_agent import-candidates --input output/source_url_agent/source_url_candidates_export.json --dry-run
-python -m pricefetcher.jobs.source_url_agent import-candidates --input output/source_url_agent/source_url_candidates_export.json --apply
+python -m ecommerce.jobs.source_url_agent export-candidates --output output/ecommerce/source-url-agent/source_url_candidates_export.json
+python -m ecommerce.jobs.source_url_agent import-candidates --input output/ecommerce/source-url-agent/source_url_candidates_export.json --dry-run
+python -m ecommerce.jobs.source_url_agent import-candidates --input output/ecommerce/source-url-agent/source_url_candidates_export.json --apply
 ```
 
 The import matches candidates back to `catalog_products` by
@@ -298,26 +314,26 @@ python -m pytest -q
 ```
 
 The canonical OpenAPI snapshot is
-`docs/contracts/openapi.pricefetcher.json`. Regenerate it only after an
+`docs/contracts/openapi.ecommerce.json`. Regenerate it only after an
 intentional API contract change:
 
 ```powershell
-python -m pricefetcher.jobs.export_openapi_snapshot
+python -m ecommerce.jobs.export_openapi_snapshot
 ```
 
 Review snapshot diffs before committing them.
 
 ## Troubleshooting
 
-- `Database is not configured.` Set `PRICEFETCHER_DATABASE_URL` in PowerShell
+- `Database is not configured.` Set `ECOMMERCE_DATABASE_URL` in PowerShell
   or copy `.env.example` to `.env` for local development.
 - `Database is configured but unreachable.` Confirm the native Windows
   PostgreSQL service is running and the host, port, role, password, and
   database name are correct.
 - `Migrations have not been applied.` Run `alembic upgrade head` from the repo
-  root after setting `PRICEFETCHER_DATABASE_URL`.
+  root after setting `ECOMMERCE_DATABASE_URL`.
 - `PostgreSQL is required for Catalog.` Import the catalog after migrations
-  with `python -m pricefetcher.jobs.ingest_catalog`.
+  with `python -m ecommerce.jobs.ingest_catalog`.
 - `psql is not available on PATH.` Add the PostgreSQL `bin` directory to PATH
   or run setup from a terminal where the installer configured it.
 - Environment changes persisted with `[Environment]::SetEnvironmentVariable`

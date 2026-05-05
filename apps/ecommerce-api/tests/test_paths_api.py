@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.artifacts import ARTIFACT_ROOTS_ENV_VAR  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.file_editor import FILE_ROOTS_ENV_VAR  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.artifacts import ARTIFACT_ROOTS_ENV_VAR  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.file_editor import FILE_ROOTS_ENV_VAR  # noqa: E402
 
 
 def test_paths_roots_endpoint_combines_known_roots(tmp_path: Path, monkeypatch) -> None:
@@ -22,7 +22,7 @@ def test_paths_roots_endpoint_combines_known_roots(tmp_path: Path, monkeypatch) 
     monkeypatch.setenv(ARTIFACT_ROOTS_ENV_VAR, str(artifact_root))
     monkeypatch.setenv(FILE_ROOTS_ENV_VAR, str(file_root))
     monkeypatch.delenv(DATABASE_URL_ENV_VAR, raising=False)
-    monkeypatch.setenv("PRICEFETCHER_SECRET_TOKEN", "do-not-expose")
+    monkeypatch.setenv("ECOMMERCE_SECRET_TOKEN", "do-not-expose")
 
     response = TestClient(create_app()).get("/api/paths/roots")
 
@@ -36,7 +36,7 @@ def test_paths_roots_endpoint_combines_known_roots(tmp_path: Path, monkeypatch) 
         FILE_ROOTS_ENV_VAR: "configured",
         DATABASE_URL_ENV_VAR: "not_configured",
     }
-    assert "PRICEFETCHER_SECRET_TOKEN" not in payload["env"]
+    assert "ECOMMERCE_SECRET_TOKEN" not in payload["env"]
 
     artifact_paths = {item["path"]: item for item in payload["artifact_roots"]}
     assert str(artifact_root.resolve(strict=False)) in artifact_paths

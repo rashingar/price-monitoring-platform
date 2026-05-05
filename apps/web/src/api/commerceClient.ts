@@ -1947,7 +1947,7 @@ async function request<T>(path: string, options: CommerceRequestOptions = {}): P
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : String(error);
     throw new CommerceApiError(
-      `Commerce API unreachable at ${path}. Start pricefetcher-api on 127.0.0.1:8001.`,
+      `Commerce API unreachable at ${path}. Start ecommerce-api on 127.0.0.1:8001.`,
       0,
       rawMessage,
       path,
@@ -1959,17 +1959,17 @@ async function request<T>(path: string, options: CommerceRequestOptions = {}): P
   if (!response.ok) {
     const backendMessage = getPayloadMessage(payload) ?? response.statusText;
     const pathHint = isArtifactPathForbidden(path, response.status)
-      ? " Path is outside configured artifact roots. Add the directory to PRICEFETCHER_ARTIFACT_ROOTS and restart the backend."
+      ? " Path is outside configured artifact roots. Add the directory to ECOMMERCE_ARTIFACT_ROOTS and restart the backend."
       : "";
     const setupHint =
       response.status === 404 && path.startsWith("/catalog/")
-        ? " If the API is running, check PostgreSQL configuration, run alembic upgrade head, and import sourceCata.csv with python -m pricefetcher.jobs.ingest_catalog."
+        ? " If the API is running, check PostgreSQL configuration, run alembic upgrade head, and import sourceCata.csv with python -m ecommerce.jobs.ingest_catalog."
         : "";
     const dbHint =
       response.status === 503 && path.startsWith("/price-monitoring/")
         ? " PostgreSQL is required for Price Monitoring; CSV/Bridge, files, paths, artifacts, and general commerce health may still be available."
         : response.status === 503 && path.startsWith("/catalog/")
-          ? " Catalog database/import required. Configure PRICEFETCHER_DATABASE_URL, run alembic upgrade head, run python -m pricefetcher.jobs.ingest_catalog, then reload the Catalog page. CSV/Bridge, files, paths, artifacts, and general commerce health may still be available."
+          ? " Catalog database/import required. Configure ECOMMERCE_DATABASE_URL, run alembic upgrade head, run python -m ecommerce.jobs.ingest_catalog, then reload the Catalog page. CSV/Bridge, files, paths, artifacts, and general commerce health may still be available."
         : "";
     const message = `Commerce API ${response.status} at ${path}: ${backendMessage}${pathHint}${setupHint}${dbHint}`;
     throw new CommerceApiError(message, response.status, payload, path);

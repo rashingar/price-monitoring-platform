@@ -2,9 +2,9 @@ param(
     [Alias("Host")]
     [string]$HostName = "127.0.0.1",
     [int]$Port = 5432,
-    [string]$Database = "pricefetcher",
-    [string]$AppUser = "pricefetcher",
-    [string]$AppPassword = "pricefetcher",
+    [string]$Database = "ecommerce",
+    [string]$AppUser = "ecommerce",
+    [string]$AppPassword = "ecommerce",
     [string]$AdminUser = "postgres",
     [switch]$PersistUserEnv,
     [switch]$WriteDotEnv,
@@ -99,12 +99,12 @@ try {
     Write-Host $sanitizedUrl
 
     if ($PersistUserEnv) {
-        [Environment]::SetEnvironmentVariable("PRICEFETCHER_DATABASE_URL", $rawUrl, "User")
-        Write-Host "Persisted PRICEFETCHER_DATABASE_URL for the current Windows user."
+        [Environment]::SetEnvironmentVariable("ECOMMERCE_DATABASE_URL", $rawUrl, "User")
+        Write-Host "Persisted ECOMMERCE_DATABASE_URL for the current Windows user."
         Write-Host "Open a new PowerShell terminal before running commands that use the persisted variable."
     }
     else {
-        Write-Host "Set PRICEFETCHER_DATABASE_URL in the current terminal before running migrations."
+        Write-Host "Set ECOMMERCE_DATABASE_URL in the current terminal before running migrations."
         Write-Host "Do not paste real credentials into shared logs or tickets."
     }
 
@@ -118,11 +118,11 @@ try {
             if (Test-Path $examplePath) {
                 Copy-Item $examplePath $envPath -Force:$Force
                 $content = Get-Content $envPath -Raw
-                $content = $content -replace "PRICEFETCHER_DATABASE_URL=.*", "PRICEFETCHER_DATABASE_URL=$rawUrl"
+                $content = $content -replace "ECOMMERCE_DATABASE_URL=.*", "ECOMMERCE_DATABASE_URL=$rawUrl"
                 Set-Content -Path $envPath -Value $content -Encoding UTF8
             }
             else {
-                Set-Content -Path $envPath -Value "PRICEFETCHER_DATABASE_URL=$rawUrl`n" -Encoding UTF8
+                Set-Content -Path $envPath -Value "ECOMMERCE_DATABASE_URL=$rawUrl`n" -Encoding UTF8
             }
             Write-Host "Wrote local .env. Do not commit it."
         }
@@ -134,7 +134,7 @@ try {
         Write-Host "1. Open a new PowerShell terminal."
     }
     Write-Host "alembic upgrade head"
-    Write-Host "python -m pricefetcher.jobs.check_db_setup"
+    Write-Host "python -m ecommerce.jobs.check_db_setup"
 }
 finally {
     if ($setPgPassword) {

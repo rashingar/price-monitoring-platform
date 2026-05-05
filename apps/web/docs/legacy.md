@@ -45,7 +45,7 @@ Older parent-level platform scripts referenced by the previous README:
 Legacy startup environment variables:
 
 ```text
-PRICE_FETCHER_DIR
+ECOMMERCE_DIR
 PRODUCT_AGENT_DIR
 PRODUCT_AGENT_API_CMD
 VITE_API_PROXY_TARGET
@@ -56,7 +56,7 @@ The old manual startup sequence was:
 
 ```powershell
 python -m pip install -e .
-pricefetcher-api
+ecommerce-api
 npm run dev
 ```
 

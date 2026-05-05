@@ -9,17 +9,17 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow, MonitoringRun, PriceObservation, SourceUrl  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, MonitoringRun, PriceObservation, SourceUrl  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 
 
 NOW = datetime(2026, 4, 29, 12, tzinfo=timezone.utc)
 
 
 def _sqlite_url(tmp_path: Path) -> str:
-    return f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
 
 
 def _client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
@@ -195,9 +195,9 @@ def test_apply_writes_rows_and_is_idempotent(tmp_path: Path, monkeypatch) -> Non
 
 
 def test_product_agent_handoff_preview_and_apply(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setenv("PRICEFETCHER_FILE_ROOTS", str(tmp_path / "work"))
+    monkeypatch.setenv("ECOMMERCE_FILE_ROOTS", str(tmp_path / "work"))
     client, database_url = _client(tmp_path, monkeypatch)
-    handoff_path = tmp_path / "work" / "005606" / "integrations" / "price_fetcher_source_handoff.json"
+    handoff_path = tmp_path / "work" / "005606" / "integrations" / "ecommerce_source_handoff.json"
     handoff_path.parent.mkdir(parents=True)
     with session_scope(database_url) as session:
         product = _catalog_product(session, model="005606")
@@ -237,16 +237,16 @@ def test_product_agent_handoff_preview_and_apply(tmp_path: Path, monkeypatch) ->
 
 
 def test_product_agent_handoff_import_rejects_paths_outside_allowed_roots(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setenv("PRICEFETCHER_FILE_ROOTS", str(tmp_path / "allowed"))
+    monkeypatch.setenv("ECOMMERCE_FILE_ROOTS", str(tmp_path / "allowed"))
     client, _database_url = _client(tmp_path, monkeypatch)
-    outside_path = tmp_path / "outside" / "price_fetcher_source_handoff.json"
+    outside_path = tmp_path / "outside" / "ecommerce_source_handoff.json"
     outside_path.parent.mkdir(parents=True)
     outside_path.write_text("{}", encoding="utf-8")
 
     response = client.post("/api/catalog/source-urls/import/product-agent/preview", json={"file": str(outside_path)})
     traversal = client.post(
         "/api/catalog/source-urls/import/product-agent/preview",
-        json={"file": str(tmp_path / "allowed" / ".." / "price_fetcher_source_handoff.json")},
+        json={"file": str(tmp_path / "allowed" / ".." / "ecommerce_source_handoff.json")},
     )
 
     assert response.status_code == 400

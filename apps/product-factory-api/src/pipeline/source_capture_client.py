@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 
 
-PRICEFETCHER_API_BASE_URL_ENV = "PRICEFETCHER_API_BASE_URL"
+ECOMMERCE_API_BASE_URL_ENV = "ECOMMERCE_API_BASE_URL"
 
 
 @dataclass(frozen=True)
@@ -18,9 +18,9 @@ class SourceCaptureSyncResult:
 
 
 def sync_initial_source_capture(model: str, source_url: str) -> SourceCaptureSyncResult:
-    base_url = str(os.environ.get(PRICEFETCHER_API_BASE_URL_ENV) or "").strip().rstrip("/")
+    base_url = str(os.environ.get(ECOMMERCE_API_BASE_URL_ENV) or "").strip().rstrip("/")
     if not base_url:
-        return SourceCaptureSyncResult(status="skipped", message="PRICEFETCHER_API_BASE_URL is not configured.")
+        return SourceCaptureSyncResult(status="skipped", message="ECOMMERCE_API_BASE_URL is not configured.")
     try:
         with httpx.Client(timeout=5.0) as client:
             response = client.post(
@@ -30,7 +30,7 @@ def sync_initial_source_capture(model: str, source_url: str) -> SourceCaptureSyn
         if response.status_code >= 400:
             return SourceCaptureSyncResult(
                 status="failed",
-                message=f"PriceFetcher source capture returned HTTP {response.status_code}.",
+                message=f"Ecommerce source capture returned HTTP {response.status_code}.",
                 payload=_json_payload(response),
             )
         return SourceCaptureSyncResult(status="submitted", message="Initial source capture submitted.", payload=_json_payload(response))

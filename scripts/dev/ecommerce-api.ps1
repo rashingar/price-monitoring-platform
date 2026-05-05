@@ -18,5 +18,5 @@ if ($env:PYTHONPATH) {
     $env:PYTHONPATH = "$srcRoot;$appRoot"
 }
 
-& $python -m pricefetcher.dev.start
+& $python -m ecommerce.dev.start
 exit $LASTEXITCODE

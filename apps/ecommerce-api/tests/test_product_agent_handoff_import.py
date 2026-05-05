@@ -7,15 +7,15 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow, PriceObservation, ProductSource, SourceCaptureSnapshot, SourceUrl  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.jobs.import_product_agent_handoff import main as handoff_job_main  # noqa: E402
-from pricefetcher.product_agent_handoff import import_product_agent_handoff, parse_product_agent_handoff  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, PriceObservation, ProductSource, SourceCaptureSnapshot, SourceUrl  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.jobs.import_product_agent_handoff import main as handoff_job_main  # noqa: E402
+from ecommerce.product_agent_handoff import import_product_agent_handoff, parse_product_agent_handoff  # noqa: E402
 
 
 NOW = datetime(2026, 5, 4, 12, tzinfo=timezone.utc)
-FIXTURE = PROJECT_ROOT / "tests" / "fixtures" / "product_agent" / "price_fetcher_source_handoff.json"
+FIXTURE = PROJECT_ROOT / "tests" / "fixtures" / "product_agent" / "ecommerce_source_handoff.json"
 
 
 def _sqlite_url(tmp_path: Path) -> str:
@@ -54,7 +54,7 @@ def _catalog_product(
 def _write_handoff(tmp_path: Path, payload: dict) -> Path:
     path = tmp_path / "work" / str(payload.get("product", {}).get("model") or "HANDOFF-1") / "integrations"
     path.mkdir(parents=True, exist_ok=True)
-    handoff_path = path / "price_fetcher_source_handoff.json"
+    handoff_path = path / "ecommerce_source_handoff.json"
     handoff_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return handoff_path
 
@@ -75,7 +75,7 @@ def test_parse_product_agent_handoff_fixture_schema_v1() -> None:
 def test_apply_imports_active_source_url_product_source_snapshot_and_price(tmp_path: Path, monkeypatch) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
-    monkeypatch.setenv("PRICEFETCHER_SOURCE_CAPTURE_ARTIFACT_DIR", str(tmp_path / "capture-artifacts"))
+    monkeypatch.setenv("ECOMMERCE_SOURCE_CAPTURE_ARTIFACT_DIR", str(tmp_path / "capture-artifacts"))
 
     with session_scope(database_url) as session:
         product = _catalog_product(session)

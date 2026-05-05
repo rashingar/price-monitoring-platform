@@ -19,9 +19,9 @@ from .prepare_scrape_persistence import (
     persist_prepare_scrape_artifacts,
 )
 from .prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult, resolve_prepare_taxonomy_enrichment
-from .price_fetcher_handoff import (
-    write_price_fetcher_source_failure_handoff,
-    write_price_fetcher_source_handoff,
+from .ecommerce_handoff import (
+    write_ecommerce_source_failure_handoff,
+    write_ecommerce_source_handoff,
 )
 from .source_acquisition_models import SourceAcquisitionResult
 from .source_acquisition_stage import execute_source_acquisition_stage
@@ -70,7 +70,7 @@ def execute_prepare_stage(
         )
     except Exception as exc:
         try:
-            write_price_fetcher_source_failure_handoff(
+            write_ecommerce_source_failure_handoff(
                 cli=cli,
                 source=acquisition.source,
                 provider_id=acquisition.provider_id,
@@ -239,7 +239,7 @@ def execute_prepare_from_acquisition(
     scrape_persistence_input.report_payload = result_assembly.report
     scrape_persistence_input.bescos_raw_payload = sections_artifact_payload
     scrape_persistence = persist_prepare_scrape_artifacts_fn(scrape_persistence_input)
-    write_price_fetcher_source_handoff(
+    write_ecommerce_source_handoff(
         cli=cli,
         source=source,
         provider_id=acquisition.provider_id,

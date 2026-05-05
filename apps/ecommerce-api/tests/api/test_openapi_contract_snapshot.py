@@ -7,11 +7,11 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.jobs.export_openapi_snapshot import normalize_openapi_schema  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.jobs.export_openapi_snapshot import normalize_openapi_schema  # noqa: E402
 
-SNAPSHOT_PATH = PROJECT_ROOT / "docs" / "contracts" / "openapi.pricefetcher.json"
-REGENERATE_COMMAND = "python -m pricefetcher.jobs.export_openapi_snapshot"
+SNAPSHOT_PATH = PROJECT_ROOT / "docs" / "contracts" / "openapi.ecommerce.json"
+REGENERATE_COMMAND = "python -m ecommerce.jobs.export_openapi_snapshot"
 
 
 @pytest.mark.contract
@@ -20,7 +20,7 @@ def test_openapi_contract_snapshot_is_current() -> None:
     actual = normalize_openapi_schema(create_app().openapi())
 
     assert actual == expected, (
-        "PriceFetcher OpenAPI contract changed. If this backend API change is intentional, "
+        "Ecommerce OpenAPI contract changed. If this backend API change is intentional, "
         f"review the diff and regenerate the canonical snapshot with `{REGENERATE_COMMAND}`. "
         "Then update downstream UI fixtures/tests in a separate UI patch."
     )

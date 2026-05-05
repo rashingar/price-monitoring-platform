@@ -264,9 +264,9 @@ function CsvBridgeSetupHint() {
     <div className="setup-hint compact">
       <strong>CSV/Bridge setup check</strong>
       <ul>
-        <li>Commerce API must be running: <code>pricefetcher-api</code></li>
+        <li>Commerce API must be running: <code>ecommerce-api</code></li>
         <li>Safe roots are defined by the backend.</li>
-        <li>Check <code>PRICEFETCHER_FILE_ROOTS</code> if expected folders are missing.</li>
+        <li>Check <code>ECOMMERCE_FILE_ROOTS</code> if expected folders are missing.</li>
       </ul>
     </div>
   );

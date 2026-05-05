@@ -7,7 +7,7 @@ import type {
 } from "../api/commerceTypes";
 import { ErrorState } from "../components/layout/StateBlocks";
 
-const DEFAULT_HANDOFF_PATH = "work/{model}/integrations/price_fetcher_source_handoff.json";
+const DEFAULT_HANDOFF_PATH = "work/{model}/integrations/ecommerce_source_handoff.json";
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === "") {
@@ -252,7 +252,7 @@ export function VendorSourceImportsPage() {
       <header className="page-header">
         <p className="eyebrow">Vendor Sources</p>
         <h2>Product-Agent Handoff Imports</h2>
-        <p>Import source URL handoff artifacts produced by Product-Agent through price-fetcher.</p>
+        <p>Import source URL handoff artifacts produced by Product-Agent through ecommerce-api.</p>
       </header>
 
       <section className="panel source-url-agent-warning-panel" aria-label="Product-Agent handoff import safety">

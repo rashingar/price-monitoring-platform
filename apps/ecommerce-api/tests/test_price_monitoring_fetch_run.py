@@ -8,15 +8,15 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_price_monitoring  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.price_monitoring import fetch_run as fetch_run_module  # noqa: E402
-from pricefetcher.price_monitoring.fetch_run import (  # noqa: E402
+from ecommerce.api import routes_price_monitoring  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.price_monitoring import fetch_run as fetch_run_module  # noqa: E402
+from ecommerce.price_monitoring.fetch_run import (  # noqa: E402
     PriceMonitoringFetchError,
     run_price_monitoring_fetch,
 )
-from pricefetcher.vendor_sources.capture import SourceUrlCaptureRunResult  # noqa: E402
-from pricefetcher.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
+from ecommerce.vendor_sources.capture import SourceUrlCaptureRunResult  # noqa: E402
+from ecommerce.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
 from test_price_monitoring_execution_utils import install_fake_execution_child  # noqa: E402
 
 
@@ -68,7 +68,7 @@ def _install_fake_source_capture(monkeypatch) -> dict[str, str]:
         result.result_path.write_text(json.dumps(result.to_dict()), encoding="utf-8")
         return result
 
-    monkeypatch.setattr("pricefetcher.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
+    monkeypatch.setattr("ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
     return captured
 
 
@@ -92,7 +92,7 @@ def _install_missing_source_capture(monkeypatch) -> None:
             observation_batch_id="vendor-capture-missing",
         )
 
-    monkeypatch.setattr("pricefetcher.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
+    monkeypatch.setattr("ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
 
 
 def test_source_is_read_from_selection_summary_when_not_supplied(tmp_path: Path, monkeypatch) -> None:
@@ -213,7 +213,7 @@ def test_api_missing_run_folder_returns_404(tmp_path: Path, monkeypatch) -> None
 
 def test_api_missing_input_csv_returns_404(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir, input_csv=False)
 
     response = TestClient(create_app()).post(
@@ -227,7 +227,7 @@ def test_api_missing_input_csv_returns_404(tmp_path: Path, monkeypatch) -> None:
 
 def test_api_accepts_arbitrary_source_filter(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     install_fake_execution_child(monkeypatch, tmp_path, mode="success")
 
@@ -243,7 +243,7 @@ def test_api_accepts_arbitrary_source_filter(tmp_path: Path, monkeypatch) -> Non
 
 def test_api_fetch_failure_returns_clear_error(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     install_fake_execution_child(monkeypatch, tmp_path, mode="fail")
@@ -262,7 +262,7 @@ def test_api_fetch_failure_returns_clear_error(tmp_path: Path, monkeypatch) -> N
 
 def test_api_successful_fetch_returns_artifacts_and_get_reads_fetch_result(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     install_fake_execution_child(monkeypatch, tmp_path, mode="success")

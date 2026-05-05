@@ -9,7 +9,7 @@ is retained only as an explicit admin diagnostic Vendor Sources operation.
 
 The `/api/products/from-source` endpoint accepts a product model and one or more source URLs. It creates or reuses a canonical `products` row, stores each URL in `product_sources`, detects the vendor, and optionally runs the shared capture layer. Capture failures are persisted as source health diagnostics and do not roll back product/source creation.
 
-The shared vendor capture implementation lives in `pricefetcher.source_capture`:
+The shared vendor capture implementation lives in `ecommerce.source_capture`:
 
 - `canonicalize_url.py` normalizes URLs and strips common tracking parameters.
 - `detect_vendor.py` maps vendor hosts to registered vendors.
@@ -19,15 +19,15 @@ The shared vendor capture implementation lives in `pricefetcher.source_capture`:
 - `scheduled.py` lets Vendor Sources refresh due `product_sources` without duplicating vendor logic.
 
 The DB-backed selected source URL capture service lives in
-`pricefetcher.vendor_sources.capture`. The old
-`pricefetcher.price_monitoring.source_url_capture` module is compatibility-only
+`ecommerce.vendor_sources.capture`. The old
+`ecommerce.price_monitoring.source_url_capture` module is compatibility-only
 and re-exports the Vendor Sources implementation for older imports.
 
 Current vendors are seeded in `vendors`: `electronet`, `skroutz`, `plaisio`, `public`, and `kotsovolos`. Electronet and Skroutz are active. Plaisio, Public, and Kotsovolos are scaffolded for future parsers.
 
 Raw capture records are stored in `source_capture_snapshots`. Request and response metadata is sanitized; cookies, auth headers, CSRF/session tokens, and fingerprinting-sensitive headers are not persisted. Price and offer observations are append-only and reference the snapshot that produced them.
 
-Product-Agent can hand off initial capture to this API by setting `PRICEFETCHER_API_BASE_URL`, for example `http://127.0.0.1:8001`. Product-Agent treats failures as warnings so product preparation does not fail because source capture failed.
+Product-Agent can hand off initial capture to this API by setting `ECOMMERCE_API_BASE_URL`, for example `http://127.0.0.1:8001`. Product-Agent treats failures as warnings so product preparation does not fail because source capture failed.
 
 Recurring capture is available through:
 
@@ -35,7 +35,7 @@ Recurring capture is available through:
 - API: `GET /api/vendor-sources/captures/runs`
 - API: `GET /api/vendor-sources/captures/runs/{run_id}`
 - API: `GET /api/vendor-sources/captures/runs/{run_id}/artifacts`
-- CLI: `pricefetcher capture-sources`
+- CLI: `ecommerce capture-sources`
 
 Vendor Source Capture runs are stored in `vendor_source_capture_runs`, separate
 from `monitoring_runs` and `price_monitoring_runs` workflow state. Capture runs
@@ -67,8 +67,8 @@ owns URL discovery, candidate review, capture, and source health.
 Legacy Product-Agent scrape artifacts can be backfilled without making Product-Agent the long-term scraper:
 
 ```powershell
-python -m pricefetcher.jobs.import_product_agent_artifacts --root ..\product-factory-api\work
-python -m pricefetcher.jobs.import_product_agent_artifacts --root ..\product-factory-api\work --apply
+python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work
+python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work --apply
 ```
 
 This importer scans `*.source.json`, sibling `*.report.json`, and `*.raw.html` files, creates/reuses `product_sources`, stores a `product_agent_artifact_*` raw snapshot, and only appends a price observation when Product-Agent reported a product page, in-scope URL, non-missing price, and high-confidence price diagnostics. Imported observations use the Product-Agent `scraped_at` timestamp when present; otherwise the importer falls back to artifact mtime and marks timestamp quality as derived.
@@ -76,8 +76,8 @@ This importer scans `*.source.json`, sibling `*.report.json`, and `*.raw.html` f
 Product-Agent source URL handoff artifacts can be imported directly from:
 
 ```powershell
-python -m pricefetcher.jobs.import_product_agent_handoff --file work\<model>\integrations\price_fetcher_source_handoff.json --dry-run
-python -m pricefetcher.jobs.import_product_agent_handoff --file work\<model>\integrations\price_fetcher_source_handoff.json --apply
+python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --dry-run
+python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --apply
 ```
 
 The handoff importer resolves catalog identity by `catalog_product_id`, then model, then MPN. Ambiguous identity and invalid or unsupported URLs are reported without writes. Active source URLs are mirrored into `product_sources` through the normal convergence path, and initial price evidence can seed a source capture snapshot plus price observation.

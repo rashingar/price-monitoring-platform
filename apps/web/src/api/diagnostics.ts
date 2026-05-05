@@ -144,28 +144,28 @@ export async function checkCommerceApi(): Promise<DiagnosticResult[]> {
       requestUrl: healthUrl,
       okMessage: "Commerce API health endpoint responded.",
       errorSuggestion:
-        "Commerce API is not reachable. Start price-fetcher with pricefetcher-api or python -m pricefetcher.api.app.",
+        "Commerce API is not reachable. Start ecommerce-api with ecommerce-api or python -m ecommerce.api.app.",
     }),
     checkEndpoint({
       service: "Commerce API catalog summary",
       requestUrl: summaryUrl,
       okMessage: "Commerce catalog summary responded.",
       errorSuggestion:
-        "Check PostgreSQL configuration, run alembic upgrade head, and import sourceCata.csv with python -m pricefetcher.jobs.ingest_catalog.",
+        "Check PostgreSQL configuration, run alembic upgrade head, and import sourceCata.csv with python -m ecommerce.jobs.ingest_catalog.",
     }),
     checkEndpoint({
       service: "Commerce API file roots",
       requestUrl: rootsUrl,
       okMessage: "Commerce file roots responded.",
       errorSuggestion:
-        "Start pricefetcher-api and check PRICEFETCHER_FILE_ROOTS if expected safe folders are missing.",
+        "Start ecommerce-api and check ECOMMERCE_FILE_ROOTS if expected safe folders are missing.",
     }),
     checkEndpoint({
       service: "Commerce API artifact roots",
       requestUrl: artifactRootsUrl,
       okMessage: "Commerce artifact roots responded.",
       errorSuggestion:
-        "Start the latest price-fetcher backend and check artifact root configuration.",
+        "Start the latest ecommerce-api backend and check artifact root configuration.",
     }),
   ]);
 
@@ -173,7 +173,7 @@ export async function checkCommerceApi(): Promise<DiagnosticResult[]> {
     summaryResult.message =
       "Commerce API is running, but Catalog database/import readiness failed.";
     summaryResult.suggestedFix =
-      "Check PRICEFETCHER_DATABASE_URL, run alembic upgrade head, then run python -m pricefetcher.jobs.ingest_catalog.";
+      "Check ECOMMERCE_DATABASE_URL, run alembic upgrade head, then run python -m ecommerce.jobs.ingest_catalog.";
   }
 
   return [healthResult, summaryResult, fileRootsResult, artifactRootsResult];

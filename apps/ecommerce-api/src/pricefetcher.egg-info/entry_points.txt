@@ -1,3 +1,0 @@
-[console_scripts]
-pricefetcher = pricefetcher.cli.main:main
-pricefetcher-api = pricefetcher.api.app:main

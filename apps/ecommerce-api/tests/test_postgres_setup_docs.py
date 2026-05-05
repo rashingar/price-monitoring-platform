@@ -9,7 +9,7 @@ def test_env_example_exists_with_safe_database_placeholder() -> None:
 
     text = env_example.read_text(encoding="utf-8")
 
-    assert "PRICEFETCHER_DATABASE_URL=postgresql+psycopg://pricefetcher:pricefetcher@127.0.0.1:5432/pricefetcher" in text
+    assert "ECOMMERCE_DATABASE_URL=postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce" in text
     assert "Do not commit .env" in text
     assert "super-secret" not in text
 
@@ -42,9 +42,9 @@ def test_readme_documents_env_template_and_native_windows_troubleshooting() -> N
     assert "Native Windows PostgreSQL setup and first-run verification" in readme
     assert ".env.example` file is a template" in readme
     assert "do not commit `.env`" in readme.lower()
-    assert "PriceFetcher loads `.env` automatically for local commands" in readme
+    assert "Ecommerce loads `.env` automatically for local commands" in readme
     assert "OS environment value wins over `.env`" in readme
     assert "Docker is not used by this project setup" in readme
-    assert "python -m pricefetcher.jobs.check_db_setup" in readme
+    assert "python -m ecommerce.jobs.check_db_setup" in readme
     assert "alembic upgrade head" in readme
     assert "Tables exist but monitoring row counts are zero before first run" in readme

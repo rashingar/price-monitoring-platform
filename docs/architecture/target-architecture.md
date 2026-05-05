@@ -14,7 +14,7 @@ The target apps are:
 - `apps/web`
 
 The old Product-Agent backend becomes `product-factory-api`. The old
-price-fetcher backend becomes `ecommerce-api`. The old product-agent-ui
+ecommerce-api backend becomes `ecommerce-api`. The old product-agent-ui
 frontend becomes `web`.
 
 `product-factory-api` and `ecommerce-api` remain separate backend runtimes.
@@ -178,10 +178,9 @@ hand-maintained assumptions where possible. Contract fixtures should support
 integration tests without forcing one backend to import the other backend's
 internals.
 
-Internal package renames are staged after the mechanical monorepo migration.
-`ecommerce-api` should temporarily keep its internal Python package name
-`pricefetcher`. `pricefetcher` should eventually be renamed to `ecommerce`, but
-that rename is explicitly staged later.
+The Ecommerce API internal package is `ecommerce`. Product Factory still keeps
+the internal `pipeline` package until a separate Product Factory refactor is
+needed.
 
 ## Artifact Strategy
 
@@ -227,8 +226,8 @@ Root scripts coordinate development and test commands while preserving app
 boundaries. Python root scripts use the monorepo virtual environment at
 `.venv/`; on Windows they call `.venv\Scripts\python.exe` and fail clearly when
 it is missing. Dependency setup remains app-aware and manual for now. Product
-Factory packaging is not normalized yet, and ecommerce-api still uses the
-internal package name `pricefetcher`.
+Factory packaging is not normalized yet. Ecommerce API uses the internal
+package name `ecommerce`.
 
 Secrets and environment files should not be centralized until the operational
 model is clear. Generated runtime outputs, generated `products/` folders, raw
@@ -262,7 +261,8 @@ slow external dependencies during stabilization.
 4. Phase 3: Mirror OpenAPI snapshots into `packages/contracts`.
 5. Phase 4: Clean up path references and documentation.
 6. Phase 5: Stabilize tests, local development, and app boundaries.
-7. Phase 6: Perform intentional refactors, including staged package renames.
+7. Phase 6: Perform intentional refactors, including package renames when
+   needed.
 
 Phase 1 through Phase 4 are complete in the current layout:
 
@@ -271,9 +271,8 @@ Phase 1 through Phase 4 are complete in the current layout:
 - `apps/web`
 - `apps/product-factory-api/src`
 
-`ecommerce-api` should temporarily keep its internal Python package name
-`pricefetcher`. Internal package renames are staged after the mechanical
-migration.
+The dedicated Ecommerce API package rename has been completed. Product Factory
+still owns its `pipeline` package.
 
 ## Explicit Non-Goals
 
@@ -283,7 +282,5 @@ migration.
 - Do not introduce generated clients in the mechanical layout migration.
 - Do not introduce database migrations in the mechanical layout migration.
 - Do not merge the two backend runtimes.
-- Do not rename `apps/ecommerce-api/src/pricefetcher` during the first
-  migration.
 - Do not change browser routes `/api` and `/commerce-api` during the first
   migration.

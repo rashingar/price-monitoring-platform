@@ -10,13 +10,13 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_price_monitoring  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.artifacts import ARTIFACT_ROOTS_ENV_VAR  # noqa: E402
-from pricefetcher.file_editor import FILE_ROOTS_ENV_VAR  # noqa: E402
-from pricefetcher.ignore.product_ignore import PRICE_IGNORE_ENV_VAR, load_ignored_products  # noqa: E402
-from pricefetcher.price_monitoring.export import export_price_update_csv  # noqa: E402
-from pricefetcher.price_monitoring.review import (  # noqa: E402
+from ecommerce.api import routes_price_monitoring  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.artifacts import ARTIFACT_ROOTS_ENV_VAR  # noqa: E402
+from ecommerce.file_editor import FILE_ROOTS_ENV_VAR  # noqa: E402
+from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR, load_ignored_products  # noqa: E402
+from ecommerce.price_monitoring.export import export_price_update_csv  # noqa: E402
+from ecommerce.price_monitoring.review import (  # noqa: E402
     REVIEW_COLUMNS,
     PriceActionInput,
     PriceReviewError,
@@ -212,7 +212,7 @@ def test_opencart_export_contains_only_model_and_price(tmp_path: Path, monkeypat
 
 def test_export_endpoint_uses_review_csv(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
     apply_price_actions(run_dir, [PriceActionInput(model="005606", selected_action="match_price")])
@@ -233,7 +233,7 @@ def test_export_endpoint_uses_review_csv(tmp_path: Path, monkeypatch) -> None:
 
 def test_export_endpoint_rejects_unsafe_explicit_output_path(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
     apply_price_actions(run_dir, [PriceActionInput(model="005606", selected_action="match_price")])
@@ -252,7 +252,7 @@ def test_export_endpoint_rejects_unsafe_explicit_output_path(tmp_path: Path, mon
 def test_export_endpoint_rejects_output_path_that_is_only_file_root(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     custom_root = tmp_path / "custom"
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
     monkeypatch.setenv(FILE_ROOTS_ENV_VAR, str(custom_root))
@@ -270,10 +270,10 @@ def test_export_endpoint_rejects_output_path_that_is_only_file_root(tmp_path: Pa
 def test_export_endpoint_allows_custom_output_when_artifact_root_configured(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     custom_root = tmp_path / "custom"
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
-    monkeypatch.setenv(ARTIFACT_ROOTS_ENV_VAR, f"{tmp_path / 'output' / 'price_monitoring' / 'runs'};{custom_root}")
+    monkeypatch.setenv(ARTIFACT_ROOTS_ENV_VAR, f"{tmp_path / 'output' / 'ecommerce' / 'monitoring' / 'runs'};{custom_root}")
     apply_price_actions(run_dir, [PriceActionInput(model="005606", selected_action="match_price")])
     custom_output = custom_root / "opencart_price_update.csv"
 
@@ -291,7 +291,7 @@ def test_export_endpoint_allows_custom_output_when_artifact_root_configured(tmp_
 
 def test_get_review_rejects_unsafe_explicit_enriched_csv_path(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     unsafe_enriched = tmp_path / "custom" / "skroutz_enriched.csv"
     unsafe_enriched.parent.mkdir()
@@ -308,12 +308,12 @@ def test_get_review_rejects_unsafe_explicit_enriched_csv_path(tmp_path: Path, mo
 
 def test_get_review_rejects_path_traversal_in_explicit_enriched_csv_path(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     response = TestClient(create_app()).get(
         "/api/price-monitoring/runs/run-1/review",
-        params={"enriched_csv_path": str(Path("output") / "price_monitoring" / "runs" / "run-1" / ".." / "x.csv")},
+        params={"enriched_csv_path": str(Path("output") / "ecommerce" / "monitoring" / "runs" / "run-1" / ".." / "x.csv")},
     )
 
     assert response.status_code == 400
@@ -322,7 +322,7 @@ def test_get_review_rejects_path_traversal_in_explicit_enriched_csv_path(tmp_pat
 
 def test_api_get_review_and_post_actions(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
     client = TestClient(create_app())

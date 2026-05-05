@@ -6,7 +6,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.core.price_workflow import run_price
+from ecommerce.core.price_workflow import run_price
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:

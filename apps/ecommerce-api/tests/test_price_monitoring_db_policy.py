@@ -6,12 +6,12 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_price_monitoring  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.artifacts import ARTIFACT_ROOTS_ENV_VAR  # noqa: E402
-from pricefetcher.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.file_editor.safe_paths import FILE_ROOTS_ENV_VAR  # noqa: E402
+from ecommerce.api import routes_price_monitoring  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.artifacts import ARTIFACT_ROOTS_ENV_VAR  # noqa: E402
+from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.file_editor.safe_paths import FILE_ROOTS_ENV_VAR  # noqa: E402
 
 
 def _client_without_db(tmp_path: Path, monkeypatch) -> TestClient:
@@ -53,7 +53,7 @@ def test_db_status_reports_monitoring_not_ready_without_database(tmp_path: Path,
 
 def test_monitoring_workflow_routes_return_structured_503_without_database(tmp_path: Path, monkeypatch) -> None:
     client = _client_without_db(tmp_path, monkeypatch)
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     responses = [
@@ -90,7 +90,7 @@ def test_run_creation_is_blocked_before_creating_file_folder(tmp_path: Path, mon
     response = client.post("/api/price-monitoring/runs", json={"source": "skroutz", "selected_models": ["005606"]})
 
     _blocked_detail(response)
-    assert not (tmp_path / "output" / "price_monitoring" / "runs").exists()
+    assert not (tmp_path / "output" / "ecommerce" / "monitoring" / "runs").exists()
 
 
 def test_non_monitoring_routes_are_not_db_blocked(tmp_path: Path, monkeypatch) -> None:
@@ -104,7 +104,7 @@ def test_non_monitoring_routes_are_not_db_blocked(tmp_path: Path, monkeypatch) -
     file_root.mkdir()
     editable = file_root / "editable.csv"
     editable.write_text("model\n005606\n", encoding="utf-8")
-    artifact_root = tmp_path / "output" / "price_monitoring" / "runs"
+    artifact_root = tmp_path / "output" / "ecommerce" / "monitoring" / "runs"
     run_dir = artifact_root / "run-1"
     _write_run(run_dir)
     stock_csv = tmp_path / "stock.csv"

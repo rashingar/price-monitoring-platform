@@ -7,8 +7,8 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.file_editor.csv_editor import read_csv_file, write_csv_copy, write_csv_file  # noqa: E402
-from pricefetcher.file_editor.safe_paths import (  # noqa: E402
+from ecommerce.file_editor.csv_editor import read_csv_file, write_csv_copy, write_csv_file  # noqa: E402
+from ecommerce.file_editor.safe_paths import (  # noqa: E402
     FILE_ROOTS_ENV_VAR,
     UnsafePathError,
     get_allowed_roots,

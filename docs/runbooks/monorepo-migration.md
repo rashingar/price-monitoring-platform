@@ -21,13 +21,13 @@ Status: completed in the current layout.
 Target moves:
 
 - `Product-Agent` -> `apps/product-factory-api`
-- `price-fetcher` -> `apps/ecommerce-api`
+- `ecommerce-api` -> `apps/ecommerce-api`
 - `product-agent-ui` -> `apps/web`
 - `apps/product-factory-api/scraper` -> `apps/product-factory-api/src`
 
 Rules:
 
-- Do not rename `apps/ecommerce-api/src/pricefetcher` yet.
+- Ecommerce API uses the internal `src/ecommerce` package.
 - Do not rename the `pipeline` package yet.
 - Do not change API routes during the mechanical migration.
 - Do not change browser `/api` and `/commerce-api` routes during the first
@@ -65,7 +65,7 @@ the current layout.
 - Update documentation references from legacy paths to target paths.
 - Fix scripts that still point at old folder names.
 - Keep compatibility aliases only where needed and document their removal path.
-- Do not rename internal Python packages as incidental cleanup.
+- Keep app boundaries explicit when updating internal Python packages.
 
 ## Phase 5: Stabilization
 
@@ -82,8 +82,8 @@ the current layout.
   files or introduce a new monorepo lockfile during stabilization.
 - Product Factory packaging is not normalized yet; the internal package remains
   `pipeline` under `apps/product-factory-api/src`.
-- ecommerce-api packaging is not renamed yet; the internal package remains
-  `pricefetcher` under `apps/ecommerce-api/src`.
+- Ecommerce API uses the internal package `ecommerce` under
+  `apps/ecommerce-api/src`.
 - Root scripts should fail clearly when the root `.venv` is missing and should
   not silently install dependencies.
 - Web scripts should fail clearly when `apps/web/node_modules` is missing and
@@ -101,7 +101,8 @@ the current layout.
 
 ## Phase 6: Intentional Refactors
 
-- Rename `src/pricefetcher` to `src/ecommerce` only in a dedicated refactor.
+- Ecommerce API package rename is complete; do not add compatibility aliases
+  for older package names.
 - Decide whether `product-factory-api` needs durable DB-backed job state.
 - Decide whether Product Factory DB state belongs in a separate schema or
   separate database.

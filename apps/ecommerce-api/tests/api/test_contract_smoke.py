@@ -8,23 +8,23 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_price_monitoring  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.artifacts import ARTIFACT_ROOTS_ENV_VAR, artifact_link_payload  # noqa: E402
-from pricefetcher.catalog_db import ingest_source_catalog  # noqa: E402
-from pricefetcher.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.file_editor import FILE_ROOTS_ENV_VAR  # noqa: E402
-from pricefetcher.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
+from ecommerce.api import routes_price_monitoring  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.artifacts import ARTIFACT_ROOTS_ENV_VAR, artifact_link_payload  # noqa: E402
+from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
+from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.file_editor import FILE_ROOTS_ENV_VAR  # noqa: E402
+from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 
 def _client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.chdir(tmp_path)
     artifact_roots = [
-        tmp_path / "output" / "bridge" / "runs",
-        tmp_path / "output" / "price_monitoring" / "runs",
+        tmp_path / "output" / "ecommerce" / "bridge" / "runs",
+        tmp_path / "output" / "ecommerce" / "monitoring" / "runs",
         tmp_path / "extra-artifacts",
     ]
     file_root = tmp_path / "files"
@@ -45,14 +45,14 @@ def test_health_returns_stable_commerce_identity(tmp_path: Path, monkeypatch: py
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
-    assert payload["service"] == "price-fetcher"
+    assert payload["service"] == "ecommerce-api"
     assert payload["api"] == "commerce"
     assert payload["checks"] == {"app": "ok", "database": "not_configured"}
 
 
 @pytest.mark.smoke
 def test_paths_roots_returns_safe_metadata_without_secret_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PRICEFETCHER_SECRET_TOKEN", "do-not-expose")
+    monkeypatch.setenv("ECOMMERCE_SECRET_TOKEN", "do-not-expose")
     response = _client(tmp_path, monkeypatch).get("/api/paths/roots")
 
     assert response.status_code == 200
@@ -61,7 +61,7 @@ def test_paths_roots_returns_safe_metadata_without_secret_env(tmp_path: Path, mo
     assert payload["path_separator"] == ";"
     assert payload["platform"] == "Windows-compatible"
     assert payload["env"][DATABASE_URL_ENV_VAR] == "not_configured"
-    assert "PRICEFETCHER_SECRET_TOKEN" not in payload["env"]
+    assert "ECOMMERCE_SECRET_TOKEN" not in payload["env"]
     for group in ("artifact_roots", "file_roots", "output_roots"):
         assert payload[group]
         assert all(set(item) == {"path", "source", "exists", "is_default", "is_configured"} for item in payload[group])
@@ -153,7 +153,7 @@ def test_artifact_roots_endpoint_shape(tmp_path: Path, monkeypatch: pytest.Monke
 @pytest.mark.smoke
 def test_artifact_link_payload_public_shape(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client(tmp_path, monkeypatch)
-    run_dir = tmp_path / "output" / "bridge" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "bridge" / "runs" / "run-1"
     artifact = run_dir / "summary.csv"
     artifact.parent.mkdir(parents=True, exist_ok=True)
     artifact.write_text("metric,value\nupdated,1\n", encoding="utf-8")
@@ -186,7 +186,7 @@ def test_price_monitoring_fetch_execution_response_shape_from_local_fixture(
     client = _client(tmp_path, monkeypatch)
     run_id = "20260502-120000-contract"
     execution_id = "exec-contract"
-    run_dir = tmp_path / "output" / "price_monitoring" / "runs" / run_id
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / run_id
     execution_dir = run_dir / "fetch_executions"
     execution_dir.mkdir(parents=True)
     (run_dir / "input.csv").write_text("model,mpn,name,price\n005606,MPN-1,Product,10.00\n", encoding="utf-8")
@@ -253,7 +253,7 @@ def test_catalog_product_response_shape_from_tmp_csv(tmp_path: Path, monkeypatch
         encoding="utf-8-sig",
     )
     client = _client(tmp_path, monkeypatch)
-    database_url = f"sqlite+pysqlite:///{tmp_path / 'pricefetcher.db'}"
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
     Base.metadata.create_all(get_engine(database_url))

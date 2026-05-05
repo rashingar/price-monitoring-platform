@@ -9,14 +9,14 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from pricefetcher.api import routes_vendor_sources  # noqa: E402
-from pricefetcher.api.app import create_app  # noqa: E402
-from pricefetcher.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from pricefetcher.db.models import Base, CatalogProductRow, PriceObservation, ProductSource, VendorSourceCaptureRun  # noqa: E402
-from pricefetcher.db.session import get_engine, session_scope  # noqa: E402
-from pricefetcher.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
-from pricefetcher.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation  # noqa: E402
-from pricefetcher.vendor_sources.capture import (  # noqa: E402
+from ecommerce.api import routes_vendor_sources  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, PriceObservation, ProductSource, VendorSourceCaptureRun  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
+from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation  # noqa: E402
+from ecommerce.vendor_sources.capture import (  # noqa: E402
     SourceUrlCaptureRunResult,
     capture_selected_source_urls,
     capture_selected_source_urls_for_run,
@@ -469,6 +469,6 @@ def test_vendor_sources_capture_run_excludes_ineligible_source_url_statuses(tmp_
 
 
 def test_legacy_price_monitoring_source_url_capture_import_still_works() -> None:
-    from pricefetcher.price_monitoring import source_url_capture
+    from ecommerce.price_monitoring import source_url_capture
 
     assert source_url_capture.run_vendor_source_capture is run_vendor_source_capture

@@ -1817,12 +1817,12 @@ function BackendPathsPanel({
             <strong>Environment</strong>
             <dl className="summary-grid diagnostics-summary-grid">
               <SummaryItem
-                label="PRICEFETCHER_ARTIFACT_ROOTS"
-                value={roots.env.PRICEFETCHER_ARTIFACT_ROOTS ?? "not_reported"}
+                label="ECOMMERCE_ARTIFACT_ROOTS"
+                value={roots.env.ECOMMERCE_ARTIFACT_ROOTS ?? "not_reported"}
               />
               <SummaryItem
-                label="PRICEFETCHER_FILE_ROOTS"
-                value={roots.env.PRICEFETCHER_FILE_ROOTS ?? "not_reported"}
+                label="ECOMMERCE_FILE_ROOTS"
+                value={roots.env.ECOMMERCE_FILE_ROOTS ?? "not_reported"}
               />
               <SummaryItem label="Platform" value={roots.platform} />
               <SummaryItem label="Separator" value={roots.path_separator} />
@@ -2044,7 +2044,7 @@ export function PriceMonitoringPage() {
       if (!signal?.aborted) {
         setPathRoots(null);
         setPathRootsError(
-          "Could not load backend path roots. Check that price-fetcher is running.",
+          "Could not load backend path roots. Check that ecommerce-api is running.",
         );
       }
     } finally {
@@ -2802,7 +2802,7 @@ export function PriceMonitoringPage() {
     }
 
     if (configuredArtifactRoots.length === 0) {
-      return "No configured artifact roots were reported. Set PRICEFETCHER_ARTIFACT_ROOTS before using custom export paths.";
+      return "No configured artifact roots were reported. Set ECOMMERCE_ARTIFACT_ROOTS before using custom export paths.";
     }
 
     if (!selectedExportArtifactRoot) {
@@ -2810,7 +2810,7 @@ export function PriceMonitoringPage() {
     }
 
     if (!isPathUnderRoot(outputPath, selectedExportArtifactRoot)) {
-      return "Custom export path does not appear to be inside the selected PRICEFETCHER_ARTIFACT_ROOTS directory.";
+      return "Custom export path does not appear to be inside the selected ECOMMERCE_ARTIFACT_ROOTS directory.";
     }
 
     return null;
@@ -3622,7 +3622,7 @@ export function PriceMonitoringPage() {
           <div className="state-block">
             <strong>Custom export path</strong>
             <p className="muted">
-              Custom export paths must be inside PRICEFETCHER_ARTIFACT_ROOTS.
+              Custom export paths must be inside ECOMMERCE_ARTIFACT_ROOTS.
             </p>
             <div className="filter-grid">
               <label>
@@ -3644,7 +3644,7 @@ export function PriceMonitoringPage() {
                 <input
                   value={exportOutputPath}
                   onChange={(event) => setExportOutputPath(event.target.value)}
-                  placeholder="D:\\PriceFetcher\\output\\custom\\opencart_price_update.csv"
+                  placeholder="D:\\Ecommerce\\output\\custom\\opencart_price_update.csv"
                 />
               </label>
             </div>
