@@ -154,7 +154,13 @@ The backend scripts use the root `.venv`. The web script uses `apps/web`.
 
 ## Test Commands
 
-Run app tests through the root scripts:
+The default Codex-safe test command is:
+
+```powershell
+.\scripts\test\fast.ps1
+```
+
+Run app-specific tests through the root scripts:
 
 ```powershell
 .\scripts\test\product-factory-api.ps1
@@ -165,7 +171,8 @@ Run app tests through the root scripts:
 ```
 
 The test scripts use verbose output. They should not run live external scraping
-tests by default.
+tests by default. See [Testing Strategy](docs/runbooks/testing-strategy.md) for
+the category definitions and fast-suite rules.
 
 ## Local URLs
 
@@ -205,6 +212,7 @@ Ecommerce generated outputs use `output/ecommerce/...` by default.
 ## Architecture And Runbooks
 
 - [Target Architecture](docs/architecture/target-architecture.md)
+- [Testing Strategy](docs/runbooks/testing-strategy.md)
 - [Monorepo Migration Runbook](docs/runbooks/monorepo-migration.md)
 - [Ecommerce PostgreSQL Local Setup](docs/runbooks/ecommerce-postgresql-local.md)
 - [App Naming and Domain Boundaries](docs/decisions/0002-app-naming-and-domain-boundaries.md)

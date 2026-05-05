@@ -5,7 +5,11 @@ $appRoot = Join-Path $repoRoot "apps\web"
 $nodeModules = Join-Path $appRoot "node_modules"
 
 if (-not (Test-Path -LiteralPath $nodeModules)) {
-    Write-Error "Missing web dependencies: $nodeModules. Setup: cd apps\web; npm ci"
+    Write-Host "Web setup commands from the repository root:"
+    Write-Host "Push-Location apps\web"
+    Write-Host "npm ci"
+    Write-Host "Pop-Location"
+    Write-Error "Missing web dependencies: $nodeModules"
     exit 1
 }
 

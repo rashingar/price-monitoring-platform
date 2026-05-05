@@ -3,7 +3,8 @@ $ErrorActionPreference = "Stop"
 $tests = @(
     @{ Name = "product-factory-api"; Script = Join-Path $PSScriptRoot "product-factory-api.ps1" },
     @{ Name = "ecommerce-api"; Script = Join-Path $PSScriptRoot "ecommerce-api.ps1" },
-    @{ Name = "web"; Script = Join-Path $PSScriptRoot "web.ps1" }
+    @{ Name = "web"; Script = Join-Path $PSScriptRoot "web.ps1" },
+    @{ Name = "contract mirrors"; Script = Join-Path $PSScriptRoot "..\contracts\check.ps1" }
 )
 
 foreach ($test in $tests) {
@@ -15,5 +16,5 @@ foreach ($test in $tests) {
     }
 }
 
-Write-Host "All fast app test scripts completed successfully."
+Write-Host "All fast app test scripts and contract mirror checks completed successfully."
 exit 0

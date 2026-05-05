@@ -32,9 +32,12 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
+    "fast: local deterministic tests with no live network, browser, or external service dependency",
     "contract: backend API contract and OpenAPI snapshot checks",
     "smoke: fast endpoint smoke checks with local fixtures",
     "integration: integration tests using local fakes or temporary services/files",
     "slow: tests that are intentionally slower than the fast local suite",
     "external: tests requiring live websites, browsers, network, Docker, or external services",
+    "e2e: full workflow, browser, or operator-flow tests",
+    "legacy: tests preserved for obsolete, flaky, unclear, or old behavior and excluded from fast defaults",
 ]

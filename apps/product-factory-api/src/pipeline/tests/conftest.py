@@ -137,6 +137,8 @@ _TEST_MARKERS: dict[tuple[str, str], tuple[str, ...]] = {
     ("test_skroutz_taxonomy.py", "test_representative_taxonomy_html_fixtures_cover_supported_skroutz_combos"): ("slow",),
 }
 
+_FAST_EXCLUDED_MARKERS = {"slow", "external", "e2e", "legacy"}
+
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     del config
@@ -146,3 +148,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         markers = (*_MODULE_MARKERS.get(path.name, ()), *_TEST_MARKERS.get((path.name, test_name), ()))
         for marker in dict.fromkeys(markers):
             item.add_marker(getattr(pytest.mark, marker))
+
+        marker_names = {marker.name for marker in item.iter_markers()}
+        if marker_names.isdisjoint(_FAST_EXCLUDED_MARKERS):
+            item.add_marker(pytest.mark.fast)

@@ -6,13 +6,15 @@ $srcRoot = Join-Path $appRoot "src"
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 
 function Write-ProductFactorySetupInstructions {
-    Write-Host "Install Product Factory into the root virtual environment with:"
+    Write-Host "Product Factory setup commands from the repository root:"
+    Write-Host "py -3.13 -m venv .venv"
     Write-Host ".\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt"
     Write-Host ".\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps"
 }
 
 if (-not (Test-Path -LiteralPath $python)) {
-    Write-Error "Missing root virtual environment Python: $python. Create the monorepo virtual environment from the repository root with: py -3.13 -m venv .venv"
+    Write-ProductFactorySetupInstructions
+    Write-Error "Missing root virtual environment Python: $python"
     exit 1
 }
 
@@ -57,5 +59,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Set-Location $appRoot
-& $python -m pytest -vv -ra -c (Join-Path $srcRoot "pytest.ini") -m "not external and not e2e and not slow"
+& $python -m pytest -vv -ra -c (Join-Path $srcRoot "pytest.ini") -m "not slow and not external and not e2e and not legacy"
 exit $LASTEXITCODE
