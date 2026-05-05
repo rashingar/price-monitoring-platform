@@ -103,15 +103,24 @@ explicitly requires broader coverage. Run `slow`, `external`, `e2e`, or
 ## Troubleshooting
 
 If the root Python environment is missing, create it and install only the app
-dependencies you need:
+dependencies you need. Python 3.11 or newer is required; the `python` command
+must resolve to Python 3.11+. If `python` is not found or is too old, install a
+supported Python version and reopen PowerShell.
 
 ```powershell
-py -3.13 -m venv .venv
+python --version
+python -m venv .venv
+.\.venv\Scripts\python.exe --version
 .\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
 .\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
 .\.venv\Scripts\python.exe -m pip install -r apps\ecommerce-api\requirements-lock.txt
 .\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
 ```
+
+If you intentionally manage multiple Python versions with the Windows `py`
+launcher, you may use a supported version explicitly, for example
+`py -3.12 -m venv .venv`. The default operator command remains
+`python -m venv .venv`.
 
 If web dependencies are missing:
 

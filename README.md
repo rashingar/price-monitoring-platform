@@ -25,7 +25,9 @@ Ecommerce API code or databases as part of local setup.
 Run these from the repository root in PowerShell:
 
 ```powershell
-py -3.13 -m venv .venv
+python --version
+python -m venv .venv
+.\.venv\Scripts\python.exe --version
 .\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
 .\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
 .\.venv\Scripts\python.exe -m pip install -r apps\ecommerce-api\requirements-lock.txt
@@ -70,7 +72,9 @@ Start the apps in separate PowerShell terminals:
 ## Local Prerequisites
 
 - Windows PowerShell.
-- Python 3.11 or newer; current scripts document `py -3.13`.
+- Python 3.11 or newer. The `python` command must resolve to Python 3.11+.
+  If `python` is not found or is too old, install a supported Python version
+  and reopen PowerShell.
 - Native Windows PostgreSQL with `psql` on `PATH`.
 - Node.js/npm for the web app.
 - Playwright Chromium if you run browser-backed backend workflows.
@@ -82,11 +86,18 @@ Docker is not required for the current local setup.
 Root scripts use one repository-level Python environment:
 
 ```powershell
-py -3.13 -m venv .venv
+python --version
+python -m venv .venv
+.\.venv\Scripts\python.exe --version
 ```
 
 The scripts call `.venv\Scripts\python.exe` and fail clearly when it is
 missing. They do not install dependencies automatically.
+
+If you intentionally manage multiple Python versions with the Windows `py`
+launcher, you may use a supported version explicitly, for example
+`py -3.12 -m venv .venv`. The default operator command remains
+`python -m venv .venv`.
 
 ## Python Dependency Setup
 

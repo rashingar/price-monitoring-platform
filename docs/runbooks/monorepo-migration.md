@@ -74,8 +74,14 @@ the current layout.
 - Create the root virtual environment from the repository root with:
 
   ```powershell
-  py -3.13 -m venv .venv
+  python --version
+  python -m venv .venv
+  .\.venv\Scripts\python.exe --version
   ```
+
+  Python 3.11 or newer is required. The `python` command must resolve to Python
+  3.11+; if it is missing or too old, install a supported Python version and
+  reopen PowerShell.
 
 - Install dependencies into the root `.venv` manually from the app-specific
   dependency files needed for the current task. Product Factory dependencies

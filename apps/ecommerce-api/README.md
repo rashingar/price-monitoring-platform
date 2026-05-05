@@ -52,10 +52,15 @@ Docker is not used by this project setup.
 Create a virtual environment and install the locked dependencies:
 
 ```powershell
+python --version
 python -m venv .venv
+.\.venv\Scripts\python.exe --version
 .\.venv\Scripts\python.exe -m pip install -r requirements-lock.txt
 .\.venv\Scripts\python.exe -m pip install -e . --no-deps
 ```
+
+The `python` command must resolve to Python 3.11 or newer. If it is not found
+or is too old, install a supported Python version and reopen PowerShell.
 
 Install Chromium for Playwright:
 

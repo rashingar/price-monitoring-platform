@@ -17,7 +17,10 @@ if not exist "%REPO_ROOT%\scripts\dev\ecommerce-api.ps1" (
 if not exist "%REPO_ROOT%\.venv\Scripts\python.exe" (
   echo ERROR: Missing root virtual environment Python: %REPO_ROOT%\.venv\Scripts\python.exe
   echo Create it from the repository root with:
-  echo   py -3.13 -m venv .venv
+  echo   python --version
+  echo   python -m venv .venv
+  echo   .\.venv\Scripts\python.exe --version
+  echo Python 3.11 or newer is required. If python is missing or too old, install a supported Python version and reopen PowerShell.
   pause
   exit /b 1
 )

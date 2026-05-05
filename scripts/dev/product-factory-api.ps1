@@ -6,13 +6,18 @@ $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 $consoleScript = Join-Path $repoRoot ".venv\Scripts\product-factory-api.exe"
 
 function Write-ProductFactorySetupInstructions {
-    Write-Host "Install Product Factory into the root virtual environment with:"
+    Write-Host "Product Factory setup commands from the repository root:"
+    Write-Host "python --version"
+    Write-Host "python -m venv .venv"
+    Write-Host ".\.venv\Scripts\python.exe --version"
     Write-Host ".\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt"
     Write-Host ".\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps"
+    Write-Host "Python 3.11 or newer is required. If python is missing or too old, install a supported Python version and reopen PowerShell."
 }
 
 if (-not (Test-Path -LiteralPath $python)) {
-    Write-Error "Missing root virtual environment Python: $python. Create the monorepo virtual environment from the repository root with: py -3.13 -m venv .venv"
+    Write-ProductFactorySetupInstructions
+    Write-Error "Missing root virtual environment Python: $python"
     exit 1
 }
 

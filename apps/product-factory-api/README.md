@@ -35,11 +35,17 @@ app-local virtual environment for this repo.
 From repo root on Windows:
 
 ```powershell
-py -3.13 -m venv .venv
+python --version
+python -m venv .venv
+.\.venv\Scripts\python.exe --version
 .\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
 .\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
 .\.venv\Scripts\python.exe -m playwright install chromium
 ```
+
+Python 3.11 or newer is required. The `python` command must resolve to Python
+3.11+. If `python` is not found or is too old, install a supported Python
+version and reopen PowerShell.
 
 `pyproject.toml` provides minimal setuptools package metadata, src-layout
 package discovery, and the `product-factory-api` console script. Dependencies
