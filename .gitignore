@@ -1,0 +1,46 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.secrets/
+*.pem
+*.key
+*.pfx
+opencart.env
+
+# Local databases/dumps
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.bak
+
+# Generated/runtime artifacts
+work/
+output/
+runs/
+logs/
+*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
