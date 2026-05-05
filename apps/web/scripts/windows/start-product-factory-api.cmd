@@ -20,6 +20,8 @@ if not exist "%REPO_ROOT%\.venv\Scripts\python.exe" (
   echo   python --version
   echo   python -m venv .venv
   echo   .\.venv\Scripts\python.exe --version
+  echo   .\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
+  echo   .\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
   echo Python 3.11 or newer is required. If python is missing or too old, install a supported Python version and reopen PowerShell.
   pause
   exit /b 1
