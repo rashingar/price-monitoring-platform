@@ -1,0 +1,23 @@
+{
+  "model": "143109",
+  "source_url": "https://www.skroutz.gr/s/61054853/lg-icheio-dxl7t-se-mayro-chroma.html",
+  "final_url": "https://www.skroutz.gr/s/61054853/lg-icheio-dxl7t-mayro.html",
+  "name": "LG Ηχείο DXL7T Μαύρο",
+  "manufacturer": "LG",
+  "category_tag_text": "Karaoke",
+  "category_tag_href": "https://www.skroutz.gr/c/2682/karaoke.html",
+  "normalized_category_slug": "karaoke",
+  "has_besco_sections": true,
+  "detected_besco_section_count": 6,
+  "taxonomy_hint": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Audio Systems:::ΕΙΚΟΝΑ & ΗΧΟΣ///Audio Systems///Ηχεία",
+  "captured_at": "2026-03-21T11:36:12.665913+00:00",
+  "content_hash": "1a0b463e5abd65ca77a3a3597eba6e7acf889eac76108b6c4097116a3c7038be",
+  "captured_live": true,
+  "family_key": "speaker",
+  "expected_parent_category": "ΕΙΚΟΝΑ & ΗΧΟΣ",
+  "expected_leaf_category": "Audio Systems",
+  "expected_sub_category": "Ηχεία",
+  "expected_source_category": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Audio Systems:::ΕΙΚΟΝΑ & ΗΧΟΣ///Audio Systems///Ηχεία",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "speaker"
+}

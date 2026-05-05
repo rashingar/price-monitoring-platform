@@ -1,0 +1,29 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "tigania_electronet_labels_v1",
+  "category_gr": "Τηγάνια",
+  "cta_map_key": "Τηγάνια",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/thgania",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/thgania/krepiera-aloyminioy-antikollhtikh-bra-efficient-a272526",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/thgania/katsarolaki-galaktos-alouminioy-antikollhtiko-16-cm-bra-cazo-efficienta-273816"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Σκεύους",
+        "Διάμετρος Σκεύους σε Εκατοστά.",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Χωρητικότητα σε Λίτρα",
+        "Πηγή Θερμότητας",
+        "Υλικό Σκεύους",
+        "Εσωτερική Επίστρωση",
+        "Εξωτερική Επίστρωση",
+        "Δείκτης Θερμότητας",
+        "Καπάκι",
+        "Χρώμα"
+      ]
+    }
+  ]
+}

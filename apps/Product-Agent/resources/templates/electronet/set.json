@@ -1,0 +1,16 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "set_electronet_labels_v1",
+  "category_gr": "Σετ",
+  "cta_map_key": "Σετ",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/set-utensils",
+  "electronet_examples": [],
+  "sections": [
+    {
+      "section": "TODO",
+      "labels": [
+        "NEEDS_MANUAL_LABELS"
+      ]
+    }
+  ]
+}

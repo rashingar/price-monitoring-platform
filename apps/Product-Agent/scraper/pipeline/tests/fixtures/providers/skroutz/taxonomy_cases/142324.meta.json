@@ -1,0 +1,20 @@
+{
+  "model": "142324",
+  "source_url": "https://www.skroutz.gr/s/56823316/Panasonic-Smart-Tileorasi-32-Full-HD-LED-TV-32S55AEZ-HDR-2024.html",
+  "final_url": "https://www.skroutz.gr/s/56823316/Panasonic-Smart-Tileorasi-32-Full-HD-LED-TV-32S55AEZ-HDR-2024.html",
+  "name": "Panasonic Smart Τηλεόραση 32\" Full HD LED TV-32S55AEZ HDR (2024)",
+  "manufacturer": "Panasonic",
+  "category_tag_text": "Τηλεοράσεις",
+  "category_tag_href": "https://www.skroutz.gr/c/12/television.html",
+  "normalized_category_slug": "television",
+  "has_besco_sections": true,
+  "detected_besco_section_count": 6,
+  "taxonomy_hint": "",
+  "captured_at": "2026-03-21T11:20:11.436857+00:00",
+  "content_hash": "f8b792e9b96111d49f101cad37b0dd3f5db1f98e7c4a7f2f053ed9d7ba957054",
+  "expected_parent_category": "ΕΙΚΟΝΑ & ΗΧΟΣ",
+  "expected_leaf_category": "Τηλεοράσεις",
+  "expected_sub_category": "Έως 32''",
+  "expected_source_category": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις///Έως 32''",
+  "expected_match_type": "exact_category"
+}

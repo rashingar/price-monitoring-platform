@@ -1,0 +1,25 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "frapieres_electronet_labels_v1",
+  "category_gr": "Φραπιέρες",
+  "cta_map_key": "Φραπιέρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/frapieres",
+  "electronet_examples": [
+    "https://www.electronet.gr/exoplismos-spitioy/kafes-hymoi-rofimata/frapieres-ilektrika-mprikia/frapiera-rohnson-mod-r-4410-asimi"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Ισχύς σε Watts",
+        "Ταχύτητες",
+        "Χρώμα",
+        "Υλικό Σώματος Rubber",
+        "Χωρητικότητα Κύπελου σε ml",
+        "Υλικό Κυπέλου",
+        "Αντιολισθητική Βάση",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

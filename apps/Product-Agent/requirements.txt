@@ -1,0 +1,11 @@
+httpx
+beautifulsoup4
+lxml
+playwright
+pytest
+pillow
+pillow-avif-plugin
+pypdf
+FastAPI
+uvicorn
+openai

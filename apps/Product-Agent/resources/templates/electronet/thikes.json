@@ -1,0 +1,27 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "thikes_electronet_labels_v1",
+  "category_gr": "Θήκες",
+  "cta_map_key": "Θήκες",
+  "cta_url": "https://www.etranoulis.gr/thlefwnia/tablets/thikes",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/thlefwnia/tablets/thikes/thiki-tablet-nedis-tcvr9100bk-universal-folio"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Κατασκευή",
+        "Άμεση πρόσβαση σε όλες τις λειτουργίες",
+        "Universal"
+      ]
+    }
+  ]
+}

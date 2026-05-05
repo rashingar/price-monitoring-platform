@@ -1,0 +1,41 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "radiofona_electronet_labels_v1",
+  "category_gr": "Ραδιοφώνα",
+  "cta_map_key": "Ραδιοφώνα",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/foritsa/radiofwna",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/eikona-hxos/foritsa/radiofwna/radiofono-analogiko-muse-m-025R",
+    "https://www.etranoulis.gr/eikona-hxos/foritsa/radiofwna/epitrapezio-radiofono-revmatos-muse-m-081-r-mpatarias"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Τύπος Ραδιοφώνου",
+        "Ραδιοφωνικός Δέκτης",
+        "Έλεγχος Έντασης Ήχου",
+        "Έξοδος Ακουστικών",
+        "Πηγή Ισχύος",
+        "Κεραία",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Ύψος",
+        "Πλάτος",
+        "Βάθος"
+      ]
+    }
+  ]
+}

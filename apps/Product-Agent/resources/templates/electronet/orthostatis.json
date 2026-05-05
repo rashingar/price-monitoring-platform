@@ -1,0 +1,41 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "orthostatis_electronet_labels_v1",
+  "category_gr": "Ορθοστάτης",
+  "cta_map_key": "Ορθοστάτης",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/orthostatis",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/orthostatis/anemistiras-orthostaths-primo-prsf-80560",
+    "https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/orthostatis/anemistiras-dapedou-rohnson-r-8550-90w-45cm"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Ανεμιστήρα",
+        "Ισχύς σε Watt",
+        "Διάμετρος σε Εκατοστά",
+        "Ταχύτητες",
+        "Περιστροφική Κίνηση",
+        "Ρυθμιζόμενη Γωνία Κλίσης",
+        "Ρυθμιζόμενο Ύψος",
+        "Αριθμός Πτερυγίων",
+        "Υλικό Πτερυγίων",
+        "Χρονοδιακόπτης",
+        "Λειτουργία Θερινή/Χειμερινή",
+        "Τηλεχειριστήριο",
+        "Διακόπτης Τοίχου",
+        "Αριθμός Λαμπτήρων"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

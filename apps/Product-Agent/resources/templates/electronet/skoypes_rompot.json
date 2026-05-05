@@ -1,0 +1,24 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "skoypes_rompot_electronet_labels_v1",
+  "category_gr": "Σκούπες Ρομπότ",
+  "cta_map_key": "Σκούπες Ρομπότ",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupes-robot",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupes-robot/irobot-skoypa-robot-roomba-combo-j5-grafitis",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupes-robot/skoypa-rompot-rohnson-vc-mamba-rm-05"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση προϊόντος",
+      "labels": [
+        "Ισχύς (Pa)",
+        "Χρόνος φόρτισης μπαταρίας σε min",
+        "Χώρος Κάλυψης (m²)",
+        "Χωρητικότητα σε λίτρα",
+        "Τύπος δαπέδου",
+        "Σφουγγάρισμα"
+      ]
+    }
+  ]
+}

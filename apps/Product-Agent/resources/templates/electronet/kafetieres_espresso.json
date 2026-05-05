@@ -1,0 +1,48 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "kafetieres_espresso_electronet_labels_v1",
+  "category_gr": "Καφετιέρες Espresso",
+  "cta_map_key": "Καφετιέρες Espresso",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kafetieres-espresso",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kafetieres-espresso/kafetiera-espresso-delonghi-magnifica-s-ecam22115b-mayro-automati-15bar",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kafetieres-espresso/kaftiera-espresso-delonghi-magnifica-evo-ecam290-81-tb-mavro-asimi"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Καφετιέρας",
+        "Τύπος Καφέ",
+        "Ισχύς σε Watts",
+        "Πίεση Ατμού",
+        "Αριθμός Φλιτζανιών Εspresso",
+        "Επιλογή για 1 ή 2 Φλιτζάνια Καφέ",
+        "Αποσπώμενο Φίλτρο Καφέ",
+        "Ακροφύσιο Ατμού",
+        "Χωρητικότητα Δοχείου Νερού (Λίτρα)",
+        "Αποσπώμενο Δοχείο Νερού",
+        "Αποσπώμενη Βάση Συλλογής Υγρών",
+        "Μύλος Άλεσης",
+        "Ενδεικτική Λυχνία Λειτουργίας",
+        "Οθόνη Ενδείξεων",
+        "Ρύθμιση Θερμοκρασίας",
+        "Αποθήκευση Προσωπικών Προτιμήσεων",
+        "Λειτουργία Αφαλάτωσης & Καθαρισμού",
+        "Πλάκα Προθέρμανσης Φλιτζανιών",
+        "Φίλτρο Νερού",
+        "Συνδεσιμότητα",
+        "Εξαρτήματα"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

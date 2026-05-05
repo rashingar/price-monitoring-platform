@@ -1,0 +1,47 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "othones_electronet_labels_v1",
+  "category_gr": "Οθόνες",
+  "cta_map_key": "Οθόνες",
+  "cta_url": "https://www.etranoulis.gr/plhroforikh/perifereiaka/othones",
+  "electronet_examples": [
+    "https://www.electronet.gr/pliroforiki/perifereiaka/othones/othoni-pc-xiaomi-g27i-gaming-monitor-27-full-hd"
+  ],
+  "sections": [
+    {
+      "section": "Οθόνη",
+      "labels": [
+        "Διαγώνιος Οθόνης ( Ίντσες )",
+        "Τεχνολογία Οθόνης",
+        "Ανάλυση Οθόνης",
+        "Αριθμός Pixels",
+        "Χρόνος Απόκρισης",
+        "Φορμά Εικόνας",
+        "Ρυθμός Ανανέωσης ( HZ )",
+        "Φωτεινότητα Εικόνας",
+        "Λόγος Αντίθεσης",
+        "Γωνία Θέασης (Ορ./Κάθ.)",
+        "Τύπος Συσκευής"
+      ]
+    },
+    {
+      "section": "Συνδεσιμότητα",
+      "labels": [
+        "HDMI",
+        "VGA",
+        "USB 2.0",
+        "DVI"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Διάκενο Βάσης Τοίχου Vesa (mm)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

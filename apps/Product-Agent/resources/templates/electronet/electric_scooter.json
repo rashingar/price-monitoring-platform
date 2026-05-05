@@ -1,0 +1,24 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "electric_scooter_electronet_labels_v1",
+  "category_gr": "ELECTRIC SCOOTER",
+  "cta_map_key": "ELECTRIC SCOOTER",
+  "cta_url": "https://www.etranoulis.gr/hobbies/Electric-Scooter",
+  "electronet_examples": [
+    "https://www.electronet.gr/gadgets-gaming-hobbies/ilektrokinisi/scooter/xiaomi-electric-scooter-4-lite-gen2"
+  ],
+  "sections": [
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Μέγιστο Βάρος Χρήστη σε Κιλά",
+        "Μέγιστη Ταχύτητα (km/h)",
+        "Μπαταρία",
+        "Αυτονομία Μπαταρίας (Max)",
+        "Βάρος συσκευής σε κιλά",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

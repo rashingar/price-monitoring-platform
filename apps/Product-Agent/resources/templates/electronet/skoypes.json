@@ -1,0 +1,40 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "skoypes_electronet_labels_v1",
+  "template_id": "skoypes",
+  "category_gr": "Σκούπες",
+  "cta_map_key": "Σκούπες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupes",
+  "electronet_examples": [
+    "https://www.electronet.gr/oikiakos-eksoplismos/skoupisma/skoupes/bosch-bgls2ba1-skoypa-me-sakoyla-35l-mayro",
+    "https://www.electronet.gr/exoplismos-spitioy/skoypisma/skoypes-ygron-stereon/ilektriki-skoypa-rowenta-in5020"
+  ],
+  "source": {
+    "electronet_url_example": "https://www.electronet.gr/exoplismos-spitioy/skoypisma/skoypes-ygron-stereon/ilektriki-skoypa-rowenta-in5020"
+  },
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "name": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Ισχύς σε Watts",
+        "Χωρητικότητα σε Λίτρα",
+        "Υλικό Κατασκευής Κάδου",
+        "Ρύθμιση Ισχύος Απορρόφησης",
+        "Φίλτρο Εξαγωγής Αέρα",
+        "Μήκος Καλωδίου σε Μέτρα",
+        "Ακτίνα Λειτουργίας σε Μέτρα",
+        "Εξαρτήματα",
+        "Αποθήκευση Εξαρτημάτων",
+        "Δυνατότητα Πλύσης",
+        "Δυνατότητα Σακούλας",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ × Π × Β)",
+        "Βάρος Συσκευής σε Κιλά"
+      ]
+    }
+  ],
+  "fingerprint": "af9b5a0ec7ab8910f6db137123a6af2543b5c3de408b5356200c1aae503ebd3f"
+}

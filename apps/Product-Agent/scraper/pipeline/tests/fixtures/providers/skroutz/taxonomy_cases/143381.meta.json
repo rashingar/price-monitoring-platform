@@ -1,0 +1,23 @@
+{
+  "model": "143381",
+  "source_url": "https://www.skroutz.gr/s/65192519/tesla-smart-tileorasi-32-hd-ready-led-32e655bhs-hdr-2025.html",
+  "final_url": "https://www.skroutz.gr/s/65192519/tesla-smart-tileorasi-32-hd-ready-led-32e655bhs-hdr-2025.html",
+  "name": "Tesla 32E655BHS – Τηλεόραση 32\" Smart 4K LED Google TV Dolby Vision ???????: 143381",
+  "manufacturer": "Tesla",
+  "category_tag_text": "Τηλεοράσεις",
+  "category_tag_href": "https://www.skroutz.gr/c/12/television.html",
+  "normalized_category_slug": "television",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις///Έως 32''",
+  "captured_at": "2026-03-21T11:36:12.638876+00:00",
+  "content_hash": "1f6b50ac5a10d1242334d4c3025ee5f9bce77a8bcbf89a89a27fe7c9ba3867af",
+  "captured_live": false,
+  "family_key": "television",
+  "expected_parent_category": "ΕΙΚΟΝΑ & ΗΧΟΣ",
+  "expected_leaf_category": "Τηλεοράσεις",
+  "expected_sub_category": "Έως 32''",
+  "expected_source_category": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις///Έως 32''",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "television:size_bucket"
+}

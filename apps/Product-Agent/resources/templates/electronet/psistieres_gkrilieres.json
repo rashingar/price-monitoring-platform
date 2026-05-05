@@ -1,0 +1,44 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "psistieres_gkrilieres_electronet_labels_v1",
+  "category_gr": "Ψηστιέρες - Γκριλιέρες",
+  "cta_map_key": "Ψηστιέρες - Γκριλιέρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/pshstieres-gkrilieres",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/pshstieres-gkrilieres/rohnson-r250n-electric-grill",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/pshstieres-gkrilieres/roller-kappatos-20106-psistiera-scharas-1050w-inox-dipli-schara-kapaki"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Ισχύς σε Watts",
+        "Επιφάνεια Ψησίματος σε Εκατοστά",
+        "Υλικό Πλάκας",
+        "Ρυθμιζόμενος Θερμοστάτης",
+        "Βαθμίδες Θερμοκρασίας",
+        "Ενδεικτική Λυχνία Λειτουργίας",
+        "Θέσεις Ψησίματος",
+        "Θερμομονωτικές Λαβές",
+        "Κάθετη Αποθήκευση"
+      ]
+    },
+    {
+      "section": "Εξαρτήματα",
+      "labels": [
+        "Καπάκι",
+        "Βάση Επιδαπέδια"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

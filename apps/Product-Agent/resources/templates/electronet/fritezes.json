@@ -1,0 +1,48 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "fritezes_electronet_labels_v1",
+  "template_id": "fritezes",
+  "category_gr": "Φριτέζες",
+  "cta_map_key": "Φριτέζες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/fritezes",
+  "electronet_examples": [
+    "https://www.electronet.gr/oikiakos-eksoplismos/mikroi-mageires/fritezes/forma-mageirematos-air-fryer-rohnson-AF02",
+    "https://www.electronet.gr/exoplismos-spitioy/mikroi-mageires/fritezes/friteza-aeros-tefal-easy-fry-infrared-ey8328"
+  ],
+  "source": {
+    "electronet_url_example": "https://www.electronet.gr/exoplismos-spitioy/mikroi-mageires/fritezes/friteza-aeros-tefal-easy-fry-infrared-ey8328"
+  },
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "name": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Χωρητικότητα Κάδου Μαγειρέματος σε Κιλά",
+        "Ρυθμιζόμενος Θερμοστάτης",
+        "Ενδείξεις Λειτουργίας",
+        "Χρονοδιακόπτης",
+        "Ισχύς σε Watts",
+        "Σύστημα Μαγειρέματος με Θερμό Αέρα",
+        "Φίλτρο Κατά των Οσμών",
+        "Αποσπώμενος Κάδος",
+        "Περιστρεφόμενο Καλάθι",
+        "Αντικολλητική Επίστρωση Κάδου",
+        "Αντιθερμικά Τοιχώματα",
+        "Παράθυρο για Έλεγχο Μαγειρέματος",
+        "Αποσπώμενα Μέρη που Πλένονται στο Πλυντήριο",
+        "Αποθήκευση Καλωδίου",
+        "Χωρητικότητα σε Λίτρα"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "name": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ],
+  "fingerprint": "a7580121c0f55f3aeb3f717ca656e12cf1f8d3431445022a7c00b553453df96d"
+}

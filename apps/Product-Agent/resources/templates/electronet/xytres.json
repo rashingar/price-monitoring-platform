@@ -1,0 +1,43 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "xytres_electronet_labels_v1",
+  "category_gr": "Χύτρες",
+  "cta_map_key": "Χύτρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/xytres",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/xytres/bra-a270320-chytra-20cm-3lt-efficient-platinum-plus",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/xytres/bra-a270532-efficient-richi-katsarola-5lt-32cm"
+  ],
+  "sections": [
+    {
+      "section": "Βασικά Χαρακτηριστικά",
+      "labels": [
+        "Τύπος Σκεύους",
+        "Διάμετρος Σκεύους σε Εκατοστά.",
+        "Χωρητικότητα σε Λίτρα",
+        "Υλικό Σκεύους",
+        "Εσωτερική Επίστρωση",
+        "Καπάκι",
+        "Υλικό Λαβής"
+      ]
+    },
+    {
+      "section": "Χρήση - Συμβατότητα",
+      "labels": [
+        "Κατάλληλο για Φούρνο",
+        "Κατάλληλο για Επαγωγική Εστία",
+        "Κατάλληλο για Όλες τις Εστίες"
+      ]
+    },
+    {
+      "section": "Επιπλέον",
+      "labels": [
+        "Τύπος Αντικολλητικής Επίστρωσης",
+        "Χωρίς PFOA",
+        "Πάχος Βάσης",
+        "Περιλαμβάνει",
+        "Χρώμα"
+      ]
+    }
+  ]
+}

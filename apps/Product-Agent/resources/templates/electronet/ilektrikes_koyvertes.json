@@ -1,0 +1,49 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "ilektrikes_koyvertes_electronet_labels_v1",
+  "category_gr": "Ηλεκτρικές Κουβέρτες",
+  "cta_map_key": "Ηλεκτρικές Κουβέρτες",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/hlektrikes-kouvertes",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/hlektrikes-kouvertes/hlektrikh-koyberta-monh-plenomenh-imetec-relaxy-334238"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Μέγεθος",
+        "Ισχύς σε Watt",
+        "Ύφασμα",
+        "Χειριστήριο",
+        "Επίπεδα Θερμοκρασιών",
+        "Χρόνος Θέρμανσης σε Λεπτά",
+        "Δυνατότητα Πλύσης",
+        "Σύστημα Ασφαλείας"
+      ]
+    },
+    {
+      "section": "Ειδικές Λειτουργίες",
+      "labels": [
+        "Χρονοδιακόπτης",
+        "Αυτόματη Ρύθμιση Θερμοκρασίας"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Πλάτος Συσκευής σε Εκατοστά",
+        "Μήκος Συσκευής σε Εκατοστά",
+        "Μήκος Καλωδίου σε Μέτρα"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

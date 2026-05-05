@@ -1,0 +1,77 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "tablets_tios_electronet_labels_v1",
+  "category_gr": "iOS",
+  "cta_map_key": "iOS",
+  "cta_url": "https://www.etranoulis.gr/thlefwnia/tablets/tios",
+  "electronet_examples": [
+    "https://www.electronet.gr/pliroforiki/tablets/ola-ta-tablets/apple-ipad-11-wi-fi-128gb-yellow-md4d4tya"
+  ],
+  "sections": [
+    {
+      "section": "Οθόνη",
+      "labels": [
+        "Διαγώνιος Οθόνης ( Ίντσες )",
+        "Τεχνολογία Οθόνης",
+        "Αριθμός Pixels",
+        "Ανάλυση Οθόνης"
+      ]
+    },
+    {
+      "section": "Επεξεργαστής",
+      "labels": [
+        "Μάρκα Επεξεργαστή",
+        "Ταχύτητα Επεξεργαστή (GHz)",
+        "Αριθμός Πυρήνων Επεξεργαστή"
+      ]
+    },
+    {
+      "section": "Μνήμη",
+      "labels": [
+        "Εσωτερική Μνήμη",
+        "Μνήμη Ram",
+        "Επεκτάσιμη Εξωτερική Μνήμη"
+      ]
+    },
+    {
+      "section": "Λειτουργικό",
+      "labels": [
+        "Λειτουργικό"
+      ]
+    },
+    {
+      "section": "Camera",
+      "labels": [
+        "Camera Οπίσθια",
+        "Camera Εμπρόσθια"
+      ]
+    },
+    {
+      "section": "Συνδεσιμότητα",
+      "labels": [
+        "3G",
+        "4G",
+        "5G",
+        "Wi - Fi",
+        "Bluetooth",
+        "GPS",
+        "Micro USB",
+        "USB Type C",
+        "USB 2.0",
+        "Micro HDMI",
+        "Λειτουργία Τηλεφώνου",
+        "Dual SIM"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Μπαταρία",
+        "Επιπλέον Εξοπλισμός",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

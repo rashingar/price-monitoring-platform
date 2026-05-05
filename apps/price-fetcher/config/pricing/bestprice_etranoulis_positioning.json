@@ -1,0 +1,11 @@
+{
+  "name": "bestprice_etranoulis_positioning",
+  "rule_family": "bestprice_store_positioning",
+  "rounding_mode": "keep_2dp",
+  "parameters": {
+    "own_store": "eTranoulis",
+    "target_gap": "0.10",
+    "min_gap": "0.10",
+    "max_gap": "1.00"
+  }
+}

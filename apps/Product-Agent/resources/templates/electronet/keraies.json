@@ -1,0 +1,37 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "keraies_electronet_labels_v1",
+  "category_gr": "Κεραίες",
+  "cta_map_key": "Κεραίες",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/eikona-ixos/keraies",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/eikona-hxos/eikona-ixos/keraies/epigeios-psifiakos-dekths-thleorashs-f-u-mpf3473hu"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Δέκτης",
+        "Αποκωδικοποίηση",
+        "Ανάλυση",
+        "PVR Ready",
+        "Επιπλέον Λειτουργίες",
+        "Αναπαραγωγή Αρχείων Εικόνας",
+        "Αναπαραγωγή Αρχείων Ήχου",
+        "USB 2.0",
+        "Scart",
+        "HDMI",
+        "Βασικός Εξοπλισμός",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

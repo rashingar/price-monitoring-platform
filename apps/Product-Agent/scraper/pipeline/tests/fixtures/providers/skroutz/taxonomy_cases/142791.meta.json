@@ -1,0 +1,23 @@
+{
+  "model": "142791",
+  "source_url": "https://www.skroutz.gr/s/63014354/lg-smart-tileorasi-98-4k-uhd-led-ut91-hdr-2024-98ut91006la.html",
+  "final_url": "https://www.skroutz.gr/s/63014354/lg-smart-tileorasi-98-4k-uhd-led-ut91-hdr-2024-98ut91006la.html",
+  "name": "LG 98UT91006LA – Τηλεόραση 98\" Smart 4K LED 120Hz α8 AI Processor Gen 2 ???????: 142791",
+  "manufacturer": "LG",
+  "category_tag_text": "Τηλεοράσεις",
+  "category_tag_href": "https://www.skroutz.gr/c/12/television.html",
+  "normalized_category_slug": "television",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις///50'' & άνω",
+  "captured_at": "2026-03-21T11:36:12.595862+00:00",
+  "content_hash": "7f9a9bd4a2ef642abc9e42cfdb987f0309fdfd334cf92e45623253ce77937a0f",
+  "captured_live": false,
+  "family_key": "television",
+  "expected_parent_category": "ΕΙΚΟΝΑ & ΗΧΟΣ",
+  "expected_leaf_category": "Τηλεοράσεις",
+  "expected_sub_category": "50'' & άνω",
+  "expected_source_category": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις///50'' & άνω",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "television:size_bucket"
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "skoypes_stick_electronet_labels_v1",
+  "category_gr": "Σκούπες Stick",
+  "cta_map_key": "Σκούπες Stick",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupes-stick",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupes-stick/skoupa-stick-bosch-unlimited-7-bbs711w-leyko-18v-40min",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupes-stick/skoupa-miele-triflex-hx2-125edition-252v-stick-handheld-lotus-white"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Μπαταρίας",
+        "Τάση Volt",
+        "Χρόνος Λειτουργίας σε Λεπτά",
+        "Χωρητικότητα Κάδου σε Λίτρα",
+        "Φίλτρο Εξαγωγής Αέρα",
+        "Βάση Φόρτισης με κιτ Στήριξης Τοίχου",
+        "Εξαρτήματα"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

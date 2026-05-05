@@ -1,0 +1,56 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "car_audio_electronet_labels_v1",
+  "category_gr": "CAR AUDIO",
+  "cta_map_key": "CAR AUDIO",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/car-audio",
+  "electronet_examples": [
+    "https://www.electronet.gr/eikona-ihos/car-audio/ihosystimata-aytokinitoy/ihosystima-aytokinitoy-philips-ce235btgrs"
+  ],
+  "sections": [
+    {
+      "section": "Αναπαραγωγή",
+      "labels": [
+        "Ισχύς ανά Κανάλι Εξόδου( Watt )",
+        "Κανάλια Εξόδου",
+        "Δίσκοι Αναπαραγωγής",
+        "Μέσα Αναπαραγωγής",
+        "Αναπαραγωγή Αρχείων Ήχου",
+        "Αναπαραγωγή Αρχείων Εικόνας",
+        "Ραδιόφωνο",
+        "Ραδιοφωνικός Δέκτης"
+      ]
+    },
+    {
+      "section": "Οθόνη",
+      "labels": [
+        "Μεταβλητός Φωτισμός Πλήκτρων",
+        "Φωτισμός Πλήκτρων",
+        "Φωτισμός Οθόνης"
+      ]
+    },
+    {
+      "section": "Λειτουργίες",
+      "labels": [
+        "Bluetooth",
+        "Λειτουργία Handsfree",
+        "Τηλεχειριστήριο",
+        "Ζώνες Ισοσταθμιστή",
+        "Ενίσχυση Μπάσων",
+        "Dolby® Pro Logic®",
+        "Συμβατό με iPod/iPhone",
+        "Συμβατό με Android",
+        "CD-Changer",
+        "Έξοδοι Ήχου"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή",
+        "Χώρα Κατασκευής"
+      ]
+    }
+  ]
+}

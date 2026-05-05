@@ -1,0 +1,157 @@
+{
+  "sources": [
+    {
+      "source_name": "bestprice",
+      "source_domain": "www.bestprice.gr",
+      "source_type": "marketplace",
+      "enabled": true,
+      "expected_listing_field": "bestprice_status",
+      "public_search_url_templates": [
+        "https://www.bestprice.gr/search?q={query}"
+      ],
+      "product_url_patterns": [
+        "^https://www\\.bestprice\\.gr/item/\\d+(?:/|$)"
+      ],
+      "blocked_url_patterns": [
+        "/search",
+        "/category/",
+        "/cart",
+        "/account",
+        "/login",
+        "\\.(?:css|js|png|jpg|jpeg|gif|svg|webp|ico)(?:\\?|$)"
+      ],
+      "rate_limit_seconds": 2.0,
+      "max_candidates_per_product": 8,
+      "max_searches_per_product": 3,
+      "notes": "Marketplace resolver must keep strict MPN evidence before auto-accept."
+    },
+    {
+      "source_name": "skroutz",
+      "source_domain": "www.skroutz.gr",
+      "source_type": "marketplace",
+      "enabled": true,
+      "expected_listing_field": "skroutz_status",
+      "public_search_url_templates": [
+        "https://www.skroutz.gr/search?keyphrase={query}"
+      ],
+      "product_url_patterns": [
+        "^https://www\\.skroutz\\.gr/s/\\d+(?:/|$)"
+      ],
+      "blocked_url_patterns": [
+        "/search",
+        "/cart",
+        "/account",
+        "/login",
+        "\\.(?:css|js|png|jpg|jpeg|gif|svg|webp|ico)(?:\\?|$)"
+      ],
+      "rate_limit_seconds": 2.0,
+      "max_candidates_per_product": 8,
+      "max_searches_per_product": 3,
+      "notes": "Marketplace resolver must keep strict MPN evidence before auto-accept."
+    },
+    {
+      "source_name": "electronet",
+      "source_domain": "www.electronet.gr",
+      "source_type": "direct_vendor",
+      "enabled": true,
+      "expected_listing_field": null,
+      "public_search_url_templates": [
+        "https://www.electronet.gr/search?search={query}"
+      ],
+      "product_url_patterns": [
+        "^https://www\\.electronet\\.gr/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/?$"
+      ],
+      "blocked_url_patterns": [
+        "/search",
+        "/cart",
+        "/checkout",
+        "/account",
+        "/login",
+        "/blog",
+        "\\.(?:css|js|png|jpg|jpeg|gif|svg|webp|ico|pdf)(?:\\?|$)"
+      ],
+      "rate_limit_seconds": 2.0,
+      "max_candidates_per_product": 6,
+      "max_searches_per_product": 4,
+      "notes": "Direct vendor resolver uses public pages only; Product-Agent is reference-only."
+    },
+    {
+      "source_name": "kotsovolos",
+      "source_domain": "www.kotsovolos.gr",
+      "source_type": "direct_vendor",
+      "enabled": true,
+      "expected_listing_field": null,
+      "public_search_url_templates": [
+        "https://www.kotsovolos.gr/search/?text={query}"
+      ],
+      "product_url_patterns": [
+        "^https://www\\.kotsovolos\\.gr/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/?$"
+      ],
+      "blocked_url_patterns": [
+        "/search",
+        "/cart",
+        "/checkout",
+        "/account",
+        "/login",
+        "/blog",
+        "\\.(?:css|js|png|jpg|jpeg|gif|svg|webp|ico|pdf)(?:\\?|$)"
+      ],
+      "rate_limit_seconds": 2.0,
+      "max_candidates_per_product": 6,
+      "max_searches_per_product": 4,
+      "notes": "Generic direct-vendor public search and product-page evidence."
+    },
+    {
+      "source_name": "public",
+      "source_domain": "www.public.gr",
+      "source_type": "direct_vendor",
+      "enabled": true,
+      "expected_listing_field": null,
+      "public_search_url_templates": [
+        "https://www.public.gr/search?query={query}"
+      ],
+      "product_url_patterns": [
+        "^https://www\\.public\\.gr/product/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/?$"
+      ],
+      "blocked_url_patterns": [
+        "/search",
+        "/cart",
+        "/checkout",
+        "/account",
+        "/login",
+        "/blog",
+        "\\.(?:css|js|png|jpg|jpeg|gif|svg|webp|ico|pdf)(?:\\?|$)"
+      ],
+      "rate_limit_seconds": 2.0,
+      "max_candidates_per_product": 6,
+      "max_searches_per_product": 4,
+      "notes": "Generic direct-vendor public search and product-page evidence."
+    },
+    {
+      "source_name": "plaisio",
+      "source_domain": "www.plaisio.gr",
+      "source_type": "direct_vendor",
+      "enabled": true,
+      "expected_listing_field": null,
+      "public_search_url_templates": [
+        "https://www.plaisio.gr/search?q={query}"
+      ],
+      "product_url_patterns": [
+        "^https://www\\.plaisio\\.gr/product/[^/?#]+/[^/?#]+/[^/?#]+/[^/?#]+/?$"
+      ],
+      "blocked_url_patterns": [
+        "/search",
+        "/cart",
+        "/checkout",
+        "/account",
+        "/login",
+        "/blog",
+        "\\.(?:css|js|png|jpg|jpeg|gif|svg|webp|ico|pdf)(?:\\?|$)"
+      ],
+      "rate_limit_seconds": 2.0,
+      "max_candidates_per_product": 6,
+      "max_searches_per_product": 4,
+      "notes": "Generic direct-vendor public search and product-page evidence."
+    }
+  ]
+}

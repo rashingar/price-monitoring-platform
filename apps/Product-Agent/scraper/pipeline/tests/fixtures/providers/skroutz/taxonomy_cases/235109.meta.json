@@ -1,0 +1,23 @@
+{
+  "model": "235109",
+  "source_url": "https://www.skroutz.gr/s/63786561/samsung-plyntirio-rouchon-10kg-me-technologia-atmou-1400-strofon-bubblesoak-ww10fg5u34aele.html",
+  "final_url": "https://www.skroutz.gr/s/63786561/samsung-plyntirio-rouchon-10kg-me-technologia-atmou-1400-strofon-bubblesoak-ww10fg5u34aele.html",
+  "name": "Samsung WW10FG5U34AELE – Πλυντήριο Ρούχων 10 kg ???????: 235109",
+  "manufacturer": "Samsung",
+  "category_tag_text": "Πλυντήρια Ρούχων",
+  "category_tag_href": "https://www.skroutz.gr/c/379/plynthria-rouxwn.html",
+  "normalized_category_slug": "plynthria rouxwn",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια///Πλυντήρια Ρούχων",
+  "captured_at": "2026-03-21T11:36:13.213516+00:00",
+  "content_hash": "7affc8a9e97bff1dbcd623f9fbfffbb190c51916fe9debdb12bdcd1c6de451d6",
+  "captured_live": false,
+  "family_key": "laundry",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Πλυντήρια-Στεγνωτήρια",
+  "expected_sub_category": "Πλυντήρια Ρούχων",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια///Πλυντήρια Ρούχων",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "laundry"
+}

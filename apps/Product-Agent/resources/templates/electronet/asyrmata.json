@@ -1,0 +1,33 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "asyrmata_electronet_labels_v1",
+  "category_gr": "Ασύρματα",
+  "cta_map_key": "Ασύρματα",
+  "cta_url": "https://www.etranoulis.gr/thlefwnia/stathera/asyrmata",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/thlefwnia/stathera/asyrmata/asyrmato-tilefono-panasonic-kx-tg1611grc-mple",
+    "https://www.etranoulis.gr/thlefwnia/stathera/asyrmata/asyrmato-tilefono-panasonic-kx-tg1611grh-mauro"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τηλεφωνική Συσκευή",
+        "Οθόνη Ίντσες",
+        "Φωτιζόμενη Οθόνη",
+        "Αναγνώριση Κλήσεων",
+        "Ανοιχτή Συνομιλία",
+        "Αναμονή Κλήσεων",
+        "Τηλεφωνητής",
+        "Ελληνικό Μενού",
+        "Τηλεφωνικός Κατάλογος",
+        "Μνήμες Επανάκλησης",
+        "Χρόνος Αναμονής/Ομιλίας",
+        "Εντοπισμός Ακουστικού",
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

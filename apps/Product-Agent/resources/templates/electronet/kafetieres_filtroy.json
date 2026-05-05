@@ -1,0 +1,46 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "kafetieres_filtroy_electronet_labels_v1",
+  "category_gr": "Καφετιέρες Φίλτρου",
+  "cta_map_key": "Καφετιέρες Φίλτρου",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kafetieres-filtrou",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kafetieres-filtrou/kafetiera-filtrou-gallikou-rohnson-mod-r-929",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kafetieres-filtrou/rohnson-mod-r991-inox-filter-coffee-maker"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Χωρητικότητα σε Φλυτζάνια",
+        "Υλικό Κανάτας",
+        "Ισχύς σε Watts",
+        "Χωρητικότητα Δοχείου Νερού σε Λίτρα",
+        "Ένδειξη Στάθμης Νερού",
+        "Αποσπώμενο Δοχείο Νερού",
+        "Θερμαινόμενη Βάση",
+        "Ενδεικτική Λυχνία Λειτουργίας",
+        "Ηχητικό Σήμα Ειδοποίησης",
+        "Αποθήκευση Καλωδίου"
+      ]
+    },
+    {
+      "section": "Ειδικές Λειτουργίες",
+      "labels": [
+        "Διακοπή Σταξίματος",
+        "Λειτουργία Aroma",
+        "Αυτόματη Διακοπή Λειτουργίας",
+        "Χρονοδιακόπτης Λειτουργίας"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

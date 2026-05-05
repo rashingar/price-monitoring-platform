@@ -1,0 +1,907 @@
+Metadata-Version: 2.4
+Name: pricefetcher
+Version: 0.1.0
+Summary: Local CSV pipeline scaffolding for Skroutz fetch and pricing workflows.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: alembic<2,>=1.13
+Requires-Dist: fastapi<1,>=0.110
+Requires-Dist: httpx<1,>=0.27
+Requires-Dist: playwright<2,>=1.52
+Requires-Dist: psycopg[binary]<4,>=3
+Requires-Dist: sqlalchemy<3,>=2
+Requires-Dist: tzdata>=2024.1
+Requires-Dist: uvicorn<1,>=0.29
+
+# PriceFetcher
+
+PriceFetcher is a local Python CLI for a two-step competitor CSV workflow:
+
+- `fetch` reads an input CSV and writes a source-enriched CSV plus summary JSON
+- `price` reads an enriched CSV and writes priced outputs plus summary JSON
+
+Supported live fetch sources:
+- `skroutz`
+- `bestprice`
+
+This repository follows `PLAN.md` as the product source of truth.
+The current implementation also follows `CONTRACT_ADDENDUM.md` for repo-specific behavior.
+
+## Current Status
+
+Milestones 1 through 5 are implemented:
+
+- project scaffolding
+- CLI command surface
+- CSV reader/writer layer
+- case-insensitive required-column handling
+- row-level validation
+- source-aware fetch output naming and contracts
+- sequential Playwright + Chromium fetch runtime
+- Skroutz `mpn`-only search flow
+- BestPrice MPN-driven fetch flow with optional category URL narrowing
+- strict match validation
+- canonical product URL extraction
+- source-specific live price extraction
+- incremental enriched CSV writing
+- completed fetch summary JSON
+- pricing rule execution
+- source-aware priced outputs
+- `price_only.csv` generation
+- pricing summary JSON
+
+## Installation
+
+Install the package in editable mode:
+
+```powershell
+python -m pip install -e .
+```
+
+Install Chromium for Playwright:
+
+```powershell
+python -m playwright install chromium
+```
+
+## CLI
+
+Skroutz fetch:
+
+```powershell
+pricefetcher fetch --input .\input\export_2026-04-02.csv --source skroutz --output-dir .\output
+```
+
+BestPrice fetch:
+
+```powershell
+pricefetcher fetch --input .\input\selected_products.csv --source bestprice --output-dir .\output
+```
+
+BestPrice fetch with an optional category narrowing hint:
+
+```powershell
+pricefetcher fetch --input .\input\selected_products.csv --source bestprice --catalog-url "https://www.bestprice.gr/cat/2493/hlektrikes-skoupes/f/1_1159/miele.html" --output-dir .\output
+```
+
+Price:
+
+```powershell
+pricefetcher price --input .\output\export_2026-04-02_bestprice_enriched.csv --rule-config .\config\pricing\bestprice_minus_0_10.json --output-dir .\output
+```
+
+BestPrice store-positioning price:
+
+```powershell
+pricefetcher price --input .\output\export_2026-04-02_bestprice_enriched.csv --rule-config .\config\pricing\bestprice_etranoulis_positioning.json --output-dir .\output
+```
+
+You can also run the module entrypoint directly:
+
+```powershell
+python -m pricefetcher.cli.main fetch --input .\input\export_2026-04-02.csv --source skroutz --output-dir .\output
+python -m pricefetcher.cli.main fetch --input .\input\selected_products.csv --source bestprice --output-dir .\output
+python -m pricefetcher.cli.main price --input .\output\export_2026-04-02_bestprice_enriched.csv --rule-config .\config\pricing\bestprice_minus_0_10.json --output-dir .\output
+python -m pricefetcher.cli.main price --input .\output\export_2026-04-02_bestprice_enriched.csv --rule-config .\config\pricing\bestprice_etranoulis_positioning.json --output-dir .\output
+```
+
+## Fetch Behavior
+
+`fetch`:
+
+- accepts required columns `model`, `mpn`, `price` case-insensitively
+- may also use an optional extra input column named `name` during BestPrice fetches
+- trims whitespace for required values
+- validates `price` as dot-decimal numeric text
+- uses strict `mpn` evidence matching
+- reuses one Chromium session per run and processes rows sequentially
+- retries transient fetch failures only, up to 5 attempts per row
+- writes only canonical product page URLs
+- preserves input row order exactly
+- preserves original input columns in enriched output and appends source monitoring columns after them
+- writes comma-delimited CSV outputs
+
+Skroutz fetch specifics:
+
+- searches Skroutz using the original `mpn`
+- writes `{base}_skroutz_enriched.csv`
+- writes `skroutz_price` and `skroutz_url`
+
+BestPrice fetch specifics:
+
+- searches BestPrice using the row `mpn`
+- accepts input columns compatible with Price Monitoring output: `model`, `mpn`, `name`, `price`
+- treats `--catalog-url` as an optional narrowing/prioritization hint, not a required argument
+- validates candidates by strict MPN evidence from product pages
+- may use `name` only as a tie-breaker after strict MPN evidence exists
+- does not accept name similarity alone as a match
+- persists the current merchant ladder in BestPrice enriched output through:
+  - `bestprice_best_store`
+  - `bestprice_best_store_price`
+  - `bestprice_next_store`
+  - `bestprice_next_store_price`
+- writes `{base}_bestprice_enriched.csv`
+- writes `bestprice_price` and `bestprice_url`
+
+Current operational note:
+
+- the default runtime config uses headed Chromium because headless sessions may still hit target-site blocking pages
+
+## Pricing Behavior
+
+`price`:
+
+- detects whether the enriched input is Skroutz- or BestPrice-based
+- reads only the enriched CSV and never refetches the live source
+- omits extra input columns from priced outputs
+- retains BestPrice merchant-ladder fields in priced enriched output when they are part of the source contract
+- writes `{input_stem}_with_new_price.csv`
+- writes `{base}_price_only.csv`
+- writes `{base}_pricing_summary.json`
+- keeps the original input `price` in `price_only.csv` when `new_price` is blank
+- writes comma-delimited CSV outputs
+
+`new_price` behavior:
+
+- supports integer-style outputs through rounding modes like `nearest`, `floor`, and `ceil`
+- supports exact 2-decimal output with `keep_2dp`
+- clamps negative computed prices to `0`
+
+## Runtime Config
+
+Default runtime config lives at `config/runtime.json`.
+
+- `output_dir`: default output directory when `--output-dir` is not supplied
+- `csv_encoding`: default CSV/JSON text encoding
+- `fetch.headless`: Chromium launch mode
+- `fetch.navigation_timeout_ms`: per-navigation timeout
+- `fetch.retry_max_attempts`: transient fetch retry cap
+- `fetch.page_ready_timeout_ms`: extra wait after DOM load before parsing
+
+Default encoding is `utf-8-sig`.
+
+## Pricing Configs
+
+Example rule files live under `config/pricing/`.
+
+Supported rule families:
+
+- `fixed_offset`
+- `percentage_discount`
+- `fixed_offset_with_floor`
+- `formula_with_rounding`
+- `bestprice_store_positioning`
+
+Supported rounding modes:
+
+- `floor`
+- `ceil`
+- `nearest`
+- `minus_one_if_decimal_79_99`
+- `keep_2dp`
+
+Included example configs:
+
+- `default_rule.json`: sample-like Skroutz pricing rule
+- `bestprice_minus_0_10.json`: subtract `0.10` from the observed BestPrice price and keep 2 decimals
+- `bestprice_etranoulis_positioning.json`: keep `eTranoulis` first on BestPrice with a target `0.10` gap, keep the live price when already first within the `0.10` to `1.00` window, and raise back toward the next store when the gap is too wide
+
+## BridgeCraft Local API
+
+The BridgeCraft bridge is exposed separately from the existing `pricefetcher fetch` and `pricefetcher price` CLI commands.
+
+Run the local API:
+
+```powershell
+pricefetcher-api
+```
+
+It starts uvicorn on `127.0.0.1:8001`. You can also run:
+
+```powershell
+python -m pricefetcher.api.app
+```
+
+Bridge stock input is a simple CSV with this schema:
+
+```csv
+model,quantity
+005606,3
+123456,0
+```
+
+If `stock_csv_path` is omitted or `null`, the API uses:
+
+```text
+C:\Exports\CheckWHouseBalance.csv
+```
+
+Valid bridge models are exactly six numeric digits after trimming whitespace. Composite, bundle, or otherwise non-atomic models such as `233374-233203`, `ABC123`, `12345`, and `1234567` are ignored and are not updated.
+
+Example request:
+
+```json
+{
+  "opencart_export_path": "C:\\Exports\\export_2026-04-28.csv",
+  "stock_csv_path": null,
+  "output_dir": null
+}
+```
+
+When `output_dir` is omitted or `null`, the API writes artifacts to a timestamped run folder under `output/bridge/runs/{run_id}`. Generated bridge artifacts include `oc_import.csv`, `summary.csv`, `updated.csv`, `swings.csv`, `unknown_codes.csv`, and `codes_not_in_entersoft.csv`.
+
+## Commerce API Health And Artifacts
+
+The commerce API exposes a lightweight health endpoint that does not require `sourceCata.csv`, `C:\Exports`, or any stock/catalog files:
+
+```text
+GET /api/health
+```
+
+Generated artifact access is restricted to safe output roots. By default those roots are:
+
+```text
+output/bridge/runs
+output/price_monitoring/runs
+```
+
+Additional roots can be allowed with a semicolon-separated environment variable:
+
+```powershell
+$env:PRICEFETCHER_ARTIFACT_ROOTS = "D:\price-fetcher\bridge\runs;D:\price-fetcher\price_monitoring\runs"
+```
+
+Available artifact endpoints:
+
+```text
+GET /api/paths/roots
+GET /api/artifacts/roots
+GET /api/artifacts/bridge/runs/{run_id}
+GET /api/artifacts/price-monitoring/runs/{run_id}
+GET /api/artifacts/read?path=<artifact_path>
+GET /api/artifacts/download?path=<artifact_path>
+```
+
+`GET /api/paths/roots` is the UI-friendly local diagnostics endpoint. It returns the artifact roots, file/editor roots, output roots, whether `PRICEFETCHER_ARTIFACT_ROOTS` and `PRICEFETCHER_FILE_ROOTS` are configured, the Windows path separator (`;`), and a Windows-compatible platform label. Only roots the backend already trusts or uses are included; unrelated environment variables and secrets are not returned.
+
+Listing endpoints return `download_url` and `read_url` for each artifact. Browser UI code should use those URLs instead of trying to open local filesystem paths directly. Preview reads are limited to text-like artifacts (`.csv`, `.json`, `.txt`, `.log`) and paths outside the configured artifact roots are rejected.
+
+Artifact link objects include access metadata:
+
+```json
+{
+  "name": "review.csv",
+  "path": "output/price_monitoring/runs/run-1/review.csv",
+  "download_url": "/api/artifacts/download?path=...",
+  "read_url": "/api/artifacts/read?path=...",
+  "is_allowed": true,
+  "can_read": true,
+  "can_download": true,
+  "warning": ""
+}
+```
+
+Links are clickable only when the target path is inside the configured artifact roots. If a generated or custom path is outside those roots, the API returns empty `download_url` and `read_url` values with `is_allowed: false` and `warning: "outside_configured_artifact_roots"`. The read/download endpoints still reject outside-root paths with HTTP 403.
+
+Custom output directories must be added to `PRICEFETCHER_ARTIFACT_ROOTS` before the UI can read or download their artifacts:
+
+```powershell
+$env:PRICEFETCHER_ARTIFACT_ROOTS = "D:\PriceFetcher\custom\runs;D:\Other\Allowed\Runs"
+```
+
+## Source Catalog API
+
+The Catalog API reads the canonical active catalog snapshot directly from `sourceCata.csv`. It does not build or modify the file.
+
+Default prototype path:
+
+```text
+C:\Users\user\Downloads\sourceCata.csv
+```
+
+You can override that path with:
+
+```powershell
+$env:PRICEFETCHER_SOURCE_CATA_PATH = "C:\path\to\sourceCata.csv"
+```
+
+`sourceCata.csv` must be UTF-8 or UTF-8 with BOM, comma-delimited, and include:
+
+```text
+model, mpn, name, category, manufacturer, price, quantity, status, bestprice_status, skroutz_status
+```
+
+`model` is read as text so leading zeroes are preserved. Whitespace is stripped before validation and before API responses. Atomic models are exactly six numeric digits; composite or invalid models are marked not automation-eligible.
+
+Available endpoints:
+
+```text
+GET /api/catalog/products
+GET /api/catalog/categories
+GET /api/catalog/category-hierarchy
+GET /api/catalog/brands
+GET /api/catalog/summary
+```
+
+Catalog product responses keep the raw OpenCart serialized `category` field for backward compatibility. They also include `raw_category`, `family`, `category_name`, `sub_category`, and `category_levels`, parsed from OpenCart category paths such as `Family:::Family///Category:::Family///Category///Sub-category`.
+
+Example product query:
+
+```text
+http://127.0.0.1:8001/api/catalog/products?manufacturer=Bosch&marketplace=bestprice&atomic_only=true&page=1&page_size=100
+```
+
+`GET /api/catalog/products` supports exact raw serialized category filtering with `category`, plus parsed hierarchy filters `family`, `category_name`, and `sub_category`. If multiple filters are supplied, all must match. Empty filter values are ignored.
+
+Catalog product responses include an `ignored` boolean. `GET /api/catalog/products` excludes ignored products by default; pass `ignored=include` to include them or `ignored=only` to return only ignored products. Automation eligibility requires an atomic model, active status, positive price, non-empty MPN, and not ignored.
+
+`GET /api/catalog/categories` keeps the existing `category` and `count` fields and adds parsed hierarchy fields for each raw category. `GET /api/catalog/category-hierarchy` returns nested family/category/sub-category counts and the raw serialized categories for debug or exact-match UI filtering.
+
+## Product Ignore API
+
+The product ignore list is product-level only and is keyed by `model`. It does not support competitor-specific ignore behavior.
+
+Default prototype path:
+
+```text
+C:\Users\user\Downloads\price_ignore.csv
+```
+
+You can override that path with:
+
+```powershell
+$env:PRICEFETCHER_PRICE_IGNORE_PATH = "C:\path\to\price_ignore.csv"
+```
+
+`price_ignore.csv` must be UTF-8 or UTF-8 with BOM, comma-delimited, and include:
+
+```text
+model, name, manufacturer, mpn, reason, ignored_at, notes
+```
+
+If the file does not exist, reads treat it as an empty list. The first write creates it with the required headers. `model` is read as text so leading zeroes are preserved, and whitespace is stripped before storage and API responses. Create/upsert rejects composite or invalid models; valid models are exactly six numeric digits.
+
+Available endpoints:
+
+```text
+GET /api/ignore/products
+POST /api/ignore/products
+DELETE /api/ignore/products/{model}
+```
+
+Example create/upsert request:
+
+```json
+{
+  "model": "005606",
+  "name": "Product name",
+  "manufacturer": "Bosch",
+  "mpn": "MPN-1",
+  "reason": "do not price monitor",
+  "notes": ""
+}
+```
+
+## Safe CSV File API
+
+The file editor API is intentionally limited to CSV files under configured safe roots. Browser clients cannot read or write arbitrary filesystem paths.
+
+Default safe roots:
+
+```text
+C:\Users\user\Downloads
+C:\Exports
+output
+```
+
+Override them with a semicolon-separated environment variable:
+
+```powershell
+$env:PRICEFETCHER_FILE_ROOTS = "C:\Users\user\Downloads;C:\Exports;D:\SomeFolder"
+```
+
+CSV reads use `utf-8-sig` and preserve all cell values as strings, including leading zeroes such as `005606`. Supported delimiters are comma, semicolon, and tab. If no delimiter is supplied, the API detects one with `csv.Sniffer` and falls back to comma.
+
+Available endpoints:
+
+```text
+GET /api/files/roots
+GET /api/files/list
+POST /api/files/read
+POST /api/files/save
+POST /api/files/save-copy
+```
+
+Example read request:
+
+```json
+{
+  "path": "C:\\Users\\user\\Downloads\\sourceCata.csv",
+  "delimiter": null,
+  "max_rows": 1000
+}
+```
+
+Example save-copy request:
+
+```json
+{
+  "source_path": "C:\\Users\\user\\Downloads\\sourceCata.csv",
+  "target_path": "C:\\Users\\user\\Downloads\\sourceCata_edited.csv",
+  "columns": ["model", "mpn", "name"],
+  "rows": [
+    {"model": "005606", "mpn": "ABC123", "name": "Product name"}
+  ],
+  "delimiter": ","
+}
+```
+
+## Price Monitoring Selection API
+
+The Price Monitoring API prepares a normalized input file for a later `pricefetcher fetch` run. This branch only creates the selection and run artifacts; it does not execute live Skroutz or BestPrice scraping, match prices, undercut competitors, or export price updates.
+
+Eligibility rules:
+
+- `model` must be atomic: exactly six numeric digits
+- `status` must be `1`
+- `price` must be present and greater than `0`
+- `mpn` must be non-empty
+- product must not be ignored, unless `include_ignored` is true
+- selected source must be listed: `skroutz_status == 1` for Skroutz, `bestprice_status == 1` for BestPrice
+
+Preview a selection without writing files:
+
+```text
+POST /api/price-monitoring/selection/preview
+```
+
+Create a run folder and write selection artifacts:
+
+```text
+POST /api/price-monitoring/runs
+```
+
+Example request:
+
+```json
+{
+  "source": "skroutz",
+  "filters": {
+    "q": null,
+    "category": "Cat A",
+    "family": null,
+    "category_name": null,
+    "sub_category": null,
+    "manufacturer": "Bosch",
+    "marketplace": null,
+    "has_mpn": true,
+    "atomic_only": true,
+    "automation_eligible_only": true
+  },
+  "selected_models": [],
+  "excluded_models": [],
+  "include_ignored": false,
+  "dry_run": false
+}
+```
+
+`filters.category` remains an exact raw serialized category filter. `filters.family`, `filters.category_name`, and `filters.sub_category` filter by the parsed OpenCart hierarchy and combine with all other filters using AND semantics.
+
+Run creation writes under `output/price_monitoring/runs/{run_id}`:
+
+```text
+input.csv
+selection_summary.json
+```
+
+`input.csv` uses the exact columns `model,mpn,name,price` and is ready for a later fetch step.
+
+## Price Monitoring Fetch Execution API
+
+The fetch execution endpoint starts an async local fetch execution for an existing Price Monitoring run and returns quickly with HTTP `202 Accepted`. A single in-process background worker performs live Skroutz or BestPrice fetching and writes file-backed execution metadata into the run folder. No Docker, Redis, Celery, or external queue service is required.
+
+Before fetch, the run folder must contain:
+
+```text
+output/price_monitoring/runs/{run_id}/input.csv
+output/price_monitoring/runs/{run_id}/selection_summary.json
+```
+
+Start fetch:
+
+```text
+POST /api/price-monitoring/runs/{run_id}/fetch
+```
+
+Example request:
+
+```json
+{
+  "source": null,
+  "catalog_url": null
+}
+```
+
+When `source` is omitted, the API reads it from `selection_summary.json`. An explicit `source` of `skroutz` or `bestprice` overrides the summary. `catalog_url` is passed through only as the existing optional BestPrice narrowing hint.
+
+Fetch executions are subprocess-backed. The API process supervises child Python processes while preserving the same polling and artifact endpoints. The internal worker CLI launched by the supervisor is:
+
+```text
+python -m pricefetcher.jobs.run_price_monitoring_execution --run-id ... --execution-id ... --execution-type fetch
+```
+
+This CLI is internal to the backend supervisor. It runs one exact execution and does not start the API server or any other repo. Each repo keeps its own clean start command; this backend change does not add a cross-repo startup script.
+
+Only one active queued or running execution is allowed per `run_id`; a second active fetch for the same run returns HTTP `409`. Different run ids can run concurrently up to the local worker cap. The default cap is 3 and can be changed with:
+
+```powershell
+$env:PRICEFETCHER_MAX_FETCH_WORKERS = "3"
+```
+
+Invalid values, empty values, or values less than 1 fall back to 3. Values above the conservative cap are reduced internally. Additional executions beyond the cap remain queued and expose a 1-based `queue_position`.
+
+The response contains an `execution_id`, worker/queue metadata, and a status of `queued` or `running` depending on worker timing. Poll the latest execution:
+
+```text
+GET /api/price-monitoring/runs/{run_id}/fetch
+```
+
+Execution statuses are:
+
+```text
+queued
+running
+succeeded
+failed
+cancelled
+killed
+```
+
+`cancelled` means a queued execution was cancelled before launch or a running child process terminated after graceful cancellation. `killed` means the backend had to force kill the child process tree after the graceful timeout; it is terminal and operationally failure-like.
+
+Running executions expose `worker_id`, `parent_process_id`, `process_id`, `process_group_id`, `thread_name`, `heartbeat_at`, `command`, `exit_code`, and termination timestamps when applicable. Stale detection is informational only; stale executions are not automatically cancelled or failed. A running execution is reported with `stale=true` when its heartbeat is older than the configured threshold or it is not owned by an active worker in the current process. The default stale threshold is 30 minutes and can be changed with:
+
+```powershell
+$env:PRICEFETCHER_FETCH_STALE_AFTER_MINUTES = "30"
+```
+
+Invalid values, empty values, or values less than 1 fall back to 30.
+
+Graceful subprocess termination timeout defaults to 30 seconds and can be changed with:
+
+```powershell
+$env:PRICEFETCHER_SUBPROCESS_TERMINATE_TIMEOUT_SECONDS = "30"
+```
+
+Invalid values, empty values, or values less than 1 fall back to 30. When a running fetch is cancelled, the supervisor sends graceful termination first. If the child does not exit within this timeout, the supervisor force kills the process tree and marks the execution `killed`.
+
+Generated artifacts include:
+
+```text
+input_skroutz_enriched.csv
+input_bestprice_enriched.csv
+input_summary.json
+fetch_result.json
+fetch_execution.json
+fetch_execution.log
+fetch_executions/{execution_id}.json
+fetch_executions/{execution_id}.log
+fetch_executions/{execution_id}.stdout.log
+fetch_executions/{execution_id}.stderr.log
+```
+
+The enriched filename depends on the selected source. `fetch_execution.json` is the latest execution metadata alias. `fetch_executions/{execution_id}.json` preserves execution history for repeated fetch attempts. `fetch_result.json` remains the canonical successful or failed result artifact for compatibility with artifact listings, review/export flows, and old file-first workflows. Old `fetch_result.json` files using `fetch_completed` or `fetch_failed` are still read and mapped to `succeeded` or `failed` in API responses.
+
+Read latest logs:
+
+```text
+GET /api/price-monitoring/runs/{run_id}/fetch/logs
+```
+
+List execution history for one run:
+
+```text
+GET /api/price-monitoring/runs/{run_id}/fetch/executions
+```
+
+The history endpoint returns only real execution files from `fetch_executions/`, newest first. Items include the same execution fields as the latest/specific execution responses, including `stale`, `stale_after_minutes`, and `queue_position`.
+
+Read a specific execution and its logs:
+
+```text
+GET /api/price-monitoring/runs/{run_id}/fetch/{execution_id}
+GET /api/price-monitoring/runs/{run_id}/fetch/{execution_id}/logs
+```
+
+Cancel a queued or running execution:
+
+```text
+POST /api/price-monitoring/runs/{run_id}/fetch/{execution_id}/cancel
+```
+
+Optional request body:
+
+```json
+{
+  "reason": "optional text"
+}
+```
+
+Cancellation is safe process supervision. It marks queued executions as `cancelled`, gracefully terminates running child processes when possible, and force kills stuck process trees as `killed` after the configured timeout. The supervisor does not kill Python threads. If cancellation is requested after fetch output has completed and DB persistence has begun, the worker logs that edge case and finishes normally to keep persisted state consistent.
+
+The cancel endpoints can also cancel stale running execution metadata left behind by a previous backend process. Stale cleanup remains manual-only in this phase.
+
+This endpoint does not review rows, choose pricing actions, export OpenCart updates, or update OpenCart automatically. After a `succeeded` fetch completes, use the review/export endpoints against the enriched CSV.
+
+## Optional PostgreSQL Persistence
+
+Price Monitoring keeps the existing local folder, CSV, JSON, review, export, and artifact behavior. PostgreSQL persistence is optional and is enabled when this environment variable is set:
+
+```powershell
+$env:PRICEFETCHER_DATABASE_URL = "postgresql+psycopg://pricefetcher:pricefetcher@127.0.0.1:5432/pricefetcher"
+```
+
+When configured, successful monitoring run creation also stores `monitoring_runs` and `catalog_snapshots`, and successful manual fetch execution through `POST /api/price-monitoring/runs/{run_id}/fetch` stores `price_observations`. When it is not configured, file-based workflows continue to work.
+
+Price Monitoring DB persistence is optional in the current local-first phase. PostgreSQL is expected to become required later for scheduled monitoring, durable history, alert dashboards, and reusable monitoring profiles, but this patch does not add a hard startup requirement for every backend route.
+
+`GET /api/price-monitoring/db/status` includes setup and migration diagnostics for the UI, including `configured`, `reachable`, `dialect`, `required_tables_present`, `missing_tables`, `alembic_current_revision`, `alembic_head_revision`, `alembic_up_to_date`, sanitized `error`, and `setup_hints`.
+
+The repo-root `.env.example` file is a template with safe local defaults and placeholders. Copy it to `.env` only for private local development, and do not commit `.env`. PriceFetcher local commands automatically load a repo-root `.env` when present, while real Windows/PowerShell environment variables remain authoritative and override `.env` values. For CI or production-like runs, prefer real environment variables.
+
+Dashboard-only alert rules are also stored in the database. The first supported rule type is `competitor_below_own_price`, which creates alert events when a competitor/source price is below the own catalog price. Rules are product-level and match observations by priority:
+
+1. `product_id`
+2. `catalog_source + model`
+3. `catalog_source + mpn`
+
+Alert events are deduplicated per rule, product or fallback target, run, and source. Events support `open`, `acknowledged`, and `resolved` statuses from the first implementation. Alerting does not send email, Slack, SMS, push, or webhook notifications.
+
+### Native Windows PostgreSQL setup and first-run verification
+
+PostgreSQL is an external native Windows runtime service for this backend repo. Do not create a separate database repository. Docker is not used by this project setup.
+
+Install PostgreSQL natively on Windows with the official PostgreSQL Windows installer:
+
+```text
+https://www.postgresql.org/download/windows/
+```
+
+Keep the default port `5432` unless another PostgreSQL instance already uses it.
+
+Create a dedicated local database and role. Open `psql` as the `postgres` admin user, then run:
+
+```sql
+CREATE USER pricefetcher WITH PASSWORD 'pricefetcher';
+CREATE DATABASE pricefetcher OWNER pricefetcher;
+GRANT ALL PRIVILEGES ON DATABASE pricefetcher TO pricefetcher;
+```
+
+If the role or database already exists, skip or adjust those commands rather than dropping existing data.
+
+For the current PowerShell terminal:
+
+```powershell
+$env:PRICEFETCHER_DATABASE_URL = "postgresql+psycopg://pricefetcher:pricefetcher@127.0.0.1:5432/pricefetcher"
+```
+
+To persist it for the current Windows user:
+
+```powershell
+[Environment]::SetEnvironmentVariable(
+  "PRICEFETCHER_DATABASE_URL",
+  "postgresql+psycopg://pricefetcher:pricefetcher@127.0.0.1:5432/pricefetcher",
+  "User"
+)
+```
+
+Open a new PowerShell terminal after persisting the variable. Existing terminals do not automatically reload Windows user environment variables.
+
+Optional `.env` flow:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Use `.env` only for local private values and do not commit it.
+
+PriceFetcher loads `.env` automatically for local commands, including database setup checks and Alembic migrations. If a PowerShell variable such as `$env:PRICEFETCHER_DATABASE_URL` is already set, that OS environment value wins over `.env`.
+
+Verify the copied configuration, run migrations, then verify again:
+
+```powershell
+python -m pricefetcher.jobs.check_db_setup
+alembic upgrade head
+python -m pricefetcher.jobs.check_db_setup
+```
+
+The helper script can create or reuse the local role/database without installing PostgreSQL:
+
+```powershell
+.\scripts\setup_postgres_windows.ps1 -PersistUserEnv
+```
+
+It checks for `psql`, prompts securely for the `postgres` admin password when needed, creates missing objects, never drops an existing database, prints only a sanitized connection URL, and can optionally write a local `.env` with `-WriteDotEnv`. It will not overwrite an existing `.env` unless `-Force` is supplied, and it will not reset an existing app user password unless `-ResetAppUserPassword` is supplied.
+
+Run migrations:
+
+```powershell
+alembic upgrade head
+```
+
+Verify setup from the backend repo root:
+
+```powershell
+python -m pricefetcher.jobs.check_db_setup
+```
+
+Check API DB status after starting the backend:
+
+```text
+GET http://127.0.0.1:8001/api/price-monitoring/db/status
+```
+
+Expected pre-run DB status:
+
+- `configured=true`
+- `reachable=true`
+- `required_tables_present=true`
+- `alembic_up_to_date=true`
+- row counts can all be zero before any Price Monitoring run
+- zero rows before the first run is valid
+
+After creating a Price Monitoring run and executing fetch through the backend API, rows should appear in:
+
+- `monitoring_runs`
+- `catalog_snapshots`
+- `products`
+- `price_observations`
+
+If alert rules are configured, rows may also appear in:
+
+- `alert_rules`
+- `alert_events`
+
+DB diagnostics and read endpoints:
+
+```text
+GET /api/price-monitoring/db/status
+GET /api/price-monitoring/observations
+GET /api/price-monitoring/runs/{run_id}/observations
+GET /api/price-monitoring/runs/{run_id}/catalog-snapshot
+GET /api/price-monitoring/products/{model}/price-history
+GET /api/price-monitoring/alerts/rules
+POST /api/price-monitoring/alerts/rules
+GET /api/price-monitoring/alerts/rules/{rule_id}
+PATCH /api/price-monitoring/alerts/rules/{rule_id}
+POST /api/price-monitoring/alerts/rules/{rule_id}/deactivate
+GET /api/price-monitoring/alerts/events
+POST /api/price-monitoring/alerts/events/{event_id}/acknowledge
+POST /api/price-monitoring/alerts/events/{event_id}/resolve
+POST /api/price-monitoring/alerts/evaluate/{run_id}
+```
+
+The frontend should keep calling the backend API for manual monitoring fetches. It should not run scripts directly from the browser or require a generic command runner endpoint.
+
+Frontend alert dashboard UI, reusable monitoring profiles, scheduled monitoring profiles, and notification delivery are intentionally future steps.
+
+Script entrypoint for a later Windows Task Scheduler job:
+
+```powershell
+python -m pricefetcher.jobs.run_price_monitoring_now --run-id YOUR_RUN_ID --source skroutz --trigger-type scheduled
+```
+
+Example Task Scheduler registration:
+
+```powershell
+schtasks /create /tn "PriceFetcher Monitoring" /sc hourly /mo 1 /tr "C:\Path\To\PriceFetcher\.venv\Scripts\python.exe -m pricefetcher.jobs.run_price_monitoring_now --run-id YOUR_RUN_ID --source skroutz --trigger-type scheduled" /f
+```
+
+### PostgreSQL troubleshooting
+
+- `Database is not configured. Set PRICEFETCHER_DATABASE_URL.` Set the variable in PowerShell, persist it for the Windows user, or copy `.env.example` to `.env` for local development, then retry.
+- `Database is configured but unreachable.` Confirm the native Windows PostgreSQL service is running, the host/port are correct, and the configured role can connect.
+- `psql is not available on PATH.` Add the PostgreSQL `bin` directory to PATH or open a terminal where the installer configured it.
+- `Migrations have not been applied. Run alembic upgrade head.` Run that command from the backend repo root after setting `PRICEFETCHER_DATABASE_URL` in PowerShell or `.env`.
+- Tables exist but row counts are zero before first run. This is valid for a migrated database before the first Price Monitoring run.
+- Run exists on disk but DB persistence is missing. The file-backed run can still be read, but `GET /api/price-monitoring/runs/{run_id}/fetch` reports `persistence_status="missing"` until matching DB rows exist.
+- Open a new terminal after persisting the Windows user environment variable.
+- `.env.example is only a template; do not commit .env.`
+- Real Windows/PowerShell environment variables override `.env`; open a new terminal after changing persisted Windows user variables.
+
+## Price Monitoring Review And Export API
+
+The review flow reads an existing Price Monitoring run folder plus an already fetched/enriched CSV. It does not execute live scraping and does not update OpenCart automatically.
+
+Review rows can be loaded with:
+
+```text
+GET /api/price-monitoring/runs/{run_id}/review
+GET /api/price-monitoring/runs/{run_id}/review?enriched_csv_path=C:\path\to\enriched.csv
+```
+
+Browser-supplied `enriched_csv_path`, `review_csv_path`, and `output_path` values are validated before use. Empty or `null` values keep the default run-folder behavior under `output/price_monitoring/runs/{run_id}`. Explicit custom review/enriched CSV paths must be inside configured artifact roots or file/editor roots. Explicit custom output paths must be inside configured artifact roots. Arbitrary browser-supplied filesystem paths, path traversal, and paths outside allowed roots are intentionally rejected.
+
+Supported manual actions:
+
+- `match_price`: sets `target_price` to the competitor price
+- `undercut`: sets `target_price` to `competitor_price - undercut_amount`
+- `ignore`: adds the product-level `model` to `price_ignore.csv` and excludes it from price update export
+
+Target prices are rounded to 2 decimal places after calculation. Valid update models must be atomic: exactly six numeric digits. Composite or bundle models are never exported for price update.
+
+Apply review actions:
+
+```text
+POST /api/price-monitoring/runs/{run_id}/review/actions
+```
+
+Example request:
+
+```json
+{
+  "enriched_csv_path": null,
+  "actions": [
+    {"model": "005606", "selected_action": "undercut", "undercut_amount": 1.0},
+    {"model": "123456", "selected_action": "ignore", "reason": "manual ignore from price review"}
+  ]
+}
+```
+
+This writes:
+
+```text
+review.csv
+review_actions.json
+```
+
+Export a manual OpenCart price update CSV:
+
+```text
+POST /api/price-monitoring/runs/{run_id}/export-price-update
+```
+
+Example request:
+
+```json
+{
+  "review_csv_path": null,
+  "output_path": null
+}
+```
+
+When `output_path` is omitted, the API writes:
+
+```text
+opencart_price_update.csv
+```
+
+If `output_path` is provided, it must be inside an artifact root. Add custom export folders to `PRICEFETCHER_ARTIFACT_ROOTS` before using them; file/editor roots alone do not authorize custom Price Monitoring export destinations.
+
+The export contains only:
+
+```csv
+model,price
+```
+
+Only reviewed `match_price` and `undercut` rows with valid positive target prices are exported. Ignored products, non-atomic models, and rows without valid target prices are excluded. OpenCart import/apply remains a manual step outside this API.

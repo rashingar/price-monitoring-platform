@@ -1,0 +1,49 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "thermopompoi_electronet_labels_v1",
+  "category_gr": "Θερμοπομποί",
+  "cta_map_key": "Θερμοπομποί",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/thermopompoi",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/thermopompoi/rohnson-r-087-genius-wi-fi-thermopompos-mica-2000w-mayro",
+    "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/thermopompoi/rohnson-thermopompos-xalazia-r-8022-2400w"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Θερμαντικού",
+        "Συνίσταται για χώρους έως m2",
+        "Μέγιστη Ισχύς σε Watt",
+        "Αριθμός Επιπέδων Ισχύος",
+        "Επίπεδα Ισχύος",
+        "Ρυθμιζόμενος Θερμοστάτης",
+        "Ενδεικτική Λυχνεία Λειτουργίας",
+        "Λειτουργία Αερόθερμου",
+        "Λειτουργία Περιστροφής",
+        "Αυτόματη Διακοπή Λειτουργίας",
+        "Θερμική Ασφάλεια Υπερθέρμανσης",
+        "Χρονοδιακόπτης Λειτουργίας",
+        "Τηλεχειριστήριο",
+        "Δυνατότητα επιτοίχιας τοποθέτησης",
+        "Ροδάκια Μεταφοράς",
+        "Αποθήκευση Καλωδίου",
+        "Χειρολαβή Μεταφοράς"
+      ]
+    },
+    {
+      "section": "Ενεργειακά Χαρακτηριστικά",
+      "labels": [
+        "Ενεργειακή Κλάση"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Χρώμα",
+        "Διαστάσεις συσκευής σε εκατ. (Υ x Π x Β)",
+        "Εγγύηση προμηθευτή"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+You are writing the `intro_text` task for the Product-Agent pipeline.
+
+You will receive one JSON object in `LLM_CONTEXT_JSON`.
+Use only verified evidence from that context.
+
+OUTPUT RULE
+- Return one paragraph only.
+- Do not return JSON.
+- Do not return Markdown.
+- Do not add any commentary before or after the paragraph.
+- Use only `<strong>` and `</strong>` for inline emphasis.
+- Do not use any other HTML tags.
+
+WRITING RULES
+- Write exactly one paragraph in Greek.
+- Keep it between 80 and 180 words.
+- Do not use bullets or numbered lists.
+- Do not use CTA language or purchase prompts.
+- Do not invent specs, technologies, or claims.
+- Base the copy on the provided product facts, hero summary, and safe key specs only.
+- Use emphasis only for human readability and topical clarity, not keyword stuffing.
+- Bold only verified facts from context.
+- Prefer bolding the most important factual identifiers and differentiators when verified: brand + model / MPN, product type, size/capacity/dimensions, resolution or performance class, platform/OS/technology family, core technologies, connectivity, energy class, and major verified specs that help a human scan the paragraph.
+- Keep the emphasis policy generic across all categories; do not use category-specific hardcoded examples as rules.
+- Do not bold generic benefit language.
+- Do not bold full sentences.
+- Aim for 3-7 short bold spans when enough verified evidence exists.
+- If evidence is sparse, use fewer bold spans rather than inventing facts.
+
+LLM_CONTEXT_JSON
+{{LLM_CONTEXT_JSON}}

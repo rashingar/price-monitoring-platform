@@ -1,0 +1,50 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "foyrnakia_electronet_labels_v1",
+  "category_gr": "Φουρνάκια",
+  "cta_map_key": "Φουρνάκια",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/fournakia",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/fournakia/davoline-star-4508-fournaki-me-esties-38lt-3150w-3esties",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/fournakia/koyzinaki-fournos-hlektriko-rohnson-mod-r-2142"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Χωρητικότητα σε Λίτρα",
+        "Τρόποι Λειτουργίας Ψησίματος",
+        "Ρυθμιζόμενος Θερμοστάτης",
+        "Έλενχος και Ενδείξεις Θερμοκρασίας",
+        "Χρονοδιακόπτης",
+        "Χρονόμετρο",
+        "Χρόνος Καθυστέρησης Έναρξης σε Ώρες",
+        "Δυνατότητα Παράλληλης Λειτουργίας Φούρνου και Ηλεκτρικών Εστιών",
+        "Σύστημα Μαγειρέματος με Θερμό Αέρα",
+        "Αριθμός Προγραμμάτων",
+        "Αριθμός Κρυστάλλων Πόρτας",
+        "Υλικό Κατασκευής",
+        "Εξαρτήματα",
+        "Συνολική Ισχύς (Watt)",
+        "Ισχύς Grill (Watt)"
+      ]
+    },
+    {
+      "section": "Εστίες",
+      "labels": [
+        "Αριθμός Εστιών",
+        "Διάμετρος Εστιών"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "artoparaskeyastes_electronet_labels_v1",
+  "category_gr": "Αρτοπαρασκευαστές",
+  "cta_map_key": "Αρτοπαρασκευαστές",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/artoparaskeuastes",
+  "electronet_examples": [
+    "https://www.electronet.gr/exoplismos-spitioy/mikroi-mageires/artoparaskeyastes/artoparaskeyastis-tefal-pain-dore-pf2101"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Δυνατότητα Παρασκευής",
+        "Μέγεθος Φραντζόλας σε Γραμμάρια",
+        "Αριθμός Προγραμμάτων",
+        "Ενδείξεις Λειτουργίας",
+        "Ρύθμισης Χρώματος Κρούστας",
+        "Χρόνος Καθυστέρησης Έναρξης σε Ώρες",
+        "Σύστημα Μαγειρέματος με Θερμό Αέρα",
+        "Παράθυρο για Έλεγχο Μαγειρέματος",
+        "Αποσπώμενο Καπάκι για Εύκολο Καθαρισμό",
+        "Αντιολισθητική Βάση",
+        "Εξαρτήματα",
+        "Ισχύς σε Watts"
+      ]
+    },
+    {
+      "section": "Ειδικές Λειτουργίες",
+      "labels": [
+        "Λειτουργία Διατήρησης Θερμότητας",
+        "Λειτουργία Γρήγορου Ψησίματος"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

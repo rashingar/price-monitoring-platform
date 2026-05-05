@@ -1,0 +1,33 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "skoypakia_electronet_labels_v1",
+  "category_gr": "Σκουπάκια",
+  "cta_map_key": "Σκουπάκια",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupakia",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/skoupakia/skoupaki-rohnson-mamba-m3"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Μπαταρίας",
+        "Τάση Volt",
+        "Χρόνος Λειτουργίας σε Λεπτά",
+        "Χωρητικότητα Κάδου σε Λίτρα",
+        "Φίλτρο Εξαγωγής Αέρα",
+        "Βάση Φόρτισης με κιτ Στήριξης Τοίχου",
+        "Εξαρτήματα"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

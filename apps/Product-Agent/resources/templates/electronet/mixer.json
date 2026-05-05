@@ -1,0 +1,34 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "mixer_electronet_labels_v1",
+  "category_gr": "Μίξερ",
+  "cta_map_key": "Μίξερ",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/mixer",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/mixer/mixer-heiros-kenwood-hmp-50000-wh"
+  ],
+  "sections": [
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Τύπος Μίξερ",
+        "Ισχύς σε Watts",
+        "Ρυθμίσεις Ταχύτητας",
+        "Αναδευτήρες Μίξερ",
+        "Κουμπί Απασφάλισης Αναδευτήρων",
+        "Χωρητικότητα Κάδου σε Λίτρα",
+        "Υλικό Κάδου",
+        "Περιστρεφόμενος Κάδος"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)"
+      ]
+    }
+  ]
+}

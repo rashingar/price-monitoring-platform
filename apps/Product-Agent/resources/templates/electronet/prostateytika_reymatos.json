@@ -1,0 +1,24 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "prostateytika_reymatos_electronet_labels_v1",
+  "category_gr": "Προστατευτικά Ρεύματος",
+  "cta_map_key": "Προστατευτικά Ρεύματος",
+  "cta_url": "https://www.etranoulis.gr/plhroforikh/perifereiaka/prostateutika-reumatos",
+  "electronet_examples": [
+    "https://www.electronet.gr/pliroforiki/perifereiaka/prostasia-reymatos/polyprizo-asfaleias-crystal-audio-cp8-1300-70-8-theseon-mayro"
+  ],
+  "sections": [
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Τύπος",
+        "Θέσεις Schuko",
+        "Θέσεις USB",
+        "Μήκος Καλωδίου σε m",
+        "Διακόπτης on/off",
+        "Τηλεχειριστήριο",
+        "Χρώμα"
+      ]
+    }
+  ]
+}

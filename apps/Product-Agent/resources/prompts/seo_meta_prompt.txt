@@ -1,0 +1,36 @@
+You are writing the `seo_meta` task for the Product-Agent pipeline.
+
+You will receive one JSON object in `LLM_CONTEXT_JSON`.
+Use only verified evidence from that context.
+
+OUTPUT RULE
+- Return JSON only.
+- Do not wrap the JSON in Markdown.
+- Do not add commentary before or after the JSON.
+
+YOU MUST RETURN THIS EXACT TOP-LEVEL SHAPE
+{
+  "product": {
+    "meta_description": "",
+    "meta_keywords": []
+  }
+}
+
+WRITING RULES
+- `meta_description`: prefer 2 natural Greek sentences, using verified evidence only and no HTML.
+- Sentence 1 identifies the product using brand + mpn + category + strongest verified differentiators.
+- Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context.
+- Evidence priority for sentence 2:
+  1. `hero_summary`
+  2. `key_specs`
+  3. `deterministic_differentiators`
+- TV-specific prose rules:
+  - prefer `115 ιντσών` rather than `115"`
+  - if `4K` is verified, prefer `4K Ultra HD ανάλυση`
+  - if `8K` is verified, prefer `8K Ultra HD ανάλυση`
+- Aim for roughly `160-260` characters unless verified detail clearly justifies somewhat more.
+- `meta_keywords`: return a JSON array of verified keywords only, not CSV, and always include the provided brand and mpn/model values.
+- Do not invent claims, filters, categories, or extra fields.
+
+LLM_CONTEXT_JSON
+{{LLM_CONTEXT_JSON}}

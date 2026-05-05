@@ -1,0 +1,63 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "entoixizomena_plyntiria_piaton_electronet_labels_v1",
+  "category_gr": "Εντοιχιζόμενα Πλυντήρια Πιάτων",
+  "cta_map_key": "Εντοιχιζόμενα Πλυντήρια Πιάτων",
+  "cta_url": "https://www.etranoulis.gr/oikiakes-syskeues/entoixizomenes-syskeues/en-plynthria-piatwn",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakes-syskeues/entoixizomenes-syskeues/en-plynthria-piatwn/Entoixizomeno-plynthrio-piaton-Bosch-SMI4ECS08E-60cm",
+    "https://www.etranoulis.gr/oikiakes-syskeues/entoixizomenes-syskeues/en-plynthria-piatwn/bosch-smi4ecs28e-entoixizomeno-plyntirio-piaton-60cm-14-servitsia-a-inox"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τρόπος Τοποθέτησης",
+        "Τύπος Πλυντηρίου Πιάτων",
+        "Χωρητικότητα σε Σερβίτσια",
+        "Αριθμός Προγραμμάτων",
+        "Προγράμματα Πλύσης",
+        "Μισό φορτίο Πλύσης",
+        "Προγραμματισμός Έναρξης",
+        "Τρίτο Κάνιστρο για Μαχαιροπίρουνα",
+        "Αισθητήρας Φορτίου",
+        "Αισθητήρας Ποιότητας Νερού",
+        "Συνδεσιμότητα",
+        "Άλλα Χαρακτηριστικά"
+      ]
+    },
+    {
+      "section": "Ενδείξεις",
+      "labels": [
+        "Ενδείξεις Λειτουργίας",
+        "Ένδειξη Πλήρωσης Αλατιού",
+        "Ένδειξη Πλήρωσης Λαμπρυντικού",
+        "Ένδειξη Υπολειπόμενου Χρόνου"
+      ]
+    },
+    {
+      "section": "Ασφάλεια",
+      "labels": [
+        "Κλείδωμα Ασφαλείας για Παιδιά",
+        "Σύστημα Προστασίας από Διαρροές"
+      ]
+    },
+    {
+      "section": "Ενεργειακά Χαρακτηριστικά",
+      "labels": [
+        "Ενεργειακή Κλάση",
+        "Χωρητικότητα σε Σερβίτσια",
+        "Επίπεδο Θορύβου σε dB"
+      ]
+    },
+    {
+      "section": "Γενικά χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή",
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)"
+      ]
+    }
+  ]
+}

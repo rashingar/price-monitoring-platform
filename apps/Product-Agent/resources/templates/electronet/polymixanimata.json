@@ -1,0 +1,37 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "polymixanimata_electronet_labels_v1",
+  "category_gr": "Πολυμηχανήματα",
+  "cta_map_key": "Πολυμηχανήματα",
+  "cta_url": "https://www.etranoulis.gr/plhroforikh/ektypwtes-analwsima/polymhxanhmata",
+  "electronet_examples": [
+    "https://www.electronet.gr/pliroforiki/ektypotes/polymihanimata-laser/polymihanima-hp-laserjet-m234sdw-aio-wifi-6gx01f"
+  ],
+  "sections": [
+    {
+      "section": "Λειτουργίες",
+      "labels": [
+        "Τύπος",
+        "Πολυμηχάνημα",
+        "Εκτύπωση",
+        "Scanner",
+        "Φωτοτυπία",
+        "FAX"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Wi - Fi",
+        "Εκτύπωση Σελίδας ανά Λεπτό (Έγχρωμο)",
+        "Εκτύπωση Σελίδας ανά Λεπτό (Μαύρο)",
+        "Μέγιστη Ανάλυση (dpi)",
+        "Οθόνη LCD",
+        "SD Card",
+        "Τροφοδοσία Χαρτιού (φύλλα)",
+        "Μέγεθος Χαρτιού",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

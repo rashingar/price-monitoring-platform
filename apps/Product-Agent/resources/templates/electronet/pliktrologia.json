@@ -1,0 +1,25 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "pliktrologia_electronet_labels_v1",
+  "category_gr": "Πληκτρολόγια",
+  "cta_map_key": "Πληκτρολόγια",
+  "cta_url": "https://www.etranoulis.gr/plhroforikh/perifereiaka/plhktrologia",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/plhroforikh/perifereiaka/plhktrologia/plhktrologio-ellhniko-lamtech-lam622178"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Γλώσσα"
+      ]
+    }
+  ]
+}

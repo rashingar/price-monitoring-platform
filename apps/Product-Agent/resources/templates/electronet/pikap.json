@@ -1,0 +1,38 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "pikap_electronet_labels_v1",
+  "category_gr": "Πικαπ",
+  "cta_map_key": "Πικαπ",
+  "cta_url": "https://www.etranoulis.gr/index.php?route=product/category&path=59_100_310",
+  "electronet_examples": [
+    "https://www.electronet.gr/eikona-ihos/audio-home-systems/pikap/pikap-akai-att-11bt"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά",
+      "labels": [
+        "Δίσκοι Αναπαραγωγής",
+        "Συμβατός Δίσκος",
+        "Ταχύτητα Περιστροφής ( rpm )",
+        "Ενσωματωμένα Ηχεία",
+        "Ενσωματωμένος Ενισχυτής",
+        "Έξοδος Ακουστικών",
+        "Συνολική Ισχύς Ηχείων(Watt)",
+        "Ραδιοφωνικός Δέκτης"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "USB 2.0",
+        "Εγγραφή σε USB",
+        "Τηλεχειριστήριο",
+        "Έξοδοι Ήχου",
+        "Βάρος Συσκευής σε Κιλά",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή",
+        "Χώρα Κατασκευής"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+﻿{
+    "$schema":  "../label_set.schema.json",
+    "template_id":  "voyrtses_psalidia_isiotika",
+    "category":  "Βούρτσες-Ψαλίδια-ισιωτικά",
+    "sections":  [
+                     {
+                         "name":  "Επισκόπηση Προϊόντος",
+                         "labels":  [
+                                        "Ισχύς σε Watts",
+                                        "Διάμετρος σε Χιλιοστά",
+                                        "Ρύθμιση Θερμοκρασίας",
+                                        "Τεχνολογία Πλάκας",
+                                        "Ενδείξεις Λειτουργίας",
+                                        "Σύστημα Ιονισμού",
+                                        "Θερμενόμενη",
+                                        "Πλήκτρο Κρύου Αέρα",
+                                        "Περιστροφή  Διπλής Κατεύθυνσης",
+                                        "Προστασία από Υπερθέρμανση",
+                                        "Μήκος Καλωδίου σε Μέτρα",
+                                        "Εγγύηση Κατασκευαστή"
+                                    ]
+                     },
+                     {
+                         "name":  "Μεταφορά - Αποθήκευση",
+                         "labels":  [
+                                        "Κρίκος για Κρέμασμα",
+                                        "Tσάντα Μεταφοράς και Αποθήκευσης"
+                                    ]
+                     }
+                 ],
+    "source":  {
+                   "electronet_url_example":  "https://www.electronet.gr/exoplismos-spitioy/gynaikeia-frontida/boyrtses-psalidia/psalidi-mallion-rowenta-cf321l"
+               },
+    "fingerprint":  "11d98a2c7207be9ac07280230be8ec8740cc0363412a63a7b8a9ac03e2fe7398"
+}

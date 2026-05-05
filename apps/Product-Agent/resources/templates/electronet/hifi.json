@@ -1,0 +1,55 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "hifi_electronet_labels_v1",
+  "category_gr": "Hifi",
+  "cta_map_key": "Hifi",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/audio-systems/hifi",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/eikona-hxos/audio-systems/hifi/hxosysthma-mini-panasonic-sc-pm250eg-k",
+    "https://www.etranoulis.gr/eikona-hxos/audio-systems/hifi/hxosysthma-mini-panasonic-sc-pm250eg-s"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Τύπος Ηχοσυστήματος",
+        "Τύπος Ηχείων",
+        "Σύστημα Ήχου",
+        "Συνολική Ισχύς Ηχείων(Watt)",
+        "Ισχύς Subwoofer(Watt)",
+        "Δίσκοι Αναπαραγωγής",
+        "Αναπαραγωγή Αρχείων Ήχου",
+        "Αναπαραγωγή Κασσέτας",
+        "Ραδιοφωνικός Δέκτης",
+        "Ενίσχυση Μπάσων",
+        "Λειτουργίες Ηχοσυστήματος",
+        "Συμβατό με iPod/iPhone",
+        "Έλεγχος Ήχου",
+        "Ισοσταθμιστής",
+        "Ασύρματη Αναπαραγωγή",
+        "USB 2.0",
+        "Bluetooth",
+        "Κατανάλωση Ενέργειας σε Λειτουργία ( Watt )",
+        "Κατανάλωση Ενέργειας σε Αναμονή ( Watt )",
+        "Βασικός Εξοπλισμός",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Ύψος",
+        "Πλάτος",
+        "Βάθος"
+      ]
+    }
+  ]
+}

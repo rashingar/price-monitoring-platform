@@ -1,0 +1,22 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "atmokatharistes_electronet_labels_v1",
+  "category_gr": "Ατμοκαθαριστές",
+  "cta_map_key": "Ατμοκαθαριστές",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/atmokathharistes",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skoupisma/atmokathharistes/atmokatharistis-ariete-4137-vaporijet"
+  ],
+  "sections": [
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Ισχύς σε Watts",
+        "Χωρητικότητα Δοχείου Νερού σε Λίτρα",
+        "Χρόνος Θέρμανσης Νερού σε λεπτά",
+        "Πίεση Ατμού",
+        "Μήκος Καλωδίου σε Μέτρα"
+      ]
+    }
+  ]
+}

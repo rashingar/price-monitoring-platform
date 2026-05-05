@@ -1,0 +1,33 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "maxairia_electronet_labels_v1",
+  "category_gr": "Μαχαίρια",
+  "cta_map_key": "Μαχαίρια",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/maxairia",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/maxairia/maxairi-genikhs-xrhshs-bra-efficient-a198001",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/maxairia/bra-efficient-a198002-maxairi-laxanikon-anoxeidoto-mayro"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Mαχαίρι",
+        "Υλικό"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Μήκος"
+      ]
+    }
+  ]
+}

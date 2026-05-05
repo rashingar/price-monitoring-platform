@@ -1,0 +1,26 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "iliakoi_thermosifones_electronet_labels_v1",
+  "category_gr": "ΗΛΙΑΚΟΙ ΘΕΡΜΟΣΙΦΩΝΕΣ",
+  "cta_map_key": "ΗΛΙΑΚΟΙ ΘΕΡΜΟΣΙΦΩΝΕΣ",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/hliakoi-thermosifones",
+  "electronet_examples": [
+    "https://www.electronet.gr/klimatismos-thermansi/thermosifones/hliakoi-thermosifones/iliakos-thermosifonas-pyramis-premium-160lt-diplis-energeias-1x23m2"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Χωρητικότητα σε Lt",
+        "Προτεινόμενη Εξυπηρέτηση Ατόμων",
+        "Τύπος τοποθέτησης",
+        "Τύπος λειτουργίας",
+        "Τύπος συλλέκτη",
+        "Επιφάνεια συλλέκτη σε τ.μ.",
+        "Αριθμός συλλεκτών",
+        "Υλικό δοχείου",
+        "Εγγύηση προμηθευτή"
+      ]
+    }
+  ]
+}

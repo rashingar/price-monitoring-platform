@@ -1,0 +1,55 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "fotografikes_electronet_labels_v1",
+  "category_gr": "Φωτογραφικές",
+  "cta_map_key": "Φωτογραφικές",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/kameres/fwtografikes",
+  "electronet_examples": [
+    "https://www.electronet.gr/eikona-ihos/fotografikes-mihanes/mirrorless/fotografiki-mihani-nikon-z-50-kit-dx-16-50mm-f35-63-vr"
+  ],
+  "sections": [
+    {
+      "section": "Τεχνικά Χαρακτηριστικά",
+      "labels": [
+        "Τύπος Φακού",
+        "Ενεργά Pixel ( mp )",
+        "Οπτικό Zoom ( - x )",
+        "Ψηφιακό Zoom ( - x )",
+        "Εστιακή Απόσταση",
+        "Ευαισθησία (ISO)",
+        "Σταθεροποιητής Εικόνας",
+        "Ανάλυση Φωτογραφιών",
+        "Ανάλυση Βίντεο",
+        "Οθόνη Ίντσες",
+        "Φορμά Φωτογραφιών",
+        "Φορμά Εγγραφής Βίντεο",
+        "Zoom κατά την Εγγραφή Βίντεο"
+      ]
+    },
+    {
+      "section": "Επιπλέον",
+      "labels": [
+        "Wi - Fi",
+        "GPS",
+        "Αδιάβροχη",
+        "Ενσωματωμένη Μνήμη ( MB )",
+        "Αποθηκευτικό Μέσο ( Κάρτα Μνήμης )",
+        "Επιπλέον Δυνατότητες",
+        "Micro USB",
+        "Mini HDMI"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Παρεχόμενη Μπαταρία",
+        "Διάρκεια Μπαταρίας",
+        "Βάρος με Μπαταρία & Κάρτα ( gr )",
+        "Παρεχόμενα Εξαρτήματα",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή",
+        "Χώρα Κατασκευής"
+      ]
+    }
+  ]
+}

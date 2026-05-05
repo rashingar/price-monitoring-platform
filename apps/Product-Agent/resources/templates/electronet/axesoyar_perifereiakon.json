@@ -1,0 +1,37 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "axesoyar_perifereiakon_electronet_labels_v1",
+  "category_gr": "Αξεσουάρ Περιφερειακών",
+  "cta_map_key": "Αξεσουάρ Περιφερειακών",
+  "cta_url": "https://www.etranoulis.gr/plhroforikh/perifereiaka/axesoyar",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/plhroforikh/perifereiaka/axesoyar/web-camera-full-hd-1080p-autofocus-lamtech-lam-021509",
+    "https://www.etranoulis.gr/plhroforikh/perifereiaka/axesoyar/kalodio-nedis-cvgp24300bk15-composite-male"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Ανάλυση Βίντεο",
+        "Καρέ ανά δευτερόλεπτο (fps)",
+        "Μικρόφωνο",
+        "Συνδεση",
+        "Autofocus",
+        "Χρώμα"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Μήκος Καλωδίου"
+      ]
+    }
+  ]
+}

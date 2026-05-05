@@ -1,0 +1,39 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "xytres_taxytitas_electronet_labels_v1",
+  "category_gr": "Χύτρες Ταχύτητας",
+  "cta_map_key": "Χύτρες Ταχύτητας",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/xytres-taxythtas",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/xytres-taxythtas/fissler-vitaquick-premium-set-quattro-8lt-45lt-kalathi-atmou",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/xytres-taxythtas/fissler-vitaquick-premium-hytra-taxytitas-10lt-26cm-kalathi-atmou"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Χωρητικότητα σε Λίτρα",
+        "Διάμετρος Σκεύους σε Εκατοστά.",
+        "Υλικό Σκεύους",
+        "Πηγή Θερμότητας",
+        "Εσωτερική Επίστρωση",
+        "Εξωτερική Επίστρωση",
+        "Επίπεδα Μαγειρέματος",
+        "Χρονόμετρο",
+        "Τύπος Χειρολαβών",
+        "Πλένεται στο Πλυντήριο Πιάτων",
+        "Συνδεσιμότητα",
+        "Περιλαμβάνει"
+      ]
+    },
+    {
+      "section": "Λειτουργίες & Ασφάλεια",
+      "labels": [
+        "Λειτουργία Αποσυμπίεσης",
+        "Σύστημα Ασφαλείας",
+        "Βάση",
+        "Κωδικός / Μοντέλο"
+      ]
+    }
+  ]
+}

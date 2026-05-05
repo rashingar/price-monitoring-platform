@@ -1,0 +1,21 @@
+{
+  "default_policy": "exact_subcategory",
+  "overrides": {
+    "tileoraseis": "leaf_family",
+    "koyzines": "leaf_family",
+    "plyntiria_piaton": "leaf_family",
+    "foyrnoi_mikrokymaton": "leaf_family",
+    "klimatistika": "mixed_family",
+    "toixoy": "mixed_family",
+    "forita": "mixed_family",
+    "ntoylapes": "mixed_family",
+    "anemistires": "mixed_family",
+    "mini": "mixed_family",
+    "ydronefosis": "mixed_family",
+    "orthostatis": "mixed_family",
+    "epitrapezioi": "mixed_family",
+    "orofis": "mixed_family",
+    "air_coolers_epidapedioi": "mixed_family",
+    "anemisthres_an_toixou": "mixed_family"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "hands_free_electronet_labels_v1",
+  "category_gr": "Hands Free",
+  "cta_map_key": "Hands Free",
+  "cta_url": "https://www.etranoulis.gr/thlefwnia/aksesouar-kinhtwn/hands-free",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/thlefwnia/aksesouar-kinhtwn/hands-free/akoustika-jbl-wave-buds-2-anc-bluetooth-handsfree-black",
+    "https://www.etranoulis.gr/thlefwnia/aksesouar-kinhtwn/hands-free/akoustika-type-c-handsfree-me-vysma-usb-c-kokkino-lamtech-lam021141"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Ακουστικών",
+        "Μικρόφωνο",
+        "Ελεγχος Έντασης Ήχου",
+        "Μήκος Καλωδίου σε m",
+        "Εύρος Απόκρισης",
+        "Ευαισθησία(db)",
+        "Προτεινόμενη Χρήση",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

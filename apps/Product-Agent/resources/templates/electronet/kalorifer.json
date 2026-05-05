@@ -1,0 +1,39 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "kalorifer_electronet_labels_v1",
+  "category_gr": "Καλοριφέρ",
+  "cta_map_key": "Καλοριφέρ",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/kalorifer",
+  "electronet_examples": [
+    "https://www.electronet.gr/klimatismos-thermansi/thermantika/kalorifer-ladioy/kalorifer-ladioy-delonghi-trdx4-1025e-2500-watt"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Θερμαντικού",
+        "Συνίσταται για χώρους έως m2",
+        "Μέγιστη Ισχύς σε Watt",
+        "Αριθμός Επιπέδων Ισχύος",
+        "Επίπεδα Ισχύος",
+        "Ρυθμιζόμενος Θερμοστάτης",
+        "Φέτες",
+        "Λειτουργία Αερόθερμου",
+        "Ενδεικτική Λυχνεία Λειτουργίας",
+        "Αυτόματη Διακοπή Λειτουργίας",
+        "Θερμική Ασφάλεια",
+        "Ροδάκια Μεταφοράς",
+        "Αποθήκευση Καλωδίου"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Εγγύηση προμηθευτή",
+        "Διαστάσεις συσκευής σε εκατ. (Υ χ Π χ Β)",
+        "Χρώμα",
+        "Βάρος συσκευής σε κιλά"
+      ]
+    }
+  ]
+}

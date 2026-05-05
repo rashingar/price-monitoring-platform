@@ -1,0 +1,57 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "polymixer_electronet_labels_v1",
+  "template_id": "polymixer",
+  "category_gr": "Πολυμίξερ",
+  "cta_map_key": "Πολυμίξερ",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/multimixer",
+  "electronet_examples": [
+    "https://www.electronet.gr/oikiakos-eksoplismos/syskeues-kouzinas/multimixer/polymixer-kenwood-multipro-fdm-73850-ss-1000-w",
+    "https://www.electronet.gr/exoplismos-spitioy/syskeyes-koyzinas/koyzinomihanes/polymixer-tefal-double-force-do8218"
+  ],
+  "source": {
+    "electronet_url_example": "https://www.electronet.gr/exoplismos-spitioy/syskeyes-koyzinas/koyzinomihanes/polymixer-tefal-double-force-do8218"
+  },
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "name": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος συσκευής",
+        "Ισχύς σε Watts",
+        "Τεχνολογία Κίνησης",
+        "Ρυθμίσεις Ταχύτητας",
+        "Ενδείξεις Λειτουργίας",
+        "Ήπια Εκκίνηση",
+        "Αυτόματο Τύλιγμα Καλωδίου",
+        "Χωρητικότητα Μπολ σε Λίτρα",
+        "Υλικό Μπολ",
+        "Χερούλια Μπολ",
+        "Καπάκι Μπολ",
+        "Αναδευτήρες"
+      ]
+    },
+    {
+      "section": "Εξαρτήματα",
+      "name": "Εξαρτήματα",
+      "labels": [
+        "Μπλέντερ",
+        "Χωρητικότητα Μπλέντερ",
+        "Κρεατομηχανή",
+        "Λεμονοστύφτης",
+        "Πολυκόφτης Συνεχούς Τεμαχισμού",
+        "Εξαρτήματα που Περιλλαμβάνονται",
+        "Εξαρτήματα Προαιρετικά"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "name": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ],
+  "fingerprint": "fff0b31ae6cb1e0faffbfb218f1979a56fd1494ed70e32eaef22c83b3116a805"
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "syskeyes_apotrixosis_electronet_labels_v1",
+  "category_gr": "Συσκευές Αποτρίχωσης",
+  "cta_map_key": "Συσκευές Αποτρίχωσης",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/proswpikh-frontida/syskeues-apotrixwshs",
+  "electronet_examples": [
+    "https://www.electronet.gr/exoplismos-spitioy/gynaikeia-frontida/syskeyes-apotrihosis/apotrihotiki-mihani-braun-silk-epil-5-se5-050"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Αριθμός Λεπίδων",
+        "Υλικό Λεπίδων",
+        "Τρόπος Χρήσης",
+        "Ταχύτητες",
+        "Χρόνος Λειτουργίας σε Λεπτά",
+        "Τροφοδοσία Ρεύματος",
+        "Χρόνος Φόρτισης Μπαταρίας σε Λεπτά",
+        "Τύπος Επαναφορτιζόμενης Μπαταρίας",
+        "Εξαρτήματα",
+        "Παλμικές Ενεργές Δονήσεις",
+        "Φωτισμός",
+        "Καθάρισμα Συσκευής",
+        "Περιλαμβάνει",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

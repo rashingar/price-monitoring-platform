@@ -1,0 +1,23 @@
+{
+  "model": "235221",
+  "source_url": "https://www.skroutz.gr/s/64982403/bosch-wtz2800-syndetiko-plyntiriou-stegnotiriou-apo-plastiko.html",
+  "final_url": "https://www.skroutz.gr/s/64982403/bosch-wtz2800-syndetiko-plyntiriou-stegnotiriou-apo-plastiko.html",
+  "name": "ΣΥΝΔΕΤΙΚΟ ΠΛΥΝΤ-ΣΤΕΓΝ WTZ2800 BOSCH ???????: 235221",
+  "manufacturer": "Bosch",
+  "category_tag_text": "Αξεσουάρ Οικιακών Συσκευών",
+  "category_tag_href": "https://www.skroutz.gr/c/2000/aksesouar-oikiakon-syskevon.html",
+  "normalized_category_slug": "aksesouar oikiakon syskevon",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Αξεσουάρ Οικιακών Συσκευών",
+  "captured_at": "2026-03-21T11:36:13.788151+00:00",
+  "content_hash": "f44b9e1e06ab228ecc014e47d78f4b11e8d856593a4414627cc7e089c7815d2e",
+  "captured_live": false,
+  "family_key": "home_appliance_accessory",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Αξεσουάρ Οικιακών Συσκευών",
+  "expected_sub_category": "",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Αξεσουάρ Οικιακών Συσκευών",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "home_appliance_accessory"
+}

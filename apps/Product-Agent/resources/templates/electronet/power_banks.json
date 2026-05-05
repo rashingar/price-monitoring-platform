@@ -1,0 +1,24 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "power_banks_electronet_labels_v1",
+  "category_gr": "Power Banks",
+  "cta_map_key": "Power Banks",
+  "cta_url": "https://www.etranoulis.gr/thlefwnia/aksesouar-kinhtwn/power-bank",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/thlefwnia/aksesouar-kinhtwn/power-bank/power-bank-xiaomi-20000mah-33w-tan-gl"
+  ],
+  "sections": [
+    {
+      "section": "Τεχνικά Χαρακτηριστικά",
+      "labels": [
+        "Τύπος Φορτιστή",
+        "Προτεινόμενη Χρήση",
+        "Χωρητικότητα σε mAh",
+        "Micro USB",
+        "USB 2.0",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

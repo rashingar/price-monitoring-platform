@@ -1,0 +1,40 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "psifiakoi_apokodikopoiites_electronet_labels_v1",
+  "category_gr": "Ψηφιακοί Αποκωδικοποιητές",
+  "cta_map_key": "Ψηφιακοί Αποκωδικοποιητές",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/eikona-ixos/pshfiakoi-apokwdikopoihtes",
+  "electronet_examples": [
+    "https://www.electronet.gr/eikona-ihos/axesoyar/epigeioi-psifiakoi-dektes/epigeios-psifiakos-dektis-osio-ost-3545d"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά",
+      "labels": [
+        "Δέκτης",
+        "Αποκωδικοποίηση",
+        "Ανάλυση",
+        "PVR Ready",
+        "Επιπλέον Λειτουργίες",
+        "Αναπαραγωγή Αρχείων Εικόνας",
+        "Αναπαραγωγή Αρχείων Ήχου"
+      ]
+    },
+    {
+      "section": "Συνδέσεις",
+      "labels": [
+        "USB 2.0",
+        "Scart",
+        "HDMI"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Βασικός Εξοπλισμός",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

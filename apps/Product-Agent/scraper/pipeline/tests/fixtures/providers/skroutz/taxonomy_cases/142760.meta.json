@@ -1,0 +1,23 @@
+{
+  "model": "142760",
+  "source_url": "https://www.skroutz.gr/s/60567147/tesla-smart-tileorasi-43-4k-uhd-led-series-6-hdr-2025-43e655bus.html",
+  "final_url": "https://www.skroutz.gr/s/60567147/tesla-smart-tileorasi-43-4k-uhd-led-series-6-hdr-2025-43e655bus.html",
+  "name": "Tesla Smart Τηλεόραση 43\" 4K UHD LED Series 6 HDR (2025) 43E655BUS",
+  "manufacturer": "Tesla",
+  "category_tag_text": "Τηλεοράσεις",
+  "category_tag_href": "https://www.skroutz.gr/c/12/television.html",
+  "normalized_category_slug": "television",
+  "has_besco_sections": true,
+  "detected_besco_section_count": 7,
+  "taxonomy_hint": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις///33''-50''",
+  "captured_at": "2026-03-21T11:36:12.522497+00:00",
+  "content_hash": "23d3a4b8b4df0a4b5cb085cf15b58e30435d20997978d85dd463649fa7f466c9",
+  "captured_live": true,
+  "family_key": "television",
+  "expected_parent_category": "ΕΙΚΟΝΑ & ΗΧΟΣ",
+  "expected_leaf_category": "Τηλεοράσεις",
+  "expected_sub_category": "33''-50''",
+  "expected_source_category": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις:::ΕΙΚΟΝΑ & ΗΧΟΣ///Τηλεοράσεις///33''-50''",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "television:size_bucket"
+}

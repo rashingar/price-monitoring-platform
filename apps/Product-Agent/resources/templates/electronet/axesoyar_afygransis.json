@@ -1,0 +1,28 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "axesoyar_afygransis_electronet_labels_v1",
+  "category_gr": "Αξεσουάρ Αφύγρανσης",
+  "cta_map_key": "Αξεσουάρ Αφύγρανσης",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/afygransh-ionistes/axeouar-afigranshs",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/afygransh-ionistes/axeouar-afigranshs/inventor-filtro-afygranthra-atm-25l-f-atmosphere",
+    "https://www.etranoulis.gr/klimatismos-thermansi/afygransh-ionistes/axeouar-afigranshs/inventor-filtro-afygranthra-cf-wuhi-f"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Είδος",
+        "Εφαρμογή",
+        "Συμβατότητα Inventor"
+      ]
+    }
+  ]
+}

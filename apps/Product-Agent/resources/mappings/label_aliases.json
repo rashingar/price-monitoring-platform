@@ -1,0 +1,355 @@
+{
+  "schema_version": 1,
+  "families": [
+    {
+      "family_id": "power_watt",
+      "canonical_label": "Ισχύς",
+      "aliases": [
+        "Ισχύς",
+        "Ισχυς",
+        "Ισχύς (Watt)",
+        "Ισχυς (Watt)",
+        "Ισχύς σε Watt",
+        "Ισχυς σε Watt",
+        "Ισχύς σε Watts",
+        "Ισχυς σε Watts",
+        "Μέγιστη Ισχύς (Watt)",
+        "Μεγιστη Ισχυς (Watt)",
+        "Μέγιστη Ισχύς σε Watt",
+        "Μεγιστη Ισχυς σε Watt",
+        "Συνολική Ισχύς (Watt)",
+        "Συνολικη Ισχυς (Watt)",
+        "Συνολική Ισχύς σε Watt",
+        "Συνολικη Ισχυς σε Watt",
+        "Συνολική Ισχύς Ηχείων",
+        "Συνολικη Ισχυς Ηχειων",
+        "Συνολική Ισχύς Ηχείων (Watt)",
+        "Συνολική Ισχύς Ηχείων(Watt)",
+        "Ισχύς Κύριας Μονάδας (RMS)",
+        "Ισχύς Κύριας Μονάδας",
+        "Ισχύς Ηχείων",
+        "Ισχύς Μικροκυμάτων"
+      ],
+      "mojibake_examples": [
+        "Ξ™ΟƒΟ‡ΟΟ‚",
+        "Ξ™ΟƒΟ‡ΟΟ‚ ΟƒΞµ Watt",
+        "Ξ™ΟƒΟ‡ΟΟ‚ ΟƒΞµ Watts",
+        "ΞΞ­Ξ³ΞΉΟƒΟ„Ξ· Ξ™ΟƒΟ‡ΟΟ‚ (Watt)",
+        "ΞΞ­Ξ³ΞΉΟƒΟ„Ξ· Ξ™ΟƒΟ‡ΟΟ‚ ΟƒΞµ Watt",
+        "Ξ£Ο…Ξ½ΞΏΞ»ΞΉΞΊΞ® Ξ™ΟƒΟ‡ΟΟ‚ (Watt)",
+        "Ξ£Ο…Ξ½ΞΏΞ»ΞΉΞΊΞ® Ξ™ΟƒΟ‡ΟΟ‚ ΟƒΞµ Watt"
+      ]
+    },
+    {
+      "family_id": "electronic_clock",
+      "canonical_label": "Ηλεκτρονικό Ρολόι",
+      "aliases": [
+        "Ηλεκτρονικό Ρολόι",
+        "Ηλεκτρονικο Ρολοι",
+        "Ψηφιακή Οθόνη",
+        "Ψηφιακη Οθονη"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "width_cm",
+      "canonical_label": "Πλάτος cm",
+      "aliases": [
+        "Πλάτος cm",
+        "Πλατος cm",
+        "Πλάτος",
+        "Πλατος"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "color",
+      "canonical_label": "Χρώμα",
+      "aliases": [
+        "Χρώμα",
+        "Χρωμα",
+        "Απόχρωση",
+        "Αποχρωση"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "resolution",
+      "canonical_label": "Ανάλυση",
+      "aliases": [
+        "Ανάλυση",
+        "Αναλυση",
+        "Ευκρίνεια",
+        "Ευκρινεια",
+        "Resolution"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "screen_size",
+      "canonical_label": "Μέγεθος οθόνης",
+      "aliases": [
+        "Μέγεθος οθόνης",
+        "Μεγεθος οθονης",
+        "Διαγώνιος",
+        "Διαγωνιος",
+        "Διαγώνιος Οθόνης",
+        "Διαγώνιος Οθόνης (Ίντσες)"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "display_technology",
+      "canonical_label": "Τεχνολογία Οθόνης",
+      "aliases": [
+        "Τεχνολογία Οθόνης",
+        "Τεχνολογια Οθονης",
+        "Τύπος Panel",
+        "Τυπος Panel",
+        "Panel",
+        "Τύπος Οθόνης"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "smart_tv",
+      "canonical_label": "Smart Tv",
+      "aliases": [
+        "Smart Tv",
+        "Smart TV",
+        "Λογισμικό",
+        "Λογισμικο",
+        "Υποστηριζόμενες Εφαρμογές",
+        "Υποστηριζομενες Εφαρμογες"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "wifi",
+      "canonical_label": "Wifi",
+      "aliases": [
+        "Wifi",
+        "WiFi",
+        "Wi-Fi",
+        "Wi Fi",
+        "Ασύρματο Δίκτυο"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "sound_system",
+      "canonical_label": "Σύστημα Ήχου",
+      "aliases": [
+        "Σύστημα Ήχου",
+        "Συστημα Ηχου",
+        "Κανάλια",
+        "Καναλια",
+        "Κανάλια Ήχου"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "subwoofer_power",
+      "canonical_label": "Ισχύς Subwoofer",
+      "aliases": [
+        "Ισχύς Subwoofer",
+        "Ισχύς Subwoofer(Watt)",
+        "Ισχύς Subwoofer (Watt)",
+        "Ισχύς Subwoofer (RMS)",
+        "Subwoofer Power"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "washing_capacity",
+      "canonical_label": "Κιλά πλύσης",
+      "aliases": [
+        "Κιλά πλύσης",
+        "Κιλα πλυσης",
+        "Χωρητικότητα Πλύσης",
+        "Χωρητικότητα πλύσης",
+        "Χωρητικότητα σε Κιλά",
+        "Μέγιστο Φορτίο"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "spin_speed",
+      "canonical_label": "Μέγιστες Στροφές Στυψίματος",
+      "aliases": [
+        "Μέγιστες Στροφές Στυψίματος",
+        "Μεγιστες Στροφες Στυψιματος",
+        "Στροφές",
+        "Στροφες",
+        "Στροφές Στυψίματος",
+        "Μέγιστη ταχύτητα στυψίματος"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "loading_type",
+      "canonical_label": "Τρόπος Φόρτωσης",
+      "aliases": [
+        "Τρόπος Φόρτωσης",
+        "Τροπος Φορτωσης",
+        "Τύπος Φόρτωσης",
+        "Τύπος φόρτωσης"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "hob_zone_count",
+      "canonical_label": "Αριθμός Ζωνών",
+      "aliases": [
+        "Αριθμός Ζωνών",
+        "Αριθμος Ζωνων",
+        "Αριθμός εστιών",
+        "Εστίες",
+        "Ζώνες Μαγειρέματος",
+        "Ζώνες"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "hob_technology",
+      "canonical_label": "Τεχνολογία Εστιών",
+      "aliases": [
+        "Τεχνολογία Εστιών",
+        "Τεχνολογια Εστιων",
+        "Τύπος Εστίας",
+        "Τύπος εστίας",
+        "Είδος Εστίας"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "nominal_btu",
+      "canonical_label": "Ονομαστική Απόδοση",
+      "aliases": [
+        "Ονομαστική Απόδοση",
+        "Ονομαστικη Αποδοση",
+        "Απόδοση (BTU)",
+        "Απόδοση BTU",
+        "Ισχύς Ψύξης",
+        "BTU"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "cooling_system",
+      "canonical_label": "Ψύξη",
+      "aliases": [
+        "Ψύξη",
+        "Ψυξη",
+        "Σύστημα Ψύξης",
+        "Τεχνολογία Ψύξης",
+        "No Frost",
+        "Total NoFrost",
+        "Total No Frost"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "height_cm",
+      "canonical_label": "Ύψος cm",
+      "aliases": [
+        "Ύψος cm",
+        "Υψος cm",
+        "Ύψος",
+        "Υψος"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "microwave_grill",
+      "canonical_label": "Με Grill",
+      "aliases": [
+        "Με Grill",
+        "Grill",
+        "Λειτουργία Grill",
+        "Λειτουργία Μικροκύματα + Grill"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "oven_capacity_liters",
+      "canonical_label": "Χωρητικότητα σε Λίτρα",
+      "aliases": [
+        "Χωρητικότητα σε Λίτρα",
+        "Χωρητικότητα Φούρνου",
+        "Χωρητικότητα Φούρνου σε Λίτρα"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "dimensions",
+      "canonical_label": "Διαστάσεις",
+      "aliases": [
+        "Διαστάσεις",
+        "Διαστασεις",
+        "Διαστάσεις Συσκευής",
+        "Διαστασεις Συσκευης",
+        "Διαστάσεις Συσκευής σε Εκατοστά",
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ x Π x Β)",
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)",
+        "Διαστάσεις (Υ x Π x Β)",
+        "Διαστάσεις (Υ χ Π χ Β)"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "weight_kg",
+      "canonical_label": "Βάρος",
+      "aliases": [
+        "Βάρος",
+        "Βαρος",
+        "Καθαρό Βάρος",
+        "Καθαρο Βαρος",
+        "Βάρος Συσκευής",
+        "Βαρος Συσκευης",
+        "Βάρος Συσκευής σε Κιλά",
+        "Βάρος (kg)"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "automatic_shutdown",
+      "canonical_label": "Αυτόματη Απενεργοποίηση",
+      "aliases": [
+        "Αυτόματη Απενεργοποίηση",
+        "Αυτοματη Απενεργοποιηση",
+        "Αυτόματη Διακοπή Λειτουργίας",
+        "Αυτοματη Διακοπη Λειτουργιας",
+        "Αυτόματος Τερματισμός Λειτουργίας",
+        "Αυτοματος Τερματισμος Λειτουργιας",
+        "Auto Shut Off",
+        "Auto Off"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "cord_length",
+      "canonical_label": "Μήκος Καλωδίου",
+      "aliases": [
+        "Μήκος Καλωδίου",
+        "Μηκος Καλωδιου",
+        "Μήκος Καλωδίου σε Μέτρα",
+        "Μηκος Καλωδιου σε Μετρα",
+        "Μήκος Καλωδίου (m)",
+        "Μήκος καλωδίου τροφοδοσίας"
+      ],
+      "mojibake_examples": []
+    },
+    {
+      "family_id": "oven_capacity",
+      "canonical_label": "Χωρητικότητα Φούρνου",
+      "aliases": [
+        "Χωρητικότητα Φούρνου",
+        "Χωρητικοτητα Φουρνου",
+        "Χωρητικότητα Φούρνου σε Λίτρα",
+        "Χωρητικοτητα Φουρνου σε Λιτρα"
+      ],
+      "mojibake_examples": []
+    }
+  ]
+}

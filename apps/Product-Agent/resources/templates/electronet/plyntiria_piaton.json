@@ -1,0 +1,62 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "plyntiria_piaton_electronet_labels_v1",
+  "category_gr": "Πλυντήρια Πιάτων",
+  "cta_map_key": "Πλυντήρια Πιάτων",
+  "cta_url": "https://www.etranoulis.gr/oikiakes-syskeues/plynthria-piatwn",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakes-syskeues/plynthria-piatwn/bosch-sks2iti00e-epitrapezio-plynthrio-piaton-55cm-inox-e",
+    "https://www.etranoulis.gr/oikiakes-syskeues/plynthria-piatwn/Plynthrio-piaton-Bosch-SMS4ECI26E-60cm"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τρόπος Τοποθέτησης",
+        "Τύπος Πλυντηρίου Πιάτων",
+        "Χωρητικότητα σε Σερβίτσια",
+        "Αριθμός Προγραμμάτων",
+        "Προγράμματα Πλύσης",
+        "Μισό φορτίο Πλύσης",
+        "Προγραμματισμός Έναρξης",
+        "Τρίτο Κάνιστρο για Μαχαιροπίρουνα",
+        "Αισθητήρας Φορτίου",
+        "Αισθητήρας Ποιότητας Νερού",
+        "Συνδεσιμότητα",
+        "Άλλα Χαρακτηριστικά"
+      ]
+    },
+    {
+      "section": "Ενδείξεις",
+      "labels": [
+        "Ενδείξεις Λειτουργίας",
+        "Ένδειξη Πλήρωσης Αλατιού",
+        "Ένδειξη Πλήρωσης Λαμπρυντικού",
+        "Ένδειξη Υπολειπόμενου Χρόνου"
+      ]
+    },
+    {
+      "section": "Ασφάλεια",
+      "labels": [
+        "Κλείδωμα Ασφαλείας για Παιδιά",
+        "Σύστημα Προστασίας από Διαρροές"
+      ]
+    },
+    {
+      "section": "Ενεργειακά Χαρακτηριστικά",
+      "labels": [
+        "Ενεργειακή Κλάση",
+        "Επίπεδο Θορύβου σε dB"
+      ]
+    },
+    {
+      "section": "Γενικά χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή",
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)"
+      ]
+    }
+  ]
+}

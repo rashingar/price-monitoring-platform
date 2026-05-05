@@ -1,0 +1,28 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "thermantika_ygraerioy_electronet_labels_v1",
+  "category_gr": "Θερμαντικά Υγραερίου",
+  "cta_map_key": "Θερμαντικά Υγραερίου",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/thermantika-ygraeriou",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/thermantika-ygraeriou/bronx=bl-4200c-keramiki_sompa-4200W"
+  ],
+  "sections": [
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Ισχύς",
+        "Βαθμίδες Θέρμανσης",
+        "Χωρητικότητα Φιάλης",
+        "Mε Αερόθερμο",
+        "Κεραμική",
+        "Mε Ρόδες",
+        "Χρώμα",
+        "Διαστάσεις",
+        "Μήκος",
+        "Βάθος",
+        "Ύψος"
+      ]
+    }
+  ]
+}

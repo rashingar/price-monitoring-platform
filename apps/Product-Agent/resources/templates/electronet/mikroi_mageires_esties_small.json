@@ -1,0 +1,32 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "mikroi_mageires_esties_small_electronet_labels_v1",
+  "category_gr": "Εστίες",
+  "cta_map_key": "Εστίες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/esties_small",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/esties_small/estia-hlektrikh-rohnson-mod-r-2410"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Εστία"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Πλάτος",
+        "Βάθος"
+      ]
+    }
+  ]
+}

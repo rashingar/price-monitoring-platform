@@ -1,0 +1,23 @@
+{
+  "model": "235510",
+  "source_url": "https://www.skroutz.gr/s/65481538/neff-pliros-entoichizomeno-plyntirio-piaton-me-wi-fi-gia-14-servitsia-p59-8xy81-5ek-s197ycx07e.html",
+  "final_url": "https://www.skroutz.gr/s/65481538/neff-pliros-entoichizomeno-plyntirio-piaton-me-wi-fi-gia-14-servitsia-p59-8xy81-5ek-s197ycx07e.html",
+  "name": "Neff S197YCX07E – Πλήρως Εντοιχιζόμενο Πλυντήριο Πιάτων 14 Σερβίτσια 60 cm A WiFi ???????: 235510",
+  "manufacturer": "Neff",
+  "category_tag_text": "Εντοιχιζόμενες Συσκευές",
+  "category_tag_href": "https://www.skroutz.gr/c/427/entoichizomenes-syskeves.html",
+  "normalized_category_slug": "entoichizomenes syskeves",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές///Πλυντήρια Πιάτων",
+  "captured_at": "2026-03-21T11:36:13.554449+00:00",
+  "content_hash": "b81dcfb12718ce902999bbdef79b24440aacf1545353fef22678ef2776885278",
+  "captured_live": false,
+  "family_key": "built_in_appliance",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Εντοιχιζόμενες Συσκευές",
+  "expected_sub_category": "Πλυντήρια Πιάτων",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές///Πλυντήρια Πιάτων",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "built_in_appliance"
+}

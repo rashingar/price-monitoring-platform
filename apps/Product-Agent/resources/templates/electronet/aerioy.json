@@ -1,0 +1,37 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "aerioy_electronet_labels_v1",
+  "category_gr": "Αερίου",
+  "cta_map_key": "Αερίου",
+  "cta_url": "https://www.etranoulis.gr/hobbies/barbeque/aeriou",
+  "electronet_examples": [
+    "https://www.electronet.gr/gadgets-gaming-hobbies/barbeque/aerioy/psistaria-ygraerioy-weber-spirit-e-335"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Επιφάνεια Ψησίματος σε Εκατοστά",
+        "Υλικό Επιφάνειας Ψησίματος",
+        "Καυστήρας",
+        "Αριθμός Καυστήρων",
+        "Θερμική Ισχύς σε KW",
+        "Πλαϊνή Εστία Υγραερίου",
+        "Θερμική Ισχύς Πλαϊνής Εστίας σε KW",
+        "Δυνατότητα Χρήσης Σούβλας",
+        "Ανάφλεξη",
+        "Θερμόμετρο",
+        "Πλευρικά Τραπέζια",
+        "Τροχοί"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

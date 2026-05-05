@@ -1,0 +1,23 @@
+{
+  "model": "232295",
+  "source_url": "https://www.skroutz.gr/s/45395915/Midea-Eleythero-Plyntirio-Piaton-me-Wi-Fi-gia-10-Servitsia-P45xY85ek-Inox-MFD45S200X-2-ES.html",
+  "final_url": "https://www.skroutz.gr/s/45395915/Midea-Eleythero-Plyntirio-Piaton-me-Wi-Fi-gia-10-Servitsia-P45xY85ek-Inox-MFD45S200X-2-ES.html",
+  "name": "Midea Ελεύθερο Πλυντήριο Πιάτων με Wi-Fi για 10 Σερβίτσια Π45xY85εκ. Inox Κωδικός: MFD45S200X.2-ES",
+  "manufacturer": "Midea",
+  "category_tag_text": "Πλυντήρια Πιάτων",
+  "category_tag_href": "https://www.skroutz.gr/c/406/plynthria-piatwn.html",
+  "normalized_category_slug": "plynthria piatwn",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια Πιάτων:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια Πιάτων///45cm",
+  "captured_at": "2026-03-21T11:36:12.864289+00:00",
+  "content_hash": "e8298dc9b695e268cd1d4db17ab28d70fd65155a6e11c13f3daefb878cc87db8",
+  "captured_live": true,
+  "family_key": "dishwasher",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Πλυντήρια Πιάτων",
+  "expected_sub_category": "45cm",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια Πιάτων:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια Πιάτων///45cm",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "dishwasher"
+}

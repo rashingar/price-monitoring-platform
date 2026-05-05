@@ -1,0 +1,31 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "siderostres_electronet_labels_v1",
+  "category_gr": "Σιδερώστρες",
+  "cta_map_key": "Σιδερώστρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/siderwma/siderwstres",
+  "electronet_examples": [
+    "https://www.electronet.gr/exoplismos-spitioy/sideroma-royhon/siderostres/siderostra-stiroplus-ib820s-prestige-2"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Σιδερώστρας",
+        "Ειδική Σχάρα για",
+        "Ρύθμιση Θέσεων Ύψους",
+        "Διαστάσεις Επιφάνειας Σιδερώματος σε Εκατοστά.",
+        "Σχάρα Τοποθέτησης Ρούχων",
+        "Ρύθμιση 'Υψους σε Εκατοστά από",
+        "Ρύθμιση Ύψους σε Εκατοστά έως",
+        "Ροδάκια για Εύκολη Μεταφορά",
+        "Θερμαινόμενη Επιφάνεια Σιδερώματος",
+        "Απορρόφηση και Εκπομπή Αέρα",
+        "Πρίζα Πάνω στο Θερμοσιδερωτήριο",
+        "Ισχύς σε Watts",
+        "Αντιολισθητική Βάση",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

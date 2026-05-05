@@ -1,0 +1,27 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "axesoyar_psistarion_electronet_labels_v1",
+  "category_gr": "Αξεσουάρ Ψησταριών",
+  "cta_map_key": "Αξεσουάρ Ψησταριών",
+  "cta_url": "https://www.etranoulis.gr/hobbies/barbeque/aksesouar-pshstariwn",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/hobbies/barbeque/aksesouar-pshstariwn/fieldmann-fzg-9000-u-doxeio-ekkinhshs-gia-psistaria"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Λαβή για αποφυγή εγκαυμάτων",
+        "Χρώμα",
+        "Βάρος"
+      ]
+    }
+  ]
+}

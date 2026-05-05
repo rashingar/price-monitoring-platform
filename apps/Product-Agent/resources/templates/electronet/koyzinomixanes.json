@@ -1,0 +1,49 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "koyzinomixanes_electronet_labels_v1",
+  "category_gr": "Κουζινομηχανές",
+  "cta_map_key": "Κουζινομηχανές",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/kouzinomhxanes",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/kouzinomhxanes/kouzinomhxanh-gruppe-ou6336c",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/kouzinomhxanes/kouzinomixani-rohnson-r5880-inox"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος συσκευής",
+        "Ισχύς σε Watts",
+        "Τεχνολογία Κίνησης",
+        "Ρυθμίσεις Ταχύτητας",
+        "Ενδείξεις Λειτουργίας",
+        "Ήπια Εκκίνηση",
+        "Αυτόματο Τύλιγμα Καλωδίου",
+        "Χωρητικότητα Μπολ σε Λίτρα",
+        "Υλικό Μπολ",
+        "Χερούλια Μπολ",
+        "Καπάκι Μπολ",
+        "Αναδευτήρες"
+      ]
+    },
+    {
+      "section": "Εξαρτήματα",
+      "labels": [
+        "Μπλέντερ",
+        "Χωρητικότητα Μπλέντερ",
+        "Κρεατομηχανή",
+        "Λεμονοστύφτης",
+        "Πολυκόφτης Συνεχούς Τεμαχισμού",
+        "Εξαρτήματα που Περιλλαμβάνονται",
+        "Εξαρτήματα Προαιρετικά"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

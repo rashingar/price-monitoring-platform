@@ -1,0 +1,23 @@
+{
+  "model": "233541",
+  "source_url": "https://www.skroutz.gr/s/49391242/LG-PSygeio-Ntoulapa-635lt-Total-NoFrost-Y179xP91-3xV73-5ek-Inox-GSGV80PYLL.html",
+  "final_url": "https://www.skroutz.gr/s/49391242/LG-PSygeio-Ntoulapa-635lt-Total-NoFrost-Y179xP91-3xV73-5ek-Inox-GSGV80PYLL.html",
+  "name": "LG Ψυγείο Ντουλάπα 635lt Total NoFrost Υ179xΠ91.3xΒ73.5εκ. Inox GSGV80PYLL",
+  "manufacturer": "LG",
+  "category_tag_text": "Ψυγεία",
+  "category_tag_href": "https://www.skroutz.gr/c/404/psigeia.html",
+  "normalized_category_slug": "psigeia",
+  "has_besco_sections": true,
+  "detected_besco_section_count": 4,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Ψυγεία & Καταψύκτες:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Ψυγεία & Καταψύκτες///Ψυγεία Ντουλάπες",
+  "captured_at": "2026-03-21T11:36:13.031207+00:00",
+  "content_hash": "eb95331eb9b80ad041e5994aeaf628c14dfcf24b54ed50f15d726e1c05f87a23",
+  "captured_live": true,
+  "family_key": "refrigeration",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Ψυγεία & Καταψύκτες",
+  "expected_sub_category": "Ψυγεία Ντουλάπες",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Ψυγεία & Καταψύκτες:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Ψυγεία & Καταψύκτες///Ψυγεία Ντουλάπες",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "refrigeration"
+}

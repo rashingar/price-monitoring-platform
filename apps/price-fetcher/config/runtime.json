@@ -1,0 +1,10 @@
+{
+  "output_dir": "./output",
+  "csv_encoding": "utf-8-sig",
+  "fetch": {
+    "headless": false,
+    "navigation_timeout_ms": 30000,
+    "retry_max_attempts": 5,
+    "page_ready_timeout_ms": 5000
+  }
+}

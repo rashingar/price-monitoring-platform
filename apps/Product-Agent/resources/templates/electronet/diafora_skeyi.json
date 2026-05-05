@@ -1,0 +1,32 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "diafora_skeyi_electronet_labels_v1",
+  "category_gr": "Διάφορα Σκεύη",
+  "cta_map_key": "Διάφορα Σκεύη",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/diafora-skeyh",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/diafora-skeyh/aygogdarths-30cm-bra-efficient-a195001",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/diafora-skeyh/spatoula-tryphth-mageirikhs-bra-efficient-a195002"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Υλικό"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Ύψος"
+      ]
+    }
+  ]
+}

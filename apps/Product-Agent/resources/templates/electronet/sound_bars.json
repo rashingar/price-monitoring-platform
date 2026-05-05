@@ -1,0 +1,55 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "sound_bars_electronet_labels_v1",
+  "template_id": "sound_bars",
+  "category_gr": "Sound Bars",
+  "cta_map_key": "Sound Bars",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/audio-systems/sound-bars",
+  "electronet_examples": [
+    "https://www.electronet.gr/eikona-ihos/audio-home-systems/sound-bars-docking-stations/soundbar-lg-s30a",
+    "https://www.electronet.gr/eikona-ihos/audio-home-systems/sound-bars-docking-stations/soundbar-lg-s80tr?v=34390"
+  ],
+  "source": {
+    "electronet_url_example": "https://www.electronet.gr/eikona-ihos/audio-home-systems/sound-bars-docking-stations/soundbar-lg-s80tr?v=34390"
+  },
+  "sections": [
+    {
+      "section": "Τεχνικά Χαρακτηριστικά",
+      "name": "Τεχνικά Χαρακτηριστικά",
+      "labels": [
+        "Σύστημα Ήχου",
+        "Συνολική Ισχύς Ηχείων(Watt)",
+        "Ισχύς Subwoofer(Watt)",
+        "Wi - Fi",
+        "Αναπαραγωγή Αρχείων Ήχου",
+        "Συμβατό με iPod/iPhone",
+        "Ασύρματη Αναπαραγωγή"
+      ]
+    },
+    {
+      "section": "Συνδέσεις",
+      "name": "Συνδέσεις",
+      "labels": [
+        "Ethernet",
+        "HDMI",
+        "USB 2.0",
+        "Component",
+        "Composite",
+        "Coaxial",
+        "Οπτική Ίνα"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "name": "Γενικά",
+      "labels": [
+        "Βασικός Εξοπλισμός",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή",
+        "Χώρα Κατασκευής",
+        "Βάρος Συσκευής σε Κιλά"
+      ]
+    }
+  ],
+  "fingerprint": "70d2e07c53ce860ad433db1e70585d100002f238b6fb4ff797cb815c79e51026"
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "skliroi_diskoi_electronet_labels_v1",
+  "category_gr": "Σκληροί δίσκοι",
+  "cta_map_key": "Σκληροί δίσκοι",
+  "cta_url": "https://www.etranoulis.gr/index.php?route=product/category&path=139_143_156",
+  "electronet_examples": [
+    "https://www.electronet.gr/pliroforiki/apothikeysi/skliroi-diskoi/exoterikos-skliros-diskos-apacer-gen1-ac533-2tb-25-usb-32-mayro"
+  ],
+  "sections": [
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χωρητικότητα",
+        "USB",
+        "Μέγεθος",
+        "Ταχύτα Εγγραφής MB/s",
+        "Ταχύτητα Αναπαραγωγής MB/s",
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "xalazia_electronet_labels_v1",
+  "category_gr": "Χαλαζία",
+  "cta_map_key": "Χαλαζία",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/xalazia",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/xalazia/thermastra-xalazia-primo-prqh-81051-1600w-2-epipeda-asfaleia"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Θερμαντικού",
+        "Συνίσταται για χώρους έως m2",
+        "Μέγιστη Ισχύς σε Watt",
+        "Αριθμός Επιπέδων Ισχύος",
+        "Επίπεδα Ισχύος",
+        "Ενδεικτική Λυχνεία Λειτουργίας",
+        "Ρυθμιζόμενος Θερμοστάτης",
+        "Θερμική Ασφάλεια",
+        "Αυτόματη Διακοπή Λειτουργίας",
+        "Λειτουργεία Περιστροφής",
+        "Λειτουργία Αερόθερμου",
+        "Χειρολαβή Μεταφοράς",
+        "Ροδάκια Μεταφοράς",
+        "Αποθήκευση Καλωδίου"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Διαστάσεις συσκευής σε εκατ. (Υ χ Π χ Β)",
+        "Χρώμα",
+        "Εγγύηση προμηθευτή"
+      ]
+    }
+  ]
+}

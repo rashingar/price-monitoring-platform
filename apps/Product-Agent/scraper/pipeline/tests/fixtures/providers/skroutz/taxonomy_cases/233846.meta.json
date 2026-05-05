@@ -1,0 +1,23 @@
+{
+  "model": "233846",
+  "source_url": "https://www.skroutz.gr/s/54333786/Hisense-WD3S8043BW3-Plyntirio-Stegnotirio-Rouchon-8kg-5kg-Atmou-1400-Strofes-me-Wi-Fi.html",
+  "final_url": "https://www.skroutz.gr/s/54333786/Hisense-WD3S8043BW3-Plyntirio-Stegnotirio-Rouchon-8kg-5kg-Atmou-1400-Strofes-me-Wi-Fi.html",
+  "name": "Hisense WD3S8043BW3 – Πλυντήριο Στεγνωτήριο 8 κιλά/5 κιλά A ???????: 233846",
+  "manufacturer": "Hisense",
+  "category_tag_text": "Πλυντήρια Ρούχων",
+  "category_tag_href": "https://www.skroutz.gr/c/379/plynthria-rouxwn.html",
+  "normalized_category_slug": "plynthria rouxwn",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια///Πλυντήρια Στεγνωτήρια 2 in1",
+  "captured_at": "2026-03-21T11:36:13.354592+00:00",
+  "content_hash": "a9a02d6b3512b16f8bdc2802d15a3fc43ebbca05884a64d95799b8949b71786c",
+  "captured_live": false,
+  "family_key": "laundry",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Πλυντήρια-Στεγνωτήρια",
+  "expected_sub_category": "Πλυντήρια Στεγνωτήρια 2 in1",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια///Πλυντήρια Στεγνωτήρια 2 in1",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "laundry"
+}

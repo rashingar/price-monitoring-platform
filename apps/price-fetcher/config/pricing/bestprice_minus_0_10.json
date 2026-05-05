@@ -1,0 +1,8 @@
+{
+  "name": "bestprice_minus_0_10",
+  "rule_family": "fixed_offset",
+  "rounding_mode": "keep_2dp",
+  "parameters": {
+    "offset": -0.10
+  }
+}

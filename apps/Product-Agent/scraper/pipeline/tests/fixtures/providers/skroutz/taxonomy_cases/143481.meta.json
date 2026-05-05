@@ -1,0 +1,23 @@
+{
+  "model": "143481",
+  "source_url": "https://www.skroutz.gr/s/61800471/tcl-q65h-soundbar-5-1-bluetooth-hdmi-kai-wi-fi-me-asyrmato-subwoofer-mayro.html",
+  "final_url": "https://www.skroutz.gr/s/61800471/tcl-q65h-soundbar-5-1-bluetooth-hdmi-kai-wi-fi-me-asyrmato-subwoofer-mayro.html",
+  "name": "TCL Q65H Soundbar 5.1 Bluetooth, HDMI και Wi-Fi με Ασύρματο Subwoofer Μαύρο",
+  "manufacturer": "TCL",
+  "category_tag_text": "Soundbar",
+  "category_tag_href": "https://www.skroutz.gr/c/1735/soundbar.html",
+  "normalized_category_slug": "soundbar",
+  "has_besco_sections": true,
+  "detected_besco_section_count": 9,
+  "taxonomy_hint": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Audio Systems:::ΕΙΚΟΝΑ & ΗΧΟΣ///Audio Systems///Sound Bars",
+  "captured_at": "2026-03-21T11:36:12.699209+00:00",
+  "content_hash": "198667026671b4449717041c9d60cdd24baaa2495a20a4758885294782097e21",
+  "captured_live": true,
+  "family_key": "soundbar",
+  "expected_parent_category": "ΕΙΚΟΝΑ & ΗΧΟΣ",
+  "expected_leaf_category": "Audio Systems",
+  "expected_sub_category": "Sound Bars",
+  "expected_source_category": "ΕΙΚΟΝΑ & ΗΧΟΣ:::ΕΙΚΟΝΑ & ΗΧΟΣ///Audio Systems:::ΕΙΚΟΝΑ & ΗΧΟΣ///Audio Systems///Sound Bars",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "family:soundbar"
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "android_electronet_labels_v1",
+  "category_gr": "Android",
+  "cta_map_key": "Android",
+  "cta_url": "https://www.etranoulis.gr/thlefwnia/smartphones/android",
+  "electronet_examples": [
+    "https://www.electronet.gr/tilefonia/smartphones/ola-ta-smartphones/smartphone-samsung-galaxy-s25-ultra-5g-512gb-titanium-black"
+  ],
+  "sections": [
+    {
+      "section": "Οθόνη",
+      "labels": [
+        "Διαγώνιος Οθόνης ( Ίντσες )",
+        "Ανάλυση Οθόνης",
+        "Τεχνολογία Οθόνης",
+        "Αριθμός Pixels",
+        "Touch Screen"
+      ]
+    },
+    {
+      "section": "Επεξεργαστής",
+      "labels": [
+        "Αριθμός Πυρήνων Επεξεργαστή",
+        "Μάρκα Επεξεργαστή",
+        "Ταχύτητα Επεξεργαστή (GHz)"
+      ]
+    },
+    {
+      "section": "Μνήμη",
+      "labels": [
+        "Μνήμη Ram",
+        "Εσωτερική Μνήμη",
+        "Επεκτάσιμη Εξωτερική Μνήμη"
+      ]
+    },
+    {
+      "section": "Camera",
+      "labels": [
+        "Camera Οπίσθια",
+        "Camera Εμπρόσθια"
+      ]
+    },
+    {
+      "section": "Λειτουργικό",
+      "labels": [
+        "Λειτουργικό"
+      ]
+    },
+    {
+      "section": "Συνδεσιμότητα",
+      "labels": [
+        "3G",
+        "4G",
+        "5G",
+        "Wi - Fi",
+        "Bluetooth",
+        "Micro USB"
+      ]
+    },
+    {
+      "section": "Γενικά χαρακτηριστικά",
+      "labels": [
+        "Δακτυλικό Αποτύπωμα (Finger Print)",
+        "Dual SIM",
+        "Τύπος SIM",
+        "Χρώμα",
+        "Μπαταρία",
+        "Χρόνος Αναμονής",
+        "Χρόνος Ομιλίας",
+        "Χρόνος Χρήσης Internet",
+        "Ραδιόφωνο",
+        "GPS",
+        "Επιπλέον Εξοπλισμός",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

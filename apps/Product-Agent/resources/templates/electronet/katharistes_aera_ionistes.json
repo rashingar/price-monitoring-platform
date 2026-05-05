@@ -1,0 +1,41 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "katharistes_aera_ionistes_electronet_labels_v1",
+  "category_gr": "Καθαριστές Αέρα Ιονιστές",
+  "cta_map_key": "Καθαριστές Αέρα Ιονιστές",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/afygransh-ionistes/katharistes-aera-ionistes",
+  "electronet_examples": [
+    "https://www.electronet.gr/klimatismos-thermansi/afygransi-katharismos-aera/katharistes-aera-ionistes/katharistis-aera-inventor-qlt-500"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος συσκευής",
+        "Συνίσταται για χώρους έως m2",
+        "Φίλτρα",
+        "Ιονιστής",
+        "Ενδείξεις λειτουργίας",
+        "Ταχύτητες ανεμιστήρα",
+        "Ένδειξη αλλαγής φίλτρου",
+        "Χρονοδιακόπτης λειτουργίας",
+        "Τηλεχειριστήριο"
+      ]
+    },
+    {
+      "section": "Απόδοση",
+      "labels": [
+        "Στάθμη θορύβου σε dB(A)",
+        "Ισχύς σε Watt"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Διαστάσεις συσκευής σε εκατ. (Υ χ Π χ Β)",
+        "Βάρος συσκευής σε κιλά",
+        "Εγγύηση προμηθευτή"
+      ]
+    }
+  ]
+}

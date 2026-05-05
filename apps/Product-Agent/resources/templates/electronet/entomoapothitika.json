@@ -1,0 +1,33 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "entomoapothitika_electronet_labels_v1",
+  "category_gr": "ΕΝΤΟΜΟΑΠΩΘΗΤΙΚΑ",
+  "cta_map_key": "ΕΝΤΟΜΟΑΠΩΘΗΤΙΚΑ",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/entomoapothitika",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/entomoapothitika/hlektrikh-entomopagida-primo-vn-01-60w"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Λάμπες φθορίου"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Ύψος",
+        "Πλάτος",
+        "Βάθος"
+      ]
+    }
+  ]
+}

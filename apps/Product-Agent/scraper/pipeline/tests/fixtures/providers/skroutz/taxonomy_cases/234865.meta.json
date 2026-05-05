@@ -1,0 +1,23 @@
+{
+  "model": "234865",
+  "source_url": "https://www.skroutz.gr/s/62020533/bosch-serie-6-stegnotirio-9kg-me-antlia-thermotitas.html",
+  "final_url": "https://www.skroutz.gr/s/62020533/bosch-serie-6-stegnotirio-9kg-me-antlia-thermotitas.html",
+  "name": "Bosch WQG243B9GR – Στεγνωτήριο Ρούχων 9 kg C με Αντλία Θερμότητας ???????: 234865",
+  "manufacturer": "Bosch",
+  "category_tag_text": "Στεγνωτήρια Ρούχων",
+  "category_tag_href": "https://www.skroutz.gr/c/380/stegnotiria-rouxon.html",
+  "normalized_category_slug": "stegnotiria rouxon",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια///Στεγνωτήρια Ρούχων",
+  "captured_at": "2026-03-21T11:36:13.260986+00:00",
+  "content_hash": "01e8150bc5402f4b5f4236ee6f65c9eeb9ba87f7ec308a4ad5f7917de20b2bed",
+  "captured_live": false,
+  "family_key": "laundry",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Πλυντήρια-Στεγνωτήρια",
+  "expected_sub_category": "Στεγνωτήρια Ρούχων",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Πλυντήρια-Στεγνωτήρια///Στεγνωτήρια Ρούχων",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "laundry"
+}

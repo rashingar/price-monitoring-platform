@@ -1,0 +1,36 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "wearables_electronet_labels_v1",
+  "category_gr": "WEARABLES",
+  "cta_map_key": "WEARABLES",
+  "cta_url": "https://www.etranoulis.gr/hobbies/wearables",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/hobbies/wearables/smartband-huawei-band-6-adiavroxo-palmografo-sakura-pink",
+    "https://www.etranoulis.gr/hobbies/wearables/smartwatch-huawei-gt4-green-strap"
+  ],
+  "sections": [
+    {
+      "section": "Τεχνικά Χαρακτηριστικά",
+      "labels": [
+        "Τύπος Wearable",
+        "Οθόνη Ίντσες",
+        "Τεχνολογία Οθόνης",
+        "Λειτουργία Κλήσεων",
+        "Κάρτα Sim",
+        "Εσωτερική Μνήμη",
+        "Λειτουργίες Wearable",
+        "Camera Εμπρόσθια",
+        "Ανθεκτικότητα σε Νερό",
+        "Συμβατό με Λειτουργικό",
+        "Bluetooth",
+        "Wi - Fi",
+        "GPS",
+        "Micro USB",
+        "Μπαταρία",
+        "Διάρκεια Μπαταρίας",
+        "Χρώμα",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

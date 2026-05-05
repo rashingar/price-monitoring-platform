@@ -1,0 +1,37 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "ektypotes_electronet_labels_v1",
+  "category_gr": "Εκτυπωτές",
+  "cta_map_key": "Εκτυπωτές",
+  "cta_url": "https://www.etranoulis.gr/plhroforikh/ektypwtes-analwsima/ektypwtws",
+  "electronet_examples": [
+    "https://www.electronet.gr/pliroforiki/ektypotes/ektypotes-laser-color/ektypotis-hp-color-laserjet-pro-3202dw-499r0f"
+  ],
+  "sections": [
+    {
+      "section": "Λειτουργίες",
+      "labels": [
+        "Τύπος",
+        "Πολυμηχάνημα",
+        "Εκτύπωση",
+        "Scanner",
+        "Φωτοτυπία",
+        "FAX"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Wi - Fi",
+        "Εκτύπωση Σελίδας ανά Λεπτό (Έγχρωμο)",
+        "Εκτύπωση Σελίδας ανά Λεπτό (Μαύρο)",
+        "Μέγιστη Ανάλυση (dpi)",
+        "Οθόνη LCD",
+        "SD Card",
+        "Τροφοδοσία Χαρτιού (φύλλα)",
+        "Μέγεθος Χαρτιού",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

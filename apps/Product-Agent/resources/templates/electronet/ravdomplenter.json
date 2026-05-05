@@ -1,0 +1,38 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "ravdomplenter_electronet_labels_v1",
+  "category_gr": "Ραβδομπλεντερ",
+  "cta_map_key": "Ραβδομπλεντερ",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/kopthria-ravdoi",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/kopthria-ravdoi/braun-hb701-mq7000x-ravdomplenter-1000w-060l-activeblade",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/kopthria-ravdoi/rabdoblenter-braun-multiquick-5-pro-mq55001m"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Πολυκόπτη",
+        "Ισχύς σε Watts",
+        "Αριθμός Λεπίδων",
+        "Ρυθμίσεις Ταχύτητας",
+        "Υλικό Σώματος",
+        "Χωρητικότητα Μπολ σε Λίτρα",
+        "Υλικό Μπολ",
+        "Εξαρτήματα",
+        "Αντιολισθητική Βάση",
+        "Αποσπώμενα Μέρη που Πλένονται στο Πλυντήριο",
+        "Αποθήκευση Καλωδίου"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

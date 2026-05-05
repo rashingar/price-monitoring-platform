@@ -1,0 +1,41 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "air_coolers_epidapedioi_electronet_labels_v1",
+  "category_gr": "Air Coolers & Επιδαπέδιοι",
+  "cta_map_key": "Air Coolers & Επιδαπέδιοι",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/aircoolers-epidapedioi",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/aircoolers-epidapedioi/air-cooler-olimpia-splendid-peler-4t",
+    "https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/aircoolers-epidapedioi/air-cooler-olimpia-splendid-peler-7t"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Ανεμιστήρα",
+        "Ισχύς σε Watt",
+        "Διάμετρος σε Εκατοστά",
+        "Ταχύτητες",
+        "Περιστροφική Κίνηση",
+        "Ρυθμιζόμενη Γωνία Κλίσης",
+        "Ρυθμιζόμενο Ύψος",
+        "Αριθμός Πτερυγίων",
+        "Υλικό Πτερυγίων",
+        "Χρονοδιακόπτης",
+        "Λειτουργία Θερινή/Χειμερινή",
+        "Τηλεχειριστήριο",
+        "Διακόπτης Τοίχου",
+        "Αριθμός Λαμπτήρων"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

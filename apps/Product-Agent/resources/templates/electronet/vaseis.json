@@ -1,0 +1,41 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "vaseis_electronet_labels_v1",
+  "category_gr": "Βάσεις",
+  "cta_map_key": "Βάσεις",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/vaseis-epipla-tv/vaseis",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/eikona-hxos/vaseis-epipla-tv/vaseis/kydos-k32-46t-vasi-tileorasis-toichou-32-80-45kg-vesa-600-400",
+    "https://www.etranoulis.gr/eikona-hxos/vaseis-epipla-tv/vaseis/kydos-k78-466-vasi-tileorasis-toichou-32-70-40kg-full-motion-vesa-600-400"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά",
+      "labels": [
+        "Τοποθέτηση",
+        "Τύπος",
+        "Ελάχιστη Διάσταση Τηλεόρασης",
+        "Μέγιστη Διάσταση Τηλεόρασης",
+        "Μέγιστο Φορτίο",
+        "Διάκενο Βάσης Τοίχου Vesa (mm)",
+        "VESA & Universal Συμβατότητα",
+        "Γωνία Κλίσης Κάθετα (Μοίρες)",
+        "Περιστροφή (Swivel)",
+        "Απόσταση από τον τοίχο (Profile)",
+        "Οδηγός Καλωδίων",
+        "Οδηγός Προσανατολισμού",
+        "Συμβατή για Curved TVs",
+        "Αλφάδι (Bubble Level)",
+        "Υλικό Κατασκευής"
+      ]
+    },
+    {
+      "section": "Διαστάσεις / Βάρος",
+      "labels": [
+        "Διαστάσεις Βάσης (Π × Υ × Β)",
+        "Καθαρό Βάρος",
+        "Μεικτό Βάρος"
+      ]
+    }
+  ]
+}

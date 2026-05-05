@@ -1,0 +1,44 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "playstation_electronet_labels_v1",
+  "category_gr": "Playstation",
+  "cta_map_key": "Playstation",
+  "cta_url": "https://www.etranoulis.gr/hobbies/gaming/playstation",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/hobbies/gaming/playstation/sony-ps5-console-pro-ps5pro-2tb-digital",
+    "https://www.etranoulis.gr/hobbies/gaming/playstation/konsola-sony-ps5-slim-4k-ssd"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά",
+      "labels": [
+        "Σειρά Προϊόντων",
+        "Παρεχόμενα Παιχνίδια",
+        "Σκληρός Δίσκος",
+        "Μοντέλο Επεξεργαστή",
+        "Μνήμη Ram (GB)",
+        "Δίσκοι Αναπαραγωγής"
+      ]
+    },
+    {
+      "section": "Συνδέσεις",
+      "labels": [
+        "Wi - Fi",
+        "Bluetooth",
+        "HDMI",
+        "USB 2.0",
+        "USB 3.0",
+        "Ethernet",
+        "Οπτική Ίνα"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Χρώμα",
+        "Βασικός Εξοπλισμός",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

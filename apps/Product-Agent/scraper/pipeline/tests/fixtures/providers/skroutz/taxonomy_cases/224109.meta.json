@@ -1,0 +1,23 @@
+{
+  "model": "224109",
+  "source_url": "https://www.skroutz.gr/s/7927541/Neff-N-70-Keramiki-Estia-me-Plaisio-Aytonomi-me-Leitourgia-Kleidomatos-58-3x51-3ek-T16BT60N0.html",
+  "final_url": "https://www.skroutz.gr/s/7927541/Neff-N-70-Keramiki-Estia-me-Plaisio-Aytonomi-me-Leitourgia-Kleidomatos-58-3x51-3ek-T16BT60N0.html",
+  "name": "Neff T16BT60N0 – Κεραμική Εστία 60cm 4 Ζωνών TwistPad ???????: 224109",
+  "manufacturer": "Neff",
+  "category_tag_text": "Εντοιχιζόμενες Συσκευές",
+  "category_tag_href": "https://www.skroutz.gr/c/427/entoichizomenes-syskeves.html",
+  "normalized_category_slug": "entoichizomenes syskeves",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές///Εστίες",
+  "captured_at": "2026-03-21T11:36:13.460001+00:00",
+  "content_hash": "2811963ec0b47e0682115799cd56e8ebe479d22b2d1b1c2a9ccb0c7fc59a3af5",
+  "captured_live": false,
+  "family_key": "built_in_appliance",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Εντοιχιζόμενες Συσκευές",
+  "expected_sub_category": "Εστίες",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές///Εστίες",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "built_in_appliance"
+}

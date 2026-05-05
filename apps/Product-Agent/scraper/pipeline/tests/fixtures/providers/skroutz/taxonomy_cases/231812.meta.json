@@ -1,0 +1,23 @@
+{
+  "model": "231812",
+  "source_url": "https://www.skroutz.gr/s/40495216/Neff-Entoichizomenos-PSygeiokatapsyktis-260lt-NoFrost-Y177-2xP55-8xV54-8ek-Leykos-KI7863DD0.html",
+  "final_url": "https://www.skroutz.gr/s/40495216/Neff-Entoichizomenos-PSygeiokatapsyktis-260lt-NoFrost-Y177-2xP55-8xV54-8ek-Leykos-KI7863DD0.html",
+  "name": "Εντοιχιζόμενος Ψυγειοκαταψύκτης Neff KI7863DD0 56cm ???????: 231812",
+  "manufacturer": "Neff",
+  "category_tag_text": "Εντοιχιζόμενες Συσκευές",
+  "category_tag_href": "https://www.skroutz.gr/c/427/entoichizomenes-syskeves.html",
+  "normalized_category_slug": "entoichizomenes syskeves",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές///Ψυγεία",
+  "captured_at": "2026-03-21T11:36:13.593360+00:00",
+  "content_hash": "cfe7dc4331953bf7aadb4e5908560878466a8ec132c121c99fa809c86941aea8",
+  "captured_live": false,
+  "family_key": "built_in_appliance",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Εντοιχιζόμενες Συσκευές",
+  "expected_sub_category": "Ψυγεία",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές///Ψυγεία",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "built_in_appliance"
+}

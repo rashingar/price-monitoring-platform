@@ -1,0 +1,33 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "psifiakes_kornizes_electronet_labels_v1",
+  "category_gr": "Ψηφιακές κορνίζες",
+  "cta_map_key": "Ψηφιακές κορνίζες",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/kameres/digital-frames",
+  "electronet_examples": [
+    "https://www.electronet.gr/eikona-ihos/fotografikes-mihanes/psifiakes-kornizes/psifiaki-korniza-sencor-sdf-874-b-8-mayro"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά",
+      "labels": [
+        "Οθόνη Ίντσες",
+        "Αριθμός Pixels",
+        "Ενσωματωμένη Μνήμη ( MB )",
+        "Αποθηκευτικό Μέσο ( Κάρτα Μνήμης )",
+        "USB 2.0",
+        "SD Card"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Βασικός Εξοπλισμός",
+        "Βάρος Συσκευής σε Κιλά",
+        "Χρώμα",
+        "Χώρα Κατασκευής",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

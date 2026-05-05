@@ -1,0 +1,8 @@
+{
+  "name": "formula_with_rounding_rule",
+  "rule_family": "formula_with_rounding",
+  "rounding_mode": "nearest",
+  "parameters": {
+    "formula": "skroutz_price - 1"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "fryganieres_electronet_labels_v1",
+  "category_gr": "Φρυγανιέρες",
+  "cta_map_key": "Φρυγανιέρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/fryganieres",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/fryganieres/fryganiera-philips-hd2640-10",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/fryganieres/toaster-rohnson-nostalgia-r-2220"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Θέσεις για Ψωμί",
+        "Ισχύς σε Watts",
+        "Σχάρα για Στρογγυλά Ψωμάκια",
+        "Αποσπώμενος Δίσκος για τα Ψίχουλα",
+        "Αποθήκευση Καλωδίου"
+      ]
+    },
+    {
+      "section": "Λειτουργίες - Ενδείξεις",
+      "labels": [
+        "Επίπεδα Φρυγανίσματος",
+        "Εκτίναξη Ψωμιού",
+        "Ένδειξη Λειτουργίας",
+        "Αυτόματος Τερματισμός Λειτουργίας",
+        "Λειτουργία Ξαναζεστάματος",
+        "Λειτουργία Ξεπαγώματος",
+        "Πλήκτρο Ακύρωσης Λειτουργίας",
+        "Αυτόματο Κεντράρισμα Ψωμιού",
+        "Φρυγάνισμα από τη μία Πλευρά"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

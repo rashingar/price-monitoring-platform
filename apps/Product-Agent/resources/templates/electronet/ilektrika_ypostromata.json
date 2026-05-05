@@ -1,0 +1,49 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "ilektrika_ypostromata_electronet_labels_v1",
+  "category_gr": "Ηλεκτρικά Υποστρώματα",
+  "cta_map_key": "Ηλεκτρικά Υποστρώματα",
+  "cta_url": "https://www.etranoulis.gr/index.php?route=product/category&path=194_197_311",
+  "electronet_examples": [
+    "https://www.electronet.gr/klimatismos-thermansi/thermantika/ilektrikes-koybertes/ypostroma-solac-norway-ct8627"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Μέγεθος",
+        "Ισχύς σε Watt",
+        "Ύφασμα",
+        "Χειριστήριο",
+        "Επίπεδα Θερμοκρασιών",
+        "Χρόνος Θέρμανσης σε Λεπτά",
+        "Δυνατότητα Πλύσης",
+        "Σύστημα Ασφαλείας"
+      ]
+    },
+    {
+      "section": "Ειδικές Λειτουργίες",
+      "labels": [
+        "Χρονοδιακόπτης",
+        "Αυτόματη Ρύθμιση Θερμοκρασίας"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Πλάτος Συσκευής σε Εκατοστά",
+        "Μήκος Συσκευής σε Εκατοστά",
+        "Μήκος Καλωδίου σε Μέτρα"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

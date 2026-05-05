@@ -1,0 +1,43 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "aerotherma_electronet_labels_v1",
+  "category_gr": "Αερόθερμα",
+  "cta_map_key": "Αερόθερμα",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/aerotherma",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/aerotherma/kerosun-aerothermo-domatioy-dapedou-kfh-19c-1000w",
+    "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/aerotherma/aerothermo-olimpia-splendid-caldo-cubic-keramiko-1800w"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Θερμαντικού",
+        "Συνίσταται για χώρους έως m2",
+        "Μέγιστη Ισχύς σε Watt",
+        "Αριθμός Επιπέδων Ισχύος",
+        "Επίπεδα Ισχύος",
+        "Ενδεικτική Λυχνεία Λειτουργίας",
+        "Ρυθμιζόμενος Θερμοστάτης",
+        "Χρονοδιακόπτης Λειτουργίας",
+        "Αυτόματη Διακοπή Λειτουργίας",
+        "Θερμική Ασφάλεια",
+        "Δυνατότητα Χρήσης σε Μπάνιο",
+        "Λειτουργεία Περιστροφής",
+        "Λειτουργία Ανεμιστήρα",
+        "Δυνατότητα επιτοίχιας τοποθέτησης",
+        "Χειρολαβή Μεταφοράς",
+        "Αποθήκευση Καλωδίου",
+        "Τηλεχειριστήριο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Διαστάσεις συσκευής σε εκατ. (Υ χ Π χ Β)",
+        "Εγγύηση προμηθευτή",
+        "Χρώμα"
+      ]
+    }
+  ]
+}

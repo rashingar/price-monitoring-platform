@@ -1,0 +1,165 @@
+{
+  "mode": "apply-overrides",
+  "csv_path": "",
+  "base_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\Product-Agent\\resources\\mappings\\filter_map.base.json",
+  "manual_overrides_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\Product-Agent\\resources\\mappings\\filter_map.manual_overrides.json",
+  "filter_map_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\Product-Agent\\resources\\mappings\\filter_map.json",
+  "rows_read": 0,
+  "filter_columns_seen": 0,
+  "categories_seen": 167,
+  "categories_updated": 0,
+  "categories_added": 0,
+  "groups_seen": 365,
+  "values_seen": 1610,
+  "manual_override_categories": 8,
+  "manual_override_groups": 13,
+  "manual_override_values": 17,
+  "existing_map_fallback_rows": [],
+  "first_deepest_fallback_rows": [],
+  "overridden_groups": [
+    {
+      "category_id": "cat_0eb2b340ab02",
+      "group_id": "fg_91201c8b25f3",
+      "field": "value_order"
+    },
+    {
+      "category_id": "cat_0eb2b340ab02",
+      "group_id": "fg_a6db7963afb3",
+      "field": "status"
+    },
+    {
+      "category_id": "cat_336bef1e907e",
+      "group_id": "fg_077efa88760f",
+      "field": "value_order"
+    },
+    {
+      "category_id": "cat_7579f53ec11b",
+      "group_id": "fg_048a497f15b3",
+      "field": "value_order"
+    },
+    {
+      "category_id": "cat_5ca4c0070725",
+      "group_id": "fg_dc8551c907a9",
+      "field": "value_order"
+    },
+    {
+      "category_id": "cat_a25efd8c2b85",
+      "group_id": "fg_261cd17c42fa",
+      "field": "value_order"
+    },
+    {
+      "category_id": "cat_20f12195304a",
+      "group_id": "fg_49e215b144da",
+      "field": "required"
+    },
+    {
+      "category_id": "cat_163ef4133501",
+      "group_id": "fg_39a556bdb8af",
+      "field": "value_order"
+    },
+    {
+      "category_id": "cat_b32f00ef486b",
+      "group_id": "fg_0810dca50516",
+      "field": "added"
+    }
+  ],
+  "overridden_values": [
+    {
+      "category_id": "cat_0eb2b340ab02",
+      "group_id": "fg_d4b02e2925bb",
+      "value_id": "fv_080daa24fe76",
+      "field": "aliases"
+    },
+    {
+      "category_id": "cat_0eb2b340ab02",
+      "group_id": "fg_07e775fadc08",
+      "value_id": "fv_64152ce1f15d",
+      "field": "aliases"
+    },
+    {
+      "category_id": "cat_0eb2b340ab02",
+      "group_id": "fg_839c35d648b6",
+      "value_id": "fv_1f10e8d5287f",
+      "field": "aliases"
+    },
+    {
+      "category_id": "cat_0eb2b340ab02",
+      "group_id": "fg_c1fa01bb9dc3",
+      "value_id": "fv_91e3886088e2",
+      "field": "aliases"
+    },
+    {
+      "category_id": "cat_0eb2b340ab02",
+      "group_id": "fg_91201c8b25f3",
+      "value_id": "fv_166e94694859",
+      "field": "added"
+    },
+    {
+      "category_id": "cat_336bef1e907e",
+      "group_id": "fg_077efa88760f",
+      "value_id": "fv_cbb96e6e594f",
+      "field": "added"
+    },
+    {
+      "category_id": "cat_7579f53ec11b",
+      "group_id": "fg_048a497f15b3",
+      "value_id": "fv_423eb779b281",
+      "field": "added"
+    },
+    {
+      "category_id": "cat_7579f53ec11b",
+      "group_id": "fg_048a497f15b3",
+      "value_id": "fv_f4e1dc14aae0",
+      "field": "added"
+    },
+    {
+      "category_id": "cat_7579f53ec11b",
+      "group_id": "fg_048a497f15b3",
+      "value_id": "fv_4fa5b2426f3b",
+      "field": "aliases"
+    },
+    {
+      "category_id": "cat_5ca4c0070725",
+      "group_id": "fg_dc8551c907a9",
+      "value_id": "fv_fa7147907142",
+      "field": "added"
+    },
+    {
+      "category_id": "cat_5ca4c0070725",
+      "group_id": "fg_dc8551c907a9",
+      "value_id": "fv_fcc8edb4ca61",
+      "field": "aliases"
+    },
+    {
+      "category_id": "cat_a25efd8c2b85",
+      "group_id": "fg_261cd17c42fa",
+      "value_id": "fv_a2e58ebedc52",
+      "field": "added"
+    },
+    {
+      "category_id": "cat_a25efd8c2b85",
+      "group_id": "fg_261cd17c42fa",
+      "value_id": "fv_2616f8c6965d",
+      "field": "added"
+    },
+    {
+      "category_id": "cat_a25efd8c2b85",
+      "group_id": "fg_261cd17c42fa",
+      "value_id": "fv_82b00937c345",
+      "field": "aliases"
+    },
+    {
+      "category_id": "cat_163ef4133501",
+      "group_id": "fg_39a556bdb8af",
+      "value_id": "fv_ad0dc862dfbe",
+      "field": "added"
+    },
+    {
+      "category_id": "cat_b32f00ef486b",
+      "group_id": "fg_0810dca50516",
+      "value_id": "fv_c86367730c0d",
+      "field": "added"
+    }
+  ],
+  "warnings": []
+}

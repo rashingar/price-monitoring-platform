@@ -1,0 +1,47 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "tostieres_electronet_labels_v1",
+  "category_gr": "Τοστιέρες",
+  "cta_map_key": "Τοστιέρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/tostieres",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/tostieres/tostiera-braun-sm-5001-br",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/tostieres/tostiera-rohnson-nostalgia-r-2720"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Χωρητικότητα Τόστ",
+        "Ισχύς σε Watts",
+        "Υλικό Πλάκας",
+        "Διαστάσεις Πλάκας Ψησίματος σε Εκατοστά",
+        "Διάμετρος Κρέπας σε Εκατοστά",
+        "Θερμομονωτικές Λαβές",
+        "Δοχείο Συλλογής Υγρών",
+        "Κάθετη Αποθήκευση",
+        "Αποθήκευση Καλωδίου",
+        "Εξαρτήματα"
+      ]
+    },
+    {
+      "section": "Λειτουργίες - Ενδείξεις",
+      "labels": [
+        "Θέσεις Ψησίματος",
+        "Ρυθμιζόμενος Θερμοστάτης",
+        "Βαθμίδες Θερμοκρασίας",
+        "Λυχνία Θέρμανσης"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

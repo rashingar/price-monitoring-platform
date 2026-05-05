@@ -1,0 +1,281 @@
+{
+  "window": {
+    "candidate_count": 2,
+    "selected_container_index": 0,
+    "duplicate_signatures_skipped": 1
+  },
+  "containers": [
+    {
+      "dom_index": 0,
+      "title_count": 9,
+      "titles": [
+        "Καλός ήχος από όλες τις κατευθύνσεις",
+        "Ευρύτερο ηχητικό πεδίο, καθαρότερος ήχος",
+        "Προσαρμοσμένο τουίτερ:",
+        "Ενισχυμένη Κόρνα 60°*:",
+        "Ισορροπημένη βελτιστοποίηση, ευρύτερο ηχητικό πεδίο",
+        "Τρισδιάστατο πραγματικό surround 360°, βυθιστείτε στο περιεχόμενο",
+        "Υψηλή πιστότητα, συγκινητικές καρδιές.",
+        "Καθαρά φωνητικά, καθηλωτικοί διάλογοι",
+        "Διαφανείς υψηλές συχνότητες, μαγευτική μουσική"
+      ],
+      "width": 1070,
+      "height": 5006.34375,
+      "visible_area": 5356787.8125
+    },
+    {
+      "dom_index": 1,
+      "title_count": 9,
+      "titles": [
+        "Καλός ήχος από όλες τις κατευθύνσεις",
+        "Ευρύτερο ηχητικό πεδίο, καθαρότερος ήχος",
+        "Προσαρμοσμένο τουίτερ:",
+        "Ενισχυμένη Κόρνα 60°*:",
+        "Ισορροπημένη βελτιστοποίηση, ευρύτερο ηχητικό πεδίο",
+        "Τρισδιάστατο πραγματικό surround 360°, βυθιστείτε στο περιεχόμενο",
+        "Υψηλή πιστότητα, συγκινητικές καρδιές.",
+        "Καθαρά φωνητικά, καθηλωτικοί διάλογοι",
+        "Διαφανείς υψηλές συχνότητες, μαγευτική μουσική"
+      ],
+      "width": 0,
+      "height": 0,
+      "visible_area": 0
+    }
+  ],
+  "sections": [
+    {
+      "position": 1,
+      "title": "Καλός ήχος από όλες τις κατευθύνσεις",
+      "body": "Η TCL RAY·DANZ είναι μια ειδικά σχεδιασμένη ακουστική τεχνολογία που ελέγχει συστηματικά και με ακρίβεια την κατεύθυνση της ηχητικής μονάδας, τη δομή ενίσχυσης ήχου, τον αλγόριθμο ήχου και το golden ear tuning. Αυτή η τεχνολογία διευρύνει σημαντικά το ηχητικό πεδίο, προσφέροντας μια κινηματογραφικά εντυπωσιακή ηχητική εμπειρία.",
+      "image_record": {
+        "currentSrc": "https://b.scdn.gr/ds/rich_description_components_images/3945778/20251209154506_screenshot_from_2025_07_28_16_37_56.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//b.scdn.gr/ds/rich_description_components_images/3945778/20251209154506_screenshot_from_2025_07_28_16_37_56.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945778/20251209154506_screenshot_from_2025_07_28_16_37_56.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945778/20251209154506_screenshot_from_2025_07_28_16_37_56.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 582,
+        "natural_height": 391
+      },
+      "resolved_image_url": "https://b.scdn.gr/ds/rich_description_components_images/3945778/20251209154506_screenshot_from_2025_07_28_16_37_56.png"
+    },
+    {
+      "position": 2,
+      "title": "Ευρύτερο ηχητικό πεδίο, καθαρότερος ήχος",
+      "body": "Η τελευταία γενιά ηχείου διαθέτει 5 χρόνια τεχνικής έρευνας και ανάπτυξης και 3 επαναλήψεις σχεδιασμού. Το ηχείο διαθέτει ένα ειδικά σχεδιασμένο tweeter υψηλής συχνότητας για ισχυρότερη κατευθυντικότητα και καθαρότερο ήχο. Επιπλέον, είναι εξοπλισμένο με μια ειδικά σχεδιασμένη δομή ενίσχυσης κόρνας, η οποία έχει υποστεί σχεδιασμό χιλιάδων γωνιών και τη βέλτιστη γωνία κλίσης 60°, για να διευρύνει φυσικά το ηχητικό πεδίο, προσφέροντας μια πιο καθηλωτική εμπειρία ήχου surround.",
+      "image_record": {
+        "currentSrc": "https://c.scdn.gr/ds/rich_description_components_images/3945780/20251209154507_screenshot_from_2025_07_28_16_38_12.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//c.scdn.gr/ds/rich_description_components_images/3945780/20251209154507_screenshot_from_2025_07_28_16_38_12.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//c.scdn.gr/ds/rich_description_components_images/3945780/20251209154507_screenshot_from_2025_07_28_16_38_12.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//c.scdn.gr/ds/rich_description_components_images/3945780/20251209154507_screenshot_from_2025_07_28_16_38_12.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 684,
+        "natural_height": 436
+      },
+      "resolved_image_url": "https://c.scdn.gr/ds/rich_description_components_images/3945780/20251209154507_screenshot_from_2025_07_28_16_38_12.png"
+    },
+    {
+      "position": 3,
+      "title": "Προσαρμοσμένο τουίτερ:",
+      "body": "Τουίτερ Tetoron Cloth Dome από ύφασμα, μαγνήτης NdFeB (νεοδυμίου, σιδήρου και βορίου) υψηλής ποιότητας, λεπτομέρεια ήχου υψηλής πιστότητας",
+      "image_record": {
+        "currentSrc": "https://d.scdn.gr/ds/rich_description_components_images/3945781/20251209154508_screenshot_from_2025_07_28_16_38_53.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//d.scdn.gr/ds/rich_description_components_images/3945781/20251209154508_screenshot_from_2025_07_28_16_38_53.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//d.scdn.gr/ds/rich_description_components_images/3945781/20251209154508_screenshot_from_2025_07_28_16_38_53.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//d.scdn.gr/ds/rich_description_components_images/3945781/20251209154508_screenshot_from_2025_07_28_16_38_53.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 466,
+        "natural_height": 271
+      },
+      "resolved_image_url": "https://d.scdn.gr/ds/rich_description_components_images/3945781/20251209154508_screenshot_from_2025_07_28_16_38_53.png"
+    },
+    {
+      "position": 4,
+      "title": "Ενισχυμένη Κόρνα 60°*:",
+      "body": "Χρυσή γωνία 60° Εξαιρετικά υψηλός ρυθμός ανάκλασης υπερήχων Ευρύτερο ηχητικό πεδίο *Πηγή δεδομένων: Ηλεκτροακουστικό Εργαστήριο TCL.",
+      "image_record": {
+        "currentSrc": "https://b.scdn.gr/ds/rich_description_components_images/3945783/20251209154508_screenshot_from_2025_07_28_16_39_14.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//b.scdn.gr/ds/rich_description_components_images/3945783/20251209154508_screenshot_from_2025_07_28_16_39_14.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945783/20251209154508_screenshot_from_2025_07_28_16_39_14.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945783/20251209154508_screenshot_from_2025_07_28_16_39_14.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 466,
+        "natural_height": 271
+      },
+      "resolved_image_url": "https://b.scdn.gr/ds/rich_description_components_images/3945783/20251209154508_screenshot_from_2025_07_28_16_39_14.png"
+    },
+    {
+      "position": 5,
+      "title": "Ισορροπημένη βελτιστοποίηση, ευρύτερο ηχητικό πεδίο",
+      "body": "Βασισμένο σε προσαρμοσμένα κατευθυντικά ηχεία και χρυσή γωνία ενίσχυσης, σε συνδυασμό με αυτοαναπτυγμένους αλγόριθμους διεύρυνσης ηχητικής σκηνής και βελτιωμένη ρύθμιση παραμέτρων, διευρύνει σημαντικά την ηχητική σκηνή και προσφέρει ακόμη πιο εντυπωσιακό εφέ surround.",
+      "image_record": {
+        "currentSrc": "https://a.scdn.gr/ds/rich_description_components_images/3945786/20251209154509_screenshot_from_2025_07_28_16_39_40.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//a.scdn.gr/ds/rich_description_components_images/3945786/20251209154509_screenshot_from_2025_07_28_16_39_40.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//a.scdn.gr/ds/rich_description_components_images/3945786/20251209154509_screenshot_from_2025_07_28_16_39_40.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//a.scdn.gr/ds/rich_description_components_images/3945786/20251209154509_screenshot_from_2025_07_28_16_39_40.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 737,
+        "natural_height": 390
+      },
+      "resolved_image_url": "https://a.scdn.gr/ds/rich_description_components_images/3945786/20251209154509_screenshot_from_2025_07_28_16_39_40.png"
+    },
+    {
+      "position": 6,
+      "title": "Τρισδιάστατο πραγματικό surround 360°, βυθιστείτε στο περιεχόμενο",
+      "body": "Αναβαθμίστε την τηλεόρασή σας σε 5.1 κανάλια για να απολαύσετε μια πραγματικά καθηλωτική εμπειρία, με 5 κύρια κανάλια ήχου και 1 ασύρματο subwoofer. Απολαύστε υπέροχο τρισδιάστατο και surround ήχο με ήχο από πάνω αλλά και από πίσω. Και βυθιστείτε στο περιεχόμενο που παρακολουθείτε.",
+      "image_record": {
+        "currentSrc": "https://b.scdn.gr/ds/rich_description_components_images/3945788/20251209154510_screenshot_from_2025_07_28_16_39_58.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//b.scdn.gr/ds/rich_description_components_images/3945788/20251209154510_screenshot_from_2025_07_28_16_39_58.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945788/20251209154510_screenshot_from_2025_07_28_16_39_58.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945788/20251209154510_screenshot_from_2025_07_28_16_39_58.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 815,
+        "natural_height": 452
+      },
+      "resolved_image_url": "https://b.scdn.gr/ds/rich_description_components_images/3945788/20251209154510_screenshot_from_2025_07_28_16_39_58.png"
+    },
+    {
+      "position": 7,
+      "title": "Υψηλή πιστότητα, συγκινητικές καρδιές.",
+      "body": "Εξοπλισμένο με ασύρματη ανεξάρτητη μονάδα subwoofer 150W, με μεγάλους μαγνήτες φερρίτη και ελαστικά κυματοειδή υλικά Conex. Προσφέρει μια συναρπαστική εμπειρία μπάσων, μειώνοντας αποτελεσματικά την παραμόρφωση των μπάσων, προσφέροντας δυνατό ήχο που σας περιβάλλει.",
+      "image_record": {
+        "currentSrc": "https://b.scdn.gr/ds/rich_description_components_images/3945790/20251209154511_screenshot_from_2025_07_28_16_40_10.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//b.scdn.gr/ds/rich_description_components_images/3945790/20251209154511_screenshot_from_2025_07_28_16_40_10.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945790/20251209154511_screenshot_from_2025_07_28_16_40_10.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945790/20251209154511_screenshot_from_2025_07_28_16_40_10.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 815,
+        "natural_height": 452
+      },
+      "resolved_image_url": "https://b.scdn.gr/ds/rich_description_components_images/3945790/20251209154511_screenshot_from_2025_07_28_16_40_10.png"
+    },
+    {
+      "position": 8,
+      "title": "Καθαρά φωνητικά, καθηλωτικοί διάλογοι",
+      "body": "Αλλάζοντας την παραδοσιακή ακουστική δομή της soundbar, οι φωνητικές συχνότητες συγκεντρώνονται και εκπέμπονται από την κεντρική μονάδα, ενισχύοντας την κατευθυντικότητα του ήχου και την καθαρότητα του διαλόγου.",
+      "image_record": {
+        "currentSrc": "https://b.scdn.gr/ds/rich_description_components_images/3945794/20251209154512_screenshot_from_2025_07_28_16_40_26.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//b.scdn.gr/ds/rich_description_components_images/3945794/20251209154512_screenshot_from_2025_07_28_16_40_26.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945794/20251209154512_screenshot_from_2025_07_28_16_40_26.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//b.scdn.gr/ds/rich_description_components_images/3945794/20251209154512_screenshot_from_2025_07_28_16_40_26.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 815,
+        "natural_height": 452
+      },
+      "resolved_image_url": "https://b.scdn.gr/ds/rich_description_components_images/3945794/20251209154512_screenshot_from_2025_07_28_16_40_26.png"
+    },
+    {
+      "position": 9,
+      "title": "Διαφανείς υψηλές συχνότητες, μαγευτική μουσική",
+      "body": "Μέσω εις βάθος ανάλυσης των τμημάτων υψηλών συχνοτήτων της πηγής ήχου, ενισχύει μέτρια το επίπεδο λεπτομέρειας και τις τονικές αποχρώσεις των υψηλών συχνοτήτων, παρέχοντας διαφανείς υψηλές συχνότητες επιπέδου αίθουσας συναυλιών που αιχμαλωτίζουν τους ακροατές.",
+      "image_record": {
+        "currentSrc": "https://a.scdn.gr/ds/rich_description_components_images/3945797/20251209154512_screenshot_from_2025_07_28_16_40_38.png",
+        "img_attrs": {
+          "data-lazy-media-target": "media",
+          "src": "//a.scdn.gr/ds/rich_description_components_images/3945797/20251209154512_screenshot_from_2025_07_28_16_40_38.png"
+        },
+        "lazy_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//a.scdn.gr/ds/rich_description_components_images/3945797/20251209154512_screenshot_from_2025_07_28_16_40_38.png"
+        },
+        "ancestor_data_attrs": {
+          "data-controller": "lazy-media",
+          "data-lazy-media-src-value": "//a.scdn.gr/ds/rich_description_components_images/3945797/20251209154512_screenshot_from_2025_07_28_16_40_38.png"
+        },
+        "source_srcsets": [],
+        "natural_width": 815,
+        "natural_height": 452
+      },
+      "resolved_image_url": "https://a.scdn.gr/ds/rich_description_components_images/3945797/20251209154512_screenshot_from_2025_07_28_16_40_38.png"
+    }
+  ],
+  "html_window": {
+    "candidate_count": 1,
+    "duplicate_signatures_skipped": 1,
+    "selected_container_index": 0,
+    "start_anchor": "Περιγραφή",
+    "stop_anchor": "Κατασκευαστής",
+    "title_signature": [
+      "Καλός ήχος από όλες τις κατευθύνσεις",
+      "Ευρύτερο ηχητικό πεδίο, καθαρότερος ήχος",
+      "Προσαρμοσμένο τουίτερ:",
+      "Ενισχυμένη Κόρνα 60°*:",
+      "Ισορροπημένη βελτιστοποίηση, ευρύτερο ηχητικό πεδίο",
+      "Τρισδιάστατο πραγματικό surround 360°, βυθιστείτε στο περιεχόμενο",
+      "Υψηλή πιστότητα, συγκινητικές καρδιές.",
+      "Καθαρά φωνητικά, καθηλωτικοί διάλογοι",
+      "Διαφανείς υψηλές συχνότητες, μαγευτική μουσική"
+    ]
+  }
+}

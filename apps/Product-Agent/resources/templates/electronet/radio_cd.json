@@ -1,0 +1,39 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "radio_cd_electronet_labels_v1",
+  "category_gr": "Radio CD",
+  "cta_map_key": "Radio CD",
+  "cta_url": "https://www.etranoulis.gr/eikona-hxos/foritsa/radio-cd",
+  "electronet_examples": [
+    "https://www.electronet.gr/eikona-ihos/foritos-ihos/radiocd/radio-cd-lenco-scd-420-asimi?v=24362"
+  ],
+  "sections": [
+    {
+      "section": "Λειτουργίες",
+      "labels": [
+        "Πηγή Ισχύος",
+        "Δέκτης",
+        "Ραδιοφωνικός Δέκτης",
+        "Δίσκοι Αναπαραγωγής",
+        "Τηλεχειριστήριο",
+        "Αναπαραγωγή Κασσέτας",
+        "Αναπαραγωγή Αρχείων Ήχου",
+        "Συνολική Ισχύς Ηχείων(Watt)",
+        "Λειτουργίες Ηχοσυστήματος",
+        "Οθόνη Ενδείξεων"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Έξοδος Ακουστικών",
+        "Bluetooth",
+        "USB 2.0",
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή",
+        "Χώρα Κατασκευής"
+      ]
+    }
+  ]
+}

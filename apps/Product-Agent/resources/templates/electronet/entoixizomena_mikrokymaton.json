@@ -1,0 +1,61 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "entoixizomena_mikrokymaton_electronet_labels_v1",
+  "category_gr": "Εντοιχιζόμενα Μικροκυμάτων",
+  "cta_map_key": "Εντοιχιζόμενα Μικροκυμάτων",
+  "cta_url": "https://www.etranoulis.gr/oikiakes-syskeues/entoixizomenes-syskeues/mikrokymatwn",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakes-syskeues/entoixizomenes-syskeues/mikrokymatwn/foyrnos-entoihizomenos-bosch-BEL7321B1",
+    "https://www.etranoulis.gr/oikiakes-syskeues/entoixizomenes-syskeues/mikrokymatwn/entoixizomenos-fournos-mikrokymatvn-neff -c17wr00g0"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τρόπος Τοποθέτησης",
+        "Χωρητικότητα Φούρνου σε Λίτρα",
+        "Ισχύς Μικροκυμάτων (Watt)",
+        "Επίπεδα Ισχύος Μικροκυμάτων",
+        "Ισχύς Grill (Watt)",
+        "Χειριστήριο",
+        "Οθόνη Ενδείξεων",
+        "Περιστρεφόμενος Δίσκος;",
+        "Διάμετρος Περιστρεφόμενου Δίσκου σε mm",
+        "Άνοιγμα Πόρτας με",
+        "Κλείδωμα Ασφαλείας για Παιδιά",
+        "Άλλα Χαρακτηριστικά"
+      ]
+    },
+    {
+      "section": "Λειτουργικότητα",
+      "labels": [
+        "Λειτουργία Μικροκύματα + Grill",
+        "Ξεπάγωμα με Βάση τον Χρόνο",
+        "Ξεπάγωμα με Βάση το Βάρος",
+        "Aυτόματα Προγράμματα Μαγειρέματος",
+        "Αριθμός Αυτόματων Προγράμματων",
+        "Χρονοδιακόπτης",
+        "Πλήκτρο Αύξησης Χρόνου"
+      ]
+    },
+    {
+      "section": "Εντοιχισμός",
+      "labels": [
+        "Πλαίσιο Εντοιχισμού",
+        "Ύψος Διάστασης Εντοιχισμού",
+        "Πλάτος Διάστασης Εντοιχισμού σε Εκατοστά",
+        "Βάθος Διάστασης Εντοιχισμού σε Εκατοστά"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Χρώμα Φούρνου Εσωτερικά",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

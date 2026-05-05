@@ -1,0 +1,1734 @@
+{
+  "version": "2026-03-21",
+  "templates": [
+    {
+      "template_id": "skroutz_washing_machine_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_leaf": "Πλυντήρια-Στεγνωτήρια",
+        "taxonomy_sub": "Πλυντήρια Ρούχων"
+      },
+      "preferred_schema_source_files": [
+        "plyntiria_rouxwn.json"
+      ],
+      "render_mode": "raw_spec_sections",
+      "sections": []
+    },
+    {
+      "template_id": "skroutz_built_in_washing_machine_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_leaf": "Εντοιχιζόμενες Συσκευές",
+        "taxonomy_sub": "Πλυντήρια Ρούχων"
+      },
+      "preferred_schema_source_files": [
+        "entoixizomena_plyntiria_royxon.json"
+      ],
+      "render_mode": "raw_spec_sections",
+      "sections": []
+    },
+    {
+      "template_id": "skroutz_fridge_freezer_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_sub": "Ψυγειοκαταψύκτες"
+      },
+      "preferred_schema_source_files": [
+        "psygeiokatapsyktes.json"
+      ],
+      "sections": [
+        {
+          "title": "Επισκόπηση Προϊόντος",
+          "fields": [
+            {
+              "label": "Τύπος Ψυγείου",
+              "aliases": [
+                "Τύπος"
+              ]
+            },
+            {
+              "label": "Τρόπος Τοποθέτησης",
+              "aliases": [
+                "Εντοιχιζόμενο",
+                "Εντοιχιζόμενη / Ελεύθερη",
+                "Τύπος εγκατάστασης"
+              ],
+              "resolver": "fridge_installation_type"
+            },
+            {
+              "label": "Τεχνολογία Ψύξης",
+              "aliases": [
+                "Σύστημα Ψύξης",
+                "Σύστημα No Frost"
+              ]
+            },
+            {
+              "label": "Συνολική Καθαρή Χωρητικότητα",
+              "aliases": [
+                "Συνολική Χωρητικότητα",
+                "Συνολική Καθαρή Χωρητικότητα"
+              ]
+            },
+            {
+              "label": "Χρώμα",
+              "aliases": [
+                "Χρώμα"
+              ]
+            },
+            {
+              "label": "Χρώμα Πλαϊνών",
+              "aliases": [
+                "Χρώμα Πλαϊνών"
+              ]
+            },
+            {
+              "label": "Έλενχος και Ενδείξεις Θερμοκρασίας",
+              "resolver": "fridge_temperature_control"
+            },
+            {
+              "label": "Αριθμός Συμπιεστών (μοτέρ",
+              "aliases": [
+                "Αριθμός συμπιεστών"
+              ]
+            },
+            {
+              "label": "Δύο Κυκλώματα Ψύξης",
+              "aliases": [
+                "Αριθμός ανεξάρτητων συστημάτων ψύξης"
+              ],
+              "resolver": "fridge_dual_cooling_circuits"
+            },
+            {
+              "label": "Αισθητήρες Ψύξης",
+              "aliases": [
+                "Αισθητήρες Ψύξης"
+              ]
+            },
+            {
+              "label": "Πολλαπλή Ροή Αέρα",
+              "resolver": "fridge_multi_airflow"
+            },
+            {
+              "label": "Σύστημα Εξουδετέρωσης Οσμών",
+              "aliases": [
+                "Σύστημα Εξουδετέρωσης Οσμών"
+              ]
+            },
+            {
+              "label": "Αντιβακτηριδιακή Τεχνολογία",
+              "aliases": [
+                "Αντιβακτηριδιακή Τεχνολογία"
+              ]
+            },
+            {
+              "label": "Συνδεσιμότητα",
+              "aliases": [
+                "Wi-Fi"
+              ],
+              "resolver": "fridge_connectivity"
+            },
+            {
+              "label": "Σήμα Ειδοποίησης Ανοικτής Πόρτας",
+              "resolver": "fridge_open_door_alert"
+            },
+            {
+              "label": "Δυνατότητα Αλλαγής Φοράς Πόρτας",
+              "aliases": [
+                "Αναστρέψιμη Πόρτα",
+                "Αναστρέψιμη φορά πόρτας"
+              ]
+            },
+            {
+              "label": "Επιπλέον Χαρακτηριστικά",
+              "aliases": [
+                "Extra Δυνατότητες"
+              ],
+              "resolver": "fridge_overview_features"
+            },
+            {
+              "label": "Πλάτος Συσκευής σε Εκατοστά",
+              "aliases": [
+                "Πλάτος"
+              ]
+            },
+            {
+              "label": "Υψος Συσκευής σε Εκατοστά",
+              "aliases": [
+                "Ύψος"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Συντήρηση",
+          "fields": [
+            {
+              "label": "Καθαρή Χωρητικότητα Συντήρησης σε Λίτρα",
+              "aliases": [
+                "Χωρητικότητα Συντήρησης",
+                "Καθαρή Χωρητικότητα Συντήρησης"
+              ]
+            },
+            {
+              "label": "Αριθμός Ραφιών",
+              "resolver": "fridge_fridge_shelf_count"
+            },
+            {
+              "label": "Ρυθμιζόμενα Ράφια σε Ύψος",
+              "aliases": [
+                "Αριθμός ρυθμιζόμενων ραφιών στη συντήρηση"
+              ],
+              "resolver": "fridge_adjustable_shelves"
+            },
+            {
+              "label": "Υλικό Ραφιών",
+              "resolver": "fridge_shelf_material"
+            },
+            {
+              "label": "Αριθμός Συρταριών",
+              "resolver": "fridge_fridge_drawer_count"
+            },
+            {
+              "label": "Αριθμός Συρταριών Μισού Μεγέθους",
+              "aliases": [
+                "Αριθμός Συρταριών Μισού Μεγέθους"
+              ]
+            },
+            {
+              "label": "Συρτάρι με Ρύθμιση Υγρασίας",
+              "resolver": "fridge_humidity_drawer"
+            },
+            {
+              "label": "Συρτάρι Μηδενικής Ζώνης 0˚C",
+              "aliases": [
+                "Συρτάρι Μηδενικής Ζώνης 0˚C"
+              ]
+            },
+            {
+              "label": "Θήκες στην Πόρτα",
+              "resolver": "fridge_door_shelves"
+            },
+            {
+              "label": "Θήκη για Μπουκάλια",
+              "aliases": [
+                "Μπουκαλοθήκη"
+              ]
+            },
+            {
+              "label": "Εσωτερικός Φωτισμός",
+              "resolver": "fridge_internal_light"
+            },
+            {
+              "label": "Εξωτερικό Βρυσάκι Νερού",
+              "aliases": [
+                "Έξοδος Κρύου Νερού"
+              ]
+            },
+            {
+              "label": "Λειτουργία Ταχείας Ψύξης",
+              "resolver": "fridge_fast_cool"
+            },
+            {
+              "label": "Επιπλέον Χαρακτηριστικά",
+              "aliases": [
+                "Στην Συντήρηση"
+              ],
+              "resolver": "fridge_storage_features"
+            }
+          ]
+        },
+        {
+          "title": "Κατάψυξη",
+          "fields": [
+            {
+              "label": "Κατάψυξη με Αστέρια",
+              "aliases": [
+                "Κατάψυξη με Αστέρια"
+              ]
+            },
+            {
+              "label": "Καθαρή Χωρητικότητα Κατάψυξης σε Λίτρα",
+              "aliases": [
+                "Χωρητικότητα Κατάψυξης",
+                "Καθαρή Χωρητικότητα Κατάψυξης"
+              ]
+            },
+            {
+              "label": "Ικανότητα Κατάψυξης σε 24 ώρες ( Κιλά",
+              "aliases": [
+                "Ικανότητα Κατάψυξης σε 24 ώρες"
+              ]
+            },
+            {
+              "label": "Αυτονομία Κατάψυξης σε Περίπτωση Διακοπής Ρεύματος (ώρες",
+              "aliases": [
+                "Αυτονομία σε περίπτωση διακοπής ρεύματος"
+              ]
+            },
+            {
+              "label": "Αριθμός Συρταριών",
+              "resolver": "fridge_freezer_drawer_count"
+            },
+            {
+              "label": "Αριθμός Ραφιών",
+              "resolver": "fridge_freezer_shelf_count"
+            },
+            {
+              "label": "Θήκες στην Πόρτα",
+              "aliases": [
+                "Θήκες στην Πόρτα"
+              ]
+            },
+            {
+              "label": "Λειτουργία Ταχείας Κατάψυξης",
+              "resolver": "fridge_fast_freeze"
+            },
+            {
+              "label": "Σύστημα Παροχής Πάγου",
+              "aliases": [
+                "Έξοδος για Παγάκια"
+              ]
+            },
+            {
+              "label": "Επιπλέον Χαρακτηριστικά",
+              "aliases": [
+                "Στην Κατάψυξη"
+              ],
+              "resolver": "fridge_freezer_features"
+            }
+          ]
+        },
+        {
+          "title": "Ενεργειακά χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Ενεργειακή Κλάση",
+              "aliases": [
+                "Ενεργειακή Κλάση"
+              ]
+            },
+            {
+              "label": "Καθαρή Χωρητικότητα Συντήρησης σε Λίτρα",
+              "aliases": [
+                "Χωρητικότητα Συντήρησης",
+                "Καθαρή Χωρητικότητα Συντήρησης"
+              ]
+            },
+            {
+              "label": "Καθαρή Χωρητικότητα Κατάψυξης σε Λίτρα",
+              "aliases": [
+                "Χωρητικότητα Κατάψυξης",
+                "Καθαρή Χωρητικότητα Κατάψυξης"
+              ]
+            },
+            {
+              "label": "Κατάψυξη με Αστέρια",
+              "aliases": [
+                "Κατάψυξη με Αστέρια"
+              ]
+            },
+            {
+              "label": "Επίπεδο Θορύβου σε dB",
+              "aliases": [
+                "Επίπεδο Θορύβου",
+                "Εκπομπές αερόφερτου ακουστικού θορύβου"
+              ]
+            },
+            {
+              "label": "Κλιματική Κλάση",
+              "aliases": [
+                "Κλιματική Κλάση"
+              ],
+              "resolver": "fridge_climate_class"
+            }
+          ]
+        },
+        {
+          "title": "Γενικά χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Βάρος Συσκευής σε Κιλά",
+              "aliases": [
+                "Καθαρό βάρος"
+              ]
+            },
+            {
+              "label": "Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β",
+              "resolver": "fridge_dimensions_triplet"
+            },
+            {
+              "label": "Εγγύηση Κατασκευαστή",
+              "aliases": [
+                "Επιμέρους Εγγύηση Κατασκευαστή"
+              ],
+              "resolver": "fridge_warranty"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "template_id": "skroutz_tv_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_leaf": "Τηλεοράσεις"
+      },
+      "preferred_schema_source_files": [
+        "tileoraseis.json"
+      ],
+      "sections": [
+        {
+          "title": "Εικόνα - Ήχος",
+          "fields": [
+            {
+              "key": "screen_technology",
+              "label": "Τεχνολογία Οθόνης",
+              "resolver": "tv_screen_technology",
+              "aliases": [
+                "Τεχνολογία Οθόνης",
+                "Τύπος Panel"
+              ]
+            },
+            {
+              "key": "screen_size_inches",
+              "label": "Διαγώνιος Οθόνης ( Ίντσες )",
+              "resolver": "tv_screen_size_inches",
+              "aliases": [
+                "Διαγώνιος",
+                "Διαγώνιος Οθόνης ( Ίντσες )"
+              ]
+            },
+            {
+              "key": "screen_size_cm",
+              "label": "Διαγώνιος Οθόνης ( Εκατοστά )",
+              "resolver": "tv_screen_size_cm"
+            },
+            {
+              "key": "resolution",
+              "label": "Ανάλυση Οθόνης",
+              "resolver": "tv_resolution",
+              "aliases": [
+                "Ευκρίνεια",
+                "Ανάλυση Οθόνης"
+              ]
+            },
+            {
+              "key": "pixels",
+              "label": "Αριθμός Pixels",
+              "resolver": "tv_pixels"
+            },
+            {
+              "key": "image_features",
+              "label": "Λειτουργίες Εικόνας",
+              "resolver": "tv_image_features"
+            },
+            {
+              "key": "refresh_rate",
+              "label": "Ρυθμός Ανανέωσης",
+              "resolver": "tv_refresh_rate",
+              "aliases": [
+                "Ρυθμός Ανανέωσης"
+              ]
+            },
+            {
+              "key": "hdr",
+              "label": "HDR",
+              "resolver": "tv_hdr",
+              "aliases": [
+                "Τύποι HDR",
+                "HDR"
+              ]
+            },
+            {
+              "key": "energy_class",
+              "label": "Ενεργειακή Κλάση",
+              "resolver": "tv_energy_class",
+              "aliases": [
+                "Ενεργειακή Κλάση"
+              ]
+            },
+            {
+              "key": "energy_class_hdr",
+              "label": "Ενεργειακή Κλάση HDR",
+              "resolver": "tv_energy_class_hdr"
+            },
+            {
+              "key": "energy_sdr",
+              "label": "Κατανάλωση Ενέργειας σε Λειτουργία SDR (kWh/1000h)",
+              "resolver": "tv_energy_sdr"
+            },
+            {
+              "key": "energy_hdr",
+              "label": "Κατανάλωση Ενέργειας σε Λειτουργία HDR (kWh/1000h)",
+              "resolver": "tv_energy_hdr"
+            },
+            {
+              "key": "tuner",
+              "label": "Δέκτης",
+              "resolver": "tv_tuner",
+              "aliases": [
+                "Δέκτης"
+              ]
+            },
+            {
+              "key": "sound_system",
+              "label": "Σύστημα Ήχου",
+              "resolver": "tv_sound_system"
+            },
+            {
+              "key": "processor",
+              "label": "Επεξεργαστής",
+              "resolver": "tv_processor"
+            }
+          ]
+        },
+        {
+          "title": "Λειτουργίες",
+          "fields": [
+            {
+              "key": "smart_tv",
+              "label": "Smart TV",
+              "resolver": "tv_smart_tv"
+            },
+            {
+              "key": "os",
+              "label": "Λειτουργικό Σύστημα",
+              "resolver": "tv_os"
+            },
+            {
+              "key": "smart_functions",
+              "label": "Λειτουργίες Smart",
+              "resolver": "tv_smart_functions"
+            },
+            {
+              "key": "extra_functions",
+              "label": "Επιπλέον Λειτουργίες",
+              "resolver": "tv_extra_functions"
+            }
+          ]
+        },
+        {
+          "title": "Συνδέσεις",
+          "fields": [
+            {
+              "key": "hdmi",
+              "label": "HDMI",
+              "resolver": "tv_hdmi"
+            },
+            {
+              "key": "bluetooth",
+              "label": "Bluetooth",
+              "resolver": "tv_bluetooth"
+            },
+            {
+              "key": "usb",
+              "label": "USB",
+              "resolver": "tv_usb"
+            },
+            {
+              "key": "io",
+              "label": "Είσοδοι / Έξοδοι",
+              "resolver": "tv_io"
+            }
+          ]
+        },
+        {
+          "title": "Γενικά",
+          "fields": [
+            {
+              "key": "equipment",
+              "label": "Βασικός Εξοπλισμός",
+              "resolver": "tv_equipment"
+            },
+            {
+              "key": "appearance",
+              "label": "Εμφάνιση",
+              "resolver": "tv_appearance"
+            },
+            {
+              "key": "vesa",
+              "label": "Διάκενο Βάσης Τοίχου Vesa (mm)",
+              "resolver": "tv_vesa",
+              "aliases": [
+                "VESA Mount",
+                "Διάκενο Βάσης Τοίχου Vesa (mm)"
+              ]
+            },
+            {
+              "key": "color",
+              "label": "Χρώμα",
+              "resolver": "tv_color"
+            },
+            {
+              "key": "weight_with_stand",
+              "label": "Βάρος Συσκευής σε Κιλά (με Βάση)",
+              "resolver": "tv_weight_with_stand",
+              "aliases": [
+                "Βάρος"
+              ]
+            },
+            {
+              "key": "country",
+              "label": "Χώρα Κατασκευής",
+              "resolver": "tv_country"
+            },
+            {
+              "key": "warranty",
+              "label": "Εγγύηση Κατασκευαστή",
+              "resolver": "tv_warranty"
+            },
+            {
+              "key": "dimensions_with_stand",
+              "label": "Διαστάσεις Συσκευής σε Εκατοστά με Βάση (Υ x Π x Β)",
+              "resolver": "tv_dimensions_with_stand"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "template_id": "skroutz_wall_air_conditioner_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_leaf": "Κλιματιστικά",
+        "taxonomy_sub": "Τοίχου"
+      },
+      "preferred_schema_source_files": [
+        "toixoy.json"
+      ],
+      "sections": [
+        {
+          "title": "Ψυκτική / Θερμική Απόδοση",
+          "fields": [
+            {
+              "label": "Ονομαστική Απόδοση (Btu/h)",
+              "aliases": [
+                "Απόδοση (BTU)"
+              ]
+            },
+            {
+              "label": "Ψυκτική Απόδοση ( Btu/h )",
+              "aliases": [
+                "Ισχύς Ψύξης"
+              ]
+            },
+            {
+              "label": "Θερμική Απόδοση ( Btu/h )",
+              "aliases": [
+                "Ισχύς Θέρμανσης"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Βαθμοί Εποχιακής Απόδοσης",
+          "fields": [
+            {
+              "label": "Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER",
+              "aliases": [
+                "Βαθμός Απόδοσης Ψύξης (SEER)"
+              ]
+            },
+            {
+              "label": "Ενεργειακή Κλάση Ψύξης",
+              "aliases": [
+                "Ψύξης"
+              ]
+            },
+            {
+              "label": "Βαθμός Εποχιακής Απόδοσης Θέρμανσης Μέσης Εποχής - SCOP",
+              "aliases": [
+                "Βαθμός Απόδοσης Θέρμανσης (SCOP)"
+              ]
+            },
+            {
+              "label": "Ενεργειακή Κλάση Θέρμανσης Μέσης Εποχής",
+              "aliases": [
+                "Θέρμανσης (Μέση Ζώνη)"
+              ]
+            },
+            {
+              "label": "Βαθμός Εποχιακής Απόδοσης Θέρμανσης Θερμότερης Εποχής - SCOP",
+              "aliases": [
+                "Βαθμός Απόδοσης Θέρμανσης (SCOP) Θερμή Ζώνη"
+              ]
+            },
+            {
+              "label": "Ενεργειακή Κλάση Θέρμανσης Θερμότερης Εποχής",
+              "aliases": [
+                "Θέρμανσης (Θερμή Ζώνη)"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Καταναλώσεις",
+          "fields": [
+            {
+              "label": "Ετήσια Κατανάλωση Ψύξης ( kWh / a )",
+              "aliases": [
+                "Κατανάλωση Ψύξης"
+              ]
+            },
+            {
+              "label": "Ετήσια Κατανάλωση Θέρμανσης Μέσης Εποχής ( kWh / a )",
+              "aliases": [
+                "Κατανάλωση Θέρμανσης"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Επιπλέον Χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Τεχνολογία Κλιματιστικού",
+              "resolver": "air_conditioner_technology"
+            },
+            {
+              "label": "Ψυκτικό Υγρό",
+              "aliases": [
+                "Οικολογικό Ψυκτικό Υγρό (R32)"
+              ],
+              "resolver": "air_conditioner_refrigerant",
+              "refrigerant_code": "R32"
+            },
+            {
+              "label": "Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A) - Hi",
+              "aliases": [
+                "Εσωτερικής Μονάδας"
+              ]
+            },
+            {
+              "label": "Ηχητική Ισχύς Εξωτερικής Μονάδας dB(A) - Hi",
+              "aliases": [
+                "Εξωτερικής Μονάδας"
+              ]
+            },
+            {
+              "label": "Αφύγρανση",
+              "resolver": "air_conditioner_dehumidification"
+            },
+            {
+              "label": "Φίλτρα",
+              "aliases": [
+                "Τύπος Φίλτρων"
+              ]
+            },
+            {
+              "label": "Πρόσθετες Λειτουργίες Κλιματιστικού",
+              "resolver": "air_conditioner_extra_features"
+            }
+          ]
+        },
+        {
+          "title": "Διαστάσεις και Βάρος",
+          "fields": [
+            {
+              "label": "Ύψος Εσωτερικής Μονάδας ( mm )",
+              "aliases": [
+                "Ύψος Εσωτερικής Μονάδας"
+              ],
+              "resolver": "air_conditioner_dimension_mm"
+            },
+            {
+              "label": "Πλάτος Εσωτερικής Μονάδας ( mm )",
+              "aliases": [
+                "Μήκος Εσωτερικής Μονάδας"
+              ],
+              "resolver": "air_conditioner_dimension_mm"
+            },
+            {
+              "label": "Βάθος Εσωτερικής Μονάδας ( mm )",
+              "aliases": [
+                "Βάθος Εσωτερικής Μονάδας"
+              ],
+              "resolver": "air_conditioner_dimension_mm"
+            },
+            {
+              "label": "Ύψος Εξωτερικής Μονάδας ( mm )",
+              "aliases": [
+                "Ύψος Εξωτερικής Μονάδας"
+              ],
+              "resolver": "air_conditioner_dimension_mm"
+            },
+            {
+              "label": "Πλάτος Εξωτερικής Μονάδας ( mm )",
+              "aliases": [
+                "Μήκος Εξωτερικής Μονάδας"
+              ],
+              "resolver": "air_conditioner_dimension_mm"
+            },
+            {
+              "label": "Βάθος Εξωτερικής Μονάδας ( mm )",
+              "aliases": [
+                "Βάθος Εξωτερικής Μονάδας"
+              ],
+              "resolver": "air_conditioner_dimension_mm"
+            }
+          ]
+        },
+        {
+          "title": "Γενικά Χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Εγγύηση Κατασκευαστή ( Εσωτερική μονάδα ) - Έτη",
+              "aliases": [
+                "Επιμέρους Εγγύηση Κατασκευαστή"
+              ],
+              "resolver": "air_conditioner_warranty_years",
+              "warranty_target": "unit"
+            },
+            {
+              "label": "Εγγύηση Κατασκευαστή ( Συμπιεστής ) - Έτη",
+              "aliases": [
+                "Επιμέρους Εγγύηση Κατασκευαστή"
+              ],
+              "resolver": "air_conditioner_warranty_years",
+              "warranty_target": "compressor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "template_id": "skroutz_soundbar_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_leaf": "Audio Systems",
+        "taxonomy_sub": "Sound Bars"
+      },
+      "preferred_schema_source_files": [
+        "sound_bars.json"
+      ],
+      "sections": []
+    },
+    {
+      "template_id": "skroutz_ice_cream_maker_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_sub": "Παγωτομηχανές"
+      },
+      "preferred_schema_source_files": [
+        "pagotomixanes.json"
+      ],
+      "render_mode": "raw_spec_sections",
+      "sections": []
+    },
+    {
+      "template_id": "manufacturer_tefal_ice_cream_maker_v1",
+      "match": {
+        "source_name": "manufacturer_tefal",
+        "taxonomy_sub": "Παγωτομηχανές"
+      },
+      "preferred_schema_source_files": [
+        "pagotomixanes.json"
+      ],
+      "render_mode": "raw_spec_sections",
+      "sections": []
+    },
+    {
+      "template_id": "manufacturer_tefal_coffee_filter_v1",
+      "match": {
+        "source_name": "manufacturer_tefal",
+        "taxonomy_sub": "Καφετιέρες Φίλτρου"
+      },
+      "preferred_schema_source_files": [
+        "kafetieres_filtroy.json"
+      ],
+      "render_mode": "raw_spec_sections",
+      "sections": []
+    },
+    {
+      "template_id": "manufacturer_tefal_kettle_v1",
+      "match": {
+        "source_name": "manufacturer_tefal",
+        "taxonomy_sub": "Βραστήρες"
+      },
+      "preferred_schema_source_files": [
+        "vrastires.json"
+      ],
+      "render_mode": "raw_spec_sections",
+      "sections": []
+    },
+    {
+      "template_id": "skroutz_robot_vacuum_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_sub": "Σκούπες Ρομπότ"
+      },
+      "preferred_schema_source_files": [
+        "skoypes_rompot.json"
+      ],
+      "sections": [
+        {
+          "title": "Επισκόπηση προϊόντος",
+          "fields": [
+            {
+              "label": "Ισχύς (Pa",
+              "aliases": [
+                "Απορρόφηση",
+                "Πίεση απορρόφησης"
+              ]
+            },
+            {
+              "label": "Χρόνος φόρτισης μπαταρίας σε min",
+              "aliases": [
+                "Διάρκεια Φόρτισης",
+                "Χρόνος επαναφόρτισης"
+              ]
+            },
+            {
+              "label": "Χώρος Κάλυψης (m²",
+              "aliases": [
+                "Κάλυψη Χώρου"
+              ]
+            },
+            {
+              "label": "Χωρητικότητα σε λίτρα",
+              "aliases": [
+                "Χωρητικότητα Κάδου Στερεών",
+                "Χωρητικότητα δοχείου σκόνης"
+              ]
+            },
+            {
+              "label": "Τύπος δαπέδου",
+              "aliases": [
+                "Τύπος δαπέδου"
+              ]
+            },
+            {
+              "label": "Σφουγγάρισμα",
+              "aliases": [
+                "Σφουγγάρισμα",
+                "Λειτουργία απορρόφησης και σφουγγαρίσματος"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "template_id": "skroutz_built_in_hob_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_leaf": "Εντοιχιζόμενες Συσκευές",
+        "taxonomy_sub": "Εστίες"
+      },
+      "preferred_schema_source_files": [
+        "esties.json"
+      ],
+      "sections": [
+        {
+          "title": "Επισκόπηση Προϊόντος",
+          "fields": [
+            {
+              "key": "installation_type",
+              "label": "Τρόπος Τοποθέτησης",
+              "resolver": "hob_installation_type",
+              "aliases": [
+                "Τύπος εγκατάστασης",
+                "Τρόπος Τοποθέτησης"
+              ]
+            },
+            {
+              "key": "surface_technology",
+              "label": "Τεχνολογία Πλατώ Εστιών",
+              "resolver": "hob_surface_technology",
+              "aliases": [
+                "Βασικό υλικό επιφανειών",
+                "Τεχνολογία Πλατώ Εστιών",
+                "Τύπος"
+              ]
+            },
+            {
+              "key": "zone_count",
+              "label": "Αριθμός Ζωνών",
+              "resolver": "hob_zone_count",
+              "aliases": [
+                "Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα",
+                "Αριθμός Εστιών"
+              ]
+            },
+            {
+              "key": "control_type",
+              "label": "Τύπος Χειριστηρίου",
+              "resolver": "hob_control_type",
+              "aliases": [
+                "Είδος ηλεκτρονικού ελέγχου",
+                "Διακόπτες",
+                "Neff"
+              ]
+            },
+            {
+              "key": "digital_indicators",
+              "label": "Ψηφιακές Ενδείξεις",
+              "resolver": "hob_digital_indicators",
+              "aliases": [
+                "Ψηφιακές Ενδείξεις",
+                "Ψηφιακό χρονόμετρο"
+              ]
+            },
+            {
+              "key": "residual_heat",
+              "label": "Ένδειξη Υπολοίπου Θερμότητας",
+              "resolver": "hob_residual_heat",
+              "aliases": [
+                "Ένδειξη Υπολοίπου Θερμότητας",
+                "Ενδεικτική λυχνία εναπομένουσας θερμότητας"
+              ]
+            },
+            {
+              "key": "timer",
+              "label": "Χρονοδιακόπτης",
+              "resolver": "hob_timer",
+              "aliases": [
+                "Χρονοδιακόπτης",
+                "Χρονοδιακόπτης απενεργοποίησης"
+              ]
+            },
+            {
+              "key": "pan_recognition",
+              "label": "Αυτόματη Αναγνώρηση Σκευών",
+              "resolver": "hob_pan_recognition",
+              "aliases": [
+                "Αυτόματη Αναγνώρηση Σκευών"
+              ]
+            },
+            {
+              "key": "coffee_zone",
+              "label": "Ζώνη Καφέ",
+              "resolver": "hob_coffee_zone",
+              "aliases": [
+                "Ζώνη Καφέ"
+              ]
+            },
+            {
+              "key": "natural_gas",
+              "label": "Σύνδεση με Φυσικό Αέριο",
+              "resolver": "hob_natural_gas",
+              "aliases": [
+                "Σύνδεση με Φυσικό Αέριο",
+                "Τύπος λειτουργίας"
+              ]
+            },
+            {
+              "key": "connectivity",
+              "label": "Συνδεσιμότητα",
+              "resolver": "hob_connectivity",
+              "aliases": [
+                "Συνδεσιμότητα",
+                "Smart"
+              ]
+            },
+            {
+              "key": "other_features",
+              "label": "Άλλα Χαρακτηριστικά",
+              "resolver": "hob_other_features"
+            }
+          ]
+        },
+        {
+          "title": "Απόδοση",
+          "fields": [
+            {
+              "key": "front_left_power",
+              "label": "Ισχύς Εστίας Μπροστά Αριστερά (KW",
+              "resolver": "hob_zone_power",
+              "zone_position": "μπροστα_αριστερα"
+            },
+            {
+              "key": "back_left_power",
+              "label": "Ισχύς Εστίας Πίσω Αριστερά (KW",
+              "resolver": "hob_zone_power",
+              "zone_position": "πισω_αριστερα"
+            },
+            {
+              "key": "back_right_power",
+              "label": "Ισχύς Εστίας Πίσω Δεξιά (KW",
+              "resolver": "hob_zone_power",
+              "zone_position": "πισω_δεξια"
+            },
+            {
+              "key": "front_right_power",
+              "label": "Ισχύς Εστίας Μπροστά Δεξιά (KW",
+              "resolver": "hob_zone_power",
+              "zone_position": "μπροστα_δεξια"
+            },
+            {
+              "key": "total_power",
+              "label": "Μέγιστη Ονομαστική Ισχύς (W",
+              "resolver": "hob_total_power",
+              "aliases": [
+                "Συνολική ισχύς",
+                "Μέγιστη Ονομαστική Ισχύς"
+              ]
+            },
+            {
+              "key": "gas_total_power",
+              "label": "Μέγιστη Ονομαστική Ισχύς Αερίου (ΚW",
+              "aliases": [
+                "Μέγιστη Ονομαστική Ισχύς Αερίου"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ασφάλεια",
+          "fields": [
+            {
+              "key": "child_lock",
+              "label": "Κλείδωμα Ασφαλείας για Παιδιά",
+              "resolver": "hob_child_lock",
+              "aliases": [
+                "Κλείδωμα ασφαλείας για τα παιδιά",
+                "Λειτουργία Κλειδώματος"
+              ]
+            },
+            {
+              "key": "auto_safety_off",
+              "label": "Αυτόματη Απενεργοποίηση Ασφαλείας",
+              "resolver": "hob_auto_safety_off",
+              "aliases": [
+                "Αυτόματη απενεργοποίηση ασφαλείας"
+              ]
+            },
+            {
+              "key": "gas_cutoff",
+              "label": "Ασφάλεια Διακοπής Παροχής Αερίου",
+              "aliases": [
+                "Ασφάλεια Διακοπής Παροχής Αερίου"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Γενικά Χαρακτηριστικά",
+          "fields": [
+            {
+              "key": "color",
+              "label": "Χρώμα",
+              "resolver": "hob_color",
+              "aliases": [
+                "Χρώμα",
+                "Χρώμα επιφανειών"
+              ]
+            },
+            {
+              "key": "frame_color",
+              "label": "Χρώμα Πλαισίου",
+              "resolver": "hob_frame_color",
+              "aliases": [
+                "Χρώμα Πλαισίου"
+              ]
+            },
+            {
+              "key": "weight",
+              "label": "Βάρος Συσκευής σε Κιλά",
+              "resolver": "hob_weight",
+              "aliases": [
+                "Καθαρό βάρος",
+                "Βάρος Συσκευής σε Κιλά"
+              ]
+            },
+            {
+              "key": "cutout_height",
+              "label": "Ύψος Διάστασης Εντοιχισμού",
+              "resolver": "hob_cutout_height",
+              "aliases": [
+                "Διαστάσεις εντοιχισμού (υ x π x β)",
+                "Διαστάσεις Εντοιχισμού (ΥxΠxΒ mm)"
+              ]
+            },
+            {
+              "key": "cutout_width",
+              "label": "Πλάτος Διάστασης Εντοιχισμού σε Εκατοστά",
+              "resolver": "hob_cutout_width",
+              "aliases": [
+                "Πλάτος Εντοιχισμού",
+                "Διαστάσεις εντοιχισμού (υ x π x β)"
+              ]
+            },
+            {
+              "key": "cutout_depth",
+              "label": "Βάθος Διάστασης Εντοιχισμού σε Εκατοστά",
+              "resolver": "hob_cutout_depth",
+              "aliases": [
+                "Βάθος Εντοιχισμού",
+                "Διαστάσεις εντοιχισμού (υ x π x β)"
+              ]
+            },
+            {
+              "key": "device_width",
+              "label": "Πλάτος Συσκευής σε Εκατοστά",
+              "resolver": "hob_device_width",
+              "aliases": [
+                "Πλάτος",
+                "Διαστάσεις συσκευής (ΥxΠxΒ mm)"
+              ]
+            },
+            {
+              "key": "device_depth",
+              "label": "Βάθος Συσκευής σε Εκατοστά",
+              "resolver": "hob_device_depth",
+              "aliases": [
+                "Βάθος",
+                "Διαστάσεις συσκευής (ΥxΠxΒ mm)"
+              ]
+            },
+            {
+              "key": "warranty",
+              "label": "Εγγύηση Κατασκευαστή",
+              "resolver": "hob_warranty",
+              "aliases": [
+                "Εγγύηση Κατασκευαστή"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "template_id": "skroutz_hair_straightener_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_parent": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        "taxonomy_leaf": "Προσωπική Φροντίδα",
+        "taxonomy_sub": "Βούρτσες-Ψαλίδια-ισιωτικά"
+      },
+      "preferred_schema_source_files": [
+        "isiotika_mallion.json"
+      ],
+      "sections": [
+        {
+          "title": "Επισκόπηση Προϊόντος",
+          "fields": [
+            {
+              "label": "Τεχνολογία Πλάκας",
+              "resolver": "personal_care_plate_technology",
+              "aliases": [
+                "Τεχνολογία Πλάκας"
+              ]
+            },
+            {
+              "label": "Μέγιστη Θερμοκρασία σε °C",
+              "aliases": [
+                "Μέγιστη Θερμοκρασία",
+                "Μέγιστη Θερμοκρασία σε °C"
+              ]
+            },
+            {
+              "label": "Αυτόματη Απενεργοποίηση",
+              "resolver": "personal_care_auto_shutdown",
+              "aliases": [
+                "Αυτόματη Απενεργοποίηση"
+              ]
+            },
+            {
+              "label": "Γρήγορη Προθέρμαση",
+              "resolver": "personal_care_fast_heat",
+              "aliases": [
+                "Γρήγορη Προθέρμαση",
+                "Γρήγορη Θέρμανση"
+              ]
+            },
+            {
+              "label": "Διάσταση Πλάκας σε Εκατοστά",
+              "resolver": "personal_care_plate_dimensions",
+              "aliases": [
+                "Διάσταση Πλάκας σε Εκατοστά",
+                "Μήκος Πλάκας",
+                "Πλάτος Πλάκας"
+              ]
+            },
+            {
+              "label": "Σύστημα Ιονισμού",
+              "resolver": "personal_care_yes_no",
+              "aliases": [
+                "Ionic",
+                "Σύστημα Ιονισμού"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Γενικά Χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Βάρος Συσκευής σε Κιλά",
+              "resolver": "personal_care_weight_kg",
+              "aliases": [
+                "Βάρος Συσκευής σε Κιλά",
+                "Βάρος"
+              ]
+            },
+            {
+              "label": "Μήκος Καλωδίου σε Μέτρα",
+              "resolver": "personal_care_cord_length_m",
+              "aliases": [
+                "Μήκος Καλωδίου σε Μέτρα",
+                "Μήκος Καλωδίου"
+              ]
+            },
+            {
+              "label": "Περιστρεφόμενο Καλώδιο",
+              "resolver": "personal_care_rotating_cord",
+              "aliases": [
+                "Περιστρεφόμενο Καλώδιο",
+                "Ειδικά Χαρακτηριστικά"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "template_id": "skroutz_microwave_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_parent": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+        "taxonomy_leaf": "Φούρνοι Μικροκυμάτων",
+        "taxonomy_sub": ""
+      },
+      "preferred_schema_source_files": [
+        "foyrnoi_mikrokymaton.json"
+      ],
+      "sections": [
+        {
+          "title": "Επισκόπηση Προϊόντος",
+          "fields": [
+            {
+              "label": "Τρόπος Τοποθέτησης",
+              "aliases": [
+                "Τρόπος Τοποθέτησης",
+                "Τοποθέτηση"
+              ]
+            },
+            {
+              "label": "Χωρητικότητα Φούρνου σε Λίτρα",
+              "resolver": "oven_number",
+              "aliases": [
+                "Χωρητικότητα Φούρνου σε Λίτρα",
+                "Χωρητικότητα"
+              ]
+            },
+            {
+              "label": "Ισχύς Μικροκυμάτων (Watt)",
+              "aliases": [
+                "Ισχύς Μικροκυμάτων (Watt)",
+                "Ισχύς Μικροκυμάτων"
+              ]
+            },
+            {
+              "label": "Επίπεδα Ισχύος Μικροκυμάτων",
+              "resolver": "oven_number",
+              "aliases": [
+                "Επίπεδα Ισχύος Μικροκυμάτων",
+                "Επίπεδα Ισχύος"
+              ]
+            },
+            {
+              "label": "Ισχύς Grill (Watt)",
+              "resolver": "microwave_grill_power",
+              "aliases": [
+                "Ισχύς Grill (Watt)",
+                "Ισχύς Grill"
+              ]
+            },
+            {
+              "label": "Χειριστήριο",
+              "aliases": [
+                "Χειριστήριο",
+                "Τύπος Λειτουργίας"
+              ]
+            },
+            {
+              "label": "Οθόνη Ενδείξεων",
+              "resolver": "microwave_display",
+              "aliases": [
+                "Οθόνη Ενδείξεων",
+                "Τύπος Λειτουργίας"
+              ]
+            },
+            {
+              "label": "Περιστρεφόμενος Δίσκος;",
+              "resolver": "microwave_yes_no",
+              "aliases": [
+                "Περιστρεφόμενος Δίσκος",
+                "Περιστρεφόμενος Δίσκος;"
+              ]
+            },
+            {
+              "label": "Διάμετρος Περιστρεφόμενου Δίσκου σε mm",
+              "aliases": [
+                "Διάμετρος Περιστρεφόμενου Δίσκου σε mm",
+                "Διάμετρος Περιστρεφόμενου Δίσκου"
+              ]
+            },
+            {
+              "label": "Άνοιγμα Πόρτας με",
+              "aliases": [
+                "Άνοιγμα Πόρτας με",
+                "Άνοιγμα Πόρτας"
+              ]
+            },
+            {
+              "label": "Κλείδωμα Ασφαλείας για Παιδιά",
+              "resolver": "microwave_yes_no",
+              "aliases": [
+                "Κλείδωμα Ασφαλείας για Παιδιά",
+                "Κλείδωμα"
+              ]
+            },
+            {
+              "label": "Άλλα Χαρακτηριστικά",
+              "resolver": "microwave_other_features"
+            }
+          ]
+        },
+        {
+          "title": "Λειτουργικότητα",
+          "fields": [
+            {
+              "label": "Λειτουργία Μικροκύματα + Grill",
+              "resolver": "microwave_yes_no",
+              "aliases": [
+                "Λειτουργία Μικροκύματα + Grill",
+                "Λειτουργία Grill"
+              ]
+            },
+            {
+              "label": "Ξεπάγωμα με Βάση τον Χρόνο",
+              "resolver": "microwave_yes_no",
+              "aliases": [
+                "Ξεπάγωμα με Βάση τον Χρόνο",
+                "Λειτουργία Ξεπαγώματος"
+              ]
+            },
+            {
+              "label": "Ξεπάγωμα με Βάση το Βάρος",
+              "resolver": "microwave_yes_no",
+              "aliases": [
+                "Ξεπάγωμα με Βάση το Βάρος"
+              ]
+            },
+            {
+              "label": "Aυτόματα Προγράμματα Μαγειρέματος",
+              "resolver": "microwave_yes_no",
+              "aliases": [
+                "Aυτόματα Προγράμματα Μαγειρέματος",
+                "Αυτόματα Προγράμματα"
+              ]
+            },
+            {
+              "label": "Αριθμός Αυτόματων Προγραμμάτων",
+              "resolver": "microwave_auto_program_count",
+              "aliases": [
+                "Αριθμός Αυτόματων Προγραμμάτων",
+                "Αυτόματα Προγράμματα"
+              ]
+            },
+            {
+              "label": "Χρονοδιακόπτης",
+              "resolver": "microwave_yes_no",
+              "aliases": [
+                "Χρονοδιακόπτης"
+              ]
+            },
+            {
+              "label": "Πλήκτρο Αύξησης Χρόνου",
+              "resolver": "microwave_time_plus",
+              "aliases": [
+                "Πλήκτρο Αύξησης Χρόνου"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Γενικά χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Χρώμα",
+              "aliases": [
+                "Χρώμα"
+              ]
+            },
+            {
+              "label": "Διαστάσεις Συσκευής σε Εκατοστά (Υ x Π x Β)",
+              "resolver": "microwave_dimensions_triplet",
+              "aliases": [
+                "Διαστάσεις Συσκευής σε Εκατοστά (Υ x Π x Β)",
+                "Διαστάσεις"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "template_id": "skroutz_built_in_oven_v1",
+      "match": {
+        "source_name": "",
+        "taxonomy_parent": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+        "taxonomy_leaf": "Εντοιχιζόμενες Συσκευές",
+        "taxonomy_sub": "Φούρνοι"
+      },
+      "preferred_schema_source_files": [
+        "entoixizomenoi_foyrnoi.json"
+      ],
+      "sections": [
+        {
+          "title": "Επισκόπηση Προϊόντος",
+          "fields": [
+            {
+              "label": "Τρόπος Εντοιχισμού",
+              "resolver": "oven_installation_type",
+              "aliases": [
+                "Τρόπος Εντοιχισμού",
+                "Είδος",
+                "Που μπορεί να εγκατασταθεί η συσκευή;"
+              ]
+            },
+            {
+              "label": "Τύπος Φούρνου",
+              "aliases": [
+                "Τύπος Φούρνου",
+                "Είδος"
+              ],
+              "resolver": "oven_type"
+            },
+            {
+              "label": "Χωρητικότητα Φούρνου σε Λίτρα",
+              "resolver": "oven_number",
+              "aliases": [
+                "Χωρητικότητα Φούρνου σε Λίτρα",
+                "Χωρητικότητα Φούρνου",
+                "Ωφέλιμος όγκος θαλάμου - ΝΕΟ (2010/30/ΕΚ)"
+              ]
+            },
+            {
+              "label": "Αριθμός Λειτουργιών Ψησίματος",
+              "resolver": "oven_number",
+              "aliases": [
+                "Αριθμός Λειτουργιών Ψησίματος",
+                "Τρόποι Ψησίματος",
+                "Αριθμός λειτουργιών θέρμασης & συνδυασμών"
+              ]
+            },
+            {
+              "label": "Τρόποι Λειτουργίας Ψησίματος",
+              "aliases": [
+                "Τρόποι Λειτουργίας Ψησίματος",
+                "Τύποι Ψησίματος",
+                "Τρόποι θέρμανσης"
+              ]
+            },
+            {
+              "label": "Οθόνη Ψηφιακών Ενδείξεων",
+              "resolver": "oven_yes_no",
+              "aliases": [
+                "Οθόνη Ψηφιακών Ενδείξεων",
+                "Ψηφιακή Οθόνη",
+                "Τύπος ενδείξεων"
+              ]
+            },
+            {
+              "label": "Χειρισμός",
+              "aliases": [
+                "Χειρισμός",
+                "Διακόπτες",
+                "Τύπος ενδείξεων"
+              ]
+            },
+            {
+              "label": "Ηλεκτρονικό Ρολόι",
+              "resolver": "oven_clock",
+              "aliases": [
+                "Ηλεκτρονικό Ρολόι",
+                "Ψηφιακή Οθόνη",
+                "Τύπος ενδείξεων"
+              ]
+            },
+            {
+              "label": "Καθαρισμός Φούρνου",
+              "aliases": [
+                "Καθαρισμός Φούρνου",
+                "Σύστημα Καθαρισμού",
+                "Ενσωματωμένο σύστημα καθαρισμού"
+              ]
+            },
+            {
+              "label": "Τηλεσκοπικός Μηχανισμός",
+              "aliases": [
+                "Τηλεσκοπικός Μηχανισμός",
+                "Τηλεσκοπικός μηχανισμός"
+              ]
+            },
+            {
+              "label": "Άλλα Χαρακτηριστικά",
+              "resolver": "oven_other_features"
+            },
+            {
+              "label": "Συνδεσιμότητα",
+              "resolver": "oven_connectivity",
+              "aliases": [
+                "Συνδεσιμότητα",
+                "WiFi",
+                "Home Connect"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ενεργειακά Χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Ενεργειακή Κλάση",
+              "aliases": [
+                "Ενεργειακή Κλάση",
+                "Ενεργειακή κλάση"
+              ]
+            },
+            {
+              "label": "Κατανάλωση ενέργειας ανά κύκλο σε συμβατική λειτουργία (kWh/cycle)"
+            },
+            {
+              "label": "Κατανάλωση ενέργειας ανά κύκλο σε λειτουργία κυκλοφορίας θερμού αέρα (kWh/cycle)"
+            },
+            {
+              "label": "Δείκτης ενεργειακής απόδοσης (%)"
+            }
+          ]
+        },
+        {
+          "title": "Ασφάλεια",
+          "fields": [
+            {
+              "label": "Κλείδωμα Ασφαλείας για Παιδιά",
+              "resolver": "oven_yes_no",
+              "aliases": [
+                "Κλείδωμα Ασφαλείας για Παιδιά",
+                "Κλείδωμα",
+                "Ασφάλεια"
+              ]
+            },
+            {
+              "label": "Ένδειξη Εναπομένουσας Θερμότητας"
+            },
+            {
+              "label": "Πόρτα",
+              "aliases": [
+                "Πόρτα",
+                "Πτυσσόμενη Πόρτα",
+                "Φορά ανοίγματος πόρτας"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Ηλεκτρικά Χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Συνολική Ισχύς (Watt)",
+              "aliases": [
+                "Συνολική Ισχύς (Watt)",
+                "Ισχύς"
+              ]
+            },
+            {
+              "label": "Ηλεκτρικό Ρεύμα (A)",
+              "aliases": [
+                "Ηλεκτρικό Ρεύμα (A)",
+                "Ηλεκτρικό ρεύμα"
+              ]
+            },
+            {
+              "label": "Τάση (V)",
+              "aliases": [
+                "Τάση (V)",
+                "Τάση"
+              ]
+            },
+            {
+              "label": "Συχνότητα (Hz)"
+            },
+            {
+              "label": "Μήκος Καλωδίου Ηλεκτρικής Παροχής",
+              "aliases": [
+                "Μήκος Καλωδίου Ηλεκτρικής Παροχής",
+                "Μήκος καλωδίου ηλεκτρικής παροχής"
+              ]
+            },
+            {
+              "label": "Τύπος Πρίζας",
+              "aliases": [
+                "Τύπος Πρίζας",
+                "Τύπος πρίζας"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Διαστάσεις - Βάρη",
+          "fields": [
+            {
+              "label": "Διαστάσεις Συσκευής σε Εκατοστά (Υ × Π × Β)",
+              "aliases": [
+                "Διαστάσεις Συσκευής σε Εκατοστά (Υ × Π × Β)",
+                "Διαστάσεις συσκευής (ΥxΠxΒ)",
+                "Διαστάσεις συσκευής (ΥxΠxΒ mm)",
+                "Διαστάσεις Εσωτερικής μονάδας: (ΥxΠxΒ)"
+              ]
+            },
+            {
+              "label": "Διαστάσεις Εντοιχισμού σε Εκατοστά (Υ × Π × Β)",
+              "aliases": [
+                "Διαστάσεις Εντοιχισμού σε Εκατοστά (Υ × Π × Β)",
+                "Διαστάσεις εντοιχισμού (υ x π x β)",
+                "Διαστάσεις εντοιχισμού (ΥxΠxΒ)",
+                "Διαστάσεις Εντοιχισμού (ΥxΠxΒ)",
+                "Ελάχιστο ύψος εγκατάστασης",
+                "Μέγιστο ύψος εγκατάστασης",
+                "Ελάχιστο πλάτος εγκατάστασης",
+                "Μέγιστο πλάτος εγκατάστασης",
+                "Βάθος εγκατάστασης"
+              ]
+            },
+            {
+              "label": "Βάρος Συσκευής σε Κιλά",
+              "aliases": [
+                "Βάρος Συσκευής σε Κιλά",
+                "Καθαρό βάρος"
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Γενικά χαρακτηριστικά",
+          "fields": [
+            {
+              "label": "Χρώμα",
+              "aliases": [
+                "Χρώμα",
+                "Χρώμα συσκευής",
+                "Χρώμα / Υλικό πορτών",
+                "Χρώμα/Υλικό μετόπης χειρισμού"
+              ]
+            },
+            {
+              "label": "Βασικός Εξοπλισμός",
+              "aliases": [
+                "Βασικός Εξοπλισμός",
+                "Αξεσουάρ",
+                "Αξεσουάρ συσκευασίας"
+              ]
+            },
+            {
+              "label": "Εγγύηση Κατασκευαστή"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

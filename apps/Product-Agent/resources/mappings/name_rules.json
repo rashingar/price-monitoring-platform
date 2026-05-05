@@ -1,0 +1,1395 @@
+{
+  "description": "Per-category rules for building product names deterministically. Pattern: {Brand} {MPN} – {category_phrase} {differentiator1} {differentiator2} ...",
+  "rule_defaults": {
+    "source_scope": "any"
+  },
+  "generic_outputs": {
+    "name": "all",
+    "meta_title": "first_2",
+    "seo_keyword": "name"
+  },
+  "source_rules": [
+    {
+      "source_scope": [
+        "skroutz"
+      ],
+      "match": {
+        "family": "soundbar"
+      },
+      "category_phrase": "Soundbar",
+      "strategy_id": "soundbar",
+      "outputs": {
+        "name": [
+          "channels",
+          "subwoofer"
+        ],
+        "meta_title": [
+          "channels",
+          "power",
+          "standards_meta"
+        ],
+        "seo_keyword": [
+          "channels_seo",
+          "standards_seo",
+          "power"
+        ]
+      }
+    },
+    {
+      "source_scope": [
+        "skroutz",
+        "manufacturer_tefal"
+      ],
+      "match": {
+        "family": "coffee_filter"
+      },
+      "category_phrase": "Καφετιέρα Φίλτρου",
+      "strategy_id": "coffee_filter",
+      "outputs": {
+        "name": [
+          "power",
+          "capacity",
+          "cups"
+        ],
+        "meta_title": [
+          "power",
+          "capacity"
+        ],
+        "seo_keyword": [
+          "power",
+          "capacity_seo"
+        ]
+      }
+    },
+    {
+      "source_scope": [
+        "skroutz"
+      ],
+      "match": {
+        "family": "fridge_freezer"
+      },
+      "category_phrase": "Ψυγειοκαταψύκτης",
+      "strategy_id": "fridge_freezer",
+      "outputs": {
+        "name": [
+          "cooling",
+          "capacity",
+          "energy_class"
+        ],
+        "meta_title": [
+          "cooling",
+          "capacity"
+        ],
+        "seo_keyword": [
+          "cooling",
+          "capacity",
+          "energy_class"
+        ]
+      }
+    },
+    {
+      "source_scope": [
+        "skroutz",
+        "manufacturer_tefal"
+      ],
+      "match": {
+        "family": "kettle"
+      },
+      "category_phrase": "Βραστήρας",
+      "strategy_id": "kettle",
+      "outputs": {
+        "name": [
+          "capacity",
+          "power",
+          "color"
+        ],
+        "meta_title": [
+          "capacity",
+          "power",
+          "color"
+        ],
+        "seo_keyword": [
+          "tail"
+        ]
+      }
+    },
+    {
+      "source_scope": [
+        "skroutz",
+        "manufacturer_tefal"
+      ],
+      "match": {
+        "family": "ice_cream_maker"
+      },
+      "category_phrase": "Παγωτομηχανή",
+      "strategy_id": "ice_cream_maker",
+      "outputs": {
+        "name": [
+          "capacity",
+          "programs",
+          "bowls_or_color"
+        ],
+        "meta_title": [
+          "capacity",
+          "programs"
+        ],
+        "seo_keyword": [
+          "capacity",
+          "programs",
+          "bowls",
+          "color"
+        ]
+      }
+    },
+    {
+      "source_scope": [
+        "skroutz"
+      ],
+      "match": {
+        "family": "air_conditioner"
+      },
+      "category_phrase": "Κλιματιστικό",
+      "strategy_id": "air_conditioner",
+      "outputs": {
+        "name": [
+          "btu",
+          "energy_class",
+          "ionizer"
+        ],
+        "meta_title": [
+          "btu",
+          "energy_class"
+        ],
+        "seo_keyword": [
+          "btu",
+          "energy_class",
+          "ionizer"
+        ]
+      }
+    },
+    {
+      "source_scope": [
+        "skroutz"
+      ],
+      "match": {
+        "family": "tabletop_hob"
+      },
+      "category_phrase": "Επιτραπέζια Εστία",
+      "strategy_id": "tabletop_hob",
+      "outputs": {
+        "name": [
+          "burner_phrase",
+          "power",
+          "surface"
+        ],
+        "meta_title": [
+          "burner_phrase",
+          "power"
+        ],
+        "seo_keyword": [
+          "seo_name"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "match": {
+        "leaf_category": "Τηλεοράσεις"
+      },
+      "category_phrase": "Τηλεόραση",
+      "differentiator_specs": [
+        [
+          "Τεχνολογία Οθόνης",
+          "Τύπος Panel",
+          "Τεχνολογία Panel"
+        ],
+        [
+          "Διαγώνιος Οθόνης",
+          "Διαγώνιος",
+          "Μέγεθος Οθόνης"
+        ],
+        [
+          "Ανάλυση",
+          "Ανάλυση Οθόνης",
+          "Ευκρίνεια"
+        ],
+        [
+          "Λειτουργικό Σύστημα",
+          "Λογισμικό",
+          "OS",
+          "Operating System",
+          "Πλατφόρμα Smart TV",
+          "Smart Platform",
+          "Google TV",
+          "webOS",
+          "Tizen",
+          "Android TV",
+          "Smart TV"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Sound Bars"
+      },
+      "category_phrase": "Soundbar",
+      "differentiator_specs": [
+        [
+          "Κανάλια",
+          "Channel Configuration",
+          "Διαμόρφωση Καναλιών"
+        ],
+        [
+          "Ισχύς",
+          "Συνολική Ισχύς",
+          "Watt"
+        ],
+        [
+          "Dolby Atmos",
+          "DTS:X",
+          "Τεχνολογία Ήχου",
+          "Audio Technology"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ηχεία"
+      },
+      "category_phrase": "Ηχείο",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Συνδεσιμότητα",
+          "Bluetooth"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Κανάλια",
+          "Channel Configuration",
+          "2.1ch"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ενισχυτές"
+      },
+      "category_phrase": "Ενισχυτής",
+      "differentiator_specs": [
+        [
+          "Ισχύς"
+        ],
+        [
+          "Κανάλια"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ραδιόφωνα"
+      },
+      "category_phrase": "Ραδιόφωνο",
+      "differentiator_specs": [
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα",
+          "Μαύρο"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Βάσεις TV"
+      },
+      "category_phrase": "Βάση TV",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Βάσης",
+          "Τοίχου"
+        ],
+        [
+          "Ίντσες",
+          "Εύρος Ιντσών",
+          "32\\\"-80\\\""
+        ],
+        [
+          "Μέγιστο Βάρος",
+          "45 kg"
+        ],
+        [
+          "VESA",
+          "VESA 600 × 400"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Πλυντήρια Ρούχων"
+      },
+      "category_phrase": "Πλυντήριο ρούχων",
+      "differentiator_specs": [
+        [
+          "Χωρητικότητα Πλύσης",
+          "Χωρητικότητα",
+          "Κιλά Πλύσης"
+        ],
+        [
+          "Ενεργειακή Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Πλυντήρια Πιάτων"
+      },
+      "category_phrase": "Πλυντήριο πιάτων",
+      "differentiator_specs": [
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα",
+          "Inox"
+        ],
+        [
+          "Πλάτος",
+          "Πλάτος σε cm"
+        ],
+        [
+          "Ενεργειακή Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Στεγνωτήρια Ρούχων"
+      },
+      "category_phrase": "Στεγνωτήριο ρούχων",
+      "differentiator_specs": [
+        [
+          "Χωρητικότητα Στεγνώματος",
+          "Χωρητικότητα",
+          "Κιλά Στεγνώματος"
+        ],
+        [
+          "Ενεργειακή Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Πλυντήρια-Στεγνωτήρια"
+      },
+      "category_phrase": "Πλυντήριο-Στεγνωτήριο",
+      "differentiator_specs": [
+        [
+          [
+            "Χωρητικότητα Πλύσης",
+            "Κιλά Πλύσης"
+          ],
+          [
+            "Χωρητικότητα Στεγνώματος",
+            "Κιλά Στεγνώματος"
+          ]
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ],
+        [
+          "Ενεργειακή Κλάση",
+          "Ενεργειακή Κλάση Πλύσης/Στεγνώματος"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "sub_category": "Ψυγεία Ντουλάπες"
+      },
+      "category_phrase": "Ψυγείο Ντουλάπα",
+      "differentiator_specs": [
+        [
+          "Τεχνολογία Ψύξης",
+          "Τεχνολογία",
+          "Total No Frost",
+          "No Frost"
+        ],
+        [
+          "Συνολική Καθαρή Χωρητικότητα",
+          "Χωρητικότητα"
+        ],
+        [
+          "Ενεργειακή Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ψυγεία"
+      },
+      "category_phrase": "Ψυγείο",
+      "differentiator_specs": [
+        [
+          "Τεχνολογία Ψύξης",
+          "Τεχνολογία",
+          "Total No Frost",
+          "No Frost"
+        ],
+        [
+          "Συνολική Καθαρή Χωρητικότητα",
+          "Χωρητικότητα"
+        ],
+        [
+          "Ενεργειακή Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ψυγειοκαταψύκτες"
+      },
+      "category_phrase": "Ψυγειοκαταψύκτης",
+      "differentiator_specs": [
+        [
+          "Τεχνολογία Ψύξης",
+          "Τεχνολογία",
+          "Total No Frost",
+          "No Frost"
+        ],
+        [
+          "Συνολική Καθαρή Χωρητικότητα",
+          "Χωρητικότητα"
+        ],
+        [
+          "Ενεργειακή Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Καταψύκτες"
+      },
+      "category_phrase": "Καταψύκτης",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Καταψύκτη",
+          "Μπαούλο",
+          "Όρθιος"
+        ],
+        [
+          "Χωρητικότητα",
+          "Συνολική Καθαρή Χωρητικότητα"
+        ],
+        [
+          "Ενεργειακή Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "sub_category": "Κουζίνες Εμαγιέ"
+      },
+      "category_phrase": "Ηλεκτρική κουζίνα με εμαγιέ εστίες",
+      "differentiator_specs": [
+        [
+          "Πλάτος",
+          "Πλάτος σε cm",
+          "Πλάτος Συσκευής σε Εκατοστά"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ],
+        [
+          "Χωρητικότητα Φούρνου",
+          "Χωρητικότητα Φούρνου σε Λίτρα",
+          "Χωρητικότητα"
+        ],
+        [
+          "Ενεργειακή Κλάση",
+          "Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Κουζίνες"
+      },
+      "category_phrase": "Κουζίνα",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Κουζίνας",
+          "Κεραμική",
+          "Εμαγιέ",
+          "Επαγωγική"
+        ],
+        [
+          "Πλάτος",
+          "Πλάτος σε cm"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ],
+        [
+          "Χωρητικότητα Φούρνου",
+          "Χωρητικότητα"
+        ],
+        [
+          "Ενεργειακή Κλάση",
+          "Κλάση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Φούρνοι"
+      },
+      "category_phrase": "Φούρνος",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Φούρνου",
+          "Εντοιχιζόμενος"
+        ],
+        [
+          "Χωρητικότητα",
+          "Χωρητικότητα Φούρνου"
+        ],
+        [
+          "Ενεργειακή Κλάση",
+          "Κλάση"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα",
+          "Inox"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Εστίες"
+      },
+      "category_phrase": "Εστία",
+      "differentiator_specs": [
+        [
+          "Τύπος Εστίας",
+          "Τύπος",
+          "Κεραμική",
+          "Επαγωγική",
+          "Αερίου"
+        ],
+        [
+          "Ζώνες Μαγειρέματος",
+          "Αριθμός Ζωνών"
+        ],
+        [
+          "Πλάτος",
+          "Πλάτος σε cm"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Απορροφητήρες"
+      },
+      "category_phrase": "Απορροφητήρας",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Απορροφητήρα",
+          "Συρόμενος",
+          "Καμινάδα",
+          "Εντοιχιζόμενος"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα",
+          "Ασημί",
+          "Inox"
+        ],
+        [
+          "Πλάτος",
+          "Πλάτος σε cm"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Φούρνοι Μικροκυμάτων"
+      },
+      "category_phrase": "Φούρνος Μικροκυμάτων",
+      "differentiator_specs": [
+        [
+          "Χωρητικότητα",
+          "Χωρητικότητα σε Λίτρα",
+          "L",
+          "Lt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Σκούπες"
+      },
+      "category_phrase": "Ηλεκτρική Σκούπα",
+      "differentiator_specs": [
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Τύπος",
+          "Τύπος Σκούπας",
+          "Με Σακούλα",
+          "Χωρίς Σακούλα"
+        ],
+        [
+          "Χωρητικότητα Σακούλας",
+          "Χωρητικότητα Κάδου",
+          "Χωρητικότητα"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Σκούπες Stick"
+      },
+      "category_phrase": "Σκούπα Stick",
+      "differentiator_specs": [
+        [
+          "Τεχνολογία Καθαρισμού",
+          "Τύπος Καθαρισμού",
+          "Wet&Dry"
+        ],
+        [
+          "Τροφοδοσία",
+          "Τύπος Τροφοδοσίας",
+          "Ασύρματη",
+          "Επαναφορτιζόμενη"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Σκούπες Ρομπότ"
+      },
+      "category_phrase": "Σκούπα Ρομπότ",
+      "differentiator_specs": [
+        [
+          "Αυτονομία"
+        ],
+        [
+          "Χαρτογράφηση"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Σκουπάκια"
+      },
+      "category_phrase": "Σκουπάκι",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Χειρός"
+        ],
+        [
+          "Τάση",
+          "Volt",
+          "V"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα",
+          "Γκρι"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Σίδερα"
+      },
+      "category_phrase": "Σίδερο",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Σίδερου",
+          "Βούρτσα Ατμού",
+          "Σίδερο Ατμού",
+          "Σίδερο Ταξιδιού"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Συστήματα Σιδερώματος"
+      },
+      "category_phrase": "Σύστημα Σιδερώματος",
+      "differentiator_specs": [
+        [
+          "Τεχνολογία",
+          "Τεχνολογία Πλάκας",
+          "EloxalPlus"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Πίεση Ατμού",
+          "Bar"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Σεσουάρ"
+      },
+      "category_phrase": "Σεσουάρ Μαλλιών",
+      "differentiator_specs": [
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Βούρτσες-Ψαλίδια-ισιωτικά"
+      },
+      "category_phrase": "Ισιωτική Συσκευή",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Συσκευής",
+          "Ισιωτική Συσκευή",
+          "Πρέσσα Μαλλιών",
+          "Ισιωτικό"
+        ],
+        [
+          "Χρήση",
+          "Μαλλιών"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ξυριστικές Μηχανές"
+      },
+      "category_phrase": "Ξυριστική Μηχανή",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Χρήση",
+          "Προσώπου",
+          "Wet & Dry"
+        ],
+        [
+          "Αυτονομία",
+          "Διάρκεια Λειτουργίας",
+          "60 Λεπτά"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Κουρευτικές Μηχανές"
+      },
+      "category_phrase": "Κουρευτική Μηχανή",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Χρήση",
+          "Σώματος",
+          "Προσώπου"
+        ],
+        [
+          "Wet & Dry",
+          "Αδιάβροχη",
+          "Πλύσιμο"
+        ],
+        [
+          "Μήκος Κοπής",
+          "Εύρος Κοπής",
+          "0"
+        ],
+        [
+          "1-12 mm"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Καφετιέρες Espresso"
+      },
+      "category_phrase": "Καφετιέρα Espresso",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Σύστημα Καφέ",
+          "Dolce Gusto",
+          "Nespresso"
+        ],
+        [
+          "Πίεση",
+          "Πίεση Αντλίας",
+          "bar"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα",
+          "Ανθρακί"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Καφετιέρες Φίλτρου"
+      },
+      "category_phrase": "Καφετιέρα Φίλτρου",
+      "differentiator_specs": [
+        [
+          "Χωρητικότητα Δοχείου Νερού σε Λίτρα",
+          "Χωρητικότητα",
+          "1"
+        ],
+        [
+          "25Lt"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Βραστήρες"
+      },
+      "category_phrase": "Βραστήρας",
+      "differentiator_specs": [
+        [
+          "Χωρητικότητα σε Λίτρα",
+          "Χωρητικότητα"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Φρυγανιέρες"
+      },
+      "category_phrase": "Φρυγανιέρα",
+      "differentiator_specs": [
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Τοστιέρες"
+      },
+      "category_phrase": "Τοστιέρα",
+      "differentiator_specs": [
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Φριτέζες"
+      },
+      "category_phrase": "Φριτέζα",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Φριτέζας",
+          "Αέρος"
+        ],
+        [
+          "Χωρητικότητα",
+          "Χωρητικότητα σε Λίτρα",
+          "10L"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Μπλέντερ"
+      },
+      "category_phrase": "Μπλέντερ",
+      "differentiator_specs": [
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Κουζινομηχανές"
+      },
+      "category_phrase": "Κουζινομηχανή",
+      "differentiator_specs": [
+        [
+          "Ισχύς"
+        ],
+        [
+          "Χωρητικότητα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ψηστιέρες-Γκριλιέρες"
+      },
+      "category_phrase": "Ψηστιέρα",
+      "differentiator_specs": [
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Διαστάσεις Επιφάνειας",
+          "Διαστάσεις",
+          "40 × 30 cm"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Χύτρες Ταχύτητας"
+      },
+      "category_phrase": "Χύτρα Ταχύτητας",
+      "differentiator_specs": [
+        [
+          "Σειρά",
+          "Οικογένεια",
+          "Family",
+          "Vitaquick"
+        ],
+        [
+          "Χωρητικότητα",
+          "Χωρητικότητα σε Λίτρα",
+          "10L"
+        ],
+        [
+          "Διάμετρος",
+          "Ø",
+          "Διάμετρος σε cm"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Φουρνάκια"
+      },
+      "category_phrase": "Φουρνάκι",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Φουρνακίου",
+          "Με Εστίες"
+        ],
+        [
+          "Χωρητικότητα",
+          "Χωρητικότητα σε Λίτρα",
+          "38L"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ηλεκτρικά μπρίκια"
+      },
+      "category_phrase": "Ηλεκτρικό Μπρίκι",
+      "differentiator_specs": [
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα",
+          "Inox"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Κλιματιστικά"
+      },
+      "category_phrase": "Κλιματιστικό",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Κλιματιστικού",
+          "Τοίχου",
+          "Δαπέδου",
+          "Inverter"
+        ],
+        [
+          "BTU",
+          "Απόδοση Ψύξης BTU"
+        ],
+        [
+          "Ενεργειακή Κλάση",
+          "Ενεργειακή Κλάση Ψύξης/Θέρμανσης"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Αφυγραντήρες"
+      },
+      "category_phrase": "Αφυγραντήρας",
+      "differentiator_specs": [
+        [
+          "Σειρά",
+          "Οικογένεια",
+          "Family",
+          "Melody"
+        ],
+        [
+          "Ισχύς Αφύγρανσης",
+          "Χωρητικότητα Αφύγρανσης",
+          "20L"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Θερμαντικά Υγραερίου"
+      },
+      "category_phrase": "Θερμαντικό Υγραερίου",
+      "differentiator_specs": [
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Τύπος",
+          "Τεχνολογία Θέρμανσης",
+          "Κεραμικό"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Αερόθερμα"
+      },
+      "category_phrase": "Αερόθερμο",
+      "differentiator_specs": [
+        [
+          "Σειρά",
+          "Οικογένεια",
+          "Family",
+          "Caldo"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Θερμοπομποί"
+      },
+      "category_phrase": "Θερμοπομπός",
+      "differentiator_specs": [
+        [
+          "Σειρά",
+          "Οικογένεια",
+          "Family",
+          "Evidence"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Καλοριφέρ"
+      },
+      "category_phrase": "Καλοριφέρ",
+      "differentiator_specs": [
+        [
+          "Ισχύς"
+        ],
+        [
+          "Φέτες"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ηλεκτρικές Κουβέρτες"
+      },
+      "category_phrase": "Ηλεκτρική Κουβέρτα",
+      "differentiator_specs": [
+        [
+          "Διαστάσεις",
+          "Μέγεθος",
+          "Μονή",
+          "Διπλή"
+        ],
+        [
+          "Χαρακτηριστικά",
+          "Πλενόμενη",
+          "Πλένεται"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Ανεμιστήρες"
+      },
+      "category_phrase": "Ανεμιστήρας",
+      "differentiator_specs": [
+        [
+          "Τύπος",
+          "Τύπος Ανεμιστήρα",
+          "Επιτραπέζιος",
+          "Ορθοστάτης",
+          "Δαπέδου"
+        ],
+        [
+          "Ισχύς",
+          "Ισχύς σε Watt",
+          "Watt"
+        ],
+        [
+          "Διάμετρος",
+          "Διάμετρος σε cm"
+        ],
+        [
+          "Χρώμα",
+          "Χρώμα Συσκευής",
+          "Χρώμα / Φινίρισμα"
+        ]
+      ],
+      "format_rules": {}
+    },
+    {
+      "match": {
+        "leaf_category": "Smartphones"
+      },
+      "category_phrase": "Smartphone",
+      "differentiator_specs": [
+        [
+          "RAM"
+        ],
+        [
+          "Αποθηκευτικός Χώρος"
+        ],
+        [
+          "Οθόνη"
+        ]
+      ],
+      "format_rules": {}
+    }
+  ],
+  "default": {
+    "match": {
+      "leaf_category": "__default__"
+    },
+    "differentiator_specs": [
+      [
+        "Χωρητικότητα"
+      ],
+      [
+        "Ισχύς"
+      ],
+      [
+        "Χρώμα"
+      ]
+    ],
+    "format_rules": {}
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "model": "233094",
+  "source_url": "https://www.skroutz.gr/s/48119542/Neff-Entoichizomenos-Orthios-Katapsyktis-212lt-GI7813CE0.html",
+  "final_url": "https://www.skroutz.gr/s/48119542/Neff-Entoichizomenos-Orthios-Katapsyktis-212lt-GI7813CE0.html",
+  "name": "Εντοιχιζόμενος Καταψύκτης Neff GI7813CE0 Ε ???????: 233094",
+  "manufacturer": "Neff",
+  "category_tag_text": "Εντοιχιζόμενες Συσκευές",
+  "category_tag_href": "https://www.skroutz.gr/c/427/entoichizomenes-syskeves.html",
+  "normalized_category_slug": "entoichizomenes syskeves",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές///Καταψύκτες",
+  "captured_at": "2026-03-21T11:36:13.630417+00:00",
+  "content_hash": "c9d43c29c4a3fe91decae52fd4f95e4e971105641f8bba711c126f9f4fd8e6a3",
+  "captured_live": false,
+  "family_key": "built_in_appliance",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Εντοιχιζόμενες Συσκευές",
+  "expected_sub_category": "Καταψύκτες",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Εντοιχιζόμενες Συσκευές///Καταψύκτες",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "built_in_appliance"
+}

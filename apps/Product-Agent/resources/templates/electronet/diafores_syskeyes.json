@@ -1,0 +1,27 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "diafores_syskeyes_electronet_labels_v1",
+  "category_gr": "Διάφορες Συσκευές",
+  "cta_map_key": "Διάφορες Συσκευές",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/diafores-syskeyes",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/diafores-syskeyes/doxeio-mpoykali-gyalio-me-filtro-laica-b01aa01"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Υλικό κατασκευής",
+        "Καπάκι",
+        "Χωρητικότητα"
+      ]
+    }
+  ]
+}

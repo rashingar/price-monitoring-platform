@@ -1,0 +1,47 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "zygaries_somatos_electronet_labels_v1",
+  "category_gr": "Ζυγαρίες Σώματος",
+  "cta_map_key": "Ζυγαρίες Σώματος",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/proswpikh-frontida/zygaries-swmatos",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/proswpikh-frontida/zygaries-swmatos/psifiakh-zygaria-mpanioy-laica-ps1075l",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/proswpikh-frontida/zygaries-swmatos/Zygaria-somatos-tefal-bm9600",
+    "https://www.electronet.gr/exoplismos-spitioy/gynaikeia-frontida/zygaries-somatos/zygaria-somatos-first-fa-8006-3-si-asimi?v=27787"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Ζυγαρίας",
+        "Μέγιστο Ζυγιζόμενο Βάρος σε Κιλά",
+        "Ακρίβεια Ζύγισης σε Γραμμάρια",
+        "Αυτόματη Απενεργοποίηση",
+        "Αριθμός Μνημών",
+        "Μονάδες Μέτρησης",
+        "Υλικό Κατασκευής",
+        "Συνδεσιμότητα"
+      ]
+    },
+    {
+      "section": "Ειδικές Λειτουργίες",
+      "labels": [
+        "Ένδειξη Υπερφόρτωσης",
+        "Λιπομέτρηση",
+        "Μέτρηση Οστικής Μάζας",
+        "Μέτρηση Ποσοστού Νερού Σώματος",
+        "Μέτρηση Μυϊκής Μάζας"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ],
+  "fingerprint": "a98b76fe5ca513583ae77c8f24cf41b6285c584e9ab2c9320cc086356c3fac08"
+}

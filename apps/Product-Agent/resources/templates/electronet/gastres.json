@@ -1,0 +1,40 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "gastres_electronet_labels_v1",
+  "category_gr": "Γάστρες",
+  "cta_map_key": "Γάστρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/gastres",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/gastres/tefal-air-gastra-24cm-chyto-alouminio-kokkino",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/gastres/gastra-oval-aloyminioy-venus-no38"
+  ],
+  "sections": [
+    {
+      "section": "Βασικά Χαρακτηριστικά",
+      "labels": [
+        "Τύπος Σκεύους",
+        "Διάμετρος Σκεύους σε Εκατοστά.",
+        "Χωρητικότητα σε Λίτρα",
+        "Υλικό Σκεύους",
+        "Πηγή Θερμότητας",
+        "Χρώμα"
+      ]
+    },
+    {
+      "section": "Χρήση - Συμβατότητα",
+      "labels": [
+        "Κατάλληλο για Φούρνο",
+        "Κατάλληλο για Όλες τις Εστίες",
+        "Κατάλληλο για Επαγωγική Εστία",
+        "Πλένεται στο Πλυντήριο Πιάτων"
+      ]
+    },
+    {
+      "section": "Γενικά",
+      "labels": [
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ × Π × Β)",
+        "Βάρος Συσκευής σε Κιλά"
+      ]
+    }
+  ]
+}

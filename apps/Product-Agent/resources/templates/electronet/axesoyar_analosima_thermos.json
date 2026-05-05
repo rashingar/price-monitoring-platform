@@ -1,0 +1,29 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "axesoyar_analosima_thermos_electronet_labels_v1",
+  "category_gr": "Αξεσουάρ-Αναλώσιμα-Θερμός",
+  "cta_map_key": "Αξεσουάρ-Αναλώσιμα-Θερμός",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kaf-aksesouar-analwsima-thermos",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kaf-aksesouar-analwsima-thermos/fiali-ygraeriou-gia-gazaki-campingaz-elgreco-cv470",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kaf-aksesouar-analwsima-thermos/antallaktiko-filtro-nerou-gia-kanata-laica-f3a3"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χωρητικότητα",
+        "Με βαλβίδα ασφαλείας",
+        "Είδος καυσίμου",
+        "Χρώμα"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "model": "235222",
+  "source_url": "https://www.skroutz.gr/s/64329782/faber-flexa-ng-hip-bk-a60-syromenos-aporrofitiras-60cm-mayros.html",
+  "final_url": "https://www.skroutz.gr/s/64329782/faber-flexa-ng-hip-bk-a60-syromenos-aporrofitiras-60cm-mayros.html",
+  "name": "Faber FLEXA NG HIP BK A60 – Συρόμενος Απορροφητήρας 60cm Μαύρος ???????: 235222",
+  "manufacturer": "Faber",
+  "category_tag_text": "Απορροφητήρες",
+  "category_tag_href": "https://www.skroutz.gr/c/405/aporrofitires.html",
+  "normalized_category_slug": "aporrofitires",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Απορροφητήρες",
+  "captured_at": "2026-03-21T11:36:13.742722+00:00",
+  "content_hash": "22e32f1df6f9f0ef8b5d89424498f4762c6e5fb948ffa354033c8e1aa8b32792",
+  "captured_live": false,
+  "family_key": "hood",
+  "expected_parent_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+  "expected_leaf_category": "Απορροφητήρες",
+  "expected_sub_category": "",
+  "expected_source_category": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Απορροφητήρες",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "hood"
+}

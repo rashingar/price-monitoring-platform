@@ -1,0 +1,31 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "thermastres_petrelaioy_electronet_labels_v1",
+  "category_gr": "Θερμάστρες Πετρελαίου",
+  "cta_map_key": "Θερμάστρες Πετρελαίου",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/thermantika/thermastres-petrelaiou",
+  "electronet_examples": [
+    "https://www.electronet.gr/klimatismos-thermansi/thermantika/thermastres-petrelaioy/thermastra-petrelaioy-kerosun-inventer-lc-56"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Θερμαντικού",
+        "Θερμική Απόδοση ( Btu/h )",
+        "Συνίσταται για χώρους έως m2",
+        "Κατανάλωση ( lt/h )",
+        "Χωρητικότητα σε λίτρα",
+        "Σύστημα ασφαλείας"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Εγγύηση προμηθευτή",
+        "Διαστάσεις συσκευής σε εκατ. (Υ χ Π χ Β)",
+        "Χρώμα"
+      ]
+    }
+  ]
+}

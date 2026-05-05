@@ -1,0 +1,26 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "karvoynoy_electronet_labels_v1",
+  "category_gr": "Κάρβουνου",
+  "cta_map_key": "Κάρβουνου",
+  "cta_url": "https://www.etranoulis.gr/hobbies/barbeque/karvounou",
+  "electronet_examples": [
+    "https://www.electronet.gr/gadgets-gaming-hobbies/barbeque/karboynoy/psistaria-karboynoy-weber-compact-kettle-57-ek-mayro"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Επιφάνεια ψησίματος σε εκατ",
+        "Υλικό Eπιφάνειας Ψησίματος",
+        "Χρώμα",
+        "Θερμόμετρο",
+        "Συλλέκτης Στάχτης",
+        "Τροχοί",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

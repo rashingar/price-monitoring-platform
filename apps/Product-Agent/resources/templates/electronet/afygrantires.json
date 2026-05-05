@@ -1,0 +1,61 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "afygrantires_electronet_labels_v1",
+  "category_gr": "Αφυγραντήρες",
+  "cta_map_key": "Αφυγραντήρες",
+  "cta_url": "https://www.etranoulis.gr/klimatismos-thermansi/afygransh-ionistes/afygranthres",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/klimatismos-thermansi/afygransh-ionistes/afygranthres/afygrantiras-inventor-melody-mdionwd20l-20lt-ionistis-wifi",
+    "https://www.etranoulis.gr/klimatismos-thermansi/afygransh-ionistes/afygranthres/afygrantiras-inventor-melody-mdionwl20l-20lt-ionistis-wifi"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Δυνατότητα Αφύγρανσης σε Λίτρα/24Ώρες",
+        "Συνίσταται για Χώρους έως m2",
+        "Ρύθμιση Αφύγρανσης",
+        "Χρονοδιακόπτης Λειτουργίας",
+        "Ταχύτητες Ανεμιστήρα",
+        "Χωρητικότητα Δοχείου Νερού σε Λίτρα",
+        "Ένδειξη Γεμάτου Δοχείου",
+        "Δυνατότητα Μόνιμης Σύνδεσης με Αποχέτευση",
+        "Αυτόματη Επανεκκίνηση σε Διακοπή Ρεύματος",
+        "Αυτόματη Διακοπή Λειτουργίας για Γεμάτο Δοχείο",
+        "Αυτόματη Λειτουργία Απόψυξης",
+        "Λειτουργία Στεγνώματος",
+        "Αποσπώμενο Φίλτρο Αέρα",
+        "Λειτουργία Ιονιστή",
+        "Λειτουργία Καθαριστή",
+        "Συνδεσιμότητα",
+        "Τύπος Ψυκτικού Μέσου"
+      ]
+    },
+    {
+      "section": "Μεταφορά",
+      "labels": [
+        "Χειρολαβή Μεταφοράς",
+        "Ροδάκια Κύλισης"
+      ]
+    },
+    {
+      "section": "Απόδοση",
+      "labels": [
+        "Ισχύς σε Watt",
+        "Παροχή Αέρα σε m3/h",
+        "Εύρος Λειτουργίας σε ℃",
+        "Στάθμη Θορύβου σε dB(A)"
+      ]
+    },
+    {
+      "section": "Γενικά χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

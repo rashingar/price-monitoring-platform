@@ -1,0 +1,32 @@
+{
+  "schema_version": "v1",
+  "catalog_source": "sourceCata",
+  "product": {
+    "model": "HANDOFF-1",
+    "mpn": "MPN-HANDOFF-1"
+  },
+  "sources": [
+    {
+      "source_name": "electronet",
+      "url": "https://www.electronet.gr/product/handoff-1?utm_source=agent",
+      "confidence": 0.96,
+      "evidence": {
+        "identity": "exact",
+        "source": "product_agent"
+      },
+      "price_evidence": {
+        "price": "699,00",
+        "currency": "EUR",
+        "confidence": 0.94,
+        "observed_at": "2026-05-04T10:00:00Z",
+        "availability": "available",
+        "product_name": "Fixture Product"
+      },
+      "capture_snapshot": {
+        "response_status": 200,
+        "final_url": "https://www.electronet.gr/product/handoff-1"
+      },
+      "raw_html": "<html><title>Fixture Product</title><span>699,00 EUR</span></html>"
+    }
+  ]
+}

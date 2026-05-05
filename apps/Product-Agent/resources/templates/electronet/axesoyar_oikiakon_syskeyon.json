@@ -1,0 +1,33 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "axesoyar_oikiakon_syskeyon_electronet_labels_v1",
+  "category_gr": "Αξεσουάρ Οικιακών Συσκευών",
+  "cta_map_key": "Αξεσουάρ Οικιακών Συσκευών",
+  "cta_url": "https://www.etranoulis.gr/oikiakes-syskeues/aksesouar-oikiakwn-syskeuwn",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakes-syskeues/aksesouar-oikiakwn-syskeuwn/set-leitoyrgeias-anakykloshs-aera-aporrofhthra-bosch-dsz4565",
+    "https://www.etranoulis.gr/oikiakes-syskeues/aksesouar-oikiakwn-syskeuwn/Metopi-prosopsis-aporrofhthra-Bosch-DSZ4685-Inox"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Eπίπεδα"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Πλάτος",
+        "Βάθος"
+      ]
+    }
+  ]
+}

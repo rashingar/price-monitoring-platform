@@ -1,0 +1,63 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "systimata_sideromatos_electronet_labels_v1",
+  "category_gr": "Συστήματα Σιδερώματος",
+  "cta_map_key": "Συστήματα Σιδερώματος",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/siderwma/systhmata-siderwmatos",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/siderwma/systhmata-siderwmatos/atmokatharisths-royxon-xeiros-bella-cucina-8013-2000w",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/siderwma/systhmata-siderwmatos/braun-gs3024bl-quickstyle-3-pro-systima-kathetou-atmou-1100w"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Τύπος Συσκευής",
+        "Συνεχές Γέμισμα Νερού",
+        "Ένδειξη",
+        "Ρύθμιση Θερμοκρασίας",
+        "Ρυθμιζόμενη Εκπομπή Ατμού",
+        "Χρόνος Προθέρμανσης σε sec",
+        "Κάθετη Εκπομπή Ατμού",
+        "Δυνατότητα Ψεκασμού",
+        "Λειτουργίες Κατά της Συγκέντρωσης Αλάτων",
+        "Λειτουργία Εξοικονόμησης Ενέργειας (Eco)",
+        "Αυτόματη Απενεργοποίηση",
+        "Διακοπή Σταξίματος",
+        "Χωρητικότητα Δοχείου Νερού Λίτρα",
+        "Αποσπώμενο Δοχείο Νερού",
+        "Άλλα Χαρακτηριστικά"
+      ]
+    },
+    {
+      "section": "Απόδοση",
+      "labels": [
+        "Πίεση Ατμού",
+        "Συνεχόμενη Παροχή Ατμού σε Γραμμάρια/Λεπτό",
+        "Βολή Ατμού σε Γραμμάρια",
+        "Συνολική Ισχύς (Watts)",
+        "Ισχύς Σίδερου Watts",
+        "Ισχύς Λέβητα σε Watts"
+      ]
+    },
+    {
+      "section": "Αποθήκευση και Μεταφορά",
+      "labels": [
+        "Κλείδωμα Μεταφοράς",
+        "Θέση Αποθήκευσης Καλωδίου Ρεύματος",
+        "Θέση Αποθήκευσης Καλωδίου Ατμού"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Σίδερου σε Κιλά",
+        "Βάρος Συσκευής σε Κιλά",
+        "Μήκος Καλωδίου Ρεύματος σε Εκατοστά",
+        "Μήκος Καλωδίου Ατμού σε Εκατοστά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

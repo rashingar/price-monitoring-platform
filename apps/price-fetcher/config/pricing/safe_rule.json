@@ -1,0 +1,9 @@
+{
+  "name": "safe_rule",
+  "rule_family": "fixed_offset_with_floor",
+  "rounding_mode": "nearest",
+  "parameters": {
+    "offset": -3,
+    "floor": 0
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "atmomageires_electronet_labels_v1",
+  "category_gr": "Ατμομάγειρες",
+  "cta_map_key": "Ατμομάγειρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/mikroi-mageires/atmomageires",
+  "electronet_examples": [
+    "https://www.electronet.gr/exoplismos-spitioy/mikroi-mageires/atmomageires/atmomageiras-braun-fs-3000wh-tributecollection-leyko"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Χωρητικότητα σε Λίτρα",
+        "Αριθμός Μπολ",
+        "Ισχύς σε Watts",
+        "Ενδεικτική Λυχνία Λειτουργίας",
+        "Χρονοδιακόπτης",
+        "Χωρητικότητα Δοχείου Νερού σε Λίτρα",
+        "Ένδειξη Στάθμης Νερού",
+        "Ενισχυτής Γεύσης",
+        "Αποθήκευση Καλωδίου",
+        "Υλικό Κατασκευής",
+        "Αποσπώμενα Μέρη που Πλένονται στο Πλυντήριο",
+        "Εξάρτηματα"
+      ]
+    },
+    {
+      "section": "Ασφάλεια",
+      "labels": [
+        "Προστασία από Βρασμό Χωρίς Νερό",
+        "Θερμομονωτικές Λαβές",
+        "Αντιολισθητική Βάση"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "pontikia_electronet_labels_v1",
+  "category_gr": "Ποντίκια",
+  "cta_map_key": "Ποντίκια",
+  "cta_url": "https://www.etranoulis.gr/plhroforikh/perifereiaka/pontikia",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/plhroforikh/perifereiaka/pontikia/ensyrmato-pontiki-kokkin-lamtech-lam021233"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Koυμπιά",
+        "Αισθητήρας"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "aggressive_rule",
+  "rule_family": "percentage_discount",
+  "rounding_mode": "nearest",
+  "parameters": {
+    "discount_percent": 8
+  }
+}

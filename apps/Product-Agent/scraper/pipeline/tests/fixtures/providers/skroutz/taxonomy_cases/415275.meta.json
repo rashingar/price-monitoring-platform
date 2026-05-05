@@ -1,0 +1,23 @@
+{
+  "model": "415275",
+  "source_url": "https://www.skroutz.gr/s/57369011/Toyotomi-Hydria-THMUSG416-3R32-Antlia-THermotitas-16kW-Trifasiki-60-C-Monoblock.html",
+  "final_url": "https://www.skroutz.gr/s/57369011/Toyotomi-Hydria-THMUSG416-3R32-Antlia-THermotitas-16kW-Trifasiki-60-C-Monoblock.html",
+  "name": "Toyotomi Hydria+ THMUSG416/3R32 ATW SG MONO – Αντλία Θερμότητας Αέρος/Νερού Monoblock 16 kW Τριφασική R32 ???????: 415275",
+  "manufacturer": "Toyotomi",
+  "category_tag_text": "Αντλίες Θερμότητας",
+  "category_tag_href": "https://www.skroutz.gr/c/5000/antlies-thermotitas.html",
+  "normalized_category_slug": "antlies thermotitas",
+  "has_besco_sections": false,
+  "detected_besco_section_count": 0,
+  "taxonomy_hint": "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ:::ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ///Αντλίες Θερμότητας",
+  "captured_at": "2026-03-21T11:36:13.882126+00:00",
+  "content_hash": "c5f074a93d04c937d96109188d72a338fcb06d5917c5061d818b3744b330312e",
+  "captured_live": false,
+  "family_key": "heat_pump",
+  "expected_parent_category": "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+  "expected_leaf_category": "Αντλίες Θερμότητας",
+  "expected_sub_category": "",
+  "expected_source_category": "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ:::ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ///Αντλίες Θερμότητας",
+  "expected_match_type": "exact_category",
+  "expected_rule_id": "heat_pump"
+}

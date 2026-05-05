@@ -1,0 +1,28 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "melania_electronet_labels_v1",
+  "category_gr": "Μελάνια",
+  "cta_map_key": "Μελάνια",
+  "cta_url": "https://www.etranoulis.gr/plhroforikh/ektypwtes-analwsima/melania",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/plhroforikh/ektypwtes-analwsima/melania/melani-hp-302-tri-color-f6u65ae",
+    "https://www.etranoulis.gr/plhroforikh/ektypwtes-analwsima/melania/melani-hp-302-f6u66ae"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Εκτιμώμενος Αριθμός Σελίδων Εκτύπωσης",
+        "Ποσότητα δοχείου",
+        "Για εκτυπωτές"
+      ]
+    }
+  ]
+}

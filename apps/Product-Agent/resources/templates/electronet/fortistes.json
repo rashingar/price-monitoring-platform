@@ -1,0 +1,28 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "fortistes_electronet_labels_v1",
+  "category_gr": "Φορτιστές",
+  "cta_map_key": "Φορτιστές",
+  "cta_url": "https://www.etranoulis.gr/thlefwnia/aksesouar-kinhtwn/fortistes",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/thlefwnia/aksesouar-kinhtwn/fortistes/fortisths-aytokinhtoy-osio-otu-5913w",
+    "https://www.etranoulis.gr/thlefwnia/aksesouar-kinhtwn/fortistes/fortisths-xoris-kalodio-power-delivery-lamtech"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Θύρες Εξόδου USB-C",
+        "Ένταση Ρεύματος Κύριας Θύρας (Max)",
+        "Ισχύς Φόρτισης"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "siderwma_accessories_consumables_electronet_labels_v1",
+  "category_gr": "Αξεσουάρ - Αναλώσιμα",
+  "cta_map_key": "Αξεσουάρ - Αναλώσιμα",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/siderwma/accessories-consumables",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/siderwma/accessories-consumables/stiroplus-sideropano-prestige",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/siderwma/accessories-consumables/pani-sideromatos-stiroplus-fiorella"
+  ],
+  "sections": [
+    {
+      "section": "Χαρακτηριστικά Μοντέλου",
+      "labels": [
+        "Κατασκευαστής",
+        "Μοντέλο"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Είδος"
+      ]
+    },
+    {
+      "section": "Διαστάσεις",
+      "labels": [
+        "Μήκος",
+        "Πλάτος"
+      ]
+    }
+  ]
+}

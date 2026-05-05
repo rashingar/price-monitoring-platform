@@ -1,0 +1,79 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "tablets_tandroid_electronet_labels_v1",
+  "category_gr": "Android",
+  "cta_map_key": "Android",
+  "cta_url": "https://www.etranoulis.gr/thlefwnia/tablets/tandroid",
+  "electronet_examples": [
+    "https://www.electronet.gr/pliroforiki/tablets/ola-ta-tablets/tablet-samsung-galaxy-tab-a11-11-128gb-wifi-gray",
+    "https://www.electronet.gr/pliroforiki/tablets/ola-ta-tablets/tablet-samsung-galaxy-tab-a9-87-64gb-wifi-graphite"
+  ],
+  "sections": [
+    {
+      "section": "Οθόνη",
+      "labels": [
+        "Διαγώνιος Οθόνης ( Ίντσες )",
+        "Τεχνολογία Οθόνης",
+        "Αριθμός Pixels",
+        "Ανάλυση Οθόνης"
+      ]
+    },
+    {
+      "section": "Επεξεργαστής",
+      "labels": [
+        "Μάρκα Επεξεργαστή",
+        "Ταχύτητα Επεξεργαστή (GHz)",
+        "Αριθμός Πυρήνων Επεξεργαστή"
+      ]
+    },
+    {
+      "section": "Μνήμη",
+      "labels": [
+        "Εσωτερική Μνήμη",
+        "Μνήμη Ram",
+        "Επεκτάσιμη Εξωτερική Μνήμη"
+      ]
+    },
+    {
+      "section": "Λειτουργικό",
+      "labels": [
+        "Λειτουργικό"
+      ]
+    },
+    {
+      "section": "Camera",
+      "labels": [
+        "Camera Οπίσθια",
+        "Camera Εμπρόσθια"
+      ]
+    },
+    {
+      "section": "Συνδεσιμότητα",
+      "labels": [
+        "3G",
+        "4G",
+        "5G",
+        "Wi - Fi",
+        "Bluetooth",
+        "GPS",
+        "Micro USB",
+        "USB Type C",
+        "USB 2.0",
+        "Micro HDMI",
+        "Λειτουργία Τηλεφώνου",
+        "Dual SIM"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Μπαταρία",
+        "Επιπλέον Εξοπλισμός",
+        "Βάρος Συσκευής σε Κιλά",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ],
+  "fingerprint": "247a8e6ed5873b2fd326f36d4e8251c304a909f6f6fc25c400a5bbf0aaefed90"
+}

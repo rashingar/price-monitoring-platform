@@ -1,0 +1,48 @@
+{
+  "$schema": "../label_set.schema.json",
+  "id": "vrastires_electronet_labels_v1",
+  "category_gr": "Βραστήρες",
+  "cta_map_key": "Βραστήρες",
+  "cta_url": "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/vrasthres",
+  "electronet_examples": [
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/vrasthres/vrasthras-bosch-TWK7L460-inox-2440W",
+    "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/vrasthres/kettle-rohnson-r7026-17-lt-black"
+  ],
+  "sections": [
+    {
+      "section": "Επισκόπηση Προϊόντος",
+      "labels": [
+        "Χωρητικότητα σε Λίτρα",
+        "Ισχύς σε Watts",
+        "Αποσπώμενη Βάση",
+        "Βάση 360 Μοιρών",
+        "Φίλτρο Νερού",
+        "Άνοιγμα του Καπακιού με το Πάτημα ενός Κουμπιού",
+        "Καλυμμένη Αντίσταση",
+        "Υλικό Κατασκευής",
+        "Αποθήκευση Καλωδίου"
+      ]
+    },
+    {
+      "section": "Λειτουργίες - Ενδείξεις",
+      "labels": [
+        "Ένδειξη Στάθμης Νερού",
+        "Ένδειξη Λειτουργίας",
+        "Ηχητικό Σήμα Ειδοποίησης",
+        "Επιλογές Θερμοκρασίας Βρασμού",
+        "Λειτουργία Διατήρησης Θερμοκρασίας",
+        "Αυτόματος Τερματισμός Λειτουργίας",
+        "Προστασία από Βρασμό Χωρίς Νερό"
+      ]
+    },
+    {
+      "section": "Γενικά Χαρακτηριστικά",
+      "labels": [
+        "Χρώμα",
+        "Βάρος Συσκευής σε Κιλά",
+        "Διαστάσεις Συσκευής σε Εκατοστά. (Υ χ Π χ Β)",
+        "Εγγύηση Κατασκευαστή"
+      ]
+    }
+  ]
+}
