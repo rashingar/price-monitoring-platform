@@ -10,12 +10,15 @@ web, or any other service.
 
 ## Start The API
 
-Run from `apps/product-factory-api/src` and use the repo virtual environment:
+Run this from the repo root through the root script after installing Product
+Factory into the root virtual environment:
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pipeline.dev.start --host 127.0.0.1 --port 8000 --reload
+.\scripts\dev\product-factory-api.ps1
 ```
+
+The installed `product-factory-api` console script resolves to
+`pipeline.dev.start:main`.
 
 Check the service:
 
@@ -42,16 +45,16 @@ docs/contracts/openapi.product-agent.json
 
 Route implementations live in `src/pipeline/api/routes_*.py`. Public request and response shapes live in `src/pipeline/api/schemas.py`.
 
-Regenerate the OpenAPI snapshot from `apps/product-factory-api/src` after intentional route or schema changes:
+Regenerate the OpenAPI snapshot from `apps/product-factory-api` after intentional route or schema changes:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
+..\..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
 ```
 
-Run contract tests from `apps/product-factory-api/src`:
+Run contract tests from `apps/product-factory-api`:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pytest -q -m contract
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m contract
 ```
 
 Snapshot diffs should be explained in commit notes. Contract coverage includes health, jobs, filters, filter review, authoring, and settings routes. Contract tests do not run full prepare/render/publish workflows.

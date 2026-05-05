@@ -1,12 +1,13 @@
 # Testing Runbook
 
-Run tests from `apps/product-factory-api/src` and always use the repo virtual environment. Do not use bare `python`, `py`, or a global interpreter.
+Run tests with the root virtual environment after installing Product Factory
+editable support. Do not use bare `python`, `py`, a global interpreter, or an
+app-local virtual environment.
 
 ## Fast Codex/local check
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q -m "not slow and not external and not legacy and not e2e"
+.\scripts\test\product-factory-api.ps1
 ```
 
 Use this as the default Codex commit check. It runs unit tests, contract tests, and small isolated stage tests without full workflow e2e, live scraping, browser automation against live pages, OpenCart, OpenAI, credentials, or long subprocess workflows.
@@ -14,23 +15,23 @@ Use this as the default Codex commit check. It runs unit tests, contract tests, 
 ## Contract-only
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q -m contract
+cd apps/product-factory-api
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m contract
 ```
 
 Use this when changing Product-Agent API routes, public response schemas, runtime service contracts, or deterministic artifact shapes. The backend OpenAPI snapshot is canonical for the Product-Agent API and lives at `docs/contracts/openapi.product-agent.json`.
 
-Regenerate the OpenAPI snapshot from `apps/product-factory-api/src` after intentional backend API changes:
+Regenerate the OpenAPI snapshot from `apps/product-factory-api` after intentional backend API changes:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
+..\..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
 ```
 
 ## Smoke-only
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q -m smoke
+cd apps/product-factory-api
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m smoke
 ```
 
 Smoke tests cover fast local API behavior through TestClient and temporary stores. They do not require the UI, OpenCart, OpenAI, live websites, PostgreSQL, credentials, browser automation, or browser execution.
@@ -38,8 +39,8 @@ Smoke tests cover fast local API behavior through TestClient and temporary store
 ## Full local suite
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q
+cd apps/product-factory-api
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini
 ```
 
 Run this before larger merges or when changing shared runtime behavior that could affect slow regressions.
@@ -47,8 +48,8 @@ Run this before larger merges or when changing shared runtime behavior that coul
 ## Integration-only
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q -m "integration"
+cd apps/product-factory-api
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "integration"
 ```
 
 Use this for local filesystem/subprocess behavior, job child-process handling, and fixture workflows that are intentionally outside the default fast check.
@@ -56,10 +57,10 @@ Use this for local filesystem/subprocess behavior, job child-process handling, a
 ## Stage-only examples
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q -m "filters"
-..\.venv\Scripts\python.exe -m pytest -q -m "render"
-..\.venv\Scripts\python.exe -m pytest -q -m "job_lifecycle"
+cd apps/product-factory-api
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "filters"
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "render"
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "job_lifecycle"
 ```
 
 Run affected-stage tests during development:
@@ -75,8 +76,8 @@ Run affected-stage tests during development:
 Filters Manager persistence changes should run both contract and filters selections:
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q -m "filters or contract"
+cd apps/product-factory-api
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "filters or contract"
 ```
 
 The Filters Manager uses locked JSON persistence and returns a revision token. New clients can pass `expected_revision` on write requests; stale revisions return `409 Conflict`, while omitted revisions remain backward-compatible for current clients.
@@ -84,10 +85,12 @@ The Filters Manager uses locked JSON persistence and returns a revision token. N
 ## Slow/external/e2e
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q -m "slow or external or e2e"
+cd apps/product-factory-api
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "slow or external or e2e"
 ```
 
 Run this when validating broad workflow behavior, long taxonomy regressions, or any test intentionally excluded from the default fast profile. The default Codex check should not run full prepare/render/publish e2e.
 
-All commands in this runbook must use `..\.venv\Scripts\python.exe` from `apps/product-factory-api/src`; do not use bare `python`, `py`, or a global interpreter.
+All commands in this runbook must use the root `.venv\Scripts\python.exe`;
+root scripts expect Product Factory to be installed editable with
+`.\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps`.

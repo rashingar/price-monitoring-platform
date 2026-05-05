@@ -27,6 +27,7 @@ Run these from the repository root in PowerShell:
 ```powershell
 py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
+.\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
 .\.venv\Scripts\python.exe -m pip install -r apps\ecommerce-api\requirements-lock.txt
 .\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
 Push-Location apps\web
@@ -93,13 +94,17 @@ Install only the backend dependencies you need:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
+.\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
 .\.venv\Scripts\python.exe -m pip install -r apps\ecommerce-api\requirements-lock.txt
 .\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
 ```
 
-Product Factory uses the `pipeline` package under
-`apps/product-factory-api/src`. Ecommerce API uses the `ecommerce` package under
-`apps/ecommerce-api/src`.
+Product Factory app name is `product-factory-api`. Its Python project
+package/install name is `product-factory`, and its internal import package
+remains `pipeline` under `apps/product-factory-api/src`; this does not rename
+`pipeline`. Ecommerce API uses the `ecommerce` package under
+`apps/ecommerce-api/src`. Root scripts expect the root `.venv` and do not use
+app-local virtual environments.
 
 ## Frontend Dependency Setup
 

@@ -8,7 +8,8 @@ filters, prepares the small LLM-owned copy fields, renders deterministic
 product HTML, validates the candidate output, and can hand the final CSV/images
 to the repo OpenCart publishing tools.
 
-The internal Python package remains `pipeline` during this staged migration.
+The Python project/install name is `product-factory`. The internal Python
+package remains `pipeline` during this staged migration.
 
 The project is intentionally repo-local. Runtime code, shared product data, generated workspaces, and final deliverables are kept in separate directories so generated output does not become source material.
 
@@ -26,17 +27,25 @@ See `docs/runbooks/repo-layout.md` for the repo layout rules.
 
 ## Setup
 
-Use the repo virtual environment for all Python commands after it exists. Pipeline commands, tests, helper scripts, and dependency checks must run through `.venv`; do not use bare `python`, `py`, or a global interpreter for this repo.
+Use the repo virtual environment for all Python commands after it exists.
+Pipeline commands, tests, helper scripts, and dependency checks must run through
+the root `.venv`; do not use bare `python`, `py`, a global interpreter, or an
+app-local virtual environment for this repo.
 
 From repo root on Windows:
 
 ```powershell
 py -3.13 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-lock.txt
+.\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
+.\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
 .\.venv\Scripts\python.exe -m playwright install chromium
 ```
 
-`requirements.txt` is the direct dependency list. `requirements-lock.txt` is the pinned install input and should change only when dependencies intentionally change.
+`pyproject.toml` provides minimal setuptools package metadata, src-layout
+package discovery, and the `product-factory-api` console script. Dependencies
+are still installed from `requirements.txt` for now. `requirements-lock.txt` is
+the pinned dependency record and should change only when dependencies
+intentionally change.
 
 Optional local configuration:
 
@@ -46,11 +55,18 @@ Optional local configuration:
 
 ## Local API
 
-The local backend is a FastAPI app under `src/pipeline/api`. Start it from `apps/product-factory-api/src`:
+The local backend is a FastAPI app under `src/pipeline/api`. Start it through
+the root script after the editable install:
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pipeline.dev.start --host 127.0.0.1 --port 8000 --reload
+.\scripts\dev\product-factory-api.ps1
+```
+
+The installed console script points to `pipeline.dev.start:main`, so the direct
+equivalent is:
+
+```powershell
+.\.venv\Scripts\product-factory-api.exe --host 127.0.0.1 --port 8000 --reload
 ```
 
 Useful local URLs:
@@ -63,11 +79,10 @@ API endpoints, request/response contracts, snapshot rules, and contract test com
 
 ## Development Checks
 
-Run tests from `apps/product-factory-api/src` with the repo virtual environment:
+Run tests through the root script with the repo virtual environment:
 
 ```powershell
-cd apps/product-factory-api/src
-..\.venv\Scripts\python.exe -m pytest -q
+.\scripts\test\product-factory-api.ps1
 ```
 
 For faster targeted checks, see `docs/runbooks/testing.md`.

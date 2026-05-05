@@ -226,8 +226,11 @@ Root scripts coordinate development and test commands while preserving app
 boundaries. Python root scripts use the monorepo virtual environment at
 `.venv/`; on Windows they call `.venv\Scripts\python.exe` and fail clearly when
 it is missing. Dependency setup remains app-aware and manual for now. Product
-Factory packaging is not normalized yet. Ecommerce API uses the internal
-package name `ecommerce`.
+Factory now has minimal setuptools package metadata and editable install
+support as Python project `product-factory`, while requirements files remain
+the dependency install inputs. Its internal package remains `pipeline`.
+Ecommerce API uses the internal package name `ecommerce`. There is still no
+unified monorepo Python lockfile.
 
 Secrets and environment files should not be centralized until the operational
 model is clear. Generated runtime outputs, generated `products/` folders, raw
@@ -272,7 +275,8 @@ Phase 1 through Phase 4 are complete in the current layout:
 - `apps/product-factory-api/src`
 
 The dedicated Ecommerce API package rename has been completed. Product Factory
-still owns its `pipeline` package.
+still owns its `pipeline` package and now has minimal package metadata for
+editable installs.
 
 ## Explicit Non-Goals
 

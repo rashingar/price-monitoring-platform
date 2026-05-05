@@ -16,28 +16,28 @@ work/{model}/integrations/ecommerce_source_handoff.json
 
 See `docs/contracts/ecommerce-api-source-handoff.md`. Product-Agent writes this artifact; ecommerce-api owns importing it and persisting any database records.
 
-Regenerate from `apps/product-factory-api/src`:
+Regenerate from `apps/product-factory-api`:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
+..\..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
 ```
 
-Run contract tests from `apps/product-factory-api/src`:
+Run contract tests from `apps/product-factory-api`:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pytest -q -m contract
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m contract
 ```
 
-Fast local check from `apps/product-factory-api/src`:
+Fast local check from repo root:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pytest -q -m "not slow and not external and not legacy and not e2e"
+.\scripts\test\product-factory-api.ps1
 ```
 
-Full suite from `apps/product-factory-api/src`:
+Full suite from `apps/product-factory-api`:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pytest -q
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini
 ```
 
 Snapshot diffs should be explained in commit output. There is no separate manual approval gate; the contract change is made explicit by the snapshot diff, backend tests, and commit notes.

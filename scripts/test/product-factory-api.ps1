@@ -5,11 +5,57 @@ $appRoot = Join-Path $repoRoot "apps\product-factory-api"
 $srcRoot = Join-Path $appRoot "src"
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 
+function Write-ProductFactorySetupInstructions {
+    Write-Host "Install Product Factory into the root virtual environment with:"
+    Write-Host ".\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt"
+    Write-Host ".\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps"
+}
+
 if (-not (Test-Path -LiteralPath $python)) {
     Write-Error "Missing root virtual environment Python: $python. Create the monorepo virtual environment from the repository root with: py -3.13 -m venv .venv"
     exit 1
 }
 
-Set-Location $srcRoot
-& $python -m pytest -vv -ra -m "not external and not e2e and not slow"
+$checkCode = @'
+from importlib import metadata
+import sys
+
+try:
+    dist = metadata.distribution("product-factory")
+except metadata.PackageNotFoundError:
+    print("Product Factory editable install is missing: distribution 'product-factory' is not installed.", file=sys.stderr)
+    sys.exit(10)
+
+try:
+    import pipeline
+    import pipeline.dev.start
+except ImportError as exc:
+    print(f"Product Factory import check failed: {exc}", file=sys.stderr)
+    sys.exit(11)
+
+matches = [
+    entry_point
+    for entry_point in dist.entry_points
+    if entry_point.group == "console_scripts" and entry_point.name == "product-factory-api"
+]
+if not matches:
+    print("Product Factory console script metadata is missing: product-factory-api.", file=sys.stderr)
+    sys.exit(12)
+if matches[0].value != "pipeline.dev.start:main":
+    print(
+        "Product Factory console script target is unexpected: "
+        f"{matches[0].value!r}; expected 'pipeline.dev.start:main'.",
+        file=sys.stderr,
+    )
+    sys.exit(13)
+'@
+
+& $python -c $checkCode
+if ($LASTEXITCODE -ne 0) {
+    Write-ProductFactorySetupInstructions
+    exit $LASTEXITCODE
+}
+
+Set-Location $appRoot
+& $python -m pytest -vv -ra -c (Join-Path $srcRoot "pytest.ini") -m "not external and not e2e and not slow"
 exit $LASTEXITCODE

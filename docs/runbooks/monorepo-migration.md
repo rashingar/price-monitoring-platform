@@ -78,10 +78,14 @@ the current layout.
   ```
 
 - Install dependencies into the root `.venv` manually from the app-specific
-  dependency files needed for the current task. Do not merge Python dependency
-  files or introduce a new monorepo lockfile during stabilization.
-- Product Factory packaging is not normalized yet; the internal package remains
-  `pipeline` under `apps/product-factory-api/src`.
+  dependency files needed for the current task. Product Factory dependencies
+  still install from `apps/product-factory-api/requirements.txt` and can then be
+  installed editable with `pip install -e apps/product-factory-api --no-deps`.
+  Do not merge Python dependency files or introduce a new monorepo lockfile
+  during stabilization.
+- Product Factory now has minimal setuptools package metadata as Python project
+  `product-factory`; the internal package remains `pipeline` under
+  `apps/product-factory-api/src`.
 - Ecommerce API uses the internal package `ecommerce` under
   `apps/ecommerce-api/src`.
 - Root scripts should fail clearly when the root `.venv` is missing and should
