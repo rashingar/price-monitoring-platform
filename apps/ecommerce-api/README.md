@@ -155,6 +155,9 @@ ALTER ROLE ecommerce WITH PASSWORD 'ecommerce';
 If the previous role or database does not exist, use the fresh setup above to
 create `ecommerce` directly.
 
+For backup commands, session cleanup, rename steps, and fresh setup details,
+see [Ecommerce PostgreSQL Local Setup](../../docs/runbooks/ecommerce-postgresql-local.md).
+
 Verify configuration, apply migrations, import the active catalog, and verify
 again:
 

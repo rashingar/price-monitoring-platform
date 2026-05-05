@@ -1,64 +1,209 @@
 # Price Monitoring Platform
 
-Price Monitoring Platform is a monorepo for product creation, ecommerce catalog
-and price monitoring, and the operator console that coordinates those workflows.
+Price Monitoring Platform is a local operator platform for creating product
+content, managing an ecommerce catalog, monitoring competitor prices, and
+reviewing/exporting updates through a browser UI.
 
-## Apps
+The active commerce backend is the Ecommerce API. No legacy Ecommerce backend
+naming should exist in active code, docs, scripts, tests, or paths.
 
-Current app folders:
+## App Map
 
-- `apps/product-factory-api`: Product Factory backend runtime.
-- `apps/ecommerce-api`: Ecommerce catalog and monitoring backend runtime.
-- `apps/web`: React/Vite/TypeScript operator console frontend.
+- `apps/product-factory-api`: Product Factory backend for product preparation,
+  capture, authoring, rendering, and OpenCart-ready product exports.
+- `apps/ecommerce-api`: Ecommerce API backend for catalog import, source URLs,
+  source capture, price monitoring, alerts, review, exports, and database
+  migrations.
+- `apps/web`: React/Vite operator console. Browser routes `/api` and
+  `/commerce-api` are intentionally stable.
 
-These are separate runtimes. The monorepo coordinates source code,
-documentation, scripts, and contracts, but the two Python APIs are not merged
-and the web app remains UI-only.
+The two Python APIs are separate runtimes. Do not merge Product Factory and
+Ecommerce API code or databases as part of local setup.
 
-`apps/product-factory-api/src` contains the old Product-Agent Python pipeline.
-The internal Python package remains `pipeline`.
+## First Run After Clone
 
-`apps/ecommerce-api` owns ecommerce catalog, source URL, source capture, price
-monitoring, review/export, alert, and database migration workflows. Its
-internal Python package is `src/ecommerce`.
+Run these from the repository root in PowerShell:
 
-## Architecture
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r apps\ecommerce-api\requirements-lock.txt
+.\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
+Push-Location apps\web
+npm ci
+Pop-Location
+```
 
-- [Target architecture](docs/architecture/target-architecture.md)
-- [0001: Monorepo with Separate Apps](docs/decisions/0001-monorepo-with-separate-apps.md)
-- [0002: App Naming and Domain Boundaries](docs/decisions/0002-app-naming-and-domain-boundaries.md)
-- [0003: Database Ownership](docs/decisions/0003-database-ownership.md)
-- [0004: Staged Package Renames](docs/decisions/0004-staged-package-renames.md)
-- [0005: Contracts-First Integration](docs/decisions/0005-contracts-first-integration.md)
-- [Monorepo migration runbook](docs/runbooks/monorepo-migration.md)
+Then configure PostgreSQL for Ecommerce API, apply migrations, and import the
+catalog:
 
-## Migration Status
+```powershell
+$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m alembic upgrade head
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.ingest_catalog
+Pop-Location
+```
 
-The mechanical app folder migration is complete. Root helper scripts live under
-`scripts/`, and mirrored OpenAPI snapshots live under `packages/contracts`.
-Generated clients, Dockerization, worker changes, database ownership changes,
-and Product Factory package renames remain out of scope for this migration.
+Start the apps in separate PowerShell terminals:
 
-## Local Setup
+```powershell
+.\scripts\dev\product-factory-api.ps1
+.\scripts\dev\ecommerce-api.ps1
+.\scripts\dev\web.ps1
+```
 
-Python tooling uses one monorepo virtual environment at the repository root:
+## Quick Start Checklist
+
+1. Create the root `.venv`.
+2. Install backend dependencies into the root `.venv`.
+3. Run `npm ci` in `apps/web`.
+4. Create or rename the local PostgreSQL database/user to `ecommerce`.
+5. Set `ECOMMERCE_DATABASE_URL`.
+6. Run Ecommerce API migrations.
+7. Import the catalog.
+8. Start Product Factory API.
+9. Start Ecommerce API.
+10. Start the web app and open the local UI.
+
+## Local Prerequisites
+
+- Windows PowerShell.
+- Python 3.11 or newer; current scripts document `py -3.13`.
+- Native Windows PostgreSQL with `psql` on `PATH`.
+- Node.js/npm for the web app.
+- Playwright Chromium if you run browser-backed backend workflows.
+
+Docker is not required for the current local setup.
+
+## Root Virtual Environment Setup
+
+Root scripts use one repository-level Python environment:
 
 ```powershell
 py -3.13 -m venv .venv
 ```
 
-Install Python dependencies into that root `.venv` from the app-specific
-requirements files you need. Dependency setup is still app-aware and manual for
-now; there is no unified Python package layout or monorepo lockfile yet.
-Product Factory still keeps the internal `pipeline` package under
-`apps/product-factory-api/src`, and ecommerce-api still keeps the internal
-`ecommerce` package under `apps/ecommerce-api/src`.
+The scripts call `.venv\Scripts\python.exe` and fail clearly when it is
+missing. They do not install dependencies automatically.
 
-Root scripts fail clearly when `.venv\Scripts\python.exe` is missing. Web
-scripts run from `apps/web` and fail clearly when `node_modules` is missing;
-use `npm ci` in `apps/web` to install frontend dependencies.
+## Python Dependency Setup
 
-Generated runtime outputs stay out of Git, including `work/`, `output/`,
-`runs/`, `logs/`, and `products/`. Raw scraped marketplace, vendor, or provider
-HTML captures must not be committed; future examples should be sanitized under
-`docs/examples` or `tests/fixtures`, not under generated output folders.
+Install only the backend dependencies you need:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r apps\ecommerce-api\requirements-lock.txt
+.\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
+```
+
+Product Factory uses the `pipeline` package under
+`apps/product-factory-api/src`. Ecommerce API uses the `ecommerce` package under
+`apps/ecommerce-api/src`.
+
+## Frontend Dependency Setup
+
+Install web dependencies from the web app folder:
+
+```powershell
+Push-Location apps\web
+npm ci
+Pop-Location
+```
+
+Web scripts run from `apps/web` and fail clearly when `node_modules` is
+missing.
+
+## PostgreSQL Setup Or Rename
+
+Ecommerce API uses PostgreSQL for catalog and price monitoring workflows.
+
+Fresh local setup:
+
+```sql
+CREATE USER ecommerce WITH PASSWORD 'ecommerce';
+CREATE DATABASE ecommerce OWNER ecommerce;
+GRANT ALL PRIVILEGES ON DATABASE ecommerce TO ecommerce;
+```
+
+PowerShell environment variable:
+
+```powershell
+$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
+```
+
+For a detailed backup, local database rename, and fresh-create runbook, see
+[Ecommerce PostgreSQL Local Setup](docs/runbooks/ecommerce-postgresql-local.md).
+
+## Start Commands
+
+Run each app in a separate PowerShell terminal:
+
+```powershell
+.\scripts\dev\product-factory-api.ps1
+.\scripts\dev\ecommerce-api.ps1
+.\scripts\dev\web.ps1
+```
+
+The backend scripts use the root `.venv`. The web script uses `apps/web`.
+
+## Test Commands
+
+Run app tests through the root scripts:
+
+```powershell
+.\scripts\test\product-factory-api.ps1
+.\scripts\test\ecommerce-api.ps1
+.\scripts\test\web.ps1
+.\scripts\test\fast.ps1
+.\scripts\contracts\check.ps1
+```
+
+The test scripts use verbose output. They should not run live external scraping
+tests by default.
+
+## Local URLs
+
+- Web app: `http://127.0.0.1:5173`
+- Product Factory API health: `http://127.0.0.1:8000/api/health`
+- Ecommerce API health: `http://127.0.0.1:8001/api/health`
+- Ecommerce API docs: `http://127.0.0.1:8001/docs`
+- Ecommerce database status:
+  `http://127.0.0.1:8001/api/price-monitoring/db/status`
+
+## Generated And Ignored Folders
+
+Generated runtime outputs stay out of Git:
+
+- `.venv/`
+- `node_modules/`
+- `work/`
+- `output/`
+- `runs/`
+- `logs/`
+- `products/`
+- `__pycache__/`
+- `.pytest_cache/`
+
+Ecommerce generated outputs use `output/ecommerce/...` by default.
+
+## Safety Notes
+
+- Do not commit `.env`, `.secrets`, credentials, tokens, or local secrets.
+- Do not commit database files, dumps, or backups.
+- Do not commit raw provider HTML captures.
+- Do not commit generated product folders or runtime output folders.
+- Use `.env.example` files only as safe templates.
+- Keep real local credentials in private environment variables or private
+  ignored `.env` files.
+
+## Architecture And Runbooks
+
+- [Target Architecture](docs/architecture/target-architecture.md)
+- [Monorepo Migration Runbook](docs/runbooks/monorepo-migration.md)
+- [Ecommerce PostgreSQL Local Setup](docs/runbooks/ecommerce-postgresql-local.md)
+- [App Naming and Domain Boundaries](docs/decisions/0002-app-naming-and-domain-boundaries.md)
+- [Contracts-First Integration](docs/decisions/0005-contracts-first-integration.md)
+
+The active backend name is Ecommerce API. Do not introduce compatibility aliases
+or old Ecommerce backend names in code, scripts, docs, tests, or filenames.

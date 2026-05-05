@@ -98,6 +98,8 @@ the current layout.
 - Verify web development startup against both backend API routes.
 - Verify contract snapshots and fixtures.
 - Record known gaps before refactors start.
+- Use [Ecommerce PostgreSQL Local Setup](ecommerce-postgresql-local.md) for
+  local database backup, rename, and fresh setup steps.
 
 ## Phase 6: Intentional Refactors
 
