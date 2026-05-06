@@ -1,3 +1,31 @@
+import type { components as ProductFactoryOpenApi } from "./generated/productFactory";
+
+type ProductFactorySchema<Name extends keyof ProductFactoryOpenApi["schemas"]> =
+  ProductFactoryOpenApi["schemas"][Name];
+type AssertAssignable<Actual extends Expected, Expected> = true;
+
+export type ProductFactoryContractHealthResponse = ProductFactorySchema<"HealthResponse">;
+export type ProductFactoryContractJobResponse = ProductFactorySchema<"JobResponse">;
+export type ProductFactoryContractAuthoringStatusResponse =
+  ProductFactorySchema<"AuthoringStatusResponse">;
+export type ProductFactoryContractFilterCategoryListItem =
+  ProductFactorySchema<"FilterCategoryListItem">;
+export type ProductFactoryContractFilterCategoryResponse =
+  ProductFactorySchema<"FilterCategoryResponse">;
+export type ProductFactoryContractPrepareJobRequest =
+  ProductFactorySchema<"PrepareJobRequest">;
+export type ProductFactoryContractRenderJobRequest = ProductFactorySchema<"RenderJobRequest">;
+export type ProductFactoryContractPublishJobRequest = ProductFactorySchema<"PublishJobRequest">;
+export type ProductFactoryContractStopJobRequest = ProductFactorySchema<"StopJobRequest">;
+export type ProductFactoryContractAddFilterGroupRequest =
+  ProductFactorySchema<"AddFilterGroupRequest">;
+export type ProductFactoryContractUpdateFilterGroupRequest =
+  ProductFactorySchema<"UpdateFilterGroupRequest">;
+export type ProductFactoryContractAddFilterValueRequest =
+  ProductFactorySchema<"AddFilterValueRequest">;
+export type ProductFactoryContractUpdateFilterValueRequest =
+  ProductFactorySchema<"UpdateFilterValueRequest">;
+
 export type JobStatus = string;
 
 export type WorkflowType = "prepare" | "render" | "publish";
@@ -301,3 +329,16 @@ export interface FilterManagerStatusResponse {
   revision?: string | null;
   [key: string]: unknown;
 }
+
+type _ProductFactoryGeneratedContractChecks = [
+  AssertAssignable<HealthResponse, ProductFactoryContractHealthResponse>,
+  AssertAssignable<ProductFactoryContractFilterCategoryListItem, FilterCategoryListItem>,
+  AssertAssignable<ProductFactoryContractFilterCategoryResponse, FilterCategoryDetail>,
+  AssertAssignable<RenderJobRequest, ProductFactoryContractRenderJobRequest>,
+  AssertAssignable<PublishJobRequest, ProductFactoryContractPublishJobRequest>,
+  AssertAssignable<StopJobRequest, ProductFactoryContractStopJobRequest>,
+  AssertAssignable<AddFilterGroupRequest, ProductFactoryContractAddFilterGroupRequest>,
+  AssertAssignable<UpdateFilterGroupRequest, ProductFactoryContractUpdateFilterGroupRequest>,
+  AssertAssignable<AddFilterValueRequest, ProductFactoryContractAddFilterValueRequest>,
+  AssertAssignable<UpdateFilterValueRequest, ProductFactoryContractUpdateFilterValueRequest>,
+];

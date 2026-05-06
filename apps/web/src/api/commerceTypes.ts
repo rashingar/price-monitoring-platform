@@ -1,3 +1,38 @@
+import type { components as EcommerceOpenApi } from "./generated/ecommerce";
+
+type EcommerceSchema<Name extends keyof EcommerceOpenApi["schemas"]> =
+  EcommerceOpenApi["schemas"][Name];
+type AssertAssignable<Actual extends Expected, Expected> = true;
+
+export type EcommerceContractAlertRuleCreateRequest =
+  EcommerceSchema<"AlertRuleCreateRequest">;
+export type EcommerceContractAlertRuleUpdateRequest =
+  EcommerceSchema<"AlertRuleUpdateRequest">;
+export type EcommerceContractBridgeRunRequest = EcommerceSchema<"BridgeRunRequest">;
+export type EcommerceContractCsvReadRequest = EcommerceSchema<"CsvReadRequest">;
+export type EcommerceContractCsvSaveRequest = EcommerceSchema<"CsvSaveRequest">;
+export type EcommerceContractCsvSaveCopyRequest = EcommerceSchema<"CsvSaveCopyRequest">;
+export type EcommerceContractPriceMonitoringFetchRequest =
+  EcommerceSchema<"PriceMonitoringFetchApiRequest">;
+export type EcommerceContractPriceMonitoringFetchCancelRequest =
+  EcommerceSchema<"PriceMonitoringFetchCancelApiRequest">;
+export type EcommerceContractPriceMonitoringSelectionRequest =
+  EcommerceSchema<"PriceMonitoringSelectionApiRequest">;
+export type EcommerceContractPriceReviewActionsRequest =
+  EcommerceSchema<"PriceReviewActionsApiRequest">;
+export type EcommerceContractPriceUpdateExportRequest =
+  EcommerceSchema<"PriceUpdateExportApiRequest">;
+export type EcommerceContractSourceUrlCreateRequest =
+  EcommerceSchema<"SourceUrlCreateRequest">;
+export type EcommerceContractSourceUrlUpdateRequest =
+  EcommerceSchema<"SourceUrlUpdateRequest">;
+export type EcommerceContractSourceUrlCandidateReviewRequest =
+  EcommerceSchema<"SourceUrlCandidateReviewRequest">;
+export type EcommerceContractSourceUrlImportRequest =
+  EcommerceSchema<"SourceUrlImportRequest">;
+export type EcommerceContractProductAgentHandoffImportRequest =
+  EcommerceSchema<"ProductAgentHandoffImportRequest">;
+
 export type MarketplaceFilter = "all" | "bestprice" | "skroutz" | "both" | "none";
 
 export type MarketplaceMonitoringSource = "skroutz" | "bestprice";
@@ -1168,3 +1203,21 @@ export interface PathRootsResponse {
   path_separator?: string | null;
   platform?: string | null;
 }
+
+type _EcommerceGeneratedContractChecks = [
+  AssertAssignable<SourceUrlCreateBody, EcommerceContractSourceUrlCreateRequest>,
+  AssertAssignable<SourceUrlUpdateBody, EcommerceContractSourceUrlUpdateRequest>,
+  AssertAssignable<SourceUrlCandidateReviewBody, EcommerceContractSourceUrlCandidateReviewRequest>,
+  AssertAssignable<PriceMonitoringSelectionBody, EcommerceContractPriceMonitoringSelectionRequest>,
+  AssertAssignable<FetchPriceMonitoringBody, EcommerceContractPriceMonitoringFetchRequest>,
+  AssertAssignable<CancelPriceMonitoringFetchBody, EcommerceContractPriceMonitoringFetchCancelRequest>,
+  AssertAssignable<CreateAlertRuleBody, EcommerceContractAlertRuleCreateRequest>,
+  AssertAssignable<UpdateAlertRuleBody, EcommerceContractAlertRuleUpdateRequest>,
+  AssertAssignable<PriceMonitoringReviewAction, EcommerceSchema<"PriceActionApiInput">>,
+  AssertAssignable<ApplyPriceMonitoringReviewActionsBody, EcommerceContractPriceReviewActionsRequest>,
+  AssertAssignable<ExportPriceMonitoringPriceUpdateBody, EcommerceContractPriceUpdateExportRequest>,
+  AssertAssignable<ReadCsvFileBody, EcommerceContractCsvReadRequest>,
+  AssertAssignable<SaveCsvFileBody, EcommerceContractCsvSaveRequest>,
+  AssertAssignable<SaveCsvCopyBody, EcommerceContractCsvSaveCopyRequest>,
+  AssertAssignable<BridgeRunBody, EcommerceContractBridgeRunRequest>,
+];

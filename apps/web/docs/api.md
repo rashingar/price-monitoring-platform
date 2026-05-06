@@ -22,7 +22,10 @@ The generated files in `src/api/generated` are refreshed from mirrored OpenAPI
 contracts with `.\scripts\contracts\generate-web-types.ps1` from the repository
 root and checked with `.\scripts\contracts\check-web-types.ps1`. They are
 committed source-facing contract artifacts and should not be manually edited.
-The manual clients listed above remain the runtime clients for now.
+Selected aliases in `src/api/types.ts` and `src/api/commerceTypes.ts` consume
+generated schema types for compile-time drift checks. The manual clients listed
+above remain the runtime clients for now, and generated clients are not used for
+fetch behavior.
 
 ## Product Factory API
 

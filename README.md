@@ -205,7 +205,9 @@ Web API type scaffolding is generated from those mirrors into
 
 The generated web API type files are committed source-facing contract artifacts
 and should not be edited by hand. The existing manual web clients remain the
-runtime source of truth for now.
+runtime source of truth for now. Selected web type aliases consume generated
+OpenAPI schema types for compile-time drift checks, but generated clients are
+not used for fetch behavior.
 
 ## Local URLs
 
