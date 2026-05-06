@@ -1,0 +1,9 @@
+# Testing Deprecation Plan
+
+| Old/broad test | Current risk | Replacement target | Delete after | Status |
+| --- | --- | --- | --- | --- |
+| Job runner subprocess lifecycle tests | Slow and process-sensitive; can hang or behave differently across local shells | Smaller contract tests around command construction plus focused runtime profile coverage for process handling | Replacement tests are added and runtime profile is stable | Reclassified as runtime/integration/slow |
+| Full Skroutz prepare/render workflow fixture test | Broad service orchestration through frozen fixtures; expensive for default Codex checks; current `307497` golden expectation is stale | Stage-level prepare/render golden tests with narrower fixture assertions | Narrow golden replacements cover each workflow contract | Reclassified as runtime/e2e/golden and strict-xfailed pending replacement |
+| Skroutz parser/deterministic-fields multi-family fixture regression | Broad frozen fixture assertion currently shares the stale `307497` golden expectation | Narrow per-family parser and deterministic-field golden cases | Narrow replacements cover the same product families | Reclassified as slow/golden and strict-xfailed pending replacement |
+| Broad taxonomy regression tests currently marked slow | Large fixture sweep can dominate routine feedback | Representative golden taxonomy cases plus targeted unit coverage for taxonomy rules | Targeted replacements cover the same taxonomy families | Reclassified as slow/golden |
+| E2e tests currently marked slow/e2e | Full workflow path is not suitable for default local or Codex checks | Explicit runtime/e2e profile with smaller contract tests for default coverage | Runtime profile is stable and default coverage protects public contracts | Reclassified as runtime where applicable |

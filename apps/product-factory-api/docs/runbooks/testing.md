@@ -4,21 +4,35 @@ Run tests with the root virtual environment after installing Product Factory
 editable support. Do not use bare `python`, `py`, a global interpreter, or an
 app-local virtual environment.
 
+Always run tests with verbose output so you can see whether it is hanging or simply taking longer.
+
+## Default Fast Check
+
+```powershell
+.\scripts\test-fast.ps1
+```
+
+Use this as the default Codex and local development check. It runs Product
+Factory tests from `apps/product-factory-api` and excludes tests marked `slow`,
+`external`, `legacy`, `e2e`, or `runtime`.
+
+Full `pytest` is not the default Codex command. Do not run full
+prepare/render/publish e2e, subprocess, browser, OpenCart, OpenAI, database, or
+live network tests unless the prompt explicitly asks for that profile.
+
 ## Product Factory Broad Check
 
 ```powershell
 .\scripts\test\product-factory-api.ps1
 ```
 
-Use this for operator-requested Product Factory broad verification. Routine
-Codex maintenance should run only focused checks that map to changed files and
-keep total automated runtime under 2 minutes.
+Use this for operator-requested Product Factory broad verification. It uses the
+same fast exclusions as `.\scripts\test-fast.ps1`.
 
 ## Contract-only
 
 ```powershell
-cd apps/product-factory-api
-..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m contract
+.\scripts\test-contract.ps1
 ```
 
 Use this when changing Product Factory API routes, public response schemas, runtime service contracts, or deterministic artifact shapes. The backend OpenAPI snapshot is canonical for the Product Factory API and lives at `docs/contracts/openapi.product-factory.json`.
@@ -28,6 +42,27 @@ Regenerate the OpenAPI snapshot from `apps/product-factory-api` after intentiona
 ```powershell
 ..\..\.venv\Scripts\python.exe -m product_factory.jobs.export_openapi_snapshot
 ```
+
+## Golden-only
+
+```powershell
+.\scripts\test-golden.ps1
+```
+
+Golden tests are deterministic frozen input/output fixture regression tests.
+They are useful when changing parser, taxonomy, render, or schema behavior that
+should preserve known fixture output.
+
+## Runtime Profile
+
+```powershell
+.\scripts\test-runtime.ps1
+```
+
+Runtime tests execute or simulate app runtime paths, subprocesses, workers,
+process termination, browser/server/database/LLM calls, or full service
+orchestration. Use this for job runner, worker, subprocess, process stop/kill,
+or broad workflow behavior.
 
 ## Smoke-only
 
@@ -45,16 +80,8 @@ cd apps/product-factory-api
 ..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini
 ```
 
-Run this before larger merges or when changing shared runtime behavior that could affect slow regressions.
-
-## Integration-only
-
-```powershell
-cd apps/product-factory-api
-..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "integration"
-```
-
-Use this for local filesystem/subprocess behavior, job child-process handling, and fixture workflows that are intentionally outside the default fast check.
+Run this only when explicitly requested for broad local verification or before
+larger merges where the runtime cost is acceptable.
 
 ## Stage-only examples
 
@@ -69,7 +96,7 @@ Run affected-stage tests during development:
 
 - Filter changes: run `filters` and relevant unit tests.
 - Render changes: run `render` and contract tests.
-- Job runner changes: run `job_lifecycle`; add `integration` when process handling changed.
+- Job runner changes: run `.\scripts\test-runtime.ps1`.
 - API changes: run `contract`.
 - Source acquisition changes: run `source_acquisition`.
 - Authoring artifact changes: run `authoring`.
@@ -88,7 +115,7 @@ The Filters Manager uses locked JSON persistence and returns a revision token. C
 
 ```powershell
 cd apps/product-factory-api
-..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "slow or external or e2e"
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "slow or external or e2e or runtime"
 ```
 
 Run this when validating broad workflow behavior, long taxonomy regressions, or any test intentionally excluded from the default fast profile. The default Codex check should not run full prepare/render/publish e2e.

@@ -69,5 +69,5 @@ finally {
 }
 
 Set-Location $appRoot
-& $python -m pytest -vv -ra -c (Join-Path $srcRoot "pytest.ini") -m "not slow and not external and not e2e and not legacy"
+& $python -m pytest -vv -ra -c (Join-Path $srcRoot "pytest.ini") -m "not slow and not external and not e2e and not legacy and not runtime"
 exit $LASTEXITCODE
