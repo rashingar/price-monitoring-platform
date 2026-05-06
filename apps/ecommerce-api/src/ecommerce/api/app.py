@@ -21,7 +21,6 @@ from ecommerce.api.routes_paths import router as paths_router
 from ecommerce.api.routes_price_alerts import router as price_alerts_router
 from ecommerce.api.routes_price_monitoring import router as price_monitoring_router
 from ecommerce.api.routes_product_sources import router as product_sources_router
-from ecommerce.api.routes_source_url_agent import router as source_url_agent_router
 from ecommerce.api.routes_source_url_import import router as source_url_import_router
 from ecommerce.api.routes_source_urls import router as source_urls_router
 from ecommerce.api.routes_vendor_sources import router as vendor_sources_router
@@ -39,7 +38,6 @@ def create_app() -> FastAPI:
     app.include_router(price_alerts_router)
     app.include_router(product_sources_router)
     app.include_router(vendor_sources_router)
-    app.include_router(source_url_agent_router)
     app.include_router(source_url_import_router)
     app.include_router(source_urls_router)
     app.include_router(artifacts_router)

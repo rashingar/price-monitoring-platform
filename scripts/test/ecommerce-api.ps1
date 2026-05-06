@@ -31,13 +31,20 @@ $checkCode = @'
 try:
     import ecommerce.api.app
 except ImportError as exc:
-    raise SystemExit(f"Ecommerce API import check failed: {exc}")
+    raise SystemExit("Ecommerce API import check failed: " + str(exc))
 '@
 
-& $python -c $checkCode
-if ($LASTEXITCODE -ne 0) {
-    Write-EcommerceSetupInstructions
-    exit $LASTEXITCODE
+$checkPath = New-TemporaryFile
+try {
+    Set-Content -LiteralPath $checkPath -Value $checkCode -Encoding UTF8
+    & $python $checkPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-EcommerceSetupInstructions
+        exit $LASTEXITCODE
+    }
+}
+finally {
+    Remove-Item -LiteralPath $checkPath -ErrorAction SilentlyContinue
 }
 
 Set-Location $appRoot

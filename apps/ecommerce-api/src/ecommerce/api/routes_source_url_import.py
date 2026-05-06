@@ -128,12 +128,12 @@ def apply_source_url_import(request: SourceUrlImportRequest) -> dict[str, Any]:
     return _run_source_url_import(request, apply=True)
 
 
-@router.post("/import/product-agent/preview", response_model=SourceUrlImportResponse)
+@router.post("/import/product-factory/preview", response_model=SourceUrlImportResponse)
 def preview_product_agent_handoff_import(request: ProductAgentHandoffImportRequest) -> dict[str, Any]:
     return _run_product_agent_handoff_import(request, apply=False)
 
 
-@router.post("/import/product-agent/apply", response_model=SourceUrlImportResponse)
+@router.post("/import/product-factory/apply", response_model=SourceUrlImportResponse)
 def apply_product_agent_handoff_import(request: ProductAgentHandoffImportRequest) -> dict[str, Any]:
     return _run_product_agent_handoff_import(request, apply=True)
 

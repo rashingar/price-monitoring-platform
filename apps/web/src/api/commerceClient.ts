@@ -1406,7 +1406,6 @@ function normalizeFetchResult(payload: unknown): FetchPriceMonitoringResult {
   if (!isRecord(payload)) {
     return {};
   }
-
   return {
     ...payload,
     run_id:
@@ -1427,10 +1426,6 @@ function normalizeFetchResult(payload: unknown): FetchPriceMonitoringResult {
         ? payload.catalog_url
         : null,
     fetch_input_mode: normalizeNullableString(payload.fetch_input_mode ?? payload.input_mode),
-    legacy_marketplace_fetch_used:
-      typeof payload.legacy_marketplace_fetch_used === "boolean"
-        ? payload.legacy_marketplace_fetch_used
-        : null,
     queued_at:
       typeof payload.queued_at === "string" || payload.queued_at === null
         ? payload.queued_at
@@ -2469,7 +2464,7 @@ export const commerceClient = {
     signal?: AbortSignal,
   ): Promise<SourceUrlImportResponse> {
     return normalizeSourceUrlImportResponse(
-      await request<unknown>("/catalog/source-urls/import/product-agent/preview", {
+      await request<unknown>("/catalog/source-urls/import/product-factory/preview", {
         method: "POST",
         body,
         signal,
@@ -2482,7 +2477,7 @@ export const commerceClient = {
     signal?: AbortSignal,
   ): Promise<SourceUrlImportResponse> {
     return normalizeSourceUrlImportResponse(
-      await request<unknown>("/catalog/source-urls/import/product-agent/apply", {
+      await request<unknown>("/catalog/source-urls/import/product-factory/apply", {
         method: "POST",
         body,
         signal,

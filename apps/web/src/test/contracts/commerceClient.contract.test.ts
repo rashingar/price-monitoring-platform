@@ -578,7 +578,6 @@ describe("commerce API client contract fixtures", () => {
       execution_id: "exec-success",
       status: "succeeded",
       fetch_input_mode: "source_urls",
-      legacy_marketplace_fetch_used: false,
       appended_observation_count: 2,
       prior_observation_count: 1,
       was_refetch: true,

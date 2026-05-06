@@ -1177,7 +1177,6 @@ export const priceMonitoringExecutions = [
     status: "running",
     source: "skroutz",
     fetch_input_mode: "source_urls",
-    legacy_marketplace_fetch_used: false,
     queued_at: "2026-05-02T09:00:00Z",
     started_at: "2026-05-02T09:01:00Z",
     queue_position: 1,
@@ -1190,7 +1189,6 @@ export const priceMonitoringExecutions = [
     status: "fetch_completed",
     source: "skroutz",
     fetch_input_mode: "source_urls",
-    legacy_marketplace_fetch_used: false,
     queued_at: "2026-05-02T08:00:00Z",
     started_at: "2026-05-02T08:01:00Z",
     completed_at: "2026-05-02T08:10:00Z",
@@ -1971,7 +1969,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   },
   {
     method: "POST",
-    path: "/commerce-api/catalog/source-url-agent/runs",
+    path: "/commerce-api/vendor-sources/agent/runs",
     requestExample: {
       mode: "catalog",
       source: "all",
@@ -1984,46 +1982,46 @@ export const commerceFixtureRoutes: MockRoute[] = [
     },
     response: createSourceUrlAgentRunResponse,
   },
-  { method: "GET", path: "/commerce-api/catalog/source-url-agent/runs", response: sourceUrlAgentRuns },
+  { method: "GET", path: "/commerce-api/vendor-sources/agent/runs", response: sourceUrlAgentRuns },
   {
     method: "GET",
-    path: "/commerce-api/catalog/source-url-agent/runs/source-run-001",
+    path: "/commerce-api/vendor-sources/agent/runs/source-run-001",
     response: sourceUrlAgentRunDetail,
   },
   {
     method: "GET",
-    path: "/commerce-api/catalog/source-url-agent/runs/source-run-001/artifacts",
+    path: "/commerce-api/vendor-sources/agent/runs/source-run-001/artifacts",
     response: sourceUrlAgentArtifacts,
   },
-  { method: "GET", path: "/commerce-api/catalog/source-url-agent/candidates", response: sourceUrlCandidatesResponse },
+  { method: "GET", path: "/commerce-api/vendor-sources/candidates", response: sourceUrlCandidatesResponse },
   {
     method: "GET",
-    path: "/commerce-api/catalog/source-url-agent/candidates/review-layout",
+    path: "/commerce-api/vendor-sources/candidates/review-layout",
     response: sourceUrlCandidateReviewLayout,
   },
   {
     method: "PUT",
-    path: "/commerce-api/catalog/source-url-agent/candidates/review-layout",
+    path: "/commerce-api/vendor-sources/candidates/review-layout",
     response: sourceUrlCandidateReviewLayout,
   },
   {
     method: "POST",
-    path: "/commerce-api/catalog/source-url-agent/candidates/review-layout/reset",
+    path: "/commerce-api/vendor-sources/candidates/review-layout/reset",
     response: sourceUrlCandidateReviewLayout,
   },
   {
     method: "GET",
-    path: "/commerce-api/catalog/source-url-agent/candidates/501",
+    path: "/commerce-api/vendor-sources/candidates/501",
     response: { candidate: { ...sourceUrlCandidates.items[0], drawer: sourceUrlCandidateReviewLayout.drawer } },
   },
   {
     method: "GET",
-    path: "/commerce-api/catalog/source-url-agent/candidates/502",
+    path: "/commerce-api/vendor-sources/candidates/502",
     response: { candidate: { ...sourceUrlCandidates.items[1], drawer: sourceUrlCandidateReviewLayout.drawer } },
   },
   {
     method: "PATCH",
-    path: "/commerce-api/catalog/source-url-agent/candidates/501/review",
+    path: "/commerce-api/vendor-sources/candidates/501/review",
     requestExample: {
       decision: "accept",
       reviewed_url: null,
@@ -2060,7 +2058,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   },
   {
     method: "POST",
-    path: "/commerce-api/catalog/source-urls/import/product-agent/preview",
+    path: "/commerce-api/catalog/source-urls/import/product-factory/preview",
     requestExample: {
       handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
@@ -2072,7 +2070,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   },
   {
     method: "POST",
-    path: "/commerce-api/catalog/source-urls/import/product-agent/apply",
+    path: "/commerce-api/catalog/source-urls/import/product-factory/apply",
     requestExample: {
       handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",

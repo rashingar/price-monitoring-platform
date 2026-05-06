@@ -395,7 +395,7 @@ describe("platform mocked page smoke tests", () => {
       mockFetch.requests.some(
         (request) =>
           request.method === "POST" &&
-          request.pathname === "/commerce-api/catalog/source-urls/import/product-agent/preview" &&
+          request.pathname === "/commerce-api/catalog/source-urls/import/product-factory/preview" &&
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&
@@ -407,7 +407,7 @@ describe("platform mocked page smoke tests", () => {
       mockFetch.requests.some(
         (request) =>
           request.method === "POST" &&
-          request.pathname === "/commerce-api/catalog/source-urls/import/product-agent/apply",
+          request.pathname === "/commerce-api/catalog/source-urls/import/product-factory/apply",
       ),
     ).toBe(true);
   });
@@ -420,25 +420,6 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findByRole("heading", { name: "Vendor Source Candidate Review" })).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("Run id filter")).toHaveValue("source-run-001");
     await expect(screen.findAllByText("source-run-001")).resolves.not.toHaveLength(0);
-  });
-
-  it("keeps old Catalog source-url routes usable as Vendor Sources redirects", async () => {
-    installMockFetch(allRoutes);
-
-    const { router } = renderWithRouter("/catalog/source-url-candidates?run_id=source-run-001");
-
-    await expect(screen.findByRole("heading", { name: "Vendor Source Candidate Review" })).resolves.toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/vendor-sources/candidates");
-    expect(screen.getByLabelText("Run id filter")).toHaveValue("source-run-001");
-  });
-
-  it("keeps old Catalog source-url agent run route usable as a Vendor Sources redirect", async () => {
-    installMockFetch(allRoutes);
-
-    const { router } = renderWithRouter("/catalog/source-url-agent/runs");
-
-    await expect(screen.findByRole("heading", { name: "Vendor Source Discovery Runs" })).resolves.toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/vendor-sources/runs");
   });
 
   it("filters Vendor Source candidates by status and source", async () => {
@@ -618,7 +599,6 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findAllByText("Monitoring URL eligibility")).resolves.not.toHaveLength(0);
     expect(screen.getAllByText("Skipped missing active URL").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Source URL monitoring").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/legacy_marketplace_fetch_used=false/)).not.toBeInTheDocument();
     await expect(screen.findAllByText("Prior observations")).resolves.not.toHaveLength(0);
     expect(screen.queryByText("Replaced observations")).not.toBeInTheDocument();
   });

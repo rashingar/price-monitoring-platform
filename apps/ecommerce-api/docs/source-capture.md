@@ -42,10 +42,10 @@ from `monitoring_runs` and `price_monitoring_runs` workflow state. Capture runs
 select active `source_urls` and active `product_sources`, excluding broken,
 disabled, needs-review, and redirected URLs. Each capture run has one
 `observation_batch_id`; by default it is the capture `run_id`, and price/offer
-observations created by that run share the same batch id. The deprecated
+observations created by that run share the same batch id. The canonical capture
+route is `POST /api/vendor-sources/captures/runs`. The old
 `POST /api/price-monitoring/source-captures/run` and
-`POST /api/vendor-sources/captures/run` compatibility routes create Vendor
-Source Capture runs and point callers at `/api/vendor-sources/captures/runs`.
+`POST /api/vendor-sources/captures/run` routes were removed.
 
 Vendor Sources exposes source URL coverage and source health through:
 

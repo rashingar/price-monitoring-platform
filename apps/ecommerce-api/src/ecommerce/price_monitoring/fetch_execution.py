@@ -91,7 +91,6 @@ class PriceMonitoringFetchExecution:
     alert_duplicate_count: int = 0
     alert_warnings: list[str] = field(default_factory=list)
     fetch_input_mode: str = "source_urls"
-    legacy_marketplace_fetch_used: bool = False
     source_url_capture_used: bool = False
     source_url_capture_status: str = "not_run"
     source_url_capture_selected_count: int = 0
@@ -366,7 +365,6 @@ def source_url_fetch_result_to_execution_payload(result: PriceMonitoringFetchRes
         "alert_duplicate_count": 0,
         "alert_warnings": [],
         "fetch_input_mode": result.fetch_input_mode,
-        "legacy_marketplace_fetch_used": result.legacy_marketplace_fetch_used,
         "source_url_capture_used": result.source_url_capture_used,
         "source_url_capture_status": result.source_url_capture_status,
         "source_url_capture_selected_count": result.source_url_capture_selected_count,
@@ -903,7 +901,6 @@ def _apply_source_url_capture_result(
     result: PriceMonitoringFetchResult,
 ) -> None:
     execution.fetch_input_mode = result.fetch_input_mode
-    execution.legacy_marketplace_fetch_used = result.legacy_marketplace_fetch_used
     execution.source_url_capture_used = result.source_url_capture_used
     execution.source_url_capture_status = result.source_url_capture_status
     execution.source_url_capture_selected_count = result.source_url_capture_selected_count
@@ -1071,7 +1068,6 @@ def _execution_from_payload(payload: dict[str, object], run_dir: Path, path: Pat
         alert_duplicate_count=_int_value(payload.get("alert_duplicate_count")),
         alert_warnings=[str(item) for item in _list_value(payload.get("alert_warnings"))],
         fetch_input_mode=str(payload.get("fetch_input_mode") or "source_urls"),
-        legacy_marketplace_fetch_used=bool(payload.get("legacy_marketplace_fetch_used", False)),
         source_url_capture_used=bool(payload.get("source_url_capture_used", False)),
         source_url_capture_status=str(payload.get("source_url_capture_status") or "not_run"),
         source_url_capture_selected_count=_int_value(payload.get("source_url_capture_selected_count")),

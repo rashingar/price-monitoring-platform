@@ -67,13 +67,13 @@ GET  /api/catalog/source-urls/summary
 GET  /api/catalog/source-urls/import/options
 POST /api/catalog/source-urls/import/preview
 POST /api/catalog/source-urls/import/apply
-POST /api/catalog/source-urls/import/product-agent/preview
-POST /api/catalog/source-urls/import/product-agent/apply
+POST /api/catalog/source-urls/import/product-factory/preview
+POST /api/catalog/source-urls/import/product-factory/apply
 ```
 
 `/import/preview` is a dry-run and returns counters plus capped candidate details without writing database rows. `/import/apply` uses the same importer and writes to `source_urls`; repeated apply calls are idempotent. Both endpoints accept `catalog_source`, `include_observations`, `include_artifacts`, `include_legacy_runs`, `legacy_runs_dir`, `limit`, and `report_items_limit`. Legacy run scanning is disabled by default and only accepts artifact-root paths.
 
-Product Factory handoff API imports are limited to `ecommerce_source_handoff.json` files under allowed artifact roots or configured file editor roots. The public route path still includes `/product-agent/` for API compatibility.
+Product Factory handoff API imports are limited to `ecommerce_source_handoff.json` files under allowed artifact roots or configured file editor roots. The public route path uses `/product-factory/`.
 
 The summary endpoint reports active catalog coverage, including products with at least one active source URL, products still missing active source URLs, grouped status/source/type counts, and a coverage percentage. Use it to track import progress and review backlog.
 
@@ -143,6 +143,6 @@ Old file-only Price Monitoring run folders are legacy artifacts and are ignored 
 
 Price Monitoring selection preview and run creation report `source_url_coverage`. Each run requires exactly one `source`, `source_name`, `vendor_slug`, or `source_filter`; `all` is rejected for Price Monitoring. Only `status = "active"` counts as active coverage for that source/vendor. Missing active source URLs are hard eligibility exclusions for Price Monitoring, reported as `missing_active_source_url`.
 
-Monitoring fetch uses stored active source URLs only. It calls Vendor Sources capture for the run's selected source/vendor, persists capture observations through the shared source capture/product source path with an `observation_batch_id`, and reports `fetch_input_mode = "source_urls"` with `legacy_marketplace_fetch_used = false`.
+Monitoring fetch uses stored active source URLs only. It calls Vendor Sources capture for the run's selected source/vendor, persists capture observations through the shared source capture/product source path with an `observation_batch_id`, and reports `fetch_input_mode = "source_urls"`.
 
 Alerting is dashboard-only. There is no email, Slack, SMS, push, or webhook delivery. Frontend alert dashboard UI and scheduled monitoring profiles remain future work.

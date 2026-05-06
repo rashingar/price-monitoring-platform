@@ -203,7 +203,10 @@ def test_vendor_sources_capture_for_run_writes_result_counts_without_live_http(t
         assert observation.observation_batch_id == result.run_id
 
 
-def test_vendor_sources_capture_api_returns_required_payload(monkeypatch) -> None:
+def test_vendor_sources_capture_api_returns_required_payload(tmp_path: Path, monkeypatch) -> None:
+    database_url = _database_url(tmp_path)
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    Base.metadata.create_all(get_engine(database_url))
     monkeypatch.setattr(routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None)
     monkeypatch.setattr(
         routes_vendor_sources,
@@ -230,7 +233,7 @@ def test_vendor_sources_capture_api_returns_required_payload(monkeypatch) -> Non
 
     response = TestClient(create_app()).post(
         "/api/vendor-sources/captures/runs",
-        json={"vendor": "electronet", "limit": 1, "include_not_due": True},
+        json={"vendor_slug": "electronet", "limit": 1, "include_not_due": True},
     )
 
     assert response.status_code == 200
@@ -249,17 +252,18 @@ def test_vendor_sources_capture_api_returns_required_payload(monkeypatch) -> Non
     assert payload["run_id"] == "vendor-capture-1"
     assert payload["observation_batch_id"] == "vendor-capture-1"
 
-    compatibility = TestClient(create_app()).post(
+    removed = TestClient(create_app()).post(
         "/api/vendor-sources/captures/run",
-        json={"vendor": "electronet", "limit": 1, "include_not_due": True},
+        json={"vendor_slug": "electronet", "limit": 1, "include_not_due": True},
     )
 
-    assert compatibility.status_code == 200
-    assert compatibility.json()["deprecated"] is True
-    assert compatibility.json()["replacement_endpoint"] == "/api/vendor-sources/captures/runs"
+    assert removed.status_code == 404
 
 
-def test_vendor_sources_capture_api_requires_source_unless_admin_diagnostic(monkeypatch) -> None:
+def test_vendor_sources_capture_api_requires_source_unless_admin_diagnostic(tmp_path: Path, monkeypatch) -> None:
+    database_url = _database_url(tmp_path)
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    Base.metadata.create_all(get_engine(database_url))
     monkeypatch.setattr(routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None)
 
     def fake_run(*_args, **kwargs):

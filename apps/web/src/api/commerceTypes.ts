@@ -682,8 +682,7 @@ export interface FetchPriceMonitoringResult {
   status?: "queued" | "running" | "succeeded" | "failed" | "killed" | "cancelled" | string | null;
   source?: PriceMonitoringSource | string | null;
   catalog_url?: string | null;
-  fetch_input_mode?: "source_urls" | "legacy_marketplace" | string | null;
-  legacy_marketplace_fetch_used?: boolean | null;
+  fetch_input_mode?: "source_urls" | string | null;
   queued_at?: string | null;
   started_at?: string | null;
   completed_at?: string | null;

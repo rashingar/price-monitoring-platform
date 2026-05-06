@@ -130,7 +130,6 @@ def test_successful_fetch_writes_fetch_result_json_and_does_not_call_legacy_fetc
     assert result.enriched_csv_path is None
     assert result.fetch_summary_path is None
     assert result.fetch_input_mode == "source_urls"
-    assert result.legacy_marketplace_fetch_used is False
     assert result.source_url_capture_used is True
     assert result.source_url_capture_run_id == "vendor-capture-1"
     assert result.observation_batch_id == "vendor-capture-1"
@@ -141,7 +140,6 @@ def test_successful_fetch_writes_fetch_result_json_and_does_not_call_legacy_fetc
     assert payload["source"] == "skroutz"
     assert payload["status"] == "fetch_completed"
     assert payload["fetch_input_mode"] == "source_urls"
-    assert payload["legacy_marketplace_fetch_used"] is False
     assert payload["source_url_capture_run_id"] == "vendor-capture-1"
     assert payload["observation_batch_id"] == "vendor-capture-1"
     assert payload["error"] == ""
@@ -157,7 +155,6 @@ def test_price_monitoring_fetch_has_no_core_run_fetch_hook(tmp_path: Path, monke
 
     assert result.status == "fetch_completed"
     assert result.fetch_input_mode == "source_urls"
-    assert result.legacy_marketplace_fetch_used is False
 
 
 def test_fetch_missing_active_source_url_error_points_to_vendor_sources(tmp_path: Path, monkeypatch) -> None:
@@ -171,7 +168,6 @@ def test_fetch_missing_active_source_url_error_points_to_vendor_sources(tmp_path
     assert "missing_active_source_url" in str(exc_info.value)
     assert "Vendor Sources" in str(exc_info.value)
     assert exc_info.value.result is not None
-    assert exc_info.value.result.legacy_marketplace_fetch_used is False
 
 
 def test_missing_selection_summary_rejects_fetch_without_one_source(tmp_path: Path, monkeypatch) -> None:
@@ -286,5 +282,4 @@ def test_api_successful_fetch_returns_artifacts_and_get_reads_fetch_result(tmp_p
     assert get_payload["status"] == "succeeded"
     assert get_payload["enriched_csv_path"] == ""
     assert get_payload["fetch_input_mode"] == "source_urls"
-    assert get_payload["legacy_marketplace_fetch_used"] is False
     assert Path(get_payload["fetch_result_path"]).exists()

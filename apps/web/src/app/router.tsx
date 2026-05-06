@@ -32,9 +32,6 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "catalog", element: <CatalogPage /> },
-      { path: "catalog/source-url-agent", element: <RedirectWithSearch to="/vendor-sources/runs" /> },
-      { path: "catalog/source-url-agent/runs", element: <RedirectWithSearch to="/vendor-sources/runs" /> },
-      { path: "catalog/source-url-candidates", element: <RedirectWithSearch to="/vendor-sources/candidates" /> },
       { path: "csv-bridge", element: <CsvBridgePage /> },
       { path: "price-monitoring", element: <PriceMonitoringPage /> },
       { path: "price-monitoring/executions", element: <PriceMonitoringExecutionsPage /> },

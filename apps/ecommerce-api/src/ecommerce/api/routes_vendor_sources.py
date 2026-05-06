@@ -41,8 +41,6 @@ class VendorSourceCaptureRunApiRequest(BaseModel):
     limit: int = 50
     dry_run: bool = False
     admin_all_sources: bool = False
-    # Deprecated request name retained for old callers. Prefer vendor_slug/source_name.
-    vendor: str | None = None
     include_not_due: bool = False
 
 
@@ -83,7 +81,7 @@ def post_vendor_source_capture_runs(request: VendorSourceCaptureRunApiRequest) -
             result = run_vendor_source_capture(
                 session,
                 source_name=request.source_name,
-                vendor_slug=request.vendor_slug or request.vendor,
+                vendor_slug=request.vendor_slug,
                 catalog_source=request.catalog_source,
                 catalog_product_ids=request.catalog_product_ids,
                 product_source_ids=request.product_source_ids,
@@ -149,14 +147,6 @@ def get_vendor_source_capture_run_artifacts(run_id: str) -> dict[str, Any]:
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Vendor source capture artifact lookup failed: {_safe_db_error(exc)}") from exc
     return {"run_id": run_id, "items": [artifact_link_payload(Path(path)) for path in artifact_paths]}
-
-
-@router.post("/captures/run")
-def post_vendor_source_capture_run_compatibility(request: VendorSourceCaptureRunApiRequest) -> dict[str, Any]:
-    payload = post_vendor_source_capture_runs(request)
-    payload["deprecated"] = True
-    payload["replacement_endpoint"] = "/api/vendor-sources/captures/runs"
-    return payload
 
 
 @router.post("/agent/runs")

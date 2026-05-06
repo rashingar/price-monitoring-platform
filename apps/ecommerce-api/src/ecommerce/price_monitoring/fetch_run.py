@@ -44,7 +44,6 @@ class PriceMonitoringFetchResult:
     error: str
     source_filter: str | None = None
     fetch_input_mode: str = "source_urls"
-    legacy_marketplace_fetch_used: bool = False
     source_url_capture_used: bool = False
     source_url_capture_status: str = "not_run"
     source_url_capture_selected_count: int = 0
@@ -168,7 +167,6 @@ def load_price_monitoring_fetch_result(run_dir: Path) -> PriceMonitoringFetchRes
         error=str(payload.get("error", "")),
         source_filter=_source_filter(str(payload.get("source_filter") or payload.get("source") or "")),
         fetch_input_mode=str(payload.get("fetch_input_mode") or "source_urls"),
-        legacy_marketplace_fetch_used=bool(payload.get("legacy_marketplace_fetch_used", False)),
         source_url_capture_used=bool(payload.get("source_url_capture_used", False)),
         source_url_capture_status=str(payload.get("source_url_capture_status") or "not_run"),
         source_url_capture_selected_count=_int_value(payload.get("source_url_capture_selected_count")),
@@ -271,7 +269,6 @@ def _run_source_url_capture(
 def _source_capture_result_fields(result: SourceUrlCaptureRunResult) -> dict[str, object]:
     return {
         "fetch_input_mode": "source_urls",
-        "legacy_marketplace_fetch_used": False,
         "source_url_capture_used": result.selected_source_url_count > 0,
         "source_url_capture_status": result.status,
         "source_url_capture_selected_count": result.selected_source_url_count,

@@ -1013,14 +1013,6 @@ function FetchResultBlock({
           <span className="status-badge ok">Source URL monitoring</span>
         </p>
       ) : null}
-      {result.legacy_marketplace_fetch_used === true ? (
-        <details className="state-block">
-          <summary>Deprecated diagnostics</summary>
-          <dl className="summary-grid">
-            <SummaryItem label="legacy_marketplace_fetch_used" value="true" />
-          </dl>
-        </details>
-      ) : null}
       {result.persistence_status ? (
         <p>
           <span className={`status-badge ${getPersistenceStatusClass(result.persistence_status)}`}>

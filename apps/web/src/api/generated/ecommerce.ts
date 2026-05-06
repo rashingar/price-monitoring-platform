@@ -51,42 +51,6 @@ export interface paths {
     /** Post Product Source Url */
     post: operations["post_product_source_url_api_catalog_products__catalog_product_id__source_urls_post"];
   };
-  "/api/catalog/source-url-agent/candidates": {
-    /** List Source Url Agent Candidates */
-    get: operations["list_source_url_agent_candidates_api_catalog_source_url_agent_candidates_get"];
-  };
-  "/api/catalog/source-url-agent/candidates/{candidate_id}": {
-    /** Get Source Url Agent Candidate */
-    get: operations["get_source_url_agent_candidate_api_catalog_source_url_agent_candidates__candidate_id__get"];
-  };
-  "/api/catalog/source-url-agent/candidates/{candidate_id}/review": {
-    /** Review Source Url Agent Candidate */
-    patch: operations["review_source_url_agent_candidate_api_catalog_source_url_agent_candidates__candidate_id__review_patch"];
-  };
-  "/api/catalog/source-url-agent/candidates/review-layout": {
-    /** Get Source Url Candidate Review Layout */
-    get: operations["get_source_url_candidate_review_layout_api_catalog_source_url_agent_candidates_review_layout_get"];
-    /** Save Source Url Candidate Review Layout */
-    put: operations["save_source_url_candidate_review_layout_api_catalog_source_url_agent_candidates_review_layout_put"];
-  };
-  "/api/catalog/source-url-agent/candidates/review-layout/reset": {
-    /** Reset Source Url Candidate Review Layout */
-    post: operations["reset_source_url_candidate_review_layout_api_catalog_source_url_agent_candidates_review_layout_reset_post"];
-  };
-  "/api/catalog/source-url-agent/runs": {
-    /** List Source Url Agent Runs */
-    get: operations["list_source_url_agent_runs_api_catalog_source_url_agent_runs_get"];
-    /** Launch Source Url Agent Run */
-    post: operations["launch_source_url_agent_run_api_catalog_source_url_agent_runs_post"];
-  };
-  "/api/catalog/source-url-agent/runs/{run_id}": {
-    /** Get Source Url Agent Run */
-    get: operations["get_source_url_agent_run_api_catalog_source_url_agent_runs__run_id__get"];
-  };
-  "/api/catalog/source-url-agent/runs/{run_id}/artifacts": {
-    /** Get Source Url Agent Run Artifacts */
-    get: operations["get_source_url_agent_run_artifacts_api_catalog_source_url_agent_runs__run_id__artifacts_get"];
-  };
   "/api/catalog/source-urls/{source_url_id}": {
     /** Patch Source Url */
     patch: operations["patch_source_url_api_catalog_source_urls__source_url_id__patch"];
@@ -107,13 +71,13 @@ export interface paths {
     /** Preview Source Url Import */
     post: operations["preview_source_url_import_api_catalog_source_urls_import_preview_post"];
   };
-  "/api/catalog/source-urls/import/product-agent/apply": {
+  "/api/catalog/source-urls/import/product-factory/apply": {
     /** Apply Product Agent Handoff Import */
-    post: operations["apply_product_agent_handoff_import_api_catalog_source_urls_import_product_agent_apply_post"];
+    post: operations["apply_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_apply_post"];
   };
-  "/api/catalog/source-urls/import/product-agent/preview": {
+  "/api/catalog/source-urls/import/product-factory/preview": {
     /** Preview Product Agent Handoff Import */
-    post: operations["preview_product_agent_handoff_import_api_catalog_source_urls_import_product_agent_preview_post"];
+    post: operations["preview_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_preview_post"];
   };
   "/api/catalog/source-urls/summary": {
     /** Get Source Url Summary */
@@ -282,10 +246,6 @@ export interface paths {
      */
     post: operations["preview_selection_api_price_monitoring_selection_preview_post"];
   };
-  "/api/price-monitoring/source-captures/run": {
-    /** Post Source Capture Run */
-    post: operations["post_source_capture_run_api_price_monitoring_source_captures_run_post"];
-  };
   "/api/products/from-source": {
     /** Post Product From Source */
     post: operations["post_product_from_source_api_products_from_source_post"];
@@ -325,10 +285,6 @@ export interface paths {
   "/api/vendor-sources/candidates/review-layout/reset": {
     /** Reset Vendor Source Candidate Review Layout */
     post: operations["reset_vendor_source_candidate_review_layout_api_vendor_sources_candidates_review_layout_reset_post"];
-  };
-  "/api/vendor-sources/captures/run": {
-    /** Post Vendor Source Capture Run Compatibility */
-    post: operations["post_vendor_source_capture_run_compatibility_api_vendor_sources_captures_run_post"];
   };
   "/api/vendor-sources/captures/runs": {
     /** Get Vendor Source Capture Runs */
@@ -649,33 +605,6 @@ export interface components {
       model: string;
       /** Source Urls */
       source_urls: string[];
-    };
-    /** SourceCaptureRunApiRequest */
-    SourceCaptureRunApiRequest: {
-      /**
-       * Admin All Sources
-       * @default false
-       */
-      admin_all_sources?: boolean;
-      /**
-       * Include Not Due
-       * @default false
-       */
-      include_not_due?: boolean;
-      /**
-       * Limit
-       * @default 50
-       */
-      limit?: number;
-      /** Product Source Ids */
-      product_source_ids?: number[];
-      /**
-       * Refresh After Minutes
-       * @default 360
-       */
-      refresh_after_minutes?: number;
-      /** Vendor */
-      vendor?: string | null;
     };
     /** SourceUrlAgentRunRequest */
     SourceUrlAgentRunRequest: {
@@ -1043,8 +972,6 @@ export interface components {
       refresh_after_minutes?: number;
       /** Source Name */
       source_name?: string | null;
-      /** Vendor */
-      vendor?: string | null;
       /** Vendor Slug */
       vendor_slug?: string | null;
     };
@@ -1324,260 +1251,6 @@ export interface operations {
       };
     };
   };
-  /** List Source Url Agent Candidates */
-  list_source_url_agent_candidates_api_catalog_source_url_agent_candidates_get: {
-    parameters: {
-      query?: {
-        status?: string | null;
-        source_name?: string | null;
-        run_id?: string | null;
-        model?: string | null;
-        catalog_product_id?: string | null;
-        min_confidence?: string | null;
-        max_confidence?: string | null;
-        limit?: number;
-        offset?: number;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Source Url Agent Candidate */
-  get_source_url_agent_candidate_api_catalog_source_url_agent_candidates__candidate_id__get: {
-    parameters: {
-      path: {
-        candidate_id: number;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Review Source Url Agent Candidate */
-  review_source_url_agent_candidate_api_catalog_source_url_agent_candidates__candidate_id__review_patch: {
-    parameters: {
-      path: {
-        candidate_id: number;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SourceUrlCandidateReviewRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Source Url Candidate Review Layout */
-  get_source_url_candidate_review_layout_api_catalog_source_url_agent_candidates_review_layout_get: {
-    parameters: {
-      query?: {
-        user_key?: string | null;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Save Source Url Candidate Review Layout */
-  save_source_url_candidate_review_layout_api_catalog_source_url_agent_candidates_review_layout_put: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SourceUrlCandidateReviewLayoutRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Reset Source Url Candidate Review Layout */
-  reset_source_url_candidate_review_layout_api_catalog_source_url_agent_candidates_review_layout_reset_post: {
-    parameters: {
-      query?: {
-        user_key?: string | null;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** List Source Url Agent Runs */
-  list_source_url_agent_runs_api_catalog_source_url_agent_runs_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-        offset?: number;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Launch Source Url Agent Run */
-  launch_source_url_agent_run_api_catalog_source_url_agent_runs_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SourceUrlAgentRunRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Source Url Agent Run */
-  get_source_url_agent_run_api_catalog_source_url_agent_runs__run_id__get: {
-    parameters: {
-      path: {
-        run_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Source Url Agent Run Artifacts */
-  get_source_url_agent_run_artifacts_api_catalog_source_url_agent_runs__run_id__artifacts_get: {
-    parameters: {
-      path: {
-        run_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Patch Source Url */
   patch_source_url_api_catalog_source_urls__source_url_id__patch: {
     parameters: {
@@ -1689,7 +1362,7 @@ export interface operations {
     };
   };
   /** Apply Product Agent Handoff Import */
-  apply_product_agent_handoff_import_api_catalog_source_urls_import_product_agent_apply_post: {
+  apply_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_apply_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ProductAgentHandoffImportRequest"];
@@ -1711,7 +1384,7 @@ export interface operations {
     };
   };
   /** Preview Product Agent Handoff Import */
-  preview_product_agent_handoff_import_api_catalog_source_urls_import_product_agent_preview_post: {
+  preview_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_preview_post: {
     requestBody: {
       content: {
         "application/json": components["schemas"]["ProductAgentHandoffImportRequest"];
@@ -2759,30 +2432,6 @@ export interface operations {
       };
     };
   };
-  /** Post Source Capture Run */
-  post_source_capture_run_api_price_monitoring_source_captures_run_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SourceCaptureRunApiRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Post Product From Source */
   post_product_from_source_api_products_from_source_post: {
     requestBody: {
@@ -3042,30 +2691,6 @@ export interface operations {
     parameters: {
       query?: {
         user_key?: string | null;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Post Vendor Source Capture Run Compatibility */
-  post_vendor_source_capture_run_compatibility_api_vendor_sources_captures_run_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["VendorSourceCaptureRunApiRequest"];
       };
     };
     responses: {

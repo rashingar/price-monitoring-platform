@@ -917,7 +917,6 @@ def _route_fetch_success(
         error="",
         source_filter=source,
         fetch_input_mode="source_urls",
-        legacy_marketplace_fetch_used=False,
         source_url_capture_used=True,
         source_url_capture_status="completed",
         source_url_capture_selected_count=1,

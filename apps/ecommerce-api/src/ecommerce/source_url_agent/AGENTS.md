@@ -643,16 +643,16 @@ Do not add API endpoints before the CLI path is reliable unless explicitly reque
 
 If API endpoints are added later, they should call the same service-layer code as the CLI. Do not duplicate orchestration logic in route handlers.
 
-Potential routes:
+Canonical Vendor Sources routes:
 
 
-POST /api/catalog/source-url-agent/runs
-GET  /api/catalog/source-url-agent/runs
-GET  /api/catalog/source-url-agent/runs/{run_id}
-GET  /api/catalog/source-url-agent/runs/{run_id}/candidates
-POST /api/catalog/source-url-agent/runs/{run_id}/apply-high-confidence
-POST /api/catalog/source-url-agent/apply-review
-GET  /api/catalog/source-url-agent/runs/{run_id}/artifacts
+POST /api/vendor-sources/agent/runs
+GET  /api/vendor-sources/agent/runs
+GET  /api/vendor-sources/agent/runs/{run_id}
+GET  /api/vendor-sources/agent/runs/{run_id}/artifacts
+GET  /api/vendor-sources/candidates
+GET  /api/vendor-sources/candidates/{candidate_id}
+PATCH /api/vendor-sources/candidates/{candidate_id}/review
 
 
 ## Testing Rules

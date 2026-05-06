@@ -163,7 +163,7 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
         product = _catalog_product(session)
 
     response = client.post(
-        "/api/catalog/source-url-agent/runs",
+        "/api/vendor-sources/agent/runs",
         json={
             "source": "bestprice",
             "mode": "catalog",
@@ -190,8 +190,8 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
         assert run.source_name == "bestprice"
         assert candidate.run_id == payload["run_id"]
         assert candidate.match_status == "matched"
-    history = client.get("/api/catalog/source-url-agent/runs")
-    detail = client.get(f"/api/catalog/source-url-agent/runs/{payload['run_id']}")
+    history = client.get("/api/vendor-sources/agent/runs")
+    detail = client.get(f"/api/vendor-sources/agent/runs/{payload['run_id']}")
     assert history.status_code == 200
     assert history.json()["items"][0]["run_id"] == payload["run_id"]
     assert detail.status_code == 200
@@ -240,11 +240,8 @@ def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_pa
     payload = response.json()
     assert payload["source"] == "electronet"
     history = client.get("/api/vendor-sources/agent/runs")
-    legacy_history = client.get("/api/catalog/source-url-agent/runs")
     assert history.status_code == 200
-    assert legacy_history.status_code == 200
     assert history.json()["items"][0]["run_id"] == payload["run_id"]
-    assert legacy_history.json()["items"][0]["run_id"] == payload["run_id"]
 
 
 def test_source_url_agent_run_api_rejects_missing_database(tmp_path: Path, monkeypatch) -> None:
@@ -252,7 +249,7 @@ def test_source_url_agent_run_api_rejects_missing_database(tmp_path: Path, monke
     monkeypatch.delenv(DATABASE_URL_ENV_VAR, raising=False)
     client = TestClient(create_app())
 
-    response = client.post("/api/catalog/source-url-agent/runs", json={"source": "bestprice", "mode": "catalog"})
+    response = client.post("/api/vendor-sources/agent/runs", json={"source": "bestprice", "mode": "catalog"})
 
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "source_url_agent_database_required"
@@ -265,7 +262,7 @@ def test_source_url_agent_run_api_enforces_bounded_default_limit(tmp_path: Path,
         for index in range(4):
             _catalog_product(session, model=f"MODEL-{index}", mpn=f"MPN-{index}")
 
-    response = client.post("/api/catalog/source-url-agent/runs", json={"source": "bestprice", "mode": "catalog"})
+    response = client.post("/api/vendor-sources/agent/runs", json={"source": "bestprice", "mode": "catalog"})
 
     assert response.status_code == 200
     payload = response.json()
@@ -280,11 +277,11 @@ def test_source_url_agent_run_artifact_endpoint_returns_safe_metadata(tmp_path: 
         product = _catalog_product(session)
 
     run_response = client.post(
-        "/api/catalog/source-url-agent/runs",
+        "/api/vendor-sources/agent/runs",
         json={"source": "bestprice", "mode": "catalog", "catalog_product_id": product.id, "limit": 1},
     )
     run_id = run_response.json()["run_id"]
-    artifact_response = client.get(f"/api/catalog/source-url-agent/runs/{run_id}/artifacts")
+    artifact_response = client.get(f"/api/vendor-sources/agent/runs/{run_id}/artifacts")
 
     assert artifact_response.status_code == 200
     payload = artifact_response.json()
@@ -301,7 +298,7 @@ def test_get_source_url_agent_candidates_returns_persisted_candidates(tmp_path: 
         product = _catalog_product(session)
         candidate = _candidate(session, product)
 
-    response = client.get("/api/catalog/source-url-agent/candidates?status=needs_review&limit=50&offset=0")
+    response = client.get("/api/vendor-sources/candidates?status=needs_review&limit=50&offset=0")
 
     assert response.status_code == 200
     payload = response.json()
@@ -336,7 +333,7 @@ def test_get_source_url_agent_candidates_filters(tmp_path: Path, monkeypatch) ->
         )
 
     response = client.get(
-        "/api/catalog/source-url-agent/candidates",
+        "/api/vendor-sources/candidates",
         params={
             "status": "needs_review",
             "source_name": "best",
@@ -360,7 +357,7 @@ def test_get_source_url_agent_candidates_returns_empty_for_no_matches(tmp_path: 
         product = _catalog_product(session)
         _candidate(session, product)
 
-    response = client.get("/api/catalog/source-url-agent/candidates", params={"status": "accepted"})
+    response = client.get("/api/vendor-sources/candidates", params={"status": "accepted"})
 
     assert response.status_code == 200
     assert response.json() == {"items": [], "total": 0, "limit": 50, "offset": 0}
@@ -369,7 +366,7 @@ def test_get_source_url_agent_candidates_returns_empty_for_no_matches(tmp_path: 
 def test_source_url_candidate_review_layout_defaults_and_persistence(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
 
-    default_response = client.get("/api/catalog/source-url-agent/candidates/review-layout")
+    default_response = client.get("/api/vendor-sources/candidates/review-layout")
 
     assert default_response.status_code == 200
     default_payload = default_response.json()
@@ -382,7 +379,7 @@ def test_source_url_candidate_review_layout_defaults_and_persistence(tmp_path: P
     assert "actions" not in [column["key"] for column in default_payload["columns"]]
 
     save_response = client.put(
-        "/api/catalog/source-url-agent/candidates/review-layout",
+        "/api/vendor-sources/candidates/review-layout",
         json={
             "user_key": "tester",
             "settings_card_collapsed": False,
@@ -405,7 +402,7 @@ def test_source_url_candidate_review_layout_defaults_and_persistence(tmp_path: P
     assert columns["candidate_url"]["width_px"] == 360
     assert columns["status"]["visible"] is False
 
-    persisted_response = client.get("/api/catalog/source-url-agent/candidates/review-layout", params={"user_key": "tester"})
+    persisted_response = client.get("/api/vendor-sources/candidates/review-layout", params={"user_key": "tester"})
 
     assert persisted_response.status_code == 200
     assert persisted_response.json()["columns"][0]["key"] == "candidate_url"
@@ -419,22 +416,22 @@ def test_source_url_candidate_review_layout_validates_columns_and_resets(tmp_pat
     client, database_url = _client(tmp_path, monkeypatch)
 
     unknown = client.put(
-        "/api/catalog/source-url-agent/candidates/review-layout",
+        "/api/vendor-sources/candidates/review-layout",
         json={"columns": [{"key": "actions", "visible": True}]},
     )
     duplicate = client.put(
-        "/api/catalog/source-url-agent/candidates/review-layout",
+        "/api/vendor-sources/candidates/review-layout",
         json={"columns": [{"key": "status"}, {"key": "status"}]},
     )
     bad_width = client.put(
-        "/api/catalog/source-url-agent/candidates/review-layout",
+        "/api/vendor-sources/candidates/review-layout",
         json={"columns": [{"key": "status", "width_px": 20}]},
     )
     saved = client.put(
-        "/api/catalog/source-url-agent/candidates/review-layout",
+        "/api/vendor-sources/candidates/review-layout",
         json={"user_key": "tester", "columns": [{"key": "status", "visible": False}]},
     )
-    reset = client.post("/api/catalog/source-url-agent/candidates/review-layout/reset", params={"user_key": "tester"})
+    reset = client.post("/api/vendor-sources/candidates/review-layout/reset", params={"user_key": "tester"})
 
     assert unknown.status_code == 400
     assert "Unknown" in unknown.json()["detail"]
@@ -453,14 +450,14 @@ def test_get_source_url_agent_candidate_returns_drawer_payload(tmp_path: Path, m
         product = _catalog_product(session)
         candidate = _candidate(session, product)
 
-    response = client.get(f"/api/catalog/source-url-agent/candidates/{candidate.id}")
-    missing = client.get("/api/catalog/source-url-agent/candidates/999")
+    response = client.get(f"/api/vendor-sources/candidates/{candidate.id}")
+    missing = client.get("/api/vendor-sources/candidates/999")
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["id"] == candidate.id
     assert payload["drawer"]["open_on"] == "row_single_click"
-    assert payload["drawer"]["review_endpoint"] == f"/api/catalog/source-url-agent/candidates/{candidate.id}/review"
+    assert payload["drawer"]["review_endpoint"] == f"/api/vendor-sources/candidates/{candidate.id}/review"
     assert [action["decision"] for action in payload["drawer"]["review_actions"]] == [
         "accept",
         "replace_url",
@@ -478,7 +475,7 @@ def test_patch_accept_updates_candidate_and_creates_source_url(tmp_path: Path, m
         candidate = _candidate(session, product)
 
     response = client.patch(
-        f"/api/catalog/source-url-agent/candidates/{candidate.id}/review",
+        f"/api/vendor-sources/candidates/{candidate.id}/review",
         json={"decision": "accept", "review_notes": "approved", "reviewed_by": "tester"},
     )
 
@@ -503,7 +500,7 @@ def test_patch_reject_updates_candidate_without_source_url(tmp_path: Path, monke
         product = _catalog_product(session)
         candidate = _candidate(session, product)
 
-    response = client.patch(f"/api/catalog/source-url-agent/candidates/{candidate.id}/review", json={"decision": "reject"})
+    response = client.patch(f"/api/vendor-sources/candidates/{candidate.id}/review", json={"decision": "reject"})
 
     assert response.status_code == 200
     assert response.json()["status"] == "rejected"
@@ -517,7 +514,7 @@ def test_patch_not_found_updates_candidate_without_source_url(tmp_path: Path, mo
         product = _catalog_product(session)
         candidate = _candidate(session, product)
 
-    response = client.patch(f"/api/catalog/source-url-agent/candidates/{candidate.id}/review", json={"decision": "not_found"})
+    response = client.patch(f"/api/vendor-sources/candidates/{candidate.id}/review", json={"decision": "not_found"})
 
     assert response.status_code == 200
     assert response.json()["status"] == "not_found"
@@ -532,7 +529,7 @@ def test_patch_needs_manual_review_keeps_candidate_in_review_without_source_url(
         candidate = _candidate(session, product, status="rejected")
 
     response = client.patch(
-        f"/api/catalog/source-url-agent/candidates/{candidate.id}/review",
+        f"/api/vendor-sources/candidates/{candidate.id}/review",
         json={"decision": "needs_manual_review"},
     )
 
@@ -549,12 +546,12 @@ def test_patch_replace_url_requires_reviewed_url_and_promotes_reviewed_url(tmp_p
         candidate = _candidate(session, product)
 
     missing = client.patch(
-        f"/api/catalog/source-url-agent/candidates/{candidate.id}/review",
+        f"/api/vendor-sources/candidates/{candidate.id}/review",
         json={"decision": "replace_url"},
     )
     reviewed_url = "https://www.bestprice.gr/item/2/replacement.html"
     replaced = client.patch(
-        f"/api/catalog/source-url-agent/candidates/{candidate.id}/review",
+        f"/api/vendor-sources/candidates/{candidate.id}/review",
         json={"decision": "replace_url", "reviewed_url": reviewed_url},
     )
 
@@ -573,7 +570,7 @@ def test_duplicate_promotion_does_not_create_duplicate_source_url(tmp_path: Path
         existing = _source_url(session, product, url="https://www.bestprice.gr/item/1/lg-remote.html")
         candidate = _candidate(session, product, url=existing.url)
 
-    response = client.patch(f"/api/catalog/source-url-agent/candidates/{candidate.id}/review", json={"decision": "accept"})
+    response = client.patch(f"/api/vendor-sources/candidates/{candidate.id}/review", json={"decision": "accept"})
 
     assert response.status_code == 200
     assert response.json()["source_url"]["source_url_id"] == existing.id
@@ -584,9 +581,9 @@ def test_duplicate_promotion_does_not_create_duplicate_source_url(tmp_path: Path
 def test_source_url_agent_candidate_routes_return_404_and_validation_errors(tmp_path: Path, monkeypatch) -> None:
     client, _database_url = _client(tmp_path, monkeypatch)
 
-    missing = client.patch("/api/catalog/source-url-agent/candidates/999/review", json={"decision": "reject"})
-    invalid_decision = client.patch("/api/catalog/source-url-agent/candidates/999/review", json={"decision": "bad"})
-    invalid_product_id = client.get("/api/catalog/source-url-agent/candidates", params={"catalog_product_id": "bad"})
+    missing = client.patch("/api/vendor-sources/candidates/999/review", json={"decision": "reject"})
+    invalid_decision = client.patch("/api/vendor-sources/candidates/999/review", json={"decision": "bad"})
+    invalid_product_id = client.get("/api/vendor-sources/candidates", params={"catalog_product_id": "bad"})
 
     assert missing.status_code == 404
     assert invalid_decision.status_code == 422
@@ -596,18 +593,24 @@ def test_source_url_agent_candidate_routes_return_404_and_validation_errors(tmp_
 def test_openapi_includes_source_url_agent_candidate_endpoints() -> None:
     paths = create_app().openapi()["paths"]
 
-    assert "/api/catalog/source-url-agent/runs" in paths
-    assert "/api/catalog/source-url-agent/runs/{run_id}" in paths
-    assert "/api/catalog/source-url-agent/runs/{run_id}/artifacts" in paths
-    assert "/api/catalog/source-url-agent/candidates" in paths
-    assert "/api/catalog/source-url-agent/candidates/{candidate_id}/review" in paths
+    assert "/api/catalog/source-url-agent/runs" not in paths
+    assert "/api/catalog/source-url-agent/candidates" not in paths
+    assert "/api/vendor-sources/agent/runs" in paths
+    assert "/api/vendor-sources/agent/runs/{run_id}" in paths
+    assert "/api/vendor-sources/agent/runs/{run_id}/artifacts" in paths
+    assert "/api/vendor-sources/candidates" in paths
+    assert "/api/vendor-sources/candidates/{candidate_id}/review" in paths
     assert "/api/vendor-sources/sources" in paths
     assert "/api/vendor-sources/captures/runs" in paths
     assert "/api/vendor-sources/captures/runs/{run_id}" in paths
     assert "/api/vendor-sources/captures/runs/{run_id}/artifacts" in paths
-    assert "/api/vendor-sources/agent/runs" in paths
-    assert "/api/vendor-sources/candidates" in paths
-    assert "/api/vendor-sources/candidates/{candidate_id}/review" in paths
+
+
+def test_catalog_source_url_agent_routes_are_removed() -> None:
+    client = TestClient(create_app())
+
+    assert client.get("/api/catalog/source-url-agent/runs").status_code == 404
+    assert client.get("/api/catalog/source-url-agent/candidates").status_code == 404
 
 
 def test_price_monitoring_no_longer_exposes_legacy_marketplace_source_enum() -> None:

@@ -55,10 +55,17 @@ if matches[0].value != "product_factory.dev.start:main":
     sys.exit(13)
 '@
 
-& $python -c $checkCode
-if ($LASTEXITCODE -ne 0) {
-    Write-ProductFactorySetupInstructions
-    exit $LASTEXITCODE
+$checkPath = New-TemporaryFile
+try {
+    Set-Content -LiteralPath $checkPath -Value $checkCode -Encoding UTF8
+    & $python $checkPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-ProductFactorySetupInstructions
+        exit $LASTEXITCODE
+    }
+}
+finally {
+    Remove-Item -LiteralPath $checkPath -ErrorAction SilentlyContinue
 }
 
 Set-Location $appRoot

@@ -222,8 +222,8 @@ def test_product_agent_handoff_preview_and_apply(tmp_path: Path, monkeypatch) ->
             encoding="utf-8",
         )
 
-    preview = client.post("/api/catalog/source-urls/import/product-agent/preview", json={"file": str(handoff_path)})
-    apply = client.post("/api/catalog/source-urls/import/product-agent/apply", json={"file": str(handoff_path)})
+    preview = client.post("/api/catalog/source-urls/import/product-factory/preview", json={"file": str(handoff_path)})
+    apply = client.post("/api/catalog/source-urls/import/product-factory/apply", json={"file": str(handoff_path)})
 
     assert preview.status_code == 200
     assert apply.status_code == 200
@@ -243,9 +243,9 @@ def test_product_agent_handoff_import_rejects_paths_outside_allowed_roots(tmp_pa
     outside_path.parent.mkdir(parents=True)
     outside_path.write_text("{}", encoding="utf-8")
 
-    response = client.post("/api/catalog/source-urls/import/product-agent/preview", json={"file": str(outside_path)})
+    response = client.post("/api/catalog/source-urls/import/product-factory/preview", json={"file": str(outside_path)})
     traversal = client.post(
-        "/api/catalog/source-urls/import/product-agent/preview",
+        "/api/catalog/source-urls/import/product-factory/preview",
         json={"file": str(tmp_path / "allowed" / ".." / "ecommerce_source_handoff.json")},
     )
 
@@ -342,6 +342,6 @@ def test_openapi_includes_source_url_import_endpoints() -> None:
     assert "/api/catalog/source-urls/summary" in paths
     assert "/api/catalog/source-urls/import/preview" in paths
     assert "/api/catalog/source-urls/import/apply" in paths
-    assert "/api/catalog/source-urls/import/product-agent/preview" in paths
-    assert "/api/catalog/source-urls/import/product-agent/apply" in paths
+    assert "/api/catalog/source-urls/import/product-factory/preview" in paths
+    assert "/api/catalog/source-urls/import/product-factory/apply" in paths
     assert "/api/catalog/source-urls/import/options" in paths

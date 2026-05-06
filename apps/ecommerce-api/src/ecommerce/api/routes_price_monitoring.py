@@ -78,8 +78,6 @@ from ecommerce.price_monitoring.source_url_coverage import (
     compute_source_url_coverage,
     require_active_source_url_coverage,
 )
-from ecommerce.vendor_sources.capture import run_vendor_source_capture
-
 router = APIRouter(prefix="/api/price-monitoring", tags=["price-monitoring"])
 
 
@@ -132,15 +130,6 @@ class PriceMonitoringFetchApiRequest(BaseModel):
 
 class PriceMonitoringFetchCancelApiRequest(BaseModel):
     reason: str | None = None
-
-
-class SourceCaptureRunApiRequest(BaseModel):
-    refresh_after_minutes: int = 360
-    limit: int = 50
-    vendor: str | None = None
-    product_source_ids: list[int] = Field(default_factory=list)
-    include_not_due: bool = False
-    admin_all_sources: bool = False
 
 
 @router.post("/selection/preview")
@@ -381,34 +370,6 @@ def cancel_price_monitoring_fetch_execution(
 @router.get("/db/status")
 def get_price_monitoring_db_status() -> dict:
     return collect_price_monitoring_database_readiness()
-
-
-@router.post("/source-captures/run")
-def post_source_capture_run(request: SourceCaptureRunApiRequest) -> dict:
-    _require_price_monitoring_database_ready()
-    vendor = _optional_query_text(request.vendor)
-    try:
-        with session_scope() as session:
-            result = run_vendor_source_capture(
-                session,
-                refresh_after_minutes=request.refresh_after_minutes,
-                limit=request.limit,
-                vendor_slug=vendor,
-                product_source_ids=[int(item) for item in request.product_source_ids],
-                include_not_due=bool(request.include_not_due),
-                admin_all_sources=bool(request.admin_all_sources),
-            )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source capture run failed: {_safe_db_error(exc)}") from exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Source capture run failed: {str(exc) or exc.__class__.__name__}") from exc
-    payload = result.to_dict()
-    payload["selected_count"] = result.selected_product_source_count
-    payload["deprecated"] = True
-    payload["replacement_endpoint"] = "/api/vendor-sources/captures/runs"
-    return payload
 
 
 @router.get("/observations")

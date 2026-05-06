@@ -568,15 +568,6 @@ export function PriceMonitoringExecutionsPage() {
                   <span className="status-badge ok">Source URL monitoring</span>
                 </p>
               ) : null}
-              {selectedExecution.legacy_marketplace_fetch_used === true ? (
-                <details className="state-block">
-                  <summary>Deprecated diagnostics</summary>
-                  <dl className="summary-grid">
-                    <SummaryItem label="legacy_marketplace_fetch_used" value="true" />
-                  </dl>
-                </details>
-              ) : null}
-
               {selectedExecution.command && selectedExecution.command.length > 0 ? (
                 <pre className="json-block">{JSON.stringify(selectedExecution.command, null, 2)}</pre>
               ) : null}

@@ -8,7 +8,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -25,8 +25,6 @@ from ecommerce.db.source_url_repository import create_or_update_imported_source_
 from ecommerce.source_url_agent.agent import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult, run_source_url_agent
 from ecommerce.source_url_agent.products import SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES, load_source_registry
-
-router = APIRouter(prefix="/api/catalog/source-url-agent", tags=["catalog-source-url-agent"])
 
 ReviewDecision = Literal["accept", "reject", "replace_url", "not_found", "needs_manual_review"]
 SourceUrlAgentRunMode = Literal["catalog", "csv"]
@@ -111,7 +109,6 @@ class SourceUrlCandidateReviewLayoutRequest(BaseModel):
     action_panel_width_px: int | None = None
 
 
-@router.post("/runs")
 def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, Any]:
     _require_source_url_agent_run_database_ready()
     _validate_source_choice(request.source)
@@ -176,7 +173,6 @@ def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, 
     return _source_url_agent_result_payload(result)
 
 
-@router.get("/runs")
 def list_source_url_agent_runs(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -197,7 +193,6 @@ def list_source_url_agent_runs(
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
-@router.get("/runs/{run_id}")
 def get_source_url_agent_run(run_id: str) -> dict[str, Any]:
     _require_source_url_agent_run_database_ready()
     try:
@@ -214,12 +209,10 @@ def get_source_url_agent_run(run_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Source URL Agent run query failed: {_safe_db_error(exc)}") from exc
 
 
-@router.get("/runs/{run_id}/artifacts")
 def get_source_url_agent_run_artifacts(run_id: str) -> dict[str, Any]:
     return _source_url_agent_artifact_listing(run_id)
 
 
-@router.get("/candidates")
 def list_source_url_agent_candidates(
     status: str | None = None,
     source_name: str | None = None,
@@ -259,7 +252,6 @@ def list_source_url_agent_candidates(
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
-@router.get("/candidates/review-layout")
 def get_source_url_candidate_review_layout(user_key: str | None = None) -> dict[str, Any]:
     _require_catalog_database_ready()
     resolved_user_key = _preference_user_key(user_key)
@@ -271,7 +263,6 @@ def get_source_url_candidate_review_layout(user_key: str | None = None) -> dict[
         raise HTTPException(status_code=500, detail=f"Source URL candidate layout query failed: {_safe_db_error(exc)}") from exc
 
 
-@router.put("/candidates/review-layout")
 def save_source_url_candidate_review_layout(request: SourceUrlCandidateReviewLayoutRequest) -> dict[str, Any]:
     _require_catalog_database_ready()
     resolved_user_key = _preference_user_key(request.user_key)
@@ -300,7 +291,6 @@ def save_source_url_candidate_review_layout(request: SourceUrlCandidateReviewLay
         raise HTTPException(status_code=500, detail=f"Source URL candidate layout save failed: {_safe_db_error(exc)}") from exc
 
 
-@router.post("/candidates/review-layout/reset")
 def reset_source_url_candidate_review_layout(user_key: str | None = None) -> dict[str, Any]:
     _require_catalog_database_ready()
     resolved_user_key = _preference_user_key(user_key)
@@ -315,7 +305,6 @@ def reset_source_url_candidate_review_layout(user_key: str | None = None) -> dic
         raise HTTPException(status_code=500, detail=f"Source URL candidate layout reset failed: {_safe_db_error(exc)}") from exc
 
 
-@router.get("/candidates/{candidate_id}")
 def get_source_url_agent_candidate(candidate_id: int) -> dict[str, Any]:
     _require_catalog_database_ready()
     try:
@@ -332,7 +321,6 @@ def get_source_url_agent_candidate(candidate_id: int) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Source URL candidate query failed: {_safe_db_error(exc)}") from exc
 
 
-@router.patch("/candidates/{candidate_id}/review")
 def review_source_url_agent_candidate(candidate_id: int, request: SourceUrlCandidateReviewRequest) -> dict[str, Any]:
     _require_catalog_database_ready()
     try:
@@ -701,7 +689,7 @@ def _candidate_drawer_payload(row: SourceUrlCandidate) -> dict[str, Any]:
                 "promotes_source_url": False,
             },
         ],
-        "review_endpoint": f"/api/catalog/source-url-agent/candidates/{row.id}/review",
+        "review_endpoint": f"/api/vendor-sources/candidates/{row.id}/review",
     }
 
 
@@ -727,7 +715,7 @@ def _review_layout_payload(user_key: str, preferences: dict[str, Any] | None) ->
         "actions": {
             "table_column_visible": False,
             "replacement": "drawer_panel",
-            "review_endpoint_template": "/api/catalog/source-url-agent/candidates/{candidate_id}/review",
+            "review_endpoint_template": "/api/vendor-sources/candidates/{candidate_id}/review",
         },
         "action_panel": normalized["action_panel"],
     }

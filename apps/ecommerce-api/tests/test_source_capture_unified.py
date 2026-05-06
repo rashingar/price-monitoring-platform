@@ -893,30 +893,7 @@ def test_scheduled_capture_refreshes_due_product_sources(tmp_path: Path) -> None
 def test_source_capture_run_api_returns_summary(tmp_path: Path, monkeypatch) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
-    monkeypatch.setattr(routes_price_monitoring, "_require_price_monitoring_database_ready", lambda: None)
     monkeypatch.setattr(routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None)
-    monkeypatch.setattr(
-        routes_price_monitoring,
-        "run_vendor_source_capture",
-        lambda *_args, **_kwargs: SourceUrlCaptureRunResult(
-            status="completed_with_partial_failures",
-            used_source_urls=True,
-            source="electronet",
-            vendor="electronet",
-            run_id="capture-run-1",
-            observation_batch_id="capture-run-1",
-            source_filter="electronet",
-            selected_catalog_product_count=2,
-            selected_source_url_count=2,
-            selected_product_source_count=2,
-            succeeded_count=1,
-            failed_count=1,
-            warnings=[],
-            items=[{"product_source_id": 1, "status": "success"}, {"product_source_id": 2, "status": "failed"}],
-            source_urls=[],
-            result_path=None,
-        ),
-    )
     monkeypatch.setattr(
         routes_vendor_sources,
         "run_vendor_source_capture",
@@ -942,7 +919,7 @@ def test_source_capture_run_api_returns_summary(tmp_path: Path, monkeypatch) -> 
 
     response = TestClient(create_app()).post(
         "/api/vendor-sources/captures/runs",
-        json={"vendor": "electronet", "limit": 2, "refresh_after_minutes": 0},
+        json={"vendor_slug": "electronet", "limit": 2, "refresh_after_minutes": 0},
     )
 
     assert response.status_code == 200
@@ -955,13 +932,12 @@ def test_source_capture_run_api_returns_summary(tmp_path: Path, monkeypatch) -> 
     assert payload["succeeded_count"] == 1
     assert payload["failed_count"] == 1
 
-    compatibility_response = TestClient(create_app()).post(
+    removed_response = TestClient(create_app()).post(
         "/api/price-monitoring/source-captures/run",
-        json={"vendor": "electronet", "limit": 2, "refresh_after_minutes": 0},
+        json={"vendor_slug": "electronet", "limit": 2, "refresh_after_minutes": 0},
     )
 
-    assert compatibility_response.status_code == 200
-    assert compatibility_response.json()["replacement_endpoint"] == "/api/vendor-sources/captures/runs"
+    assert removed_response.status_code == 404
 
 
 def test_price_monitoring_fetch_result_reports_source_url_capture_usage(tmp_path: Path, monkeypatch) -> None:
@@ -1009,7 +985,6 @@ def test_price_monitoring_fetch_result_reports_source_url_capture_usage(tmp_path
     )
 
     assert result.fetch_input_mode == "source_urls"
-    assert result.legacy_marketplace_fetch_used is False
     assert result.source_url_capture_used is True
     assert result.source_url_capture_status == "completed"
     assert result.source_url_capture_selected_count == 1
@@ -1018,7 +993,6 @@ def test_price_monitoring_fetch_result_reports_source_url_capture_usage(tmp_path
     payload = json.loads((run_dir / "fetch_result.json").read_text(encoding="utf-8"))
     assert payload["source_url_capture_used"] is True
     assert payload["fetch_input_mode"] == "source_urls"
-    assert payload["legacy_marketplace_fetch_used"] is False
 
 
 class _FakeTimeout(TimeoutError):

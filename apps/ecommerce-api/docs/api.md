@@ -206,16 +206,16 @@ GET  /api/catalog/source-urls/summary
 GET  /api/catalog/source-urls/import/options
 POST /api/catalog/source-urls/import/preview
 POST /api/catalog/source-urls/import/apply
-POST /api/catalog/source-urls/import/product-agent/preview
-POST /api/catalog/source-urls/import/product-agent/apply
+POST /api/catalog/source-urls/import/product-factory/preview
+POST /api/catalog/source-urls/import/product-factory/apply
 ```
 
 Preview is a dry-run. Apply writes resolved candidates into `source_urls` and is
 intended to be idempotent.
 
 Product Factory handoff import accepts `ecommerce_source_handoff.json` files
-only from allowed artifact roots or configured file editor roots. The route
-path keeps `/product-agent/` for API compatibility.
+only from allowed artifact roots or configured file editor roots. The canonical
+route path uses `/product-factory/`.
 
 ### Vendor Sources
 
@@ -239,17 +239,16 @@ PUT   /api/vendor-sources/candidates/review-layout
 POST  /api/vendor-sources/candidates/review-layout/reset
 ```
 
-This namespace is the direct-vendor workflow surface. Source URL Agent
-compatibility routes under `/api/catalog/source-url-agent` remain available.
+This namespace is the direct-vendor workflow surface. Use Vendor Sources
+directly for discovery runs, candidate review, capture, and source health.
 `GET /api/vendor-sources/sources` returns discovery and capture capabilities so
 clients can distinguish marketplace monitoring sources from direct vendor
 sources and avoid assuming capture support for discovery-only vendors.
-Vendor Sources owns source URL capture and health; the old
-`POST /api/price-monitoring/source-captures/run` endpoint remains as deprecated
-compatibility and routes through `POST /api/vendor-sources/captures/runs`.
-The old `POST /api/vendor-sources/captures/run` spelling also remains as
-deprecated compatibility. Vendor Source Capture history is stored separately
-from Price Monitoring run history.
+Vendor Sources owns source URL capture and health. The old
+`POST /api/price-monitoring/source-captures/run` and
+`POST /api/vendor-sources/captures/run` routes were removed; use
+`POST /api/vendor-sources/captures/runs`. Vendor Source Capture history is
+stored separately from Price Monitoring run history.
 
 ### Product Ignore
 
@@ -348,9 +347,8 @@ and `killed`.
 
 Price Monitoring fetch uses stored source URLs only. It calls Vendor Sources
 capture for the run's selected active URLs, reports `fetch_input_mode:
-"source_urls"`, persists the Vendor Sources `observation_batch_id`, and keeps
-the deprecated compatibility field `legacy_marketplace_fetch_used: false`. The
-old marketplace MPN/search fetch implementation has been removed.
+"source_urls"`, and persists the Vendor Sources `observation_batch_id`. The old
+marketplace MPN/search fetch implementation has been removed.
 
 ### Observations, History, Review, And Export
 
@@ -410,10 +408,10 @@ backend.
 ### Source Capture And Product Source Helpers
 
 ```text
-POST /api/price-monitoring/source-captures/run
 POST /api/products/from-source
 ```
 
-These endpoints support source URL capture workflows for known product sources.
-New capture callers should use `POST /api/vendor-sources/captures/runs`. See
-[source-capture.md](source-capture.md) for current behavior and boundaries.
+`POST /api/products/from-source` supports product source creation for known
+source URLs. Capture callers should use
+`POST /api/vendor-sources/captures/runs`. See [source-capture.md](source-capture.md)
+for current behavior and boundaries.
