@@ -41,13 +41,13 @@ docs/contracts/openapi.ecommerce.json
 Regenerate after an intentional API shape change:
 
 ```powershell
-python -m ecommerce.jobs.export_openapi_snapshot
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.export_openapi_snapshot
 ```
 
 Run contract tests:
 
 ```powershell
-python -m pytest -q -m contract
+..\..\.venv\Scripts\python.exe -m pytest -vv -ra -m contract
 ```
 
 Rules for API changes:
@@ -57,6 +57,8 @@ Rules for API changes:
 - Keep frontend mocks and fixtures downstream of the backend contract.
 - Contract tests should stay local and should not require PostgreSQL, live
   websites, Playwright browser execution, Docker, OpenCart, or external network.
+- Run runtime and full suites only when explicitly requested. Runtime tests are
+  opt-in; golden tests are deterministic fixture regressions.
 
 ## Runtime Boundaries
 

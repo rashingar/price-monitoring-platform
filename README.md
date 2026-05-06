@@ -154,23 +154,30 @@ Operator broad fast verification:
 ```
 
 `scripts\test\fast.ps1` is the human/operator broad fast verification command.
-Codex prompts should prefer targeted checks relevant to changed files and keep
-automated checks under 2 minutes. Broader checks are manual unless explicitly
-requested.
+Codex prompts should prefer targeted app checks relevant to changed files and
+keep automated checks under 2 minutes. Use
+`.\scripts\test\codex-product-factory.ps1` for Product Factory-only backend
+changes and `.\scripts\test\codex-ecommerce.ps1` for Ecommerce-only backend
+changes. Broader checks are manual unless explicitly requested.
 
 App-specific and contract checks:
 
 ```powershell
 .\scripts\test\product-factory-api.ps1
 .\scripts\test\ecommerce-api.ps1
+.\scripts\test\product-factory-runtime.ps1
+.\scripts\test\product-factory-golden.ps1
+.\scripts\test\ecommerce-runtime.ps1
+.\scripts\test\ecommerce-golden.ps1
 .\scripts\test\web.ps1
 .\scripts\contracts\check.ps1
 .\scripts\contracts\check-web-types.ps1
 .\scripts\check\all.ps1
 ```
 
-The test scripts use verbose output and exclude live external, e2e, slow, and
-legacy tests from the default fast path. See
+The test scripts use verbose output and exclude live external, e2e, slow,
+legacy, and runtime tests from the default fast path. Runtime tests are opt-in;
+golden tests are deterministic fixture regressions. See
 [Testing Strategy](docs/runbooks/testing-strategy.md).
 
 ## Contracts And Generated Web Types

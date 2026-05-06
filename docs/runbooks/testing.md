@@ -8,12 +8,14 @@ Always run tests with verbose output so you can see whether it is hanging or sim
 ## Default Codex Check
 
 ```powershell
-.\scripts\test-fast.ps1
+.\scripts\test\codex-product-factory.ps1
+.\scripts\test\codex-ecommerce.ps1
 ```
 
-This is the default Codex and local development check for Product Factory. It
-runs from `apps/product-factory-api` and excludes `slow`, `external`, `legacy`,
-`e2e`, and `runtime`.
+Use the app-specific Codex script when a prompt touches only that backend app.
+Both scripts exclude `slow`, `external`, `legacy`, `e2e`, and `runtime`.
+`.\scripts\test\fast.ps1` is broad monorepo operator verification, not the
+default Codex command.
 
 Full `pytest` is not the default Codex command. Do not run full
 prepare/render/publish e2e, subprocess, browser, OpenCart, OpenAI, database, or
@@ -22,9 +24,10 @@ live network tests unless the prompt explicitly asks for that profile.
 ## Profiles
 
 ```powershell
-.\scripts\test-contract.ps1
-.\scripts\test-golden.ps1
-.\scripts\test-runtime.ps1
+.\scripts\test\product-factory-golden.ps1
+.\scripts\test\product-factory-runtime.ps1
+.\scripts\test\ecommerce-golden.ps1
+.\scripts\test\ecommerce-runtime.ps1
 ```
 
 `contract` covers API, schema, artifact, and request/response contracts.
@@ -35,5 +38,7 @@ live network tests unless the prompt explicitly asks for that profile.
 subprocesses, workers, process termination, browser/server/database/LLM calls,
 or full service orchestration.
 
-Use `.\scripts\test-runtime.ps1` for intentional job runner, worker,
-subprocess, process stop/kill, integration, or broad workflow checks.
+Use the app runtime scripts for intentional job runner, worker, subprocess,
+process stop/kill, fetch execution, source capture, source URL agent, database
+workflow, or broad orchestration checks. Full suites are manual unless
+explicitly requested.

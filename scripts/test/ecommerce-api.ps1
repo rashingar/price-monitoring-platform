@@ -48,5 +48,5 @@ finally {
 }
 
 Set-Location $appRoot
-& $python -m pytest -vv -ra -m "not slow and not external and not e2e and not legacy"
+& $python -m pytest -vv -ra -m "not slow and not external and not e2e and not legacy and not runtime"
 exit $LASTEXITCODE

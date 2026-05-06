@@ -124,7 +124,8 @@ commands.
 
 Use verbose test output. Operator broad fast verification should avoid live
 external services, browser-live workflows, e2e product runs, and slow tests
-unless the change needs that scope.
+unless the change needs that scope. Runtime tests are opt-in and excluded from
+default fast backend checks.
 
 Operator broad verification:
 

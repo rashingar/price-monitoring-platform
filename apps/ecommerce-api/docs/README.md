@@ -99,6 +99,21 @@ To inspect the SQL without connecting to PostgreSQL:
 alembic upgrade head --sql
 ```
 
+## Testing Profiles
+
+Codex prompts that touch only Ecommerce API backend files should prefer:
+
+```powershell
+.\scripts\test\codex-ecommerce.ps1
+```
+
+`.\scripts\test\fast.ps1` is broad monorepo operator verification, not the
+default Codex command. Runtime tests are opt-in via
+`.\scripts\test\ecommerce-runtime.ps1`; golden tests are deterministic fixture
+regressions via `.\scripts\test\ecommerce-golden.ps1`. Full suites are manual
+unless explicitly requested. Always run tests with verbose output so you can
+see whether a command is hanging or simply taking longer.
+
 ## Price Monitoring Persistence
 
 `catalog_products` stores the active imported catalog used by Catalog API browsing and Price Monitoring selection. It preserves `catalog_source + model`, MPN/name/manufacturer, raw and parsed category fields, quantity/status/marketplace flags, raw CSV row JSON, import metadata, and an `active` flag. Products missing from the latest import are marked inactive instead of hard-deleted.

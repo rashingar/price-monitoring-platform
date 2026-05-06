@@ -6,15 +6,18 @@ app-local virtual environment.
 
 Always run tests with verbose output so you can see whether it is hanging or simply taking longer.
 
-## Default Fast Check
+## Default Codex Check
 
 ```powershell
-.\scripts\test-fast.ps1
+.\scripts\test\codex-product-factory.ps1
 ```
 
-Use this as the default Codex and local development check. It runs Product
-Factory tests from `apps/product-factory-api` and excludes tests marked `slow`,
-`external`, `legacy`, `e2e`, or `runtime`.
+Use this as the default Codex check when a prompt touches only Product Factory
+backend files. It runs Product Factory tests from `apps/product-factory-api`
+and excludes tests marked `slow`, `external`, `legacy`, `e2e`, or `runtime`.
+
+`.\scripts\test\fast.ps1` is broad operator verification for the monorepo, not
+the default Codex command.
 
 Full `pytest` is not the default Codex command. Do not run full
 prepare/render/publish e2e, subprocess, browser, OpenCart, OpenAI, database, or
@@ -27,7 +30,7 @@ live network tests unless the prompt explicitly asks for that profile.
 ```
 
 Use this for operator-requested Product Factory broad verification. It uses the
-same fast exclusions as `.\scripts\test-fast.ps1`.
+same fast exclusions as `.\scripts\test\codex-product-factory.ps1`.
 
 ## Contract-only
 
@@ -46,7 +49,7 @@ Regenerate the OpenAPI snapshot from `apps/product-factory-api` after intentiona
 ## Golden-only
 
 ```powershell
-.\scripts\test-golden.ps1
+.\scripts\test\product-factory-golden.ps1
 ```
 
 Golden tests are deterministic frozen input/output fixture regression tests.
@@ -56,7 +59,7 @@ should preserve known fixture output.
 ## Runtime Profile
 
 ```powershell
-.\scripts\test-runtime.ps1
+.\scripts\test\product-factory-runtime.ps1
 ```
 
 Runtime tests execute or simulate app runtime paths, subprocesses, workers,
@@ -96,7 +99,7 @@ Run affected-stage tests during development:
 
 - Filter changes: run `filters` and relevant unit tests.
 - Render changes: run `render` and contract tests.
-- Job runner changes: run `.\scripts\test-runtime.ps1`.
+- Job runner changes: run `.\scripts\test\product-factory-runtime.ps1`.
 - API changes: run `contract`.
 - Source acquisition changes: run `source_acquisition`.
 - Authoring artifact changes: run `authoring`.

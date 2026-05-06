@@ -33,7 +33,15 @@ exist.
 ## Codex Default Verification
 
 For normal Codex prompts, run only small, targeted checks relevant to changed
-files and keep total automated check runtime under 2 minutes. Always run:
+files and keep total automated check runtime under 2 minutes. When a prompt
+touches only one backend app, prefer that app's Codex entrypoint:
+
+```powershell
+.\scripts\test\codex-product-factory.ps1
+.\scripts\test\codex-ecommerce.ps1
+```
+
+Always run:
 
 ```powershell
 git diff --check
@@ -50,11 +58,11 @@ Use focused tests only when the changed files clearly map to them:
 - Run one relevant pytest file or test node for clearly mapped Python changes.
 - Run one relevant Vitest file for clearly mapped web changes.
 
-Do not run `.\scripts\test\fast.ps1`,
-`.\scripts\test\product-factory-api.ps1`, `.\scripts\test\ecommerce-api.ps1`,
-or `.\scripts\test\web.ps1` by default in Codex prompts. If broader
-verification is useful, list the exact command under `Manual verification
-needed` instead of running it automatically.
+Do not run `.\scripts\test\fast.ps1` by default in Codex prompts. It is broad
+human/operator verification, not the default Codex command. If a prompt changes
+multiple apps or contracts and broader verification is useful, list the exact
+command under `Manual verification needed` unless the operator explicitly asks
+for that scope.
 
 ## App Commands
 
@@ -62,8 +70,14 @@ needed` instead of running it automatically.
 .\scripts\check\hygiene.ps1
 .\scripts\check\hygiene.ps1 -Staged
 .\scripts\check\all.ps1
+.\scripts\test\codex-product-factory.ps1
+.\scripts\test\codex-ecommerce.ps1
 .\scripts\test\product-factory-api.ps1
 .\scripts\test\ecommerce-api.ps1
+.\scripts\test\product-factory-runtime.ps1
+.\scripts\test\product-factory-golden.ps1
+.\scripts\test\ecommerce-runtime.ps1
+.\scripts\test\ecommerce-golden.ps1
 .\scripts\test\web.ps1
 .\scripts\contracts\check.ps1
 .\scripts\contracts\check-web-types.ps1
@@ -83,6 +97,11 @@ that generated web API types are current with the mirrored OpenAPI contracts.
 - `smoke`: shallow health, import, route, or page checks.
 - `integration`: local multi-module or service-style tests using temp files,
   local fakes, fake browsers, in-process clients, or temporary databases.
+- `runtime`: tests that execute or simulate app runtime paths such as
+  subprocesses, job workers, fetch execution, source URL agent runs, vendor
+  capture runs, process termination, browser/server/database/LLM calls, capture
+  runs, or broad service orchestration.
+- `golden`: deterministic frozen input/output fixture regression tests.
 - `slow`: intentionally slower tests.
 - `external`: tests requiring live websites, network, marketplace pages,
   external APIs, real browser downloads, credentials, or real services.
@@ -104,9 +123,11 @@ SQLite/temp-file integration tests that complete quickly.
 
 Fast tests must not call live marketplace pages, scrape external websites,
 download real browsers, call OpenAI or other external APIs, require OpenCart,
-require PostgreSQL or another running service, depend on credentials, or perform
-full browser/operator workflows. Mark those tests `external`, `slow`, and/or
-`e2e` as appropriate.
+require PostgreSQL or another running service, depend on credentials, run
+subprocesses, or perform full browser/operator workflows. Mark those tests
+`runtime`, `external`, `slow`, and/or `e2e` as appropriate. Python fast suites
+block obvious subprocess calls unless the test is marked `runtime`, `slow`,
+`e2e`, or `external`.
 
 ## Marking Guidance
 
@@ -143,10 +164,28 @@ Do not delete tests casually. If a test is too slow, external, e2e-only, or
 diagnostic-only for the default fast path, mark it with the appropriate marker
 and keep the reason close to the test or owning app runbook.
 
+Runtime tests are opt-in. Use the app runtime scripts for job/process/fetch,
+source capture, source URL agent, database-heavy, or workflow orchestration
+changes:
+
+```powershell
+.\scripts\test\product-factory-runtime.ps1
+.\scripts\test\ecommerce-runtime.ps1
+```
+
+Golden tests are deterministic fixture regressions and can be selected
+explicitly:
+
+```powershell
+.\scripts\test\product-factory-golden.ps1
+.\scripts\test\ecommerce-golden.ps1
+```
+
 Future Codex prompts should follow the targeted policy in
 [Codex Default Verification](#codex-default-verification). Run
-`.\scripts\test\fast.ps1`, `slow`, `external`, `e2e`, or `legacy` selections
-only when the operator explicitly asks or the change needs that scope.
+`.\scripts\test\fast.ps1`, runtime, `slow`, `external`, `e2e`, `legacy`, or full
+suite selections only when the operator explicitly asks or the change needs
+that scope. Full suites are manual unless explicitly requested.
 
 ## Troubleshooting
 

@@ -84,13 +84,23 @@ API endpoints, request/response contracts, snapshot rules, and contract test com
 
 ## Development Checks
 
-Run tests through the root script with the repo virtual environment:
+Run Product Factory-only Codex checks through the targeted root script with the
+repo virtual environment:
+
+```powershell
+.\scripts\test\codex-product-factory.ps1
+```
+
+Run broader Product Factory fast verification when explicitly requested:
 
 ```powershell
 .\scripts\test\product-factory-api.ps1
 ```
 
-For faster targeted checks, see `docs/runbooks/testing.md`.
+Runtime tests are opt-in via `.\scripts\test\product-factory-runtime.ps1`.
+Golden tests are deterministic fixture regressions via
+`.\scripts\test\product-factory-golden.ps1`. For targeted checks, see
+`docs/runbooks/testing.md`.
 
 ## Runtime Outputs
 

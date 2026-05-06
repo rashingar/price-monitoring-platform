@@ -124,7 +124,10 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
 }
 
 _TEST_MARKERS: dict[tuple[str, str], tuple[str, ...]] = {
+    ("test_api_jobs.py", "test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts"): ("runtime",),
+    ("test_api_jobs.py", "test_stop_route_cancels_queued_job_and_writes_log"): ("runtime",),
     ("test_api_jobs.py", "test_jobs_by_model_lists_latest_first_and_retry_requeues_failed_stage"): ("runtime",),
+    ("test_api_jobs.py", "test_stop_route_cancels_stale_running_job"): ("runtime",),
     ("test_job_runner.py", "test_runner_executes_jobs_sequentially"): ("runtime",),
     ("test_job_runner.py", "test_runner_marks_job_failed_when_callback_raises"): ("runtime",),
     ("test_job_runner.py", "test_runner_stop_active_job_preserves_cancelled_after_callback_finishes"): ("runtime",),
@@ -168,6 +171,9 @@ _TEST_MARKERS: dict[tuple[str, str], tuple[str, ...]] = {
         "slow",
         "golden",
     ),
+    ("test_workflow.py", "test_execute_publish_workflow_passes_model_and_current_job_product_file"): ("runtime",),
+    ("test_workflow.py", "test_execute_publish_workflow_fails_preflight_when_bash_is_missing"): ("runtime",),
+    ("test_workflow.py", "test_execute_publish_workflow_classifies_wsl_launcher_probe_failures"): ("runtime",),
 }
 
 _TEST_XFAILS: dict[tuple[str, str], str] = {
@@ -182,10 +188,10 @@ _TEST_XFAILS: dict[tuple[str, str], str] = {
 }
 
 _FAST_EXCLUDED_MARKERS = {"slow", "external", "e2e", "legacy", "runtime"}
-_RUNTIME_GUARD_ALLOWED_MARKERS = {"runtime", "integration", "slow", "e2e", "external"}
+_RUNTIME_GUARD_ALLOWED_MARKERS = {"runtime", "slow", "e2e", "external"}
 _RUNTIME_GUARD_MESSAGE = (
     "subprocess calls are blocked in fast tests. "
-    "If this runtime behavior is intentional, mark the test as runtime, integration, slow, e2e, or external."
+    "If this runtime behavior is intentional, mark the test as runtime, slow, e2e, or external."
 )
 
 

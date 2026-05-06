@@ -137,6 +137,8 @@ Open a new PowerShell terminal after persisting user environment variables.
 
 Current PostgreSQL setup, backup, rename, and rebuild steps are maintained in
 [Ecommerce PostgreSQL Local Setup](../../docs/runbooks/ecommerce-postgresql-local.md).
+The helper script `scripts\setup_postgres_windows.ps1` can generate the same
+local Windows setup commands without using Docker.
 
 ### Renaming an older local PostgreSQL database
 
@@ -306,14 +308,39 @@ For operator-requested broad app verification from the repository root:
 .\scripts\test\ecommerce-api.ps1
 ```
 
+For Codex prompts that touch only Ecommerce API backend files, prefer:
+
+```powershell
+.\scripts\test\codex-ecommerce.ps1
+```
+
+Runtime tests are opt-in:
+
+```powershell
+.\scripts\test\ecommerce-runtime.ps1
+```
+
+Golden tests are deterministic fixture regressions:
+
+```powershell
+.\scripts\test\ecommerce-golden.ps1
+```
+
 For targeted checks, run the specific pytest file or node that maps to the
 change:
 
 ```powershell
 Push-Location apps\ecommerce-api
-..\..\.venv\Scripts\python.exe -m pytest tests\path\to\relevant_test.py -q
+..\..\.venv\Scripts\python.exe -m pytest tests\path\to\relevant_test.py -vv -ra
 Pop-Location
 ```
+
+The direct module form is `python -m ecommerce.jobs.check_db_setup`; use the
+repo `.venv` Python executable for this project.
+
+`.\scripts\test\fast.ps1` is broad monorepo operator verification, not the
+default Codex command. Full suites and runtime profiles are manual unless
+explicitly requested.
 
 Run API contract checks only after intentional route/schema/snapshot changes:
 

@@ -44,12 +44,14 @@ Do not run these broad commands unless the operator explicitly asks or the task
 explicitly requires that exact scope:
 
 - `.\scripts\test\fast.ps1`
-- `.\scripts\test\product-factory-api.ps1`
-- `.\scripts\test\ecommerce-api.ps1`
 - `.\scripts\test\web.ps1`
 
 Use targeted checks instead:
 
+- Run `.\scripts\test\codex-product-factory.ps1` when a prompt touches only
+  Product Factory backend files and needs the app default fast profile.
+- Run `.\scripts\test\codex-ecommerce.ps1` when a prompt touches only Ecommerce
+  API backend files and needs the app default fast profile.
 - Run `.\scripts\contracts\check.ps1` only when API contracts, routes, or
   schemas changed.
 - Run `.\scripts\contracts\check-web-types.ps1` only when contracts or
@@ -81,7 +83,7 @@ Ecommerce route change:
 
 ```powershell
 git diff --check
-.\.venv\Scripts\python.exe -m pytest apps\ecommerce-api\tests\path\to\relevant_test.py -q
+.\.venv\Scripts\python.exe -m pytest apps\ecommerce-api\tests\path\to\relevant_test.py -vv -ra
 git status --short
 ```
 

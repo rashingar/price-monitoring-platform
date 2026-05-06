@@ -36,6 +36,8 @@ markers = [
     "contract: backend API contract and OpenAPI snapshot checks",
     "smoke: fast endpoint smoke checks with local fixtures",
     "integration: integration tests using local fakes or temporary services/files",
+    "runtime: tests that execute or simulate app runtime paths, subprocesses, fetch execution, source URL agent runs, vendor capture runs, database workflows, Playwright/browser paths, or long service orchestration",
+    "golden: deterministic frozen input/output fixture regression tests",
     "slow: tests that are intentionally slower than the fast local suite",
     "external: tests requiring live websites, browsers, network, Docker, or external services",
     "e2e: full workflow, browser, or operator-flow tests",
