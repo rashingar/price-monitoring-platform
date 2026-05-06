@@ -14,9 +14,9 @@ SCRAPER_ROOT = REPO_ROOT / "scraper"
 if str(SCRAPER_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRAPER_ROOT))
 
-from pipeline.fetcher import ElectronetFetcher
-from pipeline.skroutz_sections import extract_skroutz_section_window
-from pipeline.skroutz_taxonomy import normalize_category_href_slug
+from product_factory.fetcher import ElectronetFetcher
+from product_factory.skroutz_sections import extract_skroutz_section_window
+from product_factory.skroutz_taxonomy import normalize_category_href_slug
 
 
 def build_parser() -> argparse.ArgumentParser:

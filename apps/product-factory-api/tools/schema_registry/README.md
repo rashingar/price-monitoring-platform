@@ -4,7 +4,7 @@
 This directory contains the tooling for the editable schema-template layer.
 
 The purpose of the schema registry is to keep **human-maintained schema templates**
-separate from the **compiled runtime schema artifacts** used by the pipeline.
+separate from the **compiled runtime schema artifacts** used by the product_factory.
 
 ## Why this exists
 

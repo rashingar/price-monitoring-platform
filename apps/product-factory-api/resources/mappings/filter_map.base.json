@@ -1,6 +1,6 @@
 {
   "meta": {
-    "description": "Generated filter map. Do not edit directly; run pipeline.tools.sync_filter_map.",
+    "description": "Generated filter map. Do not edit directly; run product_factory.tools.sync_filter_map.",
     "schema_version": 1,
     "source": "csv-bootstrap"
   },

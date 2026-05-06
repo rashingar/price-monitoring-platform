@@ -12,12 +12,12 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/html_builders.py`
-- `scraper/pipeline/parser_product_electronet.py`
-- `scraper/pipeline/taxonomy.py`
-- `scraper/pipeline/tests/test_csv_writer.py`
-- `scraper/pipeline/tests/test_product_parser.py`
-- `scraper/pipeline/tests/test_taxonomy.py`
+- `scraper/product_factory/html_builders.py`
+- `scraper/product_factory/parser_product_electronet.py`
+- `scraper/product_factory/taxonomy.py`
+- `scraper/product_factory/tests/test_csv_writer.py`
+- `scraper/product_factory/tests/test_product_parser.py`
+- `scraper/product_factory/tests/test_taxonomy.py`
 
 What changed:
 - Electronet asset extraction now prefers `.eprel-modal-trigger` metadata and resolves `data-label-url` / `data-pdf-url` against `https://eprel.ec.europa.eu`, so the scraped source stores the actual EPREL energy-label and fiche URLs instead of the on-page arrow asset
@@ -27,11 +27,11 @@ What changed:
 - added focused regression coverage for EPREL modal asset extraction, preserved legal-note rendering, and TV size-bucket taxonomy selection
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_product_parser.py -k "video_block or eprel_modal_assets"`
-- `python -m pytest -q pipeline/tests/test_csv_writer.py -k "video_embed_and_list_markup or split_description_preserves_small_footnotes_and_regulation_appendix"`
-- `python -m pytest -q pipeline/tests/test_taxonomy.py pipeline/tests/test_skroutz_taxonomy.py -q`
-- `python -m pipeline.workflow prepare --model 000001 --url "https://www.electronet.gr/eikona-ihos/tileoraseis/oles-oi-tileoraseis/tv-samsung-qe50qn80f-50-smart-4k-mini-led-ai" --photos 3 --sections 35 --skroutz-status 1 --boxnow 0 --price 699`
-- `python -m pipeline.workflow render --model 000001`
+- `python -m pytest -q product_factory/tests/test_product_parser.py -k "video_block or eprel_modal_assets"`
+- `python -m pytest -q product_factory/tests/test_csv_writer.py -k "video_embed_and_list_markup or split_description_preserves_small_footnotes_and_regulation_appendix"`
+- `python -m pytest -q product_factory/tests/test_taxonomy.py product_factory/tests/test_skroutz_taxonomy.py -q`
+- `python -m product_factory.workflow prepare --model 000001 --url "https://www.electronet.gr/eikona-ihos/tileoraseis/oles-oi-tileoraseis/tv-samsung-qe50qn80f-50-smart-4k-mini-led-ai" --photos 3 --sections 35 --skroutz-status 1 --boxnow 0 --price 699`
+- `python -m product_factory.workflow render --model 000001`
 
 Validation:
 - live scrape output now records `energy_label_asset_url = https://eprel.ec.europa.eu/labels/electronicdisplays/Label_2204959.png`
@@ -53,12 +53,12 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/html_builders.py`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/tests/test_csv_writer.py`
-- `scraper/pipeline/tests/test_prepare_section_assets.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/html_builders.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/tests/test_csv_writer.py`
+- `scraper/product_factory/tests/test_prepare_section_assets.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 What changed:
 - prepare-stage gallery assembly now injects the EPREL energy-label asset immediately after the primary product image, so it downloads as `{model}-2.jpg` and flows into the normal OpenCart gallery upload
@@ -66,11 +66,11 @@ What changed:
 - appendix rendering now constrains the regulation QR image to a responsive `min(75px, 18vw)` width cap with `max-width: 75px`, keeping it visually small while remaining in the same row layout as the appendix text
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets.py -k "injects_energy_label_into_gallery_slot_two"`
-- `python -m pytest -q pipeline/tests/test_csv_writer.py -k "split_description_preserves_small_footnotes_and_regulation_appendix"`
-- `python -m pytest -q pipeline/tests/test_workflow.py -k "backfills_with_weak_sections_before_reducing"`
-- `python -m pipeline.workflow prepare --model 000001 --url "https://www.electronet.gr/eikona-ihos/tileoraseis/oles-oi-tileoraseis/tv-samsung-qe50qn80f-50-smart-4k-mini-led-ai" --photos 3 --sections 35 --skroutz-status 1 --boxnow 0 --price 699`
-- `python -m pipeline.workflow render --model 000001`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets.py -k "injects_energy_label_into_gallery_slot_two"`
+- `python -m pytest -q product_factory/tests/test_csv_writer.py -k "split_description_preserves_small_footnotes_and_regulation_appendix"`
+- `python -m pytest -q product_factory/tests/test_workflow.py -k "backfills_with_weak_sections_before_reducing"`
+- `python -m product_factory.workflow prepare --model 000001 --url "https://www.electronet.gr/eikona-ihos/tileoraseis/oles-oi-tileoraseis/tv-samsung-qe50qn80f-50-smart-4k-mini-led-ai" --photos 3 --sections 35 --skroutz-status 1 --boxnow 0 --price 699`
+- `python -m product_factory.workflow render --model 000001`
 
 Validation:
 - live gallery output now includes `work/000001/scrape/gallery/000001-2.jpg` as the injected EPREL label image
@@ -90,10 +90,10 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/html_builders.py`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/tests/test_csv_writer.py`
-- `scraper/pipeline/tests/test_prepare_section_assets.py`
+- `scraper/product_factory/html_builders.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/tests/test_csv_writer.py`
+- `scraper/product_factory/tests/test_prepare_section_assets.py`
 
 What changed:
 - prepare-stage gallery download count now adds the EPREL label on top of the requested `photos` count, so a `photos: 3` run with a label produces four gallery files: main image, EPREL label, and the three requested source photos in total
@@ -101,11 +101,11 @@ What changed:
 - reran the live `000001` product after the prepare artifacts were complete so the published CSV and OpenCart import now reference all four gallery files correctly
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets.py -k "energy_label"`
-- `python -m pytest -q pipeline/tests/test_csv_writer.py -k "split_description_preserves_small_footnotes_and_regulation_appendix"`
-- `python -m pipeline.workflow prepare --model 000001 --url "https://www.electronet.gr/eikona-ihos/tileoraseis/oles-oi-tileoraseis/tv-samsung-qe50qn80f-50-smart-4k-mini-led-ai" --photos 3 --sections 35 --skroutz-status 1 --boxnow 0 --price 699`
-- `python -m pipeline.workflow render --model 000001`
-- `python -m pipeline.workflow render --model 000001`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets.py -k "energy_label"`
+- `python -m pytest -q product_factory/tests/test_csv_writer.py -k "split_description_preserves_small_footnotes_and_regulation_appendix"`
+- `python -m product_factory.workflow prepare --model 000001 --url "https://www.electronet.gr/eikona-ihos/tileoraseis/oles-oi-tileoraseis/tv-samsung-qe50qn80f-50-smart-4k-mini-led-ai" --photos 3 --sections 35 --skroutz-status 1 --boxnow 0 --price 699`
+- `python -m product_factory.workflow render --model 000001`
+- `python -m product_factory.workflow render --model 000001`
 
 Validation:
 - live gallery output now includes `work/000001/scrape/gallery/000001-1.jpg` through `work/000001/scrape/gallery/000001-4.jpg`
@@ -125,13 +125,13 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/fetcher.py`
-- `scraper/pipeline/html_builders.py`
-- `scraper/pipeline/mapping.py`
-- `scraper/pipeline/parser_product_electronet.py`
-- `scraper/pipeline/tests/test_csv_writer.py`
-- `scraper/pipeline/tests/test_fetcher_gallery_download.py`
-- `scraper/pipeline/tests/test_product_parser.py`
+- `scraper/product_factory/fetcher.py`
+- `scraper/product_factory/html_builders.py`
+- `scraper/product_factory/mapping.py`
+- `scraper/product_factory/parser_product_electronet.py`
+- `scraper/product_factory/tests/test_csv_writer.py`
+- `scraper/product_factory/tests/test_fetcher_gallery_download.py`
+- `scraper/product_factory/tests/test_product_parser.py`
 
 What changed:
 - Electronet presentation-source extraction now keeps `.ck-text.whole` blocks in the captured HTML so leading source video blocks survive into downstream rendering, while the reported presentation-section count still reflects only `.ck-text.inline` sections
@@ -141,9 +141,9 @@ What changed:
 - Besco downloads now preserve `.gif` assets as `.gif`; other non-jpg formats still follow the existing conversion path
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_csv_writer.py -k "presentation_blocks_extract or preserves_video_embed"`
-- `python -m pytest -q pipeline/tests/test_product_parser.py -k "presentation_source_html or extracts_visible_code"`
-- `python -m pytest -q pipeline/tests/test_fetcher_gallery_download.py`
+- `python -m pytest -q product_factory/tests/test_csv_writer.py -k "presentation_blocks_extract or preserves_video_embed"`
+- `python -m pytest -q product_factory/tests/test_product_parser.py -k "presentation_source_html or extracts_visible_code"`
+- `python -m pytest -q product_factory/tests/test_fetcher_gallery_download.py`
 
 Validation:
 - focused HTML builder tests now cover preserved list markup, preserved video embeds, and non-jpg Besco filename passthrough
@@ -161,8 +161,8 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/html_builders.py`
-- `scraper/pipeline/tests/test_csv_writer.py`
+- `scraper/product_factory/html_builders.py`
+- `scraper/product_factory/tests/test_csv_writer.py`
 
 What changed:
 - updated container-based presentation extraction so Electronet `.ck-text.inline` blocks now treat `<li>` items as valid deterministic body text in addition to `<p>` tags
@@ -173,7 +173,7 @@ What changed:
   - three sections using list-only copy
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_csv_writer.py -k "presentation_blocks_extract"`
+- `python -m pytest -q product_factory/tests/test_csv_writer.py -k "presentation_blocks_extract"`
 
 Validation:
 - focused presentation-block tests cover paragraph-based sections, alternating left/right banner layouts, and the current Electronet list-based section layout
@@ -189,8 +189,8 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 What changed:
 - removed the fatal render guard that raised when more than one normalized presentation section was missing
@@ -199,7 +199,7 @@ What changed:
 - added a workflow regression proving a `sections=4` request still renders successfully when only one deterministic section is usable
 
 Commands run:
-- `python -m pytest -q scraper/pipeline/tests/test_workflow.py -k "multiple_requested_sections_are_missing or one_requested_section_is_missing"`
+- `python -m pytest -q scraper/product_factory/tests/test_workflow.py -k "multiple_requested_sections_are_missing or one_requested_section_is_missing"`
 
 Validation:
 - the focused workflow regression covers the exact reduction path from four requested deterministic sections down to one usable section
@@ -230,9 +230,9 @@ Why this was needed:
 - after fixing module resolution, the next live failure showed `/ipadmin/index.php` being rewritten into a Windows path and appended to the storefront base URL, producing a 404 admin login route
 
 Commands run:
-- `python -m pipeline.workflow prepare --model 000015 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999`
-- `python -m pipeline.workflow render --model 000015`
-- `python -m pipeline.workflow render --model 000015`
+- `python -m product_factory.workflow prepare --model 000015 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999`
+- `python -m product_factory.workflow render --model 000015`
+- `python -m product_factory.workflow render --model 000015`
 
 Validation:
 - render completed successfully for model `000015`
@@ -251,7 +251,7 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/tests/test_characteristics_pipeline.py`
+- `scraper/product_factory/tests/test_characteristics_pipeline.py`
 
 What changed:
 - replaced the hardcoded Skroutz soundbar schema id assertion with the same compiled-library lookup helper already used by the neighboring characteristics tests
@@ -266,7 +266,7 @@ Why this was needed:
 - the old test still asserted a stale hardcoded `sha1:...` value and was the only remaining scraper-suite failure after merging the branch locally
 
 Commands run:
-- `python -m pytest -q scraper/pipeline/tests/test_characteristics_pipeline.py -k soundbar`
+- `python -m pytest -q scraper/product_factory/tests/test_characteristics_pipeline.py -k soundbar`
 - `python -m pytest -q` from `scraper/`
 - `python -m pytest -q tools/schema_registry/tests`
 
@@ -415,7 +415,7 @@ Goal:
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/tests/test_schema_matcher_compiled_library_regressions.py`
+- `scraper/product_factory/tests/test_schema_matcher_compiled_library_regressions.py`
 
 What changed:
 - added compiled-library matcher regressions for these direct-single template families:
@@ -431,18 +431,18 @@ What changed:
   - generic washing-machine-family labels cannot escape the resolved washing-machine category
   - kitchen/cooker-shaped extracted specs cannot override a washing-machine category binding
 - existing bounded sibling behavior remains pinned by:
-  - `scraper/pipeline/tests/test_schema_matcher.py` synthetic `category_pool` matcher tests
+  - `scraper/product_factory/tests/test_schema_matcher.py` synthetic `category_pool` matcher tests
   - `tools/schema_registry/tests/test_build_electronet_schema_library.py` compiler-side `category_pool` metadata test
 
 Commands run:
-- `python -m pytest scraper/pipeline/tests/test_schema_matcher_compiled_library_regressions.py`
-- `python -m pytest tools/schema_registry/tests/test_build_electronet_schema_library.py scraper/pipeline/tests/test_schema_matcher.py`
-- `python -m pytest scraper/pipeline/tests tools/schema_registry/tests`
+- `python -m pytest scraper/product_factory/tests/test_schema_matcher_compiled_library_regressions.py`
+- `python -m pytest tools/schema_registry/tests/test_build_electronet_schema_library.py scraper/product_factory/tests/test_schema_matcher.py`
+- `python -m pytest scraper/product_factory/tests tools/schema_registry/tests`
 
 Validation:
-- `python -m pytest scraper/pipeline/tests/test_schema_matcher_compiled_library_regressions.py` passed
-- `python -m pytest tools/schema_registry/tests/test_build_electronet_schema_library.py scraper/pipeline/tests/test_schema_matcher.py` passed
-- `python -m pytest scraper/pipeline/tests tools/schema_registry/tests` passed with `232 passed`
+- `python -m pytest scraper/product_factory/tests/test_schema_matcher_compiled_library_regressions.py` passed
+- `python -m pytest tools/schema_registry/tests/test_build_electronet_schema_library.py scraper/product_factory/tests/test_schema_matcher.py` passed
+- `python -m pytest scraper/product_factory/tests tools/schema_registry/tests` passed with `232 passed`
 
 Notes:
 - no schema-result field names or fail-reason enums changed in this milestone
@@ -457,10 +457,10 @@ Goal:
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/models.py`
-- `scraper/pipeline/schema_matcher.py`
-- `scraper/pipeline/tests/test_prepare_result_assembly_module.py`
-- `scraper/pipeline/tests/test_schema_matcher.py`
+- `scraper/product_factory/models.py`
+- `scraper/product_factory/schema_matcher.py`
+- `scraper/product_factory/tests/test_prepare_result_assembly_module.py`
+- `scraper/product_factory/tests/test_schema_matcher.py`
 
 What changed:
 - `SchemaMatchResult` now carries additive structured debug fields:
@@ -505,21 +505,21 @@ Test coverage added/updated:
 - success-path tests now assert that selected-template debug metadata is present in both `SchemaMatchResult` and the prepare report payload
 
 Commands run:
-- `Get-Content scraper\pipeline\models.py | Select-Object -Skip 248 -First 60`
-- `Get-Content scraper\pipeline\prepare_result_assembly.py | Select-Object -Skip 90 -First 90`
-- `Get-Content scraper\pipeline\tests\test_schema_matcher.py`
-- `Get-Content scraper\pipeline\tests\test_prepare_result_assembly_module.py | Select-Object -Skip 360 -First 90`
-- `Get-Content scraper\pipeline\services\render_execution.py | Select-Object -First 120`
-- `python -m pytest scraper/pipeline/tests/test_schema_matcher.py`
-- `python -m pytest scraper/pipeline/tests/test_prepare_result_assembly_module.py`
-- `python -m pytest scraper/pipeline/tests/test_workflow.py scraper/pipeline/tests/test_services.py`
-- `python -m pytest scraper/pipeline/tests`
+- `Get-Content scraper\product_factory\models.py | Select-Object -Skip 248 -First 60`
+- `Get-Content scraper\product_factory\prepare_result_assembly.py | Select-Object -Skip 90 -First 90`
+- `Get-Content scraper\product_factory\tests\test_schema_matcher.py`
+- `Get-Content scraper\product_factory\tests\test_prepare_result_assembly_module.py | Select-Object -Skip 360 -First 90`
+- `Get-Content scraper\product_factory\services\render_execution.py | Select-Object -First 120`
+- `python -m pytest scraper/product_factory/tests/test_schema_matcher.py`
+- `python -m pytest scraper/product_factory/tests/test_prepare_result_assembly_module.py`
+- `python -m pytest scraper/product_factory/tests/test_workflow.py scraper/product_factory/tests/test_services.py`
+- `python -m pytest scraper/product_factory/tests`
 
 Validation:
-- `python -m pytest scraper/pipeline/tests/test_schema_matcher.py` passed
-- `python -m pytest scraper/pipeline/tests/test_prepare_result_assembly_module.py` passed
-- `python -m pytest scraper/pipeline/tests/test_workflow.py scraper/pipeline/tests/test_services.py` passed
-- `python -m pytest scraper/pipeline/tests` passed with `218 passed`
+- `python -m pytest scraper/product_factory/tests/test_schema_matcher.py` passed
+- `python -m pytest scraper/product_factory/tests/test_prepare_result_assembly_module.py` passed
+- `python -m pytest scraper/product_factory/tests/test_workflow.py scraper/product_factory/tests/test_services.py` passed
+- `python -m pytest scraper/product_factory/tests` passed with `218 passed`
 
 Risks / follow-up:
 - fail reasons are intentionally summarized to one primary reason in `SchemaMatchResult.fail_reason`; full per-template gate detail remains available in `hard_gate_failures`
@@ -534,11 +534,11 @@ Goal:
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_result_assembly.py`
-- `scraper/pipeline/schema_matcher.py`
-- `scraper/pipeline/tests/test_characteristics_pipeline.py`
-- `scraper/pipeline/tests/test_prepare_result_assembly_module.py`
-- `scraper/pipeline/tests/test_schema_matcher.py`
+- `scraper/product_factory/prepare_result_assembly.py`
+- `scraper/product_factory/schema_matcher.py`
+- `scraper/product_factory/tests/test_characteristics_pipeline.py`
+- `scraper/product_factory/tests/test_prepare_result_assembly_module.py`
+- `scraper/product_factory/tests/test_schema_matcher.py`
 
 What changed:
 - `SchemaMatcher` no longer scores across the full schema library
@@ -570,27 +570,27 @@ Test coverage added/updated:
 
 Commands run:
 - `rg -n "schema|template|characteristics|matcher|category.*schema|no_safe_template_match|required_labels_any|required_labels_all|forbidden_labels|min_section_overlap|min_label_overlap" scraper -S`
-- `Get-Content scraper\pipeline\schema_matcher.py`
-- `Get-Content scraper\pipeline\prepare_result_assembly.py | Select-Object -First 110`
-- `Get-Content scraper\pipeline\tests\test_schema_matcher.py`
-- `Get-Content scraper\pipeline\tests\test_characteristics_pipeline.py | Select-Object -Skip 320 -First 170`
-- `Get-Content scraper\pipeline\tests\test_prepare_result_assembly_module.py | Select-Object -Skip 240 -First 130`
-- `python -m pytest scraper/pipeline/tests/test_schema_matcher.py`
-- `python -m pytest scraper/pipeline/tests/test_prepare_result_assembly_module.py`
-- `python -m pytest scraper/pipeline/tests/test_characteristics_pipeline.py`
-- `python -m pytest scraper/pipeline/tests/test_product_parser.py`
-- `python -m pytest scraper/pipeline/tests/test_prepare_provider_resolution.py`
-- `python -m pytest scraper/pipeline/tests/test_prepare_stage_result_assembly.py`
-- `python -m pytest scraper/pipeline/tests`
+- `Get-Content scraper\product_factory\schema_matcher.py`
+- `Get-Content scraper\product_factory\prepare_result_assembly.py | Select-Object -First 110`
+- `Get-Content scraper\product_factory\tests\test_schema_matcher.py`
+- `Get-Content scraper\product_factory\tests\test_characteristics_pipeline.py | Select-Object -Skip 320 -First 170`
+- `Get-Content scraper\product_factory\tests\test_prepare_result_assembly_module.py | Select-Object -Skip 240 -First 130`
+- `python -m pytest scraper/product_factory/tests/test_schema_matcher.py`
+- `python -m pytest scraper/product_factory/tests/test_prepare_result_assembly_module.py`
+- `python -m pytest scraper/product_factory/tests/test_characteristics_pipeline.py`
+- `python -m pytest scraper/product_factory/tests/test_product_parser.py`
+- `python -m pytest scraper/product_factory/tests/test_prepare_provider_resolution.py`
+- `python -m pytest scraper/product_factory/tests/test_prepare_stage_result_assembly.py`
+- `python -m pytest scraper/product_factory/tests`
 
 Validation:
-- `python -m pytest scraper/pipeline/tests/test_schema_matcher.py` passed
-- `python -m pytest scraper/pipeline/tests/test_prepare_result_assembly_module.py` passed
-- `python -m pytest scraper/pipeline/tests/test_characteristics_pipeline.py` passed
-- `python -m pytest scraper/pipeline/tests/test_product_parser.py` passed
-- `python -m pytest scraper/pipeline/tests/test_prepare_provider_resolution.py` passed
-- `python -m pytest scraper/pipeline/tests/test_prepare_stage_result_assembly.py` passed
-- `python -m pytest scraper/pipeline/tests` passed with `215 passed`
+- `python -m pytest scraper/product_factory/tests/test_schema_matcher.py` passed
+- `python -m pytest scraper/product_factory/tests/test_prepare_result_assembly_module.py` passed
+- `python -m pytest scraper/product_factory/tests/test_characteristics_pipeline.py` passed
+- `python -m pytest scraper/product_factory/tests/test_product_parser.py` passed
+- `python -m pytest scraper/product_factory/tests/test_prepare_provider_resolution.py` passed
+- `python -m pytest scraper/product_factory/tests/test_prepare_stage_result_assembly.py` passed
+- `python -m pytest scraper/product_factory/tests` passed with `215 passed`
 
 Risks / follow-up:
 - compiled metadata currently uses `match_mode` values such as `direct_single` and `category_pool`; runtime now consumes the safety metadata correctly, but a future cleanup can align naming with the docs contract if needed
@@ -696,13 +696,13 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/services/llm_stage_execution.py`
-- `scraper/pipeline/services/metadata.py`
-- `scraper/pipeline/services/models.py`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/tests/test_llm_stage_execution.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/services/llm_stage_execution.py`
+- `scraper/product_factory/services/metadata.py`
+- `scraper/product_factory/services/models.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/tests/test_llm_stage_execution.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Recorded scope:
 - execution order becomes:
@@ -716,7 +716,7 @@ Recorded scope:
 - intro retries do not regenerate or mutate `seo_meta`
 - later candidate validation remains as a safety backstop, not the first intro word-count enforcement point
 - landed internal seam:
-  - `scraper/pipeline/services/llm_stage_execution.py`
+  - `scraper/product_factory/services/llm_stage_execution.py`
   - `run_intro_text_with_retry(...)`
   - `execute_split_llm_stage(...)`
 - landed render-stage behavior:
@@ -732,7 +732,7 @@ Recorded scope:
 - landed atomic-write behavior:
   - intro retry writes now use temp-file plus `os.replace(...)` semantics so a partial intro rewrite cannot be mistaken for a persisted invalid intro on the next validation pass
 - landed test coverage:
-  - direct helper coverage in `scraper/pipeline/tests/test_llm_stage_execution.py`
+  - direct helper coverage in `scraper/product_factory/tests/test_llm_stage_execution.py`
   - workflow regressions proving early intro retry/success and early intro failure before candidate build
   - regression proving `seo_meta.output.json` stays preserved and byte-for-byte unchanged across intro retries and final intro exhaustion
   - rerun/idempotency regression proving render with already-valid `seo_meta` performs downstream work exactly once per render invocation when intro becomes valid on the first pass
@@ -744,25 +744,25 @@ Commands run:
 - `rg -n "render_execution|validate_intro_text_output|intro_text.output|seo_meta.output|llm_intro_text_word_count_invalid|split llm|intro_text" scraper/pipeline -S`
 - `Get-Content PLAN.md`
 - `Get-Content DOCUMENTATION.md`
-- `Get-Content scraper/pipeline/services/render_execution.py`
-- `Get-Content scraper/pipeline/services/llm_stage_execution.py`
-- `Get-Content scraper/pipeline/services/metadata.py`
-- `Get-Content scraper/pipeline/services/models.py`
-- `Get-Content scraper/pipeline/llm_contract.py`
-- `Get-Content scraper/pipeline/services/errors.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -Skip 400 -First 120`
-- `Get-Content scraper/pipeline/tests/test_services.py | Select-Object -Skip 430 -First 170`
-- `Get-Content scraper/pipeline/services/__init__.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -First 220`
-- `Get-Content scraper/pipeline/tests/test_services.py | Select-Object -First 220`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -Skip 560 -First 220`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -Skip 940 -First 120`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -Skip 1320 -First 90`
-- `rg -n "_load_render_llm_inputs|_normalize_render_llm_inputs|llm_stage_execution|execute_split_llm_stage|run_intro_text_with_retry" scraper/pipeline/tests scraper/pipeline -S`
-- `python -m pytest -q pipeline/tests/test_llm_stage_execution.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_workflow.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_services.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_llm_contract.py` from `scraper/`
+- `Get-Content scraper/product_factory/services/render_execution.py`
+- `Get-Content scraper/product_factory/services/llm_stage_execution.py`
+- `Get-Content scraper/product_factory/services/metadata.py`
+- `Get-Content scraper/product_factory/services/models.py`
+- `Get-Content scraper/product_factory/llm_contract.py`
+- `Get-Content scraper/product_factory/services/errors.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -Skip 400 -First 120`
+- `Get-Content scraper/product_factory/tests/test_services.py | Select-Object -Skip 430 -First 170`
+- `Get-Content scraper/product_factory/services/__init__.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -First 220`
+- `Get-Content scraper/product_factory/tests/test_services.py | Select-Object -First 220`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -Skip 560 -First 220`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -Skip 940 -First 120`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -Skip 1320 -First 90`
+- `rg -n "_load_render_llm_inputs|_normalize_render_llm_inputs|llm_stage_execution|execute_split_llm_stage|run_intro_text_with_retry" scraper/product_factory/tests scraper/pipeline -S`
+- `python -m pytest -q product_factory/tests/test_llm_stage_execution.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_workflow.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_services.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_llm_contract.py` from `scraper/`
 
 Validation:
 - `PLAN.md` now records the branch scope as completed
@@ -773,10 +773,10 @@ Validation:
 - per-attempt retry trace data is now persisted under `work/{model}/llm/intro_text.retry_trace.json` and copied into failure metadata details for inspection in CI and local runs
 - intro retry rewrites now use atomic replace semantics
 - targeted pytest results:
-  - `pipeline/tests/test_llm_stage_execution.py`: `9 passed`
-  - `pipeline/tests/test_workflow.py`: `40 passed`
-  - `pipeline/tests/test_services.py`: `21 passed`
-  - `pipeline/tests/test_llm_contract.py`: `10 passed`
+  - `product_factory/tests/test_llm_stage_execution.py`: `9 passed`
+  - `product_factory/tests/test_workflow.py`: `40 passed`
+  - `product_factory/tests/test_services.py`: `21 passed`
+  - `product_factory/tests/test_llm_contract.py`: `10 passed`
 
 ## 2026-04-02 - Rewrite stale Skroutz helper test to target the extracted public seam
 
@@ -786,19 +786,19 @@ Goal:
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/tests/test_skroutz_sections.py`
+- `scraper/product_factory/tests/test_skroutz_sections.py`
 
 Changes:
-- replaced the stale import of `_select_skroutz_image_backed_sections` from `scraper/pipeline/prepare_stage.py`
-- rewrote the affected test to call `resolve_skroutz_section_assets(...)` from `scraper/pipeline/prepare_section_assets.py`
+- replaced the stale import of `_select_skroutz_image_backed_sections` from `scraper/product_factory/prepare_stage.py`
+- rewrote the affected test to call `resolve_skroutz_section_assets(...)` from `scraper/product_factory/prepare_section_assets.py`
 - kept the original behavior under test:
   - text-only rendered interludes are skipped
   - image-backed sections are selected in stable order
   - resolved image URLs flow into the selected Besco inputs on the public seam
 
 Commands run:
-- `python -m pytest -q scraper/pipeline/tests/test_skroutz_sections.py`
-- `python -m pytest -q scraper/pipeline/tests/test_prepare_section_assets.py scraper/pipeline/tests/test_prepare_section_assets_module.py scraper/pipeline/tests/test_prepare_skroutz_section_assets_module.py`
+- `python -m pytest -q scraper/product_factory/tests/test_skroutz_sections.py`
+- `python -m pytest -q scraper/product_factory/tests/test_prepare_section_assets.py scraper/product_factory/tests/test_prepare_section_assets_module.py scraper/product_factory/tests/test_prepare_skroutz_section_assets_module.py`
 - `python -m pytest -q` from `scraper/`
 
 Validation:
@@ -819,7 +819,7 @@ Files edited:
 
 Landed state recorded:
 - landed internal seam module:
-  - `scraper/pipeline/prepare_section_assets.py`
+  - `scraper/product_factory/prepare_section_assets.py`
 - landed typed result:
   - `PrepareSectionAssetsResult`
 - landed narrowed `prepare_stage.py` responsibilities:
@@ -830,10 +830,10 @@ Landed state recorded:
   - scrape-artifact persistence handoff
   - outward dict-shaped `execute_prepare_stage(...)` return payload compatibility
 - landed test coverage split:
-  - direct helper and standalone seam tests in `scraper/pipeline/tests/test_prepare_section_assets_module.py` and `scraper/pipeline/tests/test_prepare_skroutz_section_assets_module.py`
-  - stage-isolation tests in `scraper/pipeline/tests/test_prepare_section_assets.py`
-  - downstream deterministic stage-isolation tests in `scraper/pipeline/tests/test_prepare_stage_result_assembly.py`
-  - adjacent taxonomy-enrichment stage-isolation tests in `scraper/pipeline/tests/test_prepare_taxonomy_enrichment.py`
+  - direct helper and standalone seam tests in `scraper/product_factory/tests/test_prepare_section_assets_module.py` and `scraper/product_factory/tests/test_prepare_skroutz_section_assets_module.py`
+  - stage-isolation tests in `scraper/product_factory/tests/test_prepare_section_assets.py`
+  - downstream deterministic stage-isolation tests in `scraper/product_factory/tests/test_prepare_stage_result_assembly.py`
+  - adjacent taxonomy-enrichment stage-isolation tests in `scraper/product_factory/tests/test_prepare_taxonomy_enrichment.py`
   - prepare-focused workflow regression coverage remains the higher-level unchanged-behavior backstop
 - landed injection boundary:
   - `execute_prepare_stage(...)` now keeps one section-assets seam injection:
@@ -866,8 +866,8 @@ Goal:
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/tests/test_prepare_section_assets.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/tests/test_prepare_section_assets.py`
 
 Changes:
 - `execute_prepare_stage(...)` now exposes one section-assets seam:
@@ -884,9 +884,9 @@ Old vs new signature summary:
   - `execute_prepare_stage(..., resolve_prepare_taxonomy_enrichment_fn=..., resolve_skroutz_section_assets_fn=resolve_skroutz_section_assets, assemble_prepare_result_fn=..., persist_prepare_scrape_artifacts_fn=...)`
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_skroutz_section_assets_module.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets_module.py pipeline/tests/test_prepare_section_assets.py pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_workflow.py -k "test_prepare_workflow_writes_prompt_artifacts"` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_skroutz_section_assets_module.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets_module.py product_factory/tests/test_prepare_section_assets.py product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_workflow.py -k "test_prepare_workflow_writes_prompt_artifacts"` from `scraper/`
 
 Validation:
 - direct section-assets module tests still passed
@@ -899,14 +899,14 @@ Validation:
 ## 2026-04-01 - Wire prepare stage to the extracted Skroutz section-assets workflow
 
 Goal:
-- route `scraper/pipeline/prepare_stage.py` through `resolve_skroutz_section_assets(...)`
+- route `scraper/product_factory/prepare_stage.py` through `resolve_skroutz_section_assets(...)`
 - remove the now-redundant inline Skroutz section-asset workflow block from `prepare_stage.py`
 - preserve outward stage return keys, result-assembly inputs, persistence wiring, and public workflow behavior
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/tests/test_prepare_section_assets.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/tests/test_prepare_section_assets.py`
 
 Changes:
 - `prepare_stage.py` now calls `resolve_skroutz_section_assets(...)` when:
@@ -925,8 +925,8 @@ Changes:
 - updated stage characterization tests so Skroutz-focused stage coverage now stubs `resolve_skroutz_section_assets(...)` directly instead of patching the removed inline internals
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_skroutz_section_assets_module.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets_module.py pipeline/tests/test_prepare_section_assets.py pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_skroutz_section_assets_module.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets_module.py product_factory/tests/test_prepare_section_assets.py product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
 
 Validation:
 - direct standalone Skroutz section-assets module tests still passed
@@ -951,11 +951,11 @@ Goal:
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_section_assets.py`
-- `scraper/pipeline/tests/test_prepare_skroutz_section_assets_module.py`
+- `scraper/product_factory/prepare_section_assets.py`
+- `scraper/product_factory/tests/test_prepare_skroutz_section_assets_module.py`
 
 Changes:
-- extended `scraper/pipeline/prepare_section_assets.py` with:
+- extended `scraper/product_factory/prepare_section_assets.py` with:
   - typed result `PrepareSectionAssetsResult`
   - new entrypoint `resolve_skroutz_section_assets(...)`
 - the extracted standalone Skroutz workflow now owns, inside the new module:
@@ -980,11 +980,11 @@ Changes:
     - `sections_artifact_payload`
     - `presentation_source_html_override`
 - added direct module tests in:
-  - `scraper/pipeline/tests/test_prepare_skroutz_section_assets_module.py`
+  - `scraper/product_factory/tests/test_prepare_skroutz_section_assets_module.py`
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_skroutz_section_assets_module.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets_module.py pipeline/tests/test_prepare_section_assets.py pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_skroutz_section_assets_module.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets_module.py product_factory/tests/test_prepare_section_assets.py product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
 
 Validation:
 - direct standalone Skroutz section-assets tests passed
@@ -1000,18 +1000,18 @@ Intentional temporary duplication left for the next commit:
 ## 2026-04-01 - Extract pure section diagnostics and `bescos_raw` payload builders
 
 Goal:
-- remove the deterministic section diagnostics / `bescos_raw` payload builders from `scraper/pipeline/prepare_stage.py`
+- remove the deterministic section diagnostics / `bescos_raw` payload builders from `scraper/product_factory/prepare_stage.py`
 - keep the commit limited to pure helper extraction and wiring the existing Skroutz branches through those helpers
 - preserve current payload shapes, filenames, result-assembly inputs, and persistence wiring
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_section_assets.py`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/tests/test_prepare_section_assets_module.py`
+- `scraper/product_factory/prepare_section_assets.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/tests/test_prepare_section_assets_module.py`
 
 Changes:
-- extended `scraper/pipeline/prepare_section_assets.py` with pure helpers:
+- extended `scraper/product_factory/prepare_section_assets.py` with pure helpers:
   - `build_section_image_candidates(...)`
   - `build_section_image_urls_resolved(...)`
   - `build_sections_artifact_payload(...)`
@@ -1028,8 +1028,8 @@ Changes:
   - existing result-assembly input keys and persistence wiring
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets_module.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets.py pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets_module.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets.py product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
 
 Validation:
 - helper-module tests passed after adding direct coverage for the pure builders
@@ -1049,19 +1049,19 @@ Remaining orchestration intentionally still in `prepare_stage.py`:
 ## 2026-04-01 - Extract shared Besco section-download helper
 
 Goal:
-- remove the duplicated Besco / section-image download logic from `scraper/pipeline/prepare_stage.py`
+- remove the duplicated Besco / section-image download logic from `scraper/product_factory/prepare_stage.py`
 - keep the commit limited to one shared helper and wiring the two existing call sites through it
 - preserve current direct-path warning behavior, Skroutz strict-failure behavior, and outward stage payloads
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_section_assets.py`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/tests/test_prepare_section_assets_module.py`
+- `scraper/product_factory/prepare_section_assets.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/tests/test_prepare_section_assets_module.py`
 
 Changes:
 - added focused helper module:
-  - `scraper/pipeline/prepare_section_assets.py`
+  - `scraper/product_factory/prepare_section_assets.py`
 - added shared helper:
   - `download_section_assets(...)`
 - added typed helper result:
@@ -1089,8 +1089,8 @@ Behavior preserved explicitly:
 - section diagnostics and `sections_artifact_payload` construction remain in `prepare_stage.py` in this commit
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets_module.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets.py pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets_module.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets.py product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
 
 Validation:
 - new helper-module tests passed
@@ -1108,13 +1108,13 @@ Remaining duplicated / in-place section logic intentionally left for later commi
 ## 2026-04-01 - Add prepare-stage section-assets characterization tests
 
 Goal:
-- pin the current direct-source and Skroutz section-asset behavior inside `scraper/pipeline/prepare_stage.py`
+- pin the current direct-source and Skroutz section-asset behavior inside `scraper/product_factory/prepare_stage.py`
 - add narrow characterization coverage before extracting the section-assets seam
 - keep this commit test-only with no production behavior changes
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/tests/test_prepare_section_assets.py`
+- `scraper/product_factory/tests/test_prepare_section_assets.py`
 
 Changes:
 - added focused prepare-stage characterization coverage for the direct-source / non-Skroutz section path:
@@ -1147,8 +1147,8 @@ Changes:
   - `sections_artifact_payload`
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_section_assets.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_section_assets.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
 
 Validation:
 - new section-assets characterization tests passed: `6 passed`
@@ -1174,7 +1174,7 @@ Files edited:
 
 Recorded scope:
 - branch goal:
-  - extract the Skroutz/manufacturer-first section asset workflow out of `scraper/pipeline/prepare_stage.py` while preserving current runtime behavior
+  - extract the Skroutz/manufacturer-first section asset workflow out of `scraper/product_factory/prepare_stage.py` while preserving current runtime behavior
 - exact non-goals:
   - no public workflow or CLI behavior change
   - no prepare/render ownership-boundary change
@@ -1189,7 +1189,7 @@ Recorded scope:
   - no naming-polish cleanup in this branch
   - no split-task LLM handoff contract change
 - proposed module name:
-  - `scraper/pipeline/prepare_skroutz_section_assets.py`
+  - `scraper/product_factory/prepare_skroutz_section_assets.py`
 - proposed typed result name:
   - `PrepareSkroutzSectionAssetsResult`
 - what leaves `prepare_stage.py` in this branch:
@@ -1213,8 +1213,8 @@ Recorded scope:
   - render ownership does not change
 
 Planned test split for later commits:
-- add direct module-level coverage in `scraper/pipeline/tests/test_prepare_skroutz_section_assets_module.py`
-- add stage-isolation coverage in `scraper/pipeline/tests/test_prepare_stage_section_assets.py`
+- add direct module-level coverage in `scraper/product_factory/tests/test_prepare_skroutz_section_assets_module.py`
+- add stage-isolation coverage in `scraper/product_factory/tests/test_prepare_stage_section_assets.py`
 - keep adjacent stage-isolation coverage in `test_prepare_taxonomy_enrichment.py` and `test_prepare_stage_result_assembly.py`
 - keep prepare/workflow/provider regressions as the unchanged-behavior backstop
 
@@ -1222,7 +1222,7 @@ Commands run:
 - `Get-Content PLAN.md`
 - `Get-Content DOCUMENTATION.md`
 - `Get-Content README.md`
-- `rg -n "section|besco|download|skroutz|presentation|html_builders|extract_presentation_blocks|assemble_prepare_result_fn|persist_prepare_scrape_artifacts_fn" scraper/pipeline/prepare_stage.py`
+- `rg -n "section|besco|download|skroutz|presentation|html_builders|extract_presentation_blocks|assemble_prepare_result_fn|persist_prepare_scrape_artifacts_fn" scraper/product_factory/prepare_stage.py`
 - `rg -n "extract_presentation_blocks|skroutz_sections|bescos_raw|section image|download" scraper/pipeline -g "*.py"`
 
 Validation:
@@ -1245,7 +1245,7 @@ Files edited:
 
 Landed state recorded:
 - landed internal seam module:
-  - `scraper/pipeline/prepare_taxonomy_enrichment.py`
+  - `scraper/product_factory/prepare_taxonomy_enrichment.py`
 - landed typed result:
   - `PrepareTaxonomyEnrichmentResult`
 - landed narrowed `prepare_stage.py` responsibilities:
@@ -1257,9 +1257,9 @@ Landed state recorded:
   - scrape-artifact persistence handoff
   - outward dict-shaped `execute_prepare_stage(...)` return payload compatibility
 - landed test coverage split:
-  - direct seam tests in `scraper/pipeline/tests/test_prepare_taxonomy_enrichment_module.py`
-  - stage-isolation tests in `scraper/pipeline/tests/test_prepare_taxonomy_enrichment.py`
-  - downstream deterministic stage-isolation tests in `scraper/pipeline/tests/test_prepare_stage_result_assembly.py`
+  - direct seam tests in `scraper/product_factory/tests/test_prepare_taxonomy_enrichment_module.py`
+  - stage-isolation tests in `scraper/product_factory/tests/test_prepare_taxonomy_enrichment.py`
+  - downstream deterministic stage-isolation tests in `scraper/product_factory/tests/test_prepare_stage_result_assembly.py`
   - prepare/workflow/provider regression coverage remains the higher-level unchanged-behavior backstop
 - landed injection boundary:
   - `execute_prepare_stage(...)` now keeps one taxonomy/enrichment seam injection:
@@ -1284,17 +1284,17 @@ Validation:
 
 Goal:
 - reduce the taxonomy/enrichment dependency surface in `execute_prepare_stage(...)` to one injected callable
-- remove the now-redundant lower-level stage injection surface because those helpers are internal to `scraper/pipeline/prepare_taxonomy_enrichment.py`
+- remove the now-redundant lower-level stage injection surface because those helpers are internal to `scraper/product_factory/prepare_taxonomy_enrichment.py`
 - keep workflow, prepare execution, and outward stage behavior unchanged
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/prepare_taxonomy_enrichment.py`
-- `scraper/pipeline/tests/test_prepare_taxonomy_enrichment.py`
-- `scraper/pipeline/tests/test_prepare_taxonomy_enrichment_module.py`
-- `scraper/pipeline/tests/test_prepare_stage_result_assembly.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/prepare_taxonomy_enrichment.py`
+- `scraper/product_factory/tests/test_prepare_taxonomy_enrichment.py`
+- `scraper/product_factory/tests/test_prepare_taxonomy_enrichment_module.py`
+- `scraper/product_factory/tests/test_prepare_stage_result_assembly.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
 
 Changes:
 - `execute_prepare_stage(...)` now exposes one taxonomy/enrichment seam:
@@ -1303,7 +1303,7 @@ Changes:
   - `taxonomy_resolver_factory`
   - `enrich_source_from_manufacturer_docs_fn`
 - `prepare_stage.py` now depends only on the single typed taxonomy/enrichment seam and no longer exposes the internal resolver/enrichment helpers in its signature
-- direct seam tests continue to target `scraper/pipeline/prepare_taxonomy_enrichment.py`
+- direct seam tests continue to target `scraper/product_factory/prepare_taxonomy_enrichment.py`
 - stage-isolation tests now stub only `resolve_prepare_taxonomy_enrichment_fn` when isolating `execute_prepare_stage(...)`
 - docs now use the landed seam name:
   - `resolve_prepare_taxonomy_enrichment(...)`
@@ -1315,7 +1315,7 @@ Old vs new stage signature summary:
   - `execute_prepare_stage(..., resolve_prepare_taxonomy_enrichment_fn=resolve_prepare_taxonomy_enrichment, ...)`
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_taxonomy_enrichment_module.py pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py -k "prepare"` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_taxonomy_enrichment_module.py product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py -k "prepare"` from `scraper/`
 
 Validation:
 - direct taxonomy/enrichment seam tests still pass
@@ -1327,16 +1327,16 @@ Validation:
 ## 2026-04-01 - Wire prepare stage to the taxonomy/enrichment seam
 
 Goal:
-- route `scraper/pipeline/prepare_stage.py` through the new taxonomy-resolution plus manufacturer-enrichment seam
+- route `scraper/product_factory/prepare_stage.py` through the new taxonomy-resolution plus manufacturer-enrichment seam
 - remove the now-redundant inline taxonomy/enrichment block from `prepare_stage.py`
 - preserve the outward `execute_prepare_stage(...)` payload, prepare/workflow behavior, and ownership boundaries
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_stage.py`
+- `scraper/product_factory/prepare_stage.py`
 
 Changes:
-- wired `prepare_stage.py` to `resolve_prepare_taxonomy_enrichment(...)` in `scraper/pipeline/prepare_taxonomy_enrichment.py`
+- wired `prepare_stage.py` to `resolve_prepare_taxonomy_enrichment(...)` in `scraper/product_factory/prepare_taxonomy_enrichment.py`
 - removed the inline prepare-stage block that previously owned:
   - local taxonomy resolver construction
   - `taxonomy_resolver.resolve(...)` orchestration
@@ -1350,9 +1350,9 @@ Changes:
   - keeps the outward dict-shaped return payload compatible with downstream callers
 
 Commands run:
-- `Get-Content scraper/pipeline/prepare_stage.py`
-- `Get-Content scraper/pipeline/prepare_taxonomy_enrichment.py`
-- `python -m pytest -q pipeline/tests/test_prepare_taxonomy_enrichment_module.py pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py -k "prepare"` from `scraper/`
+- `Get-Content scraper/product_factory/prepare_stage.py`
+- `Get-Content scraper/product_factory/prepare_taxonomy_enrichment.py`
+- `python -m pytest -q product_factory/tests/test_prepare_taxonomy_enrichment_module.py product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py -k "prepare"` from `scraper/`
 
 Validation:
 - direct taxonomy/enrichment seam tests still pass
@@ -1372,16 +1372,16 @@ Logic intentionally still left in `prepare_stage.py`:
 
 Goal:
 - add the extracted taxonomy-resolution plus manufacturer-enrichment module for the current branch
-- keep `scraper/pipeline/prepare_stage.py` behavior unchanged in this commit by not wiring the new seam yet
+- keep `scraper/product_factory/prepare_stage.py` behavior unchanged in this commit by not wiring the new seam yet
 - pin the new seam directly with focused tests while preserving the existing prepare-stage regressions
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_taxonomy_enrichment.py`
-- `scraper/pipeline/tests/test_prepare_taxonomy_enrichment_module.py`
+- `scraper/product_factory/prepare_taxonomy_enrichment.py`
+- `scraper/product_factory/tests/test_prepare_taxonomy_enrichment_module.py`
 
 Changes:
-- added `scraper/pipeline/prepare_taxonomy_enrichment.py`
+- added `scraper/product_factory/prepare_taxonomy_enrichment.py`
 - added the new internal typed result:
   - `PrepareTaxonomyEnrichmentResult`
 - added the new internal seam:
@@ -1392,17 +1392,17 @@ Changes:
   - Skroutz-only manufacturer-doc enrichment orchestration
   - the current non-Skroutz default manufacturer-enrichment payload shape
   - the typed handoff bundle for taxonomy, taxonomy candidates, and manufacturer-enrichment diagnostics
-- added focused direct tests for the seam in `scraper/pipeline/tests/test_prepare_taxonomy_enrichment_module.py`
+- added focused direct tests for the seam in `scraper/product_factory/tests/test_prepare_taxonomy_enrichment_module.py`
 
 Intentional temporary duplication left for the next commit:
-- `scraper/pipeline/prepare_stage.py` still contains the active inline taxonomy-resolution plus manufacturer-enrichment block
-- `scraper/pipeline/prepare_taxonomy_enrichment.py` currently mirrors that logic but is not called by `prepare_stage.py` yet
+- `scraper/product_factory/prepare_stage.py` still contains the active inline taxonomy-resolution plus manufacturer-enrichment block
+- `scraper/product_factory/prepare_taxonomy_enrichment.py` currently mirrors that logic but is not called by `prepare_stage.py` yet
 - the non-Skroutz default manufacturer-enrichment payload currently exists in both places so the next commit can wire the seam first and de-duplicate second if needed
 
 Commands run:
-- `Get-Content scraper/pipeline/manufacturer_enrichment.py`
-- `Get-Content scraper/pipeline/taxonomy.py`
-- `python -m pytest -q pipeline/tests/test_prepare_taxonomy_enrichment_module.py pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `Get-Content scraper/product_factory/manufacturer_enrichment.py`
+- `Get-Content scraper/product_factory/taxonomy.py`
+- `python -m pytest -q product_factory/tests/test_prepare_taxonomy_enrichment_module.py product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
 
 Validation:
 - the new taxonomy/enrichment seam module is covered directly without changing production behavior
@@ -1413,13 +1413,13 @@ Validation:
 ## 2026-04-01 - Add prepare-stage taxonomy/enrichment characterization tests
 
 Goal:
-- pin the current taxonomy-resolution plus manufacturer-enrichment behavior inside `scraper/pipeline/prepare_stage.py`
+- pin the current taxonomy-resolution plus manufacturer-enrichment behavior inside `scraper/product_factory/prepare_stage.py`
 - add narrow characterization coverage before extracting the taxonomy/enrichment orchestration seam
 - keep this commit test-only with no production behavior changes
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/tests/test_prepare_taxonomy_enrichment.py`
+- `scraper/product_factory/tests/test_prepare_taxonomy_enrichment.py`
 
 Changes:
 - added focused prepare-stage seam characterization coverage for:
@@ -1436,10 +1436,10 @@ Changes:
   - the current top-level `execute_prepare_stage(...)` output shape relied on by downstream code
 
 Commands run:
-- `Get-Content scraper/pipeline/prepare_stage.py`
-- `Get-Content scraper/pipeline/prepare_result_assembly.py`
-- `Get-Content scraper/pipeline/services/prepare_execution.py`
-- `python -m pytest -q pipeline/tests/test_prepare_taxonomy_enrichment.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `Get-Content scraper/product_factory/prepare_stage.py`
+- `Get-Content scraper/product_factory/prepare_result_assembly.py`
+- `Get-Content scraper/product_factory/services/prepare_execution.py`
+- `python -m pytest -q product_factory/tests/test_prepare_taxonomy_enrichment.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
 
 Validation:
 - the new taxonomy/enrichment characterization tests pass
@@ -1464,7 +1464,7 @@ Files edited:
 
 Recorded scope:
 - branch goal:
-  - extract taxonomy resolution plus manufacturer-doc enrichment orchestration out of `scraper/pipeline/prepare_stage.py` while preserving current runtime behavior
+  - extract taxonomy resolution plus manufacturer-doc enrichment orchestration out of `scraper/product_factory/prepare_stage.py` while preserving current runtime behavior
 - exact non-goals:
   - no public workflow or CLI behavior change
   - no prepare/render ownership-boundary change
@@ -1478,7 +1478,7 @@ Recorded scope:
   - no naming-polish cleanup in this branch
   - no split-task LLM handoff contract change
 - proposed module name:
-  - `scraper/pipeline/prepare_taxonomy_enrichment.py`
+  - `scraper/product_factory/prepare_taxonomy_enrichment.py`
 - proposed typed result name:
   - `PrepareTaxonomyEnrichmentResult`
 - what leaves `prepare_stage.py` in this branch:
@@ -1528,12 +1528,12 @@ Files edited:
 
 Changes:
 - updated `PLAN.md` to record the landed state instead of the earlier planned state for this branch
-- documented that `scraper/pipeline/prepare_stage.py` now owns only upstream orchestration and input preparation:
+- documented that `scraper/product_factory/prepare_stage.py` now owns only upstream orchestration and input preparation:
   - gallery/Besco handling
   - taxonomy resolution
   - manufacturer enrichment
   - shaping needed before deterministic result assembly
-- documented that `scraper/pipeline/prepare_result_assembly.py` now owns:
+- documented that `scraper/product_factory/prepare_result_assembly.py` now owns:
   - schema source preference logic
   - schema matcher construction
   - `schema_matcher.match(...)` orchestration
@@ -1545,7 +1545,7 @@ Changes:
 - documented test intent clearly without renaming files in this commit:
   - `test_prepare_result_assembly_module.py` covers direct module-level schema/result behavior
   - `test_prepare_stage_result_assembly.py` isolates stage orchestration by stubbing only the single result-assembly seam
-- recorded that public workflow behavior and `scraper/pipeline/services/prepare_execution.py` behavior remain unchanged
+- recorded that public workflow behavior and `scraper/product_factory/services/prepare_execution.py` behavior remain unchanged
 - recorded the next recommended follow-up branch:
   - taxonomy/manufacturer-enrichment orchestration extraction
 - reviewed `README.md` and left it unchanged because it does not describe the old internal ownership incorrectly
@@ -1574,11 +1574,11 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_result_assembly.py`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/tests/test_prepare_stage_result_assembly.py`
-- `scraper/pipeline/tests/test_prepare_result_assembly_module.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
+- `scraper/product_factory/prepare_result_assembly.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/tests/test_prepare_stage_result_assembly.py`
+- `scraper/product_factory/tests/test_prepare_result_assembly_module.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
 
 Changes:
 - `execute_prepare_stage(...)` now exposes one deterministic assembly seam:
@@ -1602,13 +1602,13 @@ Old vs new stage signature summary:
   - `execute_prepare_stage(..., assemble_prepare_result_fn=assemble_prepare_result, ...)`
 
 Commands run:
-- `Get-Content scraper/pipeline/prepare_stage.py`
-- `Get-Content scraper/pipeline/prepare_result_assembly.py`
-- `Get-Content scraper/pipeline/tests/test_provider_selection.py`
-- `Get-Content scraper/pipeline/tests/test_prepare_stage_result_assembly.py`
-- `python -m pytest -q pipeline/tests/test_provider_selection.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_workflow.py -k "prepare"` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_services.py -k "prepare_product"` from `scraper/`
+- `Get-Content scraper/product_factory/prepare_stage.py`
+- `Get-Content scraper/product_factory/prepare_result_assembly.py`
+- `Get-Content scraper/product_factory/tests/test_provider_selection.py`
+- `Get-Content scraper/product_factory/tests/test_prepare_stage_result_assembly.py`
+- `python -m pytest -q product_factory/tests/test_provider_selection.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_workflow.py -k "prepare"` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_services.py -k "prepare_product"` from `scraper/`
 
 Validation:
 - direct result-assembly tests still pass
@@ -1620,16 +1620,16 @@ Validation:
 ## 2026-04-01 - Wire prepare stage to the result-assembly seam
 
 Goal:
-- route `scraper/pipeline/prepare_stage.py` through the new deterministic result-assembly module
+- route `scraper/product_factory/prepare_stage.py` through the new deterministic result-assembly module
 - remove the now-redundant inline schema/result assembly block from `prepare_stage.py`
 - preserve the outward `execute_prepare_stage(...)` payload, prepare/workflow behavior, and prepare/render ownership boundaries
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_stage.py`
+- `scraper/product_factory/prepare_stage.py`
 
 Changes:
-- wired `prepare_stage.py` to `assemble_prepare_result(...)` in `scraper/pipeline/prepare_result_assembly.py`
+- wired `prepare_stage.py` to `assemble_prepare_result(...)` in `scraper/product_factory/prepare_result_assembly.py`
 - removed the inline deterministic assembly block from `prepare_stage.py` that previously owned:
   - effective spec-section shaping for schema selection
   - preferred schema-source-file computation
@@ -1646,11 +1646,11 @@ Changes:
 - removed the now-redundant local `build_identity_checks(...)` helper from `prepare_stage.py` because the assembly seam owns that report field composition now
 
 Commands run:
-- `Get-Content scraper/pipeline/prepare_stage.py`
-- `python -m pytest -q pipeline/tests/test_prepare_result_assembly_module.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_provider_selection.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_workflow.py -k "prepare"` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_services.py -k "prepare_product"` from `scraper/`
+- `Get-Content scraper/product_factory/prepare_stage.py`
+- `python -m pytest -q product_factory/tests/test_prepare_result_assembly_module.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_provider_selection.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_workflow.py -k "prepare"` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_services.py -k "prepare_product"` from `scraper/`
 
 Validation:
 - direct seam tests still pass
@@ -1667,16 +1667,16 @@ Remaining deterministic assembly logic intentionally left in `prepare_stage.py`:
 
 Goal:
 - add the extracted deterministic prepare result-assembly module for the current branch
-- keep `scraper/pipeline/prepare_stage.py` behavior unchanged in this commit by not wiring the new seam yet
+- keep `scraper/product_factory/prepare_stage.py` behavior unchanged in this commit by not wiring the new seam yet
 - pin the new module directly with focused tests while preserving the existing prepare-stage regressions
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_result_assembly.py`
-- `scraper/pipeline/tests/test_prepare_result_assembly_module.py`
+- `scraper/product_factory/prepare_result_assembly.py`
+- `scraper/product_factory/tests/test_prepare_result_assembly_module.py`
 
 Changes:
-- added `scraper/pipeline/prepare_result_assembly.py`
+- added `scraper/product_factory/prepare_result_assembly.py`
 - added the new internal typed result:
   - `PrepareResultAssemblyResult`
 - added the new internal seam:
@@ -1688,17 +1688,17 @@ Changes:
   - deterministic row-building through `build_row(...)`
   - normalized payload assembly
   - deterministic report payload assembly for prepare-stage outputs
-- added focused direct tests for the seam in `scraper/pipeline/tests/test_prepare_result_assembly_module.py`
+- added focused direct tests for the seam in `scraper/product_factory/tests/test_prepare_result_assembly_module.py`
 
 Intentional temporary duplication left for the next commit:
-- `scraper/pipeline/prepare_stage.py` still contains the active inline deterministic schema/result assembly block
-- `scraper/pipeline/prepare_result_assembly.py` currently mirrors that logic but is not called by `prepare_stage.py` yet
+- `scraper/product_factory/prepare_stage.py` still contains the active inline deterministic schema/result assembly block
+- `scraper/product_factory/prepare_result_assembly.py` currently mirrors that logic but is not called by `prepare_stage.py` yet
 - `build_prepare_result_identity_checks(...)` currently duplicates the local `build_identity_checks(...)` helper shape from `prepare_stage.py`
 
 Commands run:
-- `Get-Content scraper/pipeline/tests/test_prepare_stage_result_assembly.py`
-- `Get-Content scraper/pipeline/prepare_stage.py`
-- `python -m pytest -q pipeline/tests/test_prepare_result_assembly_module.py pipeline/tests/test_prepare_stage_result_assembly.py` from `scraper/`
+- `Get-Content scraper/product_factory/tests/test_prepare_stage_result_assembly.py`
+- `Get-Content scraper/product_factory/prepare_stage.py`
+- `python -m pytest -q product_factory/tests/test_prepare_result_assembly_module.py product_factory/tests/test_prepare_stage_result_assembly.py` from `scraper/`
 
 Validation:
 - the new seam module is covered directly without changing production behavior
@@ -1713,7 +1713,7 @@ Goal:
 - keep this commit docs-only and avoid changing runtime behavior, tests, imports, workflow entrypoints, or artifact contracts
 
 Scope framing:
-- this section records planned branch work for extracting the deterministic schema-matching and normalized/report assembly seam out of `scraper/pipeline/prepare_stage.py`
+- this section records planned branch work for extracting the deterministic schema-matching and normalized/report assembly seam out of `scraper/product_factory/prepare_stage.py`
 - it is not a statement that the seam has already been extracted in the current runtime
 - active runtime behavior remains unchanged in this commit
 
@@ -1723,7 +1723,7 @@ Files edited:
 
 Recorded scope:
 - branch goal:
-  - extract the deterministic schema-matching and normalized/report assembly seam out of `scraper/pipeline/prepare_stage.py` while preserving current runtime behavior
+  - extract the deterministic schema-matching and normalized/report assembly seam out of `scraper/product_factory/prepare_stage.py` while preserving current runtime behavior
 - exact non-goals:
   - no public workflow or CLI behavior change
   - no prepare/render ownership-boundary change
@@ -1736,7 +1736,7 @@ Recorded scope:
   - no naming-polish cleanup in this branch
   - no split-task LLM handoff contract change
 - proposed extracted module name:
-  - `scraper/pipeline/prepare_result_assembly.py`
+  - `scraper/product_factory/prepare_result_assembly.py`
 - proposed result types:
   - `PrepareResultAssemblyInput`
   - `PrepareResultAssemblyResult`
@@ -1746,7 +1746,7 @@ Recorded scope:
   - section-image/Besco download orchestration
   - taxonomy resolution for now
   - manufacturer enrichment orchestration for now
-  - scrape-persistence seam invocation through `scraper/pipeline/prepare_scrape_persistence.py`
+  - scrape-persistence seam invocation through `scraper/product_factory/prepare_scrape_persistence.py`
   - the outward dict-shaped `execute_prepare_stage(...)` payload
 - what leaves `prepare_stage.py` in this branch:
   - effective spec-section selection for deterministic schema matching
@@ -1758,7 +1758,7 @@ Recorded scope:
   - taxonomy resolution and manufacturer enrichment stay in `prepare_stage.py` for now
   - `prepare` remains scrape-only plus LLM-handoff-only
   - `render` ownership stays unchanged
-  - `scraper/pipeline/services/prepare_execution.py` remains the owner of `work/{model}/llm/*`
+  - `scraper/product_factory/services/prepare_execution.py` remains the owner of `work/{model}/llm/*`
 
 Test strategy for the next commits:
 - add focused unit coverage for the extracted result-assembly seam
@@ -1767,11 +1767,11 @@ Test strategy for the next commits:
 - run targeted seam tests during each extraction step, then run the broader scraper suite before closing the branch
 
 Commands run:
-- `rg -n "prepare_stage|artifact persistence|schema-matching|normalized|report assembly|taxonomy|manufacturer enrichment" PLAN.md DOCUMENTATION.md README.md scraper/pipeline/prepare_stage.py`
+- `rg -n "prepare_stage|artifact persistence|schema-matching|normalized|report assembly|taxonomy|manufacturer enrichment" PLAN.md DOCUMENTATION.md README.md scraper/product_factory/prepare_stage.py`
 - `Get-Content PLAN.md`
 - `Get-Content DOCUMENTATION.md`
 - `Get-Content README.md`
-- `Get-Content scraper/pipeline/prepare_stage.py`
+- `Get-Content scraper/product_factory/prepare_stage.py`
 
 Validation:
 - the new branch scope is now recorded in `PLAN.md`
@@ -1791,12 +1791,12 @@ Files edited:
 - `DOCUMENTATION.md`
 
 Current-state guidance:
-- scrape artifact persistence now lives in `scraper/pipeline/prepare_scrape_persistence.py`
-- `scraper/pipeline/prepare_stage.py` now owns prepare-stage orchestration only:
+- scrape artifact persistence now lives in `scraper/product_factory/prepare_scrape_persistence.py`
+- `scraper/product_factory/prepare_stage.py` now owns prepare-stage orchestration only:
   - it resolves provider-backed input through the existing provider seam
   - it computes gallery/besco selection, taxonomy, schema match, normalized payloads, and report payloads
   - it delegates scrape-stage persistence through one typed persistence seam call
-- `scraper/pipeline/services/prepare_execution.py` still owns all `work/{model}/llm/*` writes:
+- `scraper/product_factory/services/prepare_execution.py` still owns all `work/{model}/llm/*` writes:
   - `task_manifest.json`
   - `intro_text.context.json`
   - `intro_text.prompt.txt`
@@ -1825,12 +1825,12 @@ Goal:
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/characteristics_pipeline.py`
-- `scraper/pipeline/mapping.py`
-- `scraper/pipeline/prepare_scrape_persistence.py`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/tests/test_prepare_scrape_persistence.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
+- `scraper/product_factory/characteristics_pipeline.py`
+- `scraper/product_factory/mapping.py`
+- `scraper/product_factory/prepare_scrape_persistence.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/tests/test_prepare_scrape_persistence.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
 
 Changes:
 - `prepare_stage.py` now builds one `PrepareScrapePersistenceInput` object, fills it as state is computed, and calls `persist_prepare_scrape_artifacts(...)` once
@@ -1852,10 +1852,10 @@ Old vs new seam:
   - prepare-stage tests assert persistence orchestration through the seam
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_scrape_persistence.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_provider_selection.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_workflow.py -k "prepare"` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_services.py -k "prepare_product"` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_scrape_persistence.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_provider_selection.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_workflow.py -k "prepare"` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_services.py -k "prepare_product"` from `scraper/`
 
 Validation:
 - direct persistence tests still pass against the new module shape
@@ -1866,14 +1866,14 @@ Validation:
 ## 2026-04-01 - Wire prepare stage to the scrape persistence module
 
 Goal:
-- route `scraper/pipeline/prepare_stage.py` through the new scrape persistence module
+- route `scraper/product_factory/prepare_stage.py` through the new scrape persistence module
 - remove the now-redundant inline scrape write logic from `prepare_stage.py`
 - preserve the prepare-stage outward payload, artifact paths, and downstream service/workflow behavior
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_scrape_persistence.py`
-- `scraper/pipeline/prepare_stage.py`
+- `scraper/product_factory/prepare_scrape_persistence.py`
+- `scraper/product_factory/prepare_stage.py`
 
 Changes:
 - wired `prepare_stage.py` to `persist_prepare_scrape_artifacts(...)`
@@ -1903,10 +1903,10 @@ Compatibility behavior preserved intentionally:
 - file names and locations under `work/{model}/scrape/` remain unchanged
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_prepare_scrape_persistence.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_provider_selection.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_workflow.py -k "prepare"` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_services.py -k "prepare_product"` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_prepare_scrape_persistence.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_provider_selection.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_workflow.py -k "prepare"` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_services.py -k "prepare_product"` from `scraper/`
 
 Validation:
 - new scrape persistence unit tests passed
@@ -1925,11 +1925,11 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_scrape_persistence.py`
-- `scraper/pipeline/tests/test_prepare_scrape_persistence.py`
+- `scraper/product_factory/prepare_scrape_persistence.py`
+- `scraper/product_factory/tests/test_prepare_scrape_persistence.py`
 
 Changes:
-- added `scraper/pipeline/prepare_scrape_persistence.py`
+- added `scraper/product_factory/prepare_scrape_persistence.py`
 - added typed persistence models:
   - `PrepareScrapePersistenceInput`
   - `PrepareScrapePersistenceResult`
@@ -1943,16 +1943,16 @@ Changes:
 - updated the branch-scope note in `PLAN.md` so the proposed module/type names match the landed preferred names for this branch
 
 Intentional temporary duplication left for the next commit:
-- `scraper/pipeline/prepare_stage.py` still performs the active scrape persistence inline
+- `scraper/product_factory/prepare_stage.py` still performs the active scrape persistence inline
 - the new persistence module mirrors that write surface but is not wired in yet
 - `prepare_execution.py` remains untouched in this commit by branch rule
 
 Commands run:
-- `Get-Content scraper/pipeline/prepare_stage.py`
-- `Get-Content scraper/pipeline/services/execution_models.py`
-- `Get-Content scraper/pipeline/services/models.py`
-- `Get-Content scraper/pipeline/utils.py`
-- `python -m pytest -q pipeline/tests/test_prepare_scrape_persistence.py` from `scraper/`
+- `Get-Content scraper/product_factory/prepare_stage.py`
+- `Get-Content scraper/product_factory/services/execution_models.py`
+- `Get-Content scraper/product_factory/services/models.py`
+- `Get-Content scraper/product_factory/utils.py`
+- `python -m pytest -q product_factory/tests/test_prepare_scrape_persistence.py` from `scraper/`
 
 Validation:
 - focused unit tests cover canonical scrape file writes, exact filenames, JSON/text content behavior, stale `bescos_raw.json` cleanup, and no writes under `llm/`
@@ -1966,7 +1966,7 @@ Goal:
 - keep this commit docs-only and avoid changing runtime behavior, tests, imports, workflow entrypoints, or artifact contracts
 
 Scope framing:
-- this section records planned branch work for extracting all scrape-stage artifact persistence out of `scraper/pipeline/prepare_stage.py`
+- this section records planned branch work for extracting all scrape-stage artifact persistence out of `scraper/product_factory/prepare_stage.py`
 - it is not a statement that the persistence seam has already been extracted in the current runtime
 - active runtime behavior remains unchanged in this commit
 
@@ -1976,7 +1976,7 @@ Files edited:
 
 Recorded scope:
 - exact branch goal:
-  - extract all scrape artifact persistence out of `scraper/pipeline/prepare_stage.py` into a dedicated module while preserving current runtime behavior
+  - extract all scrape artifact persistence out of `scraper/product_factory/prepare_stage.py` into a dedicated module while preserving current runtime behavior
 - exact non-goals:
   - no public workflow or CLI behavior change
   - no `work/{model}/llm/*` ownership change
@@ -1992,12 +1992,12 @@ Recorded scope:
   - `work/{model}/scrape/{model}.report.json`
   - scrape-stage supporting assets and auxiliary artifacts currently written under `work/{model}/scrape/`
 - proposed extracted module name:
-  - `scraper/pipeline/prepare_artifact_persistence.py`
+  - `scraper/product_factory/prepare_artifact_persistence.py`
 - proposed typed persistence names:
   - `PrepareArtifactPersistenceInput`
   - `PrepareArtifactPersistenceResult`
 - explicit ownership boundary captured in `PLAN.md`:
-  - `scraper/pipeline/services/prepare_execution.py` remains responsible for all `work/{model}/llm/*` task-manifest, context, prompt, and LLM-handoff writes
+  - `scraper/product_factory/services/prepare_execution.py` remains responsible for all `work/{model}/llm/*` task-manifest, context, prompt, and LLM-handoff writes
 - invariants recorded in `PLAN.md`:
   - prepare remains scrape-only plus LLM-handoff-only; render remains the sole owner of candidate and publish outputs
   - provider-resolution ownership does not move in this branch
@@ -2029,7 +2029,7 @@ Goal:
 - keep this commit docs-only and avoid changing runtime behavior, tests, imports, or workflow entrypoints
 
 Scope framing:
-- this section records planned branch work for extracting the provider-resolution seam out of `scraper/pipeline/prepare_stage.py`
+- this section records planned branch work for extracting the provider-resolution seam out of `scraper/product_factory/prepare_stage.py`
 - it is not a statement that the seam has already been extracted in the current runtime
 - active runtime behavior remains unchanged in this commit
 
@@ -2039,7 +2039,7 @@ Files edited:
 
 Recorded scope:
 - branch goal:
-  - extract the provider-resolution seam out of `scraper/pipeline/prepare_stage.py` first, without changing observable behavior
+  - extract the provider-resolution seam out of `scraper/product_factory/prepare_stage.py` first, without changing observable behavior
 - concrete seam responsibilities:
   - source detection
   - runtime provider registry bootstrap
@@ -2051,7 +2051,7 @@ Recorded scope:
   - final URL scope validation
   - source-specific product-page checks and operator hints that currently run before gallery/taxonomy/schema work
 - landed extracted module name:
-  - `scraper/pipeline/prepare_provider_resolution.py`
+  - `scraper/product_factory/prepare_provider_resolution.py`
 - landed seam result type:
   - `PrepareProviderResolutionResult`
   - landed fields: `source`, `provider_id`, `fetch`, `parsed`
@@ -2095,8 +2095,8 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
 
 Changes:
 - collapsed `execute_prepare_stage(...)` provider-resolution dependency injection to one callable:
@@ -2112,14 +2112,14 @@ Changes:
 - kept `validate_url_scope_fn` in `execute_prepare_stage(...)` because the existing scrape report still records final URL scope validation details after the seam returns
 - updated prepare-stage tests so stage-level stubbing now happens through `resolve_prepare_provider_input_fn` instead of stubbing provider bootstrap details directly
 - reconciled branch-scope docs to the landed extraction names:
-  - module: `scraper/pipeline/prepare_provider_resolution.py`
+  - module: `scraper/product_factory/prepare_provider_resolution.py`
   - result type: `PrepareProviderResolutionResult`
 - removed stale prepare-stage imports tied only to the old inline provider-resolution surface
 
 Commands run:
-- `rg -n "execute_prepare_stage\\(|resolve_prepare_provider_resolution|bootstrap_provider_registry_fn|source_to_provider_id_fn|detect_source_fn|validate_url_scope_fn|electronet_parser_factory|skroutz_parser_factory|manufacturer_parser_factory" scraper/pipeline/tests scraper/pipeline PLAN.md DOCUMENTATION.md README.md`
-- `python -m pytest -q pipeline/tests/test_prepare_provider_resolution.py pipeline/tests/test_provider_selection.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_workflow.py -k "prepare_workflow or workflow_main_prepare or render_workflow_delegates_to_service_execution or workflow_main_render_routes_through_render_service"` from `scraper/`
+- `rg -n "execute_prepare_stage\\(|resolve_prepare_provider_resolution|bootstrap_provider_registry_fn|source_to_provider_id_fn|detect_source_fn|validate_url_scope_fn|electronet_parser_factory|skroutz_parser_factory|manufacturer_parser_factory" scraper/product_factory/tests scraper/pipeline PLAN.md DOCUMENTATION.md README.md`
+- `python -m pytest -q product_factory/tests/test_prepare_provider_resolution.py product_factory/tests/test_provider_selection.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_workflow.py -k "prepare_workflow or workflow_main_prepare or render_workflow_delegates_to_service_execution or workflow_main_render_routes_through_render_service"` from `scraper/`
 
 Validation:
 - extracted provider-resolution unit tests still exercise the dedicated module directly
@@ -2217,16 +2217,16 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/services/execution_models.py`
-- `scraper/pipeline/services/prepare_execution.py`
-- `scraper/pipeline/services/prepare_service.py`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/services/render_service.py`
-- `scraper/pipeline/workflow.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_skroutz_integration.py`
-- `scraper/pipeline/tests/test_skroutz_sections.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/services/execution_models.py`
+- `scraper/product_factory/services/prepare_execution.py`
+- `scraper/product_factory/services/prepare_service.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/services/render_service.py`
+- `scraper/product_factory/workflow.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_skroutz_integration.py`
+- `scraper/product_factory/tests/test_skroutz_sections.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
 - completed the typed execution seam:
@@ -2243,9 +2243,9 @@ Intentionally retained untyped internals:
 - provider and publish execution payloads remain on their current contracts in this branch
 
 Commands run:
-- `Select-String -Path scraper\\pipeline\\**\\*.py -Pattern 'dict\\[str, Any\\]|result\\[\"'`
+- `Select-String -Path scraper\\product_factory\\**\\*.py -Pattern 'dict\\[str, Any\\]|result\\[\"'`
 - `python -m compileall scraper/pipeline`
-- `python -m pytest -q pipeline/tests/test_services.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_services.py` from `scraper/`
 - `python -m pytest -q` from `scraper/`
 
 Validation:
@@ -2289,8 +2289,8 @@ Commands run:
 - `Get-Content DOCUMENTATION.md`
 - `rg -n "typed execution results|PrepareExecutionResult|RenderExecutionResult|prepare_service.py|render_service.py|ServiceResult|branch scope|non-goals" PLAN.md DOCUMENTATION.md`
 - `rg -n "execute_prepare_workflow|execute_render_workflow|PrepareExecutionResult|RenderExecutionResult" scraper PLAN.md DOCUMENTATION.md`
-- `Get-Content scraper/pipeline/services/prepare_service.py`
-- `Get-Content scraper/pipeline/services/render_service.py`
+- `Get-Content scraper/product_factory/services/prepare_service.py`
+- `Get-Content scraper/product_factory/services/render_service.py`
 
 Validation:
 - scope is now documented in `PLAN.md` without changing active runtime instructions
@@ -2310,32 +2310,32 @@ Files edited:
 
 Changes:
 - updated `README.md` so install, prepare, render, and test guidance all describe the workflow-only runtime
-- added an explicit active-runtime note in `README.md` that `python -m pipeline.workflow` is the only public entrypoint
+- added an explicit active-runtime note in `README.md` that `python -m product_factory.workflow` is the only public entrypoint
 - named the removed legacy runtime surfaces in `README.md` as removed, not runnable
 - updated `PLAN.md` so M37 is now completed
-- updated `PLAN.md` top-level and milestone wording so removed `pipeline.cli`, `full_run.py`, `run_service.py`, and `run_execution.py` are treated as historical pre-M37 state rather than active runtime truth
+- updated `PLAN.md` top-level and milestone wording so removed `product_factory.cli`, `full_run.py`, `run_service.py`, and `run_execution.py` are treated as historical pre-M37 state rather than active runtime truth
 - replaced the old planned M37 scope wording in `DOCUMENTATION.md` with completion wording for the workflow-only runtime and docs alignment
 - clarified that any mentions below of removed legacy entrypoints remain only as historical engineering-log evidence
 
 Active runtime truth after M37:
 - public runtime entrypoint:
-  - `python -m pipeline.workflow`
+  - `python -m product_factory.workflow`
 - public workflow commands:
-  - `python -m pipeline.workflow prepare ...`
-  - `python -m pipeline.workflow render --model {model}`
+  - `python -m product_factory.workflow prepare ...`
+  - `python -m product_factory.workflow render --model {model}`
 - active test command:
   - `cd scraper && python -m pytest -q`
 - removed legacy runtime surfaces:
-  - `python -m pipeline.cli`
-  - `scraper/pipeline/full_run.py`
-  - `scraper/pipeline/services/run_service.py`
-  - `scraper/pipeline/services/run_execution.py`
+  - `python -m product_factory.cli`
+  - `scraper/product_factory/full_run.py`
+  - `scraper/product_factory/services/run_service.py`
+  - `scraper/product_factory/services/run_execution.py`
 
 Historical note:
-- references below to `pipeline.cli`, `execute_full_run(...)`, `run_service.py`, or `run_execution.py` are retained only as historical pre-M37 execution evidence unless a section explicitly states current guidance
+- references below to `product_factory.cli`, `execute_full_run(...)`, `run_service.py`, or `run_execution.py` are retained only as historical pre-M37 execution evidence unless a section explicitly states current guidance
 
 Commands run:
-- `rg -n "python -m pipeline\\.cli|execute_full_run|run_service|run_execution|pipeline\\.workflow|prepare|render|pytest -q" README.md PLAN.md DOCUMENTATION.md docs archive -S`
+- `rg -n "python -m product_factory\\.cli|execute_full_run|run_service|run_execution|product_factory\\.workflow|prepare|render|pytest -q" README.md PLAN.md DOCUMENTATION.md docs archive -S`
 - `Get-Content README.md`
 - `Get-Content PLAN.md`
 - `Get-Content DOCUMENTATION.md | Select-Object -First 260`
@@ -2347,41 +2347,41 @@ Validation:
 ## 2026-03-31 - Freeze workflow-only cleanup branch scope (historical pre-completion note)
 
 Goal:
-- record the exact branch cleanup scope for making `pipeline.workflow` the only public entrypoint
+- record the exact branch cleanup scope for making `product_factory.workflow` the only public entrypoint
 - keep this commit documentation-only and avoid changing active runtime truth before the cleanup lands
 - leave `README.md` untouched until the runtime deletion commit makes the new entrypoint story true
 
 Scope framing:
 - this section records planned cleanup work for branch `cleanup/workflow-single-entrypoint`
-- it is not a statement that the current runtime already removed `pipeline.cli`, `full_run.py`, `run_service.py`, or `run_execution.py`
+- it is not a statement that the current runtime already removed `product_factory.cli`, `full_run.py`, `run_service.py`, or `run_execution.py`
 - active runtime guidance remains unchanged in this commit so docs do not get ahead of code
 
 Files planned for deletion when the cleanup lands:
-- `scraper/pipeline/cli.py`
-- `scraper/pipeline/full_run.py`
-- `scraper/pipeline/services/run_service.py`
-- `scraper/pipeline/services/run_execution.py`
+- `scraper/product_factory/cli.py`
+- `scraper/product_factory/full_run.py`
+- `scraper/product_factory/services/run_service.py`
+- `scraper/product_factory/services/run_execution.py`
 
 Files planned for rewrite when the cleanup lands:
-- `scraper/pipeline/workflow.py`
-- `scraper/pipeline/services/__init__.py`
-- `scraper/pipeline/tests/test_workflow.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_skroutz_integration.py`
+- `scraper/product_factory/workflow.py`
+- `scraper/product_factory/services/__init__.py`
+- `scraper/product_factory/tests/test_workflow.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_skroutz_integration.py`
 - `README.md`
 - `PLAN.md`
 - `DOCUMENTATION.md`
 
 Tests planned for migration when the cleanup lands:
-- `scraper/pipeline/tests/test_workflow.py`
-  - migrate `execute_full_run(...)` coverage to the surviving `pipeline.workflow` prepare/render entrypoints and their direct orchestration seams
-- `scraper/pipeline/tests/test_provider_selection.py`
+- `scraper/product_factory/tests/test_workflow.py`
+  - migrate `execute_full_run(...)` coverage to the surviving `product_factory.workflow` prepare/render entrypoints and their direct orchestration seams
+- `scraper/product_factory/tests/test_provider_selection.py`
   - move supported-source and injected-provider assertions off `execute_full_run(...)` and onto provider-registry bootstrap plus prepare-stage/workflow execution
-- `scraper/pipeline/tests/test_services.py`
+- `scraper/product_factory/tests/test_services.py`
   - drop `run_service` / `run_execution` ownership checks and keep coverage focused on the surviving prepare, render, and publish service layers
-- `scraper/pipeline/tests/test_skroutz_integration.py`
-  - replace the direct `pipeline.cli` validation dependency with whichever validation seam survives under the workflow-only entrypoint
+- `scraper/product_factory/tests/test_skroutz_integration.py`
+  - replace the direct `product_factory.cli` validation dependency with whichever validation seam survives under the workflow-only entrypoint
 
 README timing rule:
 - runtime instructions in `README.md` must be updated only after the deletion lands, in the same implementation window or immediately after, so active docs never present a non-existent or not-yet-true workflow-only state
@@ -2390,8 +2390,8 @@ Branch acceptance checks:
 - this scope-freeze commit must remain docs-only:
   - `git diff --stat` shows only `PLAN.md` and `DOCUMENTATION.md`
 - cleanup implementation acceptance after the deletion lands:
-  - `python -m pipeline.workflow prepare --help` and `python -m pipeline.workflow render --help` remain the public runtime help surfaces
-  - no active runtime docs present `python -m pipeline.cli ...` as runnable
+  - `python -m product_factory.workflow prepare --help` and `python -m product_factory.workflow render --help` remain the public runtime help surfaces
+  - no active runtime docs present `python -m product_factory.cli ...` as runnable
   - provider-selection and supported-source coverage no longer calls `execute_full_run(...)`
   - the legacy files listed above are removed rather than left as alternate public entrypoints
 
@@ -2399,11 +2399,11 @@ Commands run:
 - `git status --short`
 - `Get-Content PLAN.md`
 - `Get-Content DOCUMENTATION.md`
-- `rg -n "pipeline\\.cli|execute_full_run|run_service|run_execution|workflow-only|branch scope|cleanup scope|M36|Phase 4" PLAN.md DOCUMENTATION.md -S`
+- `rg -n "product_factory\\.cli|execute_full_run|run_service|run_execution|workflow-only|branch scope|cleanup scope|M36|Phase 4" PLAN.md DOCUMENTATION.md -S`
 - `Get-Content PLAN.md | Select-Object -Last 220`
 - `Get-Content DOCUMENTATION.md | Select-Object -First 220`
-- `rg -n "pipeline\\.cli|execute_full_run|run_service|run_execution|full_run\\.py" scraper/pipeline/tests scraper/pipeline README.md -S`
-- `rg --files scraper/pipeline/tests`
+- `rg -n "product_factory\\.cli|execute_full_run|run_service|run_execution|full_run\\.py" scraper/product_factory/tests scraper/pipeline README.md -S`
+- `rg --files scraper/product_factory/tests`
 
 Validation:
 - documented the future workflow-only cleanup scope without changing runtime code, imports, tests, or active README instructions
@@ -2467,20 +2467,20 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/services/__init__.py`
-- `scraper/pipeline/services/errors.py`
-- `scraper/pipeline/services/prepare_execution.py`
-- `scraper/pipeline/services/prepare_service.py`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/services/render_service.py`
-- `scraper/pipeline/services/run_execution.py`
-- `scraper/pipeline/services/run_service.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_workflow.py`
-- `scraper/pipeline/workflow.py`
+- `scraper/product_factory/services/__init__.py`
+- `scraper/product_factory/services/errors.py`
+- `scraper/product_factory/services/prepare_execution.py`
+- `scraper/product_factory/services/prepare_service.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/services/render_service.py`
+- `scraper/product_factory/services/run_execution.py`
+- `scraper/product_factory/services/run_service.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_workflow.py`
+- `scraper/product_factory/workflow.py`
 
 Changes:
-- added stable semantic service error codes in `scraper/pipeline/services/errors.py`:
+- added stable semantic service error codes in `scraper/product_factory/services/errors.py`:
   - `missing_artifact`
   - `provider_failure`
   - `parse_failure`
@@ -2505,7 +2505,7 @@ Changes:
   - `error_code: validation_failure`
   - `error_detail: Candidate validation failed`
 - updated full-run composition metadata in `run_execution.py` so stable child error codes and details propagate into the composed run result
-- replaced the old workflow `ServiceError` exit handling with an explicit matrix in `scraper/pipeline/workflow.py`:
+- replaced the old workflow `ServiceError` exit handling with an explicit matrix in `scraper/product_factory/workflow.py`:
   - `missing_artifact` -> `3`
   - `provider_failure` -> `4`
   - `validation_failure` -> `5`
@@ -2521,27 +2521,27 @@ Intentional behavior changes:
 - failed render validation now records `validation_failure` in run metadata instead of leaving `error_code` empty
 
 Commands run:
-- `Get-Content -Path scraper/pipeline/services/errors.py`
-- `Get-Content -Path scraper/pipeline/services/prepare_service.py`
-- `Get-Content -Path scraper/pipeline/services/render_service.py`
-- `Get-Content -Path scraper/pipeline/services/run_service.py`
-- `Get-Content -Path scraper/pipeline/services/run_execution.py`
-- `Get-Content -Path scraper/pipeline/services/prepare_execution.py`
-- `Get-Content -Path scraper/pipeline/services/render_execution.py`
-- `Get-Content -Path scraper/pipeline/workflow.py`
-- `Get-Content -Path scraper/pipeline/tests/test_services.py`
-- `Get-Content -Path scraper/pipeline/tests/test_workflow.py`
-- `rg -n "ServiceError|error_code|validation_failure|type\\(exc\\)__name__|exit_code" PLAN.md IMPLEMENT.md DOCUMENTATION.md scraper/pipeline scraper/pipeline/tests -S`
-- `py -3.12 -m pytest -q pipeline/tests/test_services.py pipeline/tests/test_workflow.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_services.py pipeline/tests/test_workflow.py pipeline/tests/test_provider_selection.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py` from `scraper/`
+- `Get-Content -Path scraper/product_factory/services/errors.py`
+- `Get-Content -Path scraper/product_factory/services/prepare_service.py`
+- `Get-Content -Path scraper/product_factory/services/render_service.py`
+- `Get-Content -Path scraper/product_factory/services/run_service.py`
+- `Get-Content -Path scraper/product_factory/services/run_execution.py`
+- `Get-Content -Path scraper/product_factory/services/prepare_execution.py`
+- `Get-Content -Path scraper/product_factory/services/render_execution.py`
+- `Get-Content -Path scraper/product_factory/workflow.py`
+- `Get-Content -Path scraper/product_factory/tests/test_services.py`
+- `Get-Content -Path scraper/product_factory/tests/test_workflow.py`
+- `rg -n "ServiceError|error_code|validation_failure|type\\(exc\\)__name__|exit_code" PLAN.md IMPLEMENT.md DOCUMENTATION.md scraper/pipeline scraper/product_factory/tests -S`
+- `py -3.12 -m pytest -q product_factory/tests/test_services.py product_factory/tests/test_workflow.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_services.py product_factory/tests/test_workflow.py product_factory/tests/test_provider_selection.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py` from `scraper/`
 - `git diff --check`
 
 Validation:
 - targeted service/workflow subset first:
-  - `py -3.12 -m pytest -q pipeline/tests/test_services.py pipeline/tests/test_workflow.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_services.py product_factory/tests/test_workflow.py` from `scraper/`
   - passed, `34 passed`
 - broader affected suite:
-  - `py -3.12 -m pytest -q pipeline/tests/test_services.py pipeline/tests/test_workflow.py pipeline/tests/test_provider_selection.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_services.py product_factory/tests/test_workflow.py product_factory/tests/test_provider_selection.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py` from `scraper/`
   - passed, `54 passed`
 - `git diff --check` passed
 
@@ -2562,29 +2562,29 @@ Goal:
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/full_run.py`
-- `scraper/pipeline/prepare_stage.py`
-- `scraper/pipeline/providers/__init__.py`
-- `scraper/pipeline/providers/registry.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/full_run.py`
+- `scraper/product_factory/prepare_stage.py`
+- `scraper/product_factory/providers/__init__.py`
+- `scraper/product_factory/providers/registry.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
-- extended `scraper/pipeline/providers/registry.py` with:
+- extended `scraper/product_factory/providers/registry.py` with:
   - `bootstrap_runtime_provider_registry(...)`
   - `source_to_provider_id(...)`
 - made `bootstrap_runtime_provider_registry(...)` the single runtime bootstrap point for the active providers:
   - `electronet`
   - `skroutz`
   - `manufacturer_tefal`
-- updated `scraper/pipeline/prepare_stage.py` orchestration to:
+- updated `scraper/product_factory/prepare_stage.py` orchestration to:
   - build the provider registry once per run
   - map detected source to provider id through `source_to_provider_id(...)`
   - resolve the provider through `registry.require(...)`
 - removed the active-path dependence on the old ad hoc provider-selection helper branches from orchestration
 - kept the existing readable failure behavior for missing runtime providers by surfacing the registry-not-registered failure as a direct runtime error
-- updated `scraper/pipeline/full_run.py` to pass the registry bootstrap and source-mapping functions through to the compatibility wrapper path
-- re-exported the new bootstrap and mapping helpers from `scraper/pipeline/providers/__init__.py`
+- updated `scraper/product_factory/full_run.py` to pass the registry bootstrap and source-mapping functions through to the compatibility wrapper path
+- re-exported the new bootstrap and mapping helpers from `scraper/product_factory/providers/__init__.py`
 - updated tests so public registry behavior is what is asserted now:
   - bootstrap coverage
   - source mapping coverage
@@ -2596,24 +2596,24 @@ Intentional behavior changes:
 - orchestration now depends on the public registry bootstrap plus mapping seam instead of private branch selection code
 
 Commands run:
-- `Get-Content -Raw scraper/pipeline/providers/registry.py`
-- `Get-Content -Raw scraper/pipeline/prepare_stage.py`
-- `Get-Content -Raw scraper/pipeline/tests/test_provider_selection.py`
-- `rg -n "_resolve_provider_for_source|ProviderRegistry|provider_id|detect_source\\(|require\\(" scraper/pipeline scraper/pipeline/tests -S`
-- `Get-Content -Raw scraper/pipeline/providers/__init__.py`
-- `Get-Content -Raw scraper/pipeline/providers/electronet_provider.py`
-- `Get-Content -Raw scraper/pipeline/providers/skroutz_provider.py`
-- `Get-Content -Raw scraper/pipeline/providers/manufacturer_tefal_provider.py`
-- `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py` from `scraper/`
-- `rg -n "_resolve_provider_for_source|bootstrap_runtime_provider_registry|source_to_provider_id|registry.require\\(" scraper/pipeline scraper/pipeline/tests -S`
+- `Get-Content -Raw scraper/product_factory/providers/registry.py`
+- `Get-Content -Raw scraper/product_factory/prepare_stage.py`
+- `Get-Content -Raw scraper/product_factory/tests/test_provider_selection.py`
+- `rg -n "_resolve_provider_for_source|ProviderRegistry|provider_id|detect_source\\(|require\\(" scraper/pipeline scraper/product_factory/tests -S`
+- `Get-Content -Raw scraper/product_factory/providers/__init__.py`
+- `Get-Content -Raw scraper/product_factory/providers/electronet_provider.py`
+- `Get-Content -Raw scraper/product_factory/providers/skroutz_provider.py`
+- `Get-Content -Raw scraper/product_factory/providers/manufacturer_tefal_provider.py`
+- `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py` from `scraper/`
+- `rg -n "_resolve_provider_for_source|bootstrap_runtime_provider_registry|source_to_provider_id|registry.require\\(" scraper/pipeline scraper/product_factory/tests -S`
 
 Validation:
 - targeted provider/orchestration subset first:
-  - `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py` from `scraper/`
   - passed, `26 passed`
 - broader affected suite:
-  - `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py` from `scraper/`
   - passed, `47 passed`
 
 Deferred:
@@ -2629,78 +2629,78 @@ Goal:
 - keep `render` as the sole owner of final candidate outputs and publish copy
 
 Files added:
-- `scraper/pipeline/prepare_stage.py`
+- `scraper/product_factory/prepare_stage.py`
 
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
 - `README.md`
-- `scraper/pipeline/full_run.py`
-- `scraper/pipeline/services/prepare_execution.py`
-- `scraper/pipeline/services/prepare_service.py`
-- `scraper/pipeline/services/render_service.py`
-- `scraper/pipeline/workflow.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_skroutz_integration.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/full_run.py`
+- `scraper/product_factory/services/prepare_execution.py`
+- `scraper/product_factory/services/prepare_service.py`
+- `scraper/product_factory/services/render_service.py`
+- `scraper/product_factory/workflow.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_skroutz_integration.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
-- extracted the scrape-only execution core into `scraper/pipeline/prepare_stage.py`
+- extracted the scrape-only execution core into `scraper/product_factory/prepare_stage.py`
 - moved the active prepare-stage behavior there:
   - provider-backed fetch and normalization
   - scrape artifact writes under `work/{model}/scrape/`
   - deterministic normalization used by the split-task handoff
   - report generation
 - kept candidate CSV generation out of the new prepare-stage core
-- updated `scraper/pipeline/services/prepare_execution.py` so the active prepare path now calls `execute_prepare_stage(...)` directly instead of `execute_full_run(...)`
+- updated `scraper/product_factory/services/prepare_execution.py` so the active prepare path now calls `execute_prepare_stage(...)` directly instead of `execute_full_run(...)`
 - removed the old nested scrape-dir workaround from prepare because the new core now writes directly to `work/{model}/scrape/`
-- kept `scraper/pipeline/services/render_execution.py` as the only owner of:
+- kept `scraper/product_factory/services/render_execution.py` as the only owner of:
   - `work/{model}/candidate/{model}.csv`
   - `work/{model}/candidate/{model}.normalized.json`
   - `work/{model}/candidate/{model}.validation.json`
   - `work/{model}/candidate/description.html`
   - `work/{model}/candidate/characteristics.html`
   - `products/{model}.csv`
-- reduced `scraper/pipeline/full_run.py` to a thin compatibility wrapper:
+- reduced `scraper/product_factory/full_run.py` to a thin compatibility wrapper:
   - it now delegates to `execute_prepare_stage(...)`
   - it performs the legacy direct CSV write only for explicit callers of `execute_full_run(...)`
   - it is no longer part of the active workflow prepare path
-- updated `scraper/pipeline/workflow.py` so `prepare_workflow(...)` no longer imports or passes through `execute_full_run(...)`
-- fixed `scraper/pipeline/services/prepare_service.py` so prepare result details come from the actual scrape result payload
-- fixed `scraper/pipeline/services/render_service.py` so an unpublished render result can map `published_csv_path` as `None` safely
+- updated `scraper/product_factory/workflow.py` so `prepare_workflow(...)` no longer imports or passes through `execute_full_run(...)`
+- fixed `scraper/product_factory/services/prepare_service.py` so prepare result details come from the actual scrape result payload
+- fixed `scraper/product_factory/services/render_service.py` so an unpublished render result can map `published_csv_path` as `None` safely
 - updated `README.md` to describe the steady-state boundary:
   - prepare writes scrape plus split-task handoff artifacts only
   - render owns candidate outputs and publish copy
 
 Intentional behavior changes:
-- `python -m pipeline.workflow prepare ...` no longer creates `work/{model}/scrape/{model}.csv`
-- `python -m pipeline.workflow prepare ...` does not create `work/{model}/candidate/{model}.csv`
+- `python -m product_factory.workflow prepare ...` no longer creates `work/{model}/scrape/{model}.csv`
+- `python -m product_factory.workflow prepare ...` does not create `work/{model}/candidate/{model}.csv`
 - explicit compatibility calls to `execute_full_run(...)` still write a direct CSV for callers and tests that intentionally exercise the legacy full-run helper
 
 Commands run:
-- `Get-Content -Raw scraper/pipeline/services/prepare_execution.py`
-- `Get-Content -Raw scraper/pipeline/services/render_execution.py`
-- `Get-Content -Raw scraper/pipeline/services/prepare_service.py`
-- `Get-Content -Raw scraper/pipeline/services/render_service.py`
-- `Get-Content -Raw scraper/pipeline/services/run_execution.py`
-- `Get-Content -Raw scraper/pipeline/workflow.py`
-- `Get-Content -Raw scraper/pipeline/full_run.py`
+- `Get-Content -Raw scraper/product_factory/services/prepare_execution.py`
+- `Get-Content -Raw scraper/product_factory/services/render_execution.py`
+- `Get-Content -Raw scraper/product_factory/services/prepare_service.py`
+- `Get-Content -Raw scraper/product_factory/services/render_service.py`
+- `Get-Content -Raw scraper/product_factory/services/run_execution.py`
+- `Get-Content -Raw scraper/product_factory/workflow.py`
+- `Get-Content -Raw scraper/product_factory/full_run.py`
 - `Get-Content -Raw README.md`
-- `Get-Content -Raw scraper/pipeline/tests/test_workflow.py`
-- `Get-Content -Raw scraper/pipeline/tests/test_services.py`
-- `Get-Content -Raw scraper/pipeline/tests/test_skroutz_integration.py`
-- `Get-Content -Raw scraper/pipeline/cli.py`
-- `rg -n "execute_full_run\\(|prepare_workflow\\(|execute_prepare_workflow\\(|candidate_csv_path|published_csv_path|work/\\{model\\}/scrape/\\{model\\}\\.csv|llm_output\\.json|intro_text\\.output|seo_meta\\.output" scraper/pipeline scraper/pipeline/tests README.md -S`
-- `rg -n "_select_skroutz_image_backed_sections" scraper/pipeline/tests scraper/pipeline -S`
-- `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_services.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_provider_selection.py` from `scraper/`
+- `Get-Content -Raw scraper/product_factory/tests/test_workflow.py`
+- `Get-Content -Raw scraper/product_factory/tests/test_services.py`
+- `Get-Content -Raw scraper/product_factory/tests/test_skroutz_integration.py`
+- `Get-Content -Raw scraper/product_factory/cli.py`
+- `rg -n "execute_full_run\\(|prepare_workflow\\(|execute_prepare_workflow\\(|candidate_csv_path|published_csv_path|work/\\{model\\}/scrape/\\{model\\}\\.csv|llm_output\\.json|intro_text\\.output|seo_meta\\.output" scraper/pipeline scraper/product_factory/tests README.md -S`
+- `rg -n "_select_skroutz_image_backed_sections" scraper/product_factory/tests scraper/pipeline -S`
+- `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_services.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_provider_selection.py` from `scraper/`
 
 Validation:
 - smallest relevant subset first:
-  - `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_services.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_services.py` from `scraper/`
   - passed, `27 passed`
 - broader affected suite:
-  - `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_provider_selection.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_provider_selection.py` from `scraper/`
   - passed, `47 passed`
 
 Deferred:
@@ -2723,12 +2723,12 @@ Files edited:
 
 Current state:
 - `README.md` still documents the two-stage `prepare` / `render` workflow under `scraper/`, including prepare handoff artifacts under `work/{model}/llm/` and render candidate artifacts under `work/{model}/candidate/`
-- `scraper/pipeline/services/prepare_execution.py` still routes prepare through `execute_full_run(...)`
-- `scraper/pipeline/full_run.py` still writes `{model}.csv` into the output root it is given, so the active prepare path still produces a scrape-stage CSV side effect under `work/{model}/scrape/`
-- `scraper/pipeline/services/render_execution.py` already consumes split-task outputs:
+- `scraper/product_factory/services/prepare_execution.py` still routes prepare through `execute_full_run(...)`
+- `scraper/product_factory/full_run.py` still writes `{model}.csv` into the output root it is given, so the active prepare path still produces a scrape-stage CSV side effect under `work/{model}/scrape/`
+- `scraper/product_factory/services/render_execution.py` already consumes split-task outputs:
   - `work/{model}/llm/intro_text.output.txt`
   - `work/{model}/llm/seo_meta.output.json`
-- `scraper/pipeline/services/render_execution.py` already writes candidate-stage artifacts and publish copy:
+- `scraper/product_factory/services/render_execution.py` already writes candidate-stage artifacts and publish copy:
   - `work/{model}/candidate/{model}.csv`
   - `work/{model}/candidate/{model}.validation.json`
   - `work/{model}/candidate/description.html`
@@ -2764,7 +2764,7 @@ Ownership boundary after split-LLM:
   - the LLM still writes `work/{model}/llm/intro_text.output.txt` and `work/{model}/llm/seo_meta.output.json`, but prepare owns the contract and handoff scaffolding for those files rather than render owning their creation
 
 Intended fate of `full_run.py`:
-- `scraper/pipeline/full_run.py` should stop being the active implementation seam behind workflow prepare
+- `scraper/product_factory/full_run.py` should stop being the active implementation seam behind workflow prepare
 - acceptable end states for this branch are:
   - a narrowed explicit full-run composition wrapper above scrape-only prepare plus render
   - retirement from the active prepare path if service-owned composition fully replaces it
@@ -2780,13 +2780,13 @@ Commands run:
 - `Get-Content -Raw PLAN.md`
 - `Get-Content -Raw DOCUMENTATION.md`
 - `Get-Content -Raw IMPLEMENT.md`
-- `Get-Content -Raw scraper/pipeline/services/prepare_execution.py`
-- `Get-Content -Raw scraper/pipeline/services/render_execution.py`
-- `Get-Content -Raw scraper/pipeline/full_run.py`
-- `Get-Content -Raw scraper/pipeline/workflow.py`
+- `Get-Content -Raw scraper/product_factory/services/prepare_execution.py`
+- `Get-Content -Raw scraper/product_factory/services/render_execution.py`
+- `Get-Content -Raw scraper/product_factory/full_run.py`
+- `Get-Content -Raw scraper/product_factory/workflow.py`
 - `Get-Content -Raw README.md`
-- `rg -n "execute_full_run\\(|llm_output\\.json|intro_text\\.output|seo_meta\\.output|candidate|validation|publish|csv_path" scraper/pipeline/services scraper/pipeline/full_run.py scraper/pipeline/workflow.py README.md -S`
-- `rg --files scraper/pipeline/tests`
+- `rg -n "execute_full_run\\(|llm_output\\.json|intro_text\\.output|seo_meta\\.output|candidate|validation|publish|csv_path" scraper/product_factory/services scraper/product_factory/full_run.py scraper/product_factory/workflow.py README.md -S`
+- `rg --files scraper/product_factory/tests`
 - `git status --short`
 - `git diff --check -- PLAN.md DOCUMENTATION.md IMPLEMENT.md`
 
@@ -2813,21 +2813,21 @@ Files edited:
 - `PLAN.md`
 - `IMPLEMENT.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/llm_contract.py`
-- `scraper/pipeline/repo_paths.py`
-- `scraper/pipeline/workflow.py`
-- `scraper/pipeline/services/models.py`
-- `scraper/pipeline/services/prepare_execution.py`
-- `scraper/pipeline/services/prepare_service.py`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/services/render_service.py`
-- `scraper/pipeline/services/run_execution.py`
-- `scraper/pipeline/tests/test_llm_contract.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_skroutz_integration.py`
-- `scraper/pipeline/tests/test_skroutz_sections.py`
-- `scraper/pipeline/tests/test_utils_support_paths.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/llm_contract.py`
+- `scraper/product_factory/repo_paths.py`
+- `scraper/product_factory/workflow.py`
+- `scraper/product_factory/services/models.py`
+- `scraper/product_factory/services/prepare_execution.py`
+- `scraper/product_factory/services/prepare_service.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/services/render_service.py`
+- `scraper/product_factory/services/run_execution.py`
+- `scraper/product_factory/tests/test_llm_contract.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_skroutz_integration.py`
+- `scraper/product_factory/tests/test_skroutz_sections.py`
+- `scraper/product_factory/tests/test_utils_support_paths.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Files removed:
 - `resources/prompts/master_prompt+.txt`
@@ -2839,14 +2839,14 @@ Changes:
   - `work/{model}/prompt.txt`
 - removed the legacy combined render input path:
   - `work/{model}/llm_output.json`
-- simplified the active LLM contract in `scraper/pipeline/llm_contract.py` to split-task-only helpers and validators:
+- simplified the active LLM contract in `scraper/product_factory/llm_contract.py` to split-task-only helpers and validators:
   - kept `build_intro_text_context(...)`
   - kept `build_seo_meta_context(...)`
   - kept `build_task_manifest(...)`
   - kept `validate_intro_text_output(...)`
   - kept `validate_seo_meta_output(...)`
   - removed the old combined-context builder and combined/legacy validators
-- updated `scraper/pipeline/services/prepare_execution.py` so prepare now writes only:
+- updated `scraper/product_factory/services/prepare_execution.py` so prepare now writes only:
   - `work/{model}/llm/task_manifest.json`
   - `work/{model}/llm/intro_text.context.json`
   - `work/{model}/llm/intro_text.prompt.txt`
@@ -2855,7 +2855,7 @@ Changes:
 - updated the manifest to steady-state mode:
   - `prepare_mode: split_tasks`
   - removed compatibility metadata for legacy combined artifacts
-- updated `scraper/pipeline/services/render_execution.py` so render now requires:
+- updated `scraper/product_factory/services/render_execution.py` so render now requires:
   - `work/{model}/llm/intro_text.output.txt`
   - `work/{model}/llm/seo_meta.output.json`
 - removed the render fallback to legacy combined payloads and changed the missing-artifact error to the split-task-only path
@@ -2881,28 +2881,28 @@ Legacy behavior removed:
 
 Commands run:
 - `rg -n "llm_context\\.json|prompt\\.txt|llm_output\\.json|presentation\\.intro_html|presentation\\.sections|validate_llm_output|legacy|split_tasks_with_legacy_compatibility|intro_text\\.output|seo_meta\\.output|task_manifest" README.md PLAN.md DOCUMENTATION.md IMPLEMENT.md AGENTS.md scraper resources -S`
-- `Get-Content scraper/pipeline/llm_contract.py`
-- `Get-Content scraper/pipeline/services/prepare_execution.py`
-- `Get-Content scraper/pipeline/services/render_execution.py`
-- `Get-Content scraper/pipeline/services/models.py`
-- `Get-Content scraper/pipeline/services/prepare_service.py`
-- `Get-Content scraper/pipeline/services/render_service.py`
-- `Get-Content scraper/pipeline/services/run_execution.py`
-- `Get-Content scraper/pipeline/workflow.py`
+- `Get-Content scraper/product_factory/llm_contract.py`
+- `Get-Content scraper/product_factory/services/prepare_execution.py`
+- `Get-Content scraper/product_factory/services/render_execution.py`
+- `Get-Content scraper/product_factory/services/models.py`
+- `Get-Content scraper/product_factory/services/prepare_service.py`
+- `Get-Content scraper/product_factory/services/render_service.py`
+- `Get-Content scraper/product_factory/services/run_execution.py`
+- `Get-Content scraper/product_factory/workflow.py`
 - `Get-Content README.md`
 - `Get-Content AGENTS.md`
 - `Get-Content IMPLEMENT.md`
-- `Get-Content scraper/pipeline/tests/test_llm_contract.py`
-- `Get-Content scraper/pipeline/tests/test_services.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py`
-- `Get-Content scraper/pipeline/tests/test_skroutz_integration.py`
-- `Get-Content scraper/pipeline/tests/test_skroutz_sections.py`
-- `py -3.12 -m pytest -q pipeline/tests/test_llm_contract.py pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_utils_support_paths.py` from `scraper/`
+- `Get-Content scraper/product_factory/tests/test_llm_contract.py`
+- `Get-Content scraper/product_factory/tests/test_services.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py`
+- `Get-Content scraper/product_factory/tests/test_skroutz_integration.py`
+- `Get-Content scraper/product_factory/tests/test_skroutz_sections.py`
+- `py -3.12 -m pytest -q product_factory/tests/test_llm_contract.py product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_utils_support_paths.py` from `scraper/`
 - `py -3.12 -m pytest -q` from `scraper/`
 
 Validation:
 - targeted cleanup-facing subset first:
-  - `py -3.12 -m pytest -q pipeline/tests/test_llm_contract.py pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_utils_support_paths.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_llm_contract.py product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_utils_support_paths.py` from `scraper/`
   - passed, `46 passed`
 - full suite:
   - `py -3.12 -m pytest -q` from `scraper/`
@@ -2922,29 +2922,29 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/html_builders.py`
-- `scraper/pipeline/llm_contract.py`
-- `scraper/pipeline/mapping.py`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/tests/test_llm_contract.py`
-- `scraper/pipeline/tests/test_skroutz_integration.py`
-- `scraper/pipeline/tests/test_skroutz_sections.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/html_builders.py`
+- `scraper/product_factory/llm_contract.py`
+- `scraper/product_factory/mapping.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/tests/test_llm_contract.py`
+- `scraper/product_factory/tests/test_skroutz_integration.py`
+- `scraper/product_factory/tests/test_skroutz_sections.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
-- updated `scraper/pipeline/services/render_execution.py` so render now prefers split-task outputs from `work/{model}/llm/`:
+- updated `scraper/product_factory/services/render_execution.py` so render now prefers split-task outputs from `work/{model}/llm/`:
   - `intro_text.output.txt`
   - `seo_meta.output.json`
 - kept compatibility with legacy `work/{model}/llm_output.json`:
   - legacy `product.meta_description` and `product.meta_keywords` are still accepted
   - legacy `presentation.intro_html` is reduced to plain text for the active render path
   - legacy section title/body content is no longer required or used for final description assembly
-- replaced the active render-time LLM validation path in `scraper/pipeline/llm_contract.py`:
+- replaced the active render-time LLM validation path in `scraper/product_factory/llm_contract.py`:
   - added split validators for `intro_text` and `seo_meta`
   - removed render-time dependence on LLM-owned section title/body validation
   - kept the old combined validator available only as legacy compatibility support for older tests and artifacts
-- added `build_description_html_from_intro_and_sections(...)` in `scraper/pipeline/html_builders.py`
-- updated `scraper/pipeline/mapping.py` so final description HTML is now assembled in code from:
+- added `build_description_html_from_intro_and_sections(...)` in `scraper/product_factory/html_builders.py`
+- updated `scraper/product_factory/mapping.py` so final description HTML is now assembled in code from:
   - plain-text `intro_text`
   - deterministic CTA text
   - deterministic cleaned presentation sections
@@ -2957,7 +2957,7 @@ Changes:
   - warn and continue when exactly one requested section is `missing`
 - passed only `usable` deterministic sections into the final HTML renderer
 - preserved source titles and sanitized source wording for section bodies; no section rewriting or LLM section generation remains in the active path
-- normalized SEO keywords in `scraper/pipeline/mapping.py` so render now:
+- normalized SEO keywords in `scraper/product_factory/mapping.py` so render now:
   - guarantees brand and model/MPN are present
   - collapses duplicate keywords
   - collapses singular/plural variants in code before CSV serialization
@@ -2976,27 +2976,27 @@ Behavior changes:
 
 Commands run:
 - `rg -n "validate_llm_output|meta_keywords|build_description_html_from_llm|build_description_html|extract_presentation_blocks" scraper/pipeline -S`
-- `Get-Content scraper/pipeline/services/render_execution.py`
-- `Get-Content scraper/pipeline/html_builders.py`
-- `Get-Content scraper/pipeline/mapping.py`
-- `Get-Content scraper/pipeline/llm_contract.py`
-- `Get-Content scraper/pipeline/presentation_sections.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py`
-- `Get-Content scraper/pipeline/tests/test_skroutz_sections.py`
-- `Get-Content scraper/pipeline/tests/test_skroutz_integration.py`
-- `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_llm_contract.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_skroutz_sections.py::test_143481_rendered_description_preserves_locked_wrappers pipeline/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_llm_contract.py pipeline/tests/test_services.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_presentation_sections.py` from `scraper/`
+- `Get-Content scraper/product_factory/services/render_execution.py`
+- `Get-Content scraper/product_factory/html_builders.py`
+- `Get-Content scraper/product_factory/mapping.py`
+- `Get-Content scraper/product_factory/llm_contract.py`
+- `Get-Content scraper/product_factory/presentation_sections.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py`
+- `Get-Content scraper/product_factory/tests/test_skroutz_sections.py`
+- `Get-Content scraper/product_factory/tests/test_skroutz_integration.py`
+- `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_llm_contract.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_skroutz_sections.py::test_143481_rendered_description_preserves_locked_wrappers product_factory/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_llm_contract.py product_factory/tests/test_services.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_presentation_sections.py` from `scraper/`
 
 Validation:
 - render-focused subset first:
-  - `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_llm_contract.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_llm_contract.py` from `scraper/`
   - passed, `27 passed`
 - targeted compatibility regressions after the image-mapping fix:
-  - `py -3.12 -m pytest -q pipeline/tests/test_skroutz_sections.py::test_143481_rendered_description_preserves_locked_wrappers pipeline/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_skroutz_sections.py::test_143481_rendered_description_preserves_locked_wrappers product_factory/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures` from `scraper/`
   - passed, `2 passed`
 - broader affected suite:
-  - `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_llm_contract.py pipeline/tests/test_services.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_presentation_sections.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_llm_contract.py product_factory/tests/test_services.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_presentation_sections.py` from `scraper/`
   - passed, `57 passed`
 
 Deferred:
@@ -3020,29 +3020,29 @@ Files added:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/repo_paths.py`
-- `scraper/pipeline/llm_contract.py`
-- `scraper/pipeline/services/models.py`
-- `scraper/pipeline/services/prepare_execution.py`
-- `scraper/pipeline/services/prepare_service.py`
-- `scraper/pipeline/services/run_execution.py`
-- `scraper/pipeline/workflow.py`
-- `scraper/pipeline/tests/test_llm_contract.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_utils_support_paths.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/repo_paths.py`
+- `scraper/product_factory/llm_contract.py`
+- `scraper/product_factory/services/models.py`
+- `scraper/product_factory/services/prepare_execution.py`
+- `scraper/product_factory/services/prepare_service.py`
+- `scraper/product_factory/services/run_execution.py`
+- `scraper/product_factory/workflow.py`
+- `scraper/product_factory/tests/test_llm_contract.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_utils_support_paths.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
 - added two task-specific prompt resources under `resources/prompts/`:
   - `intro_text_prompt.txt`
   - `seo_meta_prompt.txt`
-- added new prompt path constants in `scraper/pipeline/repo_paths.py`
-- extended `scraper/pipeline/llm_contract.py` with split-task builders:
+- added new prompt path constants in `scraper/product_factory/repo_paths.py`
+- extended `scraper/product_factory/llm_contract.py` with split-task builders:
   - `build_intro_text_context(...)`
   - `build_seo_meta_context(...)`
   - `build_task_manifest(...)`
 - kept the existing combined `build_llm_context(...)` and legacy prompt rendering path in place strictly for compatibility
-- updated `scraper/pipeline/services/prepare_execution.py` so prepare now writes these primary artifacts:
+- updated `scraper/product_factory/services/prepare_execution.py` so prepare now writes these primary artifacts:
   - `work/{model}/llm/intro_text.context.json`
   - `work/{model}/llm/intro_text.prompt.txt`
   - `work/{model}/llm/seo_meta.context.json`
@@ -3083,29 +3083,29 @@ Compatibility behavior intentionally preserved:
 - the task manifest explicitly marks the prepare mode as `split_tasks_with_legacy_compatibility`
 
 Commands run:
-- `Get-Content scraper/pipeline/repo_paths.py`
-- `Get-Content scraper/pipeline/services/models.py`
-- `rg -n "llm_context_path|prompt_path|llm_output_path|MASTER_PROMPT_PATH|prompt.txt|llm_context.json|task_manifest|intro_text|seo_meta" scraper/pipeline scraper/pipeline/tests resources -S`
-- `Get-Content scraper/pipeline/services/prepare_service.py`
-- `Get-Content scraper/pipeline/services/metadata.py`
-- `Get-Content scraper/pipeline/workflow.py`
-- `rg -n "meta_description_draft|differentiator|key_specs|deterministic_product" scraper/pipeline/deterministic_fields.py scraper/pipeline/tests/test_workflow.py scraper/pipeline/tests/test_skroutz_integration.py -S`
-- `Get-Content scraper/pipeline/deterministic_fields.py`
-- `Get-Content scraper/pipeline/tests/test_utils_support_paths.py`
-- `Get-Content scraper/pipeline/services/run_execution.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -First 170`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -Skip 900 -First 60`
-- `Get-Content scraper/pipeline/tests/test_services.py | Select-Object -First 240`
-- `Get-Content scraper/pipeline/tests/test_llm_contract.py`
-- `py -3.12 -m pytest -q pipeline/tests/test_llm_contract.py pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_utils_support_paths.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_presentation_sections.py pipeline/tests/test_llm_contract.py pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_utils_support_paths.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_skroutz_integration.py` from `scraper/`
+- `Get-Content scraper/product_factory/repo_paths.py`
+- `Get-Content scraper/product_factory/services/models.py`
+- `rg -n "llm_context_path|prompt_path|llm_output_path|MASTER_PROMPT_PATH|prompt.txt|llm_context.json|task_manifest|intro_text|seo_meta" scraper/pipeline scraper/product_factory/tests resources -S`
+- `Get-Content scraper/product_factory/services/prepare_service.py`
+- `Get-Content scraper/product_factory/services/metadata.py`
+- `Get-Content scraper/product_factory/workflow.py`
+- `rg -n "meta_description_draft|differentiator|key_specs|deterministic_product" scraper/product_factory/deterministic_fields.py scraper/product_factory/tests/test_workflow.py scraper/product_factory/tests/test_skroutz_integration.py -S`
+- `Get-Content scraper/product_factory/deterministic_fields.py`
+- `Get-Content scraper/product_factory/tests/test_utils_support_paths.py`
+- `Get-Content scraper/product_factory/services/run_execution.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -First 170`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -Skip 900 -First 60`
+- `Get-Content scraper/product_factory/tests/test_services.py | Select-Object -First 240`
+- `Get-Content scraper/product_factory/tests/test_llm_contract.py`
+- `py -3.12 -m pytest -q product_factory/tests/test_llm_contract.py product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_utils_support_paths.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_presentation_sections.py product_factory/tests/test_llm_contract.py product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_utils_support_paths.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_skroutz_integration.py` from `scraper/`
 
 Validation:
 - targeted prepare-facing subset first:
-  - `py -3.12 -m pytest -q pipeline/tests/test_llm_contract.py pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_utils_support_paths.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_llm_contract.py product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_utils_support_paths.py` from `scraper/`
   - passed, `30 passed`
 - broader affected tests:
-  - `py -3.12 -m pytest -q pipeline/tests/test_presentation_sections.py pipeline/tests/test_llm_contract.py pipeline/tests/test_workflow.py pipeline/tests/test_services.py pipeline/tests/test_utils_support_paths.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_skroutz_integration.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_presentation_sections.py product_factory/tests/test_llm_contract.py product_factory/tests/test_workflow.py product_factory/tests/test_services.py product_factory/tests/test_utils_support_paths.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_skroutz_integration.py` from `scraper/`
   - passed, `52 passed`
 
 Deferred:
@@ -3121,18 +3121,18 @@ Goal:
 - avoid changing final HTML assembly in this step
 
 Files added:
-- `scraper/pipeline/presentation_sections.py`
-- `scraper/pipeline/tests/test_presentation_sections.py`
+- `scraper/product_factory/presentation_sections.py`
+- `scraper/product_factory/tests/test_presentation_sections.py`
 
 Files edited:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/models.py`
-- `scraper/pipeline/llm_contract.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/models.py`
+- `scraper/product_factory/llm_contract.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
-- added `scraper/pipeline/presentation_sections.py` as the deterministic section normalization module
-- introduced normalized presentation section dataclasses in `scraper/pipeline/models.py`:
+- added `scraper/product_factory/presentation_sections.py` as the deterministic section normalization module
+- introduced normalized presentation section dataclasses in `scraper/product_factory/models.py`:
   - `NormalizedPresentationSection`
   - `NormalizedPresentationSectionMetrics`
 - implemented deterministic section normalization with these behaviors:
@@ -3151,7 +3151,7 @@ Changes:
     - `usable_clean`
   - applies the agreed word-count and alphabetic-character thresholds
   - detects duplicates against previously accepted non-missing section bodies
-- updated `scraper/pipeline/llm_contract.py` so `build_llm_context(...)` now writes normalized deterministic `presentation_source_sections` into `work/{model}/llm_context.json`
+- updated `scraper/product_factory/llm_contract.py` so `build_llm_context(...)` now writes normalized deterministic `presentation_source_sections` into `work/{model}/llm_context.json`
 - kept the current LLM output contract unchanged in this commit:
   - `presentation.intro_html`
   - `presentation.sections[].title`
@@ -3174,34 +3174,34 @@ Behavior changes:
 
 Commands run:
 - `rg -n "presentation_source_sections|sections|rendered_sections|section" scraper/pipeline -S`
-- `Get-Content scraper/pipeline/llm_contract.py`
-- `Get-Content scraper/pipeline/services/render_execution.py`
-- `Get-Content scraper/pipeline/html_builders.py`
-- `Get-Content scraper/pipeline/models.py`
-- `Get-Content scraper/pipeline/mapping.py`
-- `Get-Content scraper/pipeline/tests/test_llm_contract.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -First 180`
-- `Get-Content scraper/pipeline/services/prepare_execution.py`
-- `Get-Content scraper/pipeline/tests/test_services.py`
+- `Get-Content scraper/product_factory/llm_contract.py`
+- `Get-Content scraper/product_factory/services/render_execution.py`
+- `Get-Content scraper/product_factory/html_builders.py`
+- `Get-Content scraper/product_factory/models.py`
+- `Get-Content scraper/product_factory/mapping.py`
+- `Get-Content scraper/product_factory/tests/test_llm_contract.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -First 180`
+- `Get-Content scraper/product_factory/services/prepare_execution.py`
+- `Get-Content scraper/product_factory/tests/test_services.py`
 - `Get-Content resources/prompts/master_prompt+.txt`
-- `rg -n "presentation_source_sections|paragraph|image_url|title" resources/prompts/master_prompt+.txt scraper/pipeline/tests/test_workflow.py scraper/pipeline/tests/test_skroutz_integration.py scraper/pipeline/tests/test_skroutz_sections.py -S`
-- `Get-Content scraper/pipeline/normalize.py`
-- `py -3.12 -m pytest -q pipeline/tests/test_presentation_sections.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_presentation_sections.py pipeline/tests/test_workflow.py pipeline/tests/test_llm_contract.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_services.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_presentation_sections.py pipeline/tests/test_workflow.py pipeline/tests/test_llm_contract.py pipeline/tests/test_services.py` from `scraper/`
+- `rg -n "presentation_source_sections|paragraph|image_url|title" resources/prompts/master_prompt+.txt scraper/product_factory/tests/test_workflow.py scraper/product_factory/tests/test_skroutz_integration.py scraper/product_factory/tests/test_skroutz_sections.py -S`
+- `Get-Content scraper/product_factory/normalize.py`
+- `py -3.12 -m pytest -q product_factory/tests/test_presentation_sections.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_presentation_sections.py product_factory/tests/test_workflow.py product_factory/tests/test_llm_contract.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_services.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_presentation_sections.py product_factory/tests/test_workflow.py product_factory/tests/test_llm_contract.py product_factory/tests/test_services.py` from `scraper/`
 
 Validation:
 - smallest relevant subset first:
-  - `py -3.12 -m pytest -q pipeline/tests/test_presentation_sections.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_presentation_sections.py` from `scraper/`
   - passed, `10 passed`
 - broader affected tests:
-  - `py -3.12 -m pytest -q pipeline/tests/test_presentation_sections.py pipeline/tests/test_workflow.py pipeline/tests/test_llm_contract.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_presentation_sections.py product_factory/tests/test_workflow.py product_factory/tests/test_llm_contract.py` from `scraper/`
   - passed, `29 passed`
-  - `py -3.12 -m pytest -q pipeline/tests/test_services.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_services.py` from `scraper/`
   - passed, `8 passed`
   - final rerun:
-  - `py -3.12 -m pytest -q pipeline/tests/test_presentation_sections.py pipeline/tests/test_workflow.py pipeline/tests/test_llm_contract.py pipeline/tests/test_services.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_presentation_sections.py product_factory/tests/test_workflow.py product_factory/tests/test_llm_contract.py product_factory/tests/test_services.py` from `scraper/`
   - passed, `37 passed`
 
 Deferred:
@@ -3225,14 +3225,14 @@ Current state:
 - `README.md` still documents single prepare outputs:
   - `work/{model}/llm_context.json`
   - `work/{model}/prompt.txt`
-- `scraper/pipeline/llm_contract.py` currently marks these fields as LLM-owned:
+- `scraper/product_factory/llm_contract.py` currently marks these fields as LLM-owned:
   - `presentation.intro_html`
   - `presentation.sections[].title`
   - `presentation.sections[].body_html`
   - `product.meta_description`
   - `product.meta_keywords`
-- `scraper/pipeline/services/prepare_execution.py` still builds one LLM context and one prompt
-- `scraper/pipeline/services/render_execution.py` still reads `work/{model}/llm_output.json`
+- `scraper/product_factory/services/prepare_execution.py` still builds one LLM context and one prompt
+- `scraper/product_factory/services/render_execution.py` still reads `work/{model}/llm_output.json`
 
 Target state:
 - prepare emits two task-specific LLM handoffs:
@@ -3299,7 +3299,7 @@ Commands run:
 - `Get-Content -Raw IMPLEMENT.md`
 - `Get-Content -Raw DOCUMENTATION.md`
 - `rg -n "intro_html|meta_description|meta_keywords|sections\\[\\]\\.title|sections\\[\\]\\.body_html|llm_output\\.json|prompt\\.txt|llm_context\\.json|prepare_execution|render_execution|presentation_source_sections" scraper resources README.md -S`
-- `rg --files scraper/pipeline/tests`
+- `rg --files scraper/product_factory/tests`
 - `rg -n "llm_contract|compact_response.schema.json|master_prompt\\+\\.txt|prompt.txt|llm_context.json" scraper/pipeline resources -S`
 - `Get-Content DOCUMENTATION.md | Select-Object -First 140`
 - `rg -n "Phase 3|M29|Validation rules|Stop conditions|Current milestone" PLAN.md DOCUMENTATION.md IMPLEMENT.md -S`
@@ -3318,24 +3318,24 @@ Deferred:
 ## M29 — make run_service the true owner of full-run orchestration
 
 Goal:
-- move the real full-run orchestration body out of `scraper/pipeline/services/run_service.py` into a service-owned execution module
+- move the real full-run orchestration body out of `scraper/product_factory/services/run_service.py` into a service-owned execution module
 - keep CLI commands, workflow adapter behavior, artifact paths, validation semantics, publish gating, output semantics, and provider behavior unchanged
 - finish the full-run ownership inversion without widening scope into workflow or provider redesign
 
 Files added:
-- `scraper/pipeline/services/run_execution.py`
+- `scraper/product_factory/services/run_execution.py`
 
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/services/run_service.py`
-- `scraper/pipeline/tests/test_services.py`
+- `scraper/product_factory/services/run_service.py`
+- `scraper/product_factory/tests/test_services.py`
 
 Changes:
-- extracted the full-run composition body from `scraper/pipeline/services/run_service.py::run_product(...)` into `scraper/pipeline/services/run_execution.py::execute_run_workflow(...)`
+- extracted the full-run composition body from `scraper/product_factory/services/run_service.py::run_product(...)` into `scraper/product_factory/services/run_execution.py::execute_run_workflow(...)`
 - kept the full-run composition service-owned by having the new executor compose `prepare_product(...)` and `render_product(...)` and return the same aggregated `ServiceResult` shape as before
-- reduced `scraper/pipeline/services/run_service.py` to a thin service wrapper that directly calls the new service-owned full-run executor and preserves the existing exception-wrapping behavior
-- updated `scraper/pipeline/tests/test_services.py` to prove:
+- reduced `scraper/product_factory/services/run_service.py` to a thin service wrapper that directly calls the new service-owned full-run executor and preserves the existing exception-wrapping behavior
+- updated `scraper/product_factory/tests/test_services.py` to prove:
   - service-owned modules involved in prepare/render/full-run execution do not import `workflow.py`
   - the new full-run executor still composes prepare/render results in order with unchanged aggregation semantics
   - `run_product(...)` now delegates to the service-owned full-run executor and still wraps executor errors
@@ -3345,23 +3345,23 @@ Commands run:
 - `rg -n "run_product|FullRunRequest|prepare_product|render_product|run_execution|workflow" scraper/pipeline -S`
 - `Get-Content PLAN.md`
 - `Get-Content DOCUMENTATION.md`
-- `Get-Content scraper/pipeline/services/run_service.py`
-- `Get-Content scraper/pipeline/tests/test_services.py`
-- `Get-Content scraper/pipeline/workflow.py`
-- `Get-Content scraper/pipeline/services/models.py`
-- `Get-Content scraper/pipeline/cli.py`
-- `Get-Content scraper/pipeline/services/__init__.py`
-- `rg -n "run_product\\(|prepare_product\\(|render_product\\(" scraper/pipeline/tests/test_workflow.py scraper/pipeline/tests/test_services.py scraper/pipeline/cli.py -S`
+- `Get-Content scraper/product_factory/services/run_service.py`
+- `Get-Content scraper/product_factory/tests/test_services.py`
+- `Get-Content scraper/product_factory/workflow.py`
+- `Get-Content scraper/product_factory/services/models.py`
+- `Get-Content scraper/product_factory/cli.py`
+- `Get-Content scraper/product_factory/services/__init__.py`
+- `rg -n "run_product\\(|prepare_product\\(|render_product\\(" scraper/product_factory/tests/test_workflow.py scraper/product_factory/tests/test_services.py scraper/product_factory/cli.py -S`
 - `git status --short`
-- `Get-Content scraper/pipeline/services/prepare_service.py`
-- `Get-Content scraper/pipeline/services/render_service.py`
-- `Get-Content scraper/pipeline/services/prepare_execution.py`
-- `Get-Content scraper/pipeline/services/render_execution.py`
+- `Get-Content scraper/product_factory/services/prepare_service.py`
+- `Get-Content scraper/product_factory/services/render_service.py`
+- `Get-Content scraper/product_factory/services/prepare_execution.py`
+- `Get-Content scraper/product_factory/services/render_execution.py`
 - `rg -n "Current milestone|M28|M29|Phase 2 milestones" PLAN.md DOCUMENTATION.md -S`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -Skip 940 -First 40`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -Skip 940 -First 40`
 - `python -m compileall pipeline` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_services.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_workflow.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_services.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_workflow.py` from `scraper/`
 - `py -3.12 -m pytest -q` from `scraper/`
 
 Validation:
@@ -3369,9 +3369,9 @@ Validation:
   - `python -m compileall pipeline` from `scraper/`
   - passed
 - exact requested pytest commands:
-  - `py -3.12 -m pytest -q pipeline/tests/test_services.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_services.py` from `scraper/`
   - passed
-  - `py -3.12 -m pytest -q pipeline/tests/test_workflow.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_workflow.py` from `scraper/`
   - passed
   - `py -3.12 -m pytest -q` from `scraper/`
   - passed
@@ -3382,67 +3382,67 @@ Risks:
 
 Deferred:
 - no provider migration, CLI redesign, workflow redesign, artifact-path change, validation-contract change, or publish-gating change was attempted
-- `scraper/pipeline/tests/test_workflow.py` did not require edits because the workflow layer remains an unchanged adapter for prepare/render-only commands
+- `scraper/product_factory/tests/test_workflow.py` did not require edits because the workflow layer remains an unchanged adapter for prepare/render-only commands
 - `IMPLEMENT.md`, `AGENTS.md`, `README.md`, and `RULES.md` were left unchanged because M29 did not add a new durable operator rule or change the accepted runtime interface
 
 ## M28 — make services the true owner of prepare/render orchestration
 
 Goal:
-- move the real prepare/render orchestration bodies out of `scraper/pipeline/workflow.py` and into service-owned execution modules
+- move the real prepare/render orchestration bodies out of `scraper/product_factory/workflow.py` and into service-owned execution modules
 - keep CLI/workflow commands, artifact paths, validation semantics, publish gating, and provider behavior unchanged
 - finish the prepare/render ownership inversion without widening scope into provider changes or full-run redesign
 
 Files added:
-- `scraper/pipeline/services/prepare_execution.py`
-- `scraper/pipeline/services/render_execution.py`
+- `scraper/product_factory/services/prepare_execution.py`
+- `scraper/product_factory/services/render_execution.py`
 
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/workflow.py`
-- `scraper/pipeline/services/prepare_service.py`
-- `scraper/pipeline/services/render_service.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/workflow.py`
+- `scraper/product_factory/services/prepare_service.py`
+- `scraper/product_factory/services/render_service.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
-- extracted the prepare orchestration body from `workflow.prepare_workflow(...)` into `scraper/pipeline/services/prepare_execution.py::execute_prepare_workflow(...)`, including scrape artifact normalization, prompt/context generation, and prepare metadata writes
-- extracted the render orchestration body from `workflow.render_workflow(...)` into `scraper/pipeline/services/render_execution.py::execute_render_workflow(...)`, including LLM output loading, candidate generation, validation, publish gating, and render metadata writes
-- updated `scraper/pipeline/services/prepare_service.py` so `prepare_product(...)` now calls the service-owned prepare executor directly and no longer imports `workflow.py`
-- updated `scraper/pipeline/services/render_service.py` so `render_product(...)` now calls the service-owned render executor directly and no longer imports `workflow.py`
-- reduced `scraper/pipeline/workflow.py` to thin prepare/render adapters that inject the existing `WORK_ROOT`, `PRODUCTS_ROOT`, and `execute_full_run(...)` dependencies while keeping the CLI entrypoint behavior unchanged
-- updated `scraper/pipeline/tests/test_services.py` to assert the services no longer import `workflow.py` and to mock the new service-owned executors instead of workflow-owned orchestration
-- updated `scraper/pipeline/tests/test_workflow.py` with focused adapter-delegation coverage while preserving the existing prepare/render behavior tests at the current baseline
+- extracted the prepare orchestration body from `workflow.prepare_workflow(...)` into `scraper/product_factory/services/prepare_execution.py::execute_prepare_workflow(...)`, including scrape artifact normalization, prompt/context generation, and prepare metadata writes
+- extracted the render orchestration body from `workflow.render_workflow(...)` into `scraper/product_factory/services/render_execution.py::execute_render_workflow(...)`, including LLM output loading, candidate generation, validation, publish gating, and render metadata writes
+- updated `scraper/product_factory/services/prepare_service.py` so `prepare_product(...)` now calls the service-owned prepare executor directly and no longer imports `workflow.py`
+- updated `scraper/product_factory/services/render_service.py` so `render_product(...)` now calls the service-owned render executor directly and no longer imports `workflow.py`
+- reduced `scraper/product_factory/workflow.py` to thin prepare/render adapters that inject the existing `WORK_ROOT`, `PRODUCTS_ROOT`, and `execute_full_run(...)` dependencies while keeping the CLI entrypoint behavior unchanged
+- updated `scraper/product_factory/tests/test_services.py` to assert the services no longer import `workflow.py` and to mock the new service-owned executors instead of workflow-owned orchestration
+- updated `scraper/product_factory/tests/test_workflow.py` with focused adapter-delegation coverage while preserving the existing prepare/render behavior tests at the current baseline
 
 Commands run:
-- `Get-Content scraper/pipeline/workflow.py`
-- `Get-Content scraper/pipeline/services/prepare_service.py`
-- `Get-Content scraper/pipeline/services/render_service.py`
-- `Get-Content scraper/pipeline/tests/test_services.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py`
+- `Get-Content scraper/product_factory/workflow.py`
+- `Get-Content scraper/product_factory/services/prepare_service.py`
+- `Get-Content scraper/product_factory/services/render_service.py`
+- `Get-Content scraper/product_factory/tests/test_services.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py`
 - `Get-Content PLAN.md`
 - `Get-Content DOCUMENTATION.md`
 - `rg -n "prepare_workflow|render_workflow|prepare_product\\(|render_product\\(" scraper/pipeline -S`
-- `Get-Content scraper/pipeline/services/models.py`
-- `Get-Content scraper/pipeline/services/__init__.py`
+- `Get-Content scraper/product_factory/services/models.py`
+- `Get-Content scraper/product_factory/services/__init__.py`
 - `git status --short`
-- `Get-Content scraper/pipeline/tests/test_skroutz_integration.py -TotalCount 40`
-- `Get-Content scraper/pipeline/tests/test_skroutz_sections.py -TotalCount 40`
-- `Get-Content scraper/pipeline/workflow.py | Select-Object -First 220`
-- `Get-Content scraper/pipeline/workflow.py | Select-Object -Skip 220`
-- `Get-Content scraper/pipeline/workflow.py`
-- `Get-Content scraper/pipeline/services/prepare_execution.py`
-- `Get-Content scraper/pipeline/services/render_execution.py`
-- `Get-Content scraper/pipeline/tests/test_services.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -First 140`
+- `Get-Content scraper/product_factory/tests/test_skroutz_integration.py -TotalCount 40`
+- `Get-Content scraper/product_factory/tests/test_skroutz_sections.py -TotalCount 40`
+- `Get-Content scraper/product_factory/workflow.py | Select-Object -First 220`
+- `Get-Content scraper/product_factory/workflow.py | Select-Object -Skip 220`
+- `Get-Content scraper/product_factory/workflow.py`
+- `Get-Content scraper/product_factory/services/prepare_execution.py`
+- `Get-Content scraper/product_factory/services/render_execution.py`
+- `Get-Content scraper/product_factory/tests/test_services.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -First 140`
 - `python -m compileall pipeline` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_services.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_workflow.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_services.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_workflow.py` from `scraper/`
 - `python -m pytest -q` from `scraper/`
 - `py -0p`
 - `where.exe python`
-- `py -3.12 -m pytest -q pipeline/tests/test_services.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_workflow.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_services.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_workflow.py` from `scraper/`
 - `py -3.12 -m pytest -q` from `scraper/`
 
 Validation:
@@ -3450,14 +3450,14 @@ Validation:
   - `python -m compileall pipeline` from `scraper/`
   - passed
 - exact requested pytest commands:
-  - `python -m pytest -q pipeline/tests/test_services.py` from `scraper/`
-  - `python -m pytest -q pipeline/tests/test_workflow.py` from `scraper/`
+  - `python -m pytest -q product_factory/tests/test_services.py` from `scraper/`
+  - `python -m pytest -q product_factory/tests/test_workflow.py` from `scraper/`
   - `python -m pytest -q` from `scraper/`
   - all three failed before test discovery because the active `python` resolved to `C:\Users\Rashingar\AppData\Local\Programs\Python\Python310\python.exe`, which does not have `pytest` installed
 - executed pytest validation on the installed interpreter:
-  - `py -3.12 -m pytest -q pipeline/tests/test_services.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_services.py` from `scraper/`
   - passed, `7 passed`
-  - `py -3.12 -m pytest -q pipeline/tests/test_workflow.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_workflow.py` from `scraper/`
   - passed, `15 passed`
   - `py -3.12 -m pytest -q` from `scraper/`
   - passed, `103 passed`
@@ -3480,16 +3480,16 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/full_run.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/full_run.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Files moved:
 - none
 
 Before/after summary:
 - before:
-  - all supported sources already had provider adapters, but `scraper/pipeline/full_run.py` still carried direct fetch/parser fallback branches that could bypass the provider seam if provider selection returned `None`
+  - all supported sources already had provider adapters, but `scraper/product_factory/full_run.py` still carried direct fetch/parser fallback branches that could bypass the provider seam if provider selection returned `None`
   - `full_run.py` also still contained one dead pre-migration section-routing branch under `if cli.sections > 0 and source != "skroutz":` that could never execute
 - after:
   - `execute_full_run(...)` now fails fast with `No provider configured for supported source: ...` instead of falling back to legacy per-source fetch/parser logic
@@ -3497,10 +3497,10 @@ Before/after summary:
   - tests now lock both the supported provider map and the fail-fast no-provider behavior so the migration boundary does not regress silently
 
 Changes:
-- updated `scraper/pipeline/full_run.py` to remove the legacy direct fetch/parse branches for supported sources and require provider selection before normalization proceeds
-- removed the unreachable dead source-branch duplication in the non-Skroutz section extraction block of `scraper/pipeline/full_run.py`
-- added `test_resolve_provider_for_source_returns_none_for_unsupported_source` in `scraper/pipeline/tests/test_provider_selection.py` so the supported-provider map stays explicit
-- added `test_execute_full_run_fails_fast_when_supported_source_has_no_provider` in `scraper/pipeline/tests/test_workflow.py` so a missing provider can no longer silently reactivate legacy runtime routing
+- updated `scraper/product_factory/full_run.py` to remove the legacy direct fetch/parse branches for supported sources and require provider selection before normalization proceeds
+- removed the unreachable dead source-branch duplication in the non-Skroutz section extraction block of `scraper/product_factory/full_run.py`
+- added `test_resolve_provider_for_source_returns_none_for_unsupported_source` in `scraper/product_factory/tests/test_provider_selection.py` so the supported-provider map stays explicit
+- added `test_execute_full_run_fails_fast_when_supported_source_has_no_provider` in `scraper/product_factory/tests/test_workflow.py` so a missing provider can no longer silently reactivate legacy runtime routing
 - updated `PLAN.md` to mark M27 completed, mark Phase 2 completed, and add the Phase 3 handoff header without starting new implementation work
 
 Commands run:
@@ -3508,24 +3508,24 @@ Commands run:
 - `Get-Content PLAN.md`
 - `Get-Content IMPLEMENT.md`
 - `Get-Content DOCUMENTATION.md`
-- `Get-Content scraper\\pipeline\\full_run.py`
-- `Get-Content scraper\\pipeline\\tests\\test_workflow.py`
-- `Get-Content scraper\\pipeline\\tests\\test_provider_selection.py`
+- `Get-Content scraper\\product_factory\\full_run.py`
+- `Get-Content scraper\\product_factory\\tests\\test_workflow.py`
+- `Get-Content scraper\\product_factory\\tests\\test_provider_selection.py`
 - `rg -n '_resolve_provider_for_source|provider is not None|provider seam|provider-backed|legacy branch|legacy routing|source == "skroutz"|source == "manufacturer_tefal"|return None' scraper\\pipeline PLAN.md README.md IMPLEMENT.md -S`
-- `rg -n 'fetch_httpx\\(|fetch_playwright\\(|ManufacturerProductParser\\(|SkroutzProductParser\\(|ElectronetProductParser\\(' scraper\\pipeline\\full_run.py scraper\\pipeline\\providers scraper\\pipeline\\tests -S`
-- `Get-Content scraper\\pipeline\\source_detection.py`
-- `Get-Content scraper\\pipeline\\tests\\conftest.py`
-- `Get-Content scraper\\pipeline\\providers\\registry.py`
-- `Get-Content scraper\\pipeline\\providers\\electronet_provider.py`
-- `Get-Content scraper\\pipeline\\providers\\skroutz_provider.py`
-- `Get-Content scraper\\pipeline\\providers\\manufacturer_tefal_provider.py`
-- `git diff -- scraper/pipeline/full_run.py scraper/pipeline/tests/test_provider_selection.py scraper/pipeline/tests/test_workflow.py`
-- `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py` from `scraper/`
+- `rg -n 'fetch_httpx\\(|fetch_playwright\\(|ManufacturerProductParser\\(|SkroutzProductParser\\(|ElectronetProductParser\\(' scraper\\product_factory\\full_run.py scraper\\product_factory\\providers scraper\\product_factory\\tests -S`
+- `Get-Content scraper\\product_factory\\source_detection.py`
+- `Get-Content scraper\\product_factory\\tests\\conftest.py`
+- `Get-Content scraper\\product_factory\\providers\\registry.py`
+- `Get-Content scraper\\product_factory\\providers\\electronet_provider.py`
+- `Get-Content scraper\\product_factory\\providers\\skroutz_provider.py`
+- `Get-Content scraper\\product_factory\\providers\\manufacturer_tefal_provider.py`
+- `git diff -- scraper/product_factory/full_run.py scraper/product_factory/tests/test_provider_selection.py scraper/product_factory/tests/test_workflow.py`
+- `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py` from `scraper/`
 - `py -3.12 -m pytest -q` from `scraper/`
 
 Validation:
 - targeted migration-closure validation:
-  - `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py` from `scraper/`
   - passed, `21 passed`
 - full suite validation:
   - `py -3.12 -m pytest -q` from `scraper/`
@@ -3545,37 +3545,37 @@ Goal:
 - address the current manufacturer enrichment weak spot reflected in the failing test baseline
 
 Files added:
-- `scraper/pipeline/providers/manufacturer_tefal_provider.py`
-- `scraper/pipeline/tests/fixtures/providers/manufacturer_tefal/344709/product.html`
+- `scraper/product_factory/providers/manufacturer_tefal_provider.py`
+- `scraper/product_factory/tests/fixtures/providers/manufacturer_tefal/344709/product.html`
 
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/full_run.py`
-- `scraper/pipeline/manufacturer_enrichment.py`
-- `scraper/pipeline/providers/__init__.py`
-- `scraper/pipeline/tests/test_manufacturer_enrichment.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/full_run.py`
+- `scraper/product_factory/manufacturer_enrichment.py`
+- `scraper/product_factory/providers/__init__.py`
+- `scraper/product_factory/tests/test_manufacturer_enrichment.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
-- added `ManufacturerTefalProvider` under `scraper/pipeline/providers/` as the production adapter for the currently supported manufacturer source:
+- added `ManufacturerTefalProvider` under `scraper/product_factory/providers/` as the production adapter for the currently supported manufacturer source:
   - preserves the existing live fetch order of HTTPX first, then Playwright fallback
   - reuses the existing `ManufacturerProductParser`
   - supports optional fixture HTML overrides for deterministic provider tests
-- updated `scraper/pipeline/full_run.py` so `_resolve_provider_for_source(...)` now selects `ManufacturerTefalProvider` for `manufacturer_tefal` while leaving the rest of the prepare/render pipeline unchanged
-- exported `ManufacturerTefalProvider` from `scraper/pipeline/providers/__init__.py`
-- added a committed manufacturer provider fixture at `scraper/pipeline/tests/fixtures/providers/manufacturer_tefal/344709/product.html` so provider normalization can be tested against a stable Tefal product page sample
-- updated `scraper/pipeline/tests/test_provider_selection.py` to prove:
+- updated `scraper/product_factory/full_run.py` so `_resolve_provider_for_source(...)` now selects `ManufacturerTefalProvider` for `manufacturer_tefal` while leaving the rest of the prepare/render pipeline unchanged
+- exported `ManufacturerTefalProvider` from `scraper/product_factory/providers/__init__.py`
+- added a committed manufacturer provider fixture at `scraper/product_factory/tests/fixtures/providers/manufacturer_tefal/344709/product.html` so provider normalization can be tested against a stable Tefal product page sample
+- updated `scraper/product_factory/tests/test_provider_selection.py` to prove:
   - Electronet, Skroutz, and the supported manufacturer source all resolve through the production provider seam
   - `ManufacturerTefalProvider.fetch_snapshot()` reads the committed fixture
   - `ManufacturerTefalProvider.normalize()` returns the expected provider/runtime result shape
-- updated `scraper/pipeline/tests/test_workflow.py` so the manufacturer default-flow regression now proves provider-backed execution in production instead of the legacy direct parser branch
-- made one narrow compatibility fix in `scraper/pipeline/manufacturer_enrichment.py`:
+- updated `scraper/product_factory/tests/test_workflow.py` so the manufacturer default-flow regression now proves provider-backed execution in production instead of the legacy direct parser branch
+- made one narrow compatibility fix in `scraper/product_factory/manufacturer_enrichment.py`:
   - enrichment now tolerates official-doc adapters whose `discover(...)` implementation does not accept the optional `fetcher` keyword
   - this preserves the current enrichment contract while resolving the previously failing manufacturer framework tests
-- updated `scraper/pipeline/tests/test_manufacturer_enrichment.py` to keep the manufacturer regression explicit, including the no-`fetcher` discover-signature compatibility path
-- left `scraper/pipeline/parser_product_manufacturer.py`, workflow metadata, CLI/service entrypoints, output locations, and validation semantics unchanged
+- updated `scraper/product_factory/tests/test_manufacturer_enrichment.py` to keep the manufacturer regression explicit, including the no-`fetcher` discover-signature compatibility path
+- left `scraper/product_factory/parser_product_manufacturer.py`, workflow metadata, CLI/service entrypoints, output locations, and validation semantics unchanged
 
 Commands run:
 - `Get-Content PLAN.md | Select-Object -First 90`
@@ -3583,21 +3583,21 @@ Commands run:
 - `Get-Content DOCUMENTATION.md | Select-Object -First 180`
 - `rg -n "manufacturer_tefal|ManufacturerProductParser|enrich_source_from_manufacturer_docs|provider|supported manufacturer|adapter" scraper/pipeline PLAN.md DOCUMENTATION.md -S`
 - `git status --short`
-- `Get-Content scraper/pipeline/full_run.py`
-- `Get-Content scraper/pipeline/manufacturer_enrichment.py`
-- `Get-Content scraper/pipeline/parser_product_manufacturer.py`
-- `Get-Content scraper/pipeline/source_detection.py`
-- `Get-Content scraper/pipeline/tests/test_manufacturer_enrichment.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py | Select-Object -Skip 380 -First 140`
-- `Get-Content scraper/pipeline/tests/conftest.py`
-- `Get-ChildItem -Recurse scraper/pipeline/tests/fixtures/providers/manufacturer_tefal`
-- `Get-Content scraper/pipeline/providers/__init__.py`
-- `Get-Content scraper/pipeline/tests/test_manufacturer_enrichment_tefal.py`
-- `Get-Content scraper/pipeline/tests/test_provider_selection.py`
-- `Get-Content scraper/pipeline/models.py | Select-String -Pattern "class FetchResult|class ParsedProduct|class SourceProductData" -Context 0,60`
-- `rg -n "_resolve_provider_for_source\\(" scraper/pipeline/tests scraper/pipeline -S`
+- `Get-Content scraper/product_factory/full_run.py`
+- `Get-Content scraper/product_factory/manufacturer_enrichment.py`
+- `Get-Content scraper/product_factory/parser_product_manufacturer.py`
+- `Get-Content scraper/product_factory/source_detection.py`
+- `Get-Content scraper/product_factory/tests/test_manufacturer_enrichment.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py | Select-Object -Skip 380 -First 140`
+- `Get-Content scraper/product_factory/tests/conftest.py`
+- `Get-ChildItem -Recurse scraper/product_factory/tests/fixtures/providers/manufacturer_tefal`
+- `Get-Content scraper/product_factory/providers/__init__.py`
+- `Get-Content scraper/product_factory/tests/test_manufacturer_enrichment_tefal.py`
+- `Get-Content scraper/product_factory/tests/test_provider_selection.py`
+- `Get-Content scraper/product_factory/models.py | Select-String -Pattern "class FetchResult|class ParsedProduct|class SourceProductData" -Context 0,60`
+- `rg -n "_resolve_provider_for_source\\(" scraper/product_factory/tests scraper/pipeline -S`
 - `python -m compileall scraper/pipeline`
-- `py -3.12 -m pytest -q pipeline/tests/test_manufacturer_enrichment.py pipeline/tests/test_manufacturer_enrichment_tefal.py pipeline/tests/test_parser_product_manufacturer.py pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py::test_execute_full_run_routes_manufacturer_tefal_through_provider_by_default` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_manufacturer_enrichment.py product_factory/tests/test_manufacturer_enrichment_tefal.py product_factory/tests/test_parser_product_manufacturer.py product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py::test_execute_full_run_routes_manufacturer_tefal_through_provider_by_default` from `scraper/`
 - `py -3.12 -m pytest -q` from `scraper/`
 - `git status --short`
 - `git diff --stat`
@@ -3607,7 +3607,7 @@ Validation:
   - `python -m compileall scraper/pipeline`
   - passed
 - targeted manufacturer validation:
-  - `py -3.12 -m pytest -q pipeline/tests/test_manufacturer_enrichment.py pipeline/tests/test_manufacturer_enrichment_tefal.py pipeline/tests/test_parser_product_manufacturer.py pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py::test_execute_full_run_routes_manufacturer_tefal_through_provider_by_default` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_manufacturer_enrichment.py product_factory/tests/test_manufacturer_enrichment_tefal.py product_factory/tests/test_parser_product_manufacturer.py product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py::test_execute_full_run_routes_manufacturer_tefal_through_provider_by_default` from `scraper/`
   - passed, `17 passed`
 - full suite validation:
   - `py -3.12 -m pytest -q` from `scraper/`
@@ -3630,15 +3630,15 @@ Goal:
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/full_run.py`
-- `scraper/pipeline/providers/skroutz_provider.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
-- `scraper/pipeline/tests/test_skroutz_integration.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/full_run.py`
+- `scraper/product_factory/providers/skroutz_provider.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
+- `scraper/product_factory/tests/test_skroutz_integration.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Changes:
-- updated `scraper/pipeline/full_run.py` so `_resolve_provider_for_source(...)` now selects `SkroutzProvider` for supported Skroutz product URLs in normal production flow while leaving Electronet and manufacturer routing unchanged
-- extended `scraper/pipeline/providers/skroutz_provider.py` from a fixture-only proof into a production-capable provider adapter:
+- updated `scraper/product_factory/full_run.py` so `_resolve_provider_for_source(...)` now selects `SkroutzProvider` for supported Skroutz product URLs in normal production flow while leaving Electronet and manufacturer routing unchanged
+- extended `scraper/product_factory/providers/skroutz_provider.py` from a fixture-only proof into a production-capable provider adapter:
   - live fetch path uses the existing Skroutz runtime order of Playwright first, then HTTPX fallback
   - fixture HTML overrides remain supported for deterministic tests
   - provider metadata now reports live fetch capability while preserving the same downstream `FetchResult` and `ParsedProduct` conversion contract
@@ -3647,32 +3647,32 @@ Changes:
   - manufacturer sources still do not
   - `SkroutzProvider` can still normalize fixture-backed snapshots
   - `SkroutzProvider` uses the live fetcher path when no fixture override is configured
-- updated the default workflow regression in `scraper/pipeline/tests/test_workflow.py` so Skroutz now proves provider-seam execution by default instead of the legacy branch
-- updated `scraper/pipeline/tests/test_skroutz_integration.py` to assert prepare/render parity still holds for fixture-backed Skroutz workflow runs with `playwright` fetch mode preserved in the emitted report
-- left `scraper/pipeline/tests/test_skroutz_sections.py` and `scraper/pipeline/tests/test_skroutz_taxonomy.py` unchanged because they already cover downstream section extraction and taxonomy behavior; they were rerun as targeted regression validation for this milestone
+- updated the default workflow regression in `scraper/product_factory/tests/test_workflow.py` so Skroutz now proves provider-seam execution by default instead of the legacy branch
+- updated `scraper/product_factory/tests/test_skroutz_integration.py` to assert prepare/render parity still holds for fixture-backed Skroutz workflow runs with `playwright` fetch mode preserved in the emitted report
+- left `scraper/product_factory/tests/test_skroutz_sections.py` and `scraper/product_factory/tests/test_skroutz_taxonomy.py` unchanged because they already cover downstream section extraction and taxonomy behavior; they were rerun as targeted regression validation for this milestone
 
 Commands run:
 - `Get-Content PLAN.md`
 - `Get-Content IMPLEMENT.md`
 - `Get-Content DOCUMENTATION.md`
 - `rg -n "M25|Skroutz|provider seam|_resolve_provider_for_source|SkroutzProvider|provider selection" PLAN.md IMPLEMENT.md DOCUMENTATION.md scraper -S`
-- `Get-Content scraper/pipeline/full_run.py`
-- `Get-Content scraper/pipeline/providers/skroutz_provider.py`
-- `Get-Content scraper/pipeline/providers/__init__.py`
-- `Get-Content scraper/pipeline/tests/test_provider_selection.py`
-- `Get-Content scraper/pipeline/tests/test_skroutz_integration.py`
-- `Get-Content scraper/pipeline/tests/test_skroutz_sections.py`
-- `Get-Content scraper/pipeline/tests/test_skroutz_taxonomy.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py`
-- `Get-Content scraper/pipeline/providers/base.py`
-- `Get-Content scraper/pipeline/providers/models.py`
-- `Get-Content scraper/pipeline/providers/electronet_provider.py`
-- `rg -n "provider_id|ProviderKind|FIXTURE|VENDOR_SITE|supports_identity|fetch_snapshot\\(|normalize\\(" scraper/pipeline/providers -S`
-- `rg -n "_resolve_provider_for_source|legacy Skroutz|by default|skroutz provider|fetch_mode" scraper/pipeline/tests -S`
+- `Get-Content scraper/product_factory/full_run.py`
+- `Get-Content scraper/product_factory/providers/skroutz_provider.py`
+- `Get-Content scraper/product_factory/providers/__init__.py`
+- `Get-Content scraper/product_factory/tests/test_provider_selection.py`
+- `Get-Content scraper/product_factory/tests/test_skroutz_integration.py`
+- `Get-Content scraper/product_factory/tests/test_skroutz_sections.py`
+- `Get-Content scraper/product_factory/tests/test_skroutz_taxonomy.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py`
+- `Get-Content scraper/product_factory/providers/base.py`
+- `Get-Content scraper/product_factory/providers/models.py`
+- `Get-Content scraper/product_factory/providers/electronet_provider.py`
+- `rg -n "provider_id|ProviderKind|FIXTURE|VENDOR_SITE|supports_identity|fetch_snapshot\\(|normalize\\(" scraper/product_factory/providers -S`
+- `rg -n "_resolve_provider_for_source|legacy Skroutz|by default|skroutz provider|fetch_mode" scraper/product_factory/tests -S`
 - `git status --short`
 - `rg -n "_resolve_provider_for_source\\(" scraper/pipeline -S`
 - `python -m compileall scraper/pipeline`
-- `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_skroutz_taxonomy.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_skroutz_taxonomy.py` from `scraper/`
 - `py -3.12 -m pytest -q` from `scraper/`
 - `git status --short`
 
@@ -3681,14 +3681,14 @@ Validation:
   - `python -m compileall scraper/pipeline`
   - passed
 - targeted provider and Skroutz validation:
-  - `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py pipeline/tests/test_workflow.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py pipeline/tests/test_skroutz_taxonomy.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py product_factory/tests/test_workflow.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py product_factory/tests/test_skroutz_taxonomy.py` from `scraper/`
   - passed, `34 passed`
 - full suite validation:
   - `py -3.12 -m pytest -q` from `scraper/`
   - returned the accepted baseline for this milestone: `93 passed, 2 failed`
   - unchanged accepted failures:
-    - `pipeline/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_pdf_candidates`
-    - `pipeline/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_html_candidates`
+    - `product_factory/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_pdf_candidates`
+    - `product_factory/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_html_candidates`
 
 Risks:
 - `SkroutzProvider` now owns both live and fixture-backed fetch paths; future provider migrations should keep fixture overrides narrow so production routing changes stay observable in runtime tests
@@ -3702,25 +3702,25 @@ Deferred:
 ## M24 — stabilize the post-workdir test baseline
 
 Goal:
-- stabilize the post-M23 pytest baseline without changing runtime behavior by moving touched test baselines under `scraper/pipeline/tests/fixtures/...` and aligning workflow assertions with the live render contract
+- stabilize the post-M23 pytest baseline without changing runtime behavior by moving touched test baselines under `scraper/product_factory/tests/fixtures/...` and aligning workflow assertions with the live render contract
 
 Files edited:
 - `PLAN.md`
 - `DOCUMENTATION.md`
-- `scraper/pipeline/tests/conftest.py`
-- `scraper/pipeline/tests/test_skroutz_integration.py`
-- `scraper/pipeline/tests/test_skroutz_sections.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/tests/conftest.py`
+- `scraper/product_factory/tests/test_skroutz_integration.py`
+- `scraper/product_factory/tests/test_skroutz_sections.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Files added:
-- `scraper/pipeline/tests/fixtures/golden_outputs/skroutz/143481.csv`
-- `scraper/pipeline/tests/fixtures/golden_outputs/skroutz/307497.csv`
-- `scraper/pipeline/tests/fixtures/golden_outputs/skroutz/341490.csv`
-- `scraper/pipeline/tests/fixtures/golden_outputs/skroutz/344317.csv`
+- `scraper/product_factory/tests/fixtures/golden_outputs/skroutz/143481.csv`
+- `scraper/product_factory/tests/fixtures/golden_outputs/skroutz/307497.csv`
+- `scraper/product_factory/tests/fixtures/golden_outputs/skroutz/341490.csv`
+- `scraper/product_factory/tests/fixtures/golden_outputs/skroutz/344317.csv`
 
 Changes:
 - added `skroutz_golden_outputs_root` as the shared pytest fixture root for committed Skroutz golden CSV baselines
-- removed the touched test-layer dependency on repo-level `products/*.csv` by copying the four committed Skroutz baseline CSVs into `scraper/pipeline/tests/fixtures/golden_outputs/skroutz/`
+- removed the touched test-layer dependency on repo-level `products/*.csv` by copying the four committed Skroutz baseline CSVs into `scraper/product_factory/tests/fixtures/golden_outputs/skroutz/`
 - updated `test_skroutz_integration.py` to seed temporary publish baselines from fixture-owned golden outputs only and to assert the live render contract:
   - candidate CSV still exists when validation fails
   - `published_csv_path` is `None` when validation is not ok
@@ -3733,37 +3733,37 @@ Commands run:
 - `Get-Content PLAN.md`
 - `Get-Content DOCUMENTATION.md`
 - `Get-Content IMPLEMENT.md`
-- `rg --files scraper/pipeline/tests`
-- `Get-Content scraper/pipeline/tests/conftest.py`
-- `Get-Content scraper/pipeline/tests/test_workflow.py`
-- `Get-Content scraper/pipeline/tests/test_skroutz_integration.py`
-- `Get-Content scraper/pipeline/workflow.py`
-- `Get-Content scraper/pipeline/services/run_service.py`
+- `rg --files scraper/product_factory/tests`
+- `Get-Content scraper/product_factory/tests/conftest.py`
+- `Get-Content scraper/product_factory/tests/test_workflow.py`
+- `Get-Content scraper/product_factory/tests/test_skroutz_integration.py`
+- `Get-Content scraper/product_factory/workflow.py`
+- `Get-Content scraper/product_factory/services/run_service.py`
 - `git ls-files products work scraper/work`
-- `rg -n "products_root|products/.*csv|golden_outputs/skroutz" scraper/pipeline/tests`
-- `py -3.12 -m pytest -q pipeline/tests/test_workflow.py::test_render_workflow_writes_candidate_bundle pipeline/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures pipeline/tests/test_skroutz_sections.py::test_143481_rendered_description_preserves_locked_wrappers` from `scraper/`
+- `rg -n "products_root|products/.*csv|golden_outputs/skroutz" scraper/product_factory/tests`
+- `py -3.12 -m pytest -q product_factory/tests/test_workflow.py::test_render_workflow_writes_candidate_bundle product_factory/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures product_factory/tests/test_skroutz_sections.py::test_143481_rendered_description_preserves_locked_wrappers` from `scraper/`
 - `Get-Content` for the generated `233541.validation.json`, `143481.validation.json`, and matching `render.run.json` files under the temporary pytest workdirs
-- `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py` from `scraper/`
 - `py -3.12 -m pytest -q` from `scraper/`
 - `git status --short`
 
 Validation:
 - focused failing-contract reproduction before the test updates:
-  - `py -3.12 -m pytest -q pipeline/tests/test_workflow.py::test_render_workflow_writes_candidate_bundle pipeline/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures pipeline/tests/test_skroutz_sections.py::test_143481_rendered_description_preserves_locked_wrappers` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_workflow.py::test_render_workflow_writes_candidate_bundle product_factory/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures product_factory/tests/test_skroutz_sections.py::test_143481_rendered_description_preserves_locked_wrappers` from `scraper/`
   - result: `2 failed, 1 passed`
   - failures:
-    - `pipeline/tests/test_workflow.py::test_render_workflow_writes_candidate_bundle`
-    - `pipeline/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures`
+    - `product_factory/tests/test_workflow.py::test_render_workflow_writes_candidate_bundle`
+    - `product_factory/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures`
   - both failures were stale publish expectations against a real `published_csv_path is None` contract when validation was not ok
 - targeted touched-test validation after the fix:
-  - `py -3.12 -m pytest -q pipeline/tests/test_workflow.py pipeline/tests/test_skroutz_integration.py pipeline/tests/test_skroutz_sections.py` from `scraper/`
+  - `py -3.12 -m pytest -q product_factory/tests/test_workflow.py product_factory/tests/test_skroutz_integration.py product_factory/tests/test_skroutz_sections.py` from `scraper/`
   - passed, `24 passed`
 - full suite validation after the fix:
   - `py -3.12 -m pytest -q` from `scraper/`
   - returned the accepted baseline: `92 passed, 2 failed`
   - unchanged accepted failures:
-    - `pipeline/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_pdf_candidates`
-    - `pipeline/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_html_candidates`
+    - `product_factory/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_pdf_candidates`
+    - `product_factory/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_html_candidates`
 
 Risks:
 - the committed deliverable CSVs under `products/` still exist in the repo by design; M24 only removed the touched tests' baseline dependency on them
@@ -3780,7 +3780,7 @@ Goal:
 
 Directories moved:
 - `scrapper/` -> `scraper/`
-- `scraper/electronet_single_import/` -> `scraper/pipeline/`
+- `scraper/electronet_single_import/` -> `scraper/product_factory/`
 
 Files edited:
 - `README.md`
@@ -3793,16 +3793,16 @@ Files edited:
 - `docs/checkpoints/IMPLEMENTATION_CHECKPOINT.md`
 - `docs/specs/2026-03-22-pipeline-optimization-design.md`
 - `scraper/README.md`
-- `scraper/pipeline/cli.py`
-- `scraper/pipeline/workflow.py`
-- `scraper/pipeline/tests/*.py`
+- `scraper/product_factory/cli.py`
+- `scraper/product_factory/workflow.py`
+- `scraper/product_factory/tests/*.py`
 - `tools/capture_skroutz_fixture.py`
 
 Changes:
 - updated active runtime commands and current-state guidance from `scrapper/` plus `electronet_single_import` to `scraper/` plus `pipeline`
-- updated runtime `prog=` strings so the CLI/help surface now shows `python -m pipeline.cli` and `python -m pipeline.workflow`
+- updated runtime `prog=` strings so the CLI/help surface now shows `python -m product_factory.cli` and `python -m product_factory.workflow`
 - updated tracked test imports and the active Skroutz fixture helper script to import from `pipeline`
-- updated `IMPLEMENT.md` current path rules to `scraper/pipeline/...` and removed the stale reference to the no-longer-present `scrapper/requirements.txt` from the active dependency guardrail
+- updated `IMPLEMENT.md` current path rules to `scraper/product_factory/...` and removed the stale reference to the no-longer-present `scrapper/requirements.txt` from the active dependency guardrail
 - updated `PLAN.md` current repo facts, active phase summary paths, and root policy to the renamed layout and marked M23 completed
 - kept prior audit and milestone evidence intact; only added a short historical clarification where needed so remaining old-name references stay explicitly historical
 - added no compatibility shim because the renamed package executed cleanly with the narrow path/import updates
@@ -3812,18 +3812,18 @@ Commands run:
 - `rg -n "from electronet_single_import|import electronet_single_import|prog=\"python -m electronet_single_import|prog='python -m electronet_single_import" .`
 - `rg -n "scrapper/|electronet_single_import|cd scrapper|python -m electronet_single_import" README.md AGENTS.md RULES.md PLAN.md IMPLEMENT.md DOCUMENTATION.md docs/ scraper/ scrapper/`
 - `git status --short`
-- directory rename command moving `scrapper/` to `scraper/` and `scraper/electronet_single_import/` to `scraper/pipeline/`
-- `cd scraper && python -m pipeline.workflow --help`
-- `cd scraper && python -m pipeline.cli --help`
+- directory rename command moving `scrapper/` to `scraper/` and `scraper/electronet_single_import/` to `scraper/product_factory/`
+- `cd scraper && python -m product_factory.workflow --help`
+- `cd scraper && python -m product_factory.cli --help`
 - `python -m compileall scraper/pipeline`
 - `cd scraper && python -m pytest -q`
 - post-rename `rg` sweeps for active and historical references
 - `git status --short`
 
 Validation:
-- `cd scraper && python -m pipeline.workflow --help`
+- `cd scraper && python -m product_factory.workflow --help`
   - passed
-- `cd scraper && python -m pipeline.cli --help`
+- `cd scraper && python -m product_factory.cli --help`
   - passed
 - `python -m compileall scraper/pipeline`
   - passed
@@ -5032,8 +5032,8 @@ No cleanup follow-up is scheduled by default. If approved, open a narrowly scope
 ## 2026-03-30 - Phase 2 test fixture hierarchy migration
 
 ## What changed
-- migrated the committed Skroutz test fixtures from the legacy flat `scraper/pipeline/tests/fixtures/skroutz/` layout into the explicit provider hierarchy under `scraper/pipeline/tests/fixtures/providers/skroutz/`
-- added the new shared pytest fixture roots in `scraper/pipeline/tests/conftest.py` and kept `skroutz_fixtures_root` as a backward-compatible alias to the new Skroutz provider fixture root
+- migrated the committed Skroutz test fixtures from the legacy flat `scraper/product_factory/tests/fixtures/skroutz/` layout into the explicit provider hierarchy under `scraper/product_factory/tests/fixtures/providers/skroutz/`
+- added the new shared pytest fixture roots in `scraper/product_factory/tests/conftest.py` and kept `skroutz_fixtures_root` as a backward-compatible alias to the new Skroutz provider fixture root
 - updated the touched Skroutz tests to read fixture HTML, rendered-sections JSON, and taxonomy-case assets from the new hierarchy
 - created empty committed placeholder directories for the requested explicit fixture tree with `.gitkeep` files where no tracked fixture content exists yet
 - made one minimal stale-guidance fix in `AGENTS.md` and one additive fixture-location rule in `IMPLEMENT.md`
@@ -5041,63 +5041,63 @@ No cleanup follow-up is scheduled by default. If approved, open a narrowly scope
 
 ## Files and directories affected
 - edited:
-  - `scraper/pipeline/tests/conftest.py`
-  - `scraper/pipeline/tests/test_provider_selection.py`
-  - `scraper/pipeline/tests/test_skroutz_integration.py`
-  - `scraper/pipeline/tests/test_skroutz_sections.py`
-  - `scraper/pipeline/tests/test_skroutz_taxonomy.py`
+  - `scraper/product_factory/tests/conftest.py`
+  - `scraper/product_factory/tests/test_provider_selection.py`
+  - `scraper/product_factory/tests/test_skroutz_integration.py`
+  - `scraper/product_factory/tests/test_skroutz_sections.py`
+  - `scraper/product_factory/tests/test_skroutz_taxonomy.py`
   - `AGENTS.md`
   - `IMPLEMENT.md`
   - `DOCUMENTATION.md`
 - moved:
-  - `scraper/pipeline/tests/fixtures/skroutz/*.html` -> `scraper/pipeline/tests/fixtures/providers/skroutz/html/`
-  - `scraper/pipeline/tests/fixtures/skroutz/143481.rendered_sections.json` -> `scraper/pipeline/tests/fixtures/providers/skroutz/rendered_sections/`
-  - `scraper/pipeline/tests/fixtures/skroutz/skroutz_taxonomy_regression.csv` -> `scraper/pipeline/tests/fixtures/providers/skroutz/taxonomy_cases/`
-  - `scraper/pipeline/tests/fixtures/skroutz/taxonomy_cases/*` -> `scraper/pipeline/tests/fixtures/providers/skroutz/taxonomy_cases/`
+  - `scraper/product_factory/tests/fixtures/skroutz/*.html` -> `scraper/product_factory/tests/fixtures/providers/skroutz/html/`
+  - `scraper/product_factory/tests/fixtures/skroutz/143481.rendered_sections.json` -> `scraper/product_factory/tests/fixtures/providers/skroutz/rendered_sections/`
+  - `scraper/product_factory/tests/fixtures/skroutz/skroutz_taxonomy_regression.csv` -> `scraper/product_factory/tests/fixtures/providers/skroutz/taxonomy_cases/`
+  - `scraper/product_factory/tests/fixtures/skroutz/taxonomy_cases/*` -> `scraper/product_factory/tests/fixtures/providers/skroutz/taxonomy_cases/`
 - added placeholder directories:
-  - `scraper/pipeline/tests/fixtures/providers/skroutz/json/`
-  - `scraper/pipeline/tests/fixtures/providers/electronet/html/`
-  - `scraper/pipeline/tests/fixtures/providers/electronet/json/`
-  - `scraper/pipeline/tests/fixtures/providers/manufacturer_tefal/344709/`
-  - `scraper/pipeline/tests/fixtures/pipeline_runs/`
-  - `scraper/pipeline/tests/fixtures/golden_outputs/`
+  - `scraper/product_factory/tests/fixtures/providers/skroutz/json/`
+  - `scraper/product_factory/tests/fixtures/providers/electronet/html/`
+  - `scraper/product_factory/tests/fixtures/providers/electronet/json/`
+  - `scraper/product_factory/tests/fixtures/providers/manufacturer_tefal/344709/`
+  - `scraper/product_factory/tests/fixtures/pipeline_runs/`
+  - `scraper/product_factory/tests/fixtures/golden_outputs/`
 
 ## Commands run
 - `git ls-files work scraper/work`
 - `New-Item -ItemType Directory -Force ...` for the new fixture hierarchy roots
 - `git mv` for the explicit Skroutz fixture moves into `providers/skroutz/...`
-- `Remove-Item scraper/pipeline/tests/fixtures/skroutz` after the legacy directory became empty
+- `Remove-Item scraper/product_factory/tests/fixtures/skroutz` after the legacy directory became empty
 - `Get-Content` inspection for `AGENTS.md`, `IMPLEMENT.md`, `DOCUMENTATION.md`, and the touched test files
 - `git status --short`
-- `rg -n "def .*fixtures_root|skroutz_fixtures_root|fixtures/skroutz|work/|scraper/work/|active regression samples" scraper/pipeline/tests AGENTS.md IMPLEMENT.md .gitignore`
-- `python -m pytest -q pipeline/tests/test_provider_selection.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_skroutz_integration.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_skroutz_sections.py` from `scraper/`
-- `python -m pytest -q pipeline/tests/test_skroutz_taxonomy.py` from `scraper/`
+- `rg -n "def .*fixtures_root|skroutz_fixtures_root|fixtures/skroutz|work/|scraper/work/|active regression samples" scraper/product_factory/tests AGENTS.md IMPLEMENT.md .gitignore`
+- `python -m pytest -q product_factory/tests/test_provider_selection.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_skroutz_integration.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_skroutz_sections.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_skroutz_taxonomy.py` from `scraper/`
 - `where.exe python`
 - `py -0p`
 - `py -3.12 -m pytest --version`
-- `py -3.12 -m pytest -q pipeline/tests/test_provider_selection.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_skroutz_integration.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_skroutz_sections.py` from `scraper/`
-- `py -3.12 -m pytest -q pipeline/tests/test_skroutz_taxonomy.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_provider_selection.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_skroutz_integration.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_skroutz_sections.py` from `scraper/`
+- `py -3.12 -m pytest -q product_factory/tests/test_skroutz_taxonomy.py` from `scraper/`
 - `py -3.12 -m pytest -q` from `scraper/`
 
 ## Validation results
 - initial validation command path using `python -m pytest` could not run because the active `python` interpreter did not have `pytest` installed
 - focused touched-test results using `py -3.12 -m pytest`:
-  - `pipeline/tests/test_provider_selection.py`: `4 passed`
-  - `pipeline/tests/test_skroutz_sections.py`: `5 passed`
-  - `pipeline/tests/test_skroutz_taxonomy.py`: `5 passed`
-  - `pipeline/tests/test_skroutz_integration.py`: `6 passed, 1 failed`
+  - `product_factory/tests/test_provider_selection.py`: `4 passed`
+  - `product_factory/tests/test_skroutz_sections.py`: `5 passed`
+  - `product_factory/tests/test_skroutz_taxonomy.py`: `5 passed`
+  - `product_factory/tests/test_skroutz_integration.py`: `6 passed, 1 failed`
 - the touched integration failure was `test_prepare_and_render_workflow_with_skroutz_fixtures`, failing on `render_result["published_csv_path"] is None` after fixture loading had already succeeded from the new hierarchy
 - full suite result: `90 passed, 4 failed`
 - unchanged baseline failures from the earlier documented suite baseline:
-  - `pipeline/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_pdf_candidates`
-  - `pipeline/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_html_candidates`
+  - `product_factory/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_pdf_candidates`
+  - `product_factory/tests/test_manufacturer_enrichment.py::test_enrichment_framework_supports_html_candidates`
 - additional currently failing workflow publication tests:
-  - `pipeline/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures`
-  - `pipeline/tests/test_workflow.py::test_render_workflow_writes_candidate_bundle`
+  - `product_factory/tests/test_skroutz_integration.py::test_prepare_and_render_workflow_with_skroutz_fixtures`
+  - `product_factory/tests/test_workflow.py::test_render_workflow_writes_candidate_bundle`
 - no new fixture-path lookup failures were observed in the focused path-migration assertions
 
 ## Risks, blockers, or skipped items
@@ -5119,22 +5119,22 @@ Files changed:
 - `AGENTS.md`
 - `RULES.md`
 - `README.md`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/services/render_service.py`
-- `scraper/pipeline/workflow.py`
-- `scraper/pipeline/tests/test_workflow.py`
-- `scraper/pipeline/tests/test_services.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/services/render_service.py`
+- `scraper/product_factory/workflow.py`
+- `scraper/product_factory/tests/test_workflow.py`
+- `scraper/product_factory/tests/test_services.py`
 - `DOCUMENTATION.md`
 
 Commands run:
-- `Get-Content` inspection for `PLAN.md`, `IMPLEMENT.md`, `AGENTS.md`, `RULES.md`, `README.md`, `scraper/pipeline/services/render_execution.py`, `scraper/pipeline/services/render_service.py`, `scraper/pipeline/workflow.py`, `scraper/pipeline/tests/test_workflow.py`, and `scraper/pipeline/tests/test_services.py`
-- `python -m pytest -q scraper/pipeline/tests/test_workflow.py scraper/pipeline/tests/test_services.py` from repo root
+- `Get-Content` inspection for `PLAN.md`, `IMPLEMENT.md`, `AGENTS.md`, `RULES.md`, `README.md`, `scraper/product_factory/services/render_execution.py`, `scraper/product_factory/services/render_service.py`, `scraper/product_factory/workflow.py`, `scraper/product_factory/tests/test_workflow.py`, and `scraper/product_factory/tests/test_services.py`
+- `python -m pytest -q scraper/product_factory/tests/test_workflow.py scraper/product_factory/tests/test_services.py` from repo root
 - `python -m pytest -q` from `scraper/`
 
 Implementation notes:
 - updated the control-docs first to state that successful render publish now attempts OpenCart image upload through `tools/run_opencart_image_upload.sh`
 - kept `tools/run_opencart_image_upload.sh` as the only shell entrypoint and reused `tools/opencart_upload_images.py` unchanged
-- wired the upload stage in `scraper/pipeline/services/render_execution.py` immediately after `shutil.copyfile(candidate_csv_path, published_csv_path)`
+- wired the upload stage in `scraper/product_factory/services/render_execution.py` immediately after `shutil.copyfile(candidate_csv_path, published_csv_path)`
 - passed the exact current-job published CSV path through `CURRENT_JOB_PRODUCT_FILE`
 - preserved the uploader default admin path by not overriding `OPENCART_ADMIN_PATH` in the runtime integration
 - captured upload status, report path, and warning details in render metadata/service details while keeping upload failures warning-only
@@ -5166,7 +5166,7 @@ Files changed:
 - `DOCUMENTATION.md`
 
 Commands run:
-- `python -m pipeline.workflow prepare --model 123456 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999` from `scraper/`
+- `python -m product_factory.workflow prepare --model 123456 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999` from `scraper/`
 - inspected:
   - `work/123456/llm/task_manifest.json`
   - `work/123456/llm/intro_text.context.json`
@@ -5178,7 +5178,7 @@ Commands run:
 - wrote:
   - `work/123456/llm/intro_text.output.txt`
   - `work/123456/llm/seo_meta.output.json`
-- `python -m pipeline.workflow render --model 123456` from `scraper/`
+- `python -m product_factory.workflow render --model 123456` from `scraper/`
 - inspected:
   - `work/123456/candidate/123456.csv`
   - `work/123456/candidate/123456.validation.json`
@@ -5275,7 +5275,7 @@ Files changed:
 - `DOCUMENTATION.md`
 
 Commands run:
-- `python -m pipeline.workflow prepare --model 123455 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999` from `scraper/`
+- `python -m product_factory.workflow prepare --model 123455 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999` from `scraper/`
 - inspected:
   - `work/123455/llm/task_manifest.json`
   - `work/123455/llm/intro_text.context.json`
@@ -5289,7 +5289,7 @@ Commands run:
   - `work/123455/publish.run.json`
   - `work/123455/import.opencart.json`
   - `resources/mappings/filter_map.json`
-- `python -m pipeline.workflow render --model 123455` from `scraper/`
+- `python -m product_factory.workflow render --model 123455` from `scraper/`
 - debug probe against the admin import page using Playwright after sourcing `.secrets/opencart.env`
 - `bash -lc 'DRY_RUN=1 bash tools/run_opencart_import_csv.sh 123455'`
 - `bash -lc 'bash tools/run_opencart_import_csv.sh 123455'`
@@ -5338,22 +5338,22 @@ Files changed:
 - `IMPLEMENT.md`
 - `README.md`
 - `RULES.md`
-- `scraper/pipeline/services/__init__.py`
-- `scraper/pipeline/services/metadata.py`
-- `scraper/pipeline/services/models.py`
-- `scraper/pipeline/services/publish_execution.py`
-- `scraper/pipeline/services/publish_service.py`
-- `scraper/pipeline/services/render_execution.py`
-- `scraper/pipeline/services/render_service.py`
-- `scraper/pipeline/services/run_execution.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_workflow.py`
-- `scraper/pipeline/workflow.py`
+- `scraper/product_factory/services/__init__.py`
+- `scraper/product_factory/services/metadata.py`
+- `scraper/product_factory/services/models.py`
+- `scraper/product_factory/services/publish_execution.py`
+- `scraper/product_factory/services/publish_service.py`
+- `scraper/product_factory/services/render_execution.py`
+- `scraper/product_factory/services/render_service.py`
+- `scraper/product_factory/services/run_execution.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_workflow.py`
+- `scraper/product_factory/workflow.py`
 - `tools/run_opencart_image_upload.sh`
 - `tools/run_opencart_pipeline.sh`
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_services.py pipeline/tests/test_workflow.py` from `scraper/`
+- `python -m pytest -q product_factory/tests/test_services.py product_factory/tests/test_workflow.py` from `scraper/`
 - `bash -n tools/run_opencart_pipeline.sh`
 - `bash -n tools/run_opencart_image_upload.sh`
 - `bash -n tools/run_opencart_import_csv.sh`
@@ -5383,7 +5383,7 @@ Validation:
 
 Risks, blockers, or skipped items:
 - `publish_status=warning` is currently used when the publish wrapper exits `0` but one or both expected report files are missing
-- `scraper/pipeline/tests/test_workflow.py` still contains a small amount of unreachable legacy test code below early returns from targeted patching; the behavior is validated, but that cleanup was not expanded beyond the minimal integration scope
+- `scraper/product_factory/tests/test_workflow.py` still contains a small amount of unreachable legacy test code below early returns from targeted patching; the behavior is validated, but that cleanup was not expanded beyond the minimal integration scope
 
 ## 2026-03-31 - Restore OpenCart image upload login hardening
 
@@ -5441,15 +5441,15 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/parser_product_skroutz.py`
-- `scraper/pipeline/skroutz_taxonomy.py`
+- `scraper/product_factory/parser_product_skroutz.py`
+- `scraper/product_factory/skroutz_taxonomy.py`
 - `work/000001/llm/intro_text.output.txt`
 - `work/000001/llm/seo_meta.output.json`
 
 Commands run:
-- `..\.venv\Scripts\python.exe -m pipeline.workflow prepare --help` from `scraper/`
-- `..\.venv\Scripts\python.exe -m pipeline.workflow prepare --model 000001 --url "https://www.skroutz.gr/s/54974577/Inventor-Emperor-Klimatistiko-Inverter-24000-BTU-A-A-me-Ionisti-kai-WiFi.html" --photos 7 --sections 5 --skroutz-status 1 --boxnow 0 --price 1050` from `scraper/`
-- `..\.venv\Scripts\python.exe -m pipeline.workflow render --model 000001` from `scraper/`
+- `..\.venv\Scripts\python.exe -m product_factory.workflow prepare --help` from `scraper/`
+- `..\.venv\Scripts\python.exe -m product_factory.workflow prepare --model 000001 --url "https://www.skroutz.gr/s/54974577/Inventor-Emperor-Klimatistiko-Inverter-24000-BTU-A-A-me-Ionisti-kai-WiFi.html" --photos 7 --sections 5 --skroutz-status 1 --boxnow 0 --price 1050` from `scraper/`
+- `..\.venv\Scripts\python.exe -m product_factory.workflow render --model 000001` from `scraper/`
 - `$env:CURRENT_JOB_PRODUCT_FILE = "products/000001.csv"; bash tools/run_opencart_pipeline.sh` from repo root
 
 Implementation notes:
@@ -5489,8 +5489,8 @@ Files changed:
 - generated runtime artifacts under `work/000002/` and `products/000002.csv`
 
 Commands run:
-- `..\.venv\Scripts\python.exe -m pipeline.workflow prepare --model 000002 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999` from `scraper/`
-- `..\.venv\Scripts\python.exe -m pipeline.workflow render --model 000002` from `scraper/`
+- `..\.venv\Scripts\python.exe -m product_factory.workflow prepare --model 000002 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999` from `scraper/`
+- `..\.venv\Scripts\python.exe -m product_factory.workflow render --model 000002` from `scraper/`
 - `$env:CURRENT_JOB_PRODUCT_FILE = "products/000002.csv"; bash tools/run_opencart_pipeline.sh` from repo root
 
 Implementation notes:
@@ -5518,11 +5518,11 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/services/publish_execution.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/services/publish_execution.py`
+- `scraper/product_factory/tests/test_workflow.py`
 
 Commands run:
-- `.\\.venv\\Scripts\\python.exe -m pytest -q scraper/pipeline/tests/test_workflow.py -k "publish_workflow or workflow_main_render_routes_through_render_service"`
+- `.\\.venv\\Scripts\\python.exe -m pytest -q scraper/product_factory/tests/test_workflow.py -k "publish_workflow or workflow_main_render_routes_through_render_service"`
 
 Implementation notes:
 - added Python-side preflight checks in `publish_execution.py` before invoking `bash`:
@@ -5557,8 +5557,8 @@ Goal:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/services/publish_execution.py`
-- `scraper/pipeline/tests/test_workflow.py`
+- `scraper/product_factory/services/publish_execution.py`
+- `scraper/product_factory/tests/test_workflow.py`
 - `tools/run_opencart_pipeline.sh`
 - `tools/run_opencart_image_upload.sh`
 - `tools/run_opencart_import_csv.sh`
@@ -5576,9 +5576,9 @@ Commands run:
 - `bash -lc "python3 -m playwright install chromium"`
 - `bash -lc "python3 -m playwright install chromium-headless-shell"`
 - `bash -lc "python3 -m playwright install-deps chromium-headless-shell"`
-- `.\\.venv\\Scripts\\python.exe -m pytest -q scraper/pipeline/tests/test_workflow.py -k "publish_workflow or workflow_main_render_routes_through_render_service or test_execute_publish_workflow_passes_model_and_current_job_product_file or test_execute_publish_workflow_fails_preflight_when_bash_is_missing or test_execute_publish_workflow_classifies_wsl_launcher_probe_failures or test_execute_publish_workflow_fails_preflight_when_main_image_is_missing"`
-- `.\\.venv\\Scripts\\python.exe -m pytest -q scraper/pipeline/tests/test_services.py -k "publish_product_maps_execution_result or execute_run_workflow_composes_prepare_and_render_results"`
-- `..\.venv\Scripts\python.exe -m pipeline.workflow render --model 000002` from `scraper/`
+- `.\\.venv\\Scripts\\python.exe -m pytest -q scraper/product_factory/tests/test_workflow.py -k "publish_workflow or workflow_main_render_routes_through_render_service or test_execute_publish_workflow_passes_model_and_current_job_product_file or test_execute_publish_workflow_fails_preflight_when_bash_is_missing or test_execute_publish_workflow_classifies_wsl_launcher_probe_failures or test_execute_publish_workflow_fails_preflight_when_main_image_is_missing"`
+- `.\\.venv\\Scripts\\python.exe -m pytest -q scraper/product_factory/tests/test_services.py -k "publish_product_maps_execution_result or execute_run_workflow_composes_prepare_and_render_results"`
+- `..\.venv\Scripts\python.exe -m product_factory.workflow render --model 000002` from `scraper/`
 
 Implementation notes:
 - system diagnosis showed two separate failures:
@@ -5631,8 +5631,8 @@ Files changed:
 - `work/000003/import.opencart.json`
 
 Commands run:
-- `python -m pipeline.workflow prepare --model 000003 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999` from `scraper/`
-- `python -m pipeline.workflow render --model 000003` from `scraper/`
+- `python -m product_factory.workflow prepare --model 000003 --url "https://www.skroutz.gr/s/60276903/tcl-smart-tileorasi-115-4k-uhd-mini-led-c7k-hdr-2025-115c7k.html" --photos 7 --sections 7 --skroutz-status 1 --boxnow 0 --price 9999` from `scraper/`
+- `python -m product_factory.workflow render --model 000003` from `scraper/`
 
 Implementation notes:
 - generated the required LLM outputs only for `intro_text`, `product.meta_description`, and `product.meta_keywords`
@@ -5662,7 +5662,7 @@ Goal:
 Files changed:
 - `DOCUMENTATION.md`
 - `resources/templates/characteristics_templates.json`
-- `scraper/pipeline/tests/test_characteristics_pipeline.py`
+- `scraper/product_factory/tests/test_characteristics_pipeline.py`
 - `work/000007/scrape/000007.report.json`
 - `work/000007/candidate/000007.normalized.json`
 - `work/000007/candidate/000007.validation.json`
@@ -5674,9 +5674,9 @@ Files changed:
 - `work/000007/import.opencart.json`
 
 Commands run:
-- `python -m pytest scraper/pipeline/tests/test_characteristics_pipeline.py -k "washing_machine or ice_cream_maker or soundbar or built_in_hob or fridge_freezer"`
-- `python -m pipeline.workflow prepare --model 000007 --url "https://www.skroutz.gr/s/55224637/Samsung-Plyntirio-Rouchon-9kg-me-Technologia-Atmou-1400-Strofon-Ecobubble-Mayro-WW90DB7U94GBU3.html" --photos 5 --sections 14 --skroutz-status 1 --boxnow 0 --price 900` from `scraper/`
-- `python -m pipeline.workflow render --model 000007` from `scraper/`
+- `python -m pytest scraper/product_factory/tests/test_characteristics_pipeline.py -k "washing_machine or ice_cream_maker or soundbar or built_in_hob or fridge_freezer"`
+- `python -m product_factory.workflow prepare --model 000007 --url "https://www.skroutz.gr/s/55224637/Samsung-Plyntirio-Rouchon-9kg-me-Technologia-Atmou-1400-Strofon-Ecobubble-Mayro-WW90DB7U94GBU3.html" --photos 5 --sections 14 --skroutz-status 1 --boxnow 0 --price 900` from `scraper/`
+- `python -m product_factory.workflow render --model 000007` from `scraper/`
 
 Implementation notes:
 - added taxonomy-specific Skroutz templates for freestanding and built-in washing machines
@@ -5720,9 +5720,9 @@ Files changed:
 - `work/000006/import.opencart.json`
 
 Commands run:
-- `python -m pipeline.workflow prepare --model 000006 --url "https://www.skroutz.gr/s/55224637/Samsung-Plyntirio-Rouchon-9kg-me-Technologia-Atmou-1400-Strofon-Ecobubble-Mayro-WW90DB7U94GBU3.html" --photos 5 --sections 14 --skroutz-status 1 --boxnow 0 --price 900` from `scraper/`
-- `python -m pipeline.workflow render --model 000006` from `scraper/` (first run failed validation on intro word count)
-- `python -m pipeline.workflow render --model 000006` from `scraper/` (rerun succeeded and triggered publish)
+- `python -m product_factory.workflow prepare --model 000006 --url "https://www.skroutz.gr/s/55224637/Samsung-Plyntirio-Rouchon-9kg-me-Technologia-Atmou-1400-Strofon-Ecobubble-Mayro-WW90DB7U94GBU3.html" --photos 5 --sections 14 --skroutz-status 1 --boxnow 0 --price 900` from `scraper/`
+- `python -m product_factory.workflow render --model 000006` from `scraper/` (first run failed validation on intro word count)
+- `python -m product_factory.workflow render --model 000006` from `scraper/` (rerun succeeded and triggered publish)
 
 Implementation notes:
 - kept LLM generation constrained to the runtime-owned fields: `intro_text`, `product.meta_description`, and `product.meta_keywords`
@@ -5755,17 +5755,17 @@ Files changed:
 - `DOCUMENTATION.md`
 - `docs/specs/2026-04-01-category-scoped-schema-matching-contract.md`
 - `resources/schemas/electronet_schema_library.json`
-- `scraper/pipeline/models.py`
-- `scraper/pipeline/schema_matcher.py`
-- `scraper/pipeline/tests/test_schema_matcher.py`
-- `scraper/pipeline/tests/test_schema_matcher_compiled_library_regressions.py`
+- `scraper/product_factory/models.py`
+- `scraper/product_factory/schema_matcher.py`
+- `scraper/product_factory/tests/test_schema_matcher.py`
+- `scraper/product_factory/tests/test_schema_matcher_compiled_library_regressions.py`
 - `tools/schema_registry/build_electronet_schema_library.py`
 - `tools/schema_registry/tests/test_build_electronet_schema_library.py`
 
 Commands run:
 - `python tools/schema_registry/build_electronet_schema_library.py`
-- `python -m pytest tools/schema_registry/tests/test_build_electronet_schema_library.py scraper/pipeline/tests/test_schema_matcher.py scraper/pipeline/tests/test_schema_matcher_compiled_library_regressions.py scraper/pipeline/tests/test_prepare_result_assembly_module.py -q`
-- `python -m pytest scraper/pipeline/tests/test_execution_models.py scraper/pipeline/tests/test_workflow.py -q`
+- `python -m pytest tools/schema_registry/tests/test_build_electronet_schema_library.py scraper/product_factory/tests/test_schema_matcher.py scraper/product_factory/tests/test_schema_matcher_compiled_library_regressions.py scraper/product_factory/tests/test_prepare_result_assembly_module.py -q`
+- `python -m pytest scraper/product_factory/tests/test_execution_models.py scraper/product_factory/tests/test_workflow.py -q`
 
 Validation:
 - compiler and matcher focused regressions passed: `32 passed`
@@ -5821,9 +5821,9 @@ Files changed:
 - `DOCUMENTATION.md`
 - `docs/specs/2026-04-01-category-scoped-schema-matching-contract.md`
 - `resources/schemas/electronet_schema_library.json`
-- `scraper/pipeline/schema_matcher.py`
-- `scraper/pipeline/tests/test_schema_matcher.py`
-- `scraper/pipeline/tests/test_schema_matcher_compiled_library_regressions.py`
+- `scraper/product_factory/schema_matcher.py`
+- `scraper/product_factory/tests/test_schema_matcher.py`
+- `scraper/product_factory/tests/test_schema_matcher_compiled_library_regressions.py`
 - `tools/schema_registry/build_electronet_schema_library.py`
 - `tools/schema_registry/tests/test_build_electronet_schema_library.py`
 
@@ -5831,7 +5831,7 @@ Commands run:
 - `python -m tools.schema_registry.build_electronet_schema_library`
 - `python -m tools.schema_registry.build_schema_index`
 - `python -m tools.schema_registry.refresh_template_coverage`
-- `python -m pytest tools/schema_registry/tests/test_build_electronet_schema_library.py scraper/pipeline/tests/test_schema_matcher.py scraper/pipeline/tests/test_schema_matcher_compiled_library_regressions.py tools/schema_registry/tests/test_build_schema_index.py tools/schema_registry/tests/test_refresh_template_coverage.py -q`
+- `python -m pytest tools/schema_registry/tests/test_build_electronet_schema_library.py scraper/product_factory/tests/test_schema_matcher.py scraper/product_factory/tests/test_schema_matcher_compiled_library_regressions.py tools/schema_registry/tests/test_build_schema_index.py tools/schema_registry/tests/test_refresh_template_coverage.py -q`
 
 Validation:
 - focused compiler, matcher, and related registry regressions passed: `41 passed`
@@ -5843,7 +5843,7 @@ Risks, blockers, or skipped items:
 ## 2026-04-02 - Config-driven deterministic rules, schema policy metadata, and OpenCart config cleanup
 
 What changed:
-- promoted `resources/mappings/name_rules.json` to the active deterministic-rule source by adding validated loader/resolver code and switching `scraper/pipeline/deterministic_fields.py` to resolve generic rules and source-scoped strategy selection from JSON
+- promoted `resources/mappings/name_rules.json` to the active deterministic-rule source by adding validated loader/resolver code and switching `scraper/product_factory/deterministic_fields.py` to resolve generic rules and source-scoped strategy selection from JSON
 - migrated the generic JSON rule payloads to match the live `differentiator_priority_map.csv` differentiator ordering/coverage so the JSON ruleset now carries the same runtime rule content
 - kept the existing deterministic family formatters for the supported source-scoped families, but removed the hardcoded source/family gating from the active path in favor of config-backed rule lookup
 - added `resources/mappings/schema_policy_rules.json` and updated the Electronet schema compiler to derive `subcategory_match_policy` from authored metadata instead of hardcoded exception sets
@@ -5862,10 +5862,10 @@ Files changed:
 - `resources/schemas/electronet_schema_library.json`
 - `resources/schemas/schema_index.csv`
 - `resources/templates/TEMPLATE_presentation.html`
-- `scraper/pipeline/deterministic_fields.py`
-- `scraper/pipeline/deterministic_rule_config.py`
-- `scraper/pipeline/repo_paths.py`
-- `scraper/pipeline/tests/test_utils_support_paths.py`
+- `scraper/product_factory/deterministic_fields.py`
+- `scraper/product_factory/deterministic_rule_config.py`
+- `scraper/product_factory/repo_paths.py`
+- `scraper/product_factory/tests/test_utils_support_paths.py`
 - `tools/opencart_config.py`
 - `tools/opencart_import_csv_playwright.py`
 - `tools/opencart_upload_images.py`
@@ -5875,16 +5875,16 @@ Files changed:
 - `tools/schema_registry/tests/test_build_electronet_schema_library.py`
 
 Commands run:
-- `python -m pytest -q pipeline/tests/test_deterministic_fields.py`
+- `python -m pytest -q product_factory/tests/test_deterministic_fields.py`
 - `python -m pytest -q tools/schema_registry/tests/test_build_electronet_schema_library.py`
-- `python -m pytest -q pipeline/tests/test_utils_support_paths.py`
+- `python -m pytest -q product_factory/tests/test_utils_support_paths.py`
 - `python -m tools.schema_registry.build_electronet_schema_library`
 - `python -m tools.schema_registry.build_schema_index`
-- `python -m pytest -q pipeline/tests/test_schema_matcher_compiled_library_regressions.py`
+- `python -m pytest -q product_factory/tests/test_schema_matcher_compiled_library_regressions.py`
 - `python -m pytest -q tools/schema_registry/tests/test_build_electronet_schema_library.py`
 - inline Python compile checks for:
-  - `scraper/pipeline/deterministic_fields.py`
-  - `scraper/pipeline/deterministic_rule_config.py`
+  - `scraper/product_factory/deterministic_fields.py`
+  - `scraper/product_factory/deterministic_rule_config.py`
   - `tools/opencart_config.py`
   - `tools/opencart_import_csv_playwright.py`
   - `tools/opencart_upload_images.py`
@@ -5917,16 +5917,16 @@ What changed:
 
 Files changed:
 - `DOCUMENTATION.md`
-- `scraper/pipeline/deterministic_fields.py`
-- `scraper/pipeline/tests/test_deterministic_fields.py`
+- `scraper/product_factory/deterministic_fields.py`
+- `scraper/product_factory/tests/test_deterministic_fields.py`
 
 Commands run:
-- `python -m pytest -q scraper/pipeline/tests/test_deterministic_fields.py`
-- `python -m pytest -q scraper/pipeline/tests/test_workflow.py`
-- `python -m pytest -q scraper/pipeline/tests/test_skroutz_integration.py`
-- `python -m pytest -q scraper/pipeline/tests/test_deterministic_fields.py scraper/pipeline/tests/test_skroutz_integration.py scraper/pipeline/tests/test_workflow.py`
-- `python -m pipeline.workflow prepare --model 331566 --url "https://www.electronet.gr/exoplismos-spitioy/skoypisma/skoypakia/skoypaki-black-decker-dustbuster-pivot-pv1820l-qw-18-volt" --photos 1 --sections 4 --skroutz-status 0 --boxnow 1 --price 99`
-- `python -m pipeline.workflow render --model 331566`
+- `python -m pytest -q scraper/product_factory/tests/test_deterministic_fields.py`
+- `python -m pytest -q scraper/product_factory/tests/test_workflow.py`
+- `python -m pytest -q scraper/product_factory/tests/test_skroutz_integration.py`
+- `python -m pytest -q scraper/product_factory/tests/test_deterministic_fields.py scraper/product_factory/tests/test_skroutz_integration.py scraper/product_factory/tests/test_workflow.py`
+- `python -m product_factory.workflow prepare --model 331566 --url "https://www.electronet.gr/exoplismos-spitioy/skoypisma/skoypakia/skoypaki-black-decker-dustbuster-pivot-pv1820l-qw-18-volt" --photos 1 --sections 4 --skroutz-status 0 --boxnow 1 --price 99`
+- `python -m product_factory.workflow render --model 331566`
 
 Validation:
 - deterministic/workflow/integration regression suite passed: `60 passed`

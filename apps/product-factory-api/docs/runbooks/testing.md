@@ -24,7 +24,7 @@ Use this when changing Product Factory API routes, public response schemas, runt
 Regenerate the OpenAPI snapshot from `apps/product-factory-api` after intentional backend API changes:
 
 ```powershell
-..\..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
+..\..\.venv\Scripts\python.exe -m product_factory.jobs.export_openapi_snapshot
 ```
 
 ## Smoke-only

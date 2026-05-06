@@ -8,22 +8,22 @@ For active setup, use `README.md`. For active API endpoints and contracts, use `
 
 The old README explicitly called out removed runtime entrypoints:
 
-- `pipeline.cli`
-- `scraper/pipeline/full_run.py`
-- `scraper/pipeline/services/run_service.py`
-- `scraper/pipeline/services/run_execution.py`
+- `product_factory.cli`
+- `scraper/product_factory/full_run.py`
+- `scraper/product_factory/services/run_service.py`
+- `scraper/product_factory/services/run_execution.py`
 
 If one of these old entrypoints is needed for archaeology, restore it from git history intentionally. Do not infer runnable behavior from this archive file.
 
 ## CLI-First Workflow Notes
 
-The root README no longer documents the prepare/render workflow as the main onboarding path. The historical operator flow used `pipeline.workflow` from `scraper/`.
+The root README no longer documents the prepare/render workflow as the main onboarding path. The historical operator flow used `product_factory.workflow` from `scraper/`.
 
 Prepare example:
 
 ```powershell
 cd scraper
-..\.venv\Scripts\python.exe -m pipeline.workflow prepare `
+..\.venv\Scripts\python.exe -m product_factory.workflow prepare `
   --model 234385 `
   --url "https://www.electronet.gr/..." `
   --photos 5 `
@@ -37,10 +37,10 @@ Render example:
 
 ```powershell
 cd scraper
-..\.venv\Scripts\python.exe -m pipeline.workflow render --model 234385
+..\.venv\Scripts\python.exe -m product_factory.workflow render --model 234385
 ```
 
-Historical template options on `pipeline.workflow` also supported `--template-file` and `--stdin`.
+Historical template options on `product_factory.workflow` also supported `--template-file` and `--stdin`.
 
 ## Manual LLM Handoff Notes
 
@@ -134,14 +134,14 @@ The root README now documents only the repo-native API start command. The old RE
 
 ```powershell
 cd scraper
-..\.venv\Scripts\python.exe -m uvicorn pipeline.api.app:app --host 127.0.0.1 --port 8000 --reload
+..\.venv\Scripts\python.exe -m uvicorn product_factory.api.app:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 It also named the internal API worker CLI:
 
 ```powershell
 cd scraper
-..\.venv\Scripts\python.exe -m pipeline.jobs.run_product_agent_job --job-id <job_id>
+..\.venv\Scripts\python.exe -m product_factory.jobs.run_product_agent_job --job-id <job_id>
 ```
 
 That worker is an implementation detail for the API supervisor.

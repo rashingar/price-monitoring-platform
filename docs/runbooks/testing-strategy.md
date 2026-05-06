@@ -89,7 +89,7 @@ module has the same character. Use test-level markers for selected slow,
 external, e2e, or legacy cases inside an otherwise fast file.
 
 Product Factory uses `apps/product-factory-api/src/pytest.ini` for marker
-definitions and `apps/product-factory-api/src/pipeline/tests/conftest.py` for
+definitions and `apps/product-factory-api/src/product_factory/tests/conftest.py` for
 suite classification.
 
 Ecommerce API uses `apps/ecommerce-api/pyproject.toml` for marker definitions

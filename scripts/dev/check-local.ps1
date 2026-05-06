@@ -43,8 +43,8 @@ import sys
 
 try:
     metadata.distribution('product-factory')
-    import pipeline
-    import pipeline.dev.start
+    import product_factory
+    import product_factory.dev.start
 except Exception as exc:
     print(f'Product Factory import failed: {exc}', file=sys.stderr)
     sys.exit(1)

@@ -32,8 +32,8 @@ except metadata.PackageNotFoundError:
     sys.exit(10)
 
 try:
-    import pipeline
-    import pipeline.dev.start
+    import product_factory
+    import product_factory.dev.start
 except ImportError as exc:
     print(f'Product Factory import check failed. Install dependencies into the root .venv and reinstall the editable project. Import error: {exc}', file=sys.stderr)
     sys.exit(11)
@@ -46,10 +46,10 @@ matches = [
 if not matches:
     print('Product Factory console script metadata is missing: product-factory-api.', file=sys.stderr)
     sys.exit(12)
-if matches[0].value != 'pipeline.dev.start:main':
+if matches[0].value != 'product_factory.dev.start:main':
     print(
         'Product Factory console script target is unexpected: '
-        f'{matches[0].value!r}; expected pipeline.dev.start:main.',
+        f'{matches[0].value!r}; expected product_factory.dev.start:main.',
         file=sys.stderr,
     )
     sys.exit(13)

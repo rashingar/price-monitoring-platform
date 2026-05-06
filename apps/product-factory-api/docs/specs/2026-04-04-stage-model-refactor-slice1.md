@@ -7,8 +7,8 @@ Date: 2026-04-04
 This slice establishes an explicit internal `source_acquisition -> prepare` boundary without changing the public CLI or downstream output contracts.
 
 Public runtime behavior remains:
-- `python -m pipeline.workflow prepare ...`
-- `python -m pipeline.workflow render --model ...`
+- `python -m product_factory.workflow prepare ...`
+- `python -m product_factory.workflow render --model ...`
 
 Compatibility constraints remain:
 - scrape artifacts stay under `work/{model}/scrape/`
@@ -24,7 +24,7 @@ Internal stage flow for the current `prepare` command:
 Ownership in this slice:
 
 - `interface`
-  - CLI entrypoints in `pipeline.workflow`
+  - CLI entrypoints in `product_factory.workflow`
 - `initialize`
   - request parsing, defaults, validation, model-dir/bootstrap setup
 - `source_acquisition`
@@ -49,7 +49,7 @@ Later stages remain unchanged in this slice:
 
 ## Contract
 
-`pipeline.source_acquisition_models.SourceAcquisitionResult` is the stage handoff object for the front block.
+`product_factory.source_acquisition_models.SourceAcquisitionResult` is the stage handoff object for the front block.
 
 It intentionally carries only acquisition-owned outputs:
 
@@ -71,9 +71,9 @@ Request-owned state such as `model`, `url`, `photos`, `sections`, `skroutz_statu
 
 ## Implementation Notes
 
-- `pipeline.source_acquisition_stage.execute_source_acquisition_stage(...)` now owns the full acquisition front block.
-- `pipeline.prepare_stage.execute_prepare_stage(...)` remains the public internal prepare entrypoint.
-- `pipeline.prepare_stage.execute_prepare_from_acquisition(...)` starts the prepare stage from a prebuilt `SourceAcquisitionResult`.
+- `product_factory.source_acquisition_stage.execute_source_acquisition_stage(...)` now owns the full acquisition front block.
+- `product_factory.prepare_stage.execute_prepare_stage(...)` remains the public internal prepare entrypoint.
+- `product_factory.prepare_stage.execute_prepare_from_acquisition(...)` starts the prepare stage from a prebuilt `SourceAcquisitionResult`.
 - `prepare` still returns the same downstream-facing result shape as before this slice. Acquisition provenance is kept inside the stage seam rather than widening the prepare-stage return contract.
 
 ## Tests

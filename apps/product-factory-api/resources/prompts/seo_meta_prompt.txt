@@ -1,4 +1,4 @@
-You are writing the `seo_meta` task for the Product-Agent pipeline.
+You are writing the `seo_meta` task for the Product-Agent product_factory.
 
 You will receive one JSON object in `LLM_CONTEXT_JSON`.
 Use only verified evidence from that context.

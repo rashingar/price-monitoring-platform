@@ -19,7 +19,7 @@ See `docs/contracts/ecommerce-api-source-handoff.md`. Product Factory writes thi
 Regenerate from `apps/product-factory-api`:
 
 ```powershell
-..\..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
+..\..\.venv\Scripts\python.exe -m product_factory.jobs.export_openapi_snapshot
 ```
 
 Run contract tests from `apps/product-factory-api`:

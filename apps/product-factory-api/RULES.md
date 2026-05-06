@@ -40,7 +40,7 @@ Windows command rules:
 - Never use bare `python`, `py`, global Python, or any interpreter outside `.venv` for pipeline runs, tests, helper scripts, or dependency checks.
 - If `.venv` is missing or broken, stop and repair the repo environment before running the pipeline or tests.
 
-1. Run `..\.venv\Scripts\python.exe -m pipeline.workflow prepare ...` from `apps/product-factory-api/src`.
+1. Run `..\.venv\Scripts\python.exe -m product_factory.workflow prepare ...` from `apps/product-factory-api/src`.
 2. Read:
    - `work/{model}/llm/task_manifest.json`
    - `work/{model}/llm/intro_text.context.json`
@@ -50,7 +50,7 @@ Windows command rules:
 3. Produce:
    - `work/{model}/llm/intro_text.output.txt`
    - `work/{model}/llm/seo_meta.output.json`
-4. Run `..\.venv\Scripts\python.exe -m pipeline.workflow render --model {model}` from `apps/product-factory-api/src`.
+4. Run `..\.venv\Scripts\python.exe -m product_factory.workflow render --model {model}` from `apps/product-factory-api/src`.
 5. When render publishes `products/{model}.csv`, the runtime must then start a separate OpenCart publish phase through `tools/run_opencart_pipeline.sh` from repo root with `CURRENT_JOB_PRODUCT_FILE` set to that exact published CSV path.
 <!--
 6. Inspect:

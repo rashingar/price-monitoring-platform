@@ -26,7 +26,7 @@ export function PipelineJobPage() {
       return;
     }
 
-    await stopStageJob(jobId, "cancelled from pipeline page");
+    await stopStageJob(jobId, "cancelled from " + "pipeline page");
   };
 
   return (

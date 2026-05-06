@@ -9,7 +9,7 @@ Phase 1 cleanup milestones (M1-M14) are complete and remain preserved below as h
 Phase 2: architecture foundation is complete through M29. Phase 3 completed the split-LLM deterministic-presentation refactor through M34. Post-split execution seam cleanup, service/workflow error hardening, and the workflow-only public-entrypoint cleanup are now complete through M37. Phase 4 remains pending.
 
 ## Current repo facts
-- The active runnable code lives under `scraper/pipeline/`.
+- The active runnable code lives under `scraper/product_factory/`.
 - The repo also contains shared support assets, output CSVs, runtime work artifacts, helper tools, and docs.
 - Current runtime documentation treats several support files as source-of-truth inputs and now reads them from `resources/` through the centralized path layer.
 - `products/` and `work/` must remain stable during early cleanup.
@@ -17,7 +17,7 @@ Phase 2: architecture foundation is complete through M29. Phase 3 completed the 
 - Successful render publish now continues with a warning-only OpenCart image upload attempt through `tools/run_opencart_image_upload.sh`, using `CURRENT_JOB_PRODUCT_FILE` for the exact current-job published CSV path.
 - Legacy historical references exist and must be archived, not deleted casually.
 - Historical milestone evidence below may still mention `scrapper/` and `electronet_single_import` as pre-M23 names.
-- Historical milestone evidence below may also mention removed pre-M37 runtime surfaces such as `pipeline.cli`, `full_run.py`, `run_service.py`, and `run_execution.py`.
+- Historical milestone evidence below may also mention removed pre-M37 runtime surfaces such as `product_factory.cli`, `full_run.py`, `run_service.py`, and `run_execution.py`.
 
 ## Cleanup goals
 1. Reduce root clutter safely.
@@ -56,22 +56,22 @@ Hard rule:
   - at least one non-primary provider works behind the provider contract
 
 Phase 2 milestones:
-- M15 — define run contract (completed; import-safe run contract models added under `scraper/pipeline/services/` and not wired into runtime behavior)
+- M15 — define run contract (completed; import-safe run contract models added under `scraper/product_factory/services/` and not wired into runtime behavior)
 - M16 — write structured run metadata alongside current files (completed; `prepare.run.json` and `render.run.json` are now emitted under `work/{model}/`)
 - M17 — make CLI/workflow emit metadata (completed; historical pre-M37 state added `full.run.json` for the legacy standalone CLI while workflow prepare/render surfaced run status plus metadata path)
-- M18 — add service layer models/errors/wrappers (completed; thin internal prepare/render wrappers and a historical pre-M37 full-run composition lived under `scraper/pipeline/services/` without rerouting prepare/render behavior or adding new stage metadata files)
+- M18 — add service layer models/errors/wrappers (completed; thin internal prepare/render wrappers and a historical pre-M37 full-run composition lived under `scraper/product_factory/services/` without rerouting prepare/render behavior or adding new stage metadata files)
 - M19 — route CLI through the service layer (completed; historical pre-M37 state routed the removed `cli.py` adapter through the full-run service while workflow `prepare`/`render` entrypoints continued to call the stage service wrappers)
 - M19a — remove remaining cross-layer imports after service routing (completed; shared input validation moved to a neutral module, and the now-removed `cli.py` / `full_run.py` cross-layer imports were reduced without changing runtime behavior at the time)
-- M20 — define provider contract and registry (completed; standalone typed provider models, base contract, and registry now exist under `scraper/pipeline/providers/` without wiring runtime behavior or extracting current adapters)
+- M20 — define provider contract and registry (completed; standalone typed provider models, base contract, and registry now exist under `scraper/product_factory/providers/` without wiring runtime behavior or extracting current adapters)
 - M21 — extract the current primary source into a provider adapter (completed; the Electronet primary source path now runs through a concrete provider adapter while preserving the existing runtime outputs and leaving other sources on their current execution branches)
 - M22 — add provider selection and one second provider proof (completed; `full_run.py` now has a minimal private provider-selection seam, Electronet remains the only production-selected provider, and a fixture-backed `SkroutzProvider` is proven through test-injected routing without changing default Skroutz runtime behavior)
-- M23 — rename the active runtime package and directory layout (completed; the runtime moved under `scraper/pipeline`; historical pre-M37 invocation included both `python -m pipeline.workflow ...` and the now-removed `python -m pipeline.cli ...`)
-- M24 — stabilize the post-workdir test baseline (completed; touched workflow and Skroutz tests now read committed golden CSV baselines from `scraper/pipeline/tests/fixtures/golden_outputs/skroutz/` and assert the live render contract where candidate bundles can exist while publish is skipped on failed validation)
+- M23 — rename the active runtime package and directory layout (completed; the runtime moved under `scraper/pipeline`; historical pre-M37 invocation included both `python -m product_factory.workflow ...` and the now-removed `python -m product_factory.cli ...`)
+- M24 — stabilize the post-workdir test baseline (completed; touched workflow and Skroutz tests now read committed golden CSV baselines from `scraper/product_factory/tests/fixtures/golden_outputs/skroutz/` and assert the live render contract where candidate bundles can exist while publish is skipped on failed validation)
 - M25 — route Skroutz through the provider seam in production (completed; supported Skroutz product URLs now select `SkroutzProvider` through `_resolve_provider_for_source(...)`, the provider supports live fetch plus fixture overrides, and prepare/render artifact shapes plus validation semantics remain unchanged)
 - M26 — migrate supported manufacturer flows behind provider adapters (completed; the current supported manufacturer runtime flow now selects `ManufacturerTefalProvider` through `_resolve_provider_for_source(...)`, the provider preserves the existing HTTPX-then-Playwright fetch order plus optional fixtures, and prepare/render contracts remain unchanged while manufacturer enrichment regressions are resolved)
 - M27 — retire legacy runtime source branches and close the migration phase (completed; historical pre-M37 `execute_full_run(...)` failed fast when a supported source lacked a provider instead of falling back to legacy fetch/parser branches, and provider-based execution became the active internal seam for supported sources)
-- M28 — make services the true owner of prepare/render orchestration (completed; the real prepare/render orchestration now lives under `scraper/pipeline/services/prepare_execution.py` and `scraper/pipeline/services/render_execution.py`, `prepare_service.py` and `render_service.py` call those service-owned executors directly without importing `workflow.py`, and `workflow.py` remains a thin CLI/adapter layer with unchanged runtime behavior)
-- M29 — make `run_service` the true owner of full-run orchestration (completed; historical pre-M37 full-run composition lived under `scraper/pipeline/services/run_execution.py` and `run_service.py` before those legacy surfaces were removed)
+- M28 — make services the true owner of prepare/render orchestration (completed; the real prepare/render orchestration now lives under `scraper/product_factory/services/prepare_execution.py` and `scraper/product_factory/services/render_execution.py`, `prepare_service.py` and `render_service.py` call those service-owned executors directly without importing `workflow.py`, and `workflow.py` remains a thin CLI/adapter layer with unchanged runtime behavior)
+- M29 — make `run_service` the true owner of full-run orchestration (completed; historical pre-M37 full-run composition lived under `scraper/product_factory/services/run_execution.py` and `run_service.py` before those legacy surfaces were removed)
 
 ### Phase 3 — Split-LLM `intro_text` and deterministic presentation refactor
 
@@ -114,21 +114,21 @@ Hard rules:
 - Do not broaden this cleanup into provider bootstrap, service error taxonomy, or CI work.
 
 Post-split milestone:
-- M35 — clean up the prepare/render execution seam (completed; `scraper/pipeline/prepare_stage.py` is now the scrape-only execution core, `scraper/pipeline/services/prepare_execution.py` writes scrape plus split-task handoff artifacts without routing through `execute_full_run(...)`, `prepare` no longer writes a scrape-stage CSV, `render` remains the sole owner of candidate and publish outputs, and `scraper/pipeline/full_run.py` is reduced to a thin compatibility wrapper for explicit direct callers)
+- M35 — clean up the prepare/render execution seam (completed; `scraper/product_factory/prepare_stage.py` is now the scrape-only execution core, `scraper/product_factory/services/prepare_execution.py` writes scrape plus split-task handoff artifacts without routing through `execute_full_run(...)`, `prepare` no longer writes a scrape-stage CSV, `render` remains the sole owner of candidate and publish outputs, and `scraper/product_factory/full_run.py` is reduced to a thin compatibility wrapper for explicit direct callers)
 
 Implementation substeps:
 1. Extract or introduce a scrape-only execution seam that returns the parsed, taxonomy, normalized, and report data needed by `prepare` without writing candidate-stage outputs.
-2. Re-route `scraper/pipeline/services/prepare_execution.py` to that scrape-only seam and remove its active-path dependency on `execute_full_run(...)`.
+2. Re-route `scraper/product_factory/services/prepare_execution.py` to that scrape-only seam and remove its active-path dependency on `execute_full_run(...)`.
 3. Remove scrape-stage CSV generation and any other candidate/publish side effects from the active prepare path while preserving scrape artifacts under `work/{model}/scrape/` and task handoff artifacts under `work/{model}/llm/`.
-4. Keep `scraper/pipeline/services/render_execution.py` as the sole owner of candidate CSV generation, validation reports, `description.html`, `characteristics.html`, and publish-copy to `products/`.
-5. Narrow `scraper/pipeline/full_run.py` to explicit full-run composition only, or retire it from the active prepare path entirely, without changing supported-provider behavior.
+4. Keep `scraper/product_factory/services/render_execution.py` as the sole owner of candidate CSV generation, validation reports, `description.html`, `characteristics.html`, and publish-copy to `products/`.
+5. Narrow `scraper/product_factory/full_run.py` to explicit full-run composition only, or retire it from the active prepare path entirely, without changing supported-provider behavior.
 
 Acceptance criteria:
-1. `python -m pipeline.workflow prepare ...` writes only scrape artifacts and LLM handoff artifacts under `work/{model}/`; it does not write `work/{model}/scrape/{model}.csv`, candidate artifacts, or publish outputs.
-2. `scraper/pipeline/services/prepare_execution.py` no longer imports or depends on `execute_full_run(...)` for active prepare behavior.
-3. `python -m pipeline.workflow render --model {model}` remains the sole owner of `work/{model}/candidate/{model}.csv`, `work/{model}/candidate/{model}.validation.json`, `work/{model}/candidate/description.html`, `work/{model}/candidate/characteristics.html`, and `products/{model}.csv`.
+1. `python -m product_factory.workflow prepare ...` writes only scrape artifacts and LLM handoff artifacts under `work/{model}/`; it does not write `work/{model}/scrape/{model}.csv`, candidate artifacts, or publish outputs.
+2. `scraper/product_factory/services/prepare_execution.py` no longer imports or depends on `execute_full_run(...)` for active prepare behavior.
+3. `python -m product_factory.workflow render --model {model}` remains the sole owner of `work/{model}/candidate/{model}.csv`, `work/{model}/candidate/{model}.validation.json`, `work/{model}/candidate/description.html`, `work/{model}/candidate/characteristics.html`, and `products/{model}.csv`.
 4. Split-task `intro_text` / `seo_meta` inputs and outputs, supported-provider behavior, and render validation semantics remain unchanged.
-5. `scraper/pipeline/full_run.py` is either reduced to an explicit full-run wrapper over prepare plus render or otherwise removed from the active prepare path, with no new scope added in provider bootstrap, service error taxonomy, or CI.
+5. `scraper/product_factory/full_run.py` is either reduced to an explicit full-run wrapper over prepare plus render or otherwise removed from the active prepare path, with no new scope added in provider bootstrap, service error taxonomy, or CI.
 
 ### Service/workflow error taxonomy hardening
 
@@ -146,19 +146,19 @@ Hard rules:
 - Keep fetch/normalize behavior inside providers unchanged.
 
 Milestone:
-- M36 — add stable service error taxonomy and workflow exit mapping (completed; `scraper/pipeline/services/errors.py` now defines stable semantic error codes plus a boundary mapper, prepare/render/full-run services wrap low-level failures into those codes, workflow exit behavior is driven by an explicit code-to-exit matrix, and prepare/render metadata now persist stable semantic `error_code` values including validation failures)
+- M36 — add stable service error taxonomy and workflow exit mapping (completed; `scraper/product_factory/services/errors.py` now defines stable semantic error codes plus a boundary mapper, prepare/render/full-run services wrap low-level failures into those codes, workflow exit behavior is driven by an explicit code-to-exit matrix, and prepare/render metadata now persist stable semantic `error_code` values including validation failures)
 
 ### Workflow-only public entrypoint cleanup
 
 Status: completed
 
 Goals:
-1. Make `python -m pipeline.workflow ...` the only public CLI entrypoint.
+1. Make `python -m product_factory.workflow ...` the only public CLI entrypoint.
 2. Remove the remaining legacy public-entrypoint and full-run compatibility surfaces:
-   - `scraper/pipeline/cli.py`
-   - `scraper/pipeline/full_run.py`
-   - `scraper/pipeline/services/run_service.py`
-   - `scraper/pipeline/services/run_execution.py`
+   - `scraper/product_factory/cli.py`
+   - `scraper/product_factory/full_run.py`
+   - `scraper/product_factory/services/run_service.py`
+   - `scraper/product_factory/services/run_execution.py`
 3. Move provider-selection and supported-source regression coverage off `execute_full_run(...)` and onto the surviving workflow, prepare-stage, provider-registry, and provider-adapter seams.
 4. Update active runtime docs so they present only the surviving workflow entrypoint.
 
@@ -167,11 +167,11 @@ Hard rules:
 - Do not broaden this cleanup into provider fetch/normalize changes, LLM contract changes, or unrelated service-boundary refactors.
 
 Milestone:
-- M37 — make `pipeline.workflow` the only public CLI entrypoint (completed; `pipeline.workflow` is now the sole public command surface, `pipeline.cli` plus the legacy full-run compatibility stack have been removed, provider-selection coverage no longer anchors on `execute_full_run(...)`, and active docs no longer advertise removed entrypoints as runnable)
+- M37 — make `product_factory.workflow` the only public CLI entrypoint (completed; `product_factory.workflow` is now the sole public command surface, `product_factory.cli` plus the legacy full-run compatibility stack have been removed, provider-selection coverage no longer anchors on `execute_full_run(...)`, and active docs no longer advertise removed entrypoints as runnable)
 
 Acceptance criteria:
-1. `python -m pipeline.workflow prepare ...` and `python -m pipeline.workflow render ...` remain the only documented public runtime commands.
-2. `scraper/pipeline/cli.py`, `scraper/pipeline/full_run.py`, `scraper/pipeline/services/run_service.py`, and `scraper/pipeline/services/run_execution.py` are removed.
+1. `python -m product_factory.workflow prepare ...` and `python -m product_factory.workflow render ...` remain the only documented public runtime commands.
+2. `scraper/product_factory/cli.py`, `scraper/product_factory/full_run.py`, `scraper/product_factory/services/run_service.py`, and `scraper/product_factory/services/run_execution.py` are removed.
 3. Provider-selection and supported-source coverage no longer calls `execute_full_run(...)` and instead asserts the surviving workflow/prepare/provider seams directly.
 4. Active docs present only the workflow prepare/render interface as runnable.
 
@@ -187,8 +187,8 @@ Purpose:
 Target end state:
 1. `execute_prepare_workflow(...)` returns a typed `PrepareExecutionResult`.
 2. `execute_render_workflow(...)` returns a typed `RenderExecutionResult`.
-3. `scraper/pipeline/services/prepare_service.py` stops indexing prepare execution payloads through `result["..."]` keys and consumes typed fields instead.
-4. `scraper/pipeline/services/render_service.py` stops indexing render execution payloads through `result["..."]` keys and consumes typed fields instead.
+3. `scraper/product_factory/services/prepare_service.py` stops indexing prepare execution payloads through `result["..."]` keys and consumes typed fields instead.
+4. `scraper/product_factory/services/render_service.py` stops indexing render execution payloads through `result["..."]` keys and consumes typed fields instead.
 5. The outward `ServiceResult` contract exposed by `prepare_product(...)` and `render_product(...)` remains stable for callers.
 
 In scope:
@@ -210,7 +210,7 @@ Acceptance criteria:
 4. This branch does not expand into stage decomposition, metadata redesign, CLI changes, or provider changes.
 
 Completion note:
-- completed; `scraper/pipeline/services/execution_models.py` now owns typed `PrepareExecutionResult` and `RenderExecutionResult` models, `prepare_execution.py` and `render_execution.py` return those typed results directly, and `prepare_service.py` / `render_service.py` consume typed attributes while preserving the outward `ServiceResult` contract
+- completed; `scraper/product_factory/services/execution_models.py` now owns typed `PrepareExecutionResult` and `RenderExecutionResult` models, `prepare_execution.py` and `render_execution.py` return those typed results directly, and `prepare_service.py` / `render_service.py` consume typed attributes while preserving the outward `ServiceResult` contract
 
 ### Branch scope — metadata and error semantics hardening
 
@@ -253,22 +253,22 @@ Acceptance criteria:
 5. This branch does not expand into stage decomposition, typed-result redesign, workflow parser/CLI work, or provider routing changes.
 
 Completion note:
-- completed; `scraper/pipeline/services/metadata.py` now raises structured metadata-write failures instead of silently ignoring them, `prepare_service.py` and `render_service.py` now distinguish degraded known-outcome results from hard failures when metadata or required artifacts are missing, and workflow-facing prepare/render summaries keep the same public command shape while showing `Metadata path: None` when degraded results do not have a persisted metadata file
+- completed; `scraper/product_factory/services/metadata.py` now raises structured metadata-write failures instead of silently ignoring them, `prepare_service.py` and `render_service.py` now distinguish degraded known-outcome results from hard failures when metadata or required artifacts are missing, and workflow-facing prepare/render summaries keep the same public command shape while showing `Metadata path: None` when degraded results do not have a persisted metadata file
 
 ### Branch scope — prepare-stage provider-resolution refactor
 
 Status: scope defined
 
 Purpose:
-1. Freeze the exact branch scope for extracting the provider-resolution seam out of `scraper/pipeline/prepare_stage.py` first, without changing observable runtime behavior.
+1. Freeze the exact branch scope for extracting the provider-resolution seam out of `scraper/product_factory/prepare_stage.py` first, without changing observable runtime behavior.
 2. Keep this branch limited to provider resolution and provider-backed source preparation concerns that currently sit inline inside `prepare_stage.py`.
 3. Preserve the current public workflow entrypoint, prepare/render ownership split, artifact paths, warnings, and failures while the seam is isolated.
 
 Branch goal:
-1. Move the provider-resolution decision path behind a dedicated internal seam while keeping `python -m pipeline.workflow prepare ...` behavior unchanged.
+1. Move the provider-resolution decision path behind a dedicated internal seam while keeping `python -m product_factory.workflow prepare ...` behavior unchanged.
 
 Landed extracted module:
-1. `scraper/pipeline/prepare_provider_resolution.py`
+1. `scraper/product_factory/prepare_provider_resolution.py`
 
 Proposed seam responsibilities:
 1. Source detection.
@@ -330,12 +330,12 @@ Planned sequencing after this branch:
 Status: completed
 
 Purpose:
-1. Freeze the exact branch scope for extracting all scrape-stage artifact persistence out of `scraper/pipeline/prepare_stage.py` into a dedicated module, without changing observable runtime behavior.
+1. Freeze the exact branch scope for extracting all scrape-stage artifact persistence out of `scraper/product_factory/prepare_stage.py` into a dedicated module, without changing observable runtime behavior.
 2. Keep this branch limited to scrape-stage writes under `work/{model}/scrape/` and the persistence seam that currently lives inline inside `prepare_stage.py`.
 3. Preserve the current public workflow entrypoint, prepare/render ownership split, provider-resolution ownership, artifact paths, warnings, errors, and stage result payload keys while the write seam is isolated.
 
 Branch goal:
-1. Move all scrape-stage artifact persistence currently owned inline by `scraper/pipeline/prepare_stage.py` behind one dedicated internal persistence module, while keeping `python -m pipeline.workflow prepare ...` behavior unchanged.
+1. Move all scrape-stage artifact persistence currently owned inline by `scraper/product_factory/prepare_stage.py` behind one dedicated internal persistence module, while keeping `python -m product_factory.workflow prepare ...` behavior unchanged.
 
 Explicit write scope for this branch:
 1. `work/{model}/scrape/{model}.raw.html`
@@ -345,7 +345,7 @@ Explicit write scope for this branch:
 5. scrape-stage supporting assets and auxiliary artifacts currently written under `work/{model}/scrape/`
 
 Landed extracted module:
-1. `scraper/pipeline/prepare_scrape_persistence.py`
+1. `scraper/product_factory/prepare_scrape_persistence.py`
 
 Landed typed persistence names:
 1. input: `PrepareScrapePersistenceInput`
@@ -360,7 +360,7 @@ Landed seam responsibilities:
 6. Return the same persisted artifact-path information that the current prepare-stage flow already exposes to downstream callers.
 
 Ownership boundary that must stay explicit:
-1. `scraper/pipeline/services/prepare_execution.py` remains the owner of all `work/{model}/llm/*` task-manifest, context, prompt, and LLM-handoff writes in this branch.
+1. `scraper/product_factory/services/prepare_execution.py` remains the owner of all `work/{model}/llm/*` task-manifest, context, prompt, and LLM-handoff writes in this branch.
 2. This branch extracts scrape-stage writes together only; it does not move `work/{model}/llm/*` persistence out of `prepare_execution.py`.
 
 Invariants that must not change:
@@ -389,22 +389,22 @@ Follow-up branch candidates after this one:
 3. Harden focused regression coverage around unchanged warning/error text and scrape-artifact path contracts for supported sources.
 
 Completion note:
-1. completed; scrape artifact persistence now lives under `scraper/pipeline/prepare_scrape_persistence.py`, `scraper/pipeline/prepare_stage.py` now builds prepare state and delegates scrape-stage persistence through one typed seam call, and `scraper/pipeline/services/prepare_execution.py` remains the sole owner of `work/{model}/llm/*` writes while outward prepare-stage payload keys and scrape artifact paths remain unchanged
+1. completed; scrape artifact persistence now lives under `scraper/product_factory/prepare_scrape_persistence.py`, `scraper/product_factory/prepare_stage.py` now builds prepare state and delegates scrape-stage persistence through one typed seam call, and `scraper/product_factory/services/prepare_execution.py` remains the sole owner of `work/{model}/llm/*` writes while outward prepare-stage payload keys and scrape artifact paths remain unchanged
 
 ### Branch scope — prepare-stage result assembly refactor
 
 Status: completed
 
 Purpose:
-1. Extract the deterministic schema-matching and normalized/report assembly seam out of `scraper/pipeline/prepare_stage.py`, after the scrape-persistence branch landed, without changing observable runtime behavior.
+1. Extract the deterministic schema-matching and normalized/report assembly seam out of `scraper/product_factory/prepare_stage.py`, after the scrape-persistence branch landed, without changing observable runtime behavior.
 2. Keep the branch limited to the schema-match, normalized payload, and report payload assembly that previously sat inline inside `prepare_stage.py`.
 3. Preserve the public workflow entrypoint, prepare/render ownership split, output artifact paths, warnings, errors, and split-task LLM handoff contract while this internal computation seam is isolated.
 
 Branch goal:
-1. Move the deterministic schema-matching and normalized/report assembly path behind one dedicated internal seam while keeping `python -m pipeline.workflow prepare ...` behavior unchanged.
+1. Move the deterministic schema-matching and normalized/report assembly path behind one dedicated internal seam while keeping `python -m product_factory.workflow prepare ...` behavior unchanged.
 
 Landed extracted module:
-1. `scraper/pipeline/prepare_result_assembly.py`
+1. `scraper/product_factory/prepare_result_assembly.py`
 
 Landed result type:
 1. `PrepareResultAssemblyResult`
@@ -414,7 +414,7 @@ What stays in `prepare_stage.py` after this branch:
 2. Gallery download orchestration and section-image/Besco download orchestration stay in `prepare_stage.py`.
 3. Taxonomy resolution stays in `prepare_stage.py` for now.
 4. Manufacturer enrichment orchestration stays in `prepare_stage.py` for now.
-5. Scrape artifact persistence stays delegated through `scraper/pipeline/prepare_scrape_persistence.py`.
+5. Scrape artifact persistence stays delegated through `scraper/product_factory/prepare_scrape_persistence.py`.
 6. Any shaping needed before deterministic result assembly stays in `prepare_stage.py`.
 7. The outward `execute_prepare_stage(...)` return payload stays dict-shaped in this branch.
 
@@ -437,7 +437,7 @@ Landed seam responsibilities:
 Invariants that must not change:
 1. Public workflow entrypoint and CLI flags remain unchanged.
 2. Prepare remains scrape-only plus LLM-handoff-only; render remains the sole owner of candidate and publish outputs.
-3. `scraper/pipeline/services/prepare_execution.py` remains responsible for all `work/{model}/llm/*` writes.
+3. `scraper/product_factory/services/prepare_execution.py` remains responsible for all `work/{model}/llm/*` writes.
 4. Output artifact paths, filenames, and directory layout remain exactly under the current `work/{model}/scrape/`, `work/{model}/llm/`, `work/{model}/candidate/`, and `products/` locations.
 5. Taxonomy resolution and manufacturer enrichment stay in `prepare_stage.py` for now.
 6. Provider-resolution ownership stays where it landed in the previous branch.
@@ -458,16 +458,16 @@ Explicit non-goals:
 10. No split-task LLM handoff contract changes.
 
 Landed test coverage:
-1. Direct schema/result behavior is covered in module-level tests for `scraper/pipeline/prepare_result_assembly.py`.
+1. Direct schema/result behavior is covered in module-level tests for `scraper/product_factory/prepare_result_assembly.py`.
 2. Stage-isolation tests stub only the single result-assembly seam and keep `execute_prepare_stage(...)` focused on upstream orchestration behavior.
 3. Existing prepare/workflow/provider regression coverage continues to prove no public behavior change for supported Electronet, Skroutz, and manufacturer flows.
-4. Public workflow and `scraper/pipeline/services/prepare_execution.py` behavior remain unchanged.
+4. Public workflow and `scraper/product_factory/services/prepare_execution.py` behavior remain unchanged.
 
 Landed injection boundary:
 1. `execute_prepare_stage(...)` keeps one deterministic result-assembly seam injection, `assemble_prepare_result_fn`, and no longer exposes lower-level schema-matcher injection for this branch.
 
 Recommended next branch:
-1. Extract taxonomy/manufacturer-enrichment orchestration out of `scraper/pipeline/prepare_stage.py` as the next internal seam, without widening into workflow or handoff behavior changes.
+1. Extract taxonomy/manufacturer-enrichment orchestration out of `scraper/product_factory/prepare_stage.py` as the next internal seam, without widening into workflow or handoff behavior changes.
 
 ### Branch scope — category-scoped schema matching contract
 
@@ -556,7 +556,7 @@ Status: pending
 
 Entry handoff:
 1. Complete M36 before starting any hybrid RAG work.
-2. Keep provider-based execution under `scraper/pipeline/` as the single internal seam for supported sources.
+2. Keep provider-based execution under `scraper/product_factory/` as the single internal seam for supported sources.
 3. Preserve current CLI/workflow commands, accepted inputs, artifact paths, and validation semantics while future retrieval work layers above that seam.
 4. Preserve the completed split-task steady-state contract while starting retrieval-layer work; do not reintroduce combined LLM artifacts.
 5. Do not reintroduce source-specific routing below the provider boundary.
@@ -571,7 +571,7 @@ Purpose:
 3. Preserve the public workflow surface so `prepare` remains scrape-only plus prompt/context artifact generation and `render` remains the owner of candidate/render/publish work.
 
 Target internal seam:
-1. Add a narrow helper module under `scraper/pipeline/services/` for split-LLM stage execution.
+1. Add a narrow helper module under `scraper/product_factory/services/` for split-LLM stage execution.
 2. Introduce:
    - `run_intro_text_with_retry(...)`
    - `execute_split_llm_stage(...)`
@@ -600,22 +600,22 @@ Explicit non-goals:
 4. No change to the existing render/candidate/publish ownership boundary after the intro gate passes.
 
 Completion note:
-1. completed; `scraper/pipeline/services/llm_stage_execution.py` now owns `execute_split_llm_stage(...)` plus `run_intro_text_with_retry(...)`, intro retry exhaustion is raised as a typed intro-specific validation error with structured `stage` / `code` / `attempts` data plus persisted per-attempt trace output, intro rewrites now use atomic replace semantics, `scraper/pipeline/services/render_execution.py` resolves `seo_meta` before intro, retries only intro on `llm_intro_text_word_count_invalid`, blocks candidate/render/publish work until intro succeeds, and the new workflow/service regressions prove `seo_meta` remains single-pass while downstream work runs exactly once only after intro validation passes
+1. completed; `scraper/product_factory/services/llm_stage_execution.py` now owns `execute_split_llm_stage(...)` plus `run_intro_text_with_retry(...)`, intro retry exhaustion is raised as a typed intro-specific validation error with structured `stage` / `code` / `attempts` data plus persisted per-attempt trace output, intro rewrites now use atomic replace semantics, `scraper/product_factory/services/render_execution.py` resolves `seo_meta` before intro, retries only intro on `llm_intro_text_word_count_invalid`, blocks candidate/render/publish work until intro succeeds, and the new workflow/service regressions prove `seo_meta` remains single-pass while downstream work runs exactly once only after intro validation passes
 
 ### Branch scope — prepare-stage taxonomy enrichment refactor
 
 Status: completed
 
 Purpose:
-1. Freeze the exact branch scope for extracting taxonomy resolution plus manufacturer-doc enrichment orchestration out of `scraper/pipeline/prepare_stage.py`, after the result-assembly branch landed, without changing observable runtime behavior.
+1. Freeze the exact branch scope for extracting taxonomy resolution plus manufacturer-doc enrichment orchestration out of `scraper/product_factory/prepare_stage.py`, after the result-assembly branch landed, without changing observable runtime behavior.
 2. Keep this branch limited to one orchestration seam that owns `taxonomy_resolver.resolve(...)`, conditional manufacturer-doc enrichment orchestration, and the typed handoff back into `prepare_stage.py`.
 3. Preserve the public workflow entrypoint, prepare/render ownership split, output artifact paths, warnings, errors, and split-task LLM handoff contract while this internal orchestration seam is isolated.
 
 Branch goal:
-1. Move taxonomy resolution and manufacturer enrichment together behind one dedicated internal seam while keeping `python -m pipeline.workflow prepare ...` behavior unchanged.
+1. Move taxonomy resolution and manufacturer enrichment together behind one dedicated internal seam while keeping `python -m product_factory.workflow prepare ...` behavior unchanged.
 
 Landed extracted module:
-1. `scraper/pipeline/prepare_taxonomy_enrichment.py`
+1. `scraper/product_factory/prepare_taxonomy_enrichment.py`
 
 Landed typed result:
 1. `PrepareTaxonomyEnrichmentResult`
@@ -629,23 +629,23 @@ What stays in `prepare_stage.py` in this branch:
 1. Provider-resolution ownership stays in `prepare_stage.py`.
 2. Gallery download orchestration and section-image/Besco download orchestration stay in `prepare_stage.py`.
 3. Skroutz section extraction and manufacturer-presentation fallback handling stay in `prepare_stage.py`.
-4. Scrape artifact persistence stays delegated through `scraper/pipeline/prepare_scrape_persistence.py`.
-5. Result assembly remains outside this branch and stays delegated through `scraper/pipeline/prepare_result_assembly.py`.
+4. Scrape artifact persistence stays delegated through `scraper/product_factory/prepare_scrape_persistence.py`.
+5. Result assembly remains outside this branch and stays delegated through `scraper/product_factory/prepare_result_assembly.py`.
 6. The outward `execute_prepare_stage(...)` return payload stays dict-shaped in this branch.
 7. Any orchestration before the new taxonomy/enrichment seam and after its typed handoff stays in `prepare_stage.py`.
 
 Seam boundary that must stay explicit:
 1. Taxonomy resolution and manufacturer enrichment move together as one orchestration seam in this branch; they do not split into separate extractions.
 2. Result assembly remains outside this branch; no schema-match, normalized/report assembly, or result-assembly ownership moves in this branch.
-3. `scraper/pipeline/services/prepare_execution.py` remains unchanged in this branch.
+3. `scraper/product_factory/services/prepare_execution.py` remains unchanged in this branch.
 4. `execute_prepare_stage(...)` now keeps one taxonomy/enrichment seam injection, `resolve_prepare_taxonomy_enrichment_fn`, instead of exposing lower-level resolver or enrichment-helper injections directly.
 
 Invariants that must not change:
 1. Public workflow entrypoint and CLI flags remain unchanged.
 2. Prepare remains scrape-only plus LLM-handoff-only; render remains the sole owner of candidate and publish outputs.
-3. `scraper/pipeline/services/prepare_execution.py` remains responsible for all `work/{model}/llm/*` writes and remains behaviorally unchanged.
+3. `scraper/product_factory/services/prepare_execution.py` remains responsible for all `work/{model}/llm/*` writes and remains behaviorally unchanged.
 4. Output artifact paths, filenames, and directory layout remain exactly under the current `work/{model}/scrape/`, `work/{model}/llm/`, `work/{model}/candidate/`, and `products/` locations.
-5. Result assembly remains delegated through `scraper/pipeline/prepare_result_assembly.py`.
+5. Result assembly remains delegated through `scraper/product_factory/prepare_result_assembly.py`.
 6. Provider-resolution ownership stays where it landed in the previous branch.
 7. Render ownership does not change in this branch.
 8. The split-task `intro_text` / `seo_meta` handoff contract stays unchanged.
@@ -665,31 +665,31 @@ Explicit non-goals:
 11. No split-task LLM handoff contract changes.
 
 Landed test coverage split:
-1. Direct seam coverage now lives in `scraper/pipeline/tests/test_prepare_taxonomy_enrichment_module.py` for taxonomy resolution, manufacturer-doc enrichment gating, and the typed result returned to `prepare_stage.py`.
-2. Stage-isolation coverage now lives in `scraper/pipeline/tests/test_prepare_taxonomy_enrichment.py` and stubs only the single taxonomy/enrichment seam so `execute_prepare_stage(...)` stays focused on surrounding orchestration behavior.
-3. Adjacent stage isolation for the downstream deterministic seam remains in `scraper/pipeline/tests/test_prepare_stage_result_assembly.py`.
+1. Direct seam coverage now lives in `scraper/product_factory/tests/test_prepare_taxonomy_enrichment_module.py` for taxonomy resolution, manufacturer-doc enrichment gating, and the typed result returned to `prepare_stage.py`.
+2. Stage-isolation coverage now lives in `scraper/product_factory/tests/test_prepare_taxonomy_enrichment.py` and stubs only the single taxonomy/enrichment seam so `execute_prepare_stage(...)` stays focused on surrounding orchestration behavior.
+3. Adjacent stage isolation for the downstream deterministic seam remains in `scraper/product_factory/tests/test_prepare_stage_result_assembly.py`.
 4. Existing prepare/workflow/provider regression coverage continues to prove no public behavior change for Electronet, Skroutz, and supported manufacturer flows.
 
 Completion note:
-1. completed; taxonomy resolution plus Skroutz-only manufacturer-doc enrichment now live in `scraper/pipeline/prepare_taxonomy_enrichment.py`, `PrepareTaxonomyEnrichmentResult` is the typed handoff back into `prepare_stage.py`, and `execute_prepare_stage(...)` now exposes one injected taxonomy/enrichment seam via `resolve_prepare_taxonomy_enrichment_fn` while preserving outward return keys and prepare/workflow behavior
+1. completed; taxonomy resolution plus Skroutz-only manufacturer-doc enrichment now live in `scraper/product_factory/prepare_taxonomy_enrichment.py`, `PrepareTaxonomyEnrichmentResult` is the typed handoff back into `prepare_stage.py`, and `execute_prepare_stage(...)` now exposes one injected taxonomy/enrichment seam via `resolve_prepare_taxonomy_enrichment_fn` while preserving outward return keys and prepare/workflow behavior
 
 Recommended next branch:
-1. Extract the remaining gallery/Besco plus Skroutz section-extraction orchestration out of `scraper/pipeline/prepare_stage.py` as the next real structural seam; naming polish should stay secondary to that extraction.
+1. Extract the remaining gallery/Besco plus Skroutz section-extraction orchestration out of `scraper/product_factory/prepare_stage.py` as the next real structural seam; naming polish should stay secondary to that extraction.
 
 ### Branch scope — prepare-stage section assets refactor
 
 Status: completed
 
 Purpose:
-1. Freeze the exact branch scope for extracting the Skroutz/manufacturer-first section asset workflow out of `scraper/pipeline/prepare_stage.py` without changing observable runtime behavior.
+1. Freeze the exact branch scope for extracting the Skroutz/manufacturer-first section asset workflow out of `scraper/product_factory/prepare_stage.py` without changing observable runtime behavior.
 2. Keep this branch limited to the Skroutz section-asset seam, the shared section-image download helper reused by both direct and Skroutz paths, and the deterministic section diagnostics / `bescos_raw` payload builders.
 3. Preserve the public workflow entrypoint, prepare/render ownership split, output artifact paths, warnings, errors, and split-task LLM handoff contract while this internal seam is isolated.
 
 Branch goal:
-1. Move the Skroutz/manufacturer-first section asset workflow behind one dedicated internal seam while keeping `python -m pipeline.workflow prepare ...` behavior unchanged.
+1. Move the Skroutz/manufacturer-first section asset workflow behind one dedicated internal seam while keeping `python -m product_factory.workflow prepare ...` behavior unchanged.
 
 Landed extracted module:
-1. `scraper/pipeline/prepare_section_assets.py`
+1. `scraper/product_factory/prepare_section_assets.py`
 
 Landed typed result:
 1. `PrepareSectionAssetsResult`
@@ -708,21 +708,21 @@ What stays in `prepare_stage.py` after this branch:
 4. Final handoff into `assemble_prepare_result_fn(...)` stays in `prepare_stage.py`.
 5. Final handoff into `persist_prepare_scrape_artifacts_fn(...)` stays in `prepare_stage.py`.
 6. Provider-resolution ownership stays in `prepare_stage.py`.
-7. Taxonomy resolution and manufacturer enrichment remain outside this branch and stay delegated through `scraper/pipeline/prepare_taxonomy_enrichment.py`.
-8. Result assembly remains outside this branch and stays delegated through `scraper/pipeline/prepare_result_assembly.py`.
+7. Taxonomy resolution and manufacturer enrichment remain outside this branch and stay delegated through `scraper/product_factory/prepare_taxonomy_enrichment.py`.
+8. Result assembly remains outside this branch and stays delegated through `scraper/product_factory/prepare_result_assembly.py`.
 9. The outward `execute_prepare_stage(...)` return payload stays dict-shaped in this branch.
 
 Explicit boundary statements:
-1. `html_builders.extract_presentation_blocks(...)` stays where it is in `scraper/pipeline/html_builders.py`.
-2. `skroutz_sections` helpers stay where they are in `scraper/pipeline/skroutz_sections.py`.
+1. `html_builders.extract_presentation_blocks(...)` stays where it is in `scraper/product_factory/html_builders.py`.
+2. `skroutz_sections` helpers stay where they are in `scraper/product_factory/skroutz_sections.py`.
 3. Direct-source section extraction itself is not fully extracted in this branch.
-4. `scraper/pipeline/services/prepare_execution.py` remains behaviorally unchanged in this branch.
+4. `scraper/product_factory/services/prepare_execution.py` remains behaviorally unchanged in this branch.
 5. Prepare stays scrape-only plus LLM-handoff-only, and render ownership does not change in this branch.
 
 Invariants that must not change:
 1. Public workflow entrypoint and CLI flags remain unchanged.
 2. Prepare remains scrape-only plus LLM-handoff-only; render remains the sole owner of candidate and publish outputs.
-3. `scraper/pipeline/services/prepare_execution.py` remains responsible for all `work/{model}/llm/*` writes and remains behaviorally unchanged.
+3. `scraper/product_factory/services/prepare_execution.py` remains responsible for all `work/{model}/llm/*` writes and remains behaviorally unchanged.
 4. Output artifact paths, filenames, and directory layout remain exactly under the current `work/{model}/scrape/`, `work/{model}/llm/`, `work/{model}/candidate/`, and `products/` locations.
 5. Result assembly ownership does not change in this branch.
 6. Provider-resolution ownership does not change in this branch.
@@ -745,19 +745,19 @@ Explicit non-goals:
 12. No split-task LLM handoff contract changes.
 
 Landed test coverage split:
-1. Direct helper and standalone seam coverage now lives in `scraper/pipeline/tests/test_prepare_section_assets_module.py` and `scraper/pipeline/tests/test_prepare_skroutz_section_assets_module.py`.
-2. Stage-isolation coverage now lives in `scraper/pipeline/tests/test_prepare_section_assets.py` and stubs only the single extracted Skroutz section-assets seam, `resolve_skroutz_section_assets_fn`, when isolating `execute_prepare_stage(...)`.
-3. Adjacent stage-isolation coverage remains in `scraper/pipeline/tests/test_prepare_taxonomy_enrichment.py` and `scraper/pipeline/tests/test_prepare_stage_result_assembly.py`.
+1. Direct helper and standalone seam coverage now lives in `scraper/product_factory/tests/test_prepare_section_assets_module.py` and `scraper/product_factory/tests/test_prepare_skroutz_section_assets_module.py`.
+2. Stage-isolation coverage now lives in `scraper/product_factory/tests/test_prepare_section_assets.py` and stubs only the single extracted Skroutz section-assets seam, `resolve_skroutz_section_assets_fn`, when isolating `execute_prepare_stage(...)`.
+3. Adjacent stage-isolation coverage remains in `scraper/product_factory/tests/test_prepare_taxonomy_enrichment.py` and `scraper/product_factory/tests/test_prepare_stage_result_assembly.py`.
 4. Prepare-focused workflow regression coverage remains the higher-level unchanged-behavior backstop, and the branch kept a targeted `test_prepare_workflow_writes_prompt_artifacts` smoke/regression path green.
 
 Landed injection boundary:
 1. `execute_prepare_stage(...)` now keeps one explicit section-assets seam injection, `resolve_skroutz_section_assets_fn`, and does not expose lower-level section helpers in its signature.
 
 Completion note:
-1. completed; Skroutz section assets now live behind `scraper/pipeline/prepare_section_assets.py`, `PrepareSectionAssetsResult` is the typed handoff back into `prepare_stage.py`, direct-source / non-Skroutz section extraction intentionally remains inline by design, and `execute_prepare_stage(...)` now exposes one injected section-assets seam via `resolve_skroutz_section_assets_fn` while preserving outward return keys and prepare/workflow behavior.
+1. completed; Skroutz section assets now live behind `scraper/product_factory/prepare_section_assets.py`, `PrepareSectionAssetsResult` is the typed handoff back into `prepare_stage.py`, direct-source / non-Skroutz section extraction intentionally remains inline by design, and `execute_prepare_stage(...)` now exposes one injected section-assets seam via `resolve_skroutz_section_assets_fn` while preserving outward return keys and prepare/workflow behavior.
 
 Recommended next branch:
-1. Extract the remaining direct-source / non-Skroutz section orchestration out of `scraper/pipeline/prepare_stage.py` as the next real section seam; naming polish should stay secondary to that extraction.
+1. Extract the remaining direct-source / non-Skroutz section orchestration out of `scraper/product_factory/prepare_stage.py` as the next real section seam; naming polish should stay secondary to that extraction.
 
 ## Root policy
 ### Keep in root

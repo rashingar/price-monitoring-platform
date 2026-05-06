@@ -21,10 +21,10 @@
 Commit order for this branch:
 1. docs-only scope commit updating `PLAN.md`, `DOCUMENTATION.md`, and `IMPLEMENT.md`
 2. extract or introduce a scrape-only execution seam that preserves the current scrape artifacts and split-task handoff contract without writing candidate or publish outputs
-3. reroute `scraper/pipeline/services/prepare_execution.py` off `execute_full_run(...)` and make `prepare` truly scrape-only plus handoff-only
+3. reroute `scraper/product_factory/services/prepare_execution.py` off `execute_full_run(...)` and make `prepare` truly scrape-only plus handoff-only
 4. remove prepare-stage CSV generation and any remaining active-path candidate or publish side effects from the prepare path
-5. keep `scraper/pipeline/services/render_execution.py` as the sole owner of candidate CSV generation, validation artifacts, `description.html`, `characteristics.html`, and publish copy to `products/`
-6. reduce `scraper/pipeline/full_run.py` to explicit full-run composition only, or retire it from the active prepare path, and then update runtime-facing docs such as `README.md`
+5. keep `scraper/product_factory/services/render_execution.py` as the sole owner of candidate CSV generation, validation artifacts, `description.html`, `characteristics.html`, and publish copy to `products/`
+6. reduce `scraper/product_factory/full_run.py` to explicit full-run composition only, or retire it from the active prepare path, and then update runtime-facing docs such as `README.md`
 
 Out of scope for this branch:
 - provider bootstrap changes
@@ -32,11 +32,11 @@ Out of scope for this branch:
 - CI changes
 
 Targeted test files likely to change:
-- `scraper/pipeline/tests/test_workflow.py`
-- `scraper/pipeline/tests/test_services.py`
-- `scraper/pipeline/tests/test_skroutz_integration.py`
-- `scraper/pipeline/tests/test_provider_selection.py`
-- `scraper/pipeline/tests/test_skroutz_sections.py`
+- `scraper/product_factory/tests/test_workflow.py`
+- `scraper/product_factory/tests/test_services.py`
+- `scraper/product_factory/tests/test_skroutz_integration.py`
+- `scraper/product_factory/tests/test_provider_selection.py`
+- `scraper/product_factory/tests/test_skroutz_sections.py`
 
 Expected artifact changes after seam cleanup:
 - prepare-owned scrape artifacts remain under `work/{model}/scrape/`:
@@ -79,7 +79,7 @@ For milestone commits:
 - After a successful render publish to `products/{model}.csv`, invoke `tools/run_opencart_pipeline.sh` from repo root and pass the exact published path through `CURRENT_JOB_PRODUCT_FILE`.
 - Keep render and publish separated: render success remains render-only, while the OpenCart publish phase reports its own status, stage, and report paths without removing generated render outputs.
 - Preserve the uploader default admin path at `/ipadmin/index.php` unless `OPENCART_ADMIN_PATH` is already provided by the environment.
-- Keep committed fixtures and regression samples under `scraper/pipeline/tests/fixtures/...`; treat `work/` and `scraper/work/` as runtime/debug only.
+- Keep committed fixtures and regression samples under `scraper/product_factory/tests/fixtures/...`; treat `work/` and `scraper/work/` as runtime/debug only.
 - Do not place planning docs inside model runtime folders.
 - Do not reintroduce the old script-driven workflow implicitly.
 
@@ -134,7 +134,7 @@ For every milestone:
 
 ## Special rule for support-file moves
 Before moving any current source-of-truth support file:
-1. add or update `scraper/pipeline/repo_paths.py`
+1. add or update `scraper/product_factory/repo_paths.py`
 2. route all discovered callsites through it
 3. only then move the files
 4. rerun validation immediately

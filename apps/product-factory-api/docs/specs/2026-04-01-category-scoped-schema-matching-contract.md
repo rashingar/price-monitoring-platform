@@ -47,7 +47,7 @@ Every compiled runtime entry now includes these matcher-relevant fields:
 | `leaf_category` | Canonical leaf category segment. |
 | `sub_category` | Canonical optional sub-category segment. |
 | `subcategory_match_policy` | Explicit policy controlling whether a resolved subcategory may fall back to a leaf-only template inside the same parent/leaf family. |
-| `cta_map_key` | Deterministic CTA mapping key already used elsewhere in the pipeline. |
+| `cta_map_key` | Deterministic CTA mapping key already used elsewhere in the product_factory. |
 | `cta_url` | Resolved CTA URL bound to the taxonomy entry. |
 | `template_status` | Runtime eligibility status. |
 | `match_mode` | Runtime matching mode for the compiled entry. |

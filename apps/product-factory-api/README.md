@@ -1,7 +1,7 @@
 # product-factory-api
 
 `product-factory-api` is the Product Factory backend runtime. It contains the
-Product Factory Python pipeline under `src/pipeline` and produces
+Product Factory Python pipeline under `src/product_factory` and produces
 OpenCart-ready product CSVs from supported product pages. It captures source
 product data, normalizes taxonomy, specifications, images, and category
 filters, prepares the small LLM-owned copy fields, renders deterministic
@@ -61,14 +61,14 @@ Optional local configuration:
 
 ## Local API
 
-The local backend is a FastAPI app under `src/pipeline/api`. Start it through
+The local backend is a FastAPI app under `src/product_factory/api`. Start it through
 the root script after the editable install:
 
 ```powershell
 .\scripts\dev\product-factory-api.ps1
 ```
 
-The installed console script points to `pipeline.dev.start:main`, so the direct
+The installed console script points to `product_factory.dev.start:main`, so the direct
 equivalent is:
 
 ```powershell

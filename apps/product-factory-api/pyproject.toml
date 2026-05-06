@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 
 [project.scripts]
-product-factory-api = "pipeline.dev.start:main"
+product-factory-api = "product_factory.dev.start:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

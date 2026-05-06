@@ -1,6 +1,6 @@
 # Product-Agent Runtime Instructions
 
-This file governs runtime and operator-facing execution behavior for the current product pipeline.
+This file governs runtime and operator-facing execution behavior for the current product product_factory.
 
 ## Trigger
 
@@ -16,7 +16,7 @@ boxnow:
 price:
 ```
 
-treat it as a request to run the full pipeline.
+treat it as a request to run the full product_factory.
 
 ## End-To-End Flow
 
@@ -27,7 +27,7 @@ treat it as a request to run the full pipeline.
    - If `.venv` is missing or broken, stop and repair the repo environment before running the pipeline or tests.
 1. Parse the template fields exactly as provided.
 2. If `url` is a currently supported product URL recognized by the runtime source-detection layer, run:
-   `..\.venv\Scripts\python.exe -m pipeline.workflow prepare --model {model} --url "{url}" --photos {photos} --sections {sections} --skroutz-status {skroutz_status} --boxnow {boxnow} --price {price}`
+   `..\.venv\Scripts\python.exe -m product_factory.workflow prepare --model {model} --url "{url}" --photos {photos} --sections {sections} --skroutz-status {skroutz_status} --boxnow {boxnow} --price {price}`
    Run from `apps/product-factory-api/src`.
    Execution ordering is strict:
    - never start `render` before `prepare` has finished successfully
@@ -86,7 +86,7 @@ treat it as a request to run the full pipeline.
    - source titles are kept when present
    - no section-copy generation belongs to the LLM
 10. After both task outputs are written, run:
-   `..\.venv\Scripts\python.exe -m pipeline.workflow render --model {model}`
+   `..\.venv\Scripts\python.exe -m product_factory.workflow render --model {model}`
    Run from `apps/product-factory-api/src`.
    Execution ordering is strict:
    - never start `render` before `prepare` has finished successfully
@@ -146,10 +146,10 @@ Rules for the completion message:
 
 - All commands that execute Python code must use the repo `.venv` interpreter. From `apps/product-factory-api/src`, use `..\.venv\Scripts\python.exe -m ...`; from repo root, use `.venv\Scripts\python.exe -m ...`.
 - Tests must be run with the repo venv, for example from `apps/product-factory-api/src`: `..\.venv\Scripts\python.exe -m pytest -q`.
-- Never use bare `python -m pytest`, `python -m pipeline.workflow`, `py -m ...`, or global interpreters for this repo.
+- Never use bare `python -m pytest`, `python -m product_factory.workflow`, `py -m ...`, or global interpreters for this repo.
 - Keep all runtime artifacts in `work/{model}/`.
 - Keep source scraper artifacts in `work/{model}/scrape/`.
 - Keep task-specific LLM artifacts in `work/{model}/llm/`.
 - Keep rendered outputs in `work/{model}/candidate/`.
 - When the user asks for testing or debugging on a sample model, rerun the actual workflow instead of reasoning from stale files.
-- If a bug appears on one product, fix it generically in the pipeline and verify against the committed regression samples under `src/pipeline/tests/fixtures/...`.
+- If a bug appears on one product, fix it generically in the pipeline and verify against the committed regression samples under `src/product_factory/tests/fixtures/...`.

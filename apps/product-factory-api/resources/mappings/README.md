@@ -8,7 +8,7 @@
 
 ```bash
 cd apps/product-factory-api/src
-python -m pipeline.tools.sync_filter_map --apply-overrides --write
+python -m product_factory.tools.sync_filter_map --apply-overrides --write
 ```
 
 `full_catalog_with_filters.csv` is private/local input used only for the one-time bootstrap. It must not be committed. After bootstrap, normal sync works from `filter_map.base.json` plus `filter_map.manual_overrides.json`.
@@ -19,6 +19,6 @@ Category, group, and value IDs are deterministic SHA-1-derived IDs. Do not edit 
 
 ## Greek Label Normalization
 
-Greek label matching is centralized in `src/pipeline/normalize.py`. Matching keys are accent-insensitive, and conservative mojibake repair runs before key generation so valid Greek display text is not rewritten unnecessarily.
+Greek label matching is centralized in `src/product_factory/normalize.py`. Matching keys are accent-insensitive, and conservative mojibake repair runs before key generation so valid Greek display text is not rewritten unnecessarily.
 
 Semantic label families live in `label_aliases.json`. Keep this registry small: add future category/filter/characteristic aliases there, and add mojibake examples only to the registry or central normalization tests instead of embedding corrupted labels directly in business logic.

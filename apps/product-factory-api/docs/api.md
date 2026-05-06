@@ -18,7 +18,7 @@ Factory into the root virtual environment:
 ```
 
 The installed `product-factory-api` console script resolves to
-`pipeline.dev.start:main`.
+`product_factory.dev.start:main`.
 
 Check the service:
 
@@ -43,12 +43,12 @@ The canonical API contract snapshot is:
 docs/contracts/openapi.product-factory.json
 ```
 
-Route implementations live in `src/pipeline/api/routes_*.py`. Public request and response shapes live in `src/pipeline/api/schemas.py`.
+Route implementations live in `src/product_factory/api/routes_*.py`. Public request and response shapes live in `src/product_factory/api/schemas.py`.
 
 Regenerate the OpenAPI snapshot from `apps/product-factory-api` after intentional route or schema changes:
 
 ```powershell
-..\..\.venv\Scripts\python.exe -m pipeline.jobs.export_openapi_snapshot
+..\..\.venv\Scripts\python.exe -m product_factory.jobs.export_openapi_snapshot
 ```
 
 Run contract tests from `apps/product-factory-api`:
