@@ -8,13 +8,46 @@ routes, frontend browser routes, package names, or database schema.
 From the repository root:
 
 ```powershell
+.\scripts\setup\check-local.ps1
+```
+
+This setup diagnostic checks the root `.venv`, Product Factory import,
+Ecommerce API import, web `node_modules`, mirrored contracts, and generated web
+API type freshness when `node_modules` exists. It does not start servers and
+does not mutate the database.
+
+The dev preflight is equivalent for startup checks:
+
+```powershell
 .\scripts\dev\check-local.ps1
 ```
 
-The diagnostic checks the root `.venv`, Product Factory import, Ecommerce API
-import, web `node_modules`, mirrored contracts, and generated web API type
-freshness when `node_modules` exists. It does not start servers and does not
-mutate the database.
+## First-Time Setup
+
+For a fresh clone, run the setup helpers from the repository root:
+
+```powershell
+.\scripts\setup\root-venv.ps1
+.\scripts\setup\python-deps.ps1
+.\scripts\setup\web.ps1
+.\scripts\setup\check-local.ps1
+```
+
+What they do:
+
+- `root-venv.ps1` checks `python --version`, requires Python 3.11 or newer,
+  and creates `.venv` only when missing. Use `-Force` or `-Recreate` only when
+  intentionally deleting and recreating `.venv`.
+- `python-deps.ps1` installs Product Factory requirements and editable package,
+  then Ecommerce API locked requirements and editable package, all into the
+  root `.venv`.
+- `web.ps1` runs `npm ci` in `apps/web` and fails clearly when `npm` is
+  missing.
+- `check-local.ps1` verifies local setup without starting servers or touching
+  PostgreSQL.
+
+The scripts do not create a unified Python lockfile, do not install unrelated
+dev tools, and do not commit `.venv` or `node_modules`.
 
 ## Start Services
 
@@ -69,6 +102,10 @@ Ecommerce API can be running even when DB-backed workflows are not ready.
 `http://127.0.0.1:8001/api/health` confirms the API process. Use
 `http://127.0.0.1:8001/api/price-monitoring/db/status` for PostgreSQL setup,
 migration, and catalog readiness.
+
+PostgreSQL setup remains manual and explicit. The setup helpers do not create
+users, create databases, apply migrations, import catalogs, mutate schema, or
+change `ECOMMERCE_DATABASE_URL`.
 
 Common DB-not-ready causes:
 

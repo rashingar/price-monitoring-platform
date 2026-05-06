@@ -22,7 +22,21 @@ Ecommerce API code or databases as part of local setup.
 
 ## First Run After Clone
 
-Run these from the repository root in PowerShell:
+Preferred setup path from the repository root in PowerShell:
+
+```powershell
+.\scripts\setup\root-venv.ps1
+.\scripts\setup\python-deps.ps1
+.\scripts\setup\web.ps1
+.\scripts\setup\check-local.ps1
+```
+
+These scripts create the root `.venv` if needed, install the two backend
+projects into that root `.venv`, run `npm ci` in `apps/web`, and verify local
+setup prerequisites. They do not create a unified Python lockfile, start
+servers, or mutate PostgreSQL.
+
+The equivalent manual commands remain:
 
 ```powershell
 python --version
@@ -90,13 +104,24 @@ Docker is not required for the current local setup.
 Root scripts use one repository-level Python environment:
 
 ```powershell
+.\scripts\setup\root-venv.ps1
+```
+
+Manual equivalent:
+
+```powershell
 python --version
 python -m venv .venv
 .\.venv\Scripts\python.exe --version
 ```
 
-The scripts call `.venv\Scripts\python.exe` and fail clearly when it is
-missing. They do not install dependencies automatically.
+`root-venv.ps1` requires Python 3.11 or newer and creates `.venv` only when it
+is missing. Use `-Force` or `-Recreate` only when you intentionally want to
+delete and recreate the root `.venv`. The script does not install app
+dependencies.
+
+Runtime and test scripts call `.venv\Scripts\python.exe` and fail clearly when
+it is missing. They do not install dependencies automatically.
 
 If you intentionally manage multiple Python versions with the Windows `py`
 launcher, you may use a supported version explicitly, for example
@@ -105,7 +130,13 @@ launcher, you may use a supported version explicitly, for example
 
 ## Python Dependency Setup
 
-Install only the backend dependencies you need:
+Install backend dependencies with:
+
+```powershell
+.\scripts\setup\python-deps.ps1
+```
+
+Manual equivalent:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
@@ -121,9 +152,19 @@ remains `pipeline` under `apps/product-factory-api/src`; this does not rename
 `apps/ecommerce-api/src`. Root scripts expect the root `.venv` and do not use
 app-local virtual environments.
 
+The setup script uses the existing app requirement files and editable installs.
+It does not create a unified Python lockfile and does not install unrelated dev
+tools.
+
 ## Frontend Dependency Setup
 
-Install web dependencies from the web app folder:
+Install web dependencies with:
+
+```powershell
+.\scripts\setup\web.ps1
+```
+
+Manual equivalent:
 
 ```powershell
 Push-Location apps\web
@@ -134,9 +175,21 @@ Pop-Location
 Web scripts run from `apps/web` and fail clearly when `node_modules` is
 missing.
 
+Run the setup diagnostic after dependency setup:
+
+```powershell
+.\scripts\setup\check-local.ps1
+```
+
+This finite check verifies root `.venv`, backend imports, web dependencies,
+mirrored contracts, and generated web API type freshness when `node_modules`
+exists. It does not start servers and does not touch PostgreSQL.
+
 ## PostgreSQL Setup Or Rename
 
 Ecommerce API uses PostgreSQL for catalog and price monitoring workflows.
+PostgreSQL setup remains manual and explicit. The setup scripts do not create
+users, create databases, apply migrations, import catalogs, or change schema.
 
 Fresh local setup:
 
