@@ -57,10 +57,6 @@ function formatFetchInputMode(value: unknown): string {
     return "Source URL monitoring";
   }
 
-  if (value === "legacy_marketplace") {
-    return "Deprecated fetch diagnostic";
-  }
-
   return formatValue(value);
 }
 

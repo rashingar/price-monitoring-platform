@@ -262,7 +262,6 @@ export function SourceUrlImportPanel({
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [includeObservations, setIncludeObservations] = useState(true);
   const [includeArtifacts, setIncludeArtifacts] = useState(true);
-  const [includeLegacyRuns, setIncludeLegacyRuns] = useState(false);
   const [catalogSource, setCatalogSource] = useState("sourceCata");
   const [limit, setLimit] = useState("");
   const [reportItemLimit, setReportItemLimit] = useState("200");
@@ -319,11 +318,10 @@ export function SourceUrlImportPanel({
       catalog_source: catalogSource.trim() || "sourceCata",
       include_observations: includeObservations,
       include_artifacts: includeArtifacts,
-      include_legacy_runs: includeLegacyRuns,
       limit: Number.isFinite(parsedLimit) ? parsedLimit : null,
       report_items_limit: Number.isFinite(parsedReportLimit) ? parsedReportLimit : 200,
     };
-  }, [catalogSource, includeArtifacts, includeLegacyRuns, includeObservations, limit, reportItemLimit]);
+  }, [catalogSource, includeArtifacts, includeObservations, limit, reportItemLimit]);
 
   const requestKey = useMemo(() => JSON.stringify(requestBody), [requestBody]);
 
@@ -434,15 +432,6 @@ export function SourceUrlImportPanel({
             disabled={disabled || isPreviewLoading || isApplyLoading}
           />
           Include enriched artifacts
-        </label>
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={includeLegacyRuns}
-            onChange={(event) => setIncludeLegacyRuns(event.target.checked)}
-            disabled={disabled || isPreviewLoading || isApplyLoading}
-          />
-          Include legacy run folders
         </label>
         <label>
           Catalog source
@@ -808,10 +797,7 @@ export function CatalogSourceUrlManager({
             disabled={!canLoad || isCreating}
           />
         </label>
-        <label
-          className="inline-field"
-          title="Source name identifies the vendor or registry source used for source URL capture. It is not the legacy marketplace fetch source."
-        >
+        <label className="inline-field" title="Source name identifies the vendor or registry source used for source URL capture.">
           Source name
           <input
             type="text"

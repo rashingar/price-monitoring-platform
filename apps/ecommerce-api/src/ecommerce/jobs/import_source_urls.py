@@ -24,7 +24,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--catalog-source", default=DEFAULT_CATALOG_SOURCE, help="Catalog source to resolve candidates against.")
     parser.add_argument("--observations", action="store_true", help="Include DB price_observations.")
     parser.add_argument("--artifacts", action="store_true", help="Include DB-referenced enriched CSV artifacts.")
-    parser.add_argument("--legacy-runs-dir", type=Path, default=None, help="Opt-in legacy run folder scan.")
     parser.add_argument("--limit", type=int, default=None, help="Maximum candidates to process.")
     parser.add_argument("--json", action="store_true", help="Write JSON output.")
     parser.add_argument("--report-path", type=Path, default=None, help="Optional JSON report path.")
@@ -41,7 +40,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 catalog_source=args.catalog_source,
                 include_observations=include_observations,
                 include_artifacts=include_artifacts,
-                legacy_runs_dir=args.legacy_runs_dir,
                 limit=args.limit,
             )
     except SQLAlchemyError as exc:

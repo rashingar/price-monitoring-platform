@@ -14,8 +14,8 @@ This file governs template-triggered runtime and operator-facing execution behav
 - Do not use `py -3.13` as the canonical venv command.
 - Prefer root scripts:
   - `.\scripts\dev\product-factory-api.ps1`
-  - `.\scripts\test\product-factory-api.ps1`
-  - `.\scripts\test\fast.ps1` for operator broad verification
+  - `.\scripts\test\product-factory-api.ps1` for operator-requested Product Factory broad verification
+  - `.\scripts\test\fast.ps1` for operator-requested broad verification
 
 ## Trigger
 
@@ -163,8 +163,8 @@ Rules for the completion message:
 ## Test Guidance
 
 - Run future Product Factory checks from repo root.
-- Use `.\scripts\test\product-factory-api.ps1` for Product Factory changes.
-- Use `.\scripts\test\fast.ps1` for broad fast coverage when dependencies are installed.
+- Use `.\scripts\test\product-factory-api.ps1` only for operator-requested Product Factory broad verification.
+- Use `.\scripts\test\fast.ps1` only for operator-requested broad fast coverage when dependencies are installed.
 - For Codex maintenance or refactor tasks, do not run broad suites by default.
   Use focused checks that are relevant to changed files and keep automated
   runtime under 2 minutes.

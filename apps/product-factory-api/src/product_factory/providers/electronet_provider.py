@@ -31,7 +31,7 @@ class ElectronetProvider(ProductProvider):
             }
         ),
         display_name="Electronet",
-        description="Compatibility fallback Electronet vendor-site provider adapter.",
+        description="Electronet vendor-site provider adapter.",
     )
 
     def __init__(

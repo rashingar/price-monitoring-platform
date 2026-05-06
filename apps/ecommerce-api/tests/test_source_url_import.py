@@ -67,7 +67,7 @@ def _run(session, *, run_id: str = "run-1", source: str = "skroutz", enriched_cs
     return row
 
 
-def _legacy_product(session, *, model: str | None, mpn: str | None = None) -> Product:
+def _observation_product(session, *, model: str | None, mpn: str | None = None) -> Product:
     product = Product(
         catalog_source="sourceCata",
         model=model,
@@ -140,9 +140,9 @@ def test_db_observation_product_id_unique_mpn_imports_active(tmp_path: Path) -> 
     _create_schema(database_url)
     with session_scope(database_url) as session:
         product = _catalog_product(session, model="CAT-1", mpn="MPN-ONLY")
-        legacy = _legacy_product(session, model=None, mpn="MPN-ONLY")
+        observation_product = _observation_product(session, model=None, mpn="MPN-ONLY")
         run = _run(session)
-        _observation(session, run, url="https://www.bestprice.gr/item/1", model=None, mpn=None, product_id=legacy.id)
+        _observation(session, run, url="https://www.bestprice.gr/item/1", model=None, mpn=None, product_id=observation_product.id)
 
         result = import_source_urls(session, apply=True, include_artifacts=False)
         row = session.query(SourceUrl).one()

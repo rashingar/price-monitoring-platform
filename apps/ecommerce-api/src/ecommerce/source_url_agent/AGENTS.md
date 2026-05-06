@@ -786,8 +786,7 @@ Not allowed:
 
 ### BestPrice
 
-Use Source URL Agent discovery and evidence scoring. The legacy marketplace
-fetch/search implementation has been removed.
+Use Source URL Agent discovery and evidence scoring only.
 
 Rules:
 

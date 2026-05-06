@@ -932,14 +932,6 @@ def test_source_capture_run_api_returns_summary(tmp_path: Path, monkeypatch) -> 
     assert payload["succeeded_count"] == 1
     assert payload["failed_count"] == 1
 
-    removed_response = TestClient(create_app()).post(
-        "/api/price-monitoring/source-captures/run",
-        json={"vendor_slug": "electronet", "limit": 2, "refresh_after_minutes": 0},
-    )
-
-    assert removed_response.status_code == 404
-
-
 def test_price_monitoring_fetch_result_reports_source_url_capture_usage(tmp_path: Path, monkeypatch) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)

@@ -1404,26 +1404,10 @@
             "title": "Include Artifacts",
             "type": "boolean"
           },
-          "include_legacy_runs": {
-            "default": false,
-            "title": "Include Legacy Runs",
-            "type": "boolean"
-          },
           "include_observations": {
             "default": true,
             "title": "Include Observations",
             "type": "boolean"
-          },
-          "legacy_runs_dir": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legacy Runs Dir"
           },
           "limit": {
             "anyOf": [

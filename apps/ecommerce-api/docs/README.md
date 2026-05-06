@@ -56,7 +56,6 @@ python -m ecommerce.jobs.import_source_urls --json
 python -m ecommerce.jobs.import_source_urls --apply --catalog-source sourceCata
 python -m ecommerce.jobs.import_source_urls --apply --observations
 python -m ecommerce.jobs.import_source_urls --apply --artifacts
-python -m ecommerce.jobs.import_source_urls --legacy-runs-dir output/ecommerce/monitoring/runs
 python -m ecommerce.jobs.import_source_urls --report-path output/source-url-import-report.json
 ```
 
@@ -71,7 +70,7 @@ POST /api/catalog/source-urls/import/product-factory/preview
 POST /api/catalog/source-urls/import/product-factory/apply
 ```
 
-`/import/preview` is a dry-run and returns counters plus capped candidate details without writing database rows. `/import/apply` uses the same importer and writes to `source_urls`; repeated apply calls are idempotent. Both endpoints accept `catalog_source`, `include_observations`, `include_artifacts`, `include_legacy_runs`, `legacy_runs_dir`, `limit`, and `report_items_limit`. Legacy run scanning is disabled by default and only accepts artifact-root paths.
+`/import/preview` is a dry-run and returns counters plus capped candidate details without writing database rows. `/import/apply` uses the same importer and writes to `source_urls`; repeated apply calls are idempotent. Both endpoints accept `catalog_source`, `include_observations`, `include_artifacts`, `limit`, and `report_items_limit`.
 
 Product Factory handoff API imports are limited to `ecommerce_source_handoff.json` files under allowed artifact roots or configured file editor roots. The public route path uses `/product-factory/`.
 

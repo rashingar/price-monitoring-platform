@@ -210,8 +210,6 @@ export interface SourceUrlImportRequest {
   catalog_source?: string | null;
   include_observations?: boolean;
   include_artifacts?: boolean;
-  include_legacy_runs?: boolean;
-  legacy_runs_dir?: string | null;
   limit?: number | null;
   report_items_limit?: number | null;
   report_item_limit?: number | null;
@@ -284,7 +282,6 @@ export interface SourceUrlImportResponse extends SourceUrlImportSummary {
 
 export interface SourceUrlImportOptionsResponse {
   catalog_sources: string[];
-  legacy_runs_dirs: string[];
   default_catalog_source?: string | null;
   [key: string]: unknown;
 }

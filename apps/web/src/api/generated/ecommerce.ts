@@ -769,17 +769,10 @@ export interface components {
        */
       include_artifacts?: boolean;
       /**
-       * Include Legacy Runs
-       * @default false
-       */
-      include_legacy_runs?: boolean;
-      /**
        * Include Observations
        * @default true
        */
       include_observations?: boolean;
-      /** Legacy Runs Dir */
-      legacy_runs_dir?: string | null;
       /** Limit */
       limit?: number | null;
       /**

@@ -4,13 +4,15 @@ Run tests with the root virtual environment after installing Product Factory
 editable support. Do not use bare `python`, `py`, a global interpreter, or an
 app-local virtual environment.
 
-## Fast Codex/local check
+## Product Factory Broad Check
 
 ```powershell
 .\scripts\test\product-factory-api.ps1
 ```
 
-Use this as the default Codex commit check. It runs unit tests, contract tests, and small isolated stage tests without full workflow e2e, live scraping, browser automation against live pages, OpenCart, OpenAI, credentials, or long subprocess workflows.
+Use this for operator-requested Product Factory broad verification. Routine
+Codex maintenance should run only focused checks that map to changed files and
+keep total automated runtime under 2 minutes.
 
 ## Contract-only
 

@@ -35,7 +35,7 @@ class SkroutzProvider(ProductProvider):
             }
         ),
         display_name="Skroutz",
-        description="Compatibility fallback Skroutz provider adapter with live fetch support and optional fixture overrides.",
+        description="Skroutz provider adapter with live fetch support and optional fixture overrides.",
     )
 
     def __init__(

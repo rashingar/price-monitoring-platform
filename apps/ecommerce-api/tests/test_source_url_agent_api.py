@@ -593,8 +593,6 @@ def test_source_url_agent_candidate_routes_return_404_and_validation_errors(tmp_
 def test_openapi_includes_source_url_agent_candidate_endpoints() -> None:
     paths = create_app().openapi()["paths"]
 
-    assert "/api/catalog/source-url-agent/runs" not in paths
-    assert "/api/catalog/source-url-agent/candidates" not in paths
     assert "/api/vendor-sources/agent/runs" in paths
     assert "/api/vendor-sources/agent/runs/{run_id}" in paths
     assert "/api/vendor-sources/agent/runs/{run_id}/artifacts" in paths
@@ -606,14 +604,7 @@ def test_openapi_includes_source_url_agent_candidate_endpoints() -> None:
     assert "/api/vendor-sources/captures/runs/{run_id}/artifacts" in paths
 
 
-def test_catalog_source_url_agent_routes_are_removed() -> None:
-    client = TestClient(create_app())
-
-    assert client.get("/api/catalog/source-url-agent/runs").status_code == 404
-    assert client.get("/api/catalog/source-url-agent/candidates").status_code == 404
-
-
-def test_price_monitoring_no_longer_exposes_legacy_marketplace_source_enum() -> None:
+def test_price_monitoring_exposes_no_marketplace_source_enum() -> None:
     import ecommerce.price_monitoring.selection as selection
 
     assert not hasattr(selection, "PriceMonitoringSource")

@@ -22,31 +22,6 @@ const DEFAULT_RUN_REQUEST: SourceUrlAgentRunRequest = {
   rate_limit_seconds: 2,
 };
 
-const FALLBACK_VENDOR_SOURCES: VendorSourceCapability[] = [
-  {
-    source_name: "skroutz",
-    source_domain: "skroutz.gr",
-    source_type: "marketplace",
-    discovery_enabled: true,
-    capture_enabled: false,
-    capture_implemented: false,
-    supports_search: true,
-    supports_direct_product_url: true,
-    supports_xhr_capture: false,
-  },
-  {
-    source_name: "bestprice",
-    source_domain: "bestprice.gr",
-    source_type: "marketplace",
-    discovery_enabled: true,
-    capture_enabled: false,
-    capture_implemented: false,
-    supports_search: true,
-    supports_direct_product_url: true,
-    supports_xhr_capture: false,
-  },
-];
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -249,7 +224,7 @@ export function SourceUrlAgentRunsPage() {
       })
       .catch((loadError) => {
         if (!controller.signal.aborted) {
-          setVendorSources(FALLBACK_VENDOR_SOURCES);
+          setVendorSources([]);
           setSourceError(getCommerceApiErrorMessage(loadError));
         }
       })
@@ -479,9 +454,7 @@ export function SourceUrlAgentRunsPage() {
 
           <div className="source-capability-strip" aria-label="Vendor source capabilities">
             {isSourcesLoading ? <span className="muted">Loading vendor sources...</span> : null}
-            {!isSourcesLoading && sourceError ? (
-              <span className="form-warning">Using fallback marketplace sources. {sourceError}</span>
-            ) : null}
+            {!isSourcesLoading && sourceError ? <span className="form-warning">{sourceError}</span> : null}
             {!isSourcesLoading && discoverySourceOptions.length > 0
               ? discoverySourceOptions.map((source) => (
                   <div className="source-capability-card" key={String(source.source_name)}>

@@ -252,14 +252,6 @@ def test_vendor_sources_capture_api_returns_required_payload(tmp_path: Path, mon
     assert payload["run_id"] == "vendor-capture-1"
     assert payload["observation_batch_id"] == "vendor-capture-1"
 
-    removed = TestClient(create_app()).post(
-        "/api/vendor-sources/captures/run",
-        json={"vendor_slug": "electronet", "limit": 1, "include_not_due": True},
-    )
-
-    assert removed.status_code == 404
-
-
 def test_vendor_sources_capture_api_requires_source_unless_admin_diagnostic(tmp_path: Path, monkeypatch) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)

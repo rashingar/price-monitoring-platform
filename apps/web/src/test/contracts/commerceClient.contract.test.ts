@@ -146,7 +146,6 @@ describe("commerce API client contract fixtures", () => {
       catalog_source: "sourceCata",
       include_observations: true,
       include_artifacts: true,
-      include_legacy_runs: false,
       report_items_limit: 200,
     };
 
@@ -370,22 +369,6 @@ describe("commerce API client contract fixtures", () => {
       apply: false,
       summary: expect.objectContaining({ candidates_found: 0, skipped_count: 0 }),
       report_items: [],
-    });
-  });
-
-  it("falls back to Catalog source URL summary only when Vendor Sources summary is unavailable", async () => {
-    installMockFetch([
-      {
-        method: "GET",
-        path: "/commerce-api/vendor-sources/source-urls/summary",
-        response: { status: 404, body: { detail: "Not found" } },
-      },
-      { method: "GET", path: "/commerce-api/catalog/source-urls/summary", response: sourceUrlSummary },
-    ]);
-
-    await expect(commerceClient.getVendorSourceUrlSummary()).resolves.toMatchObject({
-      total_count: sourceUrlSummary.total_count,
-      summary_source: "catalog",
     });
   });
 

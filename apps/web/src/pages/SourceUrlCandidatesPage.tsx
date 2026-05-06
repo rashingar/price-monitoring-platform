@@ -976,7 +976,7 @@ export function SourceUrlCandidatesPage() {
               value={filters.sourceName}
               onChange={(event) => setFilter("sourceName", event.target.value)}
               placeholder="electronet, public, plaisio, kotsovolos"
-              title="Filters candidate source_name/source_domain values from the vendor/source registry, not legacy marketplace fetch sources."
+              title="Filters candidate source_name/source_domain values from the vendor/source registry."
             />
           </label>
           <label>

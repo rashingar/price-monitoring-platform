@@ -12,7 +12,7 @@ from sqlalchemy import distinct, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from ecommerce.artifacts import ArtifactPathError, ArtifactPathForbiddenError, get_artifact_roots, resolve_artifact_path
+from ecommerce.artifacts import get_artifact_roots
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.models import CatalogProductRow, SourceUrl
@@ -31,8 +31,6 @@ class SourceUrlImportRequest(BaseModel):
     catalog_source: str = Field(default=DEFAULT_CATALOG_SOURCE)
     include_observations: bool = True
     include_artifacts: bool = True
-    include_legacy_runs: bool = False
-    legacy_runs_dir: str | None = None
     limit: int | None = None
     report_items_limit: int = 200
 
@@ -144,9 +142,7 @@ def get_source_url_import_options() -> dict[str, Any]:
         "default_catalog_source": DEFAULT_CATALOG_SOURCE,
         "supports_observations": True,
         "supports_artifacts": True,
-        "supports_legacy_runs": True,
         "supports_product_factory_handoff": True,
-        "legacy_runs_default_enabled": False,
         "requires_apply_confirmation": True,
         "notes": [
             "Preview is a dry-run and does not write database rows.",
@@ -167,7 +163,6 @@ def _run_source_url_import(request: SourceUrlImportRequest, *, apply: bool) -> d
                 catalog_source=payload["catalog_source"],
                 include_observations=payload["include_observations"],
                 include_artifacts=payload["include_artifacts"],
-                legacy_runs_dir=payload["legacy_runs_dir"],
                 limit=payload["limit"],
             )
             return _import_response(result, apply=apply, report_items_limit=payload["report_items_limit"])
@@ -300,7 +295,7 @@ def _import_summary(result: SourceUrlImportResult, *, apply: bool) -> dict[str, 
 
 def _source_stats(result: SourceUrlImportResult) -> dict[str, dict[str, int]]:
     payload = {}
-    for key in ("observations", "artifacts", "legacy_runs"):
+    for key in ("observations", "artifacts"):
         stats = result.source_stats.get(key, {})
         payload[key] = {
             "processed": int(stats.get("processed", 0)),
@@ -384,20 +379,13 @@ def _validated_import_request(request: SourceUrlImportRequest) -> dict[str, Any]
     catalog_source = _validated_catalog_source(payload.get("catalog_source"))
     include_observations = bool(payload.get("include_observations", True))
     include_artifacts = bool(payload.get("include_artifacts", True))
-    include_legacy_runs = bool(payload.get("include_legacy_runs", False))
-    if not include_observations and not include_artifacts and not include_legacy_runs:
+    if not include_observations and not include_artifacts:
         raise HTTPException(status_code=400, detail="At least one import source must be enabled.")
-
-    legacy_runs_dir = _optional_text(payload.get("legacy_runs_dir"))
-    if legacy_runs_dir and not include_legacy_runs:
-        raise HTTPException(status_code=400, detail="include_legacy_runs must be true when legacy_runs_dir is provided.")
-    resolved_legacy_runs_dir = _validated_legacy_runs_dir(legacy_runs_dir) if include_legacy_runs else None
 
     return {
         "catalog_source": catalog_source,
         "include_observations": include_observations,
         "include_artifacts": include_artifacts,
-        "legacy_runs_dir": resolved_legacy_runs_dir,
         "limit": _validated_optional_positive_int(payload.get("limit"), "limit"),
         "report_items_limit": _validated_report_items_limit(payload.get("report_items_limit")),
     }
@@ -444,20 +432,6 @@ def _product_factory_handoff_allowed_roots() -> list[Path]:
     roots = [root.expanduser().resolve(strict=False) for root in get_artifact_roots()]
     roots.extend(get_allowed_roots())
     return _dedupe_paths(roots)
-
-
-def _validated_legacy_runs_dir(value: str | None) -> Path | None:
-    if not value:
-        raise HTTPException(status_code=400, detail="legacy_runs_dir is required when include_legacy_runs is true.")
-    try:
-        path = resolve_artifact_path(value)
-    except ArtifactPathForbiddenError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except ArtifactPathError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if not path.exists() or not path.is_dir():
-        raise HTTPException(status_code=400, detail="legacy_runs_dir must be an existing artifact directory.")
-    return path
 
 
 def _validated_catalog_source(value: object) -> str:

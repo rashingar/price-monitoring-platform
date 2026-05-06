@@ -302,15 +302,10 @@ def test_import_invalid_options_return_400(tmp_path: Path, monkeypatch) -> None:
 
     response = client.post(
         "/api/catalog/source-urls/import/preview",
-        json={"include_observations": False, "include_artifacts": False, "include_legacy_runs": False},
-    )
-    legacy = client.post(
-        "/api/catalog/source-urls/import/preview",
-        json={"include_legacy_runs": True, "legacy_runs_dir": "../outside"},
+        json={"include_observations": False, "include_artifacts": False},
     )
 
     assert response.status_code == 400
-    assert legacy.status_code == 400
 
 
 def test_import_routes_return_catalog_db_required_without_database(tmp_path: Path, monkeypatch) -> None:

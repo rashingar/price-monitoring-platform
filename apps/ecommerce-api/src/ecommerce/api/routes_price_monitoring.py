@@ -480,13 +480,8 @@ def get_price_monitoring_product_price_history(product_id: str) -> dict:
         with session_scope() as session:
             numeric_product_id = _int_or_none(product_id)
             if numeric_product_id is None:
-                items, count = list_model_price_history(session, product_id)
-                return {"model": product_id, "items": items, "count": count}
+                raise HTTPException(status_code=400, detail="product_id must be an integer.")
             items, count = list_product_price_history(session, numeric_product_id)
-            if count == 0:
-                legacy_items, legacy_count = list_model_price_history(session, product_id)
-                if legacy_count:
-                    return {"model": product_id, "items": legacy_items, "count": legacy_count}
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
     return {"product_id": numeric_product_id, "items": items, "count": count}

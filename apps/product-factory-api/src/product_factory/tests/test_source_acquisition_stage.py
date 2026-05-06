@@ -202,16 +202,16 @@ def test_execute_source_acquisition_stage_keeps_gallery_failure_as_warning_only(
     assert result.snapshot_provenance["gallery_downloaded_count"] == 0
 
 
-def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload_without_legacy_fetch(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload_without_provider_fetch(tmp_path: Path) -> None:
     model = "233541"
     url = "https://www.electronet.gr/example"
     fetcher = RecordingFetcher()
-    legacy_calls = 0
+    provider_calls = 0
 
-    def legacy_provider_resolution(_cli, **_kwargs):
-        nonlocal legacy_calls
-        legacy_calls += 1
-        raise AssertionError("legacy provider resolution should not run when shared capture supplies normalized data")
+    def provider_resolution(_cli, **_kwargs):
+        nonlocal provider_calls
+        provider_calls += 1
+        raise AssertionError("provider resolution should not run when shared capture supplies normalized data")
 
     result = execute_source_acquisition_stage(
         model=model,
@@ -220,7 +220,7 @@ def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload
         model_dir=tmp_path / model,
         validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
         fetcher_factory=lambda: fetcher,
-        resolve_prepare_provider_input_fn=legacy_provider_resolution,
+        resolve_prepare_provider_input_fn=provider_resolution,
         source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
             status="submitted",
             message="Initial source capture submitted.",
@@ -258,7 +258,7 @@ def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload
         ),
     )
 
-    assert legacy_calls == 0
+    assert provider_calls == 0
     assert result.fetch.method == "shared_source_capture"
     assert result.fetch.html == "<html>shared</html>"
     assert result.parsed.source.name == "LG GSGV80PYLL"

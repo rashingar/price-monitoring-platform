@@ -276,16 +276,6 @@ export function VendorSourceUrlsPage() {
 
       {!isLoading && summary ? (
         <>
-          {summary.summary_source === "catalog" ? (
-            <section className="panel source-url-agent-warning-panel" aria-label="Vendor Sources fallback warning">
-              <strong>Using Catalog summary fallback</strong>
-              <span>
-                The backend has not exposed Vendor Sources source URL coverage yet, so this page is
-                reading the legacy Catalog summary.
-              </span>
-            </section>
-          ) : null}
-
           <section className="panel">
             <div className="section-heading">
               <div>

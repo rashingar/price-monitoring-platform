@@ -920,10 +920,6 @@ function formatFetchInputMode(value: unknown): string {
     return "Source URL monitoring";
   }
 
-  if (value === "legacy_marketplace") {
-    return "Deprecated fetch diagnostic";
-  }
-
   return formatValue(value);
 }
 
@@ -3299,7 +3295,7 @@ export function PriceMonitoringPage() {
         </div>
 
         <div className="filter-grid">
-          <label title="Compatibility override for older backends. The default uses the run source/vendor.">
+          <label title="Optional source/vendor override. The default uses the run source/vendor.">
             Source/vendor override
             <select value={fetchSource} onChange={(event) => setFetchSource(event.target.value as SourceOverride)}>
               <option value="">Default from run</option>

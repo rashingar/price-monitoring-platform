@@ -2088,13 +2088,6 @@ function normalizeCatalogBrandOptions(payload: unknown): CatalogBrandOption[] {
     .filter((item): item is CatalogBrandOption => item !== null && item.manufacturer.length > 0);
 }
 
-function isEndpointUnavailable(error: unknown): boolean {
-  return (
-    error instanceof CommerceApiError &&
-    (error.status === 404 || error.status === 405 || error.status === 501)
-  );
-}
-
 export const commerceClient = {
   commerceApiBaseUrl,
 
@@ -2225,25 +2218,12 @@ export const commerceClient = {
   },
 
   async getVendorSourceUrlSummary(signal?: AbortSignal): Promise<SourceUrlSummaryResponse> {
-    try {
-      return {
-        ...normalizeSourceUrlSummary(
-          await request<unknown>("/vendor-sources/source-urls/summary", { signal }),
-        ),
-        summary_source: "vendor-sources",
-      };
-    } catch (error) {
-      if (signal?.aborted || !isEndpointUnavailable(error)) {
-        throw error;
-      }
-
-      return {
-        ...normalizeSourceUrlSummary(
-          await request<unknown>("/catalog/source-urls/summary", { signal }),
-        ),
-        summary_source: "catalog",
-      };
-    }
+    return {
+      ...normalizeSourceUrlSummary(
+        await request<unknown>("/vendor-sources/source-urls/summary", { signal }),
+      ),
+      summary_source: "vendor-sources",
+    };
   },
 
   async listVendorSources(signal?: AbortSignal): Promise<VendorSourceCapability[]> {

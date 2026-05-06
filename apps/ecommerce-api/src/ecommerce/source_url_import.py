@@ -115,7 +115,6 @@ def import_source_urls(
     catalog_source: str | None = None,
     include_observations: bool = True,
     include_artifacts: bool = True,
-    legacy_runs_dir: Path | None = None,
     limit: int | None = None,
 ) -> SourceUrlImportResult:
     result = SourceUrlImportResult(apply=apply)
@@ -127,7 +126,6 @@ def import_source_urls(
         catalog_source=catalog_source,
         include_observations=include_observations,
         include_artifacts=include_artifacts,
-        legacy_runs_dir=legacy_runs_dir,
         result=result,
     ):
         if remaining is not None and remaining <= 0:
@@ -146,10 +144,10 @@ def resolve_catalog_product_for_import(
     mpn: str | None,
     product_id: int | None = None,
 ) -> CatalogProductResolution:
-    legacy_product = session.get(Product, product_id) if product_id is not None else None
-    resolved_catalog_source = _text(catalog_source) or _text(getattr(legacy_product, "catalog_source", None)) or DEFAULT_CATALOG_SOURCE
-    resolved_model = _empty_to_none(model) or _empty_to_none(getattr(legacy_product, "model", None))
-    resolved_mpn = _empty_to_none(mpn) or _empty_to_none(getattr(legacy_product, "mpn", None))
+    observation_product = session.get(Product, product_id) if product_id is not None else None
+    resolved_catalog_source = _text(catalog_source) or _text(getattr(observation_product, "catalog_source", None)) or DEFAULT_CATALOG_SOURCE
+    resolved_model = _empty_to_none(model) or _empty_to_none(getattr(observation_product, "model", None))
+    resolved_mpn = _empty_to_none(mpn) or _empty_to_none(getattr(observation_product, "mpn", None))
 
     if resolved_model and not _looks_composite_model(resolved_model):
         product = session.execute(
@@ -192,7 +190,6 @@ def _iter_candidates(
     catalog_source: str | None,
     include_observations: bool,
     include_artifacts: bool,
-    legacy_runs_dir: Path | None,
     result: SourceUrlImportResult,
 ) -> Iterable[SourceUrlImportCandidate]:
     if include_observations:
@@ -201,9 +198,6 @@ def _iter_candidates(
     if include_artifacts:
         result.sources_processed.append("monitoring_runs.enriched_csv_path")
         yield from _iter_artifact_candidates(session, catalog_source=catalog_source, result=result)
-    if legacy_runs_dir is not None:
-        result.sources_processed.append(str(legacy_runs_dir))
-        yield from _iter_legacy_artifact_candidates(session, legacy_runs_dir, catalog_source=catalog_source, result=result)
 
 
 def _iter_observation_candidates(
@@ -303,32 +297,6 @@ def _iter_artifact_candidates(
         )
 
 
-def _iter_legacy_artifact_candidates(
-    session: Session,
-    legacy_runs_dir: Path,
-    *,
-    catalog_source: str | None,
-    result: SourceUrlImportResult,
-) -> Iterable[SourceUrlImportCandidate]:
-    root = Path(legacy_runs_dir).expanduser().resolve(strict=False)
-    if not root.exists() or not root.is_dir():
-        result.warnings.append(f"Legacy runs dir not found: {legacy_runs_dir}")
-        return
-    for path in sorted(root.glob("*/**/*enriched*.csv")):
-        _increment_source_stat(result, "legacy_runs", "processed")
-        source = _source_from_path(path)
-        yield from _parse_artifact_path(
-            session,
-            path,
-            run_id=path.parent.name,
-            source=source,
-            catalog_source=catalog_source or DEFAULT_CATALOG_SOURCE,
-            default_observed_at=None,
-            evidence_detail=f"legacy_path={path}",
-            result=result,
-        )
-
-
 def _parse_artifact_path(
     session: Session,
     path: Path,
@@ -393,8 +361,7 @@ def _artifact_observation_to_candidate(
             },
         )
         return None
-    source_key = "legacy_runs" if evidence_detail.startswith("legacy_path=") else "artifacts"
-    _increment_source_stat(result, source_key, "candidates")
+    _increment_source_stat(result, "artifacts", "candidates")
     status = "active" if resolution.match_type == "model" else "needs_review"
     return SourceUrlImportCandidate(
         url=observation.product_url or "",
@@ -549,15 +516,6 @@ def _candidate_report_item(
 def _increment_source_stat(result: SourceUrlImportResult, source_key: str, field_name: str) -> None:
     stats = result.source_stats.setdefault(source_key, Counter())
     stats[field_name] += 1
-
-
-def _source_from_path(path: Path) -> str:
-    text = path.name.casefold()
-    if "bestprice" in text:
-        return "bestprice"
-    if "skroutz" in text:
-        return "skroutz"
-    return "unknown"
 
 
 def _looks_composite_model(value: str) -> bool:
