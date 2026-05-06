@@ -11,16 +11,32 @@ Run this from the repository root for normal Codex prompts and local pre-commit
 checks:
 
 ```powershell
+.\scripts\check\hygiene.ps1
 .\scripts\test\fast.ps1
 ```
 
+`hygiene.ps1` checks unsafe tracked files, accidental app submodules, contract
+mirrors, generated web API types when web dependencies exist, and whitespace.
 `fast.ps1` runs Product Factory fast tests, Ecommerce API fast tests, web fast
-tests, and mirrored OpenAPI contract checks in sequence. It returns nonzero on
-the first failed required check.
+tests, and mirrored OpenAPI contract checks in sequence. Both return nonzero on
+failed required checks.
+
+For an aggregate local check, run:
+
+```powershell
+.\scripts\check\all.ps1
+```
+
+It runs hygiene, contracts, generated web API type checks when
+`apps/web/node_modules` exists, and fast tests when backend and web dependencies
+exist.
 
 ## App Commands
 
 ```powershell
+.\scripts\check\hygiene.ps1
+.\scripts\check\hygiene.ps1 -Staged
+.\scripts\check\all.ps1
 .\scripts\test\product-factory-api.ps1
 .\scripts\test\ecommerce-api.ps1
 .\scripts\test\web.ps1

@@ -251,6 +251,18 @@ can still be running while DB-backed workflows report not ready. Check
 
 ## Test Commands
 
+Run hygiene checks before committing:
+
+```powershell
+.\scripts\check\hygiene.ps1
+```
+
+To check only staged file paths and staged whitespace:
+
+```powershell
+.\scripts\check\hygiene.ps1 -Staged
+```
+
 The default Codex-safe test command is:
 
 ```powershell
@@ -264,6 +276,8 @@ Run app-specific tests through the root scripts:
 .\scripts\test\ecommerce-api.ps1
 .\scripts\test\web.ps1
 .\scripts\test\fast.ps1
+.\scripts\check\hygiene.ps1
+.\scripts\check\all.ps1
 .\scripts\contracts\check.ps1
 .\scripts\contracts\check-web-types.ps1
 ```
@@ -271,6 +285,11 @@ Run app-specific tests through the root scripts:
 The test scripts use verbose output. They should not run live external scraping
 tests by default. See [Testing Strategy](docs/runbooks/testing-strategy.md) for
 the category definitions and fast-suite rules.
+
+Future Codex prompts should run `.\scripts\check\hygiene.ps1` and
+`.\scripts\test\fast.ps1` when dependencies are available. The aggregate
+`.\scripts\check\all.ps1` runs hygiene, contracts, generated type checks when
+web dependencies exist, and fast tests when backend and web dependencies exist.
 
 ## Contract And Generated Type Commands
 
@@ -331,6 +350,9 @@ they are committed contract artifacts, not runtime outputs.
 - Use `.env.example` files only as safe templates.
 - Keep real local credentials in private environment variables or private
   ignored `.env` files.
+- Run `.\scripts\check\hygiene.ps1` to catch unsafe tracked files, accidental
+  app submodules, stale contract mirrors, stale generated web API types, and
+  whitespace errors.
 
 ## Architecture And Runbooks
 

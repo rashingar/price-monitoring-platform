@@ -49,6 +49,26 @@ What they do:
 The scripts do not create a unified Python lockfile, do not install unrelated
 dev tools, and do not commit `.venv` or `node_modules`.
 
+## Hygiene Checks
+
+Before committing setup or startup changes, run:
+
+```powershell
+.\scripts\check\hygiene.ps1
+```
+
+For a staged-only pre-commit path and whitespace check:
+
+```powershell
+.\scripts\check\hygiene.ps1 -Staged
+```
+
+The hygiene script checks for accidental app gitlinks/submodules, nested `.git`
+entries under `apps`, unsafe tracked files such as `.env`, `.secrets`, `.venv`,
+`node_modules`, `work`, `output`, `products`, DB dumps/backups, raw provider
+HTML captures, stale contract mirrors, stale generated web API types when
+`apps/web/node_modules` exists, and `git diff --check` whitespace errors.
+
 ## Start Services
 
 Use three separate PowerShell terminals from the repository root.
