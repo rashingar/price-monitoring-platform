@@ -147,18 +147,19 @@ For staged-only path and whitespace checks:
 .\scripts\check\hygiene.ps1 -Staged
 ```
 
-Operator broad fast verification:
+Codex-safe aggregate fast verification:
 
 ```powershell
 .\scripts\test\fast.ps1
 ```
 
-`scripts\test\fast.ps1` is the human/operator broad fast verification command.
-Codex prompts should prefer targeted app checks relevant to changed files and
-keep automated checks under 2 minutes. Use
+`scripts\test\fast.ps1` delegates to Product Factory fast, Ecommerce fast, web
+fast, and contract mirror checks. It is Codex-safe because delegated app scripts
+exclude runtime, external, e2e, legacy, and PostgreSQL-required tests. Codex
+prompts should still prefer targeted app checks relevant to changed files. Use
 `.\scripts\test\codex-product-factory.ps1` for Product Factory-only backend
 changes and `.\scripts\test\codex-ecommerce.ps1` for Ecommerce-only backend
-changes. Broader checks are manual unless explicitly requested.
+changes. Full suites are manual unless explicitly requested.
 
 App-specific and contract checks:
 
@@ -169,15 +170,21 @@ App-specific and contract checks:
 .\scripts\test\product-factory-golden.ps1
 .\scripts\test\ecommerce-runtime.ps1
 .\scripts\test\ecommerce-golden.ps1
+.\scripts\test\ecommerce-db-contract.ps1
+.\scripts\test\ecommerce-db-integration.ps1
+.\scripts\test\ecommerce-postgres.ps1
 .\scripts\test\web.ps1
 .\scripts\contracts\check.ps1
 .\scripts\contracts\check-web-types.ps1
 .\scripts\check\all.ps1
 ```
 
-The test scripts use verbose output and exclude live external, e2e, slow,
-legacy, and runtime tests from the default fast path. Runtime tests are opt-in;
-golden tests are deterministic fixture regressions. See
+The test scripts use verbose output so you can see whether a check is hanging or
+simply taking longer. Default fast paths exclude live external, e2e, slow,
+legacy, runtime, and PostgreSQL-required tests. Runtime tests are opt-in; golden
+tests are deterministic fixture regressions. Ecommerce DB tests are split into
+`db_contract`, `db_integration`, and `postgres_required`, and
+`postgres_required` tests are never part of default fast verification. See
 [Testing Strategy](docs/runbooks/testing-strategy.md).
 
 ## Contracts And Generated Web Types

@@ -5,9 +5,9 @@ broad verification from the default Codex verification policy. The goal is to
 keep routine Codex checks targeted, deterministic, local, and quick while
 preserving broader coverage for explicit operator use.
 
-## Operator Broad Verification
+## Codex-Safe Root Fast Verification
 
-Run this from the repository root for human/operator broad fast verification:
+Run this from the repository root for Codex-safe aggregate fast verification:
 
 ```powershell
 .\scripts\check\hygiene.ps1
@@ -17,8 +17,9 @@ Run this from the repository root for human/operator broad fast verification:
 `hygiene.ps1` checks unsafe tracked files, accidental app submodules, contract
 mirrors, generated web API types when web dependencies exist, and whitespace.
 `fast.ps1` runs Product Factory fast tests, Ecommerce API fast tests, web fast
-tests, and mirrored OpenAPI contract checks in sequence. Both return nonzero on
-failed required checks.
+tests, and mirrored OpenAPI contract checks in sequence. It is Codex-safe
+because delegated app scripts exclude runtime, external, e2e, legacy, and
+PostgreSQL-required checks. Both return nonzero on failed required checks.
 
 For an aggregate local check, run:
 
@@ -32,9 +33,9 @@ exist.
 
 ## Codex Default Verification
 
-For normal Codex prompts, run only small, targeted checks relevant to changed
-files and keep total automated check runtime under 2 minutes. When a prompt
-touches only one backend app, prefer that app's Codex entrypoint:
+For normal Codex prompts, run small, targeted checks relevant to changed files
+and keep total automated check runtime under 2 minutes when possible. When a
+prompt touches only one backend app, prefer that app's Codex entrypoint:
 
 ```powershell
 .\scripts\test\codex-product-factory.ps1
@@ -58,11 +59,10 @@ Use focused tests only when the changed files clearly map to them:
 - Run one relevant pytest file or test node for clearly mapped Python changes.
 - Run one relevant Vitest file for clearly mapped web changes.
 
-Do not run `.\scripts\test\fast.ps1` by default in Codex prompts. It is broad
-human/operator verification, not the default Codex command. If a prompt changes
-multiple apps or contracts and broader verification is useful, list the exact
-command under `Manual verification needed` unless the operator explicitly asks
-for that scope.
+Root `.\scripts\test\fast.ps1` is now a Codex-safe aggregate fast verification
+command. App-specific scripts are still preferred when the change touches only
+one app. Runtime, PostgreSQL-required, and full-suite selections remain manual
+unless explicitly requested.
 
 ## App Commands
 
@@ -78,6 +78,9 @@ for that scope.
 .\scripts\test\product-factory-golden.ps1
 .\scripts\test\ecommerce-runtime.ps1
 .\scripts\test\ecommerce-golden.ps1
+.\scripts\test\ecommerce-db-contract.ps1
+.\scripts\test\ecommerce-db-integration.ps1
+.\scripts\test\ecommerce-postgres.ps1
 .\scripts\test\web.ps1
 .\scripts\contracts\check.ps1
 .\scripts\contracts\check-web-types.ps1
@@ -102,6 +105,13 @@ that generated web API types are current with the mirrored OpenAPI contracts.
   capture runs, process termination, browser/server/database/LLM calls, capture
   runs, or broad service orchestration.
 - `golden`: deterministic frozen input/output fixture regression tests.
+- `db_contract`: safe local DB schema, repository, migration, or persistence
+  contract tests using local fakes, temp SQLite, or isolated temp storage.
+- `db_integration`: broader local database behavior that does not require a
+  running PostgreSQL service.
+- `postgres_required`: tests that require a real PostgreSQL service or
+  environment-specific PostgreSQL setup. These are never part of default fast
+  verification.
 - `slow`: intentionally slower tests.
 - `external`: tests requiring live websites, network, marketplace pages,
   external APIs, real browser downloads, credentials, or real services.
@@ -181,11 +191,28 @@ explicitly:
 .\scripts\test\ecommerce-golden.ps1
 ```
 
+Ecommerce DB tests are split by profile:
+
+```powershell
+.\scripts\test\ecommerce-db-contract.ps1
+.\scripts\test\ecommerce-db-integration.ps1
+.\scripts\test\ecommerce-postgres.ps1
+```
+
+`postgres_required` tests are never part of default fast verification.
+
 Future Codex prompts should follow the targeted policy in
-[Codex Default Verification](#codex-default-verification). Run
-`.\scripts\test\fast.ps1`, runtime, `slow`, `external`, `e2e`, `legacy`, or full
-suite selections only when the operator explicitly asks or the change needs
-that scope. Full suites are manual unless explicitly requested.
+[Codex Default Verification](#codex-default-verification). Run runtime, `slow`,
+`external`, `e2e`, `legacy`, PostgreSQL-required, or full suite selections only
+when the operator explicitly asks or the change needs that scope. Full suites
+are manual unless explicitly requested.
+
+Always run tests with verbose output so you can see whether a check is hanging
+or simply taking longer.
+
+The next planned cleanup is replacing broad Product Factory Skroutz e2e/golden
+tests with smaller parser, taxonomy, section extraction, deterministic
+render-row, and validation golden snapshots.
 
 ## Troubleshooting
 
