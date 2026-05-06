@@ -1,6 +1,21 @@
 # Product Factory Runtime Instructions
 
-This file governs runtime and operator-facing execution behavior for the current product product_factory.
+This file governs template-triggered runtime and operator-facing execution behavior for the current Product Factory app. Keep it active.
+
+## Command Policy
+
+- Run canonical operator and Codex commands from the repository root.
+- Use the root virtual environment interpreter: `.\.venv\Scripts\python.exe`.
+- Product Factory must be installed editable before direct module commands are used:
+  `.\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps`
+- The internal Python package is `product_factory`.
+- Do not use app-local virtual environments.
+- Do not use bare `python` for repo commands except for creating `.venv` as documented in the root README.
+- Do not use `py -3.13` as the canonical venv command.
+- Prefer root scripts:
+  - `.\scripts\dev\product-factory-api.ps1`
+  - `.\scripts\test\product-factory-api.ps1`
+  - `.\scripts\test\fast.ps1`
 
 ## Trigger
 
@@ -16,24 +31,24 @@ boxnow:
 price:
 ```
 
-treat it as a request to run the full product_factory.
+treat it as a request to run the full Product Factory workflow.
 
 ## End-To-End Flow
 
-0. Use the repo virtual environment for every pipeline and test command.
-   - On this Windows repo, the interpreter is `..\.venv\Scripts\python.exe` when running from `apps/product-factory-api/src`.
-   - From repo root, use `.venv\Scripts\python.exe`.
-   - Do not run pipeline commands, pytest, helper scripts, or dependency checks with bare `python`, global Python, `py`, or any interpreter outside `.venv`.
-   - If `.venv` is missing or broken, stop and repair the repo environment before running the pipeline or tests.
 1. Parse the template fields exactly as provided.
-2. If `url` is a currently supported product URL recognized by the runtime source-detection layer, run:
-   `..\.venv\Scripts\python.exe -m product_factory.workflow prepare --model {model} --url "{url}" --photos {photos} --sections {sections} --skroutz-status {skroutz_status} --boxnow {boxnow} --price {price}`
-   Run from `apps/product-factory-api/src`.
-   Execution ordering is strict:
-   - never start `render` before `prepare` has finished successfully
-   - never run `prepare` and `render` concurrently for the same model
-   - after `prepare`, verify the updated scrape artifacts exist on disk before starting `render`
-3. Read:
+2. Confirm `url` is supported by the runtime source-detection layer.
+3. From repo root, run prepare:
+
+```powershell
+.\.venv\Scripts\python.exe -m product_factory.workflow prepare --model {model} --url "{url}" --photos {photos} --sections {sections} --skroutz-status {skroutz_status} --boxnow {boxnow} --price {price}
+```
+
+Execution ordering is strict:
+- never start `render` before `prepare` has finished successfully
+- never run `prepare` and `render` concurrently for the same model
+- after `prepare`, verify the updated scrape artifacts exist before starting `render`
+
+4. Inspect these generated files:
    - `work/{model}/llm/task_manifest.json`
    - `work/{model}/llm/intro_text.context.json`
    - `work/{model}/llm/intro_text.prompt.txt`
@@ -41,76 +56,83 @@ treat it as a request to run the full product_factory.
    - `work/{model}/llm/seo_meta.prompt.txt`
    - `work/{model}/scrape/{model}.source.json`
    - `work/{model}/scrape/{model}.report.json`
-4. The assistant is the LLM stage in this workflow.
-5. Author these task outputs:
+5. The assistant is the LLM stage. Write:
    - `work/{model}/llm/intro_text.output.txt`
    - `work/{model}/llm/seo_meta.output.json`
-   Encoding rule:
-   - both files must be UTF-8 text without BOM
-   - do not write Greek LLM output through shell redirection, PowerShell inline heredocs, or any codepage-dependent console path
-   - when editing manually in this runtime, use repo-native UTF-8 file writes or `apply_patch`
-6. The assistant must write only the LLM-owned fields:
-   - `product.meta_description`
-   - `product.meta_keywords`
-   - `intro_text`
-7. Do not invent deterministic fields already owned by local code:
-   - brand
-   - mpn
-   - manufacturer
-   - name
-   - meta_title
-   - seo_keyword
-   - category serialization
-   - image paths
-   - characteristics HTML
-   - CTA block text/layout
-   - presentation section titles
-   - presentation section body copy
-   - description HTML wrappers/classes/styles
-   - final CSV structure
-8. Output rules:
-   - `intro_text.output.txt` must contain Greek text with only optional safe inline `<strong>...</strong>` emphasis
-   - exactly one paragraph
-   - 80-180 words
-   - no HTML except `<strong>` and `</strong>` around important verified facts
-   - no bullets
-   - no CTA language
-   - existing generated products/artifacts are not migrated; only newly authored or re-authored intro_text artifacts use emphasis
-   - `seo_meta.output.json` must contain only:
-     - `product.meta_description`
-     - `product.meta_keywords`
-   - `product.meta_keywords` must be a JSON array, not CSV text
-9. Deterministic render ownership:
-   - presentation sections are rendered from cleaned deterministic source sections
-   - source wording is preserved after sanitation
-   - source titles are kept when present
-   - no section-copy generation belongs to the LLM
-10. After both task outputs are written, run:
-   `..\.venv\Scripts\python.exe -m product_factory.workflow render --model {model}`
-   Run from `apps/product-factory-api/src`.
-   Execution ordering is strict:
-   - never start `render` before `prepare` has finished successfully
-   - never run `prepare` and `render` concurrently for the same model
-   - after `prepare`, verify the updated scrape artifacts exist on disk before starting `render`
-11. After a successful render publish to `products/{model}.csv`, the runtime must start the repo-native OpenCart publish phase by invoking:
-   `tools/run_opencart_pipeline.sh`
-   Run from repo root with `CURRENT_JOB_PRODUCT_FILE` set to the exact `products/{model}.csv` path created in the current job.
-12. If validation fails, debug the pipeline until the failure cause is understood then fixed and rerun until the output is complete.
-   - if render fails with an LLM encoding error, treat it as a corrupted handoff artifact and rewrite the LLM output files as clean UTF-8 before rerunning
-13. If the OpenCart publish phase warns or fails after render succeeds, keep the successful render outputs, report the publish status/stage/message clearly, and debug the publish phase separately.
+6. Write both LLM outputs as UTF-8 without BOM. Do not write Greek output through shell redirection, PowerShell inline heredocs, or codepage-dependent console paths.
+7. From repo root, run render:
+
+```powershell
+.\.venv\Scripts\python.exe -m product_factory.workflow render --model {model}
+```
+
+8. After render publishes `products/{model}.csv`, run the OpenCart publish phase separately from repo root:
+
+```powershell
+$env:CURRENT_JOB_PRODUCT_FILE = "apps/product-factory-api/products/{model}.csv"
+bash apps/product-factory-api/tools/run_opencart_pipeline.sh {model}
+```
+
+`CURRENT_JOB_PRODUCT_FILE` must point to the `products/{model}.csv` created by the current job.
+
+9. If validation fails, debug the Product Factory workflow until the cause is understood, fix it generically, and rerun.
+10. If OpenCart publish warns or fails after render succeeds, keep the successful render outputs, report publish status/stage/message clearly, and debug publish separately.
+
+## Ownership Contract
+
+The LLM stage owns only:
+- `intro_text`
+- `product.meta_description`
+- `product.meta_keywords`
+
+Deterministic code owns:
+- brand
+- mpn
+- manufacturer
+- name
+- meta_title
+- seo_keyword
+- taxonomy/category serialization
+- image paths
+- characteristics HTML
+- CTA block text and layout
+- presentation section titles and body copy
+- description HTML wrappers/classes/styles
+- final CSV structure
+
+## LLM Output Rules
+
+- `intro_text.output.txt` must contain Greek text with only optional safe inline `<strong>...</strong>` emphasis.
+- Use exactly one paragraph.
+- Use 80-180 words.
+- Use no HTML except `<strong>` and `</strong>` around important verified facts.
+- Use no bullets and no CTA language.
+- Existing generated products/artifacts are not migrated; only newly authored or re-authored intro text artifacts use emphasis.
+- `seo_meta.output.json` must contain only `product.meta_description` and `product.meta_keywords`.
+- `product.meta_keywords` must be a JSON array, not CSV text.
+
+## Path Semantics
+
+Product Factory runtime artifacts are app-owned and generated under:
+- `work/{model}/scrape/`
+- `work/{model}/llm/`
+- `work/{model}/candidate/`
+- `products/{model}.csv`
+
+These generated folders/files are ignored by Git and must not be committed.
 
 ## Validation Expectations
 
 - Treat `work/{model}/candidate/{model}.validation.json` as the final machine-readable health report.
-- Treat `products/{model}.csv` as the final deliverable path for the user, not as a baseline for comparison.
+- Treat `products/{model}.csv` as the final deliverable path, not as a comparison baseline.
 - Treat `work/{model}/publish.run.json` as the publish-phase status report.
-- Treat `work/{model}/upload.opencart.json` and `work/{model}/import.opencart.json` as the stage reports when the post-render publish phase runs.
+- Treat `work/{model}/upload.opencart.json` and `work/{model}/import.opencart.json` as OpenCart stage reports.
 - Do not invalidate a successful render result because the post-render publish phase warned or failed.
-- Prefer fixing pipeline issues over hand-editing generated output files.
+- Prefer fixing Product Factory code over hand-editing generated output files.
 
 ## Completion Message
 
-After the pipeline completes successfully, reply in chat with this fixed completion template first, then add any extra notes if needed:
+After the workflow completes successfully, reply with this fixed completion template first, then add any extra notes if needed:
 
 - `Warnings`
 - `Unresolved Source-Null Fields`
@@ -126,30 +148,21 @@ After the pipeline completes successfully, reply in chat with this fixed complet
   - `product_url`
 
 Rules for the completion message:
-
-- The `Category Filters` section must list only the category filters defined by `resources/mappings/filter_map.json` for the resolved taxonomy path.
+- `Category Filters` lists only filters defined by `resources/mappings/filter_map.json` for the resolved taxonomy path.
 - Do not dump the full characteristics table in place of category filters.
-- Resolve each category filter value from the scraped source/spec data when possible.
-- If a category filter exists in `resources/mappings/filter_map.json` but no source value exists, show it as `-`.
-- The fixed completion template must always appear first in the final chat response for template-triggered pipeline runs.
+- Resolve each category filter value from scraped source/spec data when possible.
+- If a category filter exists but no source value exists, show `-`.
+- The fixed completion template must always appear first for template-triggered runs.
 
 ## Source Scope
 
-- The current runtime accepts product URLs supported by the repository's source-detection layer.
-- At the time of this control-doc refresh, that includes:
-  - Electronet product URLs
-  - Skroutz product URLs
-  - supported manufacturer product URLs already implemented in the codebase
+- The runtime accepts product URLs supported by the repository's source-detection layer.
+- Current supported scope includes Electronet product URLs, Skroutz product URLs, and supported manufacturer product URLs implemented in the codebase.
 - Do not invent unsupported provider behavior.
 
-## Working Rules
+## Test Guidance
 
-- All commands that execute Python code must use the repo `.venv` interpreter. From `apps/product-factory-api/src`, use `..\.venv\Scripts\python.exe -m ...`; from repo root, use `.venv\Scripts\python.exe -m ...`.
-- Tests must be run with the repo venv, for example from `apps/product-factory-api/src`: `..\.venv\Scripts\python.exe -m pytest -q`.
-- Never use bare `python -m pytest`, `python -m product_factory.workflow`, `py -m ...`, or global interpreters for this repo.
-- Keep all runtime artifacts in `work/{model}/`.
-- Keep source scraper artifacts in `work/{model}/scrape/`.
-- Keep task-specific LLM artifacts in `work/{model}/llm/`.
-- Keep rendered outputs in `work/{model}/candidate/`.
-- When the user asks for testing or debugging on a sample model, rerun the actual workflow instead of reasoning from stale files.
-- If a bug appears on one product, fix it generically in the pipeline and verify against the committed regression samples under `src/product_factory/tests/fixtures/...`.
+- Run future Product Factory checks from repo root.
+- Use `.\scripts\test\product-factory-api.ps1` for Product Factory changes.
+- Use `.\scripts\test\fast.ps1` for broad fast coverage when dependencies are installed.
+- If dependencies are missing, report the setup command from the root README instead of installing automatically unless the user explicitly asks.

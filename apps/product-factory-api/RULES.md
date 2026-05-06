@@ -1,7 +1,21 @@
 # Product Factory Runtime Input Rules
 
-This file defines runtime input validation rules for the template-triggered workflow.
+This file defines active input validation and workflow rules for the template-triggered Product Factory runtime.
 
+## Command Policy
+
+- Run canonical operator and Codex commands from the repository root.
+- Use the root virtual environment interpreter: `.\.venv\Scripts\python.exe`.
+- Product Factory must be installed editable:
+  `.\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps`
+- The internal Python package is `product_factory`.
+- Do not use app-local virtual environments.
+- Do not use bare `python` for repo commands except for creating `.venv` as documented in the root README.
+- Do not use `py -3.13` as the canonical venv command.
+- Prefer root scripts:
+  - `.\scripts\dev\product-factory-api.ps1`
+  - `.\scripts\test\product-factory-api.ps1`
+  - `.\scripts\test\fast.ps1`
 
 ## Trigger
 
@@ -19,73 +33,65 @@ price:
 
 Rules:
 - `model` must be a confirmed 6-digit code.
-- `url` must be a currently supported product URL recognized by the runtime source-detection layer.
+- `url` must be supported by the runtime source-detection layer.
 - `photos` defaults to `1`.
 - `sections` defaults to `0`.
-- `skroutz_status` and `boxnow` boolean rule, defaults to `0`.
+- `skroutz_status` defaults to `0`.
+- `boxnow` defaults to `0`.
 - `price` defaults to `0`.
 
 If `model` is missing or not exactly 6 digits, fail with:
 `Generation failed, provide 6-digit model`
 
-Supported runtime URL scope is determined by the code-supported source-detection layer, not by a hardcoded single-source assumption in this file.
-
 ## Default Flow
 
-All Python commands for this repo must use the checked-in repo virtual environment.
+1. From repo root, run prepare:
 
-Windows command rules:
-- From `apps/product-factory-api/src`, use `..\.venv\Scripts\python.exe -m ...`.
-- From repo root, use `.venv\Scripts\python.exe -m ...`.
-- Never use bare `python`, `py`, global Python, or any interpreter outside `.venv` for pipeline runs, tests, helper scripts, or dependency checks.
-- If `.venv` is missing or broken, stop and repair the repo environment before running the pipeline or tests.
+```powershell
+.\.venv\Scripts\python.exe -m product_factory.workflow prepare --model {model} --url "{url}" --photos {photos} --sections {sections} --skroutz-status {skroutz_status} --boxnow {boxnow} --price {price}
+```
 
-1. Run `..\.venv\Scripts\python.exe -m product_factory.workflow prepare ...` from `apps/product-factory-api/src`.
-2. Read:
+2. Inspect:
    - `work/{model}/llm/task_manifest.json`
    - `work/{model}/llm/intro_text.context.json`
    - `work/{model}/llm/intro_text.prompt.txt`
    - `work/{model}/llm/seo_meta.context.json`
    - `work/{model}/llm/seo_meta.prompt.txt`
+   - `work/{model}/scrape/{model}.source.json`
+   - `work/{model}/scrape/{model}.report.json`
 3. Produce:
    - `work/{model}/llm/intro_text.output.txt`
    - `work/{model}/llm/seo_meta.output.json`
-4. Run `..\.venv\Scripts\python.exe -m product_factory.workflow render --model {model}` from `apps/product-factory-api/src`.
-5. When render publishes `products/{model}.csv`, the runtime must then start a separate OpenCart publish phase through `tools/run_opencart_pipeline.sh` from repo root with `CURRENT_JOB_PRODUCT_FILE` set to that exact published CSV path.
-<!--
-6. Inspect:
-   - `work/{model}/candidate/{model}.validation.json`
-   - `work/{model}/publish.run.json`
-   - `work/{model}/upload.opencart.json`
-   - `work/{model}/import.opencart.json`
--->
-<!--
-## Source Of Truth
+4. From repo root, run render:
 
-Use these local files as runtime sources:
-- `resources/mappings/catalog_taxonomy.json`
-- `resources/schemas/electronet_schema_library.json`
-- `resources/mappings/filter_map.json`
-- `resources/templates/product_import_template.csv`
-- `resources/templates/TEMPLATE_presentation.html`
-- `resources/prompts/master_prompt+.txt`
-- `resources/schemas/compact_response.schema.json`
--->
-## Local Responsibilities
+```powershell
+.\.venv\Scripts\python.exe -m product_factory.workflow render --model {model}
+```
 
-Local code owns:
-- category serialization
-- image path generation
-- CTA URL insertion
-- technical specs HTML rendering
-- final description wrapper HTML
+5. When render publishes `products/{model}.csv`, start a separate OpenCart publish phase from repo root:
+
+```powershell
+$env:CURRENT_JOB_PRODUCT_FILE = "apps/product-factory-api/products/{model}.csv"
+bash apps/product-factory-api/tools/run_opencart_pipeline.sh {model}
+```
+
+`CURRENT_JOB_PRODUCT_FILE` must point to the current job's published CSV.
+
+## Ownership
+
+Local deterministic code owns:
+- brand
+- mpn
+- manufacturer
+- name
+- meta_title
+- seo_keyword
+- taxonomy/category serialization
+- image paths
+- characteristics HTML
+- CTA block text and layout
 - final CSV writing
-- deterministic brand / mpn / manufacturer / name
-- deterministic meta title
-- deterministic SEO URL
-- validation and baseline comparison
-
-## LLM Responsibilities
+- validation and publish reporting
 
 The LLM stage writes only:
 - `intro_text`
@@ -94,7 +100,7 @@ The LLM stage writes only:
 
 ## Outputs
 
-Prepare stage writes:
+Prepare writes:
 - `work/{model}/scrape/{model}.raw.html`
 - `work/{model}/scrape/{model}.source.json`
 - `work/{model}/scrape/{model}.normalized.json`
@@ -105,7 +111,7 @@ Prepare stage writes:
 - `work/{model}/llm/seo_meta.context.json`
 - `work/{model}/llm/seo_meta.prompt.txt`
 
-Render stage writes:
+Render writes:
 - `work/{model}/candidate/{model}.csv`
 - `work/{model}/candidate/{model}.normalized.json`
 - `work/{model}/candidate/{model}.validation.json`
@@ -113,13 +119,19 @@ Render stage writes:
 - `work/{model}/candidate/characteristics.html`
 - `products/{model}.csv` when validation passes
 - `work/{model}/publish.run.json` when the post-render publish phase runs
-- `work/{model}/upload.opencart.json` when the publish phase reaches image upload
-- `work/{model}/import.opencart.json` when the publish phase reaches CSV import
+- `work/{model}/upload.opencart.json` when OpenCart image upload runs
+- `work/{model}/import.opencart.json` when OpenCart CSV import runs
+
+Generated runtime folders are ignored by Git and must not be committed.
 
 ## Validation
 
 - `work/{model}/candidate/{model}.validation.json` is the final machine-readable health report.
-- Render success is owned only by render; the post-render publish phase reports its own status and does not flip render to failed.
-- Prefer fixing pipeline behavior instead of patching generated files by hand.
+- Render success is owned by render; OpenCart publish reports its own status and does not flip render to failed.
+- Prefer fixing Product Factory behavior instead of patching generated files by hand.
 
+## Test Guidance
 
+- Run `.\scripts\test\product-factory-api.ps1` for Product Factory changes.
+- Run `.\scripts\test\fast.ps1` for broad fast coverage when dependencies are installed.
+- If dependencies are missing, report the root README setup command and stop.
