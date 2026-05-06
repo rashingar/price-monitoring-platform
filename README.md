@@ -56,6 +56,10 @@ Start the apps in separate PowerShell terminals:
 .\scripts\dev\web.ps1
 ```
 
+Open the web UI at `http://127.0.0.1:5173`. Backend health endpoints are
+`http://127.0.0.1:8000/api/health` for Product Factory and
+`http://127.0.0.1:8001/api/health` for Ecommerce API.
+
 ## Quick Start Checklist
 
 1. Create the root `.venv`.
@@ -153,15 +157,44 @@ For a detailed backup, local database rename, and fresh-create runbook, see
 
 ## Start Commands
 
-Run each app in a separate PowerShell terminal:
+Run the local startup diagnostic before starting long-running servers:
 
 ```powershell
+.\scripts\dev\check-local.ps1
+```
+
+Then run each app in a separate PowerShell terminal:
+
+```powershell
+# Terminal 1: Product Factory API
 .\scripts\dev\product-factory-api.ps1
+
+# Terminal 2: Ecommerce API
 .\scripts\dev\ecommerce-api.ps1
+
+# Terminal 3: Web
 .\scripts\dev\web.ps1
 ```
 
-The backend scripts use the root `.venv`. The web script uses `apps/web`.
+The backend scripts use the root `.venv`. Product Factory starts on
+`http://127.0.0.1:8000` and serves health at
+`http://127.0.0.1:8000/api/health`. Ecommerce API starts on
+`http://127.0.0.1:8001` and serves health at
+`http://127.0.0.1:8001/api/health`. The web script runs from `apps/web`,
+requires `apps/web/node_modules`, and starts Vite on
+`http://127.0.0.1:5173`.
+
+The web dev proxy keeps browser routes stable:
+
+- `/api` proxies to Product Factory at `http://127.0.0.1:8000`.
+- `/commerce-api` proxies to Ecommerce API at `http://127.0.0.1:8001` and
+  rewrites to backend `/api` routes.
+
+Ecommerce API health is separate from database readiness. If
+`ECOMMERCE_DATABASE_URL` is missing, PostgreSQL is stopped, credentials are
+wrong, migrations are missing, or catalog data has not been imported, the API
+can still be running while DB-backed workflows report not ready. Check
+`http://127.0.0.1:8001/api/price-monitoring/db/status` for setup hints.
 
 ## Test Commands
 
@@ -250,6 +283,7 @@ they are committed contract artifacts, not runtime outputs.
 
 - [Target Architecture](docs/architecture/target-architecture.md)
 - [Testing Strategy](docs/runbooks/testing-strategy.md)
+- [Operator Startup](docs/runbooks/operator-startup.md)
 - [Monorepo Migration Runbook](docs/runbooks/monorepo-migration.md)
 - [Ecommerce PostgreSQL Local Setup](docs/runbooks/ecommerce-postgresql-local.md)
 - [App Naming and Domain Boundaries](docs/decisions/0002-app-naming-and-domain-boundaries.md)

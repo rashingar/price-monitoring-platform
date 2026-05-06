@@ -10,5 +10,8 @@ if (-not (Test-Path -LiteralPath $nodeModules)) {
 }
 
 Set-Location $appRoot
+Write-Host "Starting web dev server on http://127.0.0.1:5173"
+Write-Host "/api proxies to Product Factory API at http://127.0.0.1:8000"
+Write-Host "/commerce-api proxies to Ecommerce API at http://127.0.0.1:8001"
 npm run dev
 exit $LASTEXITCODE

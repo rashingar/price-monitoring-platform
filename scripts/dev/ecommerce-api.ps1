@@ -21,6 +21,30 @@ if (-not (Test-Path -LiteralPath $python)) {
     exit 1
 }
 
+$checkCode = @'
+from importlib import metadata
+import sys
+
+try:
+    metadata.distribution('ecommerce')
+except metadata.PackageNotFoundError:
+    print('Ecommerce API editable install is missing: distribution ecommerce is not installed.', file=sys.stderr)
+    sys.exit(10)
+
+try:
+    import ecommerce
+    import ecommerce.dev.start
+except ImportError as exc:
+    print(f'Ecommerce API import check failed. Install dependencies into the root .venv and reinstall the editable project. Import error: {exc}', file=sys.stderr)
+    sys.exit(11)
+'@
+
+& $python -c $checkCode
+if ($LASTEXITCODE -ne 0) {
+    Write-EcommerceSetupInstructions
+    exit $LASTEXITCODE
+}
+
 Set-Location $appRoot
 
 if ($env:PYTHONPATH) {
@@ -29,5 +53,13 @@ if ($env:PYTHONPATH) {
     $env:PYTHONPATH = "$srcRoot;$appRoot"
 }
 
-& $python -m ecommerce.dev.start
+if (-not $env:ECOMMERCE_DATABASE_URL) {
+    Write-Host "ECOMMERCE_DATABASE_URL is not set. The API can still start and /api/health should respond."
+    Write-Host "DB-backed Ecommerce workflows will report not ready until PostgreSQL is configured, migrations are applied, and catalog data is imported."
+    Write-Host "Set ECOMMERCE_DATABASE_URL, then run alembic upgrade head from apps\ecommerce-api."
+} else {
+    Write-Host "ECOMMERCE_DATABASE_URL is set. If PostgreSQL is stopped, credentials are wrong, or migrations are missing, the API should still start and /api/price-monitoring/db/status will show setup hints."
+}
+
+& $python -m ecommerce.dev.start --host 127.0.0.1 --port 8001 --reload
 exit $LASTEXITCODE

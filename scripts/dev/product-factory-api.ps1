@@ -26,30 +26,30 @@ from importlib import metadata
 import sys
 
 try:
-    dist = metadata.distribution("product-factory")
+    dist = metadata.distribution('product-factory')
 except metadata.PackageNotFoundError:
-    print("Product Factory editable install is missing: distribution 'product-factory' is not installed.", file=sys.stderr)
+    print('Product Factory editable install is missing: distribution product-factory is not installed.', file=sys.stderr)
     sys.exit(10)
 
 try:
     import pipeline
     import pipeline.dev.start
 except ImportError as exc:
-    print(f"Product Factory import check failed: {exc}", file=sys.stderr)
+    print(f'Product Factory import check failed. Install dependencies into the root .venv and reinstall the editable project. Import error: {exc}', file=sys.stderr)
     sys.exit(11)
 
 matches = [
     entry_point
     for entry_point in dist.entry_points
-    if entry_point.group == "console_scripts" and entry_point.name == "product-factory-api"
+    if entry_point.group == 'console_scripts' and entry_point.name == 'product-factory-api'
 ]
 if not matches:
-    print("Product Factory console script metadata is missing: product-factory-api.", file=sys.stderr)
+    print('Product Factory console script metadata is missing: product-factory-api.', file=sys.stderr)
     sys.exit(12)
-if matches[0].value != "pipeline.dev.start:main":
+if matches[0].value != 'pipeline.dev.start:main':
     print(
-        "Product Factory console script target is unexpected: "
-        f"{matches[0].value!r}; expected 'pipeline.dev.start:main'.",
+        'Product Factory console script target is unexpected: '
+        f'{matches[0].value!r}; expected pipeline.dev.start:main.',
         file=sys.stderr,
     )
     sys.exit(13)
