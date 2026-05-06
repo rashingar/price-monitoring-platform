@@ -15,7 +15,14 @@ The TypeScript contract references are:
 - Commerce types: `src/api/commerceTypes.ts`
 - Product Factory client: `src/api/client.ts`
 - Commerce client: `src/api/commerceClient.ts`
+- Generated OpenAPI type scaffolding: `src/api/generated`
 - Fixture contract notes: `docs/contracts/ui-backend-contract-fixtures.md`
+
+The generated files in `src/api/generated` are refreshed from mirrored OpenAPI
+contracts with `.\scripts\contracts\generate-web-types.ps1` from the repository
+root and checked with `.\scripts\contracts\check-web-types.ps1`. They are
+committed source-facing contract artifacts and should not be manually edited.
+The manual clients listed above remain the runtime clients for now.
 
 ## Product Factory API
 

@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "test:fast": "vitest run src/test/contracts src/test/smoke",
     "test:fixture-contracts": "node scripts/check-fixture-contracts.mjs",
+    "generate:api-types": "node scripts/generate-api-types.mjs",
+    "check:api-types": "node scripts/check-api-types.mjs",
     "test:contracts": "vitest run src/test/contracts",
     "test:smoke": "vitest run src/test/smoke"
   },
@@ -26,6 +28,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^6.0.1",
     "jsdom": "^27.3.0",
+    "openapi-typescript": "^6.7.6",
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
     "vitest": "^4.0.15"

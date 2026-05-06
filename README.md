@@ -179,11 +179,33 @@ Run app-specific tests through the root scripts:
 .\scripts\test\web.ps1
 .\scripts\test\fast.ps1
 .\scripts\contracts\check.ps1
+.\scripts\contracts\check-web-types.ps1
 ```
 
 The test scripts use verbose output. They should not run live external scraping
 tests by default. See [Testing Strategy](docs/runbooks/testing-strategy.md) for
 the category definitions and fast-suite rules.
+
+## Contract And Generated Type Commands
+
+Mirrored OpenAPI contracts live under `packages/contracts` and are checked
+against app-local snapshots with:
+
+```powershell
+.\scripts\contracts\check.ps1
+```
+
+Web API type scaffolding is generated from those mirrors into
+`apps/web/src/api/generated`:
+
+```powershell
+.\scripts\contracts\generate-web-types.ps1
+.\scripts\contracts\check-web-types.ps1
+```
+
+The generated web API type files are committed source-facing contract artifacts
+and should not be edited by hand. The existing manual web clients remain the
+runtime source of truth for now.
 
 ## Local URLs
 
@@ -209,6 +231,8 @@ Generated runtime outputs stay out of Git:
 - `.pytest_cache/`
 
 Ecommerce generated outputs use `output/ecommerce/...` by default.
+Generated web API types under `apps/web/src/api/generated` are an exception:
+they are committed contract artifacts, not runtime outputs.
 
 ## Safety Notes
 

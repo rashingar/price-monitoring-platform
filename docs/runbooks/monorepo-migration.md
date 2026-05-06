@@ -54,8 +54,12 @@ Status: completed in the current layout when both mirrored snapshots exist in
 - Mirror Product Factory OpenAPI snapshots.
 - Mirror Ecommerce OpenAPI snapshots.
 - Add contract fixture locations and update docs.
-- Do not introduce generated clients in this phase unless a separate decision
-  approves it.
+- Generated web API type scaffolding now lives under
+  `apps/web/src/api/generated` and is produced from the mirrored snapshots.
+  Refresh it with `scripts\contracts\generate-web-types.ps1` and check it with
+  `scripts\contracts\check-web-types.ps1`.
+- The existing manual web clients remain the runtime source of truth until a
+  separate migration intentionally adopts generated types.
 
 ## Phase 4: Path/Doc Cleanup
 
@@ -107,6 +111,8 @@ the current layout.
 - Verify backend API startup independently.
 - Verify web development startup against both backend API routes.
 - Verify contract snapshots and fixtures.
+- Verify generated web API types with
+  `.\scripts\contracts\check-web-types.ps1` after OpenAPI contract changes.
 - Record known gaps before refactors start.
 - Use [Ecommerce PostgreSQL Local Setup](ecommerce-postgresql-local.md) for
   local database backup, rename, and fresh setup steps.
@@ -118,7 +124,9 @@ the current layout.
 - Decide whether `product-factory-api` needs durable DB-backed job state.
 - Decide whether Product Factory DB state belongs in a separate schema or
   separate database.
-- Introduce generated API clients only after contract mirroring is stable.
+- Migrate manual web API client types toward generated API types incrementally.
+  Do not replace runtime fetch clients or browser routes as part of type-only
+  contract scaffolding.
 - Introduce durable workers/jobs only after ownership and operational model are
   documented.
 - Consider gateway or browser route redesign only as an intentional follow-up.

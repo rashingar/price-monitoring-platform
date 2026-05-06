@@ -1,3 +1,7 @@
+param(
+    [switch]$SkipWebTypes
+)
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
@@ -35,4 +39,19 @@ foreach ($mirror in $mirrors) {
 }
 
 Write-Host "Mirrored OpenAPI contracts are present and match app-local snapshots in packages\contracts."
+
+if (-not $SkipWebTypes) {
+    $webTypesCheck = Join-Path $PSScriptRoot "check-web-types.ps1"
+    if (-not (Test-Path -LiteralPath $webTypesCheck)) {
+        Write-Error "Missing generated web API type check script: $webTypesCheck"
+        exit 1
+    }
+
+    & $webTypesCheck -SkipMirrorCheck
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Generated web API type check failed with exit code $LASTEXITCODE"
+        exit $LASTEXITCODE
+    }
+}
+
 exit 0

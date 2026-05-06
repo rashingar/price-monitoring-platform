@@ -25,12 +25,14 @@ the first failed required check.
 .\scripts\test\ecommerce-api.ps1
 .\scripts\test\web.ps1
 .\scripts\contracts\check.ps1
+.\scripts\contracts\check-web-types.ps1
 ```
 
 The Python scripts use the root `.venv\Scripts\python.exe`; they do not use
 app-local virtual environments and do not install dependencies automatically.
 The web script runs from `apps\web` and expects `node_modules` to already exist.
-All test scripts use verbose output.
+All test scripts use verbose output. `scripts\contracts\check.ps1` also checks
+that generated web API types are current with the mirrored OpenAPI contracts.
 
 ## Standard Categories
 
@@ -83,10 +85,15 @@ Web uses package scripts under `apps/web/package.json`:
 npm run test:fast
 npm run test:contracts
 npm run test:smoke
+npm run check:api-types
 ```
 
 The web fast suite is limited to mocked contract and smoke tests under
 `apps/web/src/test/contracts` and `apps/web/src/test/smoke`.
+Generated web API types are refreshed with
+`.\scripts\contracts\generate-web-types.ps1` and checked with
+`.\scripts\contracts\check-web-types.ps1`. The generated files under
+`apps/web/src/api/generated` are committed and should not be edited by hand.
 
 ## Legacy Tests
 
