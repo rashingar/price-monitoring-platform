@@ -9,7 +9,7 @@ const platformNavItems = [
   { to: "/price-monitoring", label: "Price Monitoring" },
   { to: "/price-monitoring/alerts", label: "Price Alerts" },
   { to: "/vendor-sources", label: "Vendor Sources" },
-  { to: "/product-agent", label: "Product-Agent" },
+  { to: "/product-factory", label: "Product Factory" },
 ];
 
 const catalogNavItems = [
@@ -24,18 +24,18 @@ const vendorSourcesNavItems = [
   { to: "/vendor-sources/imports", label: "Imports" },
 ];
 
-const productAgentNavItems = [
-  { to: "/product-agent", label: "Pipeline" },
-  { to: "/product-agent/filters", label: "Filters Manager" },
+const productFactoryNavItems = [
+  { to: "/product-factory", label: "Pipeline" },
+  { to: "/product-factory/filters", label: "Filters Manager" },
   { to: "/prepare", label: "Prepare" },
   { to: "/render", label: "Render" },
   { to: "/publish", label: "Publish" },
   { to: "/jobs", label: "Jobs" },
 ];
 
-const productAgentPaths = new Set([
-  "/product-agent",
-  "/product-agent/filters",
+const productFactoryPaths = new Set([
+  "/product-factory",
+  "/product-factory/filters",
   "/pipeline",
   "/prepare",
   "/render",
@@ -51,9 +51,9 @@ const priceMonitoringNavItems = [
 
 export function AppShell() {
   const location = useLocation();
-  const isProductAgentSection =
-    productAgentPaths.has(location.pathname) ||
-    location.pathname.startsWith("/product-agent/") ||
+  const isProductFactorySection =
+    productFactoryPaths.has(location.pathname) ||
+    location.pathname.startsWith("/product-factory/") ||
     location.pathname.startsWith("/pipeline/") ||
     location.pathname.startsWith("/jobs/");
   const isPriceMonitoringSection = location.pathname.startsWith("/price-monitoring");
@@ -65,7 +65,7 @@ export function AppShell() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Local commerce operations</p>
-          <h1>Product Agent Platform</h1>
+          <h1>Product Factory Platform</h1>
         </div>
         <nav className="nav-links" aria-label="Primary navigation">
           {platformNavItems.map((item) => (
@@ -73,15 +73,15 @@ export function AppShell() {
               key={item.to}
               to={item.to}
               className={({ isActive }) => {
-                const isProductAgentActive =
-                  item.to === "/product-agent" && isProductAgentSection;
+                const isProductFactoryActive =
+                  item.to === "/product-factory" && isProductFactorySection;
                 const isPriceMonitoringActive =
                   item.to === "/price-monitoring" && isPriceMonitoringSection;
                 const isCatalogActive = item.to === "/catalog" && isCatalogSection;
                 const isVendorSourcesActive =
                   item.to === "/vendor-sources" && isVendorSourcesSection;
                 return isActive ||
-                  isProductAgentActive ||
+                  isProductFactoryActive ||
                   isPriceMonitoringActive ||
                   isCatalogActive ||
                   isVendorSourcesActive
@@ -109,13 +109,13 @@ export function AppShell() {
           ))}
         </nav>
       ) : null}
-      {isProductAgentSection ? (
-        <nav className="subnav" aria-label="Product-Agent navigation">
-          {productAgentNavItems.map((item) => (
+      {isProductFactorySection ? (
+        <nav className="subnav" aria-label="Product Factory navigation">
+          {productFactoryNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === "/product-agent"}
+              end={item.to === "/product-factory"}
               className={({ isActive }) => (isActive ? "subnav-link active" : "subnav-link")}
             >
               {item.label}

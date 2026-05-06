@@ -60,8 +60,8 @@ def execute_source_acquisition_stage(
         provider_resolution = None
         source_capture_warnings.append(f"source_capture_payload_unusable:{exc}")
     if provider_resolution is None:
-        # Compatibility fallback: Product-Agent still owns this direct vendor fetch path
-        # until shared source-capture can provide a normalized product payload.
+        # Direct provider fetch remains the canonical local path when shared
+        # source capture has not returned a normalized product payload.
         if capture_sync.status == "failed":
             source_capture_warnings.append(f"source_capture_sync_failed:{capture_sync.message}")
         elif capture_sync.status == "submitted":
@@ -112,9 +112,9 @@ def execute_source_acquisition_stage(
                 "source_capture_sync_status": capture_sync.status,
                 "source_capture_sync_message": capture_sync.message,
                 "source_capture_payload_used": not source_capture_warnings and fetch.method == "shared_source_capture",
-                "product_agent_capture_mode": "shared_source_capture"
+                "product_factory_capture_mode": "shared_source_capture"
                 if fetch.method == "shared_source_capture"
-                else "compatibility_fallback",
+                else "local_provider_fetch",
             }
         )
 
@@ -207,7 +207,7 @@ def _normalized_product_payload(source_payload: Mapping[str, Any]) -> Mapping[st
             "normalized_product",
             "normalized_source",
             "parsed_product",
-            "product_agent_source",
+            "product_factory_source",
         ),
     )
     if direct is not None:

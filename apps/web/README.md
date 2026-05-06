@@ -94,7 +94,6 @@ not require either backend to be running.
 - `docs/api.md`: API endpoints, payload contracts, proxy behavior, and readiness contracts.
 - `docs/contracts/ui-backend-contract-fixtures.md`: fixture contract policy.
 - `docs/runbooks/testing.md`: testing runbook.
-- `docs/legacy.md`: archived setup and historical behavior notes moved out of the README.
 
 ## Operational Notes
 

@@ -11,7 +11,7 @@ from product_factory import repo_paths
 from product_factory.api.app import create_app
 from product_factory.api.job_runner import SequentialJobRunner
 from product_factory.api.job_store import JobStore
-from product_factory.services.settings_service import default_product_agent_settings_payload
+from product_factory.services.settings_service import default_product_factory_settings_payload
 from product_factory.tools.sync_filter_map import build_filter_map_payload, default_manual_overrides
 
 
@@ -22,8 +22,8 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 
 @pytest.fixture()
 def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    settings_path = tmp_path / "resources" / "settings" / "product_agent_settings.json"
-    monkeypatch.setattr(repo_paths, "PRODUCT_AGENT_SETTINGS_PATH", settings_path)
+    settings_path = tmp_path / "resources" / "settings" / "product_factory_settings.json"
+    monkeypatch.setattr(repo_paths, "PRODUCT_FACTORY_SETTINGS_PATH", settings_path)
     return settings_path
 
 
@@ -94,7 +94,7 @@ def test_missing_job_routes_return_controlled_404(tmp_path: Path) -> None:
 
 
 def test_settings_endpoint_returns_shape_and_rejects_invalid_patch(isolated_settings: Path) -> None:
-    _write_json(isolated_settings, default_product_agent_settings_payload())
+    _write_json(isolated_settings, default_product_factory_settings_payload())
     client = TestClient(create_app())
 
     get_response = client.get("/api/settings")

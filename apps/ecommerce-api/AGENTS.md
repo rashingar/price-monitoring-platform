@@ -1,8 +1,8 @@
 # Repo Guardrails
 
-## Deprecated Legacy Marketplace Fetch
+## Removed Marketplace Fetch
 
-Legacy marketplace fetch/search code has been removed. Price Monitoring must
+Marketplace fetch/search code has been removed. Price Monitoring must
 not call marketplace search or URL discovery for run fetch.
 
 Price Monitoring uses existing active `source_urls`/`product_sources` only.

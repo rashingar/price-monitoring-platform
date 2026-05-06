@@ -1,19 +1,23 @@
 # Repo Layout Runbook
 
-## What stays in root
+## App Layout
 
-Keep these at repo root:
-- control docs such as `AGENTS.md` and `RULES.md`
-- `src/` for the runnable product pipeline code and tests
-- `resources/` for shared support assets
-- `products/` for final CSV deliverables
-- `work/` for runtime artifacts
-- `docs/` for active documentation
-- `archive/` for historical references
+Product Factory lives under `apps/product-factory-api`. Run commands from the
+repository root, but treat these paths as app-owned:
+
+- `apps/product-factory-api/AGENTS.md` and `apps/product-factory-api/RULES.md`
+  for active runtime control rules
+- `apps/product-factory-api/src/product_factory/` for runtime code and tests
+- `apps/product-factory-api/resources/` for runtime support assets
+- `apps/product-factory-api/docs/` for active documentation
+- `apps/product-factory-api/work/` for generated runtime artifacts
+- `apps/product-factory-api/products/` for generated CSV deliverables
+- `apps/product-factory-api/tools/` for maintenance and OpenCart helpers
 
 ## What belongs under `resources/`
 
-Use `resources/` for shared support assets that the runtime reads directly:
+Use `apps/product-factory-api/resources/` for shared support assets that the
+runtime reads directly:
 - `resources/mappings/` for taxonomy, filter, naming, and manufacturer mapping data
 - `resources/schemas/` for schema libraries and response schemas
 - `resources/templates/` for CSV and HTML template assets
@@ -31,18 +35,9 @@ Use `docs/` for active project documentation:
 
 Do not use `docs/` for generated runtime artifacts.
 
-## What belongs under `archive/`
-
-Use `archive/` for historical or no-longer-active reference material:
-- archived legacy prompts
-- archived legacy rules
-- other superseded references that should remain readable but should not be treated as active source of truth
-
-Do not treat `archive/` files as current runtime inputs unless a runbook explicitly says otherwise.
-
 ## What belongs under `work/`
 
-`work/` stays at repo root for runtime artifacts only.
+`apps/product-factory-api/work/` is for runtime artifacts only.
 
 Use `work/{model}/` for:
 - scrape-stage artifacts
@@ -54,7 +49,7 @@ Do not place long-lived docs, checkpoints, or manual notes under `work/`.
 
 ## What belongs under `products/`
 
-`products/` stays at repo root for final deliverable CSVs.
+`apps/product-factory-api/products/` is for final deliverable CSVs.
 
 Use it for:
 - final product CSV outputs intended for user delivery

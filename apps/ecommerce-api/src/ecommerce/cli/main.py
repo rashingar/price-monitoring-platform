@@ -6,10 +6,8 @@ import argparse
 from pathlib import Path
 
 from ecommerce.core.price_workflow import run_price
-from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.session import session_scope
 from ecommerce.env import load_local_env_if_present
-from ecommerce.source_capture.product_agent_import import DEFAULT_PRODUCT_AGENT_WORK_ROOT, import_product_agent_artifacts
 from ecommerce.source_capture.scheduled import capture_due_product_sources
 
 
@@ -31,12 +29,6 @@ def build_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument("--include-not-due", action="store_true")
     capture_parser.set_defaults(handler=_handle_capture_sources)
 
-    import_product_agent_parser = subparsers.add_parser("import-product-agent-artifacts")
-    import_product_agent_parser.add_argument("--apply", action="store_true")
-    import_product_agent_parser.add_argument("--root", type=Path, default=DEFAULT_PRODUCT_AGENT_WORK_ROOT)
-    import_product_agent_parser.add_argument("--catalog-source", default=DEFAULT_CATALOG_SOURCE)
-    import_product_agent_parser.add_argument("--limit", type=int, default=None)
-    import_product_agent_parser.set_defaults(handler=_handle_import_product_agent_artifacts)
     return parser
 
 def _handle_price(args: argparse.Namespace) -> int:
@@ -61,27 +53,6 @@ def _handle_capture_sources(args: argparse.Namespace) -> int:
     print(
         "source capture completed: "
         f"selected={summary.selected_count} succeeded={summary.succeeded_count} failed={summary.failed_count}"
-    )
-    return 0
-
-
-def _handle_import_product_agent_artifacts(args: argparse.Namespace) -> int:
-    with session_scope() as session:
-        result = import_product_agent_artifacts(
-            session,
-            artifact_root=args.root,
-            apply=bool(args.apply),
-            catalog_source=str(args.catalog_source),
-            limit=args.limit,
-        )
-    counters = result.to_dict(include_items=False)["counters"]
-    print(
-        "product-agent artifact import completed: "
-        f"mode={'apply' if args.apply else 'dry-run'} "
-        f"discovered={counters.get('artifacts_discovered', 0)} "
-        f"imported_snapshots={counters.get('imported_snapshot_count', 0)} "
-        f"price_observations={counters.get('price_observation_count', 0)} "
-        f"skipped={counters.get('skipped_count', 0)}"
     )
     return 0
 

@@ -1,9 +1,9 @@
 {
   "mode": "apply-overrides",
   "csv_path": "",
-  "base_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\Product-Agent\\resources\\mappings\\filter_map.base.json",
-  "manual_overrides_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\Product-Agent\\resources\\mappings\\filter_map.manual_overrides.json",
-  "filter_map_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\Product-Agent\\resources\\mappings\\filter_map.json",
+  "base_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\price-monitoring-platform\\apps\\product-factory-api\\resources\\mappings\\filter_map.base.json",
+  "manual_overrides_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\price-monitoring-platform\\apps\\product-factory-api\\resources\\mappings\\filter_map.manual_overrides.json",
+  "filter_map_path": "C:\\Users\\user\\Documents\\VS_Projects\\Price Monitoring Platform\\price-monitoring-platform\\apps\\product-factory-api\\resources\\mappings\\filter_map.json",
   "rows_read": 0,
   "filter_columns_seen": 0,
   "categories_seen": 167,

@@ -194,7 +194,7 @@ def test_apply_writes_rows_and_is_idempotent(tmp_path: Path, monkeypatch) -> Non
         assert session.query(SourceUrl).count() == 1
 
 
-def test_product_agent_handoff_preview_and_apply(tmp_path: Path, monkeypatch) -> None:
+def test_product_factory_handoff_preview_and_apply(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("ECOMMERCE_FILE_ROOTS", str(tmp_path / "work"))
     client, database_url = _client(tmp_path, monkeypatch)
     handoff_path = tmp_path / "work" / "005606" / "integrations" / "ecommerce_source_handoff.json"
@@ -228,7 +228,7 @@ def test_product_agent_handoff_preview_and_apply(tmp_path: Path, monkeypatch) ->
     assert preview.status_code == 200
     assert apply.status_code == 200
     assert preview.json()["summary"]["would_import_count"] == 1
-    assert preview.json()["sources"]["product_agent_handoff"]["candidates"] == 1
+    assert preview.json()["sources"]["product_factory_handoff"]["candidates"] == 1
     assert apply.json()["summary"]["imported_count"] == 1
     assert apply.json()["items"][0]["action"] == "imported"
     with session_scope(database_url) as session:
@@ -236,7 +236,7 @@ def test_product_agent_handoff_preview_and_apply(tmp_path: Path, monkeypatch) ->
         assert row.url_normalized == "https://www.skroutz.gr/s/1"
 
 
-def test_product_agent_handoff_import_rejects_paths_outside_allowed_roots(tmp_path: Path, monkeypatch) -> None:
+def test_product_factory_handoff_import_rejects_paths_outside_allowed_roots(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("ECOMMERCE_FILE_ROOTS", str(tmp_path / "allowed"))
     client, _database_url = _client(tmp_path, monkeypatch)
     outside_path = tmp_path / "outside" / "ecommerce_source_handoff.json"

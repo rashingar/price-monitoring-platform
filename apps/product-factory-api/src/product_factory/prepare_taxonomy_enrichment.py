@@ -48,7 +48,7 @@ def resolve_prepare_taxonomy_enrichment(
         "hero_summary_applied": False,
         "presentation_applied": False,
         "presentation_block_count": 0,
-        "fallback_reason": "manufacturer_enrichment_deprecated",
+        "fallback_reason": "manufacturer_enrichment_disabled",
     }
 
     return PrepareTaxonomyEnrichmentResult(

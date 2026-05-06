@@ -14,18 +14,18 @@ export interface DiagnosticResult {
 }
 
 export interface ApiDiagnostics {
-  productAgentBaseUrl: string;
+  productFactoryBaseUrl: string;
   commerceBaseUrl: string;
-  productAgentProxyTarget: string;
+  productFactoryProxyTarget: string;
   commerceProxyTarget: string;
   results: DiagnosticResult[];
 }
 
-const DEFAULT_PRODUCT_AGENT_PROXY_TARGET = "http://127.0.0.1:8000";
+const DEFAULT_PRODUCT_FACTORY_PROXY_TARGET = "http://127.0.0.1:8000";
 const DEFAULT_COMMERCE_PROXY_TARGET = "http://127.0.0.1:8001";
 
-export const productAgentProxyTarget =
-  import.meta.env.VITE_API_PROXY_TARGET || DEFAULT_PRODUCT_AGENT_PROXY_TARGET;
+export const productFactoryProxyTarget =
+  import.meta.env.VITE_API_PROXY_TARGET || DEFAULT_PRODUCT_FACTORY_PROXY_TARGET;
 export const commerceProxyTarget =
   import.meta.env.VITE_COMMERCE_API_PROXY_TARGET || DEFAULT_COMMERCE_PROXY_TARGET;
 
@@ -122,13 +122,13 @@ async function checkEndpoint({
   }
 }
 
-export function checkProductAgentApi(): Promise<DiagnosticResult> {
+export function checkProductFactoryApi(): Promise<DiagnosticResult> {
   return checkEndpoint({
-    service: "Product-Agent API",
+    service: "Product Factory API",
     requestUrl: joinUrl(apiClient.apiBaseUrl, "/api/health"),
-    okMessage: "Product-Agent API health endpoint responded.",
+    okMessage: "Product Factory API health endpoint responded.",
     errorSuggestion:
-      "Start the Product-Agent API on 127.0.0.1:8000 and confirm VITE_API_PROXY_TARGET=http://127.0.0.1:8000.",
+      "Start the Product Factory API on 127.0.0.1:8000 and confirm VITE_API_PROXY_TARGET=http://127.0.0.1:8000.",
   });
 }
 
@@ -180,16 +180,16 @@ export async function checkCommerceApi(): Promise<DiagnosticResult[]> {
 }
 
 export async function runApiDiagnostics(): Promise<ApiDiagnostics> {
-  const [productAgentResult, commerceResults] = await Promise.all([
-    checkProductAgentApi(),
+  const [productFactoryResult, commerceResults] = await Promise.all([
+    checkProductFactoryApi(),
     checkCommerceApi(),
   ]);
 
   return {
-    productAgentBaseUrl: apiClient.apiBaseUrl || "/api via Vite proxy",
+    productFactoryBaseUrl: apiClient.apiBaseUrl || "/api via Vite proxy",
     commerceBaseUrl: commerceClient.commerceApiBaseUrl,
-    productAgentProxyTarget,
+    productFactoryProxyTarget,
     commerceProxyTarget,
-    results: [productAgentResult, ...commerceResults],
+    results: [productFactoryResult, ...commerceResults],
   };
 }

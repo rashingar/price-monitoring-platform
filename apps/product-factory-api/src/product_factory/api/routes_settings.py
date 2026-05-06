@@ -5,9 +5,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 
 from ..services.settings_service import (
-    ProductAgentSettingsError,
-    load_product_agent_settings,
-    patch_product_agent_settings,
+    ProductFactorySettingsError,
+    load_product_factory_settings,
+    patch_product_factory_settings,
 )
 from .schemas import ErrorResponse, SettingsPatchRequest, SettingsResponse
 
@@ -29,8 +29,8 @@ _ALLOWED_PATCH_PATHS = {
 @router.get("", response_model=SettingsResponse, responses=_ERROR_RESPONSES)
 def get_settings() -> SettingsResponse:
     try:
-        return SettingsResponse(**load_product_agent_settings().to_dict())
-    except ProductAgentSettingsError as exc:
+        return SettingsResponse(**load_product_factory_settings().to_dict())
+    except ProductFactorySettingsError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
 
@@ -44,8 +44,8 @@ def patch_settings(request: SettingsPatchRequest) -> SettingsResponse:
             detail=f"Unsupported settings patch path: {invalid_paths[0]}",
         )
     try:
-        return SettingsResponse(**patch_product_agent_settings(patch).to_dict())
-    except ProductAgentSettingsError as exc:
+        return SettingsResponse(**patch_product_factory_settings(patch).to_dict())
+    except ProductFactorySettingsError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
 

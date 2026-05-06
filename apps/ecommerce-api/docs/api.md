@@ -244,9 +244,7 @@ directly for discovery runs, candidate review, capture, and source health.
 `GET /api/vendor-sources/sources` returns discovery and capture capabilities so
 clients can distinguish marketplace monitoring sources from direct vendor
 sources and avoid assuming capture support for discovery-only vendors.
-Vendor Sources owns source URL capture and health. The old
-`POST /api/price-monitoring/source-captures/run` and
-`POST /api/vendor-sources/captures/run` routes were removed; use
+Vendor Sources owns source URL capture and health through
 `POST /api/vendor-sources/captures/runs`. Vendor Source Capture history is
 stored separately from Price Monitoring run history.
 

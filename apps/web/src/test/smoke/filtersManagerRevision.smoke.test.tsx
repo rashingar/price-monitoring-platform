@@ -2,11 +2,11 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { installMockFetch } from "../mockFetch";
 import {
-  productAgentFilterCategoryDetail,
-  productAgentFilterRevision,
-  productAgentFilterStaleRevisionError,
-  productAgentFixtureRoutes,
-} from "../fixtures/productAgentApi";
+  productFactoryFilterCategoryDetail,
+  productFactoryFilterRevision,
+  productFactoryFilterStaleRevisionError,
+  productFactoryFixtureRoutes,
+} from "../fixtures/productFactoryApi";
 import { renderWithRouter } from "../renderWithRouter";
 
 const staleRevisionMessage =
@@ -14,14 +14,14 @@ const staleRevisionMessage =
 
 function categoryWithRevision(revision: string, groupName = "Χωρητικότητα") {
   const category = {
-    ...productAgentFilterCategoryDetail.category,
+    ...productFactoryFilterCategoryDetail.category,
     revision,
     groups: [
       {
-        ...productAgentFilterCategoryDetail.category.groups[0],
+        ...productFactoryFilterCategoryDetail.category.groups[0],
         name: groupName,
       },
-      productAgentFilterCategoryDetail.category.groups[1],
+      productFactoryFilterCategoryDetail.category.groups[1],
     ],
   };
 
@@ -40,12 +40,12 @@ describe("Filters Manager revision handling", () => {
         path: "/api/filters/categories/310/groups/grp-capacity",
         response: categoryWithRevision(writeRevision, "Χωρητικότητα XL"),
       },
-      ...productAgentFixtureRoutes,
+      ...productFactoryFixtureRoutes,
     ]);
 
-    renderWithRouter("/product-agent/filters?category_id=310");
+    renderWithRouter("/product-factory/filters?category_id=310");
 
-    await expect(screen.findByText(`Revision ${productAgentFilterRevision.slice(0, 12)}`)).resolves.toBeInTheDocument();
+    await expect(screen.findByText(`Revision ${productFactoryFilterRevision.slice(0, 12)}`)).resolves.toBeInTheDocument();
     fireEvent.change(await screen.findByDisplayValue("Χωρητικότητα"), {
       target: { value: "Χωρητικότητα XL" },
     });
@@ -58,7 +58,7 @@ describe("Filters Manager revision handling", () => {
         request.pathname === "/api/filters/categories/310/groups/grp-capacity",
     );
     expect(writeRequest?.body).toMatchObject({
-      expected_revision: productAgentFilterRevision,
+      expected_revision: productFactoryFilterRevision,
       name: "Χωρητικότητα XL",
     });
   });
@@ -73,19 +73,19 @@ describe("Filters Manager revision handling", () => {
         response: () => {
           categoryLoads += 1;
           return categoryLoads === 1
-            ? productAgentFilterCategoryDetail
+            ? productFactoryFilterCategoryDetail
             : categoryWithRevision(reloadRevision);
         },
       },
       {
         method: "PATCH",
         path: "/api/filters/categories/310/groups/grp-capacity",
-        response: productAgentFilterStaleRevisionError,
+        response: productFactoryFilterStaleRevisionError,
       },
-      ...productAgentFixtureRoutes,
+      ...productFactoryFixtureRoutes,
     ]);
 
-    renderWithRouter("/product-agent/filters?category_id=310");
+    renderWithRouter("/product-factory/filters?category_id=310");
 
     fireEvent.change(await screen.findByDisplayValue("Χωρητικότητα"), {
       target: { value: "Χωρητικότητα edited" },

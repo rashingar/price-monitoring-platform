@@ -11,7 +11,7 @@ import { usePersistentPageState } from "../hooks/usePersistentPageState";
 export function PrepareJobPage() {
   const { error, isSubmitting, submitJob } = useCreateJob(apiClient.createPrepareJob);
   const [form, setForm, resetForm] = usePersistentPageState<PrepareFormState>(
-    "product-agent-ui:prepare:v1",
+    "product-factory-ui:prepare:v1",
     initialPrepareFormState,
   );
   const [resetSeq, setResetSeq] = useState(0);

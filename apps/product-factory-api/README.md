@@ -20,7 +20,6 @@ The project is intentionally repo-local. Runtime code, shared product data, gene
 - `work/{model}/` contains generated runtime artifacts for a product run.
 - `products/` contains final CSV deliverables.
 - `docs/` contains active operator, API, contract, runbook, audit, and design documentation.
-- `archive/` contains historical material that should not be treated as active runtime guidance.
 - `tools/` contains OpenCart publishing helpers and supporting maintenance scripts.
 
 See `docs/runbooks/repo-layout.md` for the repo layout rules.
@@ -106,4 +105,3 @@ Prefer fixing pipeline behavior over hand-editing generated files.
 - `docs/api.md` describes the active local API and contract workflow.
 - `docs/contracts/openapi.product-factory.json` is the canonical OpenAPI snapshot.
 - `AGENTS.md` and `RULES.md` define runtime operator behavior for template-triggered pipeline work.
-- `archive/legacy/runtime_legacy.md` preserves old README workflow detail and CLI notes removed from the root README.

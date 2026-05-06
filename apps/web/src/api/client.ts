@@ -15,7 +15,7 @@ import type {
   Job,
   LogEntry,
   PrepareJobRequest,
-  ProductAgentSettings,
+  ProductFactorySettings,
   PublishJobRequest,
   RenderJobRequest,
   StopJobRequest,
@@ -444,15 +444,15 @@ export const apiClient = {
     );
   },
 
-  async getSettings(signal?: AbortSignal): Promise<ProductAgentSettings> {
-    return normalizeRecord<ProductAgentSettings>(
+  async getSettings(signal?: AbortSignal): Promise<ProductFactorySettings> {
+    return normalizeRecord<ProductFactorySettings>(
       await request<unknown>("/api/settings", { signal }),
       ["settings", "data", "result"],
     );
   },
 
-  async patchSettings(body: ProductAgentSettings): Promise<ProductAgentSettings> {
-    return normalizeRecord<ProductAgentSettings>(
+  async patchSettings(body: ProductFactorySettings): Promise<ProductFactorySettings> {
+    return normalizeRecord<ProductFactorySettings>(
       await request<unknown>("/api/settings", { method: "PATCH", body }),
       ["settings", "data", "result"],
     );

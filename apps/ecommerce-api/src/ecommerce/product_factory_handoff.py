@@ -1,4 +1,4 @@
-"""Import Product-Agent source URL handoff artifacts."""
+"""Import Product Factory source URL handoff artifacts."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from ecommerce.source_capture.vendor_registry import VENDORS_BY_SLUG
 from ecommerce.source_urls import SourceUrlValidationError, extract_source_domain, infer_source_name, normalize_source_url
 
 
-PRODUCT_AGENT_HANDOFF_IMPORT_VERSION = "product_agent_source_handoff_import_v1"
+PRODUCT_FACTORY_HANDOFF_IMPORT_VERSION = "product_factory_source_handoff_import_v1"
 SOURCE_CONFIDENCE_ACTIVE_THRESHOLD = Decimal("0.85")
 
 
@@ -64,7 +64,7 @@ class HandoffSource:
 
 
 @dataclass(frozen=True)
-class ProductAgentHandoff:
+class ProductFactoryHandoff:
     path: Path
     payload: dict[str, Any]
     identity: HandoffIdentity
@@ -80,7 +80,7 @@ class CatalogProductResolution:
 
 
 @dataclass
-class ProductAgentHandoffImportResult:
+class ProductFactoryHandoffImportResult:
     apply: bool
     file_path: str
     counters: Counter[str] = field(default_factory=Counter)
@@ -107,14 +107,14 @@ class ProductAgentHandoffImportResult:
         return payload
 
 
-def parse_product_agent_handoff(path: Path | str) -> ProductAgentHandoff:
+def parse_product_factory_handoff(path: Path | str) -> ProductFactoryHandoff:
     artifact_path = Path(path).expanduser().resolve(strict=False)
     try:
         payload = json.loads(artifact_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"Could not read Product-Agent handoff artifact {artifact_path}: {exc}") from exc
+        raise ValueError(f"Could not read Product Factory handoff artifact {artifact_path}: {exc}") from exc
     if not isinstance(payload, dict):
-        raise ValueError(f"Product-Agent handoff artifact is not a JSON object: {artifact_path}")
+        raise ValueError(f"Product Factory handoff artifact is not a JSON object: {artifact_path}")
 
     version = _first_text(
         payload.get("schema_version"),
@@ -123,16 +123,16 @@ def parse_product_agent_handoff(path: Path | str) -> ProductAgentHandoff:
         "v1",
     ).lower()
     if version not in {"1", "v1", "schema_v1"}:
-        raise ValueError(f"Unsupported Product-Agent handoff schema version: {version}")
+        raise ValueError(f"Unsupported Product Factory handoff schema version: {version}")
 
     identity = _parse_identity(payload, artifact_path)
     sources = tuple(_iter_handoff_sources(payload))
     if not sources:
-        raise ValueError(f"Product-Agent handoff contains no source URLs: {artifact_path}")
-    return ProductAgentHandoff(path=artifact_path, payload=payload, identity=identity, sources=sources)
+        raise ValueError(f"Product Factory handoff contains no source URLs: {artifact_path}")
+    return ProductFactoryHandoff(path=artifact_path, payload=payload, identity=identity, sources=sources)
 
 
-def import_product_agent_handoff(
+def import_product_factory_handoff(
     session: Session,
     *,
     file_path: Path | str,
@@ -140,8 +140,8 @@ def import_product_agent_handoff(
     catalog_source: str | None = None,
     persist_initial_capture: bool = True,
     limit: int | None = None,
-) -> ProductAgentHandoffImportResult:
-    handoff = parse_product_agent_handoff(file_path)
+) -> ProductFactoryHandoffImportResult:
+    handoff = parse_product_factory_handoff(file_path)
     identity = handoff.identity
     if catalog_source:
         identity = HandoffIdentity(
@@ -150,8 +150,8 @@ def import_product_agent_handoff(
             model=identity.model,
             mpn=identity.mpn,
         )
-    result = ProductAgentHandoffImportResult(apply=apply, file_path=str(handoff.path))
-    _source_stat(result, "product_agent_handoff", "processed")
+    result = ProductFactoryHandoffImportResult(apply=apply, file_path=str(handoff.path))
+    _source_stat(result, "product_factory_handoff", "processed")
 
     resolution = resolve_catalog_product_for_handoff(session, identity)
     if resolution.product is None:
@@ -243,13 +243,13 @@ def resolve_catalog_product_for_handoff(session: Session, identity: HandoffIdent
 
 def _process_source(
     session: Session,
-    handoff: ProductAgentHandoff,
+    handoff: ProductFactoryHandoff,
     *,
     identity: HandoffIdentity,
     resolution: CatalogProductResolution,
     source: HandoffSource,
     source_index: int,
-    result: ProductAgentHandoffImportResult,
+    result: ProductFactoryHandoffImportResult,
     seen_urls: set[str],
     apply: bool,
     persist_initial_capture: bool,
@@ -277,7 +277,7 @@ def _process_source(
         return
 
     result.counters["candidates_found"] += 1
-    _source_stat(result, "product_agent_handoff", "candidates")
+    _source_stat(result, "product_factory_handoff", "candidates")
     if normalized in seen_urls:
         result.counters["duplicate_count"] += 1
         result.report_items.append(
@@ -305,7 +305,7 @@ def _process_source(
         status=status,
         last_seen_at=_observed_at(source),
         last_success_at=_observed_at(source) if source.price is not None and source.price.price is not None else None,
-        notes="Imported from Product-Agent source handoff",
+        notes="Imported from Product Factory source handoff",
         apply=apply,
     )
     if upsert.action == "created":
@@ -371,7 +371,7 @@ def _process_source(
 
 def _persist_initial_capture(
     session: Session,
-    handoff: ProductAgentHandoff,
+    handoff: ProductFactoryHandoff,
     source: HandoffSource,
     source_index: int,
     product_source: ProductSource,
@@ -396,8 +396,8 @@ def _persist_initial_capture(
                 stock_status=price.stock_status,
                 delivery_text=price.delivery_text,
                 product_name=price.product_name,
-                raw_observation={"source": "product_agent_source_handoff", "confidence": json_safe_value(price.confidence), **price.raw},
-                timestamp_source="product_agent_handoff.observed_at" if price.observed_at is not None else "import_time",
+                raw_observation={"source": "product_factory_source_handoff", "confidence": json_safe_value(price.confidence), **price.raw},
+                timestamp_source="product_factory_handoff.observed_at" if price.observed_at is not None else "import_time",
                 timestamp_quality="exact" if price.observed_at is not None else "fallback",
             ),
         )
@@ -405,7 +405,7 @@ def _persist_initial_capture(
     observed_at = price.observed_at if price is not None else None
     now = datetime.now(timezone.utc).replace(microsecond=0)
     capture = CaptureSnapshotPayload(
-        capture_strategy=f"product_agent_handoff_{vendor_slug}",
+        capture_strategy=f"product_factory_handoff_{vendor_slug}",
         page_url=source.url,
         final_url=_first_text(snapshot_payload.get("final_url"), snapshot_payload.get("page_url"), source.url),
         request_url=_optional_text(snapshot_payload.get("request_url")),
@@ -415,12 +415,12 @@ def _persist_initial_capture(
         response_body_json={
             "handoff": sanitize_json(handoff.payload),
             "source": sanitize_json(source.raw),
-            "importer": {"name": "product_agent_source_handoff_import", "version": PRODUCT_AGENT_HANDOFF_IMPORT_VERSION},
+            "importer": {"name": "product_factory_source_handoff_import", "version": PRODUCT_FACTORY_HANDOFF_IMPORT_VERSION},
         },
         raw_html=source.raw_html,
         artifact_ref=artifact_ref,
         content_hash=digest,
-        parser_version=PRODUCT_AGENT_HANDOFF_IMPORT_VERSION,
+        parser_version=PRODUCT_FACTORY_HANDOFF_IMPORT_VERSION,
         fetch_status_code=_optional_int(snapshot_payload.get("fetch_status_code") or snapshot_payload.get("response_status")),
         data_quality_flags=_data_quality_flags(source),
         captured_at=observed_at or _parse_datetime(snapshot_payload.get("captured_at")),
@@ -435,7 +435,7 @@ def _persist_initial_capture(
 def _snapshot_already_imported(session: Session, *, source: ProductSource, artifact_ref: str, digest: str | None) -> bool:
     statement = select(SourceCaptureSnapshot.id).where(
         SourceCaptureSnapshot.product_source_id == source.id,
-        SourceCaptureSnapshot.capture_strategy.like("product_agent_handoff%"),
+        SourceCaptureSnapshot.capture_strategy.like("product_factory_handoff%"),
         SourceCaptureSnapshot.artifact_ref == artifact_ref,
     )
     if digest:
@@ -579,7 +579,7 @@ def _data_quality_flags(source: HandoffSource) -> list[str]:
 
 
 def _skip(
-    result: ProductAgentHandoffImportResult,
+    result: ProductFactoryHandoffImportResult,
     reason: str,
     warning: str,
     *,
@@ -628,14 +628,14 @@ def _report_item(
         "action": action,
         "confidence": str(source.confidence) if source.confidence is not None else resolution.confidence,
         "identity_match_type": resolution.match_type,
-        "evidence_source": "product_agent_handoff",
+        "evidence_source": "product_factory_handoff",
         "evidence_detail": str(source.evidence or {}),
         "reason": reason,
         "price": json_safe_value(source.price.price) if source.price is not None else None,
     }
 
 
-def _source_stat(result: ProductAgentHandoffImportResult, key: str, field_name: str) -> None:
+def _source_stat(result: ProductFactoryHandoffImportResult, key: str, field_name: str) -> None:
     result.source_stats.setdefault(key, Counter())[field_name] += 1
 
 

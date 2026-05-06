@@ -38,7 +38,7 @@ import type {
   FileRoot,
   PathRootsEnv,
   PathRootsResponse,
-  ProductAgentHandoffImportRequest,
+  ProductFactoryHandoffImportRequest,
   PriceHistoryResponse,
   PriceMonitoringDbStatus,
   PriceMonitoringFetchLogsResponse,
@@ -2459,8 +2459,8 @@ export const commerceClient = {
     );
   },
 
-  async previewProductAgentHandoffImport(
-    body: ProductAgentHandoffImportRequest,
+  async previewProductFactoryHandoffImport(
+    body: ProductFactoryHandoffImportRequest,
     signal?: AbortSignal,
   ): Promise<SourceUrlImportResponse> {
     return normalizeSourceUrlImportResponse(
@@ -2472,8 +2472,8 @@ export const commerceClient = {
     );
   },
 
-  async applyProductAgentHandoffImport(
-    body: ProductAgentHandoffImportRequest,
+  async applyProductFactoryHandoffImport(
+    body: ProductFactoryHandoffImportRequest,
     signal?: AbortSignal,
   ): Promise<SourceUrlImportResponse> {
     return normalizeSourceUrlImportResponse(

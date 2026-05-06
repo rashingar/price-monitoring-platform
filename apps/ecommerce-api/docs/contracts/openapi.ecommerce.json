@@ -783,7 +783,7 @@
         "title": "PriceUpdateExportApiRequest",
         "type": "object"
       },
-      "ProductAgentHandoffImportRequest": {
+      "ProductFactoryHandoffImportRequest": {
         "properties": {
           "catalog_source": {
             "default": "sourceCata",
@@ -834,7 +834,7 @@
             "type": "integer"
           }
         },
-        "title": "ProductAgentHandoffImportRequest",
+        "title": "ProductFactoryHandoffImportRequest",
         "type": "object"
       },
       "ProductFromSourceRequest": {
@@ -2631,12 +2631,12 @@
     },
     "/api/catalog/source-urls/import/product-factory/apply": {
       "post": {
-        "operationId": "apply_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_apply_post",
+        "operationId": "apply_product_factory_handoff_import_api_catalog_source_urls_import_product_factory_apply_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProductAgentHandoffImportRequest"
+                "$ref": "#/components/schemas/ProductFactoryHandoffImportRequest"
               }
             }
           },
@@ -2664,7 +2664,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Apply Product Agent Handoff Import",
+        "summary": "Apply Product Factory Handoff Import",
         "tags": [
           "catalog-source-urls"
         ]
@@ -2672,12 +2672,12 @@
     },
     "/api/catalog/source-urls/import/product-factory/preview": {
       "post": {
-        "operationId": "preview_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_preview_post",
+        "operationId": "preview_product_factory_handoff_import_api_catalog_source_urls_import_product_factory_preview_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ProductAgentHandoffImportRequest"
+                "$ref": "#/components/schemas/ProductFactoryHandoffImportRequest"
               }
             }
           },
@@ -2705,7 +2705,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Preview Product Agent Handoff Import",
+        "summary": "Preview Product Factory Handoff Import",
         "tags": [
           "catalog-source-urls"
         ]

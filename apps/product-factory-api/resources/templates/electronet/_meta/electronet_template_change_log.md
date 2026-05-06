@@ -1,4 +1,4 @@
-﻿# spec_label_cache_log.md (append-only)
+# spec_label_cache_log.md (append-only)
 
 Entry format:
 - timestamp: <ISO 8601>

@@ -558,7 +558,7 @@ def build_library_payload(
     templates = _load_templates(template_root)
     taxonomy_paths = _load_taxonomy_paths(taxonomy_path)
     schema_policy_overrides = _load_schema_policy_rules(schema_policy_rules_path)
-    # Kept for call-site compatibility only. Compiled schema content must not inherit
+    # Kept for shared call sites. Compiled schema content must not inherit
     # structure or ids from any prior generated artifact.
     _ = existing_library_path
 

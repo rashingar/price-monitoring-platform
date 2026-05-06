@@ -20,7 +20,7 @@ import type {
   Job,
   LogEntry,
   PrepareJobRequest,
-  ProductAgentSettings,
+  ProductFactorySettings,
 } from "../api/types";
 import {
   initialPrepareFormState,
@@ -35,7 +35,7 @@ import { useGlobalJobs } from "../hooks/useGlobalJobs";
 import { usePersistentPageState } from "../hooks/usePersistentPageState";
 
 const POLL_INTERVAL_MS = 2500;
-const WORKFLOW_STORAGE_KEY = "product-agent-ui:workflow-shell:v1";
+const WORKFLOW_STORAGE_KEY = "product-factory-ui:workflow-shell:v1";
 const INTRO_EMPHASIS_MISSING_CODE = "llm_intro_text_emphasis_missing";
 const HARD_INTRO_EMPHASIS_CODES = new Set([
   "llm_intro_text_emphasis_invalid",
@@ -381,7 +381,7 @@ function allowedValueLabel(value: unknown): string {
   return "";
 }
 
-function makeSettingsForm(settings: ProductAgentSettings | null): SettingsFormState {
+function makeSettingsForm(settings: ProductFactorySettings | null): SettingsFormState {
   const introDefaults = settings?.authoring?.intro_text?.default;
   const seoDefaults = settings?.authoring?.seo_meta?.default;
   return {
@@ -398,7 +398,7 @@ function parseSettingsNumber(value: string): number | null {
 }
 
 function makeSettingsPayload(form: SettingsFormState): {
-  payload: ProductAgentSettings | null;
+  payload: ProductFactorySettings | null;
   error: string | null;
 } {
   const minWords = parseSettingsNumber(form.introMinWords);
@@ -751,7 +751,7 @@ function SettingsPanel({
   state: StageActionState;
   setActionState: React.Dispatch<React.SetStateAction<StageActionState>>;
 }) {
-  const [settings, setSettings] = useState<ProductAgentSettings | null>(null);
+  const [settings, setSettings] = useState<ProductFactorySettings | null>(null);
   const [form, setForm] = useState<SettingsFormState>(makeSettingsForm(null));
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -915,7 +915,7 @@ function SettingsPanel({
   );
 }
 
-export function ProductAgentWorkflowPage() {
+export function ProductFactoryWorkflowPage() {
   const { model: routeModel } = useParams<{ model?: string }>();
   const { trackJob } = useGlobalJobs();
   const [form, setForm, resetForm] = usePersistentPageState<PrepareFormState>(
@@ -1299,7 +1299,7 @@ export function ProductAgentWorkflowPage() {
   return (
     <div className="page-stack">
       <section className="page-header">
-        <p className="eyebrow">Product-Agent</p>
+        <p className="eyebrow">Product Factory</p>
         <h2>Pipeline</h2>
         <p>{"Prepare -> Authoring -> Filter Review -> Render -> Publish"}</p>
         <button className="text-button" type="button" onClick={handleResetForm}>
@@ -1311,7 +1311,7 @@ export function ProductAgentWorkflowPage() {
         <div className="section-heading">
           <div>
             <p className="eyebrow">API health</p>
-            <h3>{isHealthLoading ? "Checking Product-Agent API" : isBackendAvailable ? "Product-Agent API available" : "Product-Agent API unavailable"}</h3>
+            <h3>{isHealthLoading ? "Checking Product Factory API" : isBackendAvailable ? "Product Factory API available" : "Product Factory API unavailable"}</h3>
           </div>
           <button className="button secondary compact-button" type="button" onClick={() => void loadHealth()}>
             Retry health

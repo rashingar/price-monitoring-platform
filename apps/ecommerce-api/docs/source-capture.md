@@ -19,9 +19,7 @@ The shared vendor capture implementation lives in `ecommerce.source_capture`:
 - `scheduled.py` lets Vendor Sources refresh due `product_sources` without duplicating vendor logic.
 
 The DB-backed selected source URL capture service lives in
-`ecommerce.vendor_sources.capture`. The old
-`ecommerce.price_monitoring.source_url_capture` module is compatibility-only
-and re-exports the Vendor Sources implementation for older imports.
+`ecommerce.vendor_sources.capture`.
 
 Current vendors are seeded in `vendors`: `electronet`, `skroutz`, `plaisio`, `public`, and `kotsovolos`. Electronet and Skroutz are active. Plaisio, Public, and Kotsovolos are scaffolded for future parsers.
 
@@ -43,9 +41,7 @@ select active `source_urls` and active `product_sources`, excluding broken,
 disabled, needs-review, and redirected URLs. Each capture run has one
 `observation_batch_id`; by default it is the capture `run_id`, and price/offer
 observations created by that run share the same batch id. The canonical capture
-route is `POST /api/vendor-sources/captures/runs`. The old
-`POST /api/price-monitoring/source-captures/run` and
-`POST /api/vendor-sources/captures/run` routes were removed.
+route is `POST /api/vendor-sources/captures/runs`.
 
 Vendor Sources exposes source URL coverage and source health through:
 
@@ -57,27 +53,17 @@ without active source URLs using `missing_active_source_url`. Products without
 active source URLs are not eligible for Price Monitoring until Vendor Sources
 discovers or imports a reviewed active URL.
 
-## Deprecated Legacy Marketplace Fetch
+## Removed Marketplace Fetch
 
-Legacy marketplace fetch/search code has been removed. Price Monitoring run
-fetch must not perform marketplace MPN/search fallback or URL discovery. New
-monitoring work must use active `source_urls`/`product_sources`; Vendor Sources
+Marketplace fetch/search code has been removed from Price Monitoring run fetch.
+Monitoring work must use active `source_urls`/`product_sources`; Vendor Sources
 owns URL discovery, candidate review, capture, and source health.
-
-Legacy Product Factory scrape artifacts can be backfilled without making Product Factory the long-term scraper:
-
-```powershell
-python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work
-python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work --apply
-```
-
-This importer scans `*.source.json`, sibling `*.report.json`, and `*.raw.html` files, creates/reuses `product_sources`, stores a `product_agent_artifact_*` raw snapshot, and only appends a price observation when Product Factory reported a product page, in-scope URL, non-missing price, and high-confidence price diagnostics. Imported observations use the Product Factory `scraped_at` timestamp when present; otherwise the importer falls back to artifact mtime and marks timestamp quality as derived.
 
 Product Factory source URL handoff artifacts can be imported directly from:
 
 ```powershell
-python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --dry-run
-python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --apply
+python -m ecommerce.jobs.import_product_factory_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --dry-run
+python -m ecommerce.jobs.import_product_factory_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --apply
 ```
 
 The handoff importer resolves catalog identity by `catalog_product_id`, then model, then MPN. Ambiguous identity and invalid or unsupported URLs are reported without writes. Active source URLs are mirrored into `product_sources` through the normal convergence path, and initial price evidence can seed a source capture snapshot plus price observation.

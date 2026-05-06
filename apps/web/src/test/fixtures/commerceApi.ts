@@ -549,7 +549,7 @@ export const sourceUrlImportApply = {
   ],
 };
 
-export const productAgentHandoffImportPreview = {
+export const productFactoryHandoffImportPreview = {
   mode: "preview",
   applied: false,
   apply: false,
@@ -578,7 +578,7 @@ export const productAgentHandoffImportPreview = {
   },
   changed_source_urls: [],
   source_stats: {
-    product_agent_handoff: { candidates_found: 2 },
+    product_factory_handoff: { candidates_found: 2 },
   },
   candidate_evidence: [],
   items: [
@@ -591,7 +591,7 @@ export const productAgentHandoffImportPreview = {
       model: "005606",
       mpn: "MD-20L",
       url: "https://www.electronet.gr/midea-md-20l",
-      evidence_source: "product_agent_handoff",
+      evidence_source: "product_factory_handoff",
       evidence_detail: "work/005606/integrations/ecommerce_source_handoff.json",
       reason: null,
       confidence: "high",
@@ -607,7 +607,7 @@ export const productAgentHandoffImportPreview = {
       model: "005606",
       mpn: "MD-20L",
       url: "https://www.public.gr/product/midea-md-20l",
-      evidence_source: "product_agent_handoff",
+      evidence_source: "product_factory_handoff",
       evidence_detail: "capture artifact included",
       reason: "needs_review",
       confidence: "medium",
@@ -618,8 +618,8 @@ export const productAgentHandoffImportPreview = {
   truncated: false,
 };
 
-export const productAgentHandoffImportApply = {
-  ...productAgentHandoffImportPreview,
+export const productFactoryHandoffImportApply = {
+  ...productFactoryHandoffImportPreview,
   mode: "apply",
   applied: true,
   apply: true,
@@ -2066,7 +2066,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
       limit: null,
       report_items_limit: 200,
     },
-    response: productAgentHandoffImportPreview,
+    response: productFactoryHandoffImportPreview,
   },
   {
     method: "POST",
@@ -2078,7 +2078,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
       limit: null,
       report_items_limit: 200,
     },
-    response: productAgentHandoffImportApply,
+    response: productFactoryHandoffImportApply,
   },
   { method: "GET", path: "/commerce-api/price-monitoring/db/status", response: dbStatusAvailable },
   {

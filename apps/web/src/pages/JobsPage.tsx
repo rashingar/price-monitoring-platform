@@ -33,7 +33,7 @@ export function JobsPage() {
     stoppingJobIds,
   } = useJobs();
   const [statusFilter, setStatusFilter, resetJobsState] = usePersistentPageState<StatusFilter>(
-    "product-agent-ui:jobs:v1",
+    "product-factory-ui:jobs:v1",
     "all",
   );
 

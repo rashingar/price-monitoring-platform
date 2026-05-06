@@ -155,7 +155,7 @@ def test_stop_route_cancels_stale_running_job(tmp_path: Path) -> None:
     assert "Stop requested for stale running job record." in store.read_logs(record.job_id)
 
 
-def test_artifact_resolver_returns_existing_render_compatibility_paths(tmp_path: Path) -> None:
+def test_artifact_resolver_returns_existing_render_expected_paths(tmp_path: Path) -> None:
     candidate_dir = tmp_path / "work" / "233541" / "candidate"
     candidate_dir.mkdir(parents=True)
     csv_path = candidate_dir / "233541.csv"

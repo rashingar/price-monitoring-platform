@@ -80,7 +80,7 @@ cd apps/product-factory-api
 ..\..\.venv\Scripts\python.exe -m pytest -vv -ra -c src\pytest.ini -m "filters or contract"
 ```
 
-The Filters Manager uses locked JSON persistence and returns a revision token. New clients can pass `expected_revision` on write requests; stale revisions return `409 Conflict`, while omitted revisions remain backward-compatible for current clients.
+The Filters Manager uses locked JSON persistence and returns a revision token. Clients can pass `expected_revision` on write requests; stale revisions return `409 Conflict`, while omitted revisions are accepted by the current API.
 
 ## Slow/external/e2e
 

@@ -225,7 +225,7 @@ def test_matching_expected_revision_succeeds_and_returns_new_revision(client: Te
     assert response.json()["revision"] != before
 
 
-def test_omitted_expected_revision_still_succeeds_for_backward_compatibility(client: TestClient) -> None:
+def test_omitted_expected_revision_succeeds_for_current_clients(client: TestClient) -> None:
     ids = _ids()
 
     response = client.put(

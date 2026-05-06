@@ -11,7 +11,7 @@ from ..services import ServiceError
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python -m product_factory.jobs.run_product_agent_job")
+    parser = argparse.ArgumentParser(prog="python -m product_factory.jobs.run_product_factory_job")
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--job-root", default=str(DEFAULT_JOBS_DIR))
     parser.add_argument("--api-work-root", default=None)

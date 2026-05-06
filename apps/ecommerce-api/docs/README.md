@@ -4,9 +4,9 @@ Related docs:
 
 - [API endpoints and contracts](api.md)
 
-## Deprecated Legacy Marketplace Fetch
+## Removed Marketplace Fetch
 
-Legacy marketplace fetch/search code has been removed. Price Monitoring must not
+Marketplace fetch/search code has been removed. Price Monitoring must not
 call marketplace MPN/search fallback or try to discover URLs during a run fetch.
 
 New monitoring work must use existing active `source_urls`/`product_sources`.
@@ -77,20 +77,11 @@ Product Factory handoff API imports are limited to `ecommerce_source_handoff.jso
 
 The summary endpoint reports active catalog coverage, including products with at least one active source URL, products still missing active source URLs, grouped status/source/type counts, and a coverage percentage. Use it to track import progress and review backlog.
 
-Backfill legacy Product Factory scrape artifacts into first-class source capture snapshots:
-
-```powershell
-python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work
-python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work --apply
-```
-
-The importer scans `work\<model>\scrape\<model>.source.json`, sibling `.report.json`, and `.raw.html` files. It creates or reuses `products` and `product_sources`, stores a sanitized raw `source_capture_snapshots` row, and only creates a `price_observations` row when the Product Factory price diagnostics are strong enough. Re-running the importer skips snapshots with the same artifact reference and content hash. Use `ECOMMERCE_PRODUCT_AGENT_WORK_ROOT` or `--root` to point at a different Product Factory work folder.
-
 Import Product Factory source URL handoff artifacts:
 
 ```powershell
-python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --dry-run
-python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --apply
+python -m ecommerce.jobs.import_product_factory_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --dry-run
+python -m ecommerce.jobs.import_product_factory_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --apply
 ```
 
 The handoff importer resolves catalog identity without importing Product Factory code, writes active or needs-review `source_urls`, and uses the existing source convergence helpers for `product_sources`.

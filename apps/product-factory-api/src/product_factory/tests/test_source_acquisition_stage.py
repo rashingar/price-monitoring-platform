@@ -265,7 +265,7 @@ def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload
     assert result.parsed.source.spec_sections[0].items[0].value == "Ψυγειοκαταψύκτης"
     assert result.snapshot_provenance["source_capture_sync_status"] == "submitted"
     assert result.snapshot_provenance["source_capture_payload_used"] is True
-    assert result.snapshot_provenance["product_agent_capture_mode"] == "shared_source_capture"
+    assert result.snapshot_provenance["product_factory_capture_mode"] == "shared_source_capture"
 
 
 def test_execute_source_acquisition_stage_keeps_source_capture_sync_failure_as_warning_only(tmp_path: Path) -> None:
@@ -303,4 +303,4 @@ def test_execute_source_acquisition_stage_keeps_source_capture_sync_failure_as_w
     assert result.parsed is parsed
     assert result.parsed.warnings == ["source_capture_sync_failed:connection refused"]
     assert result.snapshot_provenance["source_capture_sync_status"] == "failed"
-    assert result.snapshot_provenance["product_agent_capture_mode"] == "compatibility_fallback"
+    assert result.snapshot_provenance["product_factory_capture_mode"] == "local_provider_fetch"

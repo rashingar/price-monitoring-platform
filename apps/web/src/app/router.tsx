@@ -11,7 +11,7 @@ import { PrepareJobPage } from "../pages/PrepareJobPage";
 import { PriceMonitoringAlertsPage } from "../pages/PriceMonitoringAlertsPage";
 import { PriceMonitoringExecutionsPage } from "../pages/PriceMonitoringExecutionsPage";
 import { PriceMonitoringPage } from "../pages/PriceMonitoringPage";
-import { ProductAgentWorkflowPage } from "../pages/ProductAgentWorkflowPage";
+import { ProductFactoryWorkflowPage } from "../pages/ProductFactoryWorkflowPage";
 import { PublishJobPage } from "../pages/PublishJobPage";
 import { RenderJobPage } from "../pages/RenderJobPage";
 import { SourceUrlAgentRunsPage } from "../pages/SourceUrlAgentRunsPage";
@@ -42,11 +42,11 @@ export const router = createBrowserRouter([
       { path: "vendor-sources/source-urls", element: <VendorSourceUrlsPage /> },
       { path: "vendor-sources/captures", element: <VendorSourceCaptureRunsPage /> },
       { path: "vendor-sources/imports", element: <VendorSourceImportsPage /> },
-      { path: "product-agent", element: <ProductAgentWorkflowPage /> },
-      { path: "product-agent/:model", element: <ProductAgentWorkflowPage /> },
-      { path: "product-agent/filters", element: <FiltersManagerPage /> },
-      { path: "pipeline", element: <ProductAgentWorkflowPage /> },
-      { path: "pipeline/:model", element: <ProductAgentWorkflowPage /> },
+      { path: "product-factory", element: <ProductFactoryWorkflowPage /> },
+      { path: "product-factory/:model", element: <ProductFactoryWorkflowPage /> },
+      { path: "product-factory/filters", element: <FiltersManagerPage /> },
+      { path: "pipeline", element: <ProductFactoryWorkflowPage /> },
+      { path: "pipeline/:model", element: <ProductFactoryWorkflowPage /> },
       { path: "prepare", element: <PrepareJobPage /> },
       { path: "render", element: <RenderJobPage /> },
       { path: "publish", element: <PublishJobPage /> },

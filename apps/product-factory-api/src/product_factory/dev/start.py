@@ -25,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     base_url = f"http://{args.host}:{args.port}"
-    print("Product-Agent API")
+    print("Product Factory API")
     print(f"API URL: {base_url}")
     print(f"Health URL: {base_url}/api/health")
     print(f"Docs URL: {base_url}/docs")

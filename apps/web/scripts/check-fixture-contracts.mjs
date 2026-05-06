@@ -631,9 +631,9 @@ const commerceOpenapi = readJson(SNAPSHOTS.commerce);
 const productFactoryOpenapi = readJson(SNAPSHOTS.productFactory);
 
 if (commerceOpenapi && productFactoryOpenapi) {
-  const productAgentRoutes = await loadTsFixture(
-    path.join(uiRoot, "src", "test", "fixtures", "productAgentApi.ts"),
-    "productAgentFixtureRoutes",
+  const productFactoryRoutes = await loadTsFixture(
+    path.join(uiRoot, "src", "test", "fixtures", "productFactoryApi.ts"),
+    "productFactoryFixtureRoutes",
   );
   const commerceRoutes = await loadTsFixture(
     path.join(uiRoot, "src", "test", "fixtures", "commerceApi.ts"),
@@ -651,7 +651,7 @@ if (commerceOpenapi && productFactoryOpenapi) {
   compareRoutes({
     backend: "productFactory",
     openapi: productFactoryOpenapi,
-    routes: productAgentRoutes,
+    routes: productFactoryRoutes,
     critical: productFactoryCritical,
   });
   compareRoutes({

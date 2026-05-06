@@ -17,7 +17,7 @@ import { usePersistentPageState } from "../hooks/usePersistentPageState";
 
 const DEFAULT_MAX_ROWS = 1000;
 const DEFAULT_STOCK_PATH = "C:\\Exports\\CheckWHouseBalance.csv";
-const CSV_BRIDGE_STATE_KEY = "product-agent-ui:csv-bridge:v1";
+const CSV_BRIDGE_STATE_KEY = "product-factory-ui:csv-bridge:v1";
 
 interface CsvBridgePageState {
   selectedRoot: string;

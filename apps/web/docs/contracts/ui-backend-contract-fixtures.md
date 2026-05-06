@@ -4,7 +4,7 @@ The UI test suite uses mocked Product Factory and commerce API responses so cont
 
 Fixtures live in:
 
-- `src/test/fixtures/productAgentApi.ts`
+- `src/test/fixtures/productFactoryApi.ts`
 - `src/test/fixtures/commerceApi.ts`
 
 The strict fetch helper in `src/test/mockFetch.ts` maps request method plus path to fixture responses and fails on any unexpected request. Fixture drift should be treated as a signal to intentionally update either the backend contract or the UI normalization layer.

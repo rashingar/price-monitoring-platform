@@ -113,8 +113,8 @@ export function DashboardPage() {
           <>
             <dl className="summary-grid diagnostics-summary-grid">
               <div>
-                <dt>Product-Agent base</dt>
-                <dd>{diagnostics.productAgentBaseUrl}</dd>
+                <dt>Product Factory base</dt>
+                <dd>{diagnostics.productFactoryBaseUrl}</dd>
               </div>
               <div>
                 <dt>Commerce base</dt>
@@ -122,7 +122,7 @@ export function DashboardPage() {
               </div>
               <div>
                 <dt>/api proxy</dt>
-                <dd>{diagnostics.productAgentProxyTarget}</dd>
+                <dd>{diagnostics.productFactoryProxyTarget}</dd>
               </div>
               <div>
                 <dt>/commerce-api proxy</dt>

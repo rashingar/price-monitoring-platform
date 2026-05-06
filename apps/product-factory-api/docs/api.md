@@ -73,8 +73,8 @@ New job IDs are model-first (`{model}-{stage}-{suffix}`), so workflow screens ca
 
 Runtime knobs:
 
-- `PRODUCT_AGENT_MAX_JOB_WORKERS` controls job worker count and defaults to `1`.
-- `PRODUCT_AGENT_JOB_TERMINATE_TIMEOUT_SECONDS` controls graceful stop timeout and defaults to `30`.
+- `PRODUCT_FACTORY_MAX_JOB_WORKERS` controls job worker count and defaults to `1`.
+- `PRODUCT_FACTORY_JOB_TERMINATE_TIMEOUT_SECONDS` controls graceful stop timeout and defaults to `30`.
 
 Terminal job statuses:
 
@@ -224,7 +224,7 @@ Valid filter statuses are:
 
 ## Settings Contracts
 
-`GET /api/settings` returns the product-agent settings payload. `PATCH /api/settings` currently accepts these leaf paths:
+`GET /api/settings` returns the product-factory settings payload. `PATCH /api/settings` currently accepts these leaf paths:
 
 - `authoring.intro_text.default.min_words`
 - `authoring.intro_text.default.max_words`

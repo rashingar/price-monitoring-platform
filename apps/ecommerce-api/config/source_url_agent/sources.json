@@ -73,7 +73,7 @@
       "rate_limit_seconds": 2.0,
       "max_candidates_per_product": 6,
       "max_searches_per_product": 4,
-      "notes": "Direct vendor resolver uses public pages only; Product-Agent is reference-only."
+      "notes": "Direct vendor resolver uses public pages only; Product Factory is reference-only."
     },
     {
       "source_name": "kotsovolos",

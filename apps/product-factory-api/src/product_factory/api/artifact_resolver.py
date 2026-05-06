@@ -19,7 +19,7 @@ def resolve_job_artifacts(
     *,
     repo_root: Path = REPO_ROOT,
 ) -> list[ResolvedArtifact]:
-    paths = _compatibility_paths(record, repo_root=repo_root)
+    paths = _existing_expected_paths(record, repo_root=repo_root)
     paths.update(record.artifacts)
     return [
         ResolvedArtifact(name=name, path=path, kind=_artifact_kind(Path(path)))
@@ -28,7 +28,7 @@ def resolve_job_artifacts(
     ]
 
 
-def _compatibility_paths(record: JobRecord, *, repo_root: Path) -> dict[str, str]:
+def _existing_expected_paths(record: JobRecord, *, repo_root: Path) -> dict[str, str]:
     if not record.model:
         return {}
     paths = _expected_paths(record.job_type, record.model, repo_root=repo_root)

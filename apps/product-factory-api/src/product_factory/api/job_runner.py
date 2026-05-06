@@ -27,8 +27,8 @@ from .job_store import JobStore
 
 
 SCRAPER_ROOT = Path(__file__).resolve().parents[2]
-MAX_WORKERS_ENV = "PRODUCT_AGENT_MAX_JOB_WORKERS"
-TERMINATE_TIMEOUT_ENV = "PRODUCT_AGENT_JOB_TERMINATE_TIMEOUT_SECONDS"
+MAX_WORKERS_ENV = "PRODUCT_FACTORY_MAX_JOB_WORKERS"
+TERMINATE_TIMEOUT_ENV = "PRODUCT_FACTORY_JOB_TERMINATE_TIMEOUT_SECONDS"
 DEFAULT_TERMINATE_TIMEOUT_SECONDS = 30
 
 
@@ -294,7 +294,7 @@ class SequentialJobRunner:
             index = len(self._threads) + 1
             thread = threading.Thread(
                 target=self._run_loop,
-                name=f"product-agent-api-job-runner-{index}",
+                name=f"product-factory-api-job-runner-{index}",
                 daemon=True,
             )
             self._threads.append(thread)
@@ -575,7 +575,7 @@ class SequentialJobRunner:
 
         thread = threading.Thread(
             target=read_stream,
-            name=f"product-agent-job-{job_id}-{label}-reader",
+            name=f"product-factory-job-{job_id}-{label}-reader",
             daemon=True,
         )
         thread.start()
@@ -596,7 +596,7 @@ class SequentialJobRunner:
         return [
             sys.executable,
             "-m",
-            "product_factory.jobs.run_product_agent_job",
+            "product_factory.jobs.run_product_factory_job",
             "--job-id",
             record.job_id,
             "--job-root",

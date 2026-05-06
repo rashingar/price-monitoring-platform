@@ -10,12 +10,12 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base, CatalogProductRow, PriceObservation, ProductSource, SourceCaptureSnapshot, SourceUrl  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.jobs.import_product_agent_handoff import main as handoff_job_main  # noqa: E402
-from ecommerce.product_agent_handoff import import_product_agent_handoff, parse_product_agent_handoff  # noqa: E402
+from ecommerce.jobs.import_product_factory_handoff import main as handoff_job_main  # noqa: E402
+from ecommerce.product_factory_handoff import import_product_factory_handoff, parse_product_factory_handoff  # noqa: E402
 
 
 NOW = datetime(2026, 5, 4, 12, tzinfo=timezone.utc)
-FIXTURE = PROJECT_ROOT / "tests" / "fixtures" / "product_agent" / "ecommerce_source_handoff.json"
+FIXTURE = PROJECT_ROOT / "tests" / "fixtures" / "product_factory" / "ecommerce_source_handoff.json"
 
 
 def _sqlite_url(tmp_path: Path) -> str:
@@ -63,8 +63,8 @@ def _fixture_payload() -> dict:
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
-def test_parse_product_agent_handoff_fixture_schema_v1() -> None:
-    handoff = parse_product_agent_handoff(FIXTURE)
+def test_parse_product_factory_handoff_fixture_schema_v1() -> None:
+    handoff = parse_product_factory_handoff(FIXTURE)
 
     assert handoff.identity.model == "HANDOFF-1"
     assert handoff.identity.mpn == "MPN-HANDOFF-1"
@@ -83,8 +83,8 @@ def test_apply_imports_active_source_url_product_source_snapshot_and_price(tmp_p
         payload["product"]["catalog_product_id"] = product.id
         handoff_path = _write_handoff(tmp_path, payload)
 
-        result = import_product_agent_handoff(session, file_path=handoff_path, apply=True)
-        second = import_product_agent_handoff(session, file_path=handoff_path, apply=True)
+        result = import_product_factory_handoff(session, file_path=handoff_path, apply=True)
+        second = import_product_factory_handoff(session, file_path=handoff_path, apply=True)
 
         source_url = session.query(SourceUrl).one()
         product_source = session.query(ProductSource).one()
@@ -101,10 +101,10 @@ def test_apply_imports_active_source_url_product_source_snapshot_and_price(tmp_p
     assert source_url.trust_level == "high_confidence"
     assert source_url.url_normalized == "https://www.electronet.gr/product/handoff-1"
     assert product_source.canonical_url == "https://www.electronet.gr/product/handoff-1"
-    assert snapshot.capture_strategy == "product_agent_handoff_electronet"
+    assert snapshot.capture_strategy == "product_factory_handoff_electronet"
     assert snapshot.raw_html_ref is not None
     assert observation.competitor_price == Decimal("699.00")
-    assert observation.timestamp_source == "product_agent_handoff.observed_at"
+    assert observation.timestamp_source == "product_factory_handoff.observed_at"
 
 
 def test_dry_run_reports_without_writes(tmp_path: Path) -> None:
@@ -114,7 +114,7 @@ def test_dry_run_reports_without_writes(tmp_path: Path) -> None:
         _catalog_product(session)
         handoff_path = _write_handoff(tmp_path, _fixture_payload())
 
-        result = import_product_agent_handoff(session, file_path=handoff_path, apply=False)
+        result = import_product_factory_handoff(session, file_path=handoff_path, apply=False)
 
         assert result.counters["imported_count"] == 1
         assert result.counters["would_import_snapshot_count"] == 1
@@ -134,7 +134,7 @@ def test_mpn_resolution_imports_needs_review_without_product_source(tmp_path: Pa
     with session_scope(database_url) as session:
         _catalog_product(session, model="CAT-MODEL", mpn="MPN-HANDOFF-1")
 
-        result = import_product_agent_handoff(session, file_path=handoff_path, apply=True)
+        result = import_product_factory_handoff(session, file_path=handoff_path, apply=True)
         row = session.query(SourceUrl).one()
 
         assert result.counters["needs_review_count"] == 1
@@ -155,14 +155,14 @@ def test_ambiguous_identity_and_invalid_url_do_not_write(tmp_path: Path) -> None
         _catalog_product(session, model="A", mpn="MPN-HANDOFF-1")
         _catalog_product(session, model="B", mpn="MPN-HANDOFF-1")
 
-        ambiguous = import_product_agent_handoff(session, file_path=handoff_path, apply=True)
+        ambiguous = import_product_factory_handoff(session, file_path=handoff_path, apply=True)
         assert ambiguous.counters["ambiguous_identity_count"] == 1
         assert session.query(SourceUrl).count() == 0
 
     payload["product"]["model"] = "A"
     handoff_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     with session_scope(database_url) as session:
-        invalid = import_product_agent_handoff(session, file_path=handoff_path, apply=True)
+        invalid = import_product_factory_handoff(session, file_path=handoff_path, apply=True)
 
         assert invalid.counters["invalid_url_count"] == 1
         assert session.query(SourceUrl).count() == 0

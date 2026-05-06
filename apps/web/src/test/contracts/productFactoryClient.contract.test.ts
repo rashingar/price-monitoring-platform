@@ -2,36 +2,36 @@ import { describe, expect, it } from "vitest";
 import { ApiError, apiClient } from "../../api/client";
 import { installMockFetch } from "../mockFetch";
 import {
-  productAgentConflictError,
-  productAgentFilterCategoryWriteDetail,
-  productAgentFilterRevision,
-  productAgentFixtureRoutes,
-  productAgentJobs,
-  productAgentValidationError,
-} from "../fixtures/productAgentApi";
+  productFactoryConflictError,
+  productFactoryFilterCategoryWriteDetail,
+  productFactoryFilterRevision,
+  productFactoryFixtureRoutes,
+  productFactoryJobs,
+  productFactoryValidationError,
+} from "../fixtures/productFactoryApi";
 
-describe("Product-Agent API client contract fixtures", () => {
+describe("Product Factory API client contract fixtures", () => {
   it("passes through health responses", async () => {
-    installMockFetch(productAgentFixtureRoutes);
+    installMockFetch(productFactoryFixtureRoutes);
 
     await expect(apiClient.getHealth()).resolves.toMatchObject({
       status: "ok",
-      service: "product-agent",
+      service: "product-factory",
     });
   });
 
   it("normalizes wrapped and direct job list shapes", async () => {
     installMockFetch([
-      { method: "GET", path: "/api/jobs", response: { jobs: productAgentJobs } },
+      { method: "GET", path: "/api/jobs", response: { jobs: productFactoryJobs } },
     ]);
-    await expect(apiClient.listJobs()).resolves.toHaveLength(productAgentJobs.length);
+    await expect(apiClient.listJobs()).resolves.toHaveLength(productFactoryJobs.length);
 
-    installMockFetch([{ method: "GET", path: "/api/jobs", response: productAgentJobs }]);
-    await expect(apiClient.listJobs()).resolves.toEqual(productAgentJobs);
+    installMockFetch([{ method: "GET", path: "/api/jobs", response: productFactoryJobs }]);
+    await expect(apiClient.listJobs()).resolves.toEqual(productFactoryJobs);
   });
 
   it("preserves terminal job statuses", async () => {
-    installMockFetch(productAgentFixtureRoutes);
+    installMockFetch(productFactoryFixtureRoutes);
 
     const jobs = await apiClient.listJobs();
     expect(jobs.map((job) => job.status)).toEqual(
@@ -40,7 +40,7 @@ describe("Product-Agent API client contract fixtures", () => {
   });
 
   it("normalizes job detail logs and artifacts from backend wrapper shapes", async () => {
-    installMockFetch(productAgentFixtureRoutes);
+    installMockFetch(productFactoryFixtureRoutes);
 
     await expect(apiClient.getJob("job-succeeded-1")).resolves.toMatchObject({
       job_id: "job-succeeded-1",
@@ -55,7 +55,7 @@ describe("Product-Agent API client contract fixtures", () => {
   });
 
   it("normalizes settings filter categories details and sync report", async () => {
-    installMockFetch(productAgentFixtureRoutes);
+    installMockFetch(productFactoryFixtureRoutes);
 
     await expect(apiClient.getSettings()).resolves.toMatchObject({
       authoring: { intro_text: { default: { min_words: 80 } } },
@@ -64,7 +64,7 @@ describe("Product-Agent API client contract fixtures", () => {
     await expect(apiClient.getFilterStatus()).resolves.toMatchObject({
       status: "ready",
       category_count: 2,
-      revision: productAgentFilterRevision,
+      revision: productFactoryFilterRevision,
     });
 
     const categories = await apiClient.listFilterCategories();
@@ -74,7 +74,7 @@ describe("Product-Agent API client contract fixtures", () => {
     });
 
     const category = await apiClient.getFilterCategory(310);
-    expect(category).toMatchObject({ category_id: 310, revision: productAgentFilterRevision });
+    expect(category).toMatchObject({ category_id: 310, revision: productFactoryFilterRevision });
     expect(category.groups).toEqual(
       expect.arrayContaining([expect.objectContaining({ group_id: "grp-capacity" })]),
     );
@@ -90,7 +90,7 @@ describe("Product-Agent API client contract fixtures", () => {
       {
         method: "PUT",
         path: "/api/filters/categories/310/groups",
-        response: productAgentFilterCategoryWriteDetail,
+        response: productFactoryFilterCategoryWriteDetail,
       },
     ]);
 
@@ -112,7 +112,7 @@ describe("Product-Agent API client contract fixtures", () => {
       {
         method: "PATCH",
         path: "/api/filters/categories/310/groups/grp-capacity",
-        response: productAgentFilterCategoryWriteDetail,
+        response: productFactoryFilterCategoryWriteDetail,
       },
     ]);
 
@@ -134,7 +134,7 @@ describe("Product-Agent API client contract fixtures", () => {
       {
         method: "PUT",
         path: "/api/filters/categories/310/groups/grp-wifi/values",
-        response: productAgentFilterCategoryWriteDetail,
+        response: productFactoryFilterCategoryWriteDetail,
       },
     ]);
 
@@ -155,7 +155,7 @@ describe("Product-Agent API client contract fixtures", () => {
       {
         method: "PATCH",
         path: "/api/filters/categories/310/groups/grp-wifi/values/val-yes",
-        response: productAgentFilterCategoryWriteDetail,
+        response: productFactoryFilterCategoryWriteDetail,
       },
     ]);
 
@@ -172,7 +172,7 @@ describe("Product-Agent API client contract fixtures", () => {
   });
 
   it("normalizes authoring and filter review responses for leading-zero models", async () => {
-    installMockFetch(productAgentFixtureRoutes);
+    installMockFetch(productFactoryFixtureRoutes);
 
     await expect(apiClient.getAuthoringStatus("005606")).resolves.toMatchObject({
       model: "005606",
@@ -224,8 +224,8 @@ describe("Product-Agent API client contract fixtures", () => {
 
   it("exposes useful API error messages for 409 and 422 responses", async () => {
     installMockFetch([
-      { method: "POST", path: "/api/jobs/prepare", response: productAgentConflictError },
-      { method: "POST", path: "/api/jobs/render", response: productAgentValidationError },
+      { method: "POST", path: "/api/jobs/prepare", response: productFactoryConflictError },
+      { method: "POST", path: "/api/jobs/render", response: productFactoryValidationError },
     ]);
 
     await expect(

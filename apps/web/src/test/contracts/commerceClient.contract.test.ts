@@ -11,8 +11,8 @@ import {
   dbStatusNotConfigured,
   dbStatusUnavailable,
   priceMonitoringExecutions,
-  productAgentHandoffImportApply,
-  productAgentHandoffImportPreview,
+  productFactoryHandoffImportApply,
+  productFactoryHandoffImportPreview,
   sourceUrlImportApply,
   sourceUrlImportPreview,
   sourceUrlAgentArtifacts,
@@ -181,26 +181,26 @@ describe("commerce API client contract fixtures", () => {
       report_items_limit: 200,
     };
 
-    await expect(commerceClient.previewProductAgentHandoffImport(handoffBody)).resolves.toMatchObject({
+    await expect(commerceClient.previewProductFactoryHandoffImport(handoffBody)).resolves.toMatchObject({
       apply: false,
       applied: false,
       handoff_summary: expect.objectContaining({
-        handoff_path: productAgentHandoffImportPreview.handoff_summary.handoff_path,
+        handoff_path: productFactoryHandoffImportPreview.handoff_summary.handoff_path,
       }),
       summary: expect.objectContaining({
-        candidates_found: productAgentHandoffImportPreview.summary.candidates_found,
-        would_import_count: productAgentHandoffImportPreview.summary.would_import_count,
+        candidates_found: productFactoryHandoffImportPreview.summary.candidates_found,
+        would_import_count: productFactoryHandoffImportPreview.summary.would_import_count,
       }),
       report_items: expect.arrayContaining([
         expect.objectContaining({ source_name: "electronet", status: "active", confidence: "high" }),
       ]),
     });
 
-    await expect(commerceClient.applyProductAgentHandoffImport(handoffBody)).resolves.toMatchObject({
+    await expect(commerceClient.applyProductFactoryHandoffImport(handoffBody)).resolves.toMatchObject({
       apply: true,
       applied: true,
       summary: expect.objectContaining({
-        imported_count: productAgentHandoffImportApply.summary.imported_count,
+        imported_count: productFactoryHandoffImportApply.summary.imported_count,
       }),
       changed_source_urls: expect.arrayContaining([
         expect.objectContaining({ action: "created" }),

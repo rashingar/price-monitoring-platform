@@ -12,7 +12,7 @@
       "confidence": 0.96,
       "evidence": {
         "identity": "exact",
-        "source": "product_agent"
+        "source": "product_factory"
       },
       "price_evidence": {
         "price": "699,00",

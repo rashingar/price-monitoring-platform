@@ -17,7 +17,6 @@ historical CLI/file-first notes live in separate docs:
 - [API endpoints and contracts](docs/api.md)
 - [Backend and persistence notes](docs/README.md)
 - [Source capture notes](docs/source-capture.md)
-- [Legacy CLI and historical behavior](docs/legacy.md)
 
 ## What This Service Does
 

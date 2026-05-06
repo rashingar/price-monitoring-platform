@@ -6,7 +6,7 @@ import { usePersistentPageState } from "../hooks/usePersistentPageState";
 export function RenderJobPage() {
   const { error, isSubmitting, submitJob } = useCreateJob(apiClient.createRenderJob);
   const [model, setModel, resetModel] = usePersistentPageState(
-    "product-agent-ui:render:v1",
+    "product-factory-ui:render:v1",
     "",
   );
 

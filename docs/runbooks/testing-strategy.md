@@ -111,13 +111,11 @@ Generated web API types are refreshed with
 `.\scripts\contracts\check-web-types.ps1`. The generated files under
 `apps/web/src/api/generated` are committed and should not be edited by hand.
 
-## Legacy Tests
+## Non-Default Tests
 
-Do not delete tests casually. If a test is obsolete, flaky, unclear, or coupled
-to old behavior, mark it `legacy` first and document it in
-`docs/runbooks/legacy-test-cleanup-candidates.md`. Delete later only when the
-team has confirmed that it is generated, duplicate, impossible after the
-monorepo/rename changes, or no longer useful.
+Do not delete tests casually. If a test is too slow, external, e2e-only, or
+diagnostic-only for the default fast path, mark it with the appropriate marker
+and keep the reason close to the test or owning app runbook.
 
 Future Codex prompts should run `.\scripts\test\fast.ps1` unless the task
 explicitly requires broader coverage. Run `slow`, `external`, `e2e`, or

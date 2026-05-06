@@ -470,9 +470,3 @@ def test_vendor_sources_capture_run_excludes_ineligible_source_url_statuses(tmp_
         assert result.selected_source_url_count == 1
         assert result.selected_product_source_count == 1
         assert captured_urls == ["https://www.electronet.gr/p/run-active"]
-
-
-def test_legacy_price_monitoring_source_url_capture_import_still_works() -> None:
-    from ecommerce.price_monitoring import source_url_capture
-
-    assert source_url_capture.run_vendor_source_capture is run_vendor_source_capture

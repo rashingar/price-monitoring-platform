@@ -38,8 +38,8 @@ import {
 } from "../utils/categoryHierarchy";
 
 const DEFAULT_PAGE_SIZE = 100;
-const CATALOG_COLUMNS_STORAGE_KEY = "productAgentUi.catalog.columns.v1";
-const CATALOG_STATE_KEY = "product-agent-ui:catalog:v1";
+const CATALOG_COLUMNS_STORAGE_KEY = "productFactoryUi.catalog.columns.v1";
+const CATALOG_STATE_KEY = "product-factory-ui:catalog:v1";
 
 type CatalogColumnId =
   | "select"

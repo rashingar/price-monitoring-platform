@@ -24,9 +24,9 @@ from product_factory.services.llm_stage_execution import SplitLLMStageResult, Sp
 from product_factory.services.render_execution import _build_llm_validation_backstop_errors
 from product_factory.services.settings_service import (
     IntroTextPolicy,
-    ProductAgentSettingsError,
+    ProductFactorySettingsError,
     get_intro_text_policy,
-    load_product_agent_settings,
+    load_product_factory_settings,
 )
 from product_factory.utils import write_json
 
@@ -40,11 +40,11 @@ def _build_intro(words: int) -> str:
 
 @pytest.fixture()
 def isolated_repo(tmp_path: Path, monkeypatch):
-    settings_path = tmp_path / "resources" / "settings" / "product_agent_settings.json"
+    settings_path = tmp_path / "resources" / "settings" / "product_factory_settings.json"
     monkeypatch.setattr(repo_paths, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(repo_paths, "RESOURCES_DIR", tmp_path / "resources")
     monkeypatch.setattr(repo_paths, "SETTINGS_DIR", tmp_path / "resources" / "settings")
-    monkeypatch.setattr(repo_paths, "PRODUCT_AGENT_SETTINGS_PATH", settings_path)
+    monkeypatch.setattr(repo_paths, "PRODUCT_FACTORY_SETTINGS_PATH", settings_path)
     return tmp_path
 
 
@@ -116,7 +116,7 @@ def _write_prepared_authoring_artifacts(repo_root: Path, model: str = MODEL) -> 
 
 
 def test_missing_settings_file_loads_defaults(isolated_repo: Path) -> None:
-    settings = load_product_agent_settings()
+    settings = load_product_factory_settings()
 
     assert settings.intro_text_default.min_words == INTRO_MIN_WORDS
     assert settings.intro_text_default.max_words == INTRO_MAX_WORDS
@@ -124,7 +124,7 @@ def test_missing_settings_file_loads_defaults(isolated_repo: Path) -> None:
 
 
 def test_existing_settings_file_loads_valid_values(isolated_repo: Path) -> None:
-    _write_settings(repo_paths.PRODUCT_AGENT_SETTINGS_PATH, min_words=60, max_words=140, max_attempts=5)
+    _write_settings(repo_paths.PRODUCT_FACTORY_SETTINGS_PATH, min_words=60, max_words=140, max_attempts=5)
 
     policy = get_intro_text_policy()
 
@@ -144,17 +144,17 @@ def test_existing_settings_file_loads_valid_values(isolated_repo: Path) -> None:
 )
 def test_invalid_settings_are_rejected(isolated_repo: Path, overrides: dict[str, int], message: str) -> None:
     values = {"min_words": 80, "max_words": 180, "max_attempts": 3, **overrides}
-    _write_settings(repo_paths.PRODUCT_AGENT_SETTINGS_PATH, **values)
+    _write_settings(repo_paths.PRODUCT_FACTORY_SETTINGS_PATH, **values)
 
-    with pytest.raises(ProductAgentSettingsError, match=message):
-        load_product_agent_settings()
+    with pytest.raises(ProductFactorySettingsError, match=message):
+        load_product_factory_settings()
 
 
 def test_settings_api_get_and_patch_preserves_override_keys(isolated_repo: Path) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
-    _write_settings(repo_paths.PRODUCT_AGENT_SETTINGS_PATH)
+    _write_settings(repo_paths.PRODUCT_FACTORY_SETTINGS_PATH)
     client = fastapi_testclient.TestClient(create_app())
 
     get_response = client.get("/api/settings")
@@ -262,7 +262,7 @@ def test_get_authoring_status_reports_invalid_outputs(isolated_repo: Path) -> No
 
 
 def test_intro_authoring_retry_rewrites_only_intro_and_uses_configured_policy(isolated_repo: Path) -> None:
-    _write_settings(repo_paths.PRODUCT_AGENT_SETTINGS_PATH, min_words=5, max_words=6, max_attempts=2)
+    _write_settings(repo_paths.PRODUCT_FACTORY_SETTINGS_PATH, min_words=5, max_words=6, max_attempts=2)
     model_root = _write_prepared_authoring_artifacts(isolated_repo)
     llm_dir = model_root / "llm"
     (llm_dir / "intro_text.output.txt").write_text(_build_intro(5), encoding="utf-8")

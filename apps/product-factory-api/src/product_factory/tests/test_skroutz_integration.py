@@ -146,7 +146,7 @@ def test_validate_input_accepts_skroutz_sections_for_v2() -> None:
     assert cli.skroutz_status == 1
 
 
-def test_validate_input_rejects_tefal_manufacturer_product_url_after_deprecation() -> None:
+def test_validate_input_rejects_tefal_manufacturer_product_url() -> None:
     args = argparse.Namespace(
         model="344709",
         url="https://shop.tefal.gr/products/dolci-%CF%80%CE%B1%CE%B3%CF%89%CF%84%CE%BF%CE%BC%CE%B7%CF%87%CE%B1%CE%BD%CE%AE-ig602a",

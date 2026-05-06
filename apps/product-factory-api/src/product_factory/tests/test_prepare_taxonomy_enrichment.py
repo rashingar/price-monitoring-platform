@@ -172,7 +172,7 @@ def test_prepare_stage_passes_current_source_fields_to_taxonomy_resolver_and_pro
                 "hero_summary_applied": False,
                 "presentation_applied": False,
                 "presentation_block_count": 0,
-                "fallback_reason": "manufacturer_enrichment_deprecated",
+                "fallback_reason": "manufacturer_enrichment_disabled",
             },
         ),
         assemble_prepare_result_fn=fake_assemble_prepare_result,
@@ -277,11 +277,11 @@ def test_prepare_stage_propagates_taxonomy_enrichment_payload_and_mutated_source
 @pytest.mark.parametrize(
     ("source_name", "scope_reason", "fallback_reason"),
     [
-        ("electronet", "electronet_product_path", "manufacturer_enrichment_deprecated"),
-        ("skroutz", "skroutz_product_path", "manufacturer_enrichment_deprecated"),
+        ("electronet", "electronet_product_path", "manufacturer_enrichment_disabled"),
+        ("skroutz", "skroutz_product_path", "manufacturer_enrichment_disabled"),
     ],
 )
-def test_prepare_stage_uses_deprecated_manufacturer_enrichment_default_shape(
+def test_prepare_stage_uses_disabled_manufacturer_enrichment_default_shape(
     tmp_path: Path,
     source_name: str,
     scope_reason: str,
@@ -438,7 +438,7 @@ def test_prepare_stage_returns_current_output_shape_for_downstream_code(tmp_path
                 "hero_summary_applied": False,
                 "presentation_applied": False,
                 "presentation_block_count": 0,
-                "fallback_reason": "manufacturer_enrichment_deprecated",
+                "fallback_reason": "manufacturer_enrichment_disabled",
             },
         ),
         assemble_prepare_result_fn=lambda **kwargs: _build_assembly_result(cli=kwargs["cli"], source=kwargs["source"]),

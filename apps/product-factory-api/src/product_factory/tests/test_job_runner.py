@@ -24,18 +24,18 @@ from product_factory.services import (
 
 
 def test_job_runner_env_defaults_and_invalid_values(monkeypatch) -> None:
-    monkeypatch.delenv("PRODUCT_AGENT_MAX_JOB_WORKERS", raising=False)
-    monkeypatch.delenv("PRODUCT_AGENT_JOB_TERMINATE_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("PRODUCT_FACTORY_MAX_JOB_WORKERS", raising=False)
+    monkeypatch.delenv("PRODUCT_FACTORY_JOB_TERMINATE_TIMEOUT_SECONDS", raising=False)
     assert job_runner.configured_max_workers() == 1
     assert job_runner.configured_terminate_timeout_seconds() == 30
 
-    monkeypatch.setenv("PRODUCT_AGENT_MAX_JOB_WORKERS", "0")
-    monkeypatch.setenv("PRODUCT_AGENT_JOB_TERMINATE_TIMEOUT_SECONDS", "bad")
+    monkeypatch.setenv("PRODUCT_FACTORY_MAX_JOB_WORKERS", "0")
+    monkeypatch.setenv("PRODUCT_FACTORY_JOB_TERMINATE_TIMEOUT_SECONDS", "bad")
     assert job_runner.configured_max_workers() == 1
     assert job_runner.configured_terminate_timeout_seconds() == 30
 
-    monkeypatch.setenv("PRODUCT_AGENT_MAX_JOB_WORKERS", "3")
-    monkeypatch.setenv("PRODUCT_AGENT_JOB_TERMINATE_TIMEOUT_SECONDS", "2")
+    monkeypatch.setenv("PRODUCT_FACTORY_MAX_JOB_WORKERS", "3")
+    monkeypatch.setenv("PRODUCT_FACTORY_JOB_TERMINATE_TIMEOUT_SECONDS", "2")
     assert job_runner.configured_max_workers() == 3
     assert job_runner.configured_terminate_timeout_seconds() == 2
 

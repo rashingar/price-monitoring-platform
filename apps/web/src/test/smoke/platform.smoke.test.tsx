@@ -14,18 +14,18 @@ import {
   priceMonitoringMissingSourceUrlSelectionResult,
 } from "../fixtures/commerceApi";
 import {
-  productAgentFilterRevision,
-  productAgentFixtureRoutes,
-  productAgentHealth,
-} from "../fixtures/productAgentApi";
+  productFactoryFilterRevision,
+  productFactoryFixtureRoutes,
+  productFactoryHealth,
+} from "../fixtures/productFactoryApi";
 import { installMockFetch, type MockRoute } from "../mockFetch";
 import { renderWithRouter } from "../renderWithRouter";
 
-const allRoutes = [...productAgentFixtureRoutes, ...commerceFixtureRoutes];
+const allRoutes = [...productFactoryFixtureRoutes, ...commerceFixtureRoutes];
 
 function makeGenericWorkflowRoutes(model: string, authoring: unknown): MockRoute[] {
   return [
-    { method: "GET", path: "/api/health", response: productAgentHealth },
+    { method: "GET", path: "/api/health", response: productFactoryHealth },
     { method: "GET", path: /^\/api\/jobs\/by-model\/[^/]+$/, response: { jobs: [] } },
     { method: "GET", path: `/api/authoring/${model}`, response: authoring },
   ];
@@ -62,13 +62,13 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/");
 
-    expect(screen.getByRole("heading", { name: "Product Agent Platform" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Product Factory Platform" })).toBeInTheDocument();
     const primaryNav = screen.getByRole("navigation", { name: "Primary navigation" });
     expect(within(primaryNav).getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Catalog" })).toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Price Monitoring" })).toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Vendor Sources" })).toBeInTheDocument();
-    expect(within(primaryNav).getByRole("link", { name: "Product-Agent" })).toBeInTheDocument();
+    expect(within(primaryNav).getByRole("link", { name: "Product Factory" })).toBeInTheDocument();
     await expect(screen.findByRole("heading", { name: "Local backend control surface" })).resolves.toBeInTheDocument();
   });
 
@@ -78,7 +78,7 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/");
 
     await expect(screen.findByRole("heading", { name: "ok" })).resolves.toBeInTheDocument();
-    await expect(screen.findByText(/Product-Agent API health endpoint responded/)).resolves.toBeInTheDocument();
+    await expect(screen.findByText(/Product Factory API health endpoint responded/)).resolves.toBeInTheDocument();
     await expect(screen.findByText(/Commerce API health endpoint responded/)).resolves.toBeInTheDocument();
   });
 
@@ -349,15 +349,15 @@ describe("platform mocked page smoke tests", () => {
     ).toBe(true);
   });
 
-  it("previews and applies Product-Agent handoff imports under Vendor Sources", async () => {
+  it("previews and applies Product Factory handoff imports under Vendor Sources", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
     renderWithRouter("/vendor-sources/imports");
 
-    await expect(screen.findByRole("heading", { name: "Product-Agent Handoff Imports" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("heading", { name: "Product Factory Handoff Imports" })).resolves.toBeInTheDocument();
     expect(screen.getByText("Preview does not write database rows.")).toBeInTheDocument();
     expect(screen.getByText("Apply writes source URLs only; capture runs are launched separately.")).toBeInTheDocument();
-    expect(screen.getByText("Only import handoff files produced by Product-Agent.")).toBeInTheDocument();
+    expect(screen.getByText("Only import handoff files produced by Product Factory.")).toBeInTheDocument();
     expect(screen.getByLabelText("Handoff file path")).toHaveValue("work/{model}/integrations/ecommerce_source_handoff.json");
     expect(screen.getByLabelText("catalog_source")).toHaveValue("sourceCata");
     expect(screen.queryByLabelText("Persist initial capture")).not.toBeInTheDocument();
@@ -865,23 +865,23 @@ describe("platform mocked page smoke tests", () => {
   it("renders Filters Manager categories and selected category detail", async () => {
     installMockFetch(allRoutes);
 
-    renderWithRouter("/product-agent/filters?category_id=310");
+    renderWithRouter("/product-factory/filters?category_id=310");
 
     await expect(screen.findByRole("heading", { name: "Filters Manager" })).resolves.toBeInTheDocument();
     await expect(screen.findByRole("heading", { name: "Filters API ready" })).resolves.toBeInTheDocument();
-    await expect(screen.findByText(`Revision ${productAgentFilterRevision.slice(0, 12)}`)).resolves.toBeInTheDocument();
+    await expect(screen.findByText(`Revision ${productFactoryFilterRevision.slice(0, 12)}`)).resolves.toBeInTheDocument();
     await expect(screen.findByText("Χωρητικότητα")).resolves.toBeInTheDocument();
     expect(screen.getAllByText("Αφυγραντήρες").length).toBeGreaterThan(0);
     expect(screen.getByText("Wi-Fi")).toBeInTheDocument();
   });
 
-  it("renders Product-Agent Workflow initial shell without backend side effects", async () => {
+  it("renders Product Factory Workflow initial shell without backend side effects", async () => {
     installMockFetch(allRoutes);
 
-    renderWithRouter("/product-agent");
+    renderWithRouter("/product-factory");
 
     await expect(screen.findByRole("heading", { name: "Pipeline" })).resolves.toBeInTheDocument();
-    await expect(screen.findByText("Product-Agent API available")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Prepare" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Authoring/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Filter Review/i })).toBeInTheDocument();
@@ -890,9 +890,9 @@ describe("platform mocked page smoke tests", () => {
   it("does not render intro emphasis warning when diagnostics are missing", async () => {
     installMockFetch(makeGenericWorkflowRoutes("GENERIC-001", genericAuthoringStatus()));
 
-    renderWithRouter("/product-agent/GENERIC-001");
+    renderWithRouter("/product-factory/GENERIC-001");
 
-    await expect(screen.findByText("Product-Agent API available")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
     const refreshButton = screen.getByRole("button", { name: "Refresh Authoring" });
     await waitFor(() => expect(refreshButton).not.toBeDisabled());
@@ -925,9 +925,9 @@ describe("platform mocked page smoke tests", () => {
       ),
     );
 
-    renderWithRouter("/product-agent/GENERIC-001");
+    renderWithRouter("/product-factory/GENERIC-001");
 
-    await expect(screen.findByText("Product-Agent API available")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
     const refreshButton = screen.getByRole("button", { name: "Refresh Authoring" });
     await waitFor(() => expect(refreshButton).not.toBeDisabled());
@@ -964,9 +964,9 @@ describe("platform mocked page smoke tests", () => {
       ),
     );
 
-    renderWithRouter("/product-agent/GENERIC-001");
+    renderWithRouter("/product-factory/GENERIC-001");
 
-    await expect(screen.findByText("Product-Agent API available")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
     const refreshButton = screen.getByRole("button", { name: "Refresh Authoring" });
     await waitFor(() => expect(refreshButton).not.toBeDisabled());

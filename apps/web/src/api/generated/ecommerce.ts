@@ -72,12 +72,12 @@ export interface paths {
     post: operations["preview_source_url_import_api_catalog_source_urls_import_preview_post"];
   };
   "/api/catalog/source-urls/import/product-factory/apply": {
-    /** Apply Product Agent Handoff Import */
-    post: operations["apply_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_apply_post"];
+    /** Apply Product Factory Handoff Import */
+    post: operations["apply_product_factory_handoff_import_api_catalog_source_urls_import_product_factory_apply_post"];
   };
   "/api/catalog/source-urls/import/product-factory/preview": {
-    /** Preview Product Agent Handoff Import */
-    post: operations["preview_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_preview_post"];
+    /** Preview Product Factory Handoff Import */
+    post: operations["preview_product_factory_handoff_import_api_catalog_source_urls_import_product_factory_preview_post"];
   };
   "/api/catalog/source-urls/summary": {
     /** Get Source Url Summary */
@@ -570,8 +570,8 @@ export interface components {
       /** Review Csv Path */
       review_csv_path?: string | null;
     };
-    /** ProductAgentHandoffImportRequest */
-    ProductAgentHandoffImportRequest: {
+    /** ProductFactoryHandoffImportRequest */
+    ProductFactoryHandoffImportRequest: {
       /**
        * Catalog Source
        * @default sourceCata
@@ -1361,11 +1361,11 @@ export interface operations {
       };
     };
   };
-  /** Apply Product Agent Handoff Import */
-  apply_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_apply_post: {
+  /** Apply Product Factory Handoff Import */
+  apply_product_factory_handoff_import_api_catalog_source_urls_import_product_factory_apply_post: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ProductAgentHandoffImportRequest"];
+        "application/json": components["schemas"]["ProductFactoryHandoffImportRequest"];
       };
     };
     responses: {
@@ -1383,11 +1383,11 @@ export interface operations {
       };
     };
   };
-  /** Preview Product Agent Handoff Import */
-  preview_product_agent_handoff_import_api_catalog_source_urls_import_product_factory_preview_post: {
+  /** Preview Product Factory Handoff Import */
+  preview_product_factory_handoff_import_api_catalog_source_urls_import_product_factory_preview_post: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ProductAgentHandoffImportRequest"];
+        "application/json": components["schemas"]["ProductFactoryHandoffImportRequest"];
       };
     };
     responses: {

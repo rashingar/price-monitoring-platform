@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { commerceClient, getCommerceApiErrorMessage } from "../api/commerceClient";
 import type {
-  ProductAgentHandoffImportRequest,
+  ProductFactoryHandoffImportRequest,
   SourceUrlImportResponse,
 } from "../api/commerceTypes";
 import { ErrorState } from "../components/layout/StateBlocks";
@@ -69,7 +69,7 @@ function ImportResultReport({
     <section className="panel">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Product-Agent handoff</p>
+          <p className="eyebrow">Product Factory handoff</p>
           <h3>{title}</h3>
         </div>
         <div className="button-row">
@@ -188,7 +188,7 @@ export function VendorSourceImportsPage() {
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [previewRequestKey, setPreviewRequestKey] = useState<string | null>(null);
 
-  const requestBody = useMemo<ProductAgentHandoffImportRequest>(() => {
+  const requestBody = useMemo<ProductFactoryHandoffImportRequest>(() => {
     const parsedLimit = limit.trim().length > 0 ? Number(limit) : null;
     const parsedReportLimit = reportItemsLimit.trim().length > 0 ? Number(reportItemsLimit) : null;
     return {
@@ -215,7 +215,7 @@ export function VendorSourceImportsPage() {
     setApplyResult(null);
     setReviewConfirmed(false);
     try {
-      const result = await commerceClient.previewProductAgentHandoffImport(requestBody);
+      const result = await commerceClient.previewProductFactoryHandoffImport(requestBody);
       setPreviewResult(result);
       setPreviewRequestKey(requestKey);
     } catch (error) {
@@ -231,7 +231,7 @@ export function VendorSourceImportsPage() {
     setIsApplyLoading(true);
     setApplyError(null);
     try {
-      const result = await commerceClient.applyProductAgentHandoffImport(requestBody);
+      const result = await commerceClient.applyProductFactoryHandoffImport(requestBody);
       setApplyResult(result);
     } catch (error) {
       setApplyError(getCommerceApiErrorMessage(error));
@@ -251,15 +251,15 @@ export function VendorSourceImportsPage() {
     <div className="page-stack vendor-source-imports-page">
       <header className="page-header">
         <p className="eyebrow">Vendor Sources</p>
-        <h2>Product-Agent Handoff Imports</h2>
-        <p>Import source URL handoff artifacts produced by Product-Agent through ecommerce-api.</p>
+        <h2>Product Factory Handoff Imports</h2>
+        <p>Import source URL handoff artifacts produced by Product Factory through ecommerce-api.</p>
       </header>
 
-      <section className="panel source-url-agent-warning-panel" aria-label="Product-Agent handoff import safety">
+      <section className="panel source-url-agent-warning-panel" aria-label="Product Factory handoff import safety">
         <ul className="source-url-warning-list">
           <li>Preview does not write database rows.</li>
           <li>Apply writes source URLs only; capture runs are launched separately.</li>
-          <li>Only import handoff files produced by Product-Agent.</li>
+          <li>Only import handoff files produced by Product Factory.</li>
         </ul>
       </section>
 

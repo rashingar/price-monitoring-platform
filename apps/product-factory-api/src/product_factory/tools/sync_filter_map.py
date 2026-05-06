@@ -680,7 +680,7 @@ def _check_files(expected: dict[Path, Any]) -> int:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate Product-Agent filter map files.")
+    parser = argparse.ArgumentParser(description="Generate Product Factory filter map files.")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--bootstrap-from-csv", action="store_true", help="Rebuild base map from full catalog CSV.")
     mode.add_argument("--apply-overrides", action="store_true", help="Regenerate final map from base plus overrides.")

@@ -30,7 +30,7 @@ export type JobStatus = string;
 
 export type WorkflowType = "prepare" | "render" | "publish";
 
-export type ProductAgentStageName =
+export type ProductFactoryStageName =
   | "prepare"
   | "authoring_intro"
   | "authoring_seo"
@@ -200,7 +200,7 @@ export interface FilterReview {
   [key: string]: unknown;
 }
 
-export interface ProductAgentSettings {
+export interface ProductFactorySettings {
   authoring?: {
     intro_text?: {
       default?: {

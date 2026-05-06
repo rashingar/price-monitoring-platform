@@ -9,7 +9,7 @@ import pytest
 from product_factory.api.job_models import JobStatus, JobType
 from product_factory.api.job_runner import JobRunResult
 from product_factory.api.job_store import JobStore
-from product_factory.jobs import run_product_agent_job
+from product_factory.jobs import run_product_factory_job
 
 
 def test_worker_cli_missing_job_returns_nonzero(tmp_path: Path) -> None:
@@ -17,7 +17,7 @@ def test_worker_cli_missing_job_returns_nonzero(tmp_path: Path) -> None:
         [
             sys.executable,
             "-m",
-            "product_factory.jobs.run_product_agent_job",
+            "product_factory.jobs.run_product_factory_job",
             "--job-id",
             "missing",
             "--job-root",
@@ -60,9 +60,9 @@ def test_worker_cli_runs_queued_job_through_stub_service(
             artifacts={"metadata_path": tmp_path / "work" / "run.json"},
         )
 
-    monkeypatch.setattr(run_product_agent_job, runner_name, stub_runner)
+    monkeypatch.setattr(run_product_factory_job, runner_name, stub_runner)
 
-    exit_code = run_product_agent_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
+    exit_code = run_product_factory_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
 
     loaded = store.get_job(record.job_id)
     assert exit_code == 0
@@ -80,9 +80,9 @@ def test_worker_cli_failure_writes_failed_metadata_and_exits_nonzero(tmp_path: P
         log("stub service failed")
         return JobRunResult(status=JobStatus.FAILED, message="stub failed", error="boom", error_code="TEST")
 
-    monkeypatch.setattr(run_product_agent_job, "run_render_job", stub_runner)
+    monkeypatch.setattr(run_product_factory_job, "run_render_job", stub_runner)
 
-    exit_code = run_product_agent_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
+    exit_code = run_product_factory_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
 
     loaded = store.get_job(record.job_id)
     assert exit_code != 0
@@ -102,9 +102,9 @@ def test_worker_cli_does_not_overwrite_cancelled_job(tmp_path: Path, monkeypatch
         store.mark_cancelled(record.job_id, reason="operator stop")
         return JobRunResult(status=JobStatus.SUCCEEDED, message="should not win")
 
-    monkeypatch.setattr(run_product_agent_job, "run_render_job", stub_runner)
+    monkeypatch.setattr(run_product_factory_job, "run_render_job", stub_runner)
 
-    exit_code = run_product_agent_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
+    exit_code = run_product_factory_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
 
     loaded = store.get_job(record.job_id)
     assert exit_code != 0

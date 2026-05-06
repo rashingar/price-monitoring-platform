@@ -14,7 +14,7 @@ export function PipelineJobPage() {
   const { currentRun, isRunning, startPipeline, stopJobError, stopStageJob, stoppingJobIds } =
     usePipelineRun();
   const [form, setForm, resetForm] = usePersistentPageState<PrepareFormState>(
-    "product-agent-ui:pipeline:v1",
+    "product-factory-ui:pipeline:v1",
     initialPrepareFormState,
   );
 

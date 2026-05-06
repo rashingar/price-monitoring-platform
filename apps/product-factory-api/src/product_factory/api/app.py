@@ -17,7 +17,7 @@ def create_app(
     job_store: JobStore | None = None,
     job_runner: SequentialJobRunner | None = None,
 ) -> FastAPI:
-    app = FastAPI(title="Product-Agent Local Jobs API")
+    app = FastAPI(title="Product Factory Local Jobs API")
     app.state.job_store = job_store or JobStore()
     app.state.job_runner = job_runner or SequentialJobRunner(app.state.job_store)
     app.include_router(health_router, prefix="/api")

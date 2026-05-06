@@ -1,15 +1,15 @@
 import type { MockRoute } from "../mockFetch";
 
-export const productAgentFilterRevision = "f1lterrev00112233445566778899";
-export const productAgentFilterWriteRevision = "f1lterrev99112233445566778899";
+export const productFactoryFilterRevision = "f1lterrev00112233445566778899";
+export const productFactoryFilterWriteRevision = "f1lterrev99112233445566778899";
 
-export const productAgentHealth = {
+export const productFactoryHealth = {
   status: "ok",
-  service: "product-agent",
+  service: "product-factory",
   version: "test-fixture",
 };
 
-export const productAgentJobs = [
+export const productFactoryJobs = [
   {
     job_id: "job-queued-1",
     job_type: "prepare",
@@ -74,11 +74,11 @@ export const productAgentJobs = [
   },
 ];
 
-export const productAgentJobDetail = {
-  ...productAgentJobs[2],
+export const productFactoryJobDetail = {
+  ...productFactoryJobs[2],
 };
 
-export const productAgentJobLogs = {
+export const productFactoryJobLogs = {
   job_id: "job-succeeded-1",
   lines: ["Render started", "Render succeeded"],
   logs: [
@@ -87,7 +87,7 @@ export const productAgentJobLogs = {
   ],
 };
 
-export const productAgentJobArtifacts = {
+export const productFactoryJobArtifacts = {
   job_id: "job-succeeded-1",
   artifacts: [
     {
@@ -100,7 +100,7 @@ export const productAgentJobArtifacts = {
   ],
 };
 
-export const productAgentSettings = {
+export const productFactorySettings = {
   schema_version: 1,
   authoring: {
     intro_text: {
@@ -135,11 +135,11 @@ export const productAgentSettings = {
   },
 };
 
-export const productAgentFilterStatus = {
+export const productFactoryFilterStatus = {
   filter_map_base_path: "fixtures/base-filter-map.json",
   filter_map_manual_overrides_path: "fixtures/manual-filter-overrides.json",
   filter_map_path: "fixtures/filter-map.json",
-  revision: productAgentFilterRevision,
+  revision: productFactoryFilterRevision,
   sync_report_path: "fixtures/filter-sync-report.json",
   valid_statuses: ["active", "inactive", "deprecated"],
   status: "ready",
@@ -150,7 +150,7 @@ export const productAgentFilterStatus = {
     filter_map_base_path: "fixtures/base-filter-map.json",
     filter_map_manual_overrides_path: "fixtures/manual-filter-overrides.json",
     filter_map_path: "fixtures/filter-map.json",
-    revision: productAgentFilterRevision,
+    revision: productFactoryFilterRevision,
     sync_report_path: "fixtures/filter-sync-report.json",
     valid_statuses: ["active", "inactive", "deprecated"],
     status: "ready",
@@ -160,7 +160,7 @@ export const productAgentFilterStatus = {
   },
 };
 
-export const productAgentFilterCategories = {
+export const productFactoryFilterCategories = {
   categories: [
     {
       category_id: 310,
@@ -193,14 +193,14 @@ export const productAgentFilterCategories = {
   ],
 };
 
-export const productAgentFilterCategoryDetail = {
+export const productFactoryFilterCategoryDetail = {
   category_id: 310,
   path: ["Σπίτι", "Κλιματισμός", "Αφυγραντήρες"],
   parent_category: "Κλιματισμός",
   leaf_category: "Αφυγραντήρες",
   sub_category: "Αφυγραντήρες",
   key: "climate/dehumidifiers",
-  revision: productAgentFilterRevision,
+  revision: productFactoryFilterRevision,
   source: "merged",
   groups: [
     {
@@ -233,7 +233,7 @@ export const productAgentFilterCategoryDetail = {
     leaf_category: "Αφυγραντήρες",
     sub_category: "Αφυγραντήρες",
     key: "climate/dehumidifiers",
-    revision: productAgentFilterRevision,
+    revision: productFactoryFilterRevision,
     source: "merged",
     groups: [
       {
@@ -262,18 +262,18 @@ export const productAgentFilterCategoryDetail = {
   },
 };
 
-export const productAgentFilterCategoryWriteDetail = {
-  ...productAgentFilterCategoryDetail,
-  revision: productAgentFilterWriteRevision,
+export const productFactoryFilterCategoryWriteDetail = {
+  ...productFactoryFilterCategoryDetail,
+  revision: productFactoryFilterWriteRevision,
   category: {
-    ...productAgentFilterCategoryDetail.category,
-    revision: productAgentFilterWriteRevision,
+    ...productFactoryFilterCategoryDetail.category,
+    revision: productFactoryFilterWriteRevision,
   },
 };
 
-export const productAgentFilterSyncResponse = {
+export const productFactoryFilterSyncResponse = {
   status: "synced",
-  revision: productAgentFilterWriteRevision,
+  revision: productFactoryFilterWriteRevision,
   filter_map_path: "fixtures/filter-map.json",
   sync_report_path: "fixtures/filter-sync-report.json",
   category_count: 2,
@@ -284,7 +284,7 @@ export const productAgentFilterSyncResponse = {
   overridden_value_count: 1,
 };
 
-export const productAgentFilterSyncReport = {
+export const productFactoryFilterSyncReport = {
   mode: "mocked",
   warnings: [{ category_id: 310, message: "Manual value overrides base value" }],
   overridden_groups: [{ category_id: 310, group_id: "grp-wifi" }],
@@ -300,7 +300,7 @@ export const productAgentFilterSyncReport = {
   },
 };
 
-export const productAgentFilterReview = {
+export const productFactoryFilterReview = {
   model: "005606",
   category_id: 310,
   taxonomy_path: ["Σπίτι", "Κλιματισμός", "Αφυγραντήρες"],
@@ -349,7 +349,7 @@ export const productAgentFilterReview = {
   },
 };
 
-export const productAgentAuthoring = {
+export const productFactoryAuthoring = {
   model: "005606",
   llm_dir: "runs/005606/llm",
   intro_text: {
@@ -394,17 +394,17 @@ export const productAgentAuthoring = {
   },
 };
 
-export const productAgentConflictError = {
+export const productFactoryConflictError = {
   status: 409,
   body: { detail: "A job is already running for model 005606." },
 };
 
-export const productAgentFilterStaleRevisionError = {
+export const productFactoryFilterStaleRevisionError = {
   status: 409,
   body: { detail: "Filter map revision mismatch. Reload category before saving." },
 };
 
-export const productAgentValidationError = {
+export const productFactoryValidationError = {
   status: 422,
   body: {
     detail: [
@@ -414,82 +414,82 @@ export const productAgentValidationError = {
   },
 };
 
-export const productAgentFixtureRoutes: MockRoute[] = [
-  { method: "GET", path: "/api/health", response: productAgentHealth },
-  { method: "GET", path: "/api/jobs", response: { jobs: productAgentJobs } },
+export const productFactoryFixtureRoutes: MockRoute[] = [
+  { method: "GET", path: "/api/health", response: productFactoryHealth },
+  { method: "GET", path: "/api/jobs", response: { jobs: productFactoryJobs } },
   {
     method: "GET",
     path: "/api/jobs/by-model/005606",
-    response: { jobs: productAgentJobs.filter((job) => job.model === "005606") },
+    response: { jobs: productFactoryJobs.filter((job) => job.model === "005606") },
   },
   {
     method: "GET",
     path: "/api/jobs/by-model/AB-123",
-    response: { jobs: productAgentJobs.filter((job) => job.model === "AB-123") },
+    response: { jobs: productFactoryJobs.filter((job) => job.model === "AB-123") },
   },
-  { method: "GET", path: "/api/jobs/job-succeeded-1", response: productAgentJobDetail },
-  { method: "GET", path: "/api/jobs/job-succeeded-1/logs", response: productAgentJobLogs },
-  { method: "GET", path: "/api/jobs/job-succeeded-1/artifacts", response: productAgentJobArtifacts },
-  { method: "GET", path: "/api/settings", response: productAgentSettings },
-  { method: "GET", path: "/api/filters/status", response: productAgentFilterStatus },
-  { method: "GET", path: "/api/filters/categories", response: productAgentFilterCategories },
+  { method: "GET", path: "/api/jobs/job-succeeded-1", response: productFactoryJobDetail },
+  { method: "GET", path: "/api/jobs/job-succeeded-1/logs", response: productFactoryJobLogs },
+  { method: "GET", path: "/api/jobs/job-succeeded-1/artifacts", response: productFactoryJobArtifacts },
+  { method: "GET", path: "/api/settings", response: productFactorySettings },
+  { method: "GET", path: "/api/filters/status", response: productFactoryFilterStatus },
+  { method: "GET", path: "/api/filters/categories", response: productFactoryFilterCategories },
   {
     method: "GET",
     path: "/api/filters/categories/310",
-    response: productAgentFilterCategoryDetail,
+    response: productFactoryFilterCategoryDetail,
   },
   {
     method: "PUT",
     path: "/api/filters/categories/310/groups",
     requestExample: {
-      expected_revision: productAgentFilterRevision,
+      expected_revision: productFactoryFilterRevision,
       name: "Ενεργειακή κλάση",
       required: false,
       status: "active",
     },
-    response: productAgentFilterCategoryWriteDetail,
+    response: productFactoryFilterCategoryWriteDetail,
   },
   {
     method: "PATCH",
     path: "/api/filters/categories/310/groups/grp-capacity",
     requestExample: {
-      expected_revision: productAgentFilterRevision,
+      expected_revision: productFactoryFilterRevision,
       name: "Χωρητικότητα",
       required: true,
       status: "active",
     },
-    response: productAgentFilterCategoryWriteDetail,
+    response: productFactoryFilterCategoryWriteDetail,
   },
   {
     method: "PUT",
     path: "/api/filters/categories/310/groups/grp-wifi/values",
     requestExample: {
-      expected_revision: productAgentFilterRevision,
+      expected_revision: productFactoryFilterRevision,
       value: "Μερικώς",
       status: "active",
     },
-    response: productAgentFilterCategoryWriteDetail,
+    response: productFactoryFilterCategoryWriteDetail,
   },
   {
     method: "PATCH",
     path: "/api/filters/categories/310/groups/grp-wifi/values/val-yes",
     requestExample: {
-      expected_revision: productAgentFilterRevision,
+      expected_revision: productFactoryFilterRevision,
       value: "Ναι",
       status: "active",
     },
-    response: productAgentFilterCategoryWriteDetail,
+    response: productFactoryFilterCategoryWriteDetail,
   },
-  { method: "POST", path: "/api/filters/sync", response: productAgentFilterSyncResponse },
-  { method: "GET", path: "/api/filters/sync-report", response: productAgentFilterSyncReport },
-  { method: "GET", path: "/api/filter-review/005606", response: productAgentFilterReview },
-  { method: "PUT", path: "/api/filter-review/005606", response: productAgentFilterReview },
-  { method: "POST", path: "/api/filter-review/005606/approve", response: productAgentFilterReview },
+  { method: "POST", path: "/api/filters/sync", response: productFactoryFilterSyncResponse },
+  { method: "GET", path: "/api/filters/sync-report", response: productFactoryFilterSyncReport },
+  { method: "GET", path: "/api/filter-review/005606", response: productFactoryFilterReview },
+  { method: "PUT", path: "/api/filter-review/005606", response: productFactoryFilterReview },
+  { method: "POST", path: "/api/filter-review/005606/approve", response: productFactoryFilterReview },
   {
     method: "POST",
     path: /\/api\/jobs\/[^/]+\/retry$/,
     contractPath: "/api/jobs/{job_id}/retry",
-    response: { job: { ...productAgentJobs[0], job_id: "005606-prepare-retry", status: "queued" } },
+    response: { job: { ...productFactoryJobs[0], job_id: "005606-prepare-retry", status: "queued" } },
   },
-  { method: "GET", path: "/api/authoring/005606", response: productAgentAuthoring },
+  { method: "GET", path: "/api/authoring/005606", response: productFactoryAuthoring },
 ];

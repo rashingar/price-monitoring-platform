@@ -41,7 +41,7 @@ Ownership in this slice:
   - section/Besco preparation
   - schema matching
   - deterministic prepared-context assembly
-  - scrape compatibility artifact persistence
+  - scrape artifact persistence
 
 Later stages remain unchanged in this slice:
 

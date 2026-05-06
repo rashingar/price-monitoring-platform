@@ -21,7 +21,7 @@ from ecommerce.db.repositories import json_safe_value
 from ecommerce.db.session import session_scope
 from ecommerce.db.source_url_repository import SOURCE_URL_STATUSES, SOURCE_URL_TYPES
 from ecommerce.file_editor import get_allowed_roots, is_path_allowed
-from ecommerce.product_agent_handoff import ProductAgentHandoffImportResult, import_product_agent_handoff
+from ecommerce.product_factory_handoff import ProductFactoryHandoffImportResult, import_product_factory_handoff
 from ecommerce.source_url_import import SUMMARY_COUNTERS, SourceUrlImportResult, import_source_urls
 
 router = APIRouter(prefix="/api/catalog/source-urls", tags=["catalog-source-urls"])
@@ -37,7 +37,7 @@ class SourceUrlImportRequest(BaseModel):
     report_items_limit: int = 200
 
 
-class ProductAgentHandoffImportRequest(BaseModel):
+class ProductFactoryHandoffImportRequest(BaseModel):
     file: str | None = None
     file_path: str | None = None
     catalog_source: str = Field(default=DEFAULT_CATALOG_SOURCE)
@@ -129,13 +129,13 @@ def apply_source_url_import(request: SourceUrlImportRequest) -> dict[str, Any]:
 
 
 @router.post("/import/product-factory/preview", response_model=SourceUrlImportResponse)
-def preview_product_agent_handoff_import(request: ProductAgentHandoffImportRequest) -> dict[str, Any]:
-    return _run_product_agent_handoff_import(request, apply=False)
+def preview_product_factory_handoff_import(request: ProductFactoryHandoffImportRequest) -> dict[str, Any]:
+    return _run_product_factory_handoff_import(request, apply=False)
 
 
 @router.post("/import/product-factory/apply", response_model=SourceUrlImportResponse)
-def apply_product_agent_handoff_import(request: ProductAgentHandoffImportRequest) -> dict[str, Any]:
-    return _run_product_agent_handoff_import(request, apply=True)
+def apply_product_factory_handoff_import(request: ProductFactoryHandoffImportRequest) -> dict[str, Any]:
+    return _run_product_factory_handoff_import(request, apply=True)
 
 
 @router.get("/import/options")
@@ -145,7 +145,7 @@ def get_source_url_import_options() -> dict[str, Any]:
         "supports_observations": True,
         "supports_artifacts": True,
         "supports_legacy_runs": True,
-        "supports_product_agent_handoff": True,
+        "supports_product_factory_handoff": True,
         "legacy_runs_default_enabled": False,
         "requires_apply_confirmation": True,
         "notes": [
@@ -181,12 +181,12 @@ def _run_source_url_import(request: SourceUrlImportRequest, *, apply: bool) -> d
         raise HTTPException(status_code=500, detail=f"Source URL import failed: {type(exc).__name__}") from exc
 
 
-def _run_product_agent_handoff_import(request: ProductAgentHandoffImportRequest, *, apply: bool) -> dict[str, Any]:
+def _run_product_factory_handoff_import(request: ProductFactoryHandoffImportRequest, *, apply: bool) -> dict[str, Any]:
     _require_catalog_database_ready()
-    payload = _validated_product_agent_handoff_request(request)
+    payload = _validated_product_factory_handoff_request(request)
     try:
         with session_scope() as session:
-            result = import_product_agent_handoff(
+            result = import_product_factory_handoff(
                 session,
                 file_path=payload["file_path"],
                 apply=apply,
@@ -200,9 +200,9 @@ def _run_product_agent_handoff_import(request: ProductAgentHandoffImportRequest,
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Product-Agent handoff import failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(status_code=500, detail=f"Product Factory handoff import failed: {_safe_db_error(exc)}") from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Product-Agent handoff import failed: {type(exc).__name__}") from exc
+        raise HTTPException(status_code=500, detail=f"Product Factory handoff import failed: {type(exc).__name__}") from exc
 
 
 def _source_url_summary(session: Session, catalog_source: str) -> dict[str, Any]:
@@ -335,7 +335,7 @@ def _api_report_item(item: dict[str, Any], *, apply: bool) -> dict[str, Any]:
 
 
 def _handoff_import_response(
-    result: ProductAgentHandoffImportResult,
+    result: ProductFactoryHandoffImportResult,
     *,
     apply: bool,
     report_items_limit: int,
@@ -355,7 +355,7 @@ def _handoff_import_response(
     }
 
 
-def _handoff_import_summary(result: ProductAgentHandoffImportResult, *, apply: bool) -> dict[str, int]:
+def _handoff_import_summary(result: ProductFactoryHandoffImportResult, *, apply: bool) -> dict[str, int]:
     counters = {key: int(result.counters.get(key, 0)) for key in SUMMARY_COUNTERS}
     summary = dict(counters)
     if apply:
@@ -369,10 +369,10 @@ def _handoff_import_summary(result: ProductAgentHandoffImportResult, *, apply: b
     return summary
 
 
-def _handoff_source_stats(result: ProductAgentHandoffImportResult) -> dict[str, dict[str, int]]:
-    stats = result.source_stats.get("product_agent_handoff", {})
+def _handoff_source_stats(result: ProductFactoryHandoffImportResult) -> dict[str, dict[str, int]]:
+    stats = result.source_stats.get("product_factory_handoff", {})
     return {
-        "product_agent_handoff": {
+        "product_factory_handoff": {
             "processed": int(stats.get("processed", 0)),
             "candidates": int(stats.get("candidates", 0)),
         }
@@ -403,12 +403,12 @@ def _validated_import_request(request: SourceUrlImportRequest) -> dict[str, Any]
     }
 
 
-def _validated_product_agent_handoff_request(request: ProductAgentHandoffImportRequest) -> dict[str, Any]:
+def _validated_product_factory_handoff_request(request: ProductFactoryHandoffImportRequest) -> dict[str, Any]:
     payload = _model_payload(request, exclude_unset=False)
     file_path = _optional_text(payload.get("file_path")) or _optional_text(payload.get("file"))
     if not file_path:
         raise HTTPException(status_code=400, detail="file is required.")
-    path = _validated_product_agent_handoff_path(file_path)
+    path = _validated_product_factory_handoff_path(file_path)
     return {
         "file_path": path,
         "catalog_source": _validated_catalog_source(payload.get("catalog_source")),
@@ -418,15 +418,15 @@ def _validated_product_agent_handoff_request(request: ProductAgentHandoffImportR
     }
 
 
-def _validated_product_agent_handoff_path(value: str) -> Path:
+def _validated_product_factory_handoff_path(value: str) -> Path:
     requested = Path(value)
     if requested.name != "ecommerce_source_handoff.json":
         raise HTTPException(status_code=400, detail="file must be a ecommerce_source_handoff.json artifact.")
     if _contains_parent_reference(requested):
         raise HTTPException(status_code=400, detail="file must not contain path traversal.")
     path = requested.expanduser().resolve(strict=False)
-    if not _product_agent_handoff_path_allowed(path):
-        allowed = ", ".join(_display_path(root) for root in _product_agent_handoff_allowed_roots())
+    if not _product_factory_handoff_path_allowed(path):
+        allowed = ", ".join(_display_path(root) for root in _product_factory_handoff_allowed_roots())
         raise HTTPException(
             status_code=400,
             detail=f"file must be inside allowed artifact roots or configured file roots. Allowed roots: {allowed}",
@@ -436,11 +436,11 @@ def _validated_product_agent_handoff_path(value: str) -> Path:
     return path
 
 
-def _product_agent_handoff_path_allowed(path: Path) -> bool:
-    return is_path_allowed(path, _product_agent_handoff_allowed_roots())
+def _product_factory_handoff_path_allowed(path: Path) -> bool:
+    return is_path_allowed(path, _product_factory_handoff_allowed_roots())
 
 
-def _product_agent_handoff_allowed_roots() -> list[Path]:
+def _product_factory_handoff_allowed_roots() -> list[Path]:
     roots = [root.expanduser().resolve(strict=False) for root in get_artifact_roots()]
     roots.extend(get_allowed_roots())
     return _dedupe_paths(roots)

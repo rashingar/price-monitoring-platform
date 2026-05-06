@@ -20,7 +20,7 @@ import { usePersistentPageState } from "../hooks/usePersistentPageState";
 
 type AlertStatusFilter = AlertEventStatus | "all";
 type RuleTargetMode = "product_id" | "catalog_model" | "catalog_mpn";
-const PRICE_ALERTS_STATE_KEY = "product-agent-ui:price-alerts:v1";
+const PRICE_ALERTS_STATE_KEY = "product-factory-ui:price-alerts:v1";
 
 interface AlertCounts {
   open: number;

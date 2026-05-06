@@ -5,9 +5,9 @@ import type {
   PriceMonitoringSource,
 } from "./commerceTypes";
 
-export const PRICE_MONITORING_STATE_KEY = "product-agent-ui:price-monitoring:v1";
+export const PRICE_MONITORING_STATE_KEY = "product-factory-ui:price-monitoring:v1";
 export const PRICE_MONITORING_EXECUTIONS_STATE_KEY =
-  "product-agent-ui:price-monitoring-executions:v1";
+  "product-factory-ui:price-monitoring-executions:v1";
 
 export type SourceOverride = "" | PriceMonitoringSource;
 export type StoredObservationMatchFilter = "all" | "matched" | "unmatched";

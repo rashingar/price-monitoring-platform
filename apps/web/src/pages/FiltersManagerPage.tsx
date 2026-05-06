@@ -22,7 +22,7 @@ import { usePersistentPageState } from "../hooks/usePersistentPageState";
 
 const VALID_STATUSES: FilterManagerStatus[] = ["active", "inactive", "deprecated"];
 const SOURCE_FILTERS = ["all", "base", "manual", "merged"] as const;
-const FILTERS_MANAGER_STORAGE_KEY = "product-agent-ui:filters-manager:v1";
+const FILTERS_MANAGER_STORAGE_KEY = "product-factory-ui:filters-manager:v1";
 const STALE_REVISION_MESSAGE =
   "This filter category changed since you loaded it. Reload the category before saving.";
 
@@ -1128,7 +1128,7 @@ export function FiltersManagerPage() {
   return (
     <div className="page-stack">
       <section className="page-header">
-        <p className="eyebrow">Product-Agent</p>
+        <p className="eyebrow">Product Factory</p>
         <h2>Filters Manager</h2>
         <p>Manage global category filter groups and values by stable backend IDs.</p>
         <button className="text-button" type="button" onClick={handleResetState}>
@@ -1156,7 +1156,7 @@ export function FiltersManagerPage() {
         </div>
         {healthError ? <p className="form-error">{healthError}</p> : null}
         {syncError ? <p className="form-error">{syncError}</p> : null}
-        {!backendAvailable ? <p className="muted">Write and sync actions are disabled until the Product-Agent API is reachable.</p> : null}
+        {!backendAvailable ? <p className="muted">Write and sync actions are disabled until the Product Factory API is reachable.</p> : null}
         {lastLoadedAt ? <p className="muted">Last loaded {lastLoadedAt.toLocaleTimeString()}</p> : null}
         <p className="muted">Revision {formatRevision(currentRevision)}</p>
       </section>

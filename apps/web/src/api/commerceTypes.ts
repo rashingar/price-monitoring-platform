@@ -30,8 +30,8 @@ export type EcommerceContractSourceUrlCandidateReviewRequest =
   EcommerceSchema<"SourceUrlCandidateReviewRequest">;
 export type EcommerceContractSourceUrlImportRequest =
   EcommerceSchema<"SourceUrlImportRequest">;
-export type EcommerceContractProductAgentHandoffImportRequest =
-  EcommerceSchema<"ProductAgentHandoffImportRequest">;
+export type EcommerceContractProductFactoryHandoffImportRequest =
+  EcommerceSchema<"ProductFactoryHandoffImportRequest">;
 
 export type MarketplaceFilter = "all" | "bestprice" | "skroutz" | "both" | "none";
 
@@ -218,7 +218,7 @@ export interface SourceUrlImportRequest {
   [key: string]: unknown;
 }
 
-export interface ProductAgentHandoffImportRequest {
+export interface ProductFactoryHandoffImportRequest {
   handoff_path: string;
   catalog_source?: string | null;
   persist_initial_capture: boolean;

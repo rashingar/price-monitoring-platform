@@ -1,4 +1,4 @@
-# Price-Fetcher Source Handoff
+# Product Factory Source Handoff
 
 Product Factory emits a source URL evidence artifact after a successful prepare source acquisition:
 

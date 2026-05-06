@@ -1,4 +1,4 @@
-"""Import Product-Agent ecommerce_source_handoff.json artifacts."""
+"""Import Product Factory ecommerce_source_handoff.json artifacts."""
 
 from __future__ import annotations
 
@@ -14,12 +14,12 @@ from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.session import session_scope
 from ecommerce.env import load_local_env_if_present
-from ecommerce.product_agent_handoff import import_product_agent_handoff
+from ecommerce.product_factory_handoff import import_product_factory_handoff
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     load_local_env_if_present()
-    parser = argparse.ArgumentParser(description="Import Product-Agent source URL handoff artifacts.")
+    parser = argparse.ArgumentParser(description="Import Product Factory source URL handoff artifacts.")
     parser.add_argument("--file", required=True, type=Path, help="Path to ecommerce_source_handoff.json.")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="Preview changes without writing. This is the default.")
@@ -33,7 +33,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         with session_scope() as session:
-            result = import_product_agent_handoff(
+            result = import_product_factory_handoff(
                 session,
                 file_path=args.file,
                 apply=bool(args.apply),
@@ -43,12 +43,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
     except SQLAlchemyError as exc:
         print(
-            f"Product-Agent handoff import failed: {sanitize_database_error(str(exc)) or exc.__class__.__name__}",
+            f"Product Factory handoff import failed: {sanitize_database_error(str(exc)) or exc.__class__.__name__}",
             file=sys.stderr,
         )
         return 1
     except Exception as exc:
-        print(f"Product-Agent handoff import failed: {exc}", file=sys.stderr)
+        print(f"Product Factory handoff import failed: {exc}", file=sys.stderr)
         return 1
 
     payload = result.to_dict(include_items=bool(args.report_path))

@@ -98,7 +98,7 @@ def test_resolve_prepare_taxonomy_enrichment_calls_resolver_with_current_prepare
     assert result.taxonomy.reason == "resolver_reason"
 
 
-def test_resolve_prepare_taxonomy_enrichment_skips_skroutz_manufacturer_enrichment_after_deprecation(
+def test_resolve_prepare_taxonomy_enrichment_skips_skroutz_manufacturer_enrichment_when_disabled(
     tmp_path: Path,
 ) -> None:
     source = _build_source(source_name="skroutz", url="https://www.skroutz.gr/s/143051/example.html")
@@ -117,7 +117,7 @@ def test_resolve_prepare_taxonomy_enrichment_skips_skroutz_manufacturer_enrichme
 
     def fake_enrich_source_from_manufacturer_docs(**kwargs) -> dict[str, object]:
         enrichment_calls.append(kwargs)
-        raise AssertionError("manufacturer enrichment is deprecated and should not be called")
+        raise AssertionError("manufacturer enrichment is disabled and should not be called")
 
     result = resolve_prepare_taxonomy_enrichment(
         source="skroutz",
@@ -143,7 +143,7 @@ def test_resolve_prepare_taxonomy_enrichment_skips_skroutz_manufacturer_enrichme
         "hero_summary_applied": False,
         "presentation_applied": False,
         "presentation_block_count": 0,
-        "fallback_reason": "manufacturer_enrichment_deprecated",
+        "fallback_reason": "manufacturer_enrichment_disabled",
     }
     assert parsed.source.manufacturer_source_text == ""
     assert parsed.source.manufacturer_spec_sections == []
@@ -152,11 +152,11 @@ def test_resolve_prepare_taxonomy_enrichment_skips_skroutz_manufacturer_enrichme
 @pytest.mark.parametrize(
     ("source_name", "fallback_reason"),
     [
-        ("electronet", "manufacturer_enrichment_deprecated"),
-        ("skroutz", "manufacturer_enrichment_deprecated"),
+        ("electronet", "manufacturer_enrichment_disabled"),
+        ("skroutz", "manufacturer_enrichment_disabled"),
     ],
 )
-def test_resolve_prepare_taxonomy_enrichment_uses_deprecated_default_shape(
+def test_resolve_prepare_taxonomy_enrichment_uses_disabled_default_shape(
     tmp_path: Path,
     source_name: str,
     fallback_reason: str,
