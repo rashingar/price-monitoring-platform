@@ -1,4 +1,4 @@
-# Product-Agent Runtime Instructions
+# Product Factory Runtime Instructions
 
 This file governs runtime and operator-facing execution behavior for the current product product_factory.
 

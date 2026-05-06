@@ -1,132 +1,58 @@
-# Monorepo Migration Runbook
+# Monorepo Migration
 
-This runbook sequences the migration from legacy app folders into the target
-Price Monitoring Platform monorepo layout.
+Status: complete.
 
-## Phase 0: Architecture Docs
+This runbook is a historical record of the migration from separate legacy
+folders into the current Price Monitoring Platform monorepo. Current operator
+guidance lives in:
 
-- Add target architecture documentation.
-- Add architecture decision records.
-- Add this migration runbook.
-- Add or update the root README.
-- Do not move folders.
-- Do not rename files from copied apps.
-- Do not refactor code.
-- Do not create app code.
+- [Current Architecture](../architecture/current-architecture.md)
+- [Operator Startup](operator-startup.md)
+- [Codex Workflow](codex-workflow.md)
+- [Testing Strategy](testing-strategy.md)
 
-## Phase 1: Mechanical Folder Migration
+## Completed Outcomes
 
-Status: completed in the current layout.
+- Final app folders are in place:
+  - `apps/product-factory-api`
+  - `apps/ecommerce-api`
+  - `apps/web`
+- Product Factory source lives under `apps/product-factory-api/src`.
+- Product Factory Python project/install name is `product-factory`.
+- Product Factory internal Python package is `product_factory`.
+- Ecommerce API internal Python package is `ecommerce`.
+- Web browser proxy routes remain stable:
+  - `/api`
+  - `/commerce-api`
+- OpenAPI snapshots are mirrored under `packages/contracts`.
+- Generated web API type scaffolding is committed under
+  `apps/web/src/api/generated`.
+- Root setup, dev, test, contract, and hygiene scripts are available.
+- Fast test scripts use verbose output and exclude slow/external/e2e/legacy
+  tests by default.
+- Hygiene checks cover unsafe paths, app gitlinks, contract mirrors, generated
+  web types when dependencies are installed, and whitespace.
 
-Target moves:
+## Historical Phase Summary
 
-- legacy `Product-Agent` -> `apps/product-factory-api`
-- `ecommerce-api` -> `apps/ecommerce-api`
-- `product-agent-ui` -> `apps/web`
-- `apps/product-factory-api/scraper` -> `apps/product-factory-api/src`
+1. Architecture documentation and decisions were added.
+2. Legacy folders were mechanically placed under the final `apps/*` layout.
+3. Root scripts and first-run documentation were added.
+4. Product Factory and Ecommerce OpenAPI snapshots were mirrored into
+   `packages/contracts`.
+5. Generated web API type scaffolding was added from the mirrored contracts.
+6. Ecommerce API package naming was finalized as `ecommerce`.
+7. Product Factory packaging was added as `product-factory`.
+8. Product Factory internal package naming was finalized as `product_factory`.
+9. Primary docs were converted from migration-oriented notes to current-state
+   operator documentation.
 
-Rules:
+## Historical Notes
 
-- Ecommerce API uses the internal `src/ecommerce` package.
-- Do not rename the `pipeline` package yet.
-- Do not change API routes during the mechanical migration.
-- Do not change browser `/api` and `/commerce-api` routes during the first
-  migration.
-- Keep runtime behavior stable.
-- Keep folder moves mechanical and reviewable.
+Older decisions and archived app docs may mention pre-migration names, staged
+rename plans, or transitional constraints. Treat those references as historical
+context only. Do not use them for current setup, import paths, package names, or
+operator commands.
 
-## Phase 2: Root Scripts and README
-
-Status: completed in the current layout.
-
-- Add root scripts that delegate to app-local commands.
-- Keep backend runtimes separate.
-- Add root development and test command documentation.
-- Document app-local environment setup.
-- Avoid hiding app boundaries behind root scripts.
-
-## Phase 3: Contract Snapshot Mirroring
-
-Status: completed in the current layout when both mirrored snapshots exist in
-`packages/contracts`.
-
-- Create `packages/contracts` if it is not already present.
-- Mirror Product Factory OpenAPI snapshots.
-- Mirror Ecommerce OpenAPI snapshots.
-- Add contract fixture locations and update docs.
-- Generated web API type scaffolding now lives under
-  `apps/web/src/api/generated` and is produced from the mirrored snapshots.
-  Refresh it with `scripts\contracts\generate-web-types.ps1` and check it with
-  `scripts\contracts\check-web-types.ps1`.
-- The existing manual web clients remain the runtime source of truth until a
-  separate migration intentionally adopts generated types.
-
-## Phase 4: Path/Doc Cleanup
-
-Status: completed for active setup docs, root scripts, and path references in
-the current layout.
-
-- Update documentation references from legacy paths to target paths.
-- Fix scripts that still point at old folder names.
-- Keep compatibility aliases only where needed and document their removal path.
-- Keep app boundaries explicit when updating internal Python packages.
-
-## Phase 5: Stabilization
-
-- Use a single root virtual environment at `.venv/` for Python root scripts.
-  On Windows, root scripts call `.venv\Scripts\python.exe`.
-- Create the root virtual environment from the repository root with:
-
-  ```powershell
-  python --version
-  python -m venv .venv
-  .\.venv\Scripts\python.exe --version
-  ```
-
-  Python 3.11 or newer is required. The `python` command must resolve to Python
-  3.11+; if it is missing or too old, install a supported Python version and
-  reopen PowerShell.
-
-- Install dependencies into the root `.venv` manually from the app-specific
-  dependency files needed for the current task. Product Factory dependencies
-  still install from `apps/product-factory-api/requirements.txt` and can then be
-  installed editable with `pip install -e apps/product-factory-api --no-deps`.
-  Do not merge Python dependency files or introduce a new monorepo lockfile
-  during stabilization.
-- Product Factory now has minimal setuptools package metadata as Python project
-  `product-factory`; the internal package remains `pipeline` under
-  `apps/product-factory-api/src`.
-- Ecommerce API uses the internal package `ecommerce` under
-  `apps/ecommerce-api/src`.
-- Root scripts should fail clearly when the root `.venv` is missing and should
-  not silently install dependencies.
-- Web scripts should fail clearly when `apps/web/node_modules` is missing and
-  should direct the developer to run `npm ci`.
-- Keep generated `products/`, `work/`, `output/`, `runs/`, and `logs/` outputs
-  ignored. Raw scraped marketplace, vendor, or provider HTML captures must stay
-  out of Git; sanitized examples belong under `docs/examples` or
-  `tests/fixtures`.
-- Run app-local tests with verbose output.
-- Run root checks with verbose output once root scripts exist.
-- Verify backend API startup independently.
-- Verify web development startup against both backend API routes.
-- Verify contract snapshots and fixtures.
-- Verify generated web API types with
-  `.\scripts\contracts\check-web-types.ps1` after OpenAPI contract changes.
-- Record known gaps before refactors start.
-- Use [Ecommerce PostgreSQL Local Setup](ecommerce-postgresql-local.md) for
-  local database backup, rename, and fresh setup steps.
-
-## Phase 6: Intentional Refactors
-
-- Ecommerce API package rename is complete; do not add compatibility aliases
-  for older package names.
-- Decide whether `product-factory-api` needs durable DB-backed job state.
-- Decide whether Product Factory DB state belongs in a separate schema or
-  separate database.
-- Migrate manual web API client types toward generated API types incrementally.
-  Do not replace runtime fetch clients or browser routes as part of type-only
-  contract scaffolding.
-- Introduce durable workers/jobs only after ownership and operational model are
-  documented.
-- Consider gateway or browser route redesign only as an intentional follow-up.
+Current commands and policies are maintained in the root README and the current
+runbooks linked above.

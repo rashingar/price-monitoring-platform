@@ -11,7 +11,7 @@ must be skipped with `missing_active_source_url`. The default monitoring source
 is all active source URLs across vendors; source/vendor filters are optional.
 
 Vendor Sources owns URL discovery, source URL candidates, source URL review,
-source URL capture, source health, Product-Agent handoff import, and durable
+source URL capture, source health, Product Factory handoff import, and durable
 Vendor Source Capture run history. Do not add fallback URL discovery,
 marketplace MPN/search fallback, direct-vendor capture implementation, or
 Vendor Source Capture storage under `price_monitoring`.

@@ -815,7 +815,7 @@ Electronet reference logic may exist in `../product-factory-api`.
 Rules:
 
 * inspect sibling code only as reference
-* do not import Product-Agent as runtime dependency
+* do not import Product Factory as a runtime dependency
 * port only minimal generic logic
 * test with fake Electronet-like HTML fixtures
 

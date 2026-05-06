@@ -27,7 +27,7 @@ Current vendors are seeded in `vendors`: `electronet`, `skroutz`, `plaisio`, `pu
 
 Raw capture records are stored in `source_capture_snapshots`. Request and response metadata is sanitized; cookies, auth headers, CSRF/session tokens, and fingerprinting-sensitive headers are not persisted. Price and offer observations are append-only and reference the snapshot that produced them.
 
-Product-Agent can hand off initial capture to this API by setting `ECOMMERCE_API_BASE_URL`, for example `http://127.0.0.1:8001`. Product-Agent treats failures as warnings so product preparation does not fail because source capture failed.
+Product Factory can hand off initial capture to this API by setting `ECOMMERCE_API_BASE_URL`, for example `http://127.0.0.1:8001`. Product Factory treats failures as warnings so product preparation does not fail because source capture failed.
 
 Recurring capture is available through:
 
@@ -64,16 +64,16 @@ fetch must not perform marketplace MPN/search fallback or URL discovery. New
 monitoring work must use active `source_urls`/`product_sources`; Vendor Sources
 owns URL discovery, candidate review, capture, and source health.
 
-Legacy Product-Agent scrape artifacts can be backfilled without making Product-Agent the long-term scraper:
+Legacy Product Factory scrape artifacts can be backfilled without making Product Factory the long-term scraper:
 
 ```powershell
 python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work
 python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work --apply
 ```
 
-This importer scans `*.source.json`, sibling `*.report.json`, and `*.raw.html` files, creates/reuses `product_sources`, stores a `product_agent_artifact_*` raw snapshot, and only appends a price observation when Product-Agent reported a product page, in-scope URL, non-missing price, and high-confidence price diagnostics. Imported observations use the Product-Agent `scraped_at` timestamp when present; otherwise the importer falls back to artifact mtime and marks timestamp quality as derived.
+This importer scans `*.source.json`, sibling `*.report.json`, and `*.raw.html` files, creates/reuses `product_sources`, stores a `product_agent_artifact_*` raw snapshot, and only appends a price observation when Product Factory reported a product page, in-scope URL, non-missing price, and high-confidence price diagnostics. Imported observations use the Product Factory `scraped_at` timestamp when present; otherwise the importer falls back to artifact mtime and marks timestamp quality as derived.
 
-Product-Agent source URL handoff artifacts can be imported directly from:
+Product Factory source URL handoff artifacts can be imported directly from:
 
 ```powershell
 python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --dry-run

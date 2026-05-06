@@ -1,4 +1,4 @@
-# Product-Agent Runtime Input Rules
+# Product Factory Runtime Input Rules
 
 This file defines runtime input validation rules for the template-triggered workflow.
 

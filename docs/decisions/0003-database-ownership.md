@@ -2,12 +2,12 @@
 
 ## Status
 
-Accepted
+Accepted; implemented.
 
 ## Context
 
 The platform needs a clear owner for persistent ecommerce data and database
-migrations before app folders are migrated into the monorepo. The Product
+migrations before app folders were migrated into the monorepo. The Product
 Factory backend currently has artifact/file-backed behavior, while the
 Ecommerce backend owns catalog and monitoring persistence.
 
@@ -38,8 +38,8 @@ shared contracts.
 
 - Database migration ownership is unambiguous.
 - Catalog and monitoring persistence evolve in one backend.
-- Product Factory migration can preserve existing artifact-backed behavior
-  instead of being forced into the ecommerce schema during the first migration.
+- Product Factory can preserve artifact-backed behavior instead of being forced
+  into the ecommerce schema.
 - Cross-app direct database coupling should not be introduced casually.
 - Direct database reads or writes across app boundaries require a separate
   architecture decision.

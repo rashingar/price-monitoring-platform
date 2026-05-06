@@ -213,8 +213,9 @@ POST /api/catalog/source-urls/import/product-agent/apply
 Preview is a dry-run. Apply writes resolved candidates into `source_urls` and is
 intended to be idempotent.
 
-Product-Agent handoff import accepts `ecommerce_source_handoff.json` files
-only from allowed artifact roots or configured file editor roots.
+Product Factory handoff import accepts `ecommerce_source_handoff.json` files
+only from allowed artifact roots or configured file editor roots. The route
+path keeps `/product-agent/` for API compatibility.
 
 ### Vendor Sources
 

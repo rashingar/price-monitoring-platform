@@ -73,27 +73,27 @@ POST /api/catalog/source-urls/import/product-agent/apply
 
 `/import/preview` is a dry-run and returns counters plus capped candidate details without writing database rows. `/import/apply` uses the same importer and writes to `source_urls`; repeated apply calls are idempotent. Both endpoints accept `catalog_source`, `include_observations`, `include_artifacts`, `include_legacy_runs`, `legacy_runs_dir`, `limit`, and `report_items_limit`. Legacy run scanning is disabled by default and only accepts artifact-root paths.
 
-Product-Agent handoff API imports are limited to `ecommerce_source_handoff.json` files under allowed artifact roots or configured file editor roots.
+Product Factory handoff API imports are limited to `ecommerce_source_handoff.json` files under allowed artifact roots or configured file editor roots. The public route path still includes `/product-agent/` for API compatibility.
 
 The summary endpoint reports active catalog coverage, including products with at least one active source URL, products still missing active source URLs, grouped status/source/type counts, and a coverage percentage. Use it to track import progress and review backlog.
 
-Backfill Product-Agent scrape artifacts into first-class source capture snapshots:
+Backfill legacy Product Factory scrape artifacts into first-class source capture snapshots:
 
 ```powershell
 python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work
 python -m ecommerce.jobs.import_product_agent_artifacts --root ..\product-factory-api\work --apply
 ```
 
-The importer scans `work\<model>\scrape\<model>.source.json`, sibling `.report.json`, and `.raw.html` files. It creates or reuses `products` and `product_sources`, stores a sanitized raw `source_capture_snapshots` row, and only creates a `price_observations` row when the Product-Agent price diagnostics are strong enough. Re-running the importer skips snapshots with the same artifact reference and content hash. Use `ECOMMERCE_PRODUCT_AGENT_WORK_ROOT` or `--root` to point at a different Product-Agent work folder.
+The importer scans `work\<model>\scrape\<model>.source.json`, sibling `.report.json`, and `.raw.html` files. It creates or reuses `products` and `product_sources`, stores a sanitized raw `source_capture_snapshots` row, and only creates a `price_observations` row when the Product Factory price diagnostics are strong enough. Re-running the importer skips snapshots with the same artifact reference and content hash. Use `ECOMMERCE_PRODUCT_AGENT_WORK_ROOT` or `--root` to point at a different Product Factory work folder.
 
-Import Product-Agent source URL handoff artifacts:
+Import Product Factory source URL handoff artifacts:
 
 ```powershell
 python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --dry-run
 python -m ecommerce.jobs.import_product_agent_handoff --file work\<model>\integrations\ecommerce_source_handoff.json --apply
 ```
 
-The handoff importer resolves catalog identity without importing Product-Agent code, writes active or needs-review `source_urls`, and uses the existing source convergence helpers for `product_sources`.
+The handoff importer resolves catalog identity without importing Product Factory code, writes active or needs-review `source_urls`, and uses the existing source convergence helpers for `product_sources`.
 
 Verify readiness from the repo root:
 
@@ -123,7 +123,7 @@ alembic upgrade head --sql
 
 `source_urls` stores known marketplace/source URLs for active catalog products. Source URLs can be backfilled from existing observations and enriched artifacts with `python -m ecommerce.jobs.import_source_urls` or through the source URL import API. This importer is conservative and idempotent: it does not create rows without a resolved `catalog_product_id`, preserves manual URLs, leaves disabled URLs disabled, and skips invalid or ambiguous candidates with counters and warnings. Imported URLs may be `active` or `needs_review` depending on match confidence.
 
-`product_sources` and `source_capture_snapshots` store the newer shared capture path used by Product-Agent initial capture, scheduled Ecommerce source capture, and Product-Agent artifact backfill. Product-Agent backfill is best-effort: raw HTML and source JSON are preserved where discoverable, imported snapshots carry `captured_at`, `fetched_at`, `parsed_at`, `imported_at`, and `created_at`, and recovered observations set `timestamp_source` plus `timestamp_quality`.
+`product_sources` and `source_capture_snapshots` store the newer shared capture path used by Product Factory initial capture, scheduled Ecommerce source capture, and legacy Product Factory artifact backfill. Product Factory backfill is best-effort: raw HTML and source JSON are preserved where discoverable, imported snapshots carry `captured_at`, `fetched_at`, `parsed_at`, `imported_at`, and `created_at`, and recovered observations set `timestamp_source` plus `timestamp_quality`.
 
 `alert_rules` stores dashboard-only alert rules. The first supported rule type is `competitor_below_own_price`, which triggers when a competitor/source price is lower than the own catalog price. Rules target products in this priority order:
 

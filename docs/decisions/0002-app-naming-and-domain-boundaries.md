@@ -2,24 +2,24 @@
 
 ## Status
 
-Accepted
+Accepted; implemented.
 
 ## Context
 
-The legacy repositories use names that no longer describe the long-term
-platform domains clearly. The monorepo needs stable app names before mechanical
-folder migration so documentation, scripts, contracts, and future prompts can
-refer to the same targets.
+The pre-monorepo repositories used names that no longer described the platform
+domains clearly. The monorepo needed stable app names before folder migration
+so documentation, scripts, contracts, and future prompts could refer to the
+same targets.
 
 ## Decision
 
 Use `product-factory-api`, `ecommerce-api`, and `web` as the app names.
 
-| Old name | New monorepo path |
+| Pre-monorepo source | Current monorepo path |
 | --- | --- |
-| legacy Product-Agent | `apps/product-factory-api` |
-| ecommerce-api | `apps/ecommerce-api` |
-| product-agent-ui | `apps/web` |
+| Product Factory backend | `apps/product-factory-api` |
+| Ecommerce backend | `apps/ecommerce-api` |
+| Web operator console | `apps/web` |
 
 Ownership boundaries:
 
@@ -34,8 +34,8 @@ Ownership boundaries:
 - The Ecommerce backend has a name that reflects catalog, source URL, vendor
   source, monitoring, review, export, alert, and database responsibilities.
 - The frontend has a neutral app name that can cover all operator workflows.
-- Documentation and root scripts can use stable app names before the app folders
-  are mechanically migrated.
+- Documentation and root scripts use stable app names now that app folders are
+  in their final locations.
 
 Boundary rules:
 

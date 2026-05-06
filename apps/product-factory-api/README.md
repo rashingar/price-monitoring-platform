@@ -9,13 +9,13 @@ product HTML, validates the candidate output, and can hand the final CSV/images
 to the repo OpenCart publishing tools.
 
 The Python project/install name is `product-factory`. The internal Python
-package remains `pipeline` during this staged migration.
+package is `product_factory`.
 
 The project is intentionally repo-local. Runtime code, shared product data, generated workspaces, and final deliverables are kept in separate directories so generated output does not become source material.
 
 ## Repository Layout
 
-- `src/` contains the Python pipeline package, FastAPI backend, job runner, providers, and tests.
+- `src/product_factory/` contains the Python package, FastAPI backend, job runner, providers, and tests.
 - `resources/` contains shared runtime assets: taxonomy mappings, filter maps, schema libraries, prompt templates, CSV templates, and HTML templates.
 - `work/{model}/` contains generated runtime artifacts for a product run.
 - `products/` contains final CSV deliverables.
