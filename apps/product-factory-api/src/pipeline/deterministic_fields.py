@@ -1949,12 +1949,17 @@ def extract_mpn_from_name(name: str, brand: str) -> str:
 def resolve_deterministic_mpn(source: SourceProductData, raw_title: str, brand: str, model: str) -> str:
     for candidate in [source.mpn, extract_mpn_from_name(raw_title, brand)]:
         normalized = normalize_whitespace(candidate)
-        if normalized and not _matches_runtime_product_code(normalized, model, source.product_code):
+        if normalized and not _matches_runtime_product_code(
+            normalized,
+            model,
+            source.product_code,
+            source.source_name,
+        ):
             return normalized
     return ""
 
 
-def _matches_runtime_product_code(candidate: str, model: str, product_code: str) -> bool:
+def _matches_runtime_product_code(candidate: str, model: str, product_code: str, source_name: str = "") -> bool:
     candidate_key = normalize_for_match(candidate)
     if not candidate_key:
         return False
@@ -1964,7 +1969,12 @@ def _matches_runtime_product_code(candidate: str, model: str, product_code: str)
         return True
 
     product_code_key = normalize_for_match(product_code)
-    return bool(product_code_key and product_code_key == model_key and candidate_key == product_code_key)
+    if not product_code_key or candidate_key != product_code_key:
+        return False
+
+    if normalize_for_match(source_name) == "skroutz":
+        return product_code_key.isdigit()
+    return True
 
 
 def should_preserve_parsed_title(title: str, brand: str, mpn: str, composed_name: str = "") -> bool:

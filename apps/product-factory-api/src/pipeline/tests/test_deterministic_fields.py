@@ -479,6 +479,32 @@ def test_deterministic_fields_never_use_product_code_as_mpn_and_extract_unicode_
     assert "339576" not in fields["name"]
 
 
+def test_deterministic_fields_rejects_mismatched_product_code_as_mpn() -> None:
+    source = SourceProductData(
+        source_name="electronet",
+        brand="Tefal",
+        product_code="654321",
+        mpn="654321",
+        name="Αποχυμωτής Tefal Frutelia + ΖΕ3701 Λευκό",
+        key_specs=[
+            SpecItem(label="Ισχύς σε Watts", value="350"),
+            SpecItem(label="Στόμιο Τροφοδοσίας Ø σε Χιλιοστά", value="60"),
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        leaf_category="Καφές-Ροφήματα-Χυμοί",
+        sub_category="Αποχυμωτές",
+    )
+
+    fields = build_deterministic_product_fields(source, taxonomy, "123456", derive_seo_keyword)
+
+    assert fields["mpn"] == "ΖΕ3701"
+    assert fields["name"] == "Tefal ΖΕ3701 – Αποχυμωτής Frutelia + Λευκό"
+    assert "654321" not in fields["name"]
+    assert "123456" not in fields["name"]
+
+
 def test_deterministic_fields_extract_spaced_mpn_and_do_not_inject_specs_into_complete_title() -> None:
     source = SourceProductData(
         source_name="electronet",
