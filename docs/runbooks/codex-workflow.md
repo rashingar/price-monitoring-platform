@@ -25,36 +25,96 @@ Use this runbook for routine Codex changes in the monorepo.
   .\scripts\contracts\check-web-types.ps1
   ```
 
-## Required Checks
+## Default Testing Policy
 
-Run hygiene before committing:
-
-```powershell
-.\scripts\check\hygiene.ps1
-```
-
-Run fast tests when dependencies are installed:
-
-```powershell
-.\scripts\test\fast.ps1
-```
-
-Use verbose output for tests and checks so a long-running command can be
-distinguished from a hang.
-
-If `apps/web/node_modules` is present, also run:
-
-```powershell
-.\scripts\contracts\check-web-types.ps1
-```
+Codex prompts default to small, targeted checks that are relevant to the files
+changed in the current task. Keep the total automated check runtime under 2
+minutes. Do not run broad suites by default.
 
 Always run:
 
+- `git diff --check`
+- `git status --short`
+
+Also run focused grep/search checks for changed naming, routing, or doc areas.
+For example, if a route, package name, script name, or runbook policy changes,
+search for the old and new names in the owning docs and app folders.
+
+Do not run these broad commands unless the operator explicitly asks or the task
+explicitly requires that exact scope:
+
+- `.\scripts\test\fast.ps1`
+- `.\scripts\test\product-factory-api.ps1`
+- `.\scripts\test\ecommerce-api.ps1`
+- `.\scripts\test\web.ps1`
+
+Use targeted checks instead:
+
+- Run `.\scripts\contracts\check.ps1` only when API contracts, routes, or
+  schemas changed.
+- Run `.\scripts\contracts\check-web-types.ps1` only when contracts or
+  generated web API types changed and `apps\web\node_modules` is available.
+- Run a single focused pytest file or test node only when the changed files
+  clearly map to it.
+- Run a single focused Vitest file only when web changes clearly map to it.
+
+If broader verification would be useful but exceeds the default Codex policy,
+do not run it automatically. Report it under `Manual verification needed` with
+the exact command for the operator to run.
+
+Use verbose output for any focused tests and checks so a long-running command
+can be distinguished from a hang.
+
+## Examples
+
+Docs-only change:
+
 ```powershell
-.\scripts\contracts\check.ps1
 git diff --check
 git status --short
 ```
+
+No app tests are required.
+
+Ecommerce route change:
+
+```powershell
+git diff --check
+.\.venv\Scripts\python.exe -m pytest apps\ecommerce-api\tests\path\to\relevant_test.py -q
+git status --short
+```
+
+Run `.\scripts\contracts\check.ps1` only if OpenAPI changed. If broader
+Ecommerce coverage is needed, report this manual command instead of running it:
+
+```powershell
+.\scripts\test\ecommerce-api.ps1
+```
+
+Web navigation change:
+
+```powershell
+git diff --check
+Push-Location apps\web
+npm run test -- src\test\smoke\relevant-smoke.test.tsx --run
+Pop-Location
+git status --short
+```
+
+Run the relevant smoke or contract test file only. Do not run all web tests
+unless explicitly requested.
+
+Contract or generated type change:
+
+```powershell
+.\scripts\contracts\check.ps1
+.\scripts\contracts\check-web-types.ps1
+git diff --check
+git status --short
+```
+
+Run `check-web-types.ps1` only when `apps\web\node_modules` is available. Do not
+run broad app suites by default.
 
 ## Commit Safety
 

@@ -15,7 +15,7 @@ This file defines active input validation and workflow rules for the template-tr
 - Prefer root scripts:
   - `.\scripts\dev\product-factory-api.ps1`
   - `.\scripts\test\product-factory-api.ps1`
-  - `.\scripts\test\fast.ps1`
+  - `.\scripts\test\fast.ps1` for operator broad verification
 
 ## Trigger
 
@@ -134,4 +134,9 @@ Generated runtime folders are ignored by Git and must not be committed.
 
 - Run `.\scripts\test\product-factory-api.ps1` for Product Factory changes.
 - Run `.\scripts\test\fast.ps1` for broad fast coverage when dependencies are installed.
+- For Codex maintenance or refactor tasks, do not run broad suites by default.
+  Use focused checks that are relevant to changed files and keep automated
+  runtime under 2 minutes.
+- For template-triggered actual product workflow runs, follow the runtime
+  workflow rules above.
 - If dependencies are missing, report the root README setup command and stop.

@@ -111,11 +111,11 @@ commands.
 
 ## Test Policy
 
-Use verbose test output. Default root tests should avoid live external services,
-browser-live workflows, e2e product runs, and slow tests unless the change needs
-that scope.
+Use verbose test output. Operator broad fast verification should avoid live
+external services, browser-live workflows, e2e product runs, and slow tests
+unless the change needs that scope.
 
-Routine verification:
+Operator broad verification:
 
 ```powershell
 .\scripts\check\hygiene.ps1
@@ -123,6 +123,10 @@ Routine verification:
 .\scripts\contracts\check-web-types.ps1
 .\scripts\test\fast.ps1
 ```
+
+Codex prompts should default to targeted checks relevant to changed files and
+keep automated check runtime under 2 minutes. See
+`docs/runbooks/codex-workflow.md`.
 
 When `apps/web/node_modules` is missing, web type checks and web tests cannot
 run until `.\scripts\setup\web.ps1` or `npm ci` has been run in `apps/web`.

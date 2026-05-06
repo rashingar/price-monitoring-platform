@@ -1,14 +1,13 @@
 # Testing Strategy
 
-This runbook defines the repository-wide test categories and the default
-Codex-safe command for local verification. The goal is to keep routine checks
-deterministic, local, and quick while preserving slower and live coverage for
-explicit use.
+This runbook defines the repository-wide test categories and separates operator
+broad verification from the default Codex verification policy. The goal is to
+keep routine Codex checks targeted, deterministic, local, and quick while
+preserving broader coverage for explicit operator use.
 
-## Default Command
+## Operator Broad Verification
 
-Run this from the repository root for normal Codex prompts and local pre-commit
-checks:
+Run this from the repository root for human/operator broad fast verification:
 
 ```powershell
 .\scripts\check\hygiene.ps1
@@ -30,6 +29,32 @@ For an aggregate local check, run:
 It runs hygiene, contracts, generated web API type checks when
 `apps/web/node_modules` exists, and fast tests when backend and web dependencies
 exist.
+
+## Codex Default Verification
+
+For normal Codex prompts, run only small, targeted checks relevant to changed
+files and keep total automated check runtime under 2 minutes. Always run:
+
+```powershell
+git diff --check
+git status --short
+```
+
+Also run focused grep/search checks for changed naming, routing, and doc areas.
+Use focused tests only when the changed files clearly map to them:
+
+- Run `.\scripts\contracts\check.ps1` only when API contracts, routes, or
+  schemas changed.
+- Run `.\scripts\contracts\check-web-types.ps1` only when contracts or
+  generated web API types changed and `apps\web\node_modules` is available.
+- Run one relevant pytest file or test node for clearly mapped Python changes.
+- Run one relevant Vitest file for clearly mapped web changes.
+
+Do not run `.\scripts\test\fast.ps1`,
+`.\scripts\test\product-factory-api.ps1`, `.\scripts\test\ecommerce-api.ps1`,
+or `.\scripts\test\web.ps1` by default in Codex prompts. If broader
+verification is useful, list the exact command under `Manual verification
+needed` instead of running it automatically.
 
 ## App Commands
 
@@ -70,7 +95,8 @@ categories above consistently and keep app-specific tags secondary.
 
 ## Fast Tests
 
-Fast tests belong in the default command when they are deterministic and local.
+Fast tests belong in the operator broad verification command when they are
+deterministic and local.
 Good fast tests include pure unit checks, API route smoke checks using TestClient
 and temporary files, OpenAPI/schema snapshot checks, jsdom component smoke
 checks with mocked backend responses, local fixture contract checks, and local
@@ -117,9 +143,10 @@ Do not delete tests casually. If a test is too slow, external, e2e-only, or
 diagnostic-only for the default fast path, mark it with the appropriate marker
 and keep the reason close to the test or owning app runbook.
 
-Future Codex prompts should run `.\scripts\test\fast.ps1` unless the task
-explicitly requires broader coverage. Run `slow`, `external`, `e2e`, or
-`legacy` selections only when the change needs that scope.
+Future Codex prompts should follow the targeted policy in
+[Codex Default Verification](#codex-default-verification). Run
+`.\scripts\test\fast.ps1`, `slow`, `external`, `e2e`, or `legacy` selections
+only when the operator explicitly asks or the change needs that scope.
 
 ## Troubleshooting
 

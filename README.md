@@ -144,11 +144,16 @@ For staged-only path and whitespace checks:
 .\scripts\check\hygiene.ps1 -Staged
 ```
 
-Default fast verification:
+Operator broad fast verification:
 
 ```powershell
 .\scripts\test\fast.ps1
 ```
+
+`scripts\test\fast.ps1` is the human/operator broad fast verification command.
+Codex prompts should prefer targeted checks relevant to changed files and keep
+automated checks under 2 minutes. Broader checks are manual unless explicitly
+requested.
 
 App-specific and contract checks:
 
