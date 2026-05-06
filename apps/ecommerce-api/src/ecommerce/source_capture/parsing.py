@@ -5,17 +5,38 @@ import re
 from decimal import Decimal, InvalidOperation
 from html import unescape
 from typing import Any, Iterable
+from urllib.parse import urljoin
 
 from ecommerce.source_capture.types import ParsedOfferObservation, ParsedPriceObservation
 
+
+SKROUTZ_BASE_URL = "https://www.skroutz.gr"
 
 PRICE_KEYS = ("price", "final_price", "finalprice", "current_price", "currentprice", "sale_price", "saleprice", "amount", "price_with_vat")
 PRICE_SUMMARY_KEYS = ("price_min", "min_price", "minimum_price", "lowest_price", "best_price")
 ORIGINAL_PRICE_KEYS = ("original_price", "originalprice", "old_price", "oldprice", "initial_price", "list_price", "retail_price")
 SELLER_KEYS = ("seller", "seller_name", "sellername", "shop", "shop_name", "shopname", "store", "store_name", "storename", "merchant")
-AVAILABILITY_KEYS = ("availability", "stock", "stock_status", "stockstatus", "availability_text", "availabilitytext")
+AVAILABILITY_KEYS = (
+    "availability",
+    "availability_label",
+    "availability_text",
+    "availabilitytext",
+    "stock",
+    "stock_status",
+    "stockstatus",
+)
 SHIPPING_KEYS = ("shipping", "shipping_cost", "shippingcost", "delivery_cost", "deliverycost", "shipping_price", "shippingprice")
-DELIVERY_KEYS = ("delivery", "delivery_text", "deliverytext", "delivery_time", "deliverytime", "shipping_text", "shippingtext")
+DELIVERY_KEYS = (
+    "delivery",
+    "delivery_text",
+    "deliverytext",
+    "delivery_time",
+    "deliverytime",
+    "shipping_text",
+    "shippingtext",
+    "dispatch_time",
+)
+SELLER_URL_KEYS = ("seller_url", "shop_url", "url", "path", "web_uri", "relative_url")
 
 
 def parse_electronet_html(html: str, *, page_url: str) -> tuple[ParsedPriceObservation, list[str]]:
@@ -68,9 +89,14 @@ def parse_electronet_html(html: str, *, page_url: str) -> tuple[ParsedPriceObser
     return observation, flags
 
 
-def parse_skroutz_offers(payload: Any) -> tuple[list[ParsedOfferObservation], list[str]]:
+def parse_skroutz_offers(payload: Any, *, shops_payload: Any = None) -> tuple[list[ParsedOfferObservation], list[str]]:
     data = _json_payload(payload)
-    offers: list[ParsedOfferObservation] = []
+    shops = _skroutz_shop_details_by_id(_json_payload(shops_payload))
+    offers = _parse_skroutz_product_cards(data, shops)
+    if offers:
+        return offers, []
+
+    offers = []
     for node in _walk_json(data):
         if not isinstance(node, dict):
             continue
@@ -90,7 +116,7 @@ def parse_skroutz_offers(payload: Any) -> tuple[list[ParsedOfferObservation], li
                 or _first_decimal_from_keys(_nested_dict(node, ("shipping", "delivery")), SHIPPING_KEYS + PRICE_KEYS),
                 delivery_text=_first_text_from_keys(node, DELIVERY_KEYS)
                 or _first_text_from_keys(_nested_dict(node, ("shipping", "delivery")), DELIVERY_KEYS + ("text", "title", "description")),
-                seller_url=_first_text_from_keys(node, ("seller_url", "shop_url", "url", "path")),
+                seller_url=_absolute_skroutz_url(_first_text_from_keys(node, SELLER_URL_KEYS)),
                 raw_observation=node,
             )
         )
@@ -126,43 +152,93 @@ def parse_skroutz_price_summary(payload: Any, *, page_url: str) -> tuple[ParsedP
     return None, ["PRICE_MISSING"]
 
 
-def parse_skroutz_visible_html_offers(html: str) -> tuple[list[ParsedOfferObservation], list[str]]:
-    text = _clean_visible_text(html)
-    if not text:
-        return [], ["NO_OFFER_OBSERVATIONS_PARSED"]
-    lines = [line for line in text.splitlines() if line.strip()]
+def _parse_skroutz_product_cards(data: Any, shops: dict[str, dict[str, Any]]) -> list[ParsedOfferObservation]:
+    if not isinstance(data, dict) or not isinstance(data.get("product_cards"), list):
+        return []
     offers: list[ParsedOfferObservation] = []
-    for index, line in enumerate(lines):
-        if _looks_like_shipping_only_line(line):
+    for card in data["product_cards"]:
+        if not isinstance(card, dict):
             continue
-        price = _first_decimal(line)
-        if price is None or "€" not in line:
+        price = _first_decimal_from_keys(card, PRICE_KEYS) or _first_decimal_from_keys(_nested_dict(card, ("pricing", "price")), PRICE_KEYS)
+        if price is None:
             continue
-        seller = _nearest_seller_line(lines, index)
-        if not seller:
-            continue
-        availability = _nearest_matching_line(lines, index, ("διαθε", "stock", "available", "παραδοση", "παράδοση"))
-        shipping_line = _nearest_matching_line(lines, index, ("μεταφορ", "shipping", "courier", "delivery"))
+        shop_id = _shop_id(card)
+        shop = shops.get(shop_id or "", {})
+        seller = (
+            _first_text_from_keys(card, SELLER_KEYS)
+            or _first_text_from_keys(_nested_dict(card, ("seller", "shop", "store")), ("name", "title"))
+            or _first_text_from_keys(shop, ("name", "title", "shop_name", "display_name"))
+        )
+        seller_url = _absolute_skroutz_url(
+            _first_text_from_keys(card, SELLER_URL_KEYS)
+            or _first_text_from_keys(_nested_dict(card, ("seller", "shop", "store")), SELLER_URL_KEYS)
+            or _first_text_from_keys(shop, SELLER_URL_KEYS)
+        )
+        availability = _first_text_from_keys(card, AVAILABILITY_KEYS) or _first_text_from_keys(
+            _nested_dict(card, ("availability", "stock")),
+            AVAILABILITY_KEYS + ("text", "title", "label"),
+        )
+        pricing_node = _nested_dict(card, ("pricing", "price"))
+        shipping_node = _nested_dict(card, ("shipping", "delivery"))
         offers.append(
             ParsedOfferObservation(
                 seller_name=seller,
+                seller_url=seller_url,
                 price=price,
-                currency="EUR",
+                original_price=_first_decimal_from_keys(card, ORIGINAL_PRICE_KEYS) or _first_decimal_from_keys(pricing_node, ORIGINAL_PRICE_KEYS),
+                currency=_first_text_from_keys(card, ("currency",)) or "EUR",
                 availability=availability,
                 stock_status=availability,
-                shipping_cost=_first_decimal(shipping_line),
-                delivery_text=shipping_line,
+                shipping_cost=_first_decimal_from_keys(card, SHIPPING_KEYS)
+                or _first_decimal_from_keys(shipping_node, SHIPPING_KEYS + PRICE_KEYS),
+                delivery_text=_first_text_from_keys(card, DELIVERY_KEYS)
+                or _first_text_from_keys(shipping_node, DELIVERY_KEYS + ("text", "title", "description", "label")),
                 raw_observation={
-                    "parser": "skroutz_visible_html_v1",
-                    "line": line,
-                    "seller_line": seller,
-                    "availability_line": availability,
-                    "shipping_line": shipping_line,
+                    "parser": "skroutz_filter_products_v1",
+                    "shop_id": shop_id,
+                    "card": card,
+                    "shop": shop or None,
                 },
             )
         )
-    flags = [] if offers else ["NO_OFFER_OBSERVATIONS_PARSED"]
-    return offers, flags
+    return offers
+
+
+def _skroutz_shop_details_by_id(payload: Any) -> dict[str, dict[str, Any]]:
+    shops: dict[str, dict[str, Any]] = {}
+    for node in _walk_json(payload):
+        if not isinstance(node, dict):
+            continue
+        shop_id = _shop_id(node)
+        if not shop_id:
+            continue
+        if not (
+            _first_text_from_keys(node, ("name", "title", "shop_name", "display_name"))
+            or _first_text_from_keys(node, SELLER_URL_KEYS)
+        ):
+            continue
+        shops[shop_id] = node
+    return shops
+
+
+def _shop_id(node: dict[str, Any]) -> str | None:
+    normalized = {_normalize_key(key): value for key, value in node.items()}
+    for key in ("shop_id", "shopid", "id"):
+        value = normalized.get(_normalize_key(key))
+        if value is not None:
+            text = _clean_html_text(value)
+            if text:
+                return text
+    shop = _nested_dict(node, ("shop", "seller", "store"))
+    if shop:
+        return _shop_id(shop)
+    return None
+
+
+def _absolute_skroutz_url(value: str | None) -> str | None:
+    if not value:
+        return None
+    return urljoin(SKROUTZ_BASE_URL, value)
 
 
 def _json_payload(payload: Any) -> Any:
@@ -253,69 +329,6 @@ def _first_text_from_keys(node: dict[str, Any], keys: tuple[str, ...]) -> str | 
 
 def _normalize_key(value: object) -> str:
     return str(value or "").strip().casefold().replace("-", "_").replace(" ", "_")
-
-
-def _clean_visible_text(html: str) -> str:
-    text = re.sub(r"(?i)<\s*(br|/p|/div|/li|/tr|/h[1-6])\b[^>]*>", "\n", html or "")
-    text = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", text)
-    text = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", text)
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = unescape(text)
-    return "\n".join(" ".join(line.split()) for line in text.splitlines())
-
-
-def _nearest_seller_line(lines: list[str], price_index: int) -> str | None:
-    for index in range(max(0, price_index - 10), price_index):
-        candidate = _clean_html_text(lines[index])
-        if candidate and _looks_like_seller_text(candidate):
-            return candidate
-    for index in range(price_index + 1, min(len(lines), price_index + 6)):
-        candidate = _clean_html_text(lines[index])
-        if candidate and _looks_like_seller_text(candidate):
-            return candidate
-    return None
-
-
-def _nearest_matching_line(lines: list[str], price_index: int, markers: tuple[str, ...]) -> str | None:
-    for index in range(price_index + 1, min(len(lines), price_index + 5)):
-        candidate = _clean_html_text(lines[index])
-        lowered = (candidate or "").casefold()
-        if candidate and any(marker in lowered for marker in markers):
-            return candidate
-    return None
-
-
-def _looks_like_seller_text(value: str) -> bool:
-    lowered = value.casefold()
-    if "€" in value or _first_decimal(value) is not None:
-        return False
-    noisy_markers = (
-        "skroutz",
-        "καταστήματα",
-        "προσφορ",
-        "διαθε",
-        "δυνατότητα",
-        "δυνατοτητα",
-        "τηλεοράσεις",
-        "αξεσουάρ",
-        "σελίδα",
-        "μεταφορ",
-        "shipping",
-        "delivery",
-        "stock",
-    )
-    if any(marker in lowered for marker in noisy_markers):
-        return False
-    if lowered in {"από", "απο", "σε", "ή", "η"}:
-        return False
-    return 2 <= len(value) <= 80
-
-
-def _looks_like_shipping_only_line(value: str) -> bool:
-    lowered = value.casefold()
-    shipping_markers = ("μεταφορ", "shipping", "courier", "delivery")
-    seller_price_markers = ("τιμη", "τιμή", "price", "€")
-    return any(marker in lowered for marker in shipping_markers) and not any(marker in lowered for marker in seller_price_markers[:-1])
 
 
 def _first_match(text: str, patterns: tuple[str, ...]) -> str | None:

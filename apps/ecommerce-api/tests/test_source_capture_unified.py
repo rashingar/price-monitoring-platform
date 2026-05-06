@@ -24,14 +24,18 @@ from ecommerce.price_monitoring.source_url_coverage import compute_source_url_co
 from ecommerce.source_capture.scheduled import capture_due_product_sources  # noqa: E402
 from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url  # noqa: E402
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug  # noqa: E402
+from ecommerce.source_capture import skroutz_xhr as skroutz_xhr_module  # noqa: E402
 from ecommerce.source_capture.parsing import parse_electronet_html, parse_skroutz_offers, parse_skroutz_price_summary  # noqa: E402
 from ecommerce.source_capture.sanitize import sanitize_headers, sanitize_json  # noqa: E402
 from ecommerce.source_capture.scoring import score_response_candidate  # noqa: E402
 from ecommerce.source_capture.skroutz_xhr import (  # noqa: E402
     BLOCKED_OR_CAPTCHA,
+    DIRECT_ENDPOINT_UNAVAILABLE,
+    DIRECT_JSON_STRATEGY,
     FILTER_PRODUCTS_ACTION,
-    NO_CANDIDATE_XHR_FOUND,
-    NO_SHOP_TRIGGER,
+    INVALID_SKROUTZ_PRODUCT_URL,
+    SHOPS_DETAILS_ACTION,
+    SHOPS_DETAILS_UNAVAILABLE_FLAG,
     TIMEOUT,
     XHR_PARSE_FAILED,
     capture_skroutz_xhr,
@@ -514,190 +518,206 @@ def test_skroutz_candidate_scoring_penalizes_widgets_and_promotions() -> None:
     assert "skroutz filter products endpoint" in "; ".join(filter_products.reasons)
 
 
-def test_skroutz_xhr_capture_persists_best_candidate_and_parses_offers() -> None:
-    payload = {
-        "shops": [
-            {"shop_name": "Store A", "price": "199,99", "availability": "available", "shipping_cost": "3.00"},
-            {"seller": {"name": "Store B"}, "pricing": {"final_price": "205.00"}, "delivery": {"text": "1-3 days"}},
+def _endpoint_response(url: str, payload, *, action: str, status: int = 200, content_type: str = "application/json"):
+    body = payload if isinstance(payload, str) else json.dumps(payload)
+    return skroutz_xhr_module._EndpointResponse(
+        url=url,
+        method="GET",
+        status=status,
+        content_type=content_type,
+        body_text=body,
+        body_json=json.loads(body) if content_type == "application/json" and body else None,
+        fetched_at=datetime.now(timezone.utc).replace(microsecond=0),
+        latency_ms=1,
+        trigger_action=action,
+        final_url=url,
+    )
+
+
+def test_skroutz_xhr_capture_fetches_direct_product_cards_and_shops_details(monkeypatch) -> None:
+    filter_payload = {
+        "product_cards": [
+            {
+                "shop_id": 10,
+                "pricing": {"final_price": "199,99", "original_price": "219,99"},
+                "availability_label": "available",
+                "shipping": {"shipping_cost": "3.00", "delivery_text": "1-3 days"},
+            }
         ]
     }
-    page = _FakePage(
-        has_trigger=True,
-        responses=[
-            _FakeResponse(
-                "https://www.skroutz.gr/s/1/service_filtered_offerings.json",
-                json.dumps(payload),
-                resource_type="fetch",
-            )
-        ],
-    )
+    shops_payload = {"shops": [{"id": 10, "name": "Store A", "url": "/m/10/store-a"}]}
+    calls: list[tuple[str, str]] = []
 
-    result = capture_skroutz_xhr(
-        "https://www.skroutz.gr/s/1/product.html",
-        timeout_seconds=5,
-        sync_playwright_factory=lambda: _FakePlaywright(page),
-    )
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del timeout_seconds
+        calls.append((url, action))
+        if action == FILTER_PRODUCTS_ACTION:
+            return _endpoint_response(url, filter_payload, action=action)
+        return _endpoint_response(url, shops_payload, action=action)
+
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
+
+    result = capture_skroutz_xhr("https://www.skroutz.gr/s/60985330/product.html", timeout_seconds=5)
 
     assert result.status == "success"
-    assert result.snapshot.request_url == "https://www.skroutz.gr/s/1/service_filtered_offerings.json"
+    assert result.snapshot.capture_strategy == DIRECT_JSON_STRATEGY
+    assert result.snapshot.request_url == "https://www.skroutz.gr/s/60985330/filter_products.json"
     assert result.snapshot.request_method == "GET"
     assert result.snapshot.response_status == 200
     assert result.snapshot.response_content_type == "application/json"
-    assert result.snapshot.response_body_json == payload
-    assert result.snapshot.network_event_type == "fetch"
-    assert result.snapshot.trigger_action == "#offerings button[data-controller*='shops-entrypoint']"
-    assert page.waited_selectors[0] == "#offerings button[data-controller*='shops-entrypoint']"
-    assert page.waited_timeouts[0] == 3000
-    assert page.clicked_selectors == ["#offerings button[data-controller*='shops-entrypoint']"]
-    assert result.snapshot.candidate_score is not None and result.snapshot.candidate_score > 0
-    assert len(result.offer_observations) == 2
+    assert result.snapshot.response_body_json == filter_payload
+    assert result.snapshot.trigger_action == FILTER_PRODUCTS_ACTION
+    assert result.snapshot.playwright_version is None
+    assert calls == [
+        ("https://www.skroutz.gr/s/60985330/filter_products.json", FILTER_PRODUCTS_ACTION),
+        ("https://www.skroutz.gr/s/60985330/shops_details.json", SHOPS_DETAILS_ACTION),
+    ]
+    assert len(result.offer_observations) == 1
     assert result.offer_observations[0].seller_name == "Store A"
+    assert result.offer_observations[0].seller_url == "https://www.skroutz.gr/m/10/store-a"
     assert result.offer_observations[0].price == Decimal("199.99")
+    assert result.offer_observations[0].original_price == Decimal("219.99")
+    assert result.offer_observations[0].shipping_cost == Decimal("3.00")
 
 
-def test_skroutz_xhr_capture_returns_no_shop_trigger_without_live_browser() -> None:
-    page = _FakePage(has_trigger=False)
+def test_skroutz_xhr_capture_uses_price_min_summary_when_no_offers(monkeypatch) -> None:
+    payload = {"price_min": "187,50", "availability": "available"}
 
-    result = capture_skroutz_xhr(
-        "https://www.skroutz.gr/s/2/product.html",
-        timeout_seconds=5,
-        sync_playwright_factory=lambda: _FakePlaywright(page),
-    )
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del timeout_seconds
+        assert action == FILTER_PRODUCTS_ACTION
+        return _endpoint_response(url, payload, action=action)
 
-    assert result.status == "failed"
-    assert result.error_code == NO_SHOP_TRIGGER
-    assert NO_SHOP_TRIGGER in result.snapshot.data_quality_flags
-    assert NO_CANDIDATE_XHR_FOUND in result.snapshot.data_quality_flags
-    assert result.snapshot.raw_html is not None
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
 
-
-def test_skroutz_xhr_capture_uses_filter_products_price_summary_without_shop_trigger() -> None:
-    page = _FakePage(
-        has_trigger=False,
-        filter_products_payload={"price_min": "187,50", "availability": "available"},
-    )
-
-    result = capture_skroutz_xhr(
-        "https://www.skroutz.gr/s/8/product.html",
-        timeout_seconds=5,
-        sync_playwright_factory=lambda: _FakePlaywright(page),
-    )
+    result = capture_skroutz_xhr("https://www.skroutz.gr/s/8/product.html", timeout_seconds=5)
 
     assert result.status == "success"
     assert result.snapshot.request_url == "https://www.skroutz.gr/s/8/filter_products.json"
     assert result.snapshot.parser_version == "skroutz_filter_products_v1"
-    assert result.snapshot.trigger_action == FILTER_PRODUCTS_ACTION
-    assert NO_SHOP_TRIGGER in result.snapshot.data_quality_flags
     assert len(result.price_observations) == 1
     assert result.price_observations[0].price == Decimal("187.50")
     assert result.offer_observations == ()
 
 
-def test_skroutz_xhr_capture_returns_no_candidate_after_trigger() -> None:
-    page = _FakePage(has_trigger=True)
+def test_skroutz_xhr_capture_returns_parse_failed_for_unrecognized_json(monkeypatch) -> None:
+    payload = {"price": 199.99, "availability": "available", "shipping_cost": 3}
 
-    result = capture_skroutz_xhr(
-        "https://www.skroutz.gr/s/3/product.html",
-        timeout_seconds=5,
-        sync_playwright_factory=lambda: _FakePlaywright(page),
-    )
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del timeout_seconds
+        return _endpoint_response(url, payload, action=action)
 
-    assert result.status == "failed"
-    assert result.error_code == NO_CANDIDATE_XHR_FOUND
-    assert result.snapshot.trigger_action == "#offerings button[data-controller*='shops-entrypoint']"
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
 
-
-def test_skroutz_xhr_capture_returns_parse_failed_for_unparseable_candidate() -> None:
-    page = _FakePage(
-        has_trigger=True,
-        responses=[
-            _FakeResponse(
-                "https://www.skroutz.gr/s/4/service_filtered_offerings.json",
-                '{"price":199.99,"availability":"available","shipping_cost":3}',
-            )
-        ],
-    )
-
-    result = capture_skroutz_xhr(
-        "https://www.skroutz.gr/s/4/product.html",
-        timeout_seconds=5,
-        sync_playwright_factory=lambda: _FakePlaywright(page),
-    )
+    result = capture_skroutz_xhr("https://www.skroutz.gr/s/4/product.html", timeout_seconds=5)
 
     assert result.status == "failed"
     assert result.error_code == XHR_PARSE_FAILED
-    assert result.snapshot.request_url == "https://www.skroutz.gr/s/4/service_filtered_offerings.json"
-    assert result.snapshot.response_body_json == {"price": 199.99, "availability": "available", "shipping_cost": 3}
+    assert result.snapshot.request_url == "https://www.skroutz.gr/s/4/filter_products.json"
+    assert result.snapshot.response_body_json == payload
     assert XHR_PARSE_FAILED in result.snapshot.data_quality_flags
 
 
-def test_skroutz_xhr_capture_flags_blocked_candidate() -> None:
-    page = _FakePage(
-        has_trigger=True,
-        responses=[
-            _FakeResponse(
-                "https://www.skroutz.gr/s/5/service_filtered_offerings.json",
-                "<html><title>Just a moment...</title><p>Cloudflare captcha challenge</p></html>",
-                status=403,
-                content_type="text/html",
-            )
-        ],
-    )
+def test_skroutz_xhr_capture_flags_blocked_or_captcha_response(monkeypatch) -> None:
+    body = "<html><title>Just a moment...</title><p>Cloudflare captcha challenge</p></html>"
 
-    result = capture_skroutz_xhr(
-        "https://www.skroutz.gr/s/5/product.html",
-        timeout_seconds=5,
-        sync_playwright_factory=lambda: _FakePlaywright(page),
-    )
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del timeout_seconds
+        return _endpoint_response(url, body, action=action, status=403, content_type="text/html")
+
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
+
+    result = capture_skroutz_xhr("https://www.skroutz.gr/s/5/product.html", timeout_seconds=5)
 
     assert result.status == "failed"
     assert result.error_code == BLOCKED_OR_CAPTCHA
     assert result.snapshot.response_status == 403
-    assert result.snapshot.response_body_text is not None
+    assert result.snapshot.response_body_text == body
 
 
-def test_skroutz_xhr_capture_returns_timeout_code() -> None:
-    page = _FakePage(has_trigger=True, goto_error=_FakeTimeout("timed out"))
+def test_skroutz_xhr_capture_returns_timeout_code(monkeypatch) -> None:
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del url, timeout_seconds, action
+        raise TimeoutError("timed out")
 
-    result = capture_skroutz_xhr(
-        "https://www.skroutz.gr/s/6/product.html",
-        timeout_seconds=5,
-        sync_playwright_factory=lambda: _FakePlaywright(page),
-        timeout_error_cls=_FakeTimeout,
-    )
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
+
+    result = capture_skroutz_xhr("https://www.skroutz.gr/s/6/product.html", timeout_seconds=5)
 
     assert result.status == "failed"
     assert result.error_code == TIMEOUT
     assert TIMEOUT in result.snapshot.data_quality_flags
 
 
-def test_skroutz_xhr_capture_falls_back_to_visible_dom_offers() -> None:
-    page = _FakePage(
-        has_trigger=True,
-        html="""
-        <html><body>
-          <div class="shop-card"><h3>DOM Store</h3><span>188,40 €</span><p>Διαθέσιμο</p><p>Μεταφορικά 4,00 €</p></div>
-        </body></html>
-        """,
-    )
+def test_skroutz_xhr_capture_returns_direct_endpoint_unavailable(monkeypatch) -> None:
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del url, timeout_seconds, action
+        raise skroutz_xhr_module._EndpointUnavailable("connection refused")
 
-    result = capture_skroutz_xhr(
-        "https://www.skroutz.gr/s/7/product.html",
-        timeout_seconds=5,
-        sync_playwright_factory=lambda: _FakePlaywright(page),
-    )
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
+
+    result = capture_skroutz_xhr("https://www.skroutz.gr/s/9/product.html", timeout_seconds=5)
+
+    assert result.status == "failed"
+    assert result.error_code == DIRECT_ENDPOINT_UNAVAILABLE
+    assert result.snapshot.request_url == "https://www.skroutz.gr/s/9/filter_products.json"
+    assert DIRECT_ENDPOINT_UNAVAILABLE in result.snapshot.data_quality_flags
+
+
+def test_skroutz_xhr_capture_succeeds_when_shops_details_unavailable_after_offers(monkeypatch) -> None:
+    payload = {"product_cards": [{"shop_id": 11, "shop_name": "Card Store", "price": "201.00"}]}
+
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del timeout_seconds
+        if action == SHOPS_DETAILS_ACTION:
+            raise skroutz_xhr_module._EndpointUnavailable("shops unavailable")
+        return _endpoint_response(url, payload, action=action)
+
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
+
+    result = capture_skroutz_xhr("https://www.skroutz.gr/s/11/product.html", timeout_seconds=5)
 
     assert result.status == "success"
-    assert result.snapshot.capture_strategy == "skroutz_playwright_dom_fallback"
-    assert "dom_fallback" in result.snapshot.data_quality_flags
-    assert len(result.offer_observations) == 1
-    assert result.offer_observations[0].seller_name == "DOM Store"
-    assert result.offer_observations[0].price == Decimal("188.40")
+    assert result.offer_observations[0].seller_name == "Card Store"
+    assert SHOPS_DETAILS_UNAVAILABLE_FLAG in result.snapshot.data_quality_flags
+
+
+def test_skroutz_xhr_capture_returns_parse_failed_for_empty_payload(monkeypatch) -> None:
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del timeout_seconds
+        return _endpoint_response(url, {}, action=action)
+
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
+
+    result = capture_skroutz_xhr("https://www.skroutz.gr/s/10/product.html", timeout_seconds=5)
+
+    assert result.status == "failed"
+    assert result.error_code == XHR_PARSE_FAILED
+    assert XHR_PARSE_FAILED in result.snapshot.data_quality_flags
+
+
+def test_skroutz_xhr_capture_rejects_invalid_product_url_without_browser_fallback(monkeypatch) -> None:
+    called = False
+
+    def fake_fetch(url: str, *, timeout_seconds: float, action: str):
+        del url, timeout_seconds, action
+        nonlocal called
+        called = True
+        raise AssertionError("direct fetch should not be called")
+
+    monkeypatch.setattr(skroutz_xhr_module, "_fetch_endpoint", fake_fetch)
+
+    result = capture_skroutz_xhr("https://www.skroutz.gr/search?keyphrase=tv", timeout_seconds=5)
+
+    assert result.status == "failed"
+    assert result.error_code == INVALID_SKROUTZ_PRODUCT_URL
+    assert result.snapshot.capture_strategy == DIRECT_JSON_STRATEGY
+    assert called is False
 
 
 def test_electronet_parser_extracts_price_and_flags_missing_price() -> None:
     parsed, flags = parse_electronet_html(
-        '<html><title>TV</title><meta property="product:price:amount" content="499.90"><span>Διαθεσιμότητα</span><b>Άμεσα διαθέσιμο</b></html>',
+        '<html><title>TV</title><meta property="product:price:amount" content="499.90"><span>Ξ”ΞΉΞ±ΞΈΞµΟƒΞΉΞΌΟΟ„Ξ·Ο„Ξ±</span><b>Ξ†ΞΌΞµΟƒΞ± Ξ΄ΞΉΞ±ΞΈΞ­ΟƒΞΉΞΌΞΏ</b></html>',
         page_url="https://www.electronet.gr/p/1",
     )
     missing, missing_flags = parse_electronet_html("<html><title>TV</title></html>", page_url="https://www.electronet.gr/p/1")
@@ -985,175 +1005,3 @@ def test_price_monitoring_fetch_result_reports_source_url_capture_usage(tmp_path
     payload = json.loads((run_dir / "fetch_result.json").read_text(encoding="utf-8"))
     assert payload["source_url_capture_used"] is True
     assert payload["fetch_input_mode"] == "source_urls"
-
-
-class _FakeTimeout(TimeoutError):
-    pass
-
-
-class _FakeRequest:
-    def __init__(self, *, resource_type: str = "fetch", method: str = "GET") -> None:
-        self.resource_type = resource_type
-        self.method = method
-
-
-class _FakeResponse:
-    def __init__(
-        self,
-        url: str,
-        body: str,
-        *,
-        status: int = 200,
-        content_type: str = "application/json",
-        resource_type: str = "xhr",
-        method: str = "GET",
-    ) -> None:
-        self.url = url
-        self.status = status
-        self.headers = {"content-type": content_type}
-        self.request = _FakeRequest(resource_type=resource_type, method=method)
-        self._body = body
-
-    def text(self) -> str:
-        return self._body
-
-
-class _FakeLocator:
-    def __init__(self, page: "_FakePage", selector: str) -> None:
-        self._page = page
-        self._selector = selector
-
-    @property
-    def first(self) -> "_FakeLocator":
-        return self
-
-    def count(self) -> int:
-        if "Accept" in self._selector or "OK" in self._selector or "Αποδοχή" in self._selector or "Συμφωνώ" in self._selector:
-            return 0
-        trigger_selectors = {
-            "#offerings button[data-controller*='shops-entrypoint']",
-            "#offerings .js-shops-entrypoint-wrapper button",
-            "button[data-controller='sku-page--offerings--shops-entrypoint']",
-            "button[data-controller*='sku-page--offerings--shops-entrypoint']",
-            "button[data-action*='stats#incrementCounterDeviceSuffix']",
-            "button.alternative-option-wrapper.btn-reset:has-text('καταστήματα')",
-            "text=Δες τα καταστήματα",
-        }
-        return 1 if self._page.has_trigger and self._selector in trigger_selectors else 0
-
-    def is_visible(self, timeout: int | None = None) -> bool:
-        del timeout
-        return self.count() > 0
-
-    def click(self, timeout: int | None = None) -> None:
-        del timeout
-        self._page.clicked_selectors.append(self._selector)
-        self._page.emit_trigger_responses()
-
-    def scroll_into_view_if_needed(self, timeout: int | None = None) -> None:
-        del timeout
-        self._page.scrolled_selectors.append(self._selector)
-
-
-class _FakePage:
-    def __init__(
-        self,
-        *,
-        has_trigger: bool,
-        responses: list[_FakeResponse] | None = None,
-        html: str = "<html><body><button>Δες τα καταστήματα</button></body></html>",
-        goto_error: BaseException | None = None,
-        filter_products_payload: dict | None = None,
-    ) -> None:
-        self.has_trigger = has_trigger
-        self.responses = responses or []
-        self.html = html
-        self.goto_error = goto_error
-        self.filter_products_payload = filter_products_payload
-        self.url = "https://www.skroutz.gr/s/final-product.html"
-        self.handlers: dict[str, list] = {}
-        self.clicked_selectors: list[str] = []
-        self.scrolled_selectors: list[str] = []
-        self.waited_selectors: list[str] = []
-        self.waited_timeouts: list[int] = []
-        self.evaluate_calls: list[dict] = []
-
-    def on(self, event: str, handler) -> None:
-        self.handlers.setdefault(event, []).append(handler)
-
-    def goto(self, url: str, *, wait_until: str, timeout: int) -> _FakeResponse:
-        del wait_until, timeout
-        self.url = url
-        if self.goto_error is not None:
-            raise self.goto_error
-        return _FakeResponse(url, "<html></html>", resource_type="document", content_type="text/html")
-
-    def wait_for_load_state(self, state: str, *, timeout: int) -> None:
-        del state, timeout
-
-    def wait_for_timeout(self, timeout: int) -> None:
-        self.waited_timeouts.append(timeout)
-
-    def wait_for_selector(self, selector: str, *, state: str, timeout: int):
-        del state, timeout
-        self.waited_selectors.append(selector)
-        locator = _FakeLocator(self, selector)
-        if locator.count() <= 0:
-            raise _FakeTimeout("selector not visible")
-        return locator
-
-    def locator(self, selector: str) -> _FakeLocator:
-        return _FakeLocator(self, selector)
-
-    def content(self) -> str:
-        return self.html
-
-    def evaluate(self, script: str, arg: dict):
-        del script
-        self.evaluate_calls.append(arg)
-        if self.filter_products_payload is None:
-            raise _FakeTimeout("filter_products unavailable")
-        return {
-            "url": arg["url"],
-            "status": 200,
-            "contentType": "application/json",
-            "text": json.dumps(self.filter_products_payload),
-        }
-
-    def emit_trigger_responses(self) -> None:
-        for response in self.responses:
-            for handler in self.handlers.get("response", []):
-                handler(response)
-
-
-class _FakeBrowser:
-    def __init__(self, page: _FakePage) -> None:
-        self._page = page
-        self.closed = False
-
-    def new_page(self, **kwargs) -> _FakePage:
-        del kwargs
-        return self._page
-
-    def close(self) -> None:
-        self.closed = True
-
-
-class _FakeChromium:
-    def __init__(self, page: _FakePage) -> None:
-        self._page = page
-
-    def launch(self, *, headless: bool) -> _FakeBrowser:
-        del headless
-        return _FakeBrowser(self._page)
-
-
-class _FakePlaywright:
-    def __init__(self, page: _FakePage) -> None:
-        self.chromium = _FakeChromium(page)
-
-    def __enter__(self) -> "_FakePlaywright":
-        return self
-
-    def __exit__(self, exc_type, exc, traceback) -> None:
-        del exc_type, exc, traceback

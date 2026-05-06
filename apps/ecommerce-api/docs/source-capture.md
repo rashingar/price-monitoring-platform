@@ -14,8 +14,8 @@ The shared vendor capture implementation lives in `ecommerce.source_capture`:
 - `canonicalize_url.py` normalizes URLs and strips common tracking parameters.
 - `detect_vendor.py` maps vendor hosts to registered vendors.
 - `runner.py` owns vendor capture strategy dispatch.
-- `scoring.py` ranks Skroutz XHR/fetch candidates.
-- `parsing.py` contains normalized Electronet price and Skroutz offer parsers.
+- `skroutz_xhr.py` captures Skroutz through direct `filter_products.json` and `shops_details.json` endpoints derived from the product URL.
+- `parsing.py` contains normalized Electronet price and Skroutz direct JSON offer parsers.
 - `scheduled.py` lets Vendor Sources refresh due `product_sources` without duplicating vendor logic.
 
 The DB-backed selected source URL capture service lives in
@@ -71,4 +71,4 @@ The handoff importer resolves catalog identity by `catalog_product_id`, then mod
 Live smoke notes from 2026-05-03:
 
 - Electronet direct HTML capture succeeded against a current Electronet product URL and parsed a price observation.
-- Skroutz Playwright capture clicked `Δες τα καταστήματα` and identified `service_filtered_offerings.json`; in the local automation environment Skroutz returned an anti-bot/challenge response, which is persisted as `VENDOR_BLOCKED` diagnostics instead of breaking product/source creation.
+- Skroutz capture uses direct JSON endpoints only. Anti-bot/challenge responses from those endpoints are persisted as source health diagnostics instead of breaking product/source creation.
