@@ -60,7 +60,8 @@ Use targeted checks instead:
 
 If broader verification would be useful but exceeds the default Codex policy,
 do not run it automatically. Report it under `Manual verification needed` with
-the exact command for the operator to run.
+the exact command for the operator to run. If no broader verification is needed,
+write `Manual verification needed: None` in the final report.
 
 Use verbose output for any focused tests and checks so a long-running command
 can be distinguished from a hang.
@@ -141,3 +142,11 @@ Use conventional short prefixes:
 - `chore: ...` for tooling or maintenance.
 
 Keep the subject imperative and specific.
+
+## Push Expectations
+
+Commit and push only when the operator asks for it. Before committing, review
+`git status --short`, make sure only intended files are staged, and confirm
+forbidden files are not included. After committing, push the current branch with
+the repository's normal upstream. If the branch has no upstream, set one only
+when that matches the operator request.

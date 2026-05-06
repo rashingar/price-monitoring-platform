@@ -34,6 +34,20 @@ local dependency/contract readiness.
 They do not create PostgreSQL users or databases, apply migrations, import the
 catalog, start servers, or commit generated dependency folders.
 
+The root `.venv` is the only supported Python environment for local repo
+commands. If `.venv` is missing, recreate it from the repository root:
+
+```powershell
+.\scripts\setup\root-venv.ps1
+.\scripts\setup\python-deps.ps1
+```
+
+If `apps\web\node_modules` is missing, reinstall web dependencies:
+
+```powershell
+.\scripts\setup\web.ps1
+```
+
 ## 3. Configure Ecommerce Database
 
 Create a local database if one does not already exist:
@@ -118,10 +132,16 @@ The web dev proxy keeps these browser routes stable:
 - `/api` -> Product Factory API.
 - `/commerce-api` -> Ecommerce API, rewritten to backend `/api` routes.
 
-## 7. If Ecommerce Is Not Ready
+## 7. If Ecommerce DB Is Not Ready
 
 `/api/health` only proves the Ecommerce API process is running. Use the DB
 status endpoint when catalog or price monitoring screens report not ready.
+
+DB-not-ready means the API can answer HTTP requests, but DB-backed workflows
+cannot safely run yet. Catalog browsing, price monitoring, observation history,
+alerts, and DB-backed exports may stay locked until the status endpoint reports
+the database configured, reachable, migrated, and populated with an active
+catalog.
 
 Common causes:
 
@@ -130,6 +150,17 @@ Common causes:
 - Database/user credentials are wrong.
 - Alembic migrations have not been applied.
 - Catalog import has not run.
+
+Recovery path:
+
+```powershell
+$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m alembic upgrade head
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.ingest_catalog
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.check_db_setup
+Pop-Location
+```
 
 ## 8. Before Committing Startup Changes
 

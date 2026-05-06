@@ -1,9 +1,12 @@
 # Price Monitoring Platform
 
-Price Monitoring Platform is a local operator monorepo for Product Factory,
-Ecommerce API, and the web console. The migration into the current app layout is
-complete: the repo now uses final app folders, current Python package names,
-mirrored contracts, generated web API types, setup scripts, and root checks.
+Price Monitoring Platform is the local operator monorepo for Product Factory,
+Ecommerce API, and the web console. It contains the three app runtimes, mirrored
+API contracts, generated web API type artifacts, and root setup/dev/check
+scripts used for day-to-day local operation.
+
+Monorepo migration is complete. New work should start from current
+architecture, current contracts, and current operator runbooks.
 
 ## App Map
 
@@ -219,7 +222,7 @@ keys. Use `.env.example` files only as safe templates.
 - [Ecommerce PostgreSQL Local Setup](docs/runbooks/ecommerce-postgresql-local.md)
 - [Contracts-First Integration](docs/decisions/0005-contracts-first-integration.md)
 
-Historical migration records remain available at
+Historical records remain available at
 [Monorepo Migration](docs/runbooks/monorepo-migration.md) and
 [Target Architecture](docs/architecture/target-architecture.md), but current
 operations should use the current architecture and runbooks above.

@@ -11,6 +11,9 @@ guidance lives in:
 - [Codex Workflow](codex-workflow.md)
 - [Testing Strategy](testing-strategy.md)
 
+Monorepo migration is complete. New work should start from current
+architecture, current contracts, and current operator runbooks.
+
 ## Completed Outcomes
 
 - Final app folders are in place:

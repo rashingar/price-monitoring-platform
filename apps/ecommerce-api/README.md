@@ -135,14 +135,8 @@ To persist it for the current Windows user:
 
 Open a new PowerShell terminal after persisting user environment variables.
 
-This repo also includes a helper script for local Windows setup:
-
-```powershell
-.\scripts\setup_postgres_windows.ps1 -PersistUserEnv
-```
-
-The script creates or reuses the local role/database, prints only a sanitized
-connection URL, and can optionally write a local `.env` with `-WriteDotEnv`.
+Current PostgreSQL setup, backup, rename, and rebuild steps are maintained in
+[Ecommerce PostgreSQL Local Setup](../../docs/runbooks/ecommerce-postgresql-local.md).
 
 ### Renaming an older local PostgreSQL database
 
@@ -164,17 +158,19 @@ For backup commands, session cleanup, rename steps, and fresh setup details,
 see [Ecommerce PostgreSQL Local Setup](../../docs/runbooks/ecommerce-postgresql-local.md).
 
 Verify configuration, apply migrations, import the active catalog, and verify
-again:
+again from the repository root:
 
 ```powershell
-python -m ecommerce.jobs.check_db_setup
-.\.venv\Scripts\python.exe -m alembic upgrade head
-python -m ecommerce.jobs.ingest_catalog
-python -m ecommerce.jobs.check_db_setup
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.check_db_setup
+..\..\.venv\Scripts\python.exe -m alembic upgrade head
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.ingest_catalog
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.check_db_setup
+Pop-Location
 ```
 
-You can also run migrations with `alembic upgrade head` when the virtual
-environment scripts are on `PATH`.
+You can also run migrations with `alembic upgrade head` from
+`apps/ecommerce-api` when the virtual environment scripts are on `PATH`.
 
 Expected ready state for Catalog and Price Monitoring:
 
@@ -191,16 +187,16 @@ after the catalog has been imported and before the first Price Monitoring run.
 
 ## Run The Backend
 
-Start the local API:
+Start the local API from the repository root:
 
 ```powershell
-ecommerce-api
+.\scripts\dev\ecommerce-api.ps1
 ```
 
 Or run the development entry point directly:
 
 ```powershell
-python -m ecommerce.dev.start
+.\.venv\Scripts\python.exe -m ecommerce.dev.start
 ```
 
 The default server URL is:
@@ -218,16 +214,17 @@ Useful local URLs:
 If the default port is already used by another service, start on a free port:
 
 ```powershell
-python -m ecommerce.dev.start --port 8002
+.\.venv\Scripts\python.exe -m ecommerce.dev.start --port 8002
 ```
 
 ## First Useful Workflow
 
 1. Install dependencies and Playwright Chromium.
 2. Configure `ECOMMERCE_DATABASE_URL`.
-3. Run `alembic upgrade head`.
-4. Import the catalog with `python -m ecommerce.jobs.ingest_catalog`.
-5. Start the backend with `ecommerce-api`.
+3. Run `.\.venv\Scripts\python.exe -m alembic upgrade head` from
+   `apps/ecommerce-api`.
+4. Import the catalog with `.\.venv\Scripts\python.exe -m ecommerce.jobs.ingest_catalog`.
+5. Start the backend with `.\scripts\dev\ecommerce-api.ps1`.
 6. Check `GET /api/price-monitoring/db/status`.
 7. Use the API or frontend to create a monitoring run, launch fetch, review
    results, and export a manual price update CSV.
@@ -244,19 +241,19 @@ conservatively, and writes repeatable artifacts under
 Dry-run from CSV:
 
 ```powershell
-python -m ecommerce.jobs.source_url_agent run --input input/test-1.csv --source all --limit 20 --dry-run
+.\.venv\Scripts\python.exe -m ecommerce.jobs.source_url_agent run --input input/test-1.csv --source all --limit 20 --dry-run
 ```
 
 Dry-run from the DB catalog:
 
 ```powershell
-python -m ecommerce.jobs.source_url_agent from-catalog --source all --missing-only --limit 20 --dry-run
+.\.venv\Scripts\python.exe -m ecommerce.jobs.source_url_agent from-catalog --source all --missing-only --limit 20 --dry-run
 ```
 
 Write only high-confidence matches to `source_urls`:
 
 ```powershell
-python -m ecommerce.jobs.source_url_agent run --input input/test-1.csv --source all --apply-high-confidence --limit 20
+.\.venv\Scripts\python.exe -m ecommerce.jobs.source_url_agent run --input input/test-1.csv --source all --apply-high-confidence --limit 20
 ```
 
 Review weak matches by editing:
@@ -268,7 +265,7 @@ output/ecommerce/source-url-agent/runs/{run_id}/needs_review_source_urls.csv
 Then apply the reviewed file:
 
 ```powershell
-python -m ecommerce.jobs.source_url_agent apply-review --review-file output/ecommerce/source-url-agent/runs/{run_id}/needs_review_source_urls_reviewed.csv --apply
+.\.venv\Scripts\python.exe -m ecommerce.jobs.source_url_agent apply-review --review-file output/ecommerce/source-url-agent/runs/{run_id}/needs_review_source_urls_reviewed.csv --apply
 ```
 
 Accepted reviewed URLs use `url_type = discovered` and `trust_level = manual`.
@@ -280,15 +277,15 @@ URLs are not overwritten by automatic discovery.
 Analyze a completed run:
 
 ```powershell
-python -m ecommerce.jobs.source_url_agent analyze --run-id {run_id}
+.\.venv\Scripts\python.exe -m ecommerce.jobs.source_url_agent analyze --run-id {run_id}
 ```
 
 Move DB-backed candidate review to another machine:
 
 ```powershell
-python -m ecommerce.jobs.source_url_agent export-candidates --output output/ecommerce/source-url-agent/source_url_candidates_export.json
-python -m ecommerce.jobs.source_url_agent import-candidates --input output/ecommerce/source-url-agent/source_url_candidates_export.json --dry-run
-python -m ecommerce.jobs.source_url_agent import-candidates --input output/ecommerce/source-url-agent/source_url_candidates_export.json --apply
+.\.venv\Scripts\python.exe -m ecommerce.jobs.source_url_agent export-candidates --output output/ecommerce/source-url-agent/source_url_candidates_export.json
+.\.venv\Scripts\python.exe -m ecommerce.jobs.source_url_agent import-candidates --input output/ecommerce/source-url-agent/source_url_candidates_export.json --dry-run
+.\.venv\Scripts\python.exe -m ecommerce.jobs.source_url_agent import-candidates --input output/ecommerce/source-url-agent/source_url_candidates_export.json --apply
 ```
 
 The import matches candidates back to `catalog_products` by
@@ -303,22 +300,25 @@ URLs.
 
 ## Verification
 
-Run fast local tests:
+For operator-requested broad app verification from the repository root:
 
 ```powershell
-python -m pytest -q -m "not slow and not external"
+.\scripts\test\ecommerce-api.ps1
 ```
 
-Run API contract tests:
+For targeted checks, run the specific pytest file or node that maps to the
+change:
 
 ```powershell
-python -m pytest -q -m contract
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m pytest tests\path\to\relevant_test.py -q
+Pop-Location
 ```
 
-Run the full test suite:
+Run API contract checks only after intentional route/schema/snapshot changes:
 
 ```powershell
-python -m pytest -q
+.\scripts\contracts\check.ps1
 ```
 
 The canonical OpenAPI snapshot is
@@ -326,7 +326,7 @@ The canonical OpenAPI snapshot is
 intentional API contract change:
 
 ```powershell
-python -m ecommerce.jobs.export_openapi_snapshot
+.\.venv\Scripts\python.exe -m ecommerce.jobs.export_openapi_snapshot
 ```
 
 Review snapshot diffs before committing them.
@@ -341,7 +341,7 @@ Review snapshot diffs before committing them.
 - `Migrations have not been applied.` Run `alembic upgrade head` from the repo
   root after setting `ECOMMERCE_DATABASE_URL`.
 - `PostgreSQL is required for Catalog.` Import the catalog after migrations
-  with `python -m ecommerce.jobs.ingest_catalog`.
+  with `.\.venv\Scripts\python.exe -m ecommerce.jobs.ingest_catalog`.
 - `psql is not available on PATH.` Add the PostgreSQL `bin` directory to PATH
   or run setup from a terminal where the installer configured it.
 - Environment changes persisted with `[Environment]::SetEnvironmentVariable`

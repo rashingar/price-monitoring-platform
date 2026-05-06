@@ -46,6 +46,17 @@ explicit clients and keeps browser proxy routes stable:
 The backend apps remain separate runtimes. Do not directly import one backend's
 internals from the other backend or from the web app.
 
+## Local Environment
+
+The repo uses one root Python virtual environment at `.venv`. Root scripts and
+direct backend commands should use `.\.venv\Scripts\python.exe` or installed
+console scripts from that environment after editable app installs are complete.
+App-local virtual environments are not part of the current operator setup.
+
+The web app owns its own dependency install under `apps/web/node_modules`.
+`node_modules` is required for web development, web tests, and generated API
+type checks, but it is never committed.
+
 ## Contracts
 
 `packages/contracts` mirrors the canonical app-local OpenAPI snapshots:
@@ -125,8 +136,10 @@ Operator broad verification:
 ```
 
 Codex prompts should default to targeted checks relevant to changed files and
-keep automated check runtime under 2 minutes. See
-`docs/runbooks/codex-workflow.md`.
+keep automated check runtime under 2 minutes. Codex must always run
+`git diff --check` and `git status --short`, avoid broad suites unless the
+operator explicitly requests them, and report useful broader verification under
+`Manual verification needed`. See `docs/runbooks/codex-workflow.md`.
 
 When `apps/web/node_modules` is missing, web type checks and web tests cannot
 run until `.\scripts\setup\web.ps1` or `npm ci` has been run in `apps/web`.

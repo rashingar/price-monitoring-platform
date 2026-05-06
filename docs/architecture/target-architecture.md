@@ -31,4 +31,6 @@ For active documentation, use:
 - [Operator Startup](../runbooks/operator-startup.md)
 - [Codex Workflow](../runbooks/codex-workflow.md)
 - [Testing Strategy](../runbooks/testing-strategy.md)
-- [Monorepo Migration](../runbooks/monorepo-migration.md)
+
+For the historical completion record, use
+[Monorepo Migration](../runbooks/monorepo-migration.md).
