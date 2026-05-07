@@ -107,12 +107,17 @@ Codex prompts that touch only Ecommerce API backend files should prefer:
 .\scripts\test\codex-ecommerce.ps1
 ```
 
-`.\scripts\test\fast.ps1` is broad monorepo operator verification, not the
-default Codex command. Runtime tests are opt-in via
+`.\scripts\test\fast.ps1` is Codex-safe aggregate fast verification for the
+monorepo. Prefer `.\scripts\test\codex-ecommerce.ps1` for Ecommerce-only
+patches because it is faster and narrower; root fast is appropriate when a
+prompt touches multiple apps, shared contracts, or repo-wide test
+infrastructure. Runtime tests are opt-in via
 `.\scripts\test\ecommerce-runtime.ps1`; golden tests are deterministic fixture
-regressions via `.\scripts\test\ecommerce-golden.ps1`. Full suites are manual
-unless explicitly requested. Always run tests with verbose output so you can
-see whether a command is hanging or simply taking longer.
+regressions via `.\scripts\test\ecommerce-golden.ps1`. `db_integration`,
+`postgres_required`, external, e2e, legacy, and full suites are manual unless
+explicitly requested. Ecommerce DB fast coverage includes `db_contract` only.
+Always run tests with verbose output so you can see whether a command is
+hanging or simply taking longer.
 
 ## Price Monitoring Persistence
 

@@ -95,7 +95,9 @@ that generated web API types are current with the mirrored OpenAPI contracts.
 Python backend pytest suites have a hard 60 second per-test timeout using the
 Windows-compatible `thread` timeout method. Runtime/e2e tests that legitimately
 need longer must opt in with `@pytest.mark.timeout(...)` and must not be part of
-default fast verification.
+default fast verification. Web Vitest suites have a hard 10 second per-test
+timeout configured in `apps/web/vitest.config.ts`; any test that legitimately
+needs longer should use a local Vitest timeout override with a short reason.
 
 ## Standard Categories
 

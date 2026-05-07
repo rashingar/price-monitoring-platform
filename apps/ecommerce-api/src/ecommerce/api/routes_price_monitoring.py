@@ -475,12 +475,10 @@ def get_price_monitoring_model_price_history(
 
 @router.get("/products/{product_id}/price-history")
 def get_price_monitoring_product_price_history(product_id: str) -> dict:
+    numeric_product_id = _parse_product_id_route_value(product_id)
     _require_price_monitoring_database_ready()
     try:
         with session_scope() as session:
-            numeric_product_id = _int_or_none(product_id)
-            if numeric_product_id is None:
-                raise HTTPException(status_code=400, detail="product_id must be an integer.")
             items, count = list_product_price_history(session, numeric_product_id)
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
@@ -778,11 +776,14 @@ def _optional_match_status(value: str | None) -> str | None:
     return text
 
 
-def _int_or_none(value: object) -> int | None:
-    try:
-        return int(str(value).strip())
-    except (TypeError, ValueError):
-        return None
+def _parse_product_id_route_value(value: str) -> int:
+    text = value.strip()
+    by_model_hint = "Use /api/price-monitoring/products/by-model/{model}/price-history for model identifiers."
+    if not text.isdigit():
+        raise HTTPException(status_code=400, detail=f"product_id must be an integer. {by_model_hint}")
+    if len(text) > 1 and text.startswith("0"):
+        raise HTTPException(status_code=400, detail=f"product_id must not contain leading zeroes. {by_model_hint}")
+    return int(text)
 
 
 def _safe_db_error(exc: Exception) -> str:

@@ -892,9 +892,8 @@ def test_observation_api_serializes_decimal_datetime_and_raw_json(tmp_path: Path
     assert product_history["product_id"] == product_id
     assert product_history["count"] == 1
     ambiguous_product_history = client.get("/api/price-monitoring/products/005606/price-history")
-    assert ambiguous_product_history.status_code == 200
-    assert ambiguous_product_history.json()["product_id"] == 5606
-    assert ambiguous_product_history.json()["count"] == 0
+    assert ambiguous_product_history.status_code == 400
+    assert "by-model" in ambiguous_product_history.json()["detail"]
 
     history = client.get("/api/price-monitoring/products/by-model/005606/price-history").json()
     assert history["model"] == "005606"

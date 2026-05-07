@@ -40,10 +40,14 @@ Also run focused grep/search checks for changed naming, routing, or doc areas.
 For example, if a route, package name, script name, or runbook policy changes,
 search for the old and new names in the owning docs and app folders.
 
-Do not run these broad commands unless the operator explicitly asks or the task
-explicitly requires that exact scope:
+Root `.\scripts\test\fast.ps1` is Codex-safe aggregate fast verification. Prefer
+app-specific scripts for single-app patches because they are faster and
+narrower; root fast is appropriate when a prompt touches multiple apps, shared
+contracts, or repo-wide test infrastructure.
 
-- `.\scripts\test\fast.ps1`
+Do not run these broader commands unless the operator explicitly asks or the
+task explicitly requires that exact scope:
+
 - `.\scripts\test\web.ps1`
 
 Use targeted checks instead:

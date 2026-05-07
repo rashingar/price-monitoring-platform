@@ -31,8 +31,9 @@ architecture, current contracts, and current operator runbooks.
 - Generated web API type scaffolding is committed under
   `apps/web/src/api/generated`.
 - Root setup, dev, test, contract, and hygiene scripts are available.
-- Fast test scripts use verbose output and exclude slow/external/e2e/legacy
-  tests by default.
+- Fast test scripts use verbose output and exclude runtime, Ecommerce
+  `db_integration`, PostgreSQL-required, slow, external, e2e, and legacy tests
+  by default where applicable.
 - Hygiene checks cover unsafe paths, app gitlinks, contract mirrors, generated
   web types when dependencies are installed, and whitespace.
 

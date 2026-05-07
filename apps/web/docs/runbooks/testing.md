@@ -39,6 +39,9 @@ npm run test:smoke
 `test:fixture-contracts` compares mocked fixture routes against the backend OpenAPI snapshots. It keeps `/commerce-api` to `/api` normalization, checks Price Monitoring DB status fixture fields, validates structured Price Monitoring DB-required 503 fixtures, and validates separate structured Catalog DB/import-required 503 fixtures including source URL routes. Importer/reporting source URL fixture routes are allowed as pending when the backend snapshot has not documented them yet. For Product Factory Filters Manager, it checks revision fields on response fixtures and `expected_revision` awareness on the group/value write request examples.
 
 `test:fast` runs both contract and smoke suites once in Vitest/jsdom.
+Vitest uses a hard 10 second per-test timeout from `vitest.config.ts`. If a
+test legitimately needs longer, give that test an explicit local timeout and
+document why.
 
 ## Intentional Limits
 

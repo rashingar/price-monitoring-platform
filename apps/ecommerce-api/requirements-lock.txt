@@ -1,5 +1,5 @@
 # Pinned dependency lock for local Windows development.
-# Source of direct dependencies: pyproject.toml.
+# Source of direct dependencies: pyproject.toml plus local test/dev requirements.txt.
 # Refresh intentionally from an updated virtual environment; do not edit casually.
 alembic==1.18.4
 annotated-doc==0.0.4

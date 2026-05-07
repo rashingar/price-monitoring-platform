@@ -82,7 +82,8 @@ npm run test:fixture-contracts
 ```
 
 `test:fast` runs the mocked API client contract tests and page smoke tests. These tests do
-not require either backend to be running.
+not require either backend to be running. Vitest uses a hard 10 second per-test
+timeout from `vitest.config.ts`.
 
 ## Repo Map
 

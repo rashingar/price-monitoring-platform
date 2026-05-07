@@ -338,9 +338,13 @@ Pop-Location
 The direct module form is `python -m ecommerce.jobs.check_db_setup`; use the
 repo `.venv` Python executable for this project.
 
-`.\scripts\test\fast.ps1` is broad monorepo operator verification, not the
-default Codex command. Full suites and runtime profiles are manual unless
-explicitly requested.
+`.\scripts\test\fast.ps1` is Codex-safe aggregate fast verification for the
+monorepo. Prefer `.\scripts\test\codex-ecommerce.ps1` for Ecommerce-only
+patches because it is faster and narrower; root fast is appropriate when a
+prompt touches multiple apps, shared contracts, or repo-wide test
+infrastructure. Full suites, runtime profiles, `db_integration`,
+`postgres_required`, external, e2e, and legacy tests are manual unless
+explicitly requested. Ecommerce DB fast coverage includes `db_contract` only.
 
 Run API contract checks only after intentional route/schema/snapshot changes:
 

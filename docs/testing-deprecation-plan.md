@@ -31,7 +31,7 @@ Python backend tests have a hard 60 second per-test timeout. Runtime/e2e tests
 that legitimately need longer must explicitly override it with
 `@pytest.mark.timeout(...)` and must not be part of default fast. Always run
 tests with verbose output so you can see whether a check is hanging or simply
-taking longer.
+taking longer. Web Vitest tests have a hard 10 second per-test timeout.
 
 ## Next Replacement Target
 

@@ -122,12 +122,13 @@ commands.
 
 ## Test Policy
 
-Use verbose test output. Operator broad fast verification should avoid live
-external services, browser-live workflows, e2e product runs, and slow tests
-unless the change needs that scope. Runtime tests are opt-in and excluded from
-default fast backend checks.
+Use verbose test output. Root fast is Codex-safe aggregate verification and
+avoids live external services, browser-live workflows, e2e product runs,
+runtime profiles, Ecommerce `db_integration`, PostgreSQL-required tests,
+legacy tests, and slow tests where applicable. Ecommerce DB fast coverage
+includes `db_contract` only.
 
-Operator broad verification:
+Codex-safe aggregate verification:
 
 ```powershell
 .\scripts\check\hygiene.ps1
@@ -137,10 +138,11 @@ Operator broad verification:
 ```
 
 Codex prompts should default to targeted checks relevant to changed files and
-keep automated check runtime under 2 minutes. Codex must always run
-`git diff --check` and `git status --short`, avoid broad suites unless the
-operator explicitly requests them, and report useful broader verification under
-`Manual verification needed`. See `docs/runbooks/codex-workflow.md`.
+keep automated check runtime under 2 minutes when possible. App-specific checks
+remain preferred for single-app patches; root fast is appropriate for
+multi-app, shared-contract, or repo-wide test infrastructure changes. Codex
+must always run `git diff --check` and `git status --short`. See
+`docs/runbooks/codex-workflow.md`.
 
 When `apps/web/node_modules` is missing, web type checks and web tests cannot
 run until `.\scripts\setup\web.ps1` or `npm ci` has been run in `apps/web`.

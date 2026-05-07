@@ -16,8 +16,11 @@ Use this as the default Codex check when a prompt touches only Product Factory
 backend files. It runs Product Factory tests from `apps/product-factory-api`
 and excludes tests marked `slow`, `external`, `legacy`, `e2e`, or `runtime`.
 
-`.\scripts\test\fast.ps1` is broad operator verification for the monorepo, not
-the default Codex command.
+`.\scripts\test\fast.ps1` is Codex-safe aggregate fast verification for the
+monorepo. App-specific Codex scripts are still preferred for single-app Product
+Factory patches because they are faster and narrower. Root fast is appropriate
+when a prompt touches multiple apps, shared contracts, or repo-wide test
+infrastructure.
 
 Full `pytest` is not the default Codex command. Do not run full
 prepare/render/publish e2e, subprocess, browser, OpenCart, OpenAI, database, or

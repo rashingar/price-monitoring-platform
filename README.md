@@ -187,9 +187,10 @@ Runtime tests are opt-in; golden tests are deterministic fixture regressions.
 Ecommerce DB tests are split into `db_contract`, `db_integration`, and
 `postgres_required`; `db_contract` is allowed in fast/root-fast when local and
 deterministic, while `db_integration` and `postgres_required` are opt-in. Python
-backend pytest suites have a hard 60 second per-test timeout; runtime/e2e tests
-that legitimately need more time must explicitly override it and remain outside
-default fast. See [Testing Strategy](docs/runbooks/testing-strategy.md).
+backend pytest suites have a hard 60 second per-test timeout, and web Vitest
+suites have a hard 10 second per-test timeout; tests that legitimately need
+more time must explicitly override it and remain outside default fast where
+appropriate. See [Testing Strategy](docs/runbooks/testing-strategy.md).
 
 ## Contracts And Generated Web Types
 
