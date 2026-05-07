@@ -155,8 +155,9 @@ Codex-safe aggregate fast verification:
 
 `scripts\test\fast.ps1` delegates to Product Factory fast, Ecommerce fast, web
 fast, and contract mirror checks. It is Codex-safe because delegated app scripts
-exclude runtime, external, e2e, legacy, and PostgreSQL-required tests. Codex
-prompts should still prefer targeted app checks relevant to changed files. Use
+exclude runtime, Ecommerce `db_integration`, `postgres_required`, external,
+e2e, legacy, and slow checks where applicable. Codex prompts should still
+prefer targeted app checks relevant to changed files. Use
 `.\scripts\test\codex-product-factory.ps1` for Product Factory-only backend
 changes and `.\scripts\test\codex-ecommerce.ps1` for Ecommerce-only backend
 changes. Full suites are manual unless explicitly requested.
@@ -181,11 +182,14 @@ App-specific and contract checks:
 
 The test scripts use verbose output so you can see whether a check is hanging or
 simply taking longer. Default fast paths exclude live external, e2e, slow,
-legacy, runtime, and PostgreSQL-required tests. Runtime tests are opt-in; golden
-tests are deterministic fixture regressions. Ecommerce DB tests are split into
-`db_contract`, `db_integration`, and `postgres_required`, and
-`postgres_required` tests are never part of default fast verification. See
-[Testing Strategy](docs/runbooks/testing-strategy.md).
+legacy, runtime, Ecommerce `db_integration`, and PostgreSQL-required tests.
+Runtime tests are opt-in; golden tests are deterministic fixture regressions.
+Ecommerce DB tests are split into `db_contract`, `db_integration`, and
+`postgres_required`; `db_contract` is allowed in fast/root-fast when local and
+deterministic, while `db_integration` and `postgres_required` are opt-in. Python
+backend pytest suites have a hard 60 second per-test timeout; runtime/e2e tests
+that legitimately need more time must explicitly override it and remain outside
+default fast. See [Testing Strategy](docs/runbooks/testing-strategy.md).
 
 ## Contracts And Generated Web Types
 

@@ -18,8 +18,9 @@ Run this from the repository root for Codex-safe aggregate fast verification:
 mirrors, generated web API types when web dependencies exist, and whitespace.
 `fast.ps1` runs Product Factory fast tests, Ecommerce API fast tests, web fast
 tests, and mirrored OpenAPI contract checks in sequence. It is Codex-safe
-because delegated app scripts exclude runtime, external, e2e, legacy, and
-PostgreSQL-required checks. Both return nonzero on failed required checks.
+because delegated app scripts exclude runtime, Ecommerce `db_integration`,
+`postgres_required`, external, e2e, legacy, and slow checks where applicable.
+Both return nonzero on failed required checks.
 
 For an aggregate local check, run:
 
@@ -61,8 +62,8 @@ Use focused tests only when the changed files clearly map to them:
 
 Root `.\scripts\test\fast.ps1` is now a Codex-safe aggregate fast verification
 command. App-specific scripts are still preferred when the change touches only
-one app. Runtime, PostgreSQL-required, and full-suite selections remain manual
-unless explicitly requested.
+one app. Runtime, Ecommerce `db_integration`, PostgreSQL-required, and
+full-suite selections remain manual unless explicitly requested.
 
 ## App Commands
 
@@ -91,6 +92,10 @@ app-local virtual environments and do not install dependencies automatically.
 The web script runs from `apps\web` and expects `node_modules` to already exist.
 All test scripts use verbose output. `scripts\contracts\check.ps1` also checks
 that generated web API types are current with the mirrored OpenAPI contracts.
+Python backend pytest suites have a hard 60 second per-test timeout using the
+Windows-compatible `thread` timeout method. Runtime/e2e tests that legitimately
+need longer must opt in with `@pytest.mark.timeout(...)` and must not be part of
+default fast verification.
 
 ## Standard Categories
 
@@ -107,11 +112,13 @@ that generated web API types are current with the mirrored OpenAPI contracts.
 - `golden`: deterministic frozen input/output fixture regression tests.
 - `db_contract`: safe local DB schema, repository, migration, or persistence
   contract tests using local fakes, temp SQLite, or isolated temp storage.
-- `db_integration`: broader local database behavior that does not require a
-  running PostgreSQL service.
+  Ecommerce `db_contract` tests are allowed in fast/root-fast when local and
+  deterministic.
+- `db_integration`: broader local database behavior that is opt-in and not part
+  of default/root fast verification.
 - `postgres_required`: tests that require a real PostgreSQL service or
-  environment-specific PostgreSQL setup. These are never part of default fast
-  verification.
+  environment-specific PostgreSQL setup. These are opt-in and never part of
+  default fast verification.
 - `slow`: intentionally slower tests.
 - `external`: tests requiring live websites, network, marketplace pages,
   external APIs, real browser downloads, credentials, or real services.
@@ -134,10 +141,12 @@ SQLite/temp-file integration tests that complete quickly.
 Fast tests must not call live marketplace pages, scrape external websites,
 download real browsers, call OpenAI or other external APIs, require OpenCart,
 require PostgreSQL or another running service, depend on credentials, run
-subprocesses, or perform full browser/operator workflows. Mark those tests
-`runtime`, `external`, `slow`, and/or `e2e` as appropriate. Python fast suites
-block obvious subprocess calls unless the test is marked `runtime`, `slow`,
-`e2e`, or `external`.
+subprocesses, perform broad DB integration, or perform full browser/operator
+workflows. Mark those tests `runtime`, `db_integration`, `postgres_required`,
+`external`, `slow`, and/or `e2e` as appropriate. No default fast test should
+need more than 60 seconds. Python fast suites block obvious subprocess calls
+unless the test is intentionally marked for a non-fast runtime/integration
+profile.
 
 ## Marking Guidance
 
@@ -199,20 +208,25 @@ Ecommerce DB tests are split by profile:
 .\scripts\test\ecommerce-postgres.ps1
 ```
 
-`postgres_required` tests are never part of default fast verification.
+`db_contract` is included in Ecommerce fast/root-fast when local and
+deterministic. `db_integration` is opt-in and not part of root fast.
+`postgres_required` tests are opt-in and never part of default fast
+verification.
 
 Future Codex prompts should follow the targeted policy in
-[Codex Default Verification](#codex-default-verification). Run runtime, `slow`,
-`external`, `e2e`, `legacy`, PostgreSQL-required, or full suite selections only
-when the operator explicitly asks or the change needs that scope. Full suites
-are manual unless explicitly requested.
+[Codex Default Verification](#codex-default-verification). Run runtime,
+Ecommerce `db_integration`, `postgres_required`, `slow`, `external`, `e2e`,
+`legacy`, or full suite selections only when the operator explicitly asks or
+the change needs that scope. Full suites are manual unless explicitly
+requested.
 
 Always run tests with verbose output so you can see whether a check is hanging
 or simply taking longer.
 
 The next planned cleanup is replacing broad Product Factory Skroutz e2e/golden
 tests with smaller parser, taxonomy, section extraction, deterministic
-render-row, and validation golden snapshots.
+render-row, and validation golden snapshots. After those replacements exist,
+remove the stale `307497` sample if it is no longer necessary.
 
 ## Troubleshooting
 

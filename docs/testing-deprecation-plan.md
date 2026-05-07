@@ -15,14 +15,21 @@
 
 Root `scripts/test/fast.ps1` is the Codex-safe aggregate fast verification
 command. It delegates to app-specific fast scripts, web fast checks, and
-contract mirrors; the delegated app scripts exclude runtime, external, e2e,
-legacy, and PostgreSQL-required checks. App-specific scripts are still preferred
-when a change touches only one app.
+contract mirrors; the delegated app scripts exclude runtime, Ecommerce
+`db_integration`, `postgres_required`, external, e2e, legacy, and slow checks
+where applicable. App-specific scripts are still preferred when a change
+touches only one app.
 
 Ecommerce DB tests are split into `db_contract`, `db_integration`, and
-`postgres_required`. `postgres_required` tests are never part of default fast
+`postgres_required`. `db_contract` tests are included in fast/root-fast when
+local and deterministic. `db_integration` is opt-in and not root fast.
+`postgres_required` tests are opt-in and never part of default fast
 verification. Runtime tests are opt-in, golden tests are deterministic fixture
-regressions, and full suites are manual unless explicitly requested. Always run
+regressions, and full suites are manual unless explicitly requested.
+
+Python backend tests have a hard 60 second per-test timeout. Runtime/e2e tests
+that legitimately need longer must explicitly override it with
+`@pytest.mark.timeout(...)` and must not be part of default fast. Always run
 tests with verbose output so you can see whether a check is hanging or simply
 taking longer.
 
@@ -31,5 +38,5 @@ taking longer.
 Replace the Product Factory full Skroutz prepare/render workflow fixture test
 with smaller golden parser, taxonomy, section extraction, deterministic
 render-row, and validation snapshots. Replace stale `307497` broad expectations
-with narrow explicit expected outputs or remove the stale sample after
-replacement coverage exists.
+with narrow explicit expected outputs. Remove the stale `307497` sample
+entirely after replacement coverage makes it unnecessary.

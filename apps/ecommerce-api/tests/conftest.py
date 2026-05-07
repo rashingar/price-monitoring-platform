@@ -55,7 +55,15 @@ _TEST_MARKERS: dict[tuple[str, str], tuple[str, ...]] = {
     ("test_source_url_agent_api.py", "test_source_url_agent_run_artifact_endpoint_returns_safe_metadata"): ("runtime",),
 }
 
-_FAST_EXCLUDED_MARKERS = {"slow", "external", "e2e", "legacy", "runtime", "postgres_required"}
+_FAST_EXCLUDED_MARKERS = {
+    "slow",
+    "external",
+    "e2e",
+    "legacy",
+    "runtime",
+    "db_integration",
+    "postgres_required",
+}
 _RUNTIME_GUARD_ALLOWED_MARKERS = {"runtime", "integration", "slow", "e2e", "external", "postgres_required"}
 _RUNTIME_GUARD_MESSAGE = (
     "subprocess calls are blocked in fast tests. "

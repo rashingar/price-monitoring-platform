@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.27,<1",
     "playwright>=1.52,<2",
     "psycopg[binary]>=3,<4",
+    "pytest-timeout>=2.4,<3",
     "sqlalchemy>=2,<3",
     "tzdata>=2024.1",
     "uvicorn>=0.29,<1",
@@ -31,6 +32,8 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+timeout = 60
+timeout_method = "thread"
 markers = [
     "fast: local deterministic tests with no live network, browser, or external service dependency",
     "contract: backend API contract and OpenAPI snapshot checks",
@@ -39,8 +42,9 @@ markers = [
     "runtime: tests that execute or simulate app runtime paths, subprocesses, fetch execution, source URL agent runs, vendor capture runs, database workflows, Playwright/browser paths, or long service orchestration",
     "golden: deterministic frozen input/output fixture regression tests",
     "db_contract: database schema, repository, migration, or persistence contract tests that use local fakes, temp SQLite, or fully isolated temp storage and are safe for default Codex checks",
-    "db_integration: database integration tests that exercise broader DB behavior but do not require a running PostgreSQL service",
+    "db_integration: database integration tests that exercise broader DB behavior and are not part of default/root fast verification",
     "postgres_required: tests requiring a real PostgreSQL service or environment-specific PostgreSQL setup",
+    "timeout(seconds): justified per-test timeout override for opt-in runtime/e2e tests; no default fast test should need more than 60 seconds",
     "slow: tests that are intentionally slower than the fast local suite",
     "external: tests requiring live websites, browsers, network, Docker, or external services",
     "e2e: full workflow, browser, or operator-flow tests",

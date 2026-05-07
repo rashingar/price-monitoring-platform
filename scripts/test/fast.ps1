@@ -1,8 +1,9 @@
 $ErrorActionPreference = "Stop"
 
 # Codex-safe aggregate fast verification. Delegated app scripts keep runtime,
-# external, e2e, legacy, and PostgreSQL-required checks out of the default path.
-# Do not add runtime profile scripts here.
+# db_integration, postgres_required, external, e2e, legacy, and slow checks out
+# of the default path where applicable. Do not add runtime, DB integration,
+# PostgreSQL, or golden profile scripts here.
 $tests = @(
     @{ Name = "product-factory-api"; Script = Join-Path $PSScriptRoot "product-factory-api.ps1" },
     @{ Name = "ecommerce-api"; Script = Join-Path $PSScriptRoot "ecommerce-api.ps1" },

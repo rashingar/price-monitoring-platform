@@ -3,6 +3,7 @@ beautifulsoup4
 lxml
 playwright
 pytest
+pytest-timeout
 pillow
 pillow-avif-plugin
 pypdf
