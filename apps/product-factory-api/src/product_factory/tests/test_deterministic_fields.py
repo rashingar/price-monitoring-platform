@@ -3,10 +3,42 @@ from product_factory.deterministic_fields import (
     apply_name_rule,
     build_deterministic_product_fields,
     compose_name,
+    is_dimension_model_token,
     resolve_name_rule_component,
 )
 from product_factory.mapping import derive_seo_keyword
 from product_factory.models import SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+
+
+def test_skroutz_ironing_board_uses_source_mpn_and_dimensions_name_schema() -> None:
+    source = SourceProductData(
+        source_name="skroutz",
+        brand="Afer",
+        product_code="2062",
+        mpn="2062",
+        name="Afer Homie Pro Σιδερώστρα για Σύστημα Σιδερώματος Σπαστή Γκρι 124x40x95cm",
+        key_specs=[
+            SpecItem(label="Κωδικός Προϊόντος", value="2062"),
+            SpecItem(label="Τύπος Σιδερώστρας", value="Για Σύστημα Σιδερώματος"),
+            SpecItem(label="Είδος", value="Σπαστή"),
+            SpecItem(label="Μήκος Ανοιχτής", value="124 cm"),
+            SpecItem(label="Πλάτος Ανοιχτής", value="40 cm"),
+            SpecItem(label="Ύψος", value="95 cm"),
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        leaf_category="Σιδέρωμα",
+        sub_category="Σιδερώστρες",
+    )
+
+    fields = build_deterministic_product_fields(source, taxonomy, "328984", derive_seo_keyword)
+
+    assert is_dimension_model_token("124X40X95CM")
+    assert fields["mpn"] == "2062"
+    assert fields["name"] == "Afer 2062 – Σιδερώστρα Homie Pro 124x40x95cm Γκρι"
+    assert fields["meta_title"] == "Afer 2062 Σιδερώστρα Homie Pro 124x40x95cm Γκρι | eTranoulis"
+    assert fields["seo_keyword"] == "afer-2062-siderostra-homie-pro-124x40x95cm-gkri"
 
 
 def test_skroutz_fridge_freezer_uses_requested_name_schema() -> None:

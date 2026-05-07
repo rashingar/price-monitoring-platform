@@ -19,6 +19,10 @@ from .normalize import candidate_label_keys, normalize_for_match, normalize_whit
 PURE_NUMERIC_TOKEN_RE = re.compile(r"^\d+(?:[.,]\d+)?$")
 NUMERIC_RE = re.compile(r"\d+(?:[.,]\d+)?")
 ENERGY_CLASS_TOKEN_RE = re.compile(r"^[A-G](?:\+{1,3})?$", re.IGNORECASE)
+DIMENSION_MODEL_TOKEN_RE = re.compile(
+    r"\d+(?:[.,]\d+)?(?:\s*[x×]\s*\d+(?:[.,]\d+)?){2,}\s*(?:cm|mm)",
+    re.IGNORECASE,
+)
 DEFAULT_MAX_NAME_DIFFERENTIATORS = 3
 DEFAULT_MAX_META_DESCRIPTION_DIFFERENTIATORS = 4
 TV_CATEGORY_PHRASE = "Τηλεόραση"
@@ -308,6 +312,10 @@ def build_skroutz_deterministic_fields(
     raw_title = normalize_whitespace(source.name)
     brand = normalize_whitespace(source.brand)
     mpn = resolve_deterministic_mpn(source, raw_title, brand, model)
+    if family == "ironing_board":
+        source_mpn = normalize_whitespace(source.mpn)
+        if source_mpn and not is_dimension_model_token(source_mpn) and normalize_for_match(source_mpn) != normalize_for_match(model):
+            mpn = source_mpn
     spec_lookup = _build_preferred_spec_lookup(source)
     return build_source_scoped_deterministic_fields(
         rule=source_rule,
@@ -518,6 +526,8 @@ def build_source_scoped_deterministic_fields(
         return _build_tabletop_hob_deterministic_fields(rule, taxonomy, model, seo_keyword_builder, raw_title, brand, mpn, spec_lookup)
     if strategy_id == "air_conditioner":
         return _build_air_conditioner_deterministic_fields(rule, source, taxonomy, model, seo_keyword_builder, raw_title, brand, mpn, spec_lookup)
+    if strategy_id == "ironing_board":
+        return _build_ironing_board_deterministic_fields(rule, source, taxonomy, model, seo_keyword_builder, raw_title, brand, mpn, spec_lookup)
     raise ValueError(f"Unsupported deterministic source strategy: {rule.strategy_id}")
 
 
@@ -782,6 +792,33 @@ def _build_air_conditioner_deterministic_fields(
     return _skroutz_result(brand, mpn, category_phrase, differentiators, name, meta_title, seo_keyword, taxonomy)
 
 
+def _build_ironing_board_deterministic_fields(
+    rule: SourceScopedRule,
+    source: SourceProductData,
+    taxonomy: TaxonomyResolution,
+    model: str,
+    seo_keyword_builder,
+    raw_title: str,
+    brand: str,
+    mpn: str,
+    spec_lookup: dict[str, str],
+) -> dict[str, object]:
+    category_phrase = rule.category_phrase
+    components = {
+        "family": extract_ironing_board_family_from_title(raw_title, brand, category_phrase),
+        "dimensions": extract_ironing_board_dimensions(raw_title, spec_lookup),
+        "color": normalize_color_differentiator(spec_lookup) or extract_title_color(raw_title, brand, mpn),
+    }
+    differentiators = _source_rule_output_parts(rule, "name", components)
+    name = compose_name(brand, mpn, category_phrase, differentiators)
+    meta_title_value = normalize_whitespace(
+        " ".join(part for part in [brand, mpn, category_phrase, *_source_rule_output_parts(rule, "meta_title", components)] if part)
+    )
+    meta_title = f"{meta_title_value} | eTranoulis" if meta_title_value else ""
+    seo_keyword = seo_keyword_builder(name, model)
+    return _skroutz_result(brand, mpn, category_phrase, differentiators, name, meta_title, seo_keyword, taxonomy)
+
+
 def _skroutz_result(
     brand: str,
     mpn: str,
@@ -829,6 +866,8 @@ def resolve_skroutz_family(taxonomy: TaxonomyResolution) -> str | None:
         return "ice_cream_maker"
     if sub == normalize_for_match("Εστίες") and leaf == normalize_for_match("Μικροί Μάγειρες"):
         return "tabletop_hob"
+    if sub == normalize_for_match("Σιδερώστρες") or leaf == normalize_for_match("Σιδερώστρες"):
+        return "ironing_board"
     return None
 
 
@@ -1928,6 +1967,65 @@ def extract_numeric(value: str) -> str:
     return match.group(0).replace(".", ",") if match else ""
 
 
+def is_dimension_model_token(value: str) -> bool:
+    return bool(DIMENSION_MODEL_TOKEN_RE.fullmatch(normalize_whitespace(value).replace(" ", "")))
+
+
+def extract_dimension_token_from_text(value: str) -> str:
+    match = DIMENSION_MODEL_TOKEN_RE.search(normalize_whitespace(value))
+    if not match:
+        return ""
+    return normalize_dimension_token(match.group(0))
+
+
+def normalize_dimension_token(value: str) -> str:
+    normalized = normalize_whitespace(value).replace("×", "x")
+    normalized = re.sub(r"\s*x\s*", "x", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"\s+(?=cm$|mm$)", "", normalized, flags=re.IGNORECASE)
+    return normalized[:-2] + normalized[-2:].lower() if len(normalized) >= 2 else normalized
+
+
+def extract_ironing_board_dimensions(raw_title: str, spec_lookup: dict[str, str]) -> str:
+    title_dimensions = extract_dimension_token_from_text(raw_title)
+    if title_dimensions:
+        return title_dimensions
+
+    values = [
+        format_centimeters(spec_lookup, ["Μήκος Ανοιχτής"]),
+        format_centimeters(spec_lookup, ["Πλάτος Ανοιχτής"]),
+        format_centimeters(spec_lookup, ["Ύψος"]),
+    ]
+    numbers = [extract_numeric(value) for value in values if extract_numeric(value)]
+    return f"{'x'.join(numbers)}cm" if len(numbers) >= 3 else ""
+
+
+def extract_ironing_board_family_from_title(title: str, brand: str, category_phrase: str) -> str:
+    tokens = title_tokens(title)
+    brand_norm = normalize_for_match(brand)
+    if not tokens or not brand_norm:
+        return ""
+    brand_index = next((idx for idx, token in enumerate(tokens) if normalize_for_match(token) == brand_norm), -1)
+    if brand_index == -1:
+        return ""
+    category_roots = {
+        normalize_for_match(category_phrase),
+        normalize_for_match("Σιδερώστρα"),
+        normalize_for_match("Σιδερώστρες"),
+    }
+    category_index = next(
+        (
+            idx
+            for idx, token in enumerate(tokens[brand_index + 1 :], start=brand_index + 1)
+            if any(normalize_for_match(token).startswith(root) for root in category_roots if root)
+        ),
+        -1,
+    )
+    if category_index <= brand_index + 1:
+        return ""
+    family = normalize_whitespace(" ".join(tokens[brand_index + 1 : category_index]))
+    return "" if PURE_NUMERIC_TOKEN_RE.fullmatch(family) else family
+
+
 def extract_mpn_from_name(name: str, brand: str) -> str:
     tokens = [token for token in normalize_whitespace(name).split() if token]
     brand_norm = normalize_for_match(brand)
@@ -1949,7 +2047,7 @@ def extract_mpn_from_name(name: str, brand: str) -> str:
 def resolve_deterministic_mpn(source: SourceProductData, raw_title: str, brand: str, model: str) -> str:
     for candidate in [source.mpn, extract_mpn_from_name(raw_title, brand)]:
         normalized = normalize_whitespace(candidate)
-        if normalized and not _matches_runtime_product_code(
+        if normalized and not is_dimension_model_token(normalized) and not _matches_runtime_product_code(
             normalized,
             model,
             source.product_code,
@@ -2053,6 +2151,8 @@ def score_model_sequence(tokens: list[str]) -> int:
     if not all(is_model_sequence_fragment(token) for token in tokens):
         return 0
     combined = "".join(tokens)
+    if is_dimension_model_token(combined):
+        return 0
     if PURE_NUMERIC_TOKEN_RE.fullmatch(combined):
         return 0
     if not any(ch.isalpha() for ch in combined) or not any(ch.isdigit() for ch in combined):
@@ -2078,6 +2178,8 @@ def is_model_sequence_fragment(token: str) -> bool:
 
 def score_model_token(token: str) -> int:
     upper = token.upper()
+    if is_dimension_model_token(upper):
+        return 0
     if PURE_NUMERIC_TOKEN_RE.fullmatch(token):
         return 0
     if len(upper) < 3:

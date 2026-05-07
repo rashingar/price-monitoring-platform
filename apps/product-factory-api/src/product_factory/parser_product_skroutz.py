@@ -86,6 +86,15 @@ SKROUTZ_FAMILIES: dict[str, dict[str, Any]] = {
         "spec_mode": "raw",
         "taxonomy_mode": "family",
     },
+    "ironing_board": {
+        "category_labels": {"Σιδερώστρες"},
+        "category_href_tokens": {"siderostres"},
+        "title_tokens": {"siderostra", "siderostres", "ironing board"},
+        "breadcrumbs": ["Αρχική", "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "Σιδέρωμα", "Σιδερώστρες"],
+        "sections": [],
+        "spec_mode": "raw",
+        "taxonomy_mode": "family",
+    },
     "television": {
         "category_labels": {"Τηλεοράσεις"},
         "category_href_tokens": {"tileoraseis", "television"},

@@ -190,6 +190,33 @@
           "seo_name"
         ]
       }
+    },
+    {
+      "source_scope": [
+        "skroutz"
+      ],
+      "match": {
+        "family": "ironing_board"
+      },
+      "category_phrase": "Σιδερώστρα",
+      "strategy_id": "ironing_board",
+      "outputs": {
+        "name": [
+          "family",
+          "dimensions",
+          "color"
+        ],
+        "meta_title": [
+          "family",
+          "dimensions",
+          "color"
+        ],
+        "seo_keyword": [
+          "family",
+          "dimensions",
+          "color"
+        ]
+      }
     }
   ],
   "rules": [
