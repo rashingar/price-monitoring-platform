@@ -1,0 +1,22 @@
+{
+  "captured_urls": [
+    "https://www.electronet.gr/p/active"
+  ],
+  "failed_count": 0,
+  "selected_catalog_product_count": 2,
+  "selected_product_source_count": 1,
+  "selected_source_url_count": 1,
+  "source": "electronet",
+  "source_urls": [
+    {
+      "source_name": "electronet",
+      "status": "active",
+      "url_normalized": "https://www.electronet.gr/p/active"
+    }
+  ],
+  "status": "completed",
+  "succeeded_count": 1,
+  "used_source_urls": true,
+  "vendor": "electronet",
+  "warnings": []
+}

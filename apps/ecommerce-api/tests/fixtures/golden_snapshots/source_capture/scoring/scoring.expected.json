@@ -1,0 +1,49 @@
+{
+  "analytics": {
+    "reasons": [
+      "-3 tiny payload",
+      "-5 analytics endpoint"
+    ],
+    "score": -8
+  },
+  "filter_products": {
+    "reasons": [
+      "+3 json",
+      "+3 price fields",
+      "+1 product/offers endpoint",
+      "+4 skroutz filter products endpoint",
+      "-3 tiny payload"
+    ],
+    "score": 8
+  },
+  "offers": {
+    "reasons": [
+      "+3 json",
+      "+3 price fields",
+      "+3 seller/shop fields",
+      "+2 availability fields",
+      "+2 shipping fields",
+      "+2 after trigger",
+      "+1 product/offers endpoint"
+    ],
+    "score": 16
+  },
+  "promotion": {
+    "reasons": [
+      "+2 after trigger",
+      "-2 error status",
+      "-4 blocked/challenge payload",
+      "-3 tiny payload",
+      "-4 promotion endpoint"
+    ],
+    "score": -11
+  },
+  "widget": {
+    "reasons": [
+      "+3 json",
+      "-3 tiny payload",
+      "-5 analytics endpoint"
+    ],
+    "score": -5
+  }
+}

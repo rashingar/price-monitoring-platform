@@ -1,0 +1,84 @@
+{
+  "blocked": {
+    "calls": [],
+    "error_code": "blocked_or_captcha",
+    "offer_observations": [],
+    "price_observations": [],
+    "snapshot": {
+      "capture_strategy": "skroutz_direct_json_endpoints",
+      "data_quality_flags": [
+        "blocked_or_captcha"
+      ],
+      "error_code": "blocked_or_captcha",
+      "parser_version": "skroutz_filter_products_v1",
+      "request_method": "GET",
+      "request_url": "https://www.skroutz.gr/s/5/filter_products.json",
+      "response_content_type": "text/html",
+      "response_status": 403,
+      "trigger_action": "skroutz_filter_products_fetch"
+    },
+    "status": "failed"
+  },
+  "direct_endpoint_unavailable": {
+    "calls": [],
+    "error_code": "direct_endpoint_unavailable",
+    "offer_observations": [],
+    "price_observations": [],
+    "snapshot": {
+      "capture_strategy": "skroutz_direct_json_endpoints",
+      "data_quality_flags": [
+        "direct_endpoint_unavailable"
+      ],
+      "error_code": "direct_endpoint_unavailable",
+      "parser_version": null,
+      "request_method": "GET",
+      "request_url": "https://www.skroutz.gr/s/9/filter_products.json",
+      "response_content_type": null,
+      "response_status": null,
+      "trigger_action": "skroutz_filter_products_fetch"
+    },
+    "status": "failed"
+  },
+  "parse_failed": {
+    "calls": [],
+    "error_code": "xhr_parse_failed",
+    "offer_observations": [],
+    "price_observations": [],
+    "snapshot": {
+      "capture_strategy": "skroutz_direct_json_endpoints",
+      "data_quality_flags": [
+        "xhr_parse_failed",
+        "NO_OFFER_OBSERVATIONS_PARSED",
+        "PRICE_MISSING"
+      ],
+      "error_code": "xhr_parse_failed",
+      "parser_version": "skroutz_filter_products_v1",
+      "request_method": "GET",
+      "request_url": "https://www.skroutz.gr/s/4/filter_products.json",
+      "response_content_type": "application/json",
+      "response_status": 200,
+      "trigger_action": "skroutz_filter_products_fetch"
+    },
+    "status": "failed"
+  },
+  "timeout": {
+    "calls": [],
+    "error_code": "timeout",
+    "offer_observations": [],
+    "price_observations": [],
+    "snapshot": {
+      "capture_strategy": "skroutz_direct_json_endpoints",
+      "data_quality_flags": [
+        "timeout"
+      ],
+      "error_code": "timeout",
+      "parser_version": null,
+      "request_method": "GET",
+      "request_url": "https://www.skroutz.gr/s/6/filter_products.json",
+      "response_content_type": null,
+      "response_status": null,
+      "trigger_action": "skroutz_filter_products_fetch"
+    },
+    "status": "failed"
+  }
+}

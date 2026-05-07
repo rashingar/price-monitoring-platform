@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Trace": "trace-1"
+  },
+  "json": {
+    "payload": {
+      "nested": [
+        {},
+        {
+          "availability": "available"
+        }
+      ],
+      "price": 10
+    }
+  }
+}

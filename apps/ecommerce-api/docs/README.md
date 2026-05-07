@@ -119,6 +119,13 @@ explicitly requested. Ecommerce DB fast coverage includes `db_contract` only.
 Always run tests with verbose output so you can see whether a command is
 hanging or simply taking longer.
 
+Source capture and Vendor Sources coverage is split by profile. Parser,
+scoring, sanitization, direct Skroutz endpoint, source selection, run-result,
+and API response contracts use narrow golden JSON snapshots. Local source URL
+and product source persistence contracts use `db_contract`. Runtime Vendor
+Sources capture workflows, run history, artifact writing, scheduled capture,
+and Price Monitoring capture handoff are opt-in and excluded from root fast.
+
 ## Price Monitoring Persistence
 
 `catalog_products` stores the active imported catalog used by Catalog API browsing and Price Monitoring selection. It preserves `catalog_source + model`, MPN/name/manufacturer, raw and parsed category fields, quantity/status/marketplace flags, raw CSV row JSON, import metadata, and an `active` flag. Products missing from the latest import are marked inactive instead of hard-deleted.

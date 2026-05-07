@@ -1,0 +1,24 @@
+{
+  "calls": [],
+  "error_code": null,
+  "offer_observations": [],
+  "price_observations": [
+    {
+      "availability": "available",
+      "price": "187.50",
+      "source": "filter_products"
+    }
+  ],
+  "snapshot": {
+    "capture_strategy": "skroutz_direct_json_endpoints",
+    "data_quality_flags": [],
+    "error_code": null,
+    "parser_version": "skroutz_filter_products_v1",
+    "request_method": "GET",
+    "request_url": "https://www.skroutz.gr/s/8/filter_products.json",
+    "response_content_type": "application/json",
+    "response_status": 200,
+    "trigger_action": "skroutz_filter_products_fetch"
+  },
+  "status": "success"
+}

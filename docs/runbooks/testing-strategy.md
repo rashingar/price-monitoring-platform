@@ -208,6 +208,15 @@ snapshots use committed fixtures and do not call live websites, browser
 execution, OpenAI, OpenCart, or full workflow orchestration. Runtime/e2e
 workflow coverage remains opt-in only.
 
+Ecommerce source capture and Vendor Sources golden coverage follows the same
+pattern. Parser, scoring, sanitization, direct Skroutz endpoint, source
+selection, run-result serialization, and API response snapshots use small JSON
+fixtures. They must not include live timestamps, absolute temp paths, secrets,
+large raw payload dumps, or broad workflow side effects. DB source URL/product
+source persistence coverage belongs in `db_contract`; vendor capture run
+history, artifact writing, scheduled capture, and Price Monitoring capture
+handoff remain runtime opt-in.
+
 Ecommerce DB tests are split by profile:
 
 ```powershell

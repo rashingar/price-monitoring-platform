@@ -1,0 +1,22 @@
+{
+  "failed_count": 0,
+  "items": [
+    {
+      "product_source_id": 1,
+      "status": "success",
+      "vendor": "electronet"
+    }
+  ],
+  "observation_batch_id": "vendor-capture-1",
+  "run_id": "vendor-capture-1",
+  "selected_catalog_product_count": 1,
+  "selected_count": 1,
+  "selected_product_source_count": 1,
+  "selected_source_url_count": 1,
+  "source": "electronet",
+  "status": "completed",
+  "succeeded_count": 1,
+  "used_source_urls": true,
+  "vendor": "electronet",
+  "warnings": []
+}

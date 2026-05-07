@@ -8,7 +8,8 @@
 | Ecommerce API | Price Monitoring fetch execution/run tests | Simulates fetch execution, worker state, subprocess results, cancellation, and run artifacts | Smaller route contracts plus focused runtime fetch execution coverage | Replacement target is implemented and validated | Reclassified as runtime |
 | Ecommerce API | Source URL agent tests | Exercises source URL agent run orchestration, artifacts, persistence, and review flows | Smaller pure scoring/matching contracts plus focused runtime agent coverage | Replacement target is implemented and validated | Reclassified as runtime |
 | Ecommerce API | Source URL agent API run tests | Enqueues or simulates source URL agent runs and persists candidates/artifacts | Route-shape contract tests plus focused runtime API run coverage | Replacement target is implemented and validated | Selected tests reclassified as runtime |
-| Ecommerce API | Vendor source capture tests | Simulates capture runs, source URL selection, persistence, and artifact generation | Smaller capture result contract tests plus focused runtime capture coverage | Replacement target is implemented and validated | Reclassified as runtime |
+| Ecommerce API | Source capture parser/scoring/direct endpoint tests | Mixed pure parser, sanitization, direct endpoint, DB, and runtime capture behavior in one runtime-marked module | Narrow parser, scoring, sanitization, and direct Skroutz endpoint golden snapshots plus separate DB contracts | Replaced by `test_source_capture_snapshots.py`, `test_skroutz_direct_capture_snapshots.py`, and `test_source_capture_db_contracts.py` | Complete |
+| Ecommerce API | Vendor source capture tests | Simulates capture runs, source URL selection, persistence, and artifact generation | Smaller selection, run-result, and API response golden snapshots plus focused runtime capture coverage | Replaced by `test_vendor_sources_snapshots.py`; runtime run-history/artifact orchestration remains opt-in | Split into db_contract/golden/runtime |
 | Ecommerce API | Price Monitoring DB-heavy tests | Broad SQLite-backed database workflows, migrations, observations, and alert behavior can dominate default Codex checks | Smaller route/serialization contracts plus explicit runtime database workflow coverage | Replacement target is implemented and validated | Reclassified as runtime where broad |
 
 ## Current Test Profile Policy
@@ -49,3 +50,19 @@ the tabletop-hob taxonomy behavior remains covered by the explicit
 `test_explicit_tabletop_hob_category_still_resolves_to_small_appliance_hobs`
 unit-style taxonomy test. Future Skroutz golden additions should use narrow
 explicit JSON snapshots rather than full workflow CSV baselines.
+
+## Completed Ecommerce Source Capture Split
+
+Ecommerce source capture and Vendor Sources capture now use narrow golden
+snapshots for parser, scoring, sanitization, direct Skroutz endpoint capture,
+vendor source selection, run-result serialization, and API response shapes.
+The snapshots live under
+`apps/ecommerce-api/tests/fixtures/golden_snapshots/` and avoid timestamps,
+absolute temp paths, secrets, full raw payload dumps, and broad workflow side
+effects.
+
+Local SQLite persistence behavior is separated into `db_contract` tests for
+source URL mirroring, active-status filtering, source health updates, and
+append-only observations. Runtime/vendor orchestration, run history, artifact
+writing, scheduled capture, and Price Monitoring fetch handoff remain opt-in
+runtime or `db_integration` coverage and are not part of root fast.

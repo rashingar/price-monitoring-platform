@@ -1,0 +1,45 @@
+{
+  "failed_count": 1,
+  "items": [
+    {
+      "product_source_id": 1,
+      "status": "success",
+      "vendor": "electronet"
+    },
+    {
+      "error_code": "timeout",
+      "product_source_id": 2,
+      "status": "failed",
+      "vendor": "electronet"
+    }
+  ],
+  "observation_batch_id": "vendor-capture-1",
+  "result_file_name": "vendor_source_capture_result.json",
+  "run_id": "vendor-capture-1",
+  "selected_catalog_product_count": 2,
+  "selected_product_source_count": 2,
+  "selected_source_url_count": 2,
+  "source": "electronet",
+  "source_filter": "electronet",
+  "source_urls": [
+    {
+      "id": 1,
+      "source_name": "electronet",
+      "status": "active",
+      "url_normalized": "https://www.electronet.gr/p/1"
+    },
+    {
+      "id": 2,
+      "source_name": "electronet",
+      "status": "active",
+      "url_normalized": "https://www.electronet.gr/p/2"
+    }
+  ],
+  "status": "completed_with_partial_failures",
+  "succeeded_count": 1,
+  "used_source_urls": true,
+  "vendor": "electronet",
+  "warnings": [
+    "one source failed"
+  ]
+}

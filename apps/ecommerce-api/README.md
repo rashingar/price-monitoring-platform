@@ -326,6 +326,14 @@ Golden tests are deterministic fixture regressions:
 .\scripts\test\ecommerce-golden.ps1
 ```
 
+Source capture and Vendor Sources golden tests use narrow JSON snapshots for
+parser, scoring, sanitization, direct Skroutz endpoint, source selection,
+run-result serialization, and API response contracts. DB source URL/product
+source persistence belongs in `db_contract`; run history, artifacts, scheduled
+capture, and vendor capture orchestration stay in the runtime profile.
+Snapshots must not include timestamps, temp paths, secrets, full raw payload
+dumps, or live service side effects.
+
 For targeted checks, run the specific pytest file or node that maps to the
 change:
 

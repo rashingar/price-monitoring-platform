@@ -6,6 +6,11 @@ from pathlib import Path
 import pytest
 
 
+@pytest.fixture(scope="session")
+def fixtures_root() -> Path:
+    return Path(__file__).resolve().parent / "fixtures"
+
+
 _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_contract_smoke.py": ("contract", "smoke"),
     "test_openapi_contract_snapshot.py": ("contract", "golden"),
@@ -36,6 +41,9 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_pricing_engine.py": ("contract", "golden"),
     "test_product_factory_handoff_import.py": ("contract", "integration", "golden"),
     "test_product_ignore.py": ("contract",),
+    "test_skroutz_direct_capture_snapshots.py": ("contract", "golden"),
+    "test_source_capture_db_contracts.py": ("integration", "db_contract"),
+    "test_source_capture_snapshots.py": ("contract", "golden"),
     "test_source_capture_unified.py": ("integration", "db_integration", "runtime"),
     "test_source_catalog.py": ("contract",),
     "test_source_url_agent.py": ("integration", "db_integration", "runtime"),
@@ -43,6 +51,7 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_source_url_import.py": ("integration", "db_contract"),
     "test_source_url_import_api.py": ("smoke", "integration", "db_integration"),
     "test_source_urls_api.py": ("smoke",),
+    "test_vendor_sources_snapshots.py": ("contract", "integration", "db_contract", "golden"),
     "test_vendor_sources_capture.py": ("integration", "db_integration", "runtime"),
 }
 

@@ -1,0 +1,49 @@
+{
+  "json_ld_product_offer": {
+    "availability": "https://schema.org/InStock",
+    "flags": [],
+    "price": "849.90",
+    "product_name": "LG OLED",
+    "raw_observation": {
+      "availability": "https://schema.org/InStock",
+      "page_url": "https://www.electronet.gr/p/structured",
+      "parser": "electronet_html_v1",
+      "structured_data_found": true,
+      "title": "LG OLED"
+    },
+    "stock_status": "https://schema.org/InStock"
+  },
+  "meta_price": {
+    "availability": null,
+    "flags": [
+      "AVAILABILITY_MISSING"
+    ],
+    "price": "499.90",
+    "product_name": "TV",
+    "raw_observation": {
+      "availability": null,
+      "page_url": "https://www.electronet.gr/p/1",
+      "parser": "electronet_html_v1",
+      "structured_data_found": false,
+      "title": "TV"
+    },
+    "stock_status": null
+  },
+  "missing_price": {
+    "availability": null,
+    "flags": [
+      "PRICE_MISSING",
+      "AVAILABILITY_MISSING"
+    ],
+    "price": null,
+    "product_name": "TV",
+    "raw_observation": {
+      "availability": null,
+      "page_url": "https://www.electronet.gr/p/1",
+      "parser": "electronet_html_v1",
+      "structured_data_found": false,
+      "title": "TV"
+    },
+    "stock_status": null
+  }
+}

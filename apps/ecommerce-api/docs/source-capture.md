@@ -18,6 +18,13 @@ The shared vendor capture implementation lives in `ecommerce.source_capture`:
 - `parsing.py` contains normalized Electronet price and Skroutz direct JSON offer parsers.
 - `scheduled.py` lets Vendor Sources refresh due `product_sources` without duplicating vendor logic.
 
+Testing is split by profile. Parser, scoring, sanitization, direct Skroutz
+endpoint, selection, run-result, and API response behavior uses small golden
+JSON snapshots under `tests/fixtures/golden_snapshots/`. Local source URL and
+product source persistence uses `db_contract` tests. Runtime Vendor Sources
+capture workflows, run history, artifact writing, scheduled capture, and Price
+Monitoring capture handoff are opt-in and must not be part of root fast.
+
 The DB-backed selected source URL capture service lives in
 `ecommerce.vendor_sources.capture`.
 

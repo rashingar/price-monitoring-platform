@@ -9,19 +9,13 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.api import routes_vendor_sources  # noqa: E402
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, PriceObservation, ProductSource, VendorSourceCaptureRun  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, PriceObservation, VendorSourceCaptureRun  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation  # noqa: E402
-from ecommerce.vendor_sources.capture import (  # noqa: E402
-    SourceUrlCaptureRunResult,
-    capture_selected_source_urls,
-    capture_selected_source_urls_for_run,
-    run_vendor_source_capture,
-)
+from ecommerce.vendor_sources.capture import capture_selected_source_urls_for_run, run_vendor_source_capture  # noqa: E402
 
 
 NOW = datetime(2026, 5, 5, 12, tzinfo=timezone.utc)
@@ -68,87 +62,6 @@ def _fake_electronet_capture(captured_urls: list[str]):
         )
 
     return fake_capture
-
-
-def test_vendor_sources_capture_selects_electronet_active_urls(tmp_path: Path) -> None:
-    database_url = _database_url(tmp_path)
-    captured_urls: list[str] = []
-
-    with session_scope(database_url) as session:
-        product = _catalog_product(session, model="EL-ACTIVE")
-        create_or_update_imported_source_url(
-            session,
-            catalog_product_id=product.id,
-            url="https://www.electronet.gr/p/el-active",
-            source_name="electronet",
-            trust_level="high_confidence",
-            status="active",
-        )
-
-        result = capture_selected_source_urls(
-            session,
-            run_id="vendor-run-1",
-            source="electronet",
-            catalog_product_ids=[product.id],
-            capture_fn=_fake_electronet_capture(captured_urls),
-        )
-
-        assert result.status == "completed"
-        assert result.used_source_urls is True
-        assert result.source == "electronet"
-        assert result.vendor == "electronet"
-        assert result.selected_catalog_product_count == 1
-        assert result.selected_source_url_count == 1
-        assert result.selected_product_source_count == 1
-        assert result.succeeded_count == 1
-        assert captured_urls == ["https://www.electronet.gr/p/el-active"]
-        assert session.query(PriceObservation).count() == 1
-
-
-def test_vendor_sources_capture_excludes_ineligible_source_urls_and_disabled_product_sources(tmp_path: Path) -> None:
-    database_url = _database_url(tmp_path)
-    captured_urls: list[str] = []
-
-    with session_scope(database_url) as session:
-        active_product = _catalog_product(session, model="EL-ELIGIBLE")
-        disabled_product_source_product = _catalog_product(session, model="EL-PS-DISABLED")
-        for status in ["active", "broken", "disabled", "needs_review", "redirected"]:
-            create_or_update_imported_source_url(
-                session,
-                catalog_product_id=active_product.id,
-                url=f"https://www.electronet.gr/p/{status}",
-                source_name="electronet",
-                trust_level="high_confidence",
-                status=status,
-            )
-        create_or_update_imported_source_url(
-            session,
-            catalog_product_id=disabled_product_source_product.id,
-            url="https://www.electronet.gr/p/product-source-disabled",
-            source_name="electronet",
-            trust_level="high_confidence",
-            status="active",
-        )
-        disabled_source = (
-            session.query(ProductSource)
-            .filter(ProductSource.source_url == "https://www.electronet.gr/p/product-source-disabled")
-            .one()
-        )
-        disabled_source.active = False
-        session.flush()
-
-        result = capture_selected_source_urls(
-            session,
-            run_id="vendor-run-2",
-            source="electronet",
-            catalog_product_ids=[active_product.id, disabled_product_source_product.id],
-            capture_fn=_fake_electronet_capture(captured_urls),
-        )
-
-        assert result.selected_source_url_count == 1
-        assert result.selected_product_source_count == 1
-        assert result.succeeded_count == 1
-        assert captured_urls == ["https://www.electronet.gr/p/active"]
 
 
 def test_vendor_sources_capture_for_run_writes_result_counts_without_live_http(tmp_path: Path, monkeypatch) -> None:
@@ -203,99 +116,9 @@ def test_vendor_sources_capture_for_run_writes_result_counts_without_live_http(t
         assert observation.observation_batch_id == result.run_id
 
 
-def test_vendor_sources_capture_api_returns_required_payload(tmp_path: Path, monkeypatch) -> None:
-    database_url = _database_url(tmp_path)
-    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
-    Base.metadata.create_all(get_engine(database_url))
-    monkeypatch.setattr(routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None)
-    monkeypatch.setattr(
-        routes_vendor_sources,
-        "run_vendor_source_capture",
-        lambda *_args, **_kwargs: SourceUrlCaptureRunResult(
-            status="completed",
-            used_source_urls=True,
-            source="electronet",
-            vendor="electronet",
-            run_id="vendor-capture-1",
-            observation_batch_id="vendor-capture-1",
-            source_filter="electronet",
-            selected_catalog_product_count=1,
-            selected_source_url_count=1,
-            selected_product_source_count=1,
-            succeeded_count=1,
-            failed_count=0,
-            warnings=[],
-            items=[{"product_source_id": 1, "vendor": "electronet", "status": "success"}],
-            source_urls=[{"id": 1, "source_name": "electronet", "status": "active"}],
-            result_path=None,
-        ),
-    )
-
-    response = TestClient(create_app()).post(
-        "/api/vendor-sources/captures/runs",
-        json={"vendor_slug": "electronet", "limit": 1, "include_not_due": True},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["status"] == "completed"
-    assert payload["used_source_urls"] is True
-    assert payload["source"] == "electronet"
-    assert payload["vendor"] == "electronet"
-    assert payload["selected_catalog_product_count"] == 1
-    assert payload["selected_source_url_count"] == 1
-    assert payload["selected_product_source_count"] == 1
-    assert payload["succeeded_count"] == 1
-    assert payload["failed_count"] == 0
-    assert payload["warnings"] == []
-    assert payload["items"][0]["status"] == "success"
-    assert payload["run_id"] == "vendor-capture-1"
-    assert payload["observation_batch_id"] == "vendor-capture-1"
-
-def test_vendor_sources_capture_api_requires_source_unless_admin_diagnostic(tmp_path: Path, monkeypatch) -> None:
-    database_url = _database_url(tmp_path)
-    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
-    Base.metadata.create_all(get_engine(database_url))
-    monkeypatch.setattr(routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None)
-
-    def fake_run(*_args, **kwargs):
-        if not kwargs.get("admin_all_sources"):
-            raise ValueError("Vendor Sources capture requires one source/vendor unless admin_all_sources=true for diagnostic all-source capture.")
-        return SourceUrlCaptureRunResult(
-            status="dry_run",
-            used_source_urls=False,
-            source="",
-            vendor=None,
-            run_id="vendor-capture-admin",
-            observation_batch_id="vendor-capture-admin",
-            source_filter=None,
-            selected_catalog_product_count=0,
-            selected_source_url_count=0,
-            selected_product_source_count=0,
-            succeeded_count=0,
-            failed_count=0,
-            warnings=[],
-            items=[],
-            source_urls=[],
-            result_path=None,
-        )
-
-    monkeypatch.setattr(routes_vendor_sources, "run_vendor_source_capture", fake_run)
-    client = TestClient(create_app())
-
-    missing = client.post("/api/vendor-sources/captures/runs", json={"dry_run": True})
-    admin = client.post("/api/vendor-sources/captures/runs", json={"dry_run": True, "admin_all_sources": True})
-
-    assert missing.status_code == 400
-    assert "admin_all_sources=true" in missing.json()["detail"]
-    assert admin.status_code == 200
-    assert admin.json()["observation_batch_id"] == "vendor-capture-admin"
-
-
 def test_vendor_sources_capture_run_history_row_is_created(tmp_path: Path, monkeypatch) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
-    monkeypatch.setattr(routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None)
     captured_urls: list[str] = []
     run_id = ""
 

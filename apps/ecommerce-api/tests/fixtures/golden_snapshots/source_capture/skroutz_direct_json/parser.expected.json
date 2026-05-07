@@ -1,0 +1,46 @@
+{
+  "nested_shop_pricing": {
+    "flags": [],
+    "offers": [
+      {
+        "availability": "in stock",
+        "delivery_text": "1-3 days",
+        "original_price": null,
+        "price": "321.50",
+        "seller_name": "Nested Store",
+        "seller_url": null,
+        "shipping_cost": "4.90"
+      }
+    ]
+  },
+  "price_min_summary": {
+    "availability": "available",
+    "flags": [],
+    "price": "187.50",
+    "product_name": null,
+    "raw_observation": {
+      "page_url": "https://www.skroutz.gr/s/8/product.html",
+      "parser": "skroutz_filter_products_v1",
+      "payload": {
+        "availability": "available",
+        "price_min": "187,50"
+      },
+      "source": "filter_products"
+    },
+    "stock_status": "available"
+  },
+  "product_cards_with_shops_details": {
+    "flags": [],
+    "offers": [
+      {
+        "availability": "available",
+        "delivery_text": "1-3 days",
+        "original_price": "219.99",
+        "price": "199.99",
+        "seller_name": "Store A",
+        "seller_url": "https://www.skroutz.gr/m/10/store-a",
+        "shipping_cost": "3.00"
+      }
+    ]
+  }
+}
