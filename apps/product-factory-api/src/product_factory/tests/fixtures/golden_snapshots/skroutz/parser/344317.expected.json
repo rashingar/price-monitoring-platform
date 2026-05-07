@@ -1,0 +1,37 @@
+{
+  "brand": "Tefal",
+  "canonical_url": "https://www.skroutz.cy/s/65282590/tefal-subito-kafetiera-filtrou-1000w.html",
+  "category_tag_href": "https://www.skroutz.cy/c/2417/Kafetieres-Filtrou.html",
+  "category_tag_slug": "Kafetieres Filtrou",
+  "category_tag_text": "Καφετιέρες Φίλτρου",
+  "gallery_image_count": 2,
+  "key_specs": [
+    {
+      "label": "Χωρητικότητα σε Φλυτζάνια",
+      "value": "10 - 15"
+    },
+    {
+      "label": "Χωρητικότητα Δοχείου Νερού σε Λίτρα",
+      "value": "1,25"
+    },
+    {
+      "label": "Ισχύς σε Watts",
+      "value": "1000"
+    },
+    {
+      "label": "Υλικό Κανάτας",
+      "value": "Γυάλινη"
+    },
+    {
+      "label": "Χρώμα",
+      "value": "Μαύρο"
+    }
+  ],
+  "mpn": "CM5S1DE",
+  "name": "Tefal Subito Καφετιέρα Φίλτρου 1000W",
+  "page_type": "product",
+  "product_code": "65282590",
+  "skroutz_family": "coffee_filter",
+  "source_name": "skroutz",
+  "spec_section_count": 3
+}

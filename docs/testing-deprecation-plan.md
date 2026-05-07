@@ -3,7 +3,7 @@
 | App | Old/broad test area | Current risk | Replacement target | Delete after | Status |
 | --- | --- | --- | --- | --- | --- |
 | Product Factory | Subprocess job runner tests | Slow and process-sensitive; can hang or behave differently across local shells | Smaller command-construction contract tests plus focused runtime profile coverage for process handling | Replacement target is implemented and validated | Reclassified as runtime/integration/slow |
-| Product Factory | Full Skroutz prepare/render fixture workflow | Broad service orchestration through frozen fixtures; expensive for default Codex checks; current `307497` golden expectation is stale | Stage-level prepare/render golden tests with narrower fixture assertions | Replacement target is implemented and validated | Reclassified as runtime/e2e/golden and strict-xfailed pending replacement |
+| Product Factory | Full Skroutz prepare/render fixture workflow | Broad service orchestration through frozen fixtures; expensive for default Codex checks; the old `307497` golden expectation was stale | Narrow parser, taxonomy, section extraction, deterministic render-row, and validation snapshots | Replaced by `test_skroutz_golden_snapshots.py`; stale `307497` HTML/CSV fixtures removed | Complete |
 | Product Factory | Broad Skroutz taxonomy fixture loops | Large fixture sweep can dominate routine feedback | Representative golden taxonomy cases plus targeted unit coverage for taxonomy rules | Replacement target is implemented and validated | Reclassified as slow/golden |
 | Ecommerce API | Price Monitoring fetch execution/run tests | Simulates fetch execution, worker state, subprocess results, cancellation, and run artifacts | Smaller route contracts plus focused runtime fetch execution coverage | Replacement target is implemented and validated | Reclassified as runtime |
 | Ecommerce API | Source URL agent tests | Exercises source URL agent run orchestration, artifacts, persistence, and review flows | Smaller pure scoring/matching contracts plus focused runtime agent coverage | Replacement target is implemented and validated | Reclassified as runtime |
@@ -33,10 +33,19 @@ that legitimately need longer must explicitly override it with
 tests with verbose output so you can see whether a check is hanging or simply
 taking longer. Web Vitest tests have a hard 10 second per-test timeout.
 
-## Next Replacement Target
+## Completed Product Factory Skroutz Replacement
 
-Replace the Product Factory full Skroutz prepare/render workflow fixture test
-with smaller golden parser, taxonomy, section extraction, deterministic
-render-row, and validation snapshots. Replace stale `307497` broad expectations
-with narrow explicit expected outputs. Remove the stale `307497` sample
-entirely after replacement coverage makes it unnecessary.
+The Product Factory full Skroutz prepare/render workflow fixture test has been
+replaced by smaller golden parser, taxonomy, section extraction, deterministic
+render-row, and validation snapshots in
+`apps/product-factory-api/src/product_factory/tests/test_skroutz_golden_snapshots.py`.
+Those snapshots load committed HTML/rendered-section fixtures and call parser,
+taxonomy, render-row, section extraction, and validator code directly. They do
+not call live websites, Playwright browser execution, OpenAI, OpenCart, Docker,
+or full prepare/render workflow orchestration.
+
+The stale `307497` broad expectations and fixture sample were removed because
+the tabletop-hob taxonomy behavior remains covered by the explicit
+`test_explicit_tabletop_hob_category_still_resolves_to_small_appliance_hobs`
+unit-style taxonomy test. Future Skroutz golden additions should use narrow
+explicit JSON snapshots rather than full workflow CSV baselines.

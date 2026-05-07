@@ -1,0 +1,10 @@
+{
+  "leaf_category": "Καφές-Ροφήματα-Χυμοί",
+  "parent_category": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+  "sub_category": "Καφετιέρες Φίλτρου",
+  "taxonomy_ambiguity": false,
+  "taxonomy_escalation_reason": "",
+  "taxonomy_match_type": "exact_category",
+  "taxonomy_rule_id": "family:coffee_filter",
+  "taxonomy_source_category": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ:::ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ///Καφές-Ροφήματα-Χυμοί:::ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ///Καφές-Ροφήματα-Χυμοί///Καφετιέρες Φίλτρου"
+}

@@ -1,0 +1,50 @@
+{
+  "errors": [],
+  "field_health": {
+    "category": {
+      "status": "match"
+    },
+    "characteristics": {
+      "status": "match"
+    },
+    "description": {
+      "status": "match"
+    },
+    "meta_description": {
+      "status": "match"
+    },
+    "meta_keyword": {
+      "status": "match"
+    },
+    "meta_title": {
+      "status": "match"
+    },
+    "model": {
+      "status": "match"
+    },
+    "mpn": {
+      "status": "match"
+    },
+    "name": {
+      "status": "match"
+    },
+    "price": {
+      "status": "match"
+    },
+    "product_url": {
+      "status": "match"
+    },
+    "seo_keyword": {
+      "status": "match"
+    }
+  },
+  "ok": true,
+  "summary": {
+    "different_but_valid": 0,
+    "empty": 0,
+    "encoding_issue": 0,
+    "filled": 0,
+    "match": 24,
+    "missing": 0
+  }
+}

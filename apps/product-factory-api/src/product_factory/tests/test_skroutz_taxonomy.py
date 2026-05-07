@@ -2,8 +2,19 @@ import csv
 import json
 from pathlib import Path
 
+import pytest
+
 from product_factory.parser_product_skroutz import SkroutzProductParser
 from product_factory.taxonomy import TaxonomyResolver
+
+
+@pytest.fixture(autouse=True)
+def disable_eprel_energy_label_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "product_factory.parser_product_skroutz.resolve_eprel_energy_label_asset_url",
+        lambda **_kwargs: "",
+    )
+
 
 def read_taxonomy_rows(regression_fixture: Path) -> list[dict[str, str]]:
     with regression_fixture.open("r", encoding="utf-8-sig", newline="") as handle:

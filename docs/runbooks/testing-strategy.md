@@ -202,6 +202,12 @@ explicitly:
 .\scripts\test\ecommerce-golden.ps1
 ```
 
+Product Factory Skroutz golden coverage is intentionally narrow: parser,
+taxonomy, section extraction, deterministic render-row, and validation
+snapshots use committed fixtures and do not call live websites, browser
+execution, OpenAI, OpenCart, or full workflow orchestration. Runtime/e2e
+workflow coverage remains opt-in only.
+
 Ecommerce DB tests are split by profile:
 
 ```powershell
@@ -225,10 +231,11 @@ requested.
 Always run tests with verbose output so you can see whether a check is hanging
 or simply taking longer.
 
-The next planned cleanup is replacing broad Product Factory Skroutz e2e/golden
-tests with smaller parser, taxonomy, section extraction, deterministic
-render-row, and validation golden snapshots. After those replacements exist,
-remove the stale `307497` sample if it is no longer necessary.
+Broad Product Factory Skroutz prepare/render e2e golden coverage has been
+replaced by narrow parser, taxonomy, section extraction, deterministic
+render-row, and validation snapshots. The stale `307497` broad expectation and
+fixture sample were removed because tabletop-hob taxonomy is covered by a
+focused taxonomy test.
 
 ## Troubleshooting
 

@@ -1,19 +1,14 @@
-import csv
 import json
 import sys
 import types
 from pathlib import Path
 
-from bs4 import BeautifulSoup
-
 import product_factory.prepare_section_assets as section_assets_module
 from product_factory.fetcher import ElectronetFetcher
-from product_factory.models import CLIInput, FetchResult, GalleryImage
+from product_factory.models import GalleryImage
 from product_factory.prepare_section_assets import resolve_skroutz_section_assets
 from product_factory.skroutz_sections import extract_skroutz_section_window, is_placeholder_image_url, resolve_skroutz_section_image_url
-from product_factory.workflow import prepare_workflow, render_workflow
 
-JPEG_BYTES = b"\xff\xd8\xff\xdb\x00C\x00" + (b"\x08" * 64) + b"\xff\xd9"
 SAMPLE = {
     "model": "143481",
     "url": "https://www.skroutz.gr/s/61800471/tcl-q65h-soundbar-5-1-bluetooth-hdmi-kai-wi-fi-me-asyrmato-subwoofer-mayro.html",
@@ -34,58 +29,6 @@ EXPECTED_TITLES = [
     "Καθαρά φωνητικά, καθηλωτικοί διάλογοι",
     "Διαφανείς υψηλές συχνότητες, μαγευτική μουσική",
 ]
-
-
-def read_csv_row(path: Path) -> dict[str, str]:
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        return next(csv.DictReader(handle))
-
-
-def write_split_llm_outputs_from_baseline(model_root: Path, path: Path) -> None:
-    row = read_csv_row(path)
-    llm_dir = model_root / "llm"
-    llm_dir.mkdir(parents=True, exist_ok=True)
-    soup = BeautifulSoup(row["description"], "lxml")
-    intro_span = soup.select_one("p span")
-    (llm_dir / "intro_text.output.txt").write_text(
-        intro_span.get_text(" ", strip=True) if intro_span else "",
-        encoding="utf-8",
-    )
-    (llm_dir / "seo_meta.output.json").write_text(
-        json.dumps(
-            {
-                "product": {
-                    "meta_description": row["meta_description"],
-                    "meta_keywords": [item.strip() for item in row["meta_keyword"].split(",") if item.strip()],
-                }
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-
-
-def install_143481_fixture_fetcher(monkeypatch, skroutz_fixtures_root: Path) -> None:
-    from product_factory import fetcher
-
-    def fake_fetch_httpx(self, url: str):
-        raise fetcher.FetchError(f"httpx disabled for test: {url}")
-
-    def fake_fetch_playwright(self, url: str):
-        html = (skroutz_fixtures_root / "html" / "143481.html").read_text(encoding="utf-8")
-        return FetchResult(url=url, final_url=url, html=html, status_code=200, method="playwright", fallback_used=True, response_headers={})
-
-    def fake_fetch_binary(self, url: str):
-        return JPEG_BYTES, "image/jpeg"
-
-    def fake_extract_skroutz_section_image_records(self, url: str):
-        return json.loads((skroutz_fixtures_root / "rendered_sections" / "143481.rendered_sections.json").read_text(encoding="utf-8"))
-
-    monkeypatch.setattr(fetcher.ElectronetFetcher, "fetch_httpx", fake_fetch_httpx)
-    monkeypatch.setattr(fetcher.ElectronetFetcher, "fetch_playwright", fake_fetch_playwright)
-    monkeypatch.setattr(fetcher.ElectronetFetcher, "fetch_binary", fake_fetch_binary)
-    monkeypatch.setattr(fetcher.ElectronetFetcher, "extract_skroutz_section_image_records", fake_extract_skroutz_section_image_records)
 
 
 def test_143481_html_fixture_resolves_9_sections_in_stable_order(skroutz_fixtures_root: Path) -> None:
@@ -357,63 +300,4 @@ def test_rendered_section_extraction_skips_non_presentation_titles_and_tolerates
 
     assert [section["title"] for section in rendered["sections"]] == ["Κανονική Ενότητα"]
     assert rendered["sections"][0]["resolved_image_url"] == "https://b.scdn.gr/test-image.png"
-
-
-def test_143481_rendered_description_preserves_locked_wrappers(
-    tmp_path: Path,
-    monkeypatch,
-    skroutz_fixtures_root: Path,
-    skroutz_golden_outputs_root: Path,
-) -> None:
-    from product_factory import workflow
-
-    install_143481_fixture_fetcher(monkeypatch, skroutz_fixtures_root)
-    monkeypatch.setattr(workflow, "WORK_ROOT", tmp_path / "work")
-    monkeypatch.setattr(workflow, "PRODUCTS_ROOT", tmp_path / "products")
-    (tmp_path / "products").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "products" / "143481.csv").write_text(
-        (skroutz_golden_outputs_root / "143481.csv").read_text(encoding="utf-8-sig"),
-        encoding="utf-8",
-    )
-
-    cli = CLIInput(
-        model=SAMPLE["model"],
-        url=SAMPLE["url"],
-        photos=SAMPLE["photos"],
-        sections=SAMPLE["sections"],
-        skroutz_status=SAMPLE["skroutz_status"],
-        boxnow=SAMPLE["boxnow"],
-        price=SAMPLE["price"],
-        out="unused",
-    )
-    prepare_result = prepare_workflow(cli)
-    write_split_llm_outputs_from_baseline(prepare_result.model_root, skroutz_golden_outputs_root / "143481.csv")
-
-    render_result = render_workflow("143481")
-    description = render_result.description_path.read_text(encoding="utf-8")
-    soup = BeautifulSoup(description, "lxml")
-    section_nodes = soup.select("div.etr-sec, div.etr-sec.rev")
-    besco_dir = prepare_result.scrape_dir / "bescos"
-    besco_filenames = [f"besco{index}.jpg" for index in range(1, 10)]
-
-    assert render_result.run_status.value == "completed"
-    assert "presentation_sections_weak:2" in render_result.validation_report.warnings
-    assert description.count('class="etr-sec"') == 5
-    assert description.count('class="etr-sec rev"') == 4
-    assert description.count("<!-- SECTION ") == 9
-    assert len(section_nodes) == 9
-    assert sorted(path.name for path in besco_dir.glob("*.jpg")) == besco_filenames
-
-    for index, section in enumerate(section_nodes, start=1):
-        expected_class = ["etr-sec", "rev"] if index % 2 == 0 else ["etr-sec"]
-        assert section.get("class") == expected_class
-        direct_children = [child for child in section.find_all(recursive=False)]
-        assert [child.get("class") for child in direct_children] == [["etr-text"], ["etr-img"]]
-        image = section.select_one(".etr-img img")
-        assert image is not None
-        assert image.get("src", "").rsplit("/", 1)[-1] in besco_filenames
-        if index % 2 == 0:
-            assert image.get("style") == "display:block; margin-left:auto; margin-right:0;"
-        else:
-            assert image.get("style") is None
 

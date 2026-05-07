@@ -110,6 +110,7 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_services.py": ("contract", "stage", "prepare", "render", "publish"),
     "test_settings_authoring.py": ("contract", "authoring"),
     "test_skroutz_built_in_family_override.py": ("stage", "source_acquisition", "filters"),
+    "test_skroutz_golden_snapshots.py": ("stage", "source_acquisition", "filters", "render", "golden"),
     "test_skroutz_integration.py": ("stage", "source_acquisition", "render"),
     "test_skroutz_robot_vacuum.py": ("stage", "source_acquisition", "filters"),
     "test_skroutz_sections.py": ("stage", "source_acquisition", "prepare", "render"),
@@ -145,24 +146,6 @@ _TEST_MARKERS: dict[tuple[str, str], tuple[str, ...]] = {
     ("test_job_runner.py", "test_stop_running_child_force_kills_after_timeout"): ("integration", "slow", "runtime"),
     ("test_job_runner.py", "test_same_model_jobs_do_not_run_concurrently_with_multiple_workers"): ("integration", "slow", "runtime"),
     ("test_job_worker_cli.py", "test_worker_cli_missing_job_returns_nonzero"): ("integration", "slow", "runtime"),
-    ("test_skroutz_integration.py", "test_skroutz_parser_and_deterministic_fields_cover_supported_families"): (
-        "slow",
-        "golden",
-    ),
-    ("test_skroutz_integration.py", "test_prepare_and_render_workflow_with_skroutz_fixtures"): (
-        "integration",
-        "slow",
-        "e2e",
-        "runtime",
-        "golden",
-    ),
-    ("test_skroutz_sections.py", "test_143481_rendered_description_preserves_locked_wrappers"): (
-        "integration",
-        "slow",
-        "e2e",
-        "runtime",
-        "golden",
-    ),
     ("test_skroutz_taxonomy.py", "test_taxonomy_regression_fixture_resolves_expected_categories"): (
         "slow",
         "golden",
@@ -176,16 +159,7 @@ _TEST_MARKERS: dict[tuple[str, str], tuple[str, ...]] = {
     ("test_workflow.py", "test_execute_publish_workflow_classifies_wsl_launcher_probe_failures"): ("runtime",),
 }
 
-_TEST_XFAILS: dict[tuple[str, str], str] = {
-    (
-        "test_skroutz_integration.py",
-        "test_skroutz_parser_and_deterministic_fields_cover_supported_families",
-    ): "known stale Skroutz 307497 golden expectation pending narrower replacement coverage",
-    (
-        "test_skroutz_integration.py",
-        "test_prepare_and_render_workflow_with_skroutz_fixtures",
-    ): "known stale Skroutz 307497 full workflow golden expectation pending narrower replacement coverage",
-}
+_TEST_XFAILS: dict[tuple[str, str], str] = {}
 
 _FAST_EXCLUDED_MARKERS = {"slow", "external", "e2e", "legacy", "runtime"}
 _RUNTIME_GUARD_ALLOWED_MARKERS = {"runtime", "slow", "e2e", "external"}

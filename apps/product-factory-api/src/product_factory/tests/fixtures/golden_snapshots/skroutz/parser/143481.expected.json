@@ -1,0 +1,37 @@
+{
+  "brand": "TCL",
+  "canonical_url": "https://www.skroutz.gr/s/61800471/tcl-q65h-soundbar-5-1-bluetooth-hdmi-kai-wi-fi-me-asyrmato-subwoofer-mayro.html",
+  "category_tag_href": "https://www.skroutz.gr/c/1735/soundbar.html",
+  "category_tag_slug": "soundbar",
+  "category_tag_text": "Soundbar",
+  "gallery_image_count": 12,
+  "key_specs": [
+    {
+      "label": "Κανάλια",
+      "value": "5.1"
+    },
+    {
+      "label": "Πρότυπα Ήχου",
+      "value": "Dolby Atmos, DTS: X"
+    },
+    {
+      "label": "Συνδεσιμότητα",
+      "value": "Wi-Fi, Bluetooth, Optical, HDMI, USB, HDMI (ARC)"
+    },
+    {
+      "label": "Subwoofer",
+      "value": "Ασύρματο Subwoofer"
+    },
+    {
+      "label": "Χρώμα",
+      "value": "Μαύρο"
+    }
+  ],
+  "mpn": "Q65H",
+  "name": "TCL Q65H Soundbar 5.1 Bluetooth, HDMI και Wi-Fi με Ασύρματο Subwoofer Μαύρο",
+  "page_type": "product",
+  "product_code": "61800471",
+  "skroutz_family": "soundbar",
+  "source_name": "skroutz",
+  "spec_section_count": 2
+}

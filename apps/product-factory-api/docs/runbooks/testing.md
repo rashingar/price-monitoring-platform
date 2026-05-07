@@ -59,6 +59,13 @@ Golden tests are deterministic frozen input/output fixture regression tests.
 They are useful when changing parser, taxonomy, render, or schema behavior that
 should preserve known fixture output.
 
+Skroutz golden coverage is kept narrow and deterministic. The old broad
+prepare/render workflow fixture loop was replaced by parser, taxonomy, section
+extraction, deterministic render-row, and validation JSON snapshots. These
+tests use committed fixtures only and must not call live websites, browser
+execution, OpenAI, OpenCart, or full workflow orchestration. Runtime/e2e
+workflow coverage remains opt-in through the runtime profile.
+
 ## Runtime Profile
 
 ```powershell
