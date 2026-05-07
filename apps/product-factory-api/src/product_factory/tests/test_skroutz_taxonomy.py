@@ -159,6 +159,56 @@ def test_explicit_tabletop_hob_category_still_resolves_to_small_appliance_hobs()
     assert taxonomy.sub_category == "Εστίες"
 
 
+def test_smartphone_category_resolves_to_android_taxonomy() -> None:
+    parser = SkroutzProductParser()
+    resolver = TaxonomyResolver()
+    row = {
+        "name": "Xiaomi Poco M8 5G Dual Sim 8/256GB Πράσινο",
+        "category_tag_text": "Κινητά Τηλέφωνα",
+        "category_tag_href": "https://www.skroutz.gr/c/40/kinhta-thlefwna.html",
+        "manufacturer": "Xiaomi",
+        "skroutz_product_url": "https://www.skroutz.gr/s/65005733/xiaomi-poco-m8-5g-dual-sim-8-256gb-prasino.html",
+        "model": "M8",
+    }
+
+    parsed = parser.parse(build_minimal_taxonomy_html(row), row["skroutz_product_url"])
+    taxonomy, _ = resolver.resolve(parsed.source.breadcrumbs, parsed.source.canonical_url, parsed.source.name, parsed.source.key_specs, parsed.source.spec_sections)
+
+    assert parsed.source.page_type == "product"
+    assert parsed.source.skroutz_family == "smartphone"
+    assert taxonomy.parent_category == "ΤΗΛΕΦΩΝΙΑ"
+    assert taxonomy.leaf_category == "Smartphones"
+    assert taxonomy.sub_category == "Android"
+    assert parsed.source.taxonomy_source_category == "ΤΗΛΕΦΩΝΙΑ:::ΤΗΛΕΦΩΝΙΑ///Smartphones:::ΤΗΛΕΦΩΝΙΑ///Smartphones///Android"
+    assert parsed.source.taxonomy_match_type == "exact_category"
+    assert parsed.source.taxonomy_rule_id == "smartphone:android"
+
+
+def test_smartphone_category_resolves_to_ios_taxonomy_for_iphone() -> None:
+    parser = SkroutzProductParser()
+    resolver = TaxonomyResolver()
+    row = {
+        "name": "Apple iPhone 17 Pro Max 512GB Deep Blue",
+        "category_tag_text": "Smartphones",
+        "category_tag_href": "https://www.skroutz.gr/c/40/smartphones.html",
+        "manufacturer": "Apple",
+        "skroutz_product_url": "https://www.skroutz.gr/s/70000000/apple-iphone-17-pro-max-512gb-deep-blue.html",
+        "model": "AIPHONE17PM",
+    }
+
+    parsed = parser.parse(build_minimal_taxonomy_html(row), row["skroutz_product_url"])
+    taxonomy, _ = resolver.resolve(parsed.source.breadcrumbs, parsed.source.canonical_url, parsed.source.name, parsed.source.key_specs, parsed.source.spec_sections)
+
+    assert parsed.source.page_type == "product"
+    assert parsed.source.skroutz_family == "smartphone"
+    assert taxonomy.parent_category == "ΤΗΛΕΦΩΝΙΑ"
+    assert taxonomy.leaf_category == "Smartphones"
+    assert taxonomy.sub_category == "iOS"
+    assert parsed.source.taxonomy_source_category == "ΤΗΛΕΦΩΝΙΑ:::ΤΗΛΕΦΩΝΙΑ///Smartphones:::ΤΗΛΕΦΩΝΙΑ///Smartphones///iOS"
+    assert parsed.source.taxonomy_match_type == "exact_category"
+    assert parsed.source.taxonomy_rule_id == "smartphone:ios"
+
+
 def test_ice_cream_maker_category_resolves_to_small_appliance_taxonomy() -> None:
     parser = SkroutzProductParser()
     resolver = TaxonomyResolver()

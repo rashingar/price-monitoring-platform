@@ -96,6 +96,7 @@ def classify_skroutz_taxonomy(
         "title_norm": title_norm,
         "url": normalize_whitespace(url),
         "url_norm": url_norm,
+        "brand_norm": normalize_for_match(brand),
         "family_key": family_key or "",
     }
 
@@ -109,6 +110,8 @@ def classify_skroutz_taxonomy(
             sub="Ηχεία",
             matched_rule_id="audio:speaker",
         )
+    if family_key == "smartphone":
+        return _classify_smartphone(context)
     if family_key == "dishwasher":
         return _classify_dishwasher(context)
     if family_key == "cooker":
@@ -165,6 +168,8 @@ def classify_skroutz_taxonomy(
             sub="Ηχεία",
             matched_rule_id="audio:speaker",
         )
+    if _has_any(context, "kinhta thlefwna", "kinita tilefona", "smartphones", "mobile phones", "iphone"):
+        return _classify_smartphone(context)
     if _has_any(context, "aporrofit"):
         return _build_hint(
             context=context,
@@ -202,6 +207,22 @@ def classify_skroutz_taxonomy(
             matched_rule_id="heating:lpg",
         )
     return None
+
+
+def _classify_smartphone(context: dict[str, str]) -> SkroutzTaxonomyHint:
+    if _has_any(context, "iphone", "ios") or "apple" in context["brand_norm"]:
+        sub = "iOS"
+        rule_id = "smartphone:ios"
+    else:
+        sub = "Android"
+        rule_id = "smartphone:android"
+    return _build_hint(
+        context=context,
+        parent="ΤΗΛΕΦΩΝΙΑ",
+        leaf="Smartphones",
+        sub=sub,
+        matched_rule_id=rule_id,
+    )
 
 
 def _classify_television(context: dict[str, str]) -> SkroutzTaxonomyHint:

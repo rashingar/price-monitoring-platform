@@ -19,6 +19,7 @@ from .normalize import candidate_label_keys, normalize_for_match, normalize_whit
 PURE_NUMERIC_TOKEN_RE = re.compile(r"^\d+(?:[.,]\d+)?$")
 NUMERIC_RE = re.compile(r"\d+(?:[.,]\d+)?")
 ENERGY_CLASS_TOKEN_RE = re.compile(r"^[A-G](?:\+{1,3})?$", re.IGNORECASE)
+MEMORY_STORAGE_BUNDLE_RE = re.compile(r"\b\d{1,2}(?:gb|g)?[/+]\d{2,4}(?:gb|g)\b", re.IGNORECASE)
 DIMENSION_MODEL_TOKEN_RE = re.compile(
     r"\d+(?:[.,]\d+)?(?:\s*[x×]\s*\d+(?:[.,]\d+)?){2,}\s*(?:cm|mm)",
     re.IGNORECASE,
@@ -72,6 +73,26 @@ FUZZY_SINGLE_TOKEN_ALLOWLIST = {
     "χρωμα",
 }
 FUZZY_ALIAS_DENYLIST = {"τυπος"}
+MOBILE_CONNECTIVITY_TOKENS = {"4g", "5g", "lte"}
+MOBILE_MODEL_STOP_TOKENS = {
+    "dual",
+    "sim",
+    "single",
+    "wifi",
+    "wi-fi",
+    "cellular",
+    "green",
+    "black",
+    "white",
+    "blue",
+    "red",
+    "purple",
+    "gray",
+    "grey",
+    "silver",
+    "πρασινο",
+}
+MOBILE_SUBBRAND_TOKENS = {"poco", "redmi", "galaxy", "iphone", "ipad"}
 
 ARTICLE_MAP = {"fem": "Η", "neut": "Το", "masc": "Ο"}
 COLOR_TOKEN_MAP = {
@@ -230,7 +251,7 @@ def build_deterministic_product_fields(
 
     raw_title = normalize_whitespace(source.name)
     brand = normalize_whitespace(source.brand)
-    mpn = resolve_deterministic_mpn(source, raw_title, brand, model)
+    mpn = resolve_deterministic_mpn(source, raw_title, brand, model, taxonomy)
     tv_fields = build_tv_deterministic_fields(
         source=source,
         taxonomy=taxonomy,
@@ -311,7 +332,7 @@ def build_skroutz_deterministic_fields(
 
     raw_title = normalize_whitespace(source.name)
     brand = normalize_whitespace(source.brand)
-    mpn = resolve_deterministic_mpn(source, raw_title, brand, model)
+    mpn = resolve_deterministic_mpn(source, raw_title, brand, model, taxonomy)
     if family == "ironing_board":
         source_mpn = normalize_whitespace(source.mpn)
         if source_mpn and not is_dimension_model_token(source_mpn) and normalize_for_match(source_mpn) != normalize_for_match(model):
@@ -372,8 +393,7 @@ def build_skroutz_deterministic_fields(
         category_phrase = "Ψυγειοκαταψύκτης"
         cooling = normalize_fridge_cooling(normalize_value(spec_lookup, ["Σύστημα Ψύξης", "Τεχνολογία Ψύξης"]))
         capacity = normalize_value(spec_lookup, ["Συνολική Χωρητικότητα", "Συνολική Καθαρή Χωρητικότητα", "Χωρητικότητα"])
-        title_tail = normalize_whitespace(source.name).split()[-1] if normalize_whitespace(source.name) else ""
-        energy_class = normalize_value(spec_lookup, ["?????????? ?????"]) or extract_energy_class_from_source(source) or (title_tail.upper() if ENERGY_CLASS_TOKEN_RE.fullmatch(title_tail) else "")
+        energy_class = normalize_value(spec_lookup, ["Ενεργειακή Κλάση"]) or extract_energy_class_from_source(source, taxonomy)
         differentiators = [item for item in [cooling, capacity, energy_class] if item]
         name = compose_name(brand, mpn, category_phrase, differentiators)
         meta_title = compose_meta_title(
@@ -640,7 +660,7 @@ def _build_fridge_freezer_deterministic_fields(
         extract_first_preferred_spec_value(source, [r"\b\d+(?:[.,]\d+)?\s*lt\b"]),
         "Lt",
     )
-    energy_class = normalize_value(spec_lookup, ["Ενεργειακή Κλάση"]) or extract_energy_class_from_source(source)
+    energy_class = normalize_value(spec_lookup, ["Ενεργειακή Κλάση"]) or extract_energy_class_from_source(source, taxonomy)
     differentiators = [item for item in [cooling, capacity, energy_class] if item]
     name = compose_name(brand, mpn, category_phrase, differentiators)
     meta_title = compose_meta_title(
@@ -898,8 +918,7 @@ def derive_name_differentiators(
     ordered: list[str] = []
 
     capacity = format_capacity_differentiator(spec_lookup, category_phrase, taxonomy)
-    title_tail = normalize_whitespace(source.name).split()[-1] if normalize_whitespace(source.name) else ""
-    energy_class = normalize_value(spec_lookup, ["?????????? ?????"]) or extract_energy_class_from_source(source) or (title_tail.upper() if ENERGY_CLASS_TOKEN_RE.fullmatch(title_tail) else "")
+    energy_class = normalize_value(spec_lookup, ["Ενεργειακή Κλάση"]) or extract_energy_class_from_source(source, taxonomy)
     cooling = normalize_value(spec_lookup, ["Τεχνολογία Ψύξης"])
     connectivity = normalize_connectivity(normalize_value(spec_lookup, ["Συνδεσιμότητα"]))
     family = extract_commercial_family_from_title(source.name, brand, mpn)
@@ -958,12 +977,33 @@ def extract_title_energy_class(value: str) -> str:
     return match.group(1).upper() if match else ""
 
 
-def extract_energy_class_from_source(source: SourceProductData) -> str:
-    for value in _preferred_spec_values(source):
-        extracted = _extract_energy_class_from_value(value)
+def extract_energy_class_from_source(source: SourceProductData, taxonomy: TaxonomyResolution | None = None) -> str:
+    prefer_manufacturer = _prefer_manufacturer_evidence(source)
+    for item in iter_specs(
+        source.key_specs,
+        effective_spec_sections(source, manufacturer_first=prefer_manufacturer),
+        key_specs_last=prefer_manufacturer,
+    ):
+        if not _is_energy_spec_context(item.label):
+            continue
+        extracted = _extract_energy_class_from_value(item.value)
         if extracted:
             return extracted
-    return extract_title_energy_class(source.name) or _extract_energy_class_from_value(source.name)
+    return extract_title_energy_class(source.name) if _allows_title_energy_class(taxonomy) else ""
+
+
+def _is_energy_spec_context(label: str) -> bool:
+    haystack = normalize_for_match(label)
+    return any(token in haystack for token in ("energy", "ενεργ", "κλαση"))
+
+
+def _allows_title_energy_class(taxonomy: TaxonomyResolution | None) -> bool:
+    if taxonomy is None:
+        return False
+    haystack = normalize_for_match(" ".join(str(value or "") for value in (taxonomy.parent_category, taxonomy.leaf_category, taxonomy.sub_category)))
+    if any(token in haystack for token in ("smartphone", "smartphones", "tablet", "tablets", "android", "ios")):
+        return False
+    return True
 
 
 def extract_first_preferred_spec_value(source: SourceProductData, patterns: list[str]) -> str:
@@ -1180,7 +1220,7 @@ def resolve_name_rule_value(
     category_phrase: str,
     taxonomy: TaxonomyResolution,
 ) -> str:
-    groups = alias_groups if alias_groups and isinstance(alias_groups[0], list) else [alias_groups]
+    groups = _normalize_name_rule_alias_groups(alias_groups)
     resolved_parts: list[str] = []
     for aliases in groups:
         resolved = resolve_name_rule_component(source, spec_lookup, [str(alias) for alias in aliases], category_phrase, taxonomy)
@@ -1191,7 +1231,47 @@ def resolve_name_rule_value(
         return ""
     if len(resolved_parts) == 1:
         return resolved_parts[0]
+    if _is_mobile_scope(taxonomy) and _is_mobile_memory_alias_groups(groups):
+        return " ".join(resolved_parts)
     return "/".join(resolved_parts)
+
+
+def _normalize_name_rule_alias_groups(alias_groups: Any) -> list[list[str]]:
+    if not alias_groups:
+        return []
+    if isinstance(alias_groups, str):
+        return [[alias_groups]]
+    if isinstance(alias_groups, tuple):
+        alias_groups = list(alias_groups)
+    if not isinstance(alias_groups, list):
+        return [[str(alias_groups)]]
+    if not alias_groups:
+        return []
+    if all(not isinstance(item, (list, tuple)) for item in alias_groups):
+        return [[str(item) for item in alias_groups]]
+
+    normalized: list[list[str]] = []
+    for item in alias_groups:
+        if isinstance(item, str):
+            normalized.append([item])
+        elif isinstance(item, tuple):
+            normalized.extend(_normalize_name_rule_alias_groups(list(item)))
+        elif isinstance(item, list):
+            if any(isinstance(child, (list, tuple)) for child in item):
+                normalized.extend(_normalize_name_rule_alias_groups(item))
+            else:
+                normalized.append([str(child) for child in item])
+        elif item:
+            normalized.append([str(item)])
+    return normalized
+
+
+def _is_mobile_memory_alias_groups(groups: list[list[str]]) -> bool:
+    haystack = normalize_for_match(" ".join(alias for group in groups for alias in group))
+    return (
+        any(token in haystack for token in ("ram", "μνημη ram"))
+        and any(token in haystack for token in ("αποθηκευτικος", "εσωτερικη μνημη", "χωρος"))
+    )
 
 
 def resolve_name_rule_component(
@@ -1253,6 +1333,16 @@ def normalize_name_rule_value(
     if not normalized:
         return ""
     alias_keys = {normalize_for_match(alias) for alias in aliases}
+    connectivity_aliases = alias_keys & MOBILE_CONNECTIVITY_TOKENS
+    if connectivity_aliases:
+        value_key = normalize_for_match(normalized)
+        if value_key in {"yes", "y", "true", "1", "ναι", "nai", "υποστηριζεται", "ypostirizetai"} or any(
+            token in value_key for token in connectivity_aliases
+        ):
+            return sorted(connectivity_aliases)[0].upper()
+        return ""
+    if _is_memory_alias_keys(alias_keys):
+        return normalize_memory_value(normalized)
     if _is_color_alias_keys(alias_keys):
         if _value_matches_category_context(normalized, category_phrase, taxonomy):
             return ""
@@ -1278,6 +1368,15 @@ def normalize_name_rule_value(
         if numeric and unit == "Lt":
             return f"{numeric}Lt"
     return normalized
+
+
+def _is_memory_alias_keys(alias_keys: set[str]) -> bool:
+    return any(token in " ".join(alias_keys) for token in ("ram", "μνημη", "αποθηκευτικος", "εσωτερικη"))
+
+
+def normalize_memory_value(value: str) -> str:
+    normalized = normalize_whitespace(value)
+    return re.sub(r"\b(\d{1,4})\s*(GB|G)\b", lambda match: f"{match.group(1)} GB", normalized, flags=re.IGNORECASE)
 
 
 def _is_tv_scope(category_phrase: str, taxonomy: TaxonomyResolution) -> bool:
@@ -2044,17 +2143,97 @@ def extract_mpn_from_name(name: str, brand: str) -> str:
     return ""
 
 
-def resolve_deterministic_mpn(source: SourceProductData, raw_title: str, brand: str, model: str) -> str:
-    for candidate in [source.mpn, extract_mpn_from_name(raw_title, brand)]:
+def resolve_deterministic_mpn(
+    source: SourceProductData,
+    raw_title: str,
+    brand: str,
+    model: str,
+    taxonomy: TaxonomyResolution | None = None,
+) -> str:
+    source_mpn = normalize_whitespace(source.mpn)
+    if _is_valid_deterministic_mpn(source_mpn, source=source, model=model):
+        return source_mpn
+
+    if _is_mobile_scope(taxonomy):
+        mobile_title_mpn = extract_mobile_model_from_title(raw_title, brand)
+        if mobile_title_mpn:
+            return mobile_title_mpn
+
+    for candidate in [extract_mpn_from_name(raw_title, brand)]:
         normalized = normalize_whitespace(candidate)
-        if normalized and not is_dimension_model_token(normalized) and not _matches_runtime_product_code(
+        if _is_valid_deterministic_mpn(normalized, source=source, model=model):
+            return normalized
+    return ""
+
+
+def _is_valid_deterministic_mpn(candidate: str, *, source: SourceProductData, model: str) -> bool:
+    normalized = normalize_whitespace(candidate)
+    return bool(
+        normalized
+        and not is_dimension_model_token(normalized)
+        and not is_memory_storage_bundle(normalized)
+        and not _matches_runtime_product_code(
             normalized,
             model,
             source.product_code,
             source.source_name,
-        ):
-            return normalized
-    return ""
+        )
+    )
+
+
+def is_memory_storage_bundle(value: str) -> bool:
+    compact = re.sub(r"\s+", "", normalize_whitespace(value).lower().strip("()[]{}"))
+    return bool(MEMORY_STORAGE_BUNDLE_RE.search(compact))
+
+
+def _is_mobile_scope(taxonomy: TaxonomyResolution | None) -> bool:
+    if taxonomy is None:
+        return False
+    haystack = normalize_for_match(" ".join(str(value or "") for value in (taxonomy.leaf_category, taxonomy.sub_category)))
+    return any(token in haystack for token in ("smartphone", "smartphones", "tablet", "tablets", "android", "ios"))
+
+
+def extract_mobile_model_from_title(raw_title: str, brand: str) -> str:
+    tokens = title_tokens(raw_title)
+    brand_norm = normalize_for_match(brand)
+    if not tokens or not brand_norm:
+        return ""
+    brand_index = next((idx for idx, token in enumerate(tokens) if normalize_for_match(token) == brand_norm), -1)
+    if brand_index == -1:
+        return ""
+
+    model_tokens: list[str] = []
+    for index, token in enumerate(tokens[brand_index + 1 :], start=brand_index + 1):
+        token_norm = normalize_for_match(token)
+        window = normalize_whitespace(" ".join(tokens[index : min(len(tokens), index + 5)]))
+        if is_memory_storage_bundle(token) or is_memory_storage_bundle(window):
+            break
+        if token_norm in MOBILE_CONNECTIVITY_TOKENS:
+            break
+        if token_norm in MOBILE_MODEL_STOP_TOKENS or token_norm in COLOR_TOKEN_MAP:
+            break
+        if token_norm in {brand_norm, "smartphone", "tablet"}:
+            continue
+        if _is_mobile_model_fragment(token) or (not model_tokens and token_norm in MOBILE_SUBBRAND_TOKENS):
+            model_tokens.append(token.upper() if _is_mobile_model_fragment(token) else token)
+            continue
+        if model_tokens:
+            break
+    return normalize_whitespace(" ".join(model_tokens))
+
+
+def _is_mobile_model_fragment(token: str) -> bool:
+    normalized = normalize_whitespace(token).strip("()[]{}")
+    if not normalized or is_memory_storage_bundle(normalized):
+        return False
+    upper = normalized.upper()
+    if len(upper) < 2 or len(upper) > 12:
+        return False
+    if not all(ch.isalnum() or ch in "._/-" for ch in upper):
+        return False
+    if not any(ch.isalpha() for ch in upper) or not any(ch.isdigit() for ch in upper):
+        return False
+    return True
 
 
 def _matches_runtime_product_code(candidate: str, model: str, product_code: str, source_name: str = "") -> bool:

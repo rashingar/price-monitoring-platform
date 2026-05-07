@@ -113,6 +113,15 @@ SKROUTZ_FAMILIES: dict[str, dict[str, Any]] = {
         "spec_mode": "raw",
         "taxonomy_mode": "helper",
     },
+    "smartphone": {
+        "category_labels": {"Κινητά Τηλέφωνα", "Smartphones"},
+        "category_href_tokens": {"kinhta thlefwna", "kinita tilefona", "smartphones", "mobile phones"},
+        "title_tokens": {"smartphone", "iphone"},
+        "breadcrumbs": [],
+        "sections": [],
+        "spec_mode": "raw",
+        "taxonomy_mode": "helper",
+    },
     "dishwasher": {
         "category_labels": {"Πλυντήρια Πιάτων"},
         "category_href_tokens": {"plyntiria piaton", "plynthria piatwn", "dishwashers"},

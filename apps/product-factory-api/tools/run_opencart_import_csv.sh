@@ -54,6 +54,7 @@ echo "[opencart-csv-import] repo_root=${REPO_ROOT} model=${MODEL} profile=${PROF
 # Prevent Git Bash / MSYS from rewriting web paths such as
 # `/ipadmin/index.php` into local Windows filesystem paths.
 export MSYS2_ARG_CONV_EXCL="${ADMIN_PATH}"
-export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
+PY_PATHSEP="$("${PYTHON_BIN}" -c 'import os; print(os.pathsep)')"
+export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+${PY_PATHSEP}${PYTHONPATH}}"
 
 exec "${CMD[@]}"

@@ -74,5 +74,5 @@ def bootstrap_runtime_provider_registry(
 ) -> ProviderRegistry:
     registry = ProviderRegistry()
     registry.register(ElectronetProvider(fetcher=fetcher, parser=electronet_parser))
-    registry.register(SkroutzProvider(fetcher=fetcher, parser=skroutz_parser))
+    registry.register(SkroutzProvider(parser=skroutz_parser))
     return registry

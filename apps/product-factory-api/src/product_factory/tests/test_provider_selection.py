@@ -23,9 +23,10 @@ from product_factory.providers.models import (
 )
 from product_factory.providers.manufacturer_tefal_provider import ManufacturerTefalProvider
 from product_factory.providers.skroutz_provider import SkroutzProvider
+from product_factory.providers.skroutz_fetcher import SkroutzFetchResult, SkroutzFetchStatus
 
-SAMPLE_MODEL = "341490"
-SAMPLE_URL = "https://www.skroutz.gr/s/51055155/Estia-Intense-Vrastiras-1-7lt-2200W-Luminus-Mat.html"
+SAMPLE_MODEL = "143109"
+SAMPLE_URL = "https://www.skroutz.gr/s/61054853/lg-icheio-dxl7t-mayro.html"
 MANUFACTURER_MODEL = "344709"
 MANUFACTURER_URL = "https://shop.tefal.gr/products/dolci-%CF%80%CE%B1%CE%B3%CF%89%CF%84%CE%BF%CE%BC%CE%B7%CF%87%CE%B1%CE%BD%CE%AE-ig602a"
 
@@ -88,7 +89,7 @@ class DummyFetcher:
 
 
 def build_provider(skroutz_fixtures_root: Path) -> SkroutzProvider:
-    return SkroutzProvider(fixture_html_by_url={SAMPLE_URL: skroutz_fixtures_root / "html" / f"{SAMPLE_MODEL}.html"})
+    return SkroutzProvider(fixture_html_by_url={SAMPLE_URL: skroutz_fixtures_root / "taxonomy_cases" / f"{SAMPLE_MODEL}.html"})
 
 
 def build_manufacturer_provider(manufacturer_tefal_provider_fixtures_root: Path) -> ManufacturerTefalProvider:
@@ -217,7 +218,7 @@ def test_skroutz_provider_fetch_snapshot_reads_fixture_html(skroutz_fixtures_roo
     assert snapshot.status_code == 200
     assert snapshot.metadata["fetch_method"] == "fixture"
     assert str(snapshot.metadata["fixture_path"]).endswith(f"{SAMPLE_MODEL}.html")
-    assert "Estia" in snapshot.body_text
+    assert "LG" in snapshot.body_text
 
 
 def test_skroutz_provider_normalize_returns_provider_result(skroutz_fixtures_root: Path) -> None:
@@ -238,40 +239,32 @@ def test_skroutz_provider_normalize_returns_provider_result(skroutz_fixtures_roo
     assert "name" in result.field_diagnostics
 
 
-def test_skroutz_provider_fetch_snapshot_uses_live_fetcher_when_no_fixture_override() -> None:
+def test_skroutz_provider_fetch_snapshot_uses_raw_http_fetcher_when_no_fixture_override() -> None:
     identity = ProviderInputIdentity(model=SAMPLE_MODEL, url=SAMPLE_URL)
-    calls = {"playwright": 0, "httpx": 0}
+    calls = {"fetch": 0}
 
     class LiveFetcher:
-        def fetch_playwright(self, url: str):
-            calls["playwright"] += 1
-            return type(
-                "Fetch",
-                (),
-                {
-                    "url": url,
-                    "final_url": url,
-                    "html": "<html></html>",
-                    "status_code": 200,
-                    "method": "playwright",
-                    "fallback_used": True,
-                    "response_headers": {"content-type": "text/html"},
-                },
-            )()
-
-        def fetch_httpx(self, _url: str):
-            calls["httpx"] += 1
-            raise AssertionError("HTTPX should not be used when Skroutz Playwright succeeds")
+        def fetch(self, url: str) -> SkroutzFetchResult:
+            calls["fetch"] += 1
+            return SkroutzFetchResult(
+                url=url,
+                final_url=url,
+                html="<html></html>",
+                status_code=200,
+                method="httpx",
+                status=SkroutzFetchStatus.OK,
+                headers={"content-type": "text/html"},
+            )
 
     provider = SkroutzProvider(fetcher=LiveFetcher())
 
     snapshot = provider.fetch_snapshot(identity)
 
-    assert calls == {"playwright": 1, "httpx": 0}
+    assert calls == {"fetch": 1}
     assert snapshot.requested_url == SAMPLE_URL
     assert snapshot.final_url == SAMPLE_URL
-    assert snapshot.metadata["fetch_method"] == "playwright"
-    assert snapshot.metadata["fallback_used"] is True
+    assert snapshot.metadata["fetch_method"] == "httpx"
+    assert snapshot.metadata["fallback_used"] is False
 
 
 def test_manufacturer_tefal_provider_fetch_snapshot_reads_fixture_html(

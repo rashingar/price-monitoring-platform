@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 from .fetcher import ElectronetFetcher
 from .html_builders import extract_presentation_blocks
-from .models import CLIInput, GalleryImage
+from .models import CLIInput, GalleryImage, ParsedProduct, SchemaMatchResult, TaxonomyResolution
 from .prepare_provider_resolution import PrepareProviderResolutionResult, resolve_prepare_provider_resolution
 from .prepare_result_assembly import assemble_prepare_result
 from .prepare_section_assets import (
@@ -28,6 +28,8 @@ from .source_acquisition_stage import execute_source_acquisition_stage
 from .source_capture_client import SourceCaptureSyncResult, sync_initial_source_capture
 from .source_detection import validate_url_scope
 from .utils import ensure_directory
+
+BLOCKED_BY_CHALLENGE = "blocked_by_challenge"
 
 
 def execute_prepare_stage(
@@ -109,6 +111,21 @@ def execute_prepare_from_acquisition(
         normalized_payload={},
         report_payload={},
     )
+
+    if _is_blocked_by_challenge(parsed):
+        return _persist_blocked_prepare_result(
+            cli=cli,
+            source=source,
+            provider_id=acquisition.provider_id,
+            fetch=fetch,
+            parsed=parsed,
+            model_dir=resolved_model_dir,
+            final_source=final_source,
+            final_scope_ok=final_scope_ok,
+            final_scope_reason=final_scope_reason,
+            scrape_persistence_input=scrape_persistence_input,
+            persist_prepare_scrape_artifacts_fn=persist_prepare_scrape_artifacts_fn,
+        )
 
     extracted_gallery_count = acquisition.extracted_gallery_count
     gallery_warnings = list(acquisition.gallery_warnings)
@@ -270,4 +287,131 @@ def execute_prepare_from_acquisition(
         "downloaded_gallery": downloaded_gallery,
         "downloaded_besco": downloaded_besco,
         "besco_filenames_by_section": besco_filenames_by_section,
+    }
+
+
+def _is_blocked_by_challenge(parsed: ParsedProduct) -> bool:
+    return parsed.source.page_type == BLOCKED_BY_CHALLENGE
+
+
+def _append_warning_once(warnings: list[str], warning: str) -> None:
+    if warning not in warnings:
+        warnings.append(warning)
+
+
+def _persist_blocked_prepare_result(
+    *,
+    cli: CLIInput,
+    source: str,
+    provider_id: str,
+    fetch,
+    parsed: ParsedProduct,
+    model_dir: Path,
+    final_source: str,
+    final_scope_ok: bool,
+    final_scope_reason: str,
+    scrape_persistence_input: PrepareScrapePersistenceInput,
+    persist_prepare_scrape_artifacts_fn: Callable[[PrepareScrapePersistenceInput], PrepareScrapePersistenceResult],
+) -> dict[str, Any]:
+    _append_warning_once(parsed.warnings, BLOCKED_BY_CHALLENGE)
+    _append_warning_once(parsed.warnings, "prepare_snapshot_blocked_by_challenge")
+    parsed.source.raw_html_path = str(scrape_persistence_input.raw_html_path)
+    parsed.source.fallback_used = fetch.fallback_used
+    source_payload = parsed.source.to_dict()
+    taxonomy = TaxonomyResolution(reason=BLOCKED_BY_CHALLENGE)
+    schema_match = SchemaMatchResult(fail_reason=BLOCKED_BY_CHALLENGE, warnings=[BLOCKED_BY_CHALLENGE])
+    blocked_snapshot = {
+        "blocked": True,
+        "reason": BLOCKED_BY_CHALLENGE,
+        "status_code": fetch.status_code,
+        "requested_url": fetch.url,
+        "final_url": fetch.final_url,
+        "fetch_method": fetch.method,
+        "provider_id": provider_id,
+    }
+    normalized = {
+        "input": cli.to_dict(),
+        "source": source_payload,
+        "taxonomy": taxonomy.to_dict(),
+        "schema_match": schema_match.to_dict(),
+        "deterministic_product": {},
+        "blocked_snapshot": blocked_snapshot,
+    }
+    report = {
+        "input": cli.to_dict(),
+        "source": source,
+        "fetch_mode": fetch.method,
+        "source_resolution": {
+            "requested_url": cli.url,
+            "detected_source": source,
+            "resolved_url": fetch.final_url,
+        },
+        "identity_checks": {
+            "source": source,
+            "input_model": cli.model,
+            "page_type": parsed.source.page_type,
+            "page_product_code": parsed.source.product_code,
+            "name_present": bool(parsed.source.name),
+            "brand_present": bool(parsed.source.brand),
+            "mpn_present": bool(parsed.source.mpn),
+        },
+        "url_scope_validation": {
+            "ok": final_scope_ok,
+            "reason": final_scope_reason,
+            "final_url_source": final_source,
+        },
+        "blocked_snapshot": blocked_snapshot,
+        "critical_extractors": {
+            "product_code": "blocked",
+            "brand": "blocked",
+            "mpn": "blocked",
+            "name": "blocked",
+            "price": "blocked",
+            "taxonomy": "blocked",
+            "schema_match": "blocked",
+        },
+        "missing_fields": list(parsed.missing_fields),
+        "warnings": list(parsed.warnings),
+        "files_written": [
+            str(scrape_persistence_input.raw_html_path),
+            str(scrape_persistence_input.source_json_path),
+            str(scrape_persistence_input.normalized_json_path),
+            str(scrape_persistence_input.report_json_path),
+        ],
+    }
+    scrape_persistence_input.source_payload = source_payload
+    scrape_persistence_input.normalized_payload = normalized
+    scrape_persistence_input.report_payload = report
+    scrape_persistence = persist_prepare_scrape_artifacts_fn(scrape_persistence_input)
+    write_ecommerce_source_handoff(
+        cli=cli,
+        source=source,
+        provider_id=provider_id,
+        fetch=fetch,
+        parsed=parsed,
+        model_dir=model_dir,
+    )
+    return {
+        "cli": cli,
+        "source": source,
+        "fetch": fetch,
+        "parsed": parsed,
+        "taxonomy": taxonomy,
+        "taxonomy_candidates": [],
+        "schema_match": schema_match,
+        "schema_candidates": [],
+        "manufacturer_enrichment": {},
+        "row": {},
+        "normalized": normalized,
+        "report": report,
+        "model_dir": model_dir,
+        "raw_html_path": scrape_persistence.raw_html_path,
+        "source_json_path": scrape_persistence.source_json_path,
+        "normalized_json_path": scrape_persistence.normalized_json_path,
+        "report_json_path": scrape_persistence.report_json_path,
+        "selected_presentation_blocks": [],
+        "downloaded_gallery": [],
+        "downloaded_besco": [],
+        "besco_filenames_by_section": {},
+        "blocked_reason": BLOCKED_BY_CHALLENGE,
     }

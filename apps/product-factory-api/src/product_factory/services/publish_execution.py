@@ -168,6 +168,7 @@ def execute_publish_workflow(
             publish_message = preflight_message
         else:
             env = os.environ.copy()
+            env.pop("PYTHONPATH", None)
             env["CURRENT_JOB_PRODUCT_FILE"] = _shell_path_from_repo(
                 published_csv_path,
                 repo_root=repo_root,

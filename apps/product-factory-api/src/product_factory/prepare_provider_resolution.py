@@ -12,6 +12,7 @@ from .parser_product_skroutz import SkroutzProductParser
 from .providers.base import ProviderError
 from .providers.models import ProviderInputIdentity, ProviderResult
 from .providers.registry import ProviderRegistry, bootstrap_runtime_provider_registry, source_to_provider_id
+from .providers.skroutz_provider import SKROUTZ_CHALLENGE_REASON
 from .repo_paths import SCHEMA_LIBRARY_PATH
 from .schema_matcher import SchemaMatcher
 from .source_detection import detect_source, validate_url_scope
@@ -31,6 +32,11 @@ class PrepareProviderResolutionResult:
 
 def _provider_result_to_fetch(provider_result: ProviderResult) -> FetchResult:
     snapshot = provider_result.snapshot
+    response_headers = dict(snapshot.headers)
+    for key in ("fetch_status", "blocked", "blocked_reason"):
+        value = snapshot.metadata.get(key)
+        if value not in (None, ""):
+            response_headers[f"x-product-factory-{key.replace('_', '-')}"] = str(value)
     return FetchResult(
         url=snapshot.requested_url or provider_result.identity.url,
         final_url=snapshot.final_url or snapshot.requested_url or provider_result.identity.url,
@@ -38,7 +44,7 @@ def _provider_result_to_fetch(provider_result: ProviderResult) -> FetchResult:
         status_code=int(snapshot.status_code or 0),
         method=str(snapshot.metadata.get("fetch_method", "")),
         fallback_used=bool(snapshot.metadata.get("fallback_used", False)),
-        response_headers=dict(snapshot.headers),
+        response_headers=response_headers,
     )
 
 
@@ -81,6 +87,10 @@ def validate_prepare_provider_resolution_result(
             parsed.warnings.append(f"source_product_code_mismatch:input={cli.model}:page={source_code}")
     elif source == "skroutz":
         apply_skroutz_contract_hints(cli, parsed)
+        if parsed.source.page_type == SKROUTZ_CHALLENGE_REASON:
+            if "blocked_by_challenge" not in parsed.warnings:
+                parsed.warnings.append("blocked_by_challenge")
+            return result
         if parsed.source.page_type != "product":
             detail = parsed.source.taxonomy_escalation_reason or "unsupported_skroutz_page_type"
             raise RuntimeError(f"Unsupported Skroutz page type: {detail}")
@@ -89,7 +99,7 @@ def validate_prepare_provider_resolution_result(
             detail = parsed.source.taxonomy_escalation_reason or "unsupported_manufacturer_page_type"
             raise RuntimeError(f"Unsupported manufacturer page type: {detail}")
 
-    if not parsed.source.name and not parsed.source.spec_sections:
+    if parsed.source.page_type != SKROUTZ_CHALLENGE_REASON and not parsed.source.name and not parsed.source.spec_sections:
         raise RuntimeError("Total parse failure")
 
     return result

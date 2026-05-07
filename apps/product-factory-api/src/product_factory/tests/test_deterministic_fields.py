@@ -567,6 +567,94 @@ def test_deterministic_fields_extract_spaced_mpn_and_do_not_inject_specs_into_co
     assert "226826" not in fields["name"]
 
 
+def test_smartphone_name_uses_mobile_model_and_specs_not_storage_as_mpn() -> None:
+    source = SourceProductData(
+        source_name="electronet",
+        brand="POCO",
+        product_code="580852",
+        mpn="8GB/256GB",
+        name="Smartphone Poco M8 5G 8GB/256GB Green",
+        key_specs=[
+            SpecItem(label="Μνήμη Ram", value="8 GB"),
+            SpecItem(label="Εσωτερική Μνήμη", value="256GB"),
+            SpecItem(label="5G", value="Υποστηρίζεται"),
+        ],
+        spec_sections=[
+            SpecSection(section="Γενικά", items=[SpecItem(label="Χρώμα", value="Green")]),
+            SpecSection(section="Εξοπλισμός", items=[SpecItem(label="Επιπλέον Εξοπλισμός", value="Καλώδιο Type-C σε USB-A")]),
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΤΗΛΕΦΩΝΙΑ",
+        leaf_category="Smartphones",
+        sub_category="Android",
+    )
+
+    fields = build_deterministic_product_fields(source, taxonomy, "580852", derive_seo_keyword)
+
+    assert fields["mpn"] == "M8"
+    assert fields["name"] == "POCO M8 – Smartphone 5G 8 GB 256 GB Green"
+    assert fields["name_differentiators"] == ["5G", "8 GB 256 GB", "Green"]
+    assert "Type-C" not in fields["name"]
+
+
+def test_smartphone_name_keeps_manufacturer_and_subbrand_model() -> None:
+    source = SourceProductData(
+        source_name="skroutz",
+        brand="Xiaomi",
+        product_code="65005733",
+        mpn="8/256GB",
+        name="Xiaomi Poco M8 5G Dual SIM (8/256GB) Πράσινο",
+        key_specs=[
+            SpecItem(label="Μνήμη Ram", value="8 GB"),
+            SpecItem(label="Εσωτερική Μνήμη", value="256 GB"),
+            SpecItem(label="5G", value="Ναι"),
+        ],
+        spec_sections=[SpecSection(section="Γενικά", items=[SpecItem(label="Χρώμα", value="Πράσινο")])],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΤΗΛΕΦΩΝΙΑ",
+        leaf_category="Smartphones",
+        sub_category="Android",
+    )
+
+    fields = build_deterministic_product_fields(source, taxonomy, "580852", derive_seo_keyword)
+
+    assert fields["manufacturer"] == "Xiaomi"
+    assert fields["mpn"] == "Poco M8"
+    assert fields["name"] == "Xiaomi Poco M8 – Smartphone 5G 8 GB 256 GB Πράσινο"
+
+
+def test_smartphone_name_prefers_verified_source_mpn_over_title_model_family() -> None:
+    source = SourceProductData(
+        source_name="skroutz",
+        brand="Xiaomi",
+        product_code="65005733",
+        mpn="MZB0MA8EU",
+        name="Xiaomi Poco M8 5G Dual SIM (8/256GB) Πράσινο",
+        key_specs=[
+            SpecItem(label="Μνήμη Ram", value="8 GB"),
+            SpecItem(label="Εσωτερική Μνήμη", value="256 GB"),
+            SpecItem(label="5G", value="Ναι"),
+        ],
+        spec_sections=[SpecSection(section="Γενικά", items=[SpecItem(label="Χρώμα", value="Πράσινο")])],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΤΗΛΕΦΩΝΙΑ",
+        leaf_category="Smartphones",
+        sub_category="Android",
+    )
+
+    fields = build_deterministic_product_fields(source, taxonomy, "000009", derive_seo_keyword)
+
+    assert fields["manufacturer"] == "Xiaomi"
+    assert fields["mpn"] == "MZB0MA8EU"
+    assert fields["name"].startswith("Xiaomi MZB0MA8EU")
+    assert "Poco M8" not in fields["name"]
+    assert "5G" in fields["name"]
+    assert "8 GB 256 GB" in fields["name"]
+
+
 def test_deterministic_fields_use_capacity_and_energy_for_dryers() -> None:
     source = SourceProductData(
         brand="LG",

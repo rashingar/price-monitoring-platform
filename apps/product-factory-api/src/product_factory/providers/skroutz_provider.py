@@ -3,9 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Mapping
 
-from ..fetcher import ElectronetFetcher, FetchError
-from ..models import ParsedProduct
+from ..fetcher import FetchError
+from ..models import ParsedProduct, SourceProductData
 from ..parser_product_skroutz import SkroutzProductParser
+from ..utils import utcnow_iso
 from .base import ProductProvider, ProviderError
 from .models import (
     ProviderCapability,
@@ -18,6 +19,10 @@ from .models import (
     ProviderSnapshotKind,
     ProviderStage,
 )
+from .skroutz_fetcher import SkroutzFetchStatus, SkroutzSnapshotFetcher, is_skroutz_challenge_html
+
+SKROUTZ_CHALLENGE_REASON = SkroutzFetchStatus.BLOCKED_BY_CHALLENGE.value
+SKROUTZ_CHALLENGE_WARNING = "skroutz_snapshot_blocked_by_challenge"
 
 
 class SkroutzProvider(ProductProvider):
@@ -42,11 +47,11 @@ class SkroutzProvider(ProductProvider):
         self,
         *,
         fixture_html_by_url: Mapping[str, Path] | None = None,
-        fetcher: ElectronetFetcher | None = None,
+        fetcher: SkroutzSnapshotFetcher | None = None,
         parser: SkroutzProductParser | None = None,
     ) -> None:
         self._fixture_html_by_url = {url: Path(path) for url, path in (fixture_html_by_url or {}).items()}
-        self._fetcher = fetcher or ElectronetFetcher()
+        self._fetcher = fetcher or SkroutzSnapshotFetcher()
         self._parser = parser or SkroutzProductParser()
 
     def supports_identity(self, identity: ProviderInputIdentity) -> bool:
@@ -67,19 +72,16 @@ class SkroutzProvider(ProductProvider):
             return self._snapshot_from_fixture(identity, url, fixture_path)
 
         try:
-            fetch = self._fetcher.fetch_playwright(url)
-        except FetchError:
-            try:
-                fetch = self._fetcher.fetch_httpx(url)
-            except FetchError as exc:
-                raise ProviderError.build(
-                    provider_id=self.provider_id,
-                    code=ProviderErrorCode.FETCH_FAILED,
-                    stage=ProviderStage.FETCH,
-                    message=str(exc),
-                    details={"url": url},
-                    cause=exc,
-                ) from exc
+            fetch = self._fetcher.fetch(url)
+        except FetchError as exc:
+            raise ProviderError.build(
+                provider_id=self.provider_id,
+                code=ProviderErrorCode.FETCH_FAILED,
+                stage=ProviderStage.FETCH,
+                message=str(exc),
+                details={"url": url},
+                cause=exc,
+            ) from exc
 
         return ProviderSnapshot(
             provider_id=self.provider_id,
@@ -87,13 +89,16 @@ class SkroutzProvider(ProductProvider):
             snapshot_kind=ProviderSnapshotKind.HTML,
             requested_url=fetch.url,
             final_url=fetch.final_url,
-            content_type=str(fetch.response_headers.get("content-type", "")),
+            content_type=str(fetch.headers.get("content-type", "")),
             status_code=fetch.status_code,
             body_text=fetch.html,
-            headers=dict(fetch.response_headers),
+            headers=dict(fetch.headers),
             metadata={
                 "fetch_method": fetch.method,
                 "fallback_used": fetch.fallback_used,
+                "fetch_status": fetch.status.value,
+                "blocked": fetch.blocked,
+                "blocked_reason": fetch.blocked_reason,
             },
         )
 
@@ -120,6 +125,7 @@ class SkroutzProvider(ProductProvider):
                 cause=exc,
             ) from exc
 
+        challenge_blocked = is_skroutz_challenge_html(html, status_code=200, headers={})
         return ProviderSnapshot(
             provider_id=self.provider_id,
             identity=identity,
@@ -133,10 +139,15 @@ class SkroutzProvider(ProductProvider):
                 "fetch_method": "fixture",
                 "fallback_used": False,
                 "fixture_path": str(fixture_path),
+                "fetch_status": SKROUTZ_CHALLENGE_REASON if challenge_blocked else SkroutzFetchStatus.OK.value,
+                "blocked": challenge_blocked,
+                "blocked_reason": SKROUTZ_CHALLENGE_REASON if challenge_blocked else "",
             },
         )
 
     def normalize(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+        if self._snapshot_blocked_by_challenge(snapshot):
+            return self._blocked_provider_result(snapshot, identity)
         try:
             parsed = self._parse_snapshot(snapshot)
         except Exception as exc:
@@ -156,6 +167,44 @@ class SkroutzProvider(ProductProvider):
             snapshot.body_text,
             snapshot.final_url or snapshot.requested_url or snapshot.identity.url,
             fallback_used=bool(snapshot.metadata.get("fallback_used", False)),
+        )
+
+    def _snapshot_blocked_by_challenge(self, snapshot: ProviderSnapshot) -> bool:
+        if str(snapshot.metadata.get("blocked_reason", "")) == SKROUTZ_CHALLENGE_REASON:
+            return True
+        return is_skroutz_challenge_html(
+            snapshot.body_text,
+            status_code=int(snapshot.status_code or 0),
+            headers=dict(snapshot.headers),
+        )
+
+    def _blocked_provider_result(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+        url = snapshot.final_url or snapshot.requested_url or identity.url
+        source = SourceProductData(
+            source_name=self.definition.source_name,
+            page_type=SKROUTZ_CHALLENGE_REASON,
+            url=identity.url,
+            canonical_url=url,
+            scraped_at=utcnow_iso(),
+            fallback_used=bool(snapshot.metadata.get("fallback_used", False)),
+            taxonomy_escalation_reason=SKROUTZ_CHALLENGE_REASON,
+        )
+        return ProviderResult(
+            provider=self.definition,
+            identity=identity,
+            snapshot=snapshot,
+            product=source,
+            provenance={"snapshot": SKROUTZ_CHALLENGE_REASON},
+            warnings=[SKROUTZ_CHALLENGE_WARNING],
+            missing_fields=["name", "brand", "mpn", "gallery_images", "spec_sections"],
+            critical_missing=[],
+            metadata={
+                "fetch_method": str(snapshot.metadata.get("fetch_method", "")),
+                "fallback_used": bool(snapshot.metadata.get("fallback_used", False)),
+                "fetch_status": SKROUTZ_CHALLENGE_REASON,
+                "blocked": True,
+                "blocked_reason": SKROUTZ_CHALLENGE_REASON,
+            },
         )
 
     def _provider_result(
@@ -178,5 +227,8 @@ class SkroutzProvider(ProductProvider):
                 "fetch_method": str(snapshot.metadata.get("fetch_method", "")),
                 "fallback_used": bool(snapshot.metadata.get("fallback_used", False)),
                 "fixture_path": str(snapshot.metadata.get("fixture_path", "")),
+                "fetch_status": str(snapshot.metadata.get("fetch_status", "")),
+                "blocked": bool(snapshot.metadata.get("blocked", False)),
+                "blocked_reason": str(snapshot.metadata.get("blocked_reason", "")),
             },
         )

@@ -175,8 +175,12 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
         "matched_schema_id": str(getattr(schema_match, "matched_schema_id", "") or ""),
         "schema_score": float(getattr(schema_match, "score", 0.0) or 0.0),
         "warnings_count": len(scrape_result.report_warnings),
-        "llm_prepare_mode": "split_tasks",
+        "llm_prepare_mode": "blocked_snapshot"
+        if str(getattr(getattr(parsed, "source", None), "page_type", "") or "") == "blocked_by_challenge"
+        else "split_tasks",
     }
+    if details["llm_prepare_mode"] == "blocked_snapshot":
+        details["blocked_reason"] = "blocked_by_challenge"
 
     return _build_prepare_service_result(
         request=request,
