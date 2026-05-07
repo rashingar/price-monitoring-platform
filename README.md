@@ -153,11 +153,13 @@ Codex-safe aggregate fast verification:
 .\scripts\test\fast.ps1
 ```
 
-`scripts\test\fast.ps1` delegates to Product Factory fast, Ecommerce fast, web
-fast, and contract mirror checks. It is Codex-safe because delegated app scripts
-exclude runtime, Ecommerce `db_integration`, `postgres_required`, external,
-e2e, legacy, and slow checks where applicable. Codex prompts should still
-prefer targeted app checks relevant to changed files. Use
+`scripts\test\fast.ps1` first runs snapshot hygiene and fast marker hygiene,
+then delegates to Product Factory fast, Ecommerce fast, web fast, and contract
+mirror checks. It is Codex-safe because delegated app scripts exclude runtime,
+Ecommerce `db_integration`, `postgres_required`, external, e2e, legacy, and
+slow checks where applicable, and marker hygiene prevents those forbidden
+profiles from leaking into root fast. Codex prompts should still prefer
+targeted app checks relevant to changed files. Use
 `.\scripts\test\codex-product-factory.ps1` for Product Factory-only backend
 changes and `.\scripts\test\codex-ecommerce.ps1` for Ecommerce-only backend
 changes. Full suites are manual unless explicitly requested.
@@ -174,6 +176,8 @@ App-specific and contract checks:
 .\scripts\test\ecommerce-db-contract.ps1
 .\scripts\test\ecommerce-db-integration.ps1
 .\scripts\test\ecommerce-postgres.ps1
+.\scripts\test\check-snapshots.ps1
+.\scripts\test\check-fast-marker-hygiene.ps1
 .\scripts\test\web.ps1
 .\scripts\contracts\check.ps1
 .\scripts\contracts\check-web-types.ps1
@@ -183,7 +187,10 @@ App-specific and contract checks:
 The test scripts use verbose output so you can see whether a check is hanging or
 simply taking longer. Default fast paths exclude live external, e2e, slow,
 legacy, runtime, Ecommerce `db_integration`, and PostgreSQL-required tests.
-Runtime tests are opt-in; golden tests are deterministic fixture regressions.
+Runtime tests are opt-in; golden tests are deterministic fixture regressions and
+reviewed contract artifacts, not auto-regenerated dumps. Snapshot expected files
+must not be updated unless the prompt explicitly says
+`Approve snapshot updates`.
 Ecommerce DB tests are split into `db_contract`, `db_integration`, and
 `postgres_required`; `db_contract` is allowed in fast/root-fast when local and
 deterministic, while `db_integration` and `postgres_required` are opt-in. Python

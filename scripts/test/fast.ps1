@@ -5,6 +5,8 @@ $ErrorActionPreference = "Stop"
 # of the default path where applicable. Do not add runtime, DB integration,
 # PostgreSQL, or golden profile scripts here.
 $tests = @(
+    @{ Name = "snapshot hygiene"; Script = Join-Path $PSScriptRoot "check-snapshots.ps1" },
+    @{ Name = "fast marker hygiene"; Script = Join-Path $PSScriptRoot "check-fast-marker-hygiene.ps1" },
     @{ Name = "product-factory-api"; Script = Join-Path $PSScriptRoot "product-factory-api.ps1" },
     @{ Name = "ecommerce-api"; Script = Join-Path $PSScriptRoot "ecommerce-api.ps1" },
     @{ Name = "web"; Script = Join-Path $PSScriptRoot "web.ps1" },

@@ -16,11 +16,14 @@ Run this from the repository root for Codex-safe aggregate fast verification:
 
 `hygiene.ps1` checks unsafe tracked files, accidental app submodules, contract
 mirrors, generated web API types when web dependencies exist, and whitespace.
-`fast.ps1` runs Product Factory fast tests, Ecommerce API fast tests, web fast
-tests, and mirrored OpenAPI contract checks in sequence. It is Codex-safe
-because delegated app scripts exclude runtime, Ecommerce `db_integration`,
-`postgres_required`, external, e2e, legacy, and slow checks where applicable.
-Both return nonzero on failed required checks.
+`fast.ps1` first enforces golden snapshot hygiene and fast marker hygiene, then
+runs Product Factory fast tests, Ecommerce API fast tests, web fast tests, and
+mirrored OpenAPI contract checks in sequence. It is Codex-safe because delegated
+app scripts exclude runtime, Ecommerce `db_integration`, `postgres_required`,
+external, e2e, legacy, and slow checks where applicable. Fast marker hygiene
+prevents runtime, `db_integration`, `postgres_required`, external, e2e, legacy,
+or slow tests from leaking into root fast. Both return nonzero on failed
+required checks.
 
 For an aggregate local check, run:
 
@@ -61,7 +64,8 @@ Use focused tests only when the changed files clearly map to them:
 - Run one relevant Vitest file for clearly mapped web changes.
 
 Root `.\scripts\test\fast.ps1` is now a Codex-safe aggregate fast verification
-command. App-specific scripts are still preferred when the change touches only
+command with snapshot hygiene and fast marker hygiene before app/web/contract
+checks. App-specific scripts are still preferred when the change touches only
 one app. Runtime, Ecommerce `db_integration`, PostgreSQL-required, and
 full-suite selections remain manual unless explicitly requested.
 
@@ -71,6 +75,8 @@ full-suite selections remain manual unless explicitly requested.
 .\scripts\check\hygiene.ps1
 .\scripts\check\hygiene.ps1 -Staged
 .\scripts\check\all.ps1
+.\scripts\test\check-snapshots.ps1
+.\scripts\test\check-fast-marker-hygiene.ps1
 .\scripts\test\codex-product-factory.ps1
 .\scripts\test\codex-ecommerce.ps1
 .\scripts\test\product-factory-api.ps1
@@ -207,6 +213,16 @@ taxonomy, section extraction, deterministic render-row, and validation
 snapshots use committed fixtures and do not call live websites, browser
 execution, OpenAI, OpenCart, or full workflow orchestration. Runtime/e2e
 workflow coverage remains opt-in only.
+
+Golden snapshots are reviewed contract artifacts, not auto-regenerated dumps.
+Expected JSON files must remain human-readable UTF-8 with stable key ordering
+and focused stable fields. Snapshot expected files must not be updated unless
+the prompt explicitly says `Approve snapshot updates`. If behavior changes
+intentionally, Codex should show the semantic reason in the commit message,
+commit body, or notes. If a snapshot failure reveals a real bug, fix production
+or test code rather than blindly updating the snapshot. Snapshot rewrites should
+be isolated from unrelated production changes when practical. Codex must not
+silently rewrite expected snapshots as part of unrelated fixes.
 
 Ecommerce source capture and Vendor Sources golden coverage follows the same
 pattern. Parser, scoring, sanitization, direct Skroutz endpoint, source

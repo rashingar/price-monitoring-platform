@@ -15,11 +15,13 @@
 ## Current Test Profile Policy
 
 Root `scripts/test/fast.ps1` is the Codex-safe aggregate fast verification
-command. It delegates to app-specific fast scripts, web fast checks, and
-contract mirrors; the delegated app scripts exclude runtime, Ecommerce
-`db_integration`, `postgres_required`, external, e2e, legacy, and slow checks
-where applicable. App-specific scripts are still preferred when a change
-touches only one app.
+command. It first runs snapshot hygiene and fast marker hygiene, then delegates
+to app-specific fast scripts, web fast checks, and contract mirrors; the
+delegated app scripts exclude runtime, Ecommerce `db_integration`,
+`postgres_required`, external, e2e, legacy, and slow checks where applicable.
+Fast marker hygiene prevents runtime, `db_integration`, `postgres_required`,
+external, e2e, legacy, or slow tests from leaking into root fast. App-specific
+scripts are still preferred when a change touches only one app.
 
 Ecommerce DB tests are split into `db_contract`, `db_integration`, and
 `postgres_required`. `db_contract` tests are included in fast/root-fast when
@@ -33,6 +35,14 @@ that legitimately need longer must explicitly override it with
 `@pytest.mark.timeout(...)` and must not be part of default fast. Always run
 tests with verbose output so you can see whether a check is hanging or simply
 taking longer. Web Vitest tests have a hard 10 second per-test timeout.
+
+Golden snapshots are reviewed contract artifacts, not auto-regenerated dumps.
+Golden snapshot expected files must not be updated unless the prompt explicitly
+says `Approve snapshot updates`. If behavior changes intentionally, Codex
+should show the semantic reason in the commit message, commit body, or notes. If
+a snapshot failure reveals a real bug, fix production or test code rather than
+blindly updating the snapshot. Snapshot rewrites should be isolated from
+unrelated production changes when practical.
 
 ## Completed Product Factory Skroutz Replacement
 
