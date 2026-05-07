@@ -1084,7 +1084,7 @@ textarea {
 }
 
 .source-url-candidates-table-wrap {
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .source-url-candidates-table-wrap table {
@@ -1099,13 +1099,22 @@ textarea {
   font-size: 13px;
 }
 
-.source-url-candidates-table-wrap tbody tr {
+.source-url-candidates-table-wrap tbody tr:not(.source-url-expanded-row) {
   cursor: pointer;
 }
 
 .source-url-candidates-table-wrap tbody tr:hover,
 .source-url-candidates-table-wrap tbody tr.selected-row {
   background: var(--active-bg);
+}
+
+.source-url-candidates-table-wrap tbody tr.source-url-expanded-row {
+  background: #f7fbfa;
+}
+
+.source-url-candidates-table-wrap tbody tr.source-url-expanded-row > td {
+  border-top: 0;
+  padding: 0 8px 12px;
 }
 
 .source-url-candidate-cell-content {
@@ -1139,6 +1148,85 @@ textarea {
 
 .source-url-candidate-drawer {
   width: min(980px, 94vw);
+}
+
+.source-url-inline-review-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 0 0 8px 8px;
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.source-url-inline-review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(240px, 0.72fr);
+  gap: 12px;
+}
+
+.source-url-review-summary-card {
+  align-content: start;
+}
+
+.source-url-review-summary-card h3,
+.source-url-review-decision-card h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-url-review-compact-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.source-url-review-decision-card {
+  align-content: start;
+}
+
+.source-url-review-actions {
+  gap: 8px;
+}
+
+.source-url-replace-inline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.source-url-debug-details {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbfcfc;
+}
+
+.source-url-debug-details summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.source-url-debug-details[open] {
+  display: grid;
+  gap: 12px;
+}
+
+.source-url-debug-detail-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.source-url-debug-json-section {
+  display: grid;
+  gap: 8px;
+}
+
+.source-url-debug-json-section h4 {
+  margin: 0;
+  font-size: 14px;
 }
 
 .candidate-product-summary {
@@ -1844,6 +1932,9 @@ code {
   .source-url-import-summary-grid,
   .source-url-agent-form-grid,
   .source-url-agent-summary-grid,
+  .source-url-inline-review-grid,
+  .source-url-replace-inline-row,
+  .source-url-debug-detail-list,
   .vendor-source-coverage-grid,
   .vendor-source-count-grid,
   .source-url-product-summary,

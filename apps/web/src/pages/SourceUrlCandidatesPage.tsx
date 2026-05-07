@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -28,24 +28,28 @@ const REVIEW_STATUSES: Array<SourceUrlCandidateStatus | "all"> = [
 ];
 
 const DEFAULT_COLUMNS: SourceUrlCandidateReviewLayoutColumn[] = [
-  { key: "id", label: "Candidate id", visible: true, table_column_visible: true, width_px: 110, order: 0 },
-  { key: "run_id", label: "Run id", visible: true, table_column_visible: true, width_px: 130, order: 1 },
-  { key: "model", label: "Model", visible: true, table_column_visible: true, width_px: 110, order: 2 },
-  { key: "product_name", label: "Product", visible: true, table_column_visible: true, width_px: 220, order: 3 },
-  { key: "source_name", label: "Source name", visible: true, table_column_visible: true, width_px: 120, order: 4 },
-  { key: "candidate_title", label: "Candidate title", visible: true, table_column_visible: true, width_px: 220, order: 5 },
-  { key: "candidate_price", label: "Price", visible: true, table_column_visible: true, width_px: 95, order: 6 },
-  { key: "confidence_score", label: "Confidence", visible: true, table_column_visible: true, width_px: 105, order: 7 },
-  { key: "status", label: "Review status", visible: true, table_column_visible: true, width_px: 130, order: 8 },
-  { key: "created_at", label: "Created", visible: true, table_column_visible: true, width_px: 155, order: 9 },
+  { key: "status", label: "Status", visible: true, table_column_visible: true, width_px: 112, order: 0 },
+  { key: "confidence_score", label: "Confidence", visible: true, table_column_visible: true, width_px: 104, order: 1 },
+  { key: "model", label: "Model", visible: true, table_column_visible: true, width_px: 96, order: 2 },
+  { key: "mpn", label: "MPN", visible: true, table_column_visible: true, width_px: 110, order: 3 },
+  { key: "manufacturer", label: "Manufacturer", visible: true, table_column_visible: true, width_px: 130, order: 4 },
+  { key: "source_name", label: "Source", visible: true, table_column_visible: true, width_px: 116, order: 5 },
+  { key: "candidate_price", label: "Candidate price", visible: true, table_column_visible: true, width_px: 116, order: 6 },
+  { key: "own_price", label: "Own price", visible: true, table_column_visible: true, width_px: 104, order: 7 },
+  { key: "candidate_title", label: "Candidate title", visible: true, table_column_visible: true, width_px: 250, order: 8 },
+  { key: "review_action", label: "Review", visible: true, table_column_visible: true, width_px: 92, order: 9 },
 ];
 
 const FALLBACK_REVIEW_ACTIONS: SourceUrlCandidateReviewActionConfig[] = [
   { decision: "accept", label: "Accept", style: "primary" },
   { decision: "reject", label: "Reject", style: "danger" },
-  { decision: "not_found", label: "Not found", style: "secondary" },
-  { decision: "needs_manual_review", label: "Needs review", style: "secondary" },
   { decision: "replace_url", label: "Replace URL", style: "secondary", requires_url: true },
+];
+
+const OPERATOR_REVIEW_DECISIONS: SourceUrlCandidateReviewDecision[] = [
+  "accept",
+  "reject",
+  "replace_url",
 ];
 
 interface CandidateFilters {
@@ -264,7 +268,27 @@ function isColumnVisible(column: SourceUrlCandidateReviewLayoutColumn): boolean 
 }
 
 function normalizeColumns(columns: SourceUrlCandidateReviewLayoutColumn[]): SourceUrlCandidateReviewLayoutColumn[] {
-  const source = columns.length > 0 ? columns : DEFAULT_COLUMNS;
+  const sourceByKey = new Map(
+    columns
+      .filter((column) => columnKey(column).length > 0)
+      .map((column) => [columnKey(column), column]),
+  );
+  const source = DEFAULT_COLUMNS.map((defaultColumn) => {
+    const sourceColumn = sourceByKey.get(columnKey(defaultColumn));
+    return sourceColumn
+      ? {
+          ...sourceColumn,
+          key: columnKey(defaultColumn),
+          label: defaultColumn.label,
+          visible: typeof sourceColumn.visible === "boolean" ? sourceColumn.visible : true,
+          table_column_visible:
+            typeof sourceColumn.table_column_visible === "boolean" ? sourceColumn.table_column_visible : true,
+          order: defaultColumn.order,
+          width_px: typeof sourceColumn.width_px === "number" ? sourceColumn.width_px : defaultColumn.width_px,
+        }
+      : defaultColumn;
+  });
+
   return source
     .filter((column) => columnKey(column).length > 0 && columnKey(column) !== "actions")
     .map((column, index) => ({
@@ -283,7 +307,7 @@ function makeFallbackLayout(): SourceUrlCandidateReviewLayout {
   return {
     user_key: REVIEW_LAYOUT_USER_KEY,
     columns: normalizeColumns(DEFAULT_COLUMNS),
-    actions: { table_column_visible: false, replacement: "drawer_panel" },
+    actions: { table_column_visible: false, replacement: "inline_panel" },
     drawer: { review_actions: FALLBACK_REVIEW_ACTIONS },
   };
 }
@@ -319,6 +343,10 @@ function renderCandidateCell(candidate: SourceUrlCandidate, key: string): ReactN
     case "confidence_score":
     case "confidence":
       return formatConfidence(candidate.confidence_score);
+    case "source_name":
+      return formatValue(candidate.source_name);
+    case "source_domain":
+      return formatValue(candidate.source_domain);
     case "created_at":
     case "updated_at":
     case "reviewed_at":
@@ -337,6 +365,39 @@ function renderCandidateCell(candidate: SourceUrlCandidate, key: string): ReactN
     default:
       return formatValue(getCandidateField(candidate, key));
   }
+}
+
+function sourceDisplayName(candidate: SourceUrlCandidate): string {
+  const sourceName = typeof candidate.source_name === "string" ? candidate.source_name : "";
+  const sourceDomain = typeof candidate.source_domain === "string" ? candidate.source_domain : "";
+  if (sourceName && sourceDomain && sourceName !== sourceDomain) {
+    return `${sourceName} / ${sourceDomain}`;
+  }
+  return sourceName || sourceDomain || "-";
+}
+
+function normalizeUrlForComparison(value: string | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    url.hostname = url.hostname.toLowerCase();
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return value.trim().replace(/\/$/, "");
+  }
+}
+
+function shouldShowCanonicalUrl(candidate: SourceUrlCandidate): boolean {
+  const canonicalUrl = typeof candidate.canonical_url === "string" ? candidate.canonical_url.trim() : "";
+  if (!canonicalUrl) {
+    return false;
+  }
+
+  return normalizeUrlForComparison(candidate.candidate_url) !== normalizeUrlForComparison(canonicalUrl);
 }
 
 function isInteractiveClick(target: EventTarget | null): boolean {
@@ -460,7 +521,10 @@ function getReviewActions(layout: SourceUrlCandidateReviewLayout, candidate: Sou
     : [];
   const layoutActions = layout.drawer?.review_actions ?? [];
   const actions = candidateActions.length > 0 ? candidateActions : layoutActions;
-  return actions.length > 0 ? actions : FALLBACK_REVIEW_ACTIONS;
+  const operatorActions = (actions.length > 0 ? actions : FALLBACK_REVIEW_ACTIONS).filter((action) =>
+    OPERATOR_REVIEW_DECISIONS.includes(getActionDecision(action)),
+  );
+  return operatorActions.length > 0 ? operatorActions : FALLBACK_REVIEW_ACTIONS;
 }
 
 function getActionDecision(action: SourceUrlCandidateReviewActionConfig): SourceUrlCandidateReviewDecision {
@@ -488,19 +552,17 @@ function actionButtonClass(action: SourceUrlCandidateReviewActionConfig): string
   return "button secondary";
 }
 
-function DetailDrawer({
+function CandidateReviewPanel({
   candidate,
   layout,
   isLoading,
   isPending,
-  onClose,
   onReview,
 }: {
   candidate: SourceUrlCandidate | null;
   layout: SourceUrlCandidateReviewLayout;
   isLoading: boolean;
   isPending: boolean;
-  onClose: () => void;
   onReview: (
     candidate: SourceUrlCandidate,
     decision: SourceUrlCandidateReviewDecision,
@@ -509,27 +571,12 @@ function DetailDrawer({
   ) => void;
 }) {
   const [replacementUrl, setReplacementUrl] = useState("");
-  const [notes, setNotes] = useState("");
+  const [isReplaceOpen, setIsReplaceOpen] = useState(false);
 
   useEffect(() => {
     setReplacementUrl("");
-    setNotes(candidate?.notes ?? "");
+    setIsReplaceOpen(false);
   }, [candidate?.id, candidate?.notes]);
-
-  useEffect(() => {
-    if (!candidate) {
-      return undefined;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [candidate, onClose]);
 
   if (!candidate) {
     return null;
@@ -541,75 +588,25 @@ function DetailDrawer({
     getJsonSection(evidence, ["error", "error_message", "message", "error_code"]) ??
     getJsonSection(candidate, ["error", "error_message", "error_code"]);
   const reviewActions = getReviewActions(layout, candidate);
+  const acceptAction = reviewActions.find((action) => getActionDecision(action) === "accept");
+  const rejectAction = reviewActions.find((action) => getActionDecision(action) === "reject");
+  const replaceAction = reviewActions.find((action) => getActionDecision(action) === "replace_url");
+  const reviewNotes = typeof candidate.notes === "string" ? candidate.notes : "";
 
   return (
-    <div className="source-url-drawer-backdrop" onMouseDown={onClose}>
-      <section
-        className="source-url-drawer source-url-candidate-drawer"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="source-url-candidate-drawer-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className="source-url-drawer-header">
+    <section
+      className="source-url-inline-review-panel"
+      aria-label={`Vendor source candidate ${candidate.id} review`}
+    >
+      {isLoading ? <LoadingState label="Loading candidate details..." /> : null}
+
+      <div className="source-url-inline-review-grid">
+        <section className="candidate-detail-card source-url-review-summary-card">
           <div>
-            <p className="eyebrow">Review candidate</p>
-            <h2 id="source-url-candidate-drawer-title">Vendor source candidate {candidate.id}</h2>
+            <p className="eyebrow">Catalog product</p>
+            <h3>{formatValue(candidate.model)}</h3>
           </div>
-          <button className="button secondary" type="button" onClick={onClose}>
-            Close
-          </button>
-        </header>
-
-        <div className="source-url-drawer-body">
-          {isLoading ? <LoadingState label="Loading candidate details..." /> : null}
-
-          <section className="candidate-detail-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Decision</p>
-                <h3>Review actions</h3>
-              </div>
-              <span className={`status-badge ${statusClass(candidate.status)}`}>
-                {normalizeLabel(candidate.status ?? null)}
-              </span>
-            </div>
-            <label className="inline-field wide">
-              <span>Replacement URL</span>
-              <input
-                type="url"
-                value={replacementUrl}
-                onChange={(event) => setReplacementUrl(event.target.value)}
-                placeholder="https://example.com/product"
-              />
-            </label>
-            <label className="inline-field wide">
-              <span>Review notes</span>
-              <textarea
-                rows={3}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-              />
-            </label>
-            <div className="button-row">
-              {reviewActions.map((action) => {
-                const decision = getActionDecision(action);
-                return (
-                  <button
-                    className={actionButtonClass(action)}
-                    type="button"
-                    key={String(decision)}
-                    disabled={isPending || (actionRequiresUrl(action) && replacementUrl.trim().length === 0)}
-                    onClick={() => onReview(candidate, decision, replacementUrl, notes)}
-                  >
-                    {isPending ? "Submitting..." : getActionLabel(action)}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <dl className="source-url-product-summary candidate-product-summary">
+          <dl className="candidate-detail-list source-url-review-compact-list">
             <div>
               <dt>Catalog product id</dt>
               <dd>{formatValue(candidate.catalog_product_id)}</dd>
@@ -630,92 +627,194 @@ function DetailDrawer({
               <dt>Product</dt>
               <dd>{formatValue(candidate.product_name)}</dd>
             </div>
+            <div>
+              <dt>Own price</dt>
+              <dd>{formatMoney(candidate.own_price)}</dd>
+            </div>
           </dl>
+        </section>
 
-          <section className="candidate-detail-card">
-            <h3>Candidate</h3>
-            <dl className="candidate-detail-list">
-              <div>
-                <dt>Candidate URL</dt>
-                <dd className="source-url-cell">
-                  {candidate.candidate_url ? (
-                    <a href={candidate.candidate_url} target="_blank" rel="noreferrer">
-                      {candidate.candidate_url}
-                    </a>
-                  ) : (
-                    "-"
-                  )}
-                </dd>
-              </div>
+        <section className="candidate-detail-card source-url-review-summary-card">
+          <div>
+            <p className="eyebrow">Candidate source</p>
+            <h3>{sourceDisplayName(candidate)}</h3>
+          </div>
+          <dl className="candidate-detail-list source-url-review-compact-list">
+            <div>
+              <dt>Candidate title</dt>
+              <dd>{formatValue(candidate.candidate_title)}</dd>
+            </div>
+            <div>
+              <dt>Candidate price</dt>
+              <dd>{formatMoney(candidate.candidate_price)}</dd>
+            </div>
+            <div>
+              <dt>Candidate URL</dt>
+              <dd>
+                {candidate.candidate_url ? (
+                  <a href={candidate.candidate_url} target="_blank" rel="noreferrer">
+                    Open candidate
+                  </a>
+                ) : (
+                  "-"
+                )}
+              </dd>
+            </div>
+            {shouldShowCanonicalUrl(candidate) ? (
               <div>
                 <dt>Canonical URL</dt>
                 <dd className="source-url-cell">{formatValue(candidate.canonical_url)}</dd>
               </div>
-              <div>
-                <dt>Title</dt>
-                <dd>{formatValue(candidate.candidate_title)}</dd>
-              </div>
-              <div>
-                <dt>Price</dt>
-                <dd>{formatMoney(candidate.candidate_price)}</dd>
-              </div>
-              <div>
-                <dt>Source name / domain</dt>
-                <dd>{formatValue(candidate.source_name ?? candidate.source_domain)}</dd>
-              </div>
-              <div>
-                <dt>Notes</dt>
-                <dd>{formatValue(candidate.notes)}</dd>
-              </div>
-            </dl>
-          </section>
+            ) : null}
+          </dl>
+        </section>
 
-          <section className="candidate-detail-card">
-            <h3>Searched queries</h3>
-            <JsonDetail value={searchedQueries} />
-          </section>
+        <section className="candidate-detail-card source-url-review-decision-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Decision</p>
+              <h3>Review</h3>
+            </div>
+            <span className={`status-badge ${statusClass(candidate.status)}`}>
+              {normalizeLabel(candidate.status ?? null)}
+            </span>
+          </div>
+          <div className="button-row source-url-review-actions">
+            {acceptAction ? (
+              <button
+                className={actionButtonClass(acceptAction)}
+                type="button"
+                disabled={isPending}
+                onClick={() => onReview(candidate, "accept", "", reviewNotes)}
+              >
+                {isPending ? "Submitting..." : getActionLabel(acceptAction)}
+              </button>
+            ) : null}
+            {rejectAction ? (
+              <button
+                className={actionButtonClass(rejectAction)}
+                type="button"
+                disabled={isPending}
+                onClick={() => onReview(candidate, "reject", "", reviewNotes)}
+              >
+                {isPending ? "Submitting..." : getActionLabel(rejectAction)}
+              </button>
+            ) : null}
+            {replaceAction ? (
+              <button
+                className="button secondary"
+                type="button"
+                aria-expanded={isReplaceOpen}
+                onClick={() => setIsReplaceOpen((current) => !current)}
+              >
+                {getActionLabel(replaceAction)}
+              </button>
+            ) : null}
+          </div>
+          {isReplaceOpen && replaceAction ? (
+            <div className="source-url-replace-inline-row">
+              <label className="inline-field wide">
+                <span>Replacement URL</span>
+                <input
+                  type="url"
+                  value={replacementUrl}
+                  onChange={(event) => setReplacementUrl(event.target.value)}
+                  placeholder="https://example.com/product"
+                />
+              </label>
+              <button
+                className="button secondary"
+                type="button"
+                disabled={isPending || (actionRequiresUrl(replaceAction) && replacementUrl.trim().length === 0)}
+                onClick={() => onReview(candidate, "replace_url", replacementUrl, reviewNotes)}
+              >
+                {isPending ? "Submitting..." : "Submit replacement"}
+              </button>
+            </div>
+          ) : null}
+        </section>
+      </div>
 
-          <section className="candidate-detail-card">
-            <h3>Evidence</h3>
-            <dl className="candidate-evidence-grid">
-              <EvidenceSection
-                title="MPN evidence"
-                value={getJsonSection(evidence, ["mpn_evidence", "mpn", "mpn_match"])}
-              />
-              <EvidenceSection
-                title="Model evidence"
-                value={getJsonSection(evidence, ["model_evidence", "model", "model_match"])}
-              />
-              <EvidenceSection
-                title="Brand evidence"
-                value={getJsonSection(evidence, ["brand_evidence", "brand", "manufacturer"])}
-              />
-              <EvidenceSection
-                title="Category evidence"
-                value={getJsonSection(evidence, ["category_evidence", "category"])}
-              />
-              <EvidenceSection
-                title="Price evidence"
-                value={getJsonSection(evidence, ["price_evidence", "price"])}
-              />
-              <EvidenceSection
-                title="Title similarity"
-                value={getJsonSection(evidence, ["title_similarity", "similarity"])}
-              />
-              <EvidenceSection
-                title="Title-only flag"
-                value={getJsonSection(evidence, ["title_only", "title_only_match"])}
-              />
-              <EvidenceSection title="Error" value={errorValue} />
-            </dl>
-            <details className="candidate-raw-evidence">
-              <summary>Raw evidence JSON</summary>
-              <JsonDetail value={evidence} />
-            </details>
-          </section>
-        </div>
-      </section>
-    </div>
+      <details className="source-url-debug-details">
+        <summary>Debug details</summary>
+        <dl className="candidate-detail-list source-url-debug-detail-list">
+          <div>
+            <dt>Candidate URL</dt>
+            <dd className="source-url-cell">{formatValue(candidate.candidate_url)}</dd>
+          </div>
+          <div>
+            <dt>Canonical URL</dt>
+            <dd className="source-url-cell">{formatValue(candidate.canonical_url)}</dd>
+          </div>
+          <div>
+            <dt>Review notes</dt>
+            <dd>{formatValue(candidate.notes)}</dd>
+          </div>
+          <div>
+            <dt>Match method</dt>
+            <dd>{formatValue(candidate.match_method)}</dd>
+          </div>
+          <div>
+            <dt>Confidence</dt>
+            <dd>{formatConfidence(candidate.confidence_score)}</dd>
+          </div>
+          <div>
+            <dt>Created</dt>
+            <dd>{formatDate(candidate.created_at)}</dd>
+          </div>
+          <div>
+            <dt>Run id</dt>
+            <dd>{formatValue(candidate.run_id)}</dd>
+          </div>
+          <div>
+            <dt>Source candidate id</dt>
+            <dd>{formatValue(candidate.id)}</dd>
+          </div>
+        </dl>
+        <section className="source-url-debug-json-section">
+          <h4>Searched queries</h4>
+          <JsonDetail value={searchedQueries} />
+        </section>
+        <section className="source-url-debug-json-section">
+          <h4>Matching details</h4>
+          <dl className="candidate-evidence-grid">
+            <EvidenceSection
+              title="MPN evidence"
+              value={getJsonSection(evidence, ["mpn_evidence", "mpn", "mpn_match"])}
+            />
+            <EvidenceSection
+              title="Model evidence"
+              value={getJsonSection(evidence, ["model_evidence", "model", "model_match"])}
+            />
+            <EvidenceSection
+              title="Brand evidence"
+              value={getJsonSection(evidence, ["brand_evidence", "brand", "manufacturer"])}
+            />
+            <EvidenceSection
+              title="Category evidence"
+              value={getJsonSection(evidence, ["category_evidence", "category"])}
+            />
+            <EvidenceSection
+              title="Price evidence"
+              value={getJsonSection(evidence, ["price_evidence", "price"])}
+            />
+            <EvidenceSection
+              title="Title similarity"
+              value={getJsonSection(evidence, ["title_similarity", "similarity"])}
+            />
+            <EvidenceSection
+              title="Title-only flag"
+              value={getJsonSection(evidence, ["title_only", "title_only_match"])}
+            />
+            <EvidenceSection title="Error" value={errorValue} />
+          </dl>
+        </section>
+        <section className="source-url-debug-json-section">
+          <h4>Raw evidence JSON</h4>
+          <JsonDetail value={evidence} />
+        </section>
+      </details>
+    </section>
   );
 }
 
@@ -854,7 +953,7 @@ export function SourceUrlCandidatesPage() {
         ...layout,
         user_key: layout.user_key ?? REVIEW_LAYOUT_USER_KEY,
         columns: normalizeColumns(layout.columns),
-        actions: { ...(layout.actions ?? {}), table_column_visible: false, replacement: "drawer_panel" },
+        actions: { ...(layout.actions ?? {}), table_column_visible: false, replacement: "inline_panel" },
       });
       setLayout({ ...nextLayout, columns: normalizeColumns(nextLayout.columns) });
       setNotice("Review table layout saved.");
@@ -879,8 +978,15 @@ export function SourceUrlCandidatesPage() {
     }
   };
 
-  const openCandidateDrawer = async (candidate: SourceUrlCandidate) => {
+  const toggleCandidateReview = async (candidate: SourceUrlCandidate) => {
     const id = candidateId(candidate);
+    if (selectedCandidateId === id) {
+      setSelectedCandidateId(null);
+      setSelectedCandidate(null);
+      setIsDetailLoading(false);
+      return;
+    }
+
     setSelectedCandidateId(id);
     setSelectedCandidate(candidate);
     setIsDetailLoading(true);
@@ -957,7 +1063,7 @@ export function SourceUrlCandidatesPage() {
 
         <div className="filter-grid source-url-candidate-filters">
           <label>
-            Status
+            Review status
             <select
               value={filters.status}
               onChange={(event) => setFilter("status", event.target.value as CandidateFilters["status"])}
@@ -1093,26 +1199,54 @@ export function SourceUrlCandidatesPage() {
                     const id = candidateId(candidate);
                     const isSelected = selectedCandidateId === id;
                     return (
-                      <tr
-                        key={id}
-                        className={isSelected ? "selected-row" : undefined}
-                        onClick={(event) => {
-                          if (!isInteractiveClick(event.target)) {
-                            void openCandidateDrawer(candidate);
-                          }
-                        }}
-                      >
-                        {tableColumns.map((column) => {
-                          const key = columnKey(column);
-                          return (
-                            <td key={key} className="source-url-candidate-cell">
-                              <span className="source-url-candidate-cell-content">
-                                {renderCandidateCell(candidate, key)}
-                              </span>
+                      <Fragment key={id}>
+                        <tr
+                          className={isSelected ? "selected-row" : undefined}
+                          aria-expanded={isSelected}
+                          onClick={(event) => {
+                            if (!isInteractiveClick(event.target)) {
+                              void toggleCandidateReview(candidate);
+                            }
+                          }}
+                        >
+                          {tableColumns.map((column) => {
+                            const key = columnKey(column);
+                            return (
+                              <td key={key} className="source-url-candidate-cell">
+                                {key === "review_action" ? (
+                                  <button
+                                    className="button secondary compact-button"
+                                    type="button"
+                                    aria-expanded={isSelected}
+                                    onClick={() => void toggleCandidateReview(candidate)}
+                                  >
+                                    {isSelected ? "Collapse" : "Review"}
+                                  </button>
+                                ) : (
+                                  <span className="source-url-candidate-cell-content">
+                                    {renderCandidateCell(candidate, key)}
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        {isSelected ? (
+                          <tr className="source-url-expanded-row">
+                            <td colSpan={tableColumns.length}>
+                              <CandidateReviewPanel
+                                candidate={selectedCandidate}
+                                layout={layout}
+                                isLoading={isDetailLoading}
+                                isPending={pendingCandidateId === id}
+                                onReview={(reviewCandidateValue, decision, reviewedUrl, notes) =>
+                                  void reviewCandidate(reviewCandidateValue, decision, reviewedUrl, notes)
+                                }
+                              />
                             </td>
-                          );
-                        })}
-                      </tr>
+                          </tr>
+                        ) : null}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -1144,19 +1278,6 @@ export function SourceUrlCandidatesPage() {
         ) : null}
       </section>
 
-      <DetailDrawer
-        candidate={selectedCandidate}
-        layout={layout}
-        isLoading={isDetailLoading}
-        isPending={Boolean(selectedCandidateId && pendingCandidateId === selectedCandidateId)}
-        onClose={() => {
-          setSelectedCandidate(null);
-          setSelectedCandidateId(null);
-        }}
-        onReview={(candidate, decision, reviewedUrl, notes) =>
-          void reviewCandidate(candidate, decision, reviewedUrl, notes)
-        }
-      />
     </div>
   );
 }
