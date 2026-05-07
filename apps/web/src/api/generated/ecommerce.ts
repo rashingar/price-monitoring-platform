@@ -304,6 +304,14 @@ export interface paths {
     /** Get Vendor Source Health */
     get: operations["get_vendor_source_health_api_vendor_sources_source_health_get"];
   };
+  "/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network": {
+    /** Post Skroutz Network Diagnostic */
+    post: operations["post_skroutz_network_diagnostic_api_vendor_sources_source_urls__source_url_id__diagnostics_skroutz_network_post"];
+  };
+  "/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network/latest": {
+    /** Get Latest Skroutz Network Diagnostic */
+    get: operations["get_latest_skroutz_network_diagnostic_api_vendor_sources_source_urls__source_url_id__diagnostics_skroutz_network_latest_get"];
+  };
   "/api/vendor-sources/source-urls/summary": {
     /** Get Vendor Source Url Summary */
     get: operations["get_vendor_source_url_summary_api_vendor_sources_source_urls_summary_get"];
@@ -605,6 +613,19 @@ export interface components {
       model: string;
       /** Source Urls */
       source_urls: string[];
+    };
+    /** SkroutzNetworkDiagnosticApiRequest */
+    SkroutzNetworkDiagnosticApiRequest: {
+      /**
+       * Headed
+       * @default false
+       */
+      headed?: boolean;
+      /**
+       * Timeout Seconds
+       * @default 60
+       */
+      timeout_seconds?: number;
     };
     /** SourceUrlAgentRunRequest */
     SourceUrlAgentRunRequest: {
@@ -2807,6 +2828,59 @@ export interface operations {
         vendor?: string | null;
         limit?: number;
         offset?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Post Skroutz Network Diagnostic */
+  post_skroutz_network_diagnostic_api_vendor_sources_source_urls__source_url_id__diagnostics_skroutz_network_post: {
+    parameters: {
+      path: {
+        source_url_id: number;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SkroutzNetworkDiagnosticApiRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Latest Skroutz Network Diagnostic */
+  get_latest_skroutz_network_diagnostic_api_vendor_sources_source_urls__source_url_id__diagnostics_skroutz_network_latest_get: {
+    parameters: {
+      path: {
+        source_url_id: number;
       };
     };
     responses: {

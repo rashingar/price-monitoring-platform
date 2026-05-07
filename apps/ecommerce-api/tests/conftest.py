@@ -42,6 +42,7 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_product_factory_handoff_import.py": ("contract", "integration", "golden"),
     "test_product_ignore.py": ("contract",),
     "test_skroutz_direct_capture_snapshots.py": ("contract", "golden"),
+    "test_skroutz_network_diagnostic.py": ("contract", "integration", "db_contract"),
     "test_source_capture_db_contracts.py": ("integration", "db_contract"),
     "test_source_capture_snapshots.py": ("contract", "golden"),
     "test_source_capture_unified.py": ("integration", "db_integration", "runtime"),

@@ -13,6 +13,9 @@ import type {
   SourceUrlCandidateReviewLayout,
   SourceUrlCandidateReviewLayoutColumn,
   SourceUrlCandidateStatus,
+  SkroutzNetworkCapturedEndpoint,
+  SkroutzNetworkDiagnosticReport,
+  SkroutzNetworkDiagnosticSummary,
 } from "../api/commerceTypes";
 import { EmptyState, ErrorState, LoadingState } from "../components/layout/StateBlocks";
 
@@ -135,6 +138,49 @@ function statusClass(status: string | null | undefined): string {
 
 function normalizeLabel(value: string | null | undefined): string {
   return value ? value.replace(/_/g, " ") : "-";
+}
+
+function isSkroutzCandidate(candidate: SourceUrlCandidate): boolean {
+  const sourceName = String(candidate.source_name ?? "").toLowerCase();
+  const domain = String(candidate.source_domain ?? "").toLowerCase();
+  const url = String(candidate.candidate_url ?? candidate.canonical_url ?? "").toLowerCase();
+  return sourceName === "skroutz" || domain.includes("skroutz.gr") || url.includes("skroutz.gr");
+}
+
+function diagnosticSourceUrlId(candidate: SourceUrlCandidate): string | number | null {
+  const value = candidate.source_url_id;
+  return typeof value === "string" || typeof value === "number" ? value : null;
+}
+
+function yesNo(value: unknown): string {
+  return value === true ? "yes" : "no";
+}
+
+function endpointKeySummary(endpoint: SkroutzNetworkCapturedEndpoint): string {
+  const summary = endpoint.json_summary;
+  const keys = Array.isArray(summary?.top_level_keys) ? summary.top_level_keys : [];
+  if (keys.length > 0) {
+    return keys.slice(0, 6).join(", ");
+  }
+
+  if (Array.isArray(summary?.first_item_keys) && summary.first_item_keys.length > 0) {
+    return `first item: ${summary.first_item_keys.slice(0, 6).join(", ")}`;
+  }
+
+  return formatValue(summary?.top_level_type);
+}
+
+function diagnosticTone(classification: string | null | undefined): string {
+  switch (classification) {
+    case "PRIMARY_CANDIDATE_PRODUCT_OFFERS":
+      return "success";
+    case "SECONDARY_CANDIDATE_SHOP_DETAILS":
+      return "active";
+    case "BLOCKED_OR_CHALLENGE":
+      return "danger";
+    default:
+      return "neutral";
+  }
 }
 
 function candidateId(candidate: SourceUrlCandidate): string {
@@ -519,6 +565,194 @@ function actionButtonClass(action: SourceUrlCandidateReviewActionConfig): string
   return "button secondary";
 }
 
+function SkroutzNetworkDiagnosticPanel({ candidate }: { candidate: SourceUrlCandidate }) {
+  const sourceUrlId = diagnosticSourceUrlId(candidate);
+  const [summary, setSummary] = useState<SkroutzNetworkDiagnosticSummary | null>(null);
+  const [detail, setDetail] = useState<SkroutzNetworkDiagnosticReport | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSummary(null);
+    setDetail(null);
+    setExpandedIndex(null);
+    setError(null);
+    setIsRunning(false);
+    setIsLoadingDetail(false);
+  }, [candidate.id]);
+
+  if (!isSkroutzCandidate(candidate)) {
+    return null;
+  }
+
+  const runDiagnostic = async () => {
+    if (sourceUrlId === null) {
+      setError("This candidate is not linked to an active Skroutz source URL yet.");
+      return;
+    }
+
+    setIsRunning(true);
+    setError(null);
+    setDetail(null);
+    setExpandedIndex(null);
+    try {
+      const nextSummary = await commerceClient.runSkroutzNetworkDiagnostic(sourceUrlId, {
+        headed: false,
+        timeout_seconds: 60,
+      });
+      setSummary(nextSummary);
+    } catch (diagnosticError) {
+      setSummary(null);
+      setError(getCommerceApiErrorMessage(diagnosticError));
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const loadDetails = async () => {
+    if (sourceUrlId === null) {
+      return;
+    }
+
+    setIsLoadingDetail(true);
+    setError(null);
+    try {
+      const report = await commerceClient.getLatestSkroutzNetworkDiagnostic(sourceUrlId);
+      setDetail(report);
+    } catch (detailError) {
+      setError(getCommerceApiErrorMessage(detailError));
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const activeSummary = summary ?? detail?.summary ?? null;
+  const endpoints = detail?.captured_responses ?? [];
+  const blocked = activeSummary?.blocked_or_challenge_detected === true;
+  const noProductEndpoint = activeSummary && !activeSummary.best_product_data_endpoint && !activeSummary.product_data_candidate_url;
+
+  return (
+    <section className="candidate-detail-card skroutz-network-diagnostic-panel">
+      <div className="section-heading compact-section-heading">
+        <div>
+          <p className="eyebrow">Skroutz</p>
+          <h4>Browser network diagnostic</h4>
+        </div>
+        <button
+          className="button secondary compact-button"
+          type="button"
+          disabled={isRunning || sourceUrlId === null}
+          onClick={() => void runDiagnostic()}
+        >
+          {isRunning ? "Running..." : "Run browser diagnostic"}
+        </button>
+      </div>
+      {sourceUrlId === null ? (
+        <p className="form-warning">Diagnostics require an existing active Skroutz source URL.</p>
+      ) : null}
+      {error ? <p className="form-warning">{error}</p> : null}
+      {activeSummary ? (
+        <>
+          <dl className="candidate-evidence-grid skroutz-diagnostic-summary-grid">
+            <div>
+              <dt>Best endpoint</dt>
+              <dd>{formatValue(activeSummary.best_product_data_endpoint ?? activeSummary.product_data_candidate_url)}</dd>
+            </div>
+            <div>
+              <dt>filter_products.json</dt>
+              <dd>{yesNo(activeSummary.observed_filter_products_url)}</dd>
+            </div>
+            <div>
+              <dt>shops_details.json</dt>
+              <dd>{yesNo(activeSummary.observed_shops_details_url)}</dd>
+            </div>
+            <div>
+              <dt>Captured</dt>
+              <dd>{formatValue(activeSummary.captured_response_count)}</dd>
+            </div>
+          </dl>
+          {blocked ? <p className="form-warning">Blocked or challenge-like response detected.</p> : null}
+          {noProductEndpoint ? <p className="form-warning">No likely product or offer endpoint was found.</p> : null}
+          {activeSummary.product_data_candidate_reason ? (
+            <p className="muted">{activeSummary.product_data_candidate_reason}</p>
+          ) : null}
+          <button
+            className="button secondary compact-button"
+            type="button"
+            disabled={isLoadingDetail || sourceUrlId === null}
+            onClick={() => void loadDetails()}
+          >
+            {isLoadingDetail ? "Loading details..." : "View captured endpoint details"}
+          </button>
+        </>
+      ) : null}
+      {detail ? (
+        <div className="table-wrap skroutz-diagnostic-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>classification</th>
+                <th>status</th>
+                <th>method</th>
+                <th>URL</th>
+                <th>content type</th>
+                <th>body size</th>
+                <th>derived</th>
+                <th>JSON</th>
+                <th>keys</th>
+              </tr>
+            </thead>
+            <tbody>
+              {endpoints.map((endpoint, index) => (
+                <Fragment key={`${endpoint.url ?? "endpoint"}-${index}`}>
+                  <tr>
+                    <td>
+                      <span className={`status-badge ${diagnosticTone(endpoint.classification)}`}>
+                        {formatValue(endpoint.classification)}
+                      </span>
+                    </td>
+                    <td>{formatValue(endpoint.status)}</td>
+                    <td>{formatValue(endpoint.method)}</td>
+                    <td className="source-url-candidate-cell">
+                      <span className="source-url-candidate-cell-content">{formatValue(endpoint.url)}</span>
+                    </td>
+                    <td>{formatValue(endpoint.content_type)}</td>
+                    <td>{formatValue(endpoint.body_size)}</td>
+                    <td>{formatValue(endpoint.matched_derived_endpoint)}</td>
+                    <td>{yesNo(endpoint.parsed_json_valid)}</td>
+                    <td>
+                      <button
+                        className="button secondary compact-button"
+                        type="button"
+                        onClick={() => setExpandedIndex((current) => (current === index ? null : index))}
+                      >
+                        {endpointKeySummary(endpoint)}
+                      </button>
+                    </td>
+                  </tr>
+                  {expandedIndex === index ? (
+                    <tr className="source-url-expanded-row">
+                      <td colSpan={9}>
+                        <dl className="candidate-evidence-grid">
+                          <EvidenceSection title="Top-level keys" value={endpoint.json_summary?.top_level_keys ?? []} />
+                          <EvidenceSection title="Body sample" value={endpoint.body_sample} />
+                          <EvidenceSection title="Parse error" value={endpoint.json_parse_error} />
+                        </dl>
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function CandidateReviewPanel({
   candidate,
   layout,
@@ -731,6 +965,7 @@ function CandidateReviewPanel({
             </div>
           ) : null}
         </section>
+        <SkroutzNetworkDiagnosticPanel candidate={candidate} />
       </div>
     </section>
   );

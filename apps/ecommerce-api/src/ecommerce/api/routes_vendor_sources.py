@@ -26,7 +26,12 @@ from ecommerce.vendor_sources.capture import (
     vendor_source_capture_run_to_dict,
 )
 from ecommerce.vendor_sources.coverage import source_health_items, source_url_summary
+from ecommerce.vendor_sources.skroutz_network_diagnostics import (
+    latest_skroutz_network_diagnostic,
+    run_and_persist_skroutz_network_diagnostic,
+)
 from ecommerce.vendor_sources import list_vendor_source_capabilities
+from ecommerce.source_capture.skroutz_network_diagnostic import PlaywrightUnavailableError
 
 router = APIRouter(prefix="/api/vendor-sources", tags=["vendor-sources"])
 
@@ -42,6 +47,11 @@ class VendorSourceCaptureRunApiRequest(BaseModel):
     dry_run: bool = False
     admin_all_sources: bool = False
     include_not_due: bool = False
+
+
+class SkroutzNetworkDiagnosticApiRequest(BaseModel):
+    headed: bool = False
+    timeout_seconds: int = Field(default=60, ge=5, le=180)
 
 
 @router.get("/sources")
@@ -71,6 +81,47 @@ def get_vendor_source_health(
             return source_health_items(session, vendor=vendor, limit=limit, offset=offset)
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Vendor source health query failed: {_safe_db_error(exc)}") from exc
+
+
+@router.post("/source-urls/{source_url_id}/diagnostics/skroutz-network")
+def post_skroutz_network_diagnostic(source_url_id: int, request: SkroutzNetworkDiagnosticApiRequest) -> dict[str, Any]:
+    _require_vendor_sources_database_ready()
+    try:
+        with session_scope() as session:
+            result = run_and_persist_skroutz_network_diagnostic(
+                session,
+                source_url_id=source_url_id,
+                headed=request.headed,
+                timeout_seconds=request.timeout_seconds,
+            )
+            return result.summary_response()
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PlaywrightUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Skroutz network diagnostic persistence failed: {_safe_db_error(exc)}") from exc
+
+
+@router.get("/source-urls/{source_url_id}/diagnostics/skroutz-network/latest")
+def get_latest_skroutz_network_diagnostic(source_url_id: int) -> dict[str, Any]:
+    _require_vendor_sources_database_ready()
+    try:
+        with session_scope() as session:
+            result = latest_skroutz_network_diagnostic(session, source_url_id=source_url_id)
+            if result is None:
+                raise FileNotFoundError("Skroutz network diagnostic report not found.")
+            return result.detail_response()
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Skroutz network diagnostic lookup failed: {_safe_db_error(exc)}") from exc
 
 
 @router.post("/captures/runs")

@@ -179,6 +179,82 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
   });
 
+  it("runs Skroutz browser diagnostics from candidate review and renders endpoint details", async () => {
+    const mockFetch = installMockFetch(allRoutes);
+
+    renderWithRouter("/vendor-sources/candidates");
+
+    const reviewButtons = await screen.findAllByRole("button", { name: "Review" });
+    fireEvent.click(reviewButtons[0]);
+
+    const runButton = await screen.findByRole("button", { name: "Run browser diagnostic" });
+    expect(runButton).toBeEnabled();
+    fireEvent.click(runButton);
+
+    await expect(screen.findByText("https://www.skroutz.gr/s/123/filter_products.json")).resolves.toBeInTheDocument();
+    expect(screen.getByText("Blocked or challenge-like response detected.")).toBeInTheDocument();
+    expect(screen.getAllByText("yes").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("no").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "View captured endpoint details" }));
+    await expect(screen.findByText("PRIMARY_CANDIDATE_PRODUCT_OFFERS")).resolves.toBeInTheDocument();
+    expect(screen.getByText("BLOCKED_OR_CHALLENGE")).toBeInTheDocument();
+    expect(screen.getByText("product_cards, pagination")).toBeInTheDocument();
+    expect(
+      mockFetch.requests.some(
+        (request) =>
+          request.method === "POST" &&
+          request.pathname === "/commerce-api/vendor-sources/source-urls/101/diagnostics/skroutz-network",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not show Skroutz browser diagnostics for non-Skroutz candidates", async () => {
+    installMockFetch(allRoutes);
+
+    renderWithRouter("/vendor-sources/candidates");
+
+    await expect(screen.findByText("Keyboard mouse bundle")).resolves.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Review" })[1]);
+
+    await expect(screen.findByText("Open candidate URL")).resolves.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run browser diagnostic" })).not.toBeInTheDocument();
+  });
+
+  it("shows Skroutz diagnostic running state", async () => {
+    installMockFetch([
+      {
+        method: "POST",
+        path: "/commerce-api/vendor-sources/source-urls/101/diagnostics/skroutz-network",
+        response: async () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  source_url_id: 101,
+                  vendor_slug: "skroutz",
+                  status: "success",
+                  captured_response_count: 0,
+                  observed_filter_products_url: false,
+                  observed_shops_details_url: false,
+                  classifications_summary: {},
+                }),
+              50,
+            ),
+          ),
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/vendor-sources/candidates");
+
+    const reviewButtons = await screen.findAllByRole("button", { name: "Review" });
+    fireEvent.click(reviewButtons[0]);
+    fireEvent.click(await screen.findByRole("button", { name: "Run browser diagnostic" }));
+
+    expect(await screen.findByRole("button", { name: "Running..." })).toBeDisabled();
+  });
+
   it("renders Vendor Source discovery runs with backend source capabilities and candidate review links", async () => {
     const mockFetch = installMockFetch(allRoutes);
 

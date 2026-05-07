@@ -8,8 +8,9 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import CatalogProductRow, Product, ProductSource, SourceUrl, Vendor
+from ecommerce.db.models import CatalogProductRow, Product, ProductSource, SourceCaptureSnapshot, SourceUrl, Vendor
 from ecommerce.db.repositories import json_safe_value
+from ecommerce.source_capture.skroutz_network_diagnostic import CAPTURE_STRATEGY as SKROUTZ_NETWORK_DIAGNOSTIC_STRATEGY
 
 
 SOURCE_URL_STATUSES = ("active", "needs_review", "broken", "disabled", "redirected")
@@ -87,6 +88,7 @@ def source_health_items(
             "last_error_message": source.last_error_message,
             "consecutive_failures": int(source.consecutive_failures or 0),
             "data_quality_flags": source.data_quality_flags or [],
+            "latest_skroutz_network_diagnostic": _latest_skroutz_network_diagnostic_summary(session, source) if (vendor_row.slug if vendor_row is not None else None) == "skroutz" else None,
             "updated_at": json_safe_value(source.updated_at),
         }
         for source, product, vendor_row in rows
@@ -116,6 +118,33 @@ def _product_source_health(row: ProductSource) -> str:
     if row.last_fetch_status == "success":
         return "healthy"
     return "unknown"
+
+
+def _latest_skroutz_network_diagnostic_summary(session: Session, source: ProductSource) -> dict[str, Any] | None:
+    if source.id is None:
+        return None
+    snapshot = session.execute(
+        select(SourceCaptureSnapshot)
+        .where(
+            SourceCaptureSnapshot.product_source_id == source.id,
+            SourceCaptureSnapshot.capture_strategy == SKROUTZ_NETWORK_DIAGNOSTIC_STRATEGY,
+        )
+        .order_by(SourceCaptureSnapshot.created_at.desc(), SourceCaptureSnapshot.id.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if snapshot is None or not isinstance(snapshot.response_body_json, dict):
+        return None
+    report = snapshot.response_body_json
+    return {
+        "diagnostic_report_id": snapshot.id,
+        "status": report.get("status"),
+        "captured_response_count": len(report.get("captured_responses") or []) if isinstance(report.get("captured_responses"), list) else 0,
+        "observed_filter_products_url": bool(report.get("observed_filter_products_url")),
+        "observed_shops_details_url": bool(report.get("observed_shops_details_url")),
+        "best_product_data_endpoint": report.get("product_data_candidate_url"),
+        "classifications_summary": report.get("classifications_summary") if isinstance(report.get("classifications_summary"), dict) else {},
+        "created_at": json_safe_value(snapshot.created_at),
+    }
 
 
 def _optional_text(value: object) -> str | None:

@@ -302,6 +302,7 @@ export type SourceUrlCandidateReviewDecision =
 
 export interface SourceUrlCandidate {
   id: number | string;
+  source_url_id?: number | string | null;
   run_id?: number | string | null;
   catalog_product_id?: number | string | null;
   model?: string | null;
@@ -331,6 +332,68 @@ export interface SourceUrlCandidate {
   created_at?: string | null;
   updated_at?: string | null;
   [key: string]: unknown;
+}
+
+export interface SkroutzNetworkJsonSummary {
+  top_level_type?: string | null;
+  top_level_keys?: string[];
+  top_level_key_count?: number | null;
+  has_product_cards?: boolean | null;
+  product_cards_count?: number | null;
+  array_length?: number | null;
+  first_item_keys?: string[];
+  [key: string]: unknown;
+}
+
+export interface SkroutzNetworkCapturedEndpoint {
+  method?: string | null;
+  url?: string | null;
+  status?: number | string | null;
+  resource_type?: string | null;
+  content_type?: string | null;
+  body_size?: number | string | null;
+  parsed_json_valid?: boolean | null;
+  json_summary?: SkroutzNetworkJsonSummary | null;
+  classification?: string | null;
+  matched_derived_endpoint?: string | null;
+  body_sample?: string | null;
+  json_parse_error?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SkroutzNetworkDiagnosticSummary {
+  source_url_id?: number | string | null;
+  vendor_slug?: string | null;
+  source_url?: string | null;
+  status?: string | null;
+  captured_response_count?: number;
+  derived_endpoints?: Record<string, string>;
+  derived_filter_products_url?: string | null;
+  derived_shops_details_url?: string | null;
+  observed_derived_endpoints?: Record<string, boolean>;
+  observed_filter_products_url?: boolean;
+  observed_shops_details_url?: boolean;
+  exact_match_count?: number;
+  best_product_data_endpoint?: string | null;
+  product_data_candidate_url?: string | null;
+  product_data_candidate_reason?: string | null;
+  classifications_summary?: Record<string, number>;
+  blocked_or_challenge_detected?: boolean;
+  diagnostic_report_id?: number | string | null;
+  artifact_path?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  created_at?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SkroutzNetworkDiagnosticReport extends SkroutzNetworkDiagnosticSummary {
+  summary?: SkroutzNetworkDiagnosticSummary;
+  captured_responses?: SkroutzNetworkCapturedEndpoint[];
+  started_at?: string | null;
+  completed_at?: string | null;
+  timeout_seconds?: number | null;
+  headed?: boolean | null;
 }
 
 export interface SourceUrlCandidateListParams {

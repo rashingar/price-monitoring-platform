@@ -1048,6 +1048,77 @@ export const sourceUrlCandidates = {
   offset: 0,
 };
 
+export const skroutzNetworkDiagnosticSummary = {
+  source_url_id: 101,
+  vendor_slug: "skroutz",
+  source_url: "https://www.skroutz.gr/s/123/midea-md-20l.html",
+  status: "success",
+  captured_response_count: 3,
+  derived_endpoints: {
+    filter_products: "https://www.skroutz.gr/s/123/filter_products.json",
+    shops_details: "https://www.skroutz.gr/s/123/shops_details.json",
+  },
+  derived_filter_products_url: "https://www.skroutz.gr/s/123/filter_products.json",
+  derived_shops_details_url: "https://www.skroutz.gr/s/123/shops_details.json",
+  observed_derived_endpoints: { filter_products: true, shops_details: false },
+  observed_filter_products_url: true,
+  observed_shops_details_url: false,
+  exact_match_count: 1,
+  best_product_data_endpoint: "https://www.skroutz.gr/s/123/filter_products.json",
+  product_data_candidate_url: "https://www.skroutz.gr/s/123/filter_products.json",
+  product_data_candidate_reason: "PRIMARY_CANDIDATE_PRODUCT_OFFERS: exact derived filter_products endpoint observed",
+  classifications_summary: {
+    PRIMARY_CANDIDATE_PRODUCT_OFFERS: 1,
+    BLOCKED_OR_CHALLENGE: 1,
+    OTHER_JSON: 1,
+  },
+  blocked_or_challenge_detected: true,
+  diagnostic_report_id: 90001,
+  created_at: "2026-05-07T12:00:00Z",
+};
+
+export const skroutzNetworkDiagnosticReport = {
+  ...skroutzNetworkDiagnosticSummary,
+  summary: skroutzNetworkDiagnosticSummary,
+  started_at: "2026-05-07T11:59:00Z",
+  completed_at: "2026-05-07T12:00:00Z",
+  captured_responses: [
+    {
+      method: "GET",
+      url: "https://www.skroutz.gr/s/123/filter_products.json",
+      status: 200,
+      resource_type: "xhr",
+      content_type: "application/json",
+      body_size: 512,
+      parsed_json_valid: true,
+      json_summary: {
+        top_level_type: "object",
+        top_level_keys: ["product_cards", "pagination"],
+        top_level_key_count: 2,
+        has_product_cards: true,
+        product_cards_count: 2,
+      },
+      classification: "PRIMARY_CANDIDATE_PRODUCT_OFFERS",
+      matched_derived_endpoint: "filter_products",
+      body_sample: "{\"product_cards\":[{\"price\":189.9}]}",
+    },
+    {
+      method: "GET",
+      url: "https://www.skroutz.gr/challenge",
+      status: 403,
+      resource_type: "fetch",
+      content_type: "text/html",
+      body_size: 300,
+      parsed_json_valid: false,
+      json_summary: { top_level_type: "none", top_level_keys: [], top_level_key_count: 0 },
+      classification: "BLOCKED_OR_CHALLENGE",
+      matched_derived_endpoint: null,
+      body_sample: "<html>captcha challenge</html>",
+      json_parse_error: "JSONDecodeError",
+    },
+  ],
+};
+
 export const sourceUrlCandidateReviewLayout = {
   user_key: "default",
   columns: [
@@ -1949,7 +2020,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   {
     method: "GET",
     path: "/commerce-api/vendor-sources/candidates/501",
-    response: { candidate: { ...sourceUrlCandidates.items[0], drawer: sourceUrlCandidateReviewLayout.drawer } },
+    response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, drawer: sourceUrlCandidateReviewLayout.drawer } },
   },
   {
     method: "GET",
@@ -1966,6 +2037,17 @@ export const commerceFixtureRoutes: MockRoute[] = [
       reviewed_by: "operator",
     },
     response: reviewSourceUrlCandidateResponse,
+  },
+  {
+    method: "POST",
+    path: "/commerce-api/vendor-sources/source-urls/101/diagnostics/skroutz-network",
+    requestExample: { headed: false, timeout_seconds: 60 },
+    response: skroutzNetworkDiagnosticSummary,
+  },
+  {
+    method: "GET",
+    path: "/commerce-api/vendor-sources/source-urls/101/diagnostics/skroutz-network/latest",
+    response: skroutzNetworkDiagnosticReport,
   },
   {
     method: "POST",
@@ -2012,7 +2094,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   {
     method: "GET",
     path: "/commerce-api/vendor-sources/candidates/501",
-    response: { candidate: { ...sourceUrlCandidates.items[0], drawer: sourceUrlCandidateReviewLayout.drawer } },
+    response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, drawer: sourceUrlCandidateReviewLayout.drawer } },
   },
   {
     method: "GET",

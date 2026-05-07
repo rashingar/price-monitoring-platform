@@ -1209,6 +1209,32 @@ textarea {
   font-size: 14px;
 }
 
+.compact-section-heading {
+  gap: 8px;
+}
+
+.compact-section-heading h4 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.skroutz-network-diagnostic-panel {
+  background: var(--surface);
+}
+
+.skroutz-diagnostic-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.skroutz-diagnostic-table-wrap table {
+  min-width: 1120px;
+}
+
+.skroutz-diagnostic-table-wrap th,
+.skroutz-diagnostic-table-wrap td {
+  vertical-align: top;
+}
+
 .candidate-product-summary {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }

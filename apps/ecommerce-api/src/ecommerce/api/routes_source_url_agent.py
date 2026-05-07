@@ -17,11 +17,12 @@ from sqlalchemy.orm import Session
 from ecommerce.artifacts import ArtifactPathError, ArtifactPathForbiddenError, artifact_link_payload, list_run_artifacts
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import sanitize_database_error
-from ecommerce.db.models import SourceUrlCandidate, SourceUrlDiscoveryRun, UiViewPreference
+from ecommerce.db.models import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, UiViewPreference
 from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness, require_database_ready_for_catalog
 from ecommerce.db.repositories import json_safe_value
 from ecommerce.db.session import session_scope
 from ecommerce.db.source_url_repository import create_or_update_imported_source_url, source_url_to_dict
+from ecommerce.source_urls import normalize_source_url
 from ecommerce.source_url_agent.agent import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult, run_source_url_agent
 from ecommerce.source_url_agent.products import SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES, load_source_registry
@@ -313,12 +314,28 @@ def get_source_url_agent_candidate(candidate_id: int) -> dict[str, Any]:
             if candidate is None:
                 raise HTTPException(status_code=404, detail="Source URL candidate not found.")
             payload = _candidate_to_dict(candidate)
+            payload["source_url_id"] = _matching_source_url_id(session, candidate)
             payload["drawer"] = _candidate_drawer_payload(candidate)
             return payload
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Source URL candidate query failed: {_safe_db_error(exc)}") from exc
+
+
+def _matching_source_url_id(session: Session, candidate: SourceUrlCandidate) -> int | None:
+    if candidate.catalog_product_id is None or not candidate.candidate_url:
+        return None
+    try:
+        normalized = normalize_source_url(candidate.candidate_url)
+    except Exception:
+        return None
+    statement = select(SourceUrl.id).where(
+        SourceUrl.catalog_product_id == candidate.catalog_product_id,
+        SourceUrl.url_normalized == normalized,
+    )
+    value = session.execute(statement).scalar_one_or_none()
+    return int(value) if value is not None else None
 
 
 def review_source_url_agent_candidate(candidate_id: int, request: SourceUrlCandidateReviewRequest) -> dict[str, Any]:

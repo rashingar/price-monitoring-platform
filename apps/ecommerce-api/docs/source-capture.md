@@ -15,6 +15,7 @@ The shared vendor capture implementation lives in `ecommerce.source_capture`:
 - `detect_vendor.py` maps vendor hosts to registered vendors.
 - `runner.py` owns vendor capture strategy dispatch.
 - `skroutz_xhr.py` captures Skroutz through direct `filter_products.json` and `shops_details.json` endpoints derived from the product URL.
+- `skroutz_network_diagnostic.py` is an operator-triggered browser network diagnostic for Skroutz product pages.
 - `parsing.py` contains normalized Electronet price and Skroutz direct JSON offer parsers.
 - `scheduled.py` lets Vendor Sources refresh due `product_sources` without duplicating vendor logic.
 
@@ -54,6 +55,30 @@ Vendor Sources exposes source URL coverage and source health through:
 
 - `GET /api/vendor-sources/source-urls/summary`
 - `GET /api/vendor-sources/source-health`
+
+Skroutz browser network diagnostics are available for active Skroutz source URLs:
+
+- API: `POST /api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network`
+- API: `GET /api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network/latest`
+- CLI: `python apps/ecommerce-api/tools/probe_skroutz_network.py --url "https://www.skroutz.gr/s/65005733/xiaomi-poco-m8-5g-dual-sim-8-256gb-prasino.html" --output work/skroutz_65005733_network.json`
+
+This is an admin diagnostic workflow only. It launches Chromium with Playwright,
+opens the operator-provided Skroutz product URL, captures JSON/XHR/fetch-like
+responses, classifies likely product/offer endpoints, and compares browser
+observations with the currently derived `filter_products.json` and
+`shops_details.json` URLs. It does not replace direct JSON production capture,
+does not run from scheduled monitoring, does not create price observations, and
+does not mutate source capture strategy.
+
+Persisted reports store sanitized endpoint summaries only: method, sanitized
+URL, status, resource type, content type, body size, JSON key summaries,
+classification, derived-endpoint match, capped body sample, and parse errors.
+The workflow never persists request headers, cookies, auth headers, CSRF/session
+tokens, fingerprint-sensitive headers, or full unbounded response bodies.
+Operators can launch the diagnostic from Vendor Source Candidate Review for a
+linked Skroutz source URL and then inspect whether `filter_products.json`,
+`shops_details.json`, another product-data endpoint, or a block/challenge was
+observed.
 
 Price Monitoring reports source URL coverage during selection and skips products
 without active source URLs using `missing_active_source_url`. Products without

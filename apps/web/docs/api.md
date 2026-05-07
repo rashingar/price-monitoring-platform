@@ -136,6 +136,8 @@ GET    /commerce-api/vendor-sources/sources
 GET    /commerce-api/vendor-sources/agent/runs
 POST   /commerce-api/vendor-sources/agent/runs
 GET    /commerce-api/vendor-sources/candidates
+POST   /commerce-api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network
+GET    /commerce-api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network/latest
 
 GET    /commerce-api/paths/roots
 GET    /commerce-api/artifacts/roots
@@ -215,6 +217,13 @@ state, not a live CSV read from the browser.
 Source URL records require a URL and support statuses such as `active`, `disabled`, `broken`,
 `redirected`, and `needs_review`. Source URL import has separate preview and apply calls, and
 apply should only be enabled after the operator has reviewed the preview report.
+
+Skroutz browser network diagnostics are explicit operator/admin actions from Vendor Source
+Candidate Review when a Skroutz candidate is linked to an active source URL. The workflow opens
+the Skroutz product page in Playwright, captures sanitized JSON/XHR/fetch response summaries,
+compares them with derived `filter_products.json` and `shops_details.json` URLs, and renders a
+compact endpoint table. It does not replace normal direct JSON capture, does not run in scheduled
+monitoring, and does not create price observations.
 
 ### Price Monitoring Contracts
 

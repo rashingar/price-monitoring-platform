@@ -863,6 +863,24 @@
         "title": "ProductFromSourceRequest",
         "type": "object"
       },
+      "SkroutzNetworkDiagnosticApiRequest": {
+        "properties": {
+          "headed": {
+            "default": false,
+            "title": "Headed",
+            "type": "boolean"
+          },
+          "timeout_seconds": {
+            "default": 60,
+            "maximum": 180.0,
+            "minimum": 5.0,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "SkroutzNetworkDiagnosticApiRequest",
+        "type": "object"
+      },
       "SourceUrlAgentRunRequest": {
         "properties": {
           "active_only": {
@@ -5979,6 +5997,104 @@
           }
         },
         "summary": "Get Vendor Source Url Summary",
+        "tags": [
+          "vendor-sources"
+        ]
+      }
+    },
+    "/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network": {
+      "post": {
+        "operationId": "post_skroutz_network_diagnostic_api_vendor_sources_source_urls__source_url_id__diagnostics_skroutz_network_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_url_id",
+            "required": true,
+            "schema": {
+              "title": "Source Url Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkroutzNetworkDiagnosticApiRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Skroutz Network Diagnostic Api Vendor Sources Source Urls  Source Url Id  Diagnostics Skroutz Network Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Skroutz Network Diagnostic",
+        "tags": [
+          "vendor-sources"
+        ]
+      }
+    },
+    "/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network/latest": {
+      "get": {
+        "operationId": "get_latest_skroutz_network_diagnostic_api_vendor_sources_source_urls__source_url_id__diagnostics_skroutz_network_latest_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_url_id",
+            "required": true,
+            "schema": {
+              "title": "Source Url Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Latest Skroutz Network Diagnostic Api Vendor Sources Source Urls  Source Url Id  Diagnostics Skroutz Network Latest Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Latest Skroutz Network Diagnostic",
         "tags": [
           "vendor-sources"
         ]

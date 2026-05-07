@@ -77,6 +77,9 @@ import type {
   SourceUrlAgentRunArtifactsResponse,
   SourceUrlAgentRunRequest,
   SourceUrlAgentRunSummary,
+  SkroutzNetworkCapturedEndpoint,
+  SkroutzNetworkDiagnosticReport,
+  SkroutzNetworkDiagnosticSummary,
   SourceUrlListResponse,
   SourceUrlSummaryResponse,
   SourceUrlUpdateBody,
@@ -668,6 +671,7 @@ function normalizeSourceUrlCandidate(value: unknown): SourceUrlCandidate | null 
   return {
     ...value,
     id,
+    source_url_id: normalizeNullableId(value.source_url_id),
     run_id: normalizeNullableId(value.run_id),
     catalog_product_id: normalizeNullableId(value.catalog_product_id),
     model: normalizeNullableString(value.model),
@@ -931,6 +935,80 @@ function normalizeVendorSourceCaptureRunArtifacts(
   payload: unknown,
 ): VendorSourceCaptureRunArtifactsResponse {
   return normalizeArtifactList(payload) as VendorSourceCaptureRunArtifactsResponse;
+}
+
+function normalizeSkroutzNetworkEndpoint(value: unknown): SkroutzNetworkCapturedEndpoint | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    ...value,
+    method: normalizeNullableString(value.method),
+    url: normalizeNullableString(value.url),
+    status: normalizeNullableId(value.status),
+    resource_type: normalizeNullableString(value.resource_type),
+    content_type: normalizeNullableString(value.content_type),
+    body_size: normalizeNullableId(value.body_size),
+    parsed_json_valid: typeof value.parsed_json_valid === "boolean" ? value.parsed_json_valid : null,
+    json_summary: isRecord(value.json_summary) ? value.json_summary : null,
+    classification: normalizeNullableString(value.classification),
+    matched_derived_endpoint: normalizeNullableString(value.matched_derived_endpoint),
+    body_sample: normalizeNullableString(value.body_sample),
+    json_parse_error: normalizeNullableString(value.json_parse_error),
+  };
+}
+
+function normalizeSkroutzNetworkDiagnosticSummary(payload: unknown): SkroutzNetworkDiagnosticSummary {
+  const source = isRecord(payload) ? payload : {};
+  return {
+    ...source,
+    source_url_id: normalizeNullableId(source.source_url_id),
+    vendor_slug: normalizeNullableString(source.vendor_slug),
+    source_url: normalizeNullableString(source.source_url),
+    status: normalizeNullableString(source.status),
+    captured_response_count: normalizeCounter(source.captured_response_count),
+    derived_endpoints: isRecord(source.derived_endpoints)
+      ? Object.fromEntries(
+          Object.entries(source.derived_endpoints).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+        )
+      : {},
+    derived_filter_products_url: normalizeNullableString(source.derived_filter_products_url),
+    derived_shops_details_url: normalizeNullableString(source.derived_shops_details_url),
+    observed_derived_endpoints: isRecord(source.observed_derived_endpoints)
+      ? Object.fromEntries(Object.entries(source.observed_derived_endpoints).map(([key, value]) => [key, normalizeBooleanFlag(value)]))
+      : {},
+    observed_filter_products_url: normalizeBooleanFlag(source.observed_filter_products_url),
+    observed_shops_details_url: normalizeBooleanFlag(source.observed_shops_details_url),
+    exact_match_count: normalizeCounter(source.exact_match_count),
+    best_product_data_endpoint: normalizeNullableString(source.best_product_data_endpoint),
+    product_data_candidate_url: normalizeNullableString(source.product_data_candidate_url ?? source.best_product_data_endpoint),
+    product_data_candidate_reason: normalizeNullableString(source.product_data_candidate_reason),
+    classifications_summary: normalizeNumberRecord(source.classifications_summary),
+    blocked_or_challenge_detected: normalizeBooleanFlag(source.blocked_or_challenge_detected),
+    diagnostic_report_id: normalizeNullableId(source.diagnostic_report_id),
+    artifact_path: normalizeNullableString(source.artifact_path),
+    error_code: normalizeNullableString(source.error_code),
+    error_message: normalizeNullableString(source.error_message),
+    created_at: normalizeNullableString(source.created_at),
+  };
+}
+
+function normalizeSkroutzNetworkDiagnosticReport(payload: unknown): SkroutzNetworkDiagnosticReport {
+  const source = isRecord(payload) ? payload : {};
+  const summary = normalizeSkroutzNetworkDiagnosticSummary(source.summary ?? source);
+  return {
+    ...source,
+    ...summary,
+    summary,
+    captured_responses: getArrayPayload(source.captured_responses, ["items", "responses", "data", "results"])
+      .map(normalizeSkroutzNetworkEndpoint)
+      .filter((item): item is SkroutzNetworkCapturedEndpoint => item !== null),
+    started_at: normalizeNullableString(source.started_at),
+    completed_at: normalizeNullableString(source.completed_at),
+    timeout_seconds: normalizeOptionalNumber(source.timeout_seconds),
+    headed: typeof source.headed === "boolean" ? source.headed : null,
+  };
 }
 
 function normalizeLayoutColumn(value: unknown, index: number): SourceUrlCandidateReviewLayoutColumn | null {
@@ -2410,6 +2488,35 @@ export const commerceClient = {
           },
         ),
       ) ?? { id: candidateId, status: body.decision === "accept" ? "accepted" : "needs_review" }
+    );
+  },
+
+  async runSkroutzNetworkDiagnostic(
+    sourceUrlId: string | number,
+    body: { headed?: boolean; timeout_seconds?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<SkroutzNetworkDiagnosticSummary> {
+    return normalizeSkroutzNetworkDiagnosticSummary(
+      await request<unknown>(
+        `/vendor-sources/source-urls/${encodeURIComponent(String(sourceUrlId))}/diagnostics/skroutz-network`,
+        {
+          method: "POST",
+          body,
+          signal,
+        },
+      ),
+    );
+  },
+
+  async getLatestSkroutzNetworkDiagnostic(
+    sourceUrlId: string | number,
+    signal?: AbortSignal,
+  ): Promise<SkroutzNetworkDiagnosticReport> {
+    return normalizeSkroutzNetworkDiagnosticReport(
+      await request<unknown>(
+        `/vendor-sources/source-urls/${encodeURIComponent(String(sourceUrlId))}/diagnostics/skroutz-network/latest`,
+        { signal },
+      ),
     );
   },
 
