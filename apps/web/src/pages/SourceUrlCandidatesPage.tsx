@@ -141,6 +141,62 @@ function candidateId(candidate: SourceUrlCandidate): string {
   return String(candidate.id);
 }
 
+function getJsonSection(source: unknown, keys: string[]): unknown {
+  if (!isRecord(source)) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    if (source[key] !== undefined) {
+      return source[key];
+    }
+  }
+
+  return undefined;
+}
+
+function renderJsonValue(value: unknown): string {
+  if (value === undefined || value === null || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return JSON.stringify(value, null, 2);
+}
+
+function JsonDetail({ value }: { value: unknown }) {
+  const rendered = renderJsonValue(value);
+  if (rendered === "-") {
+    return <span className="muted">-</span>;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return <pre className="json-block compact-json-block">{rendered}</pre>;
+  }
+
+  return <span>{rendered}</span>;
+}
+
+function EvidenceSection({
+  title,
+  value,
+}: {
+  title: string;
+  value: unknown;
+}) {
+  return (
+    <div className="candidate-evidence-section">
+      <dt>{title}</dt>
+      <dd>
+        <JsonDetail value={value} />
+      </dd>
+    </div>
+  );
+}
+
 function passesCreatedDateFilter(candidate: SourceUrlCandidate, filters: CandidateFilters): boolean {
   if (!filters.createdFrom && !filters.createdTo) {
     return true;
@@ -483,10 +539,12 @@ function CandidateReviewPanel({
 }) {
   const [replacementUrl, setReplacementUrl] = useState("");
   const [isReplaceOpen, setIsReplaceOpen] = useState(false);
+  const [isDebugOpen, setIsDebugOpen] = useState(false);
 
   useEffect(() => {
     setReplacementUrl("");
     setIsReplaceOpen(false);
+    setIsDebugOpen(false);
   }, [candidate?.id, candidate?.notes]);
 
   if (!candidate) {
@@ -498,6 +556,11 @@ function CandidateReviewPanel({
   const rejectAction = reviewActions.find((action) => getActionDecision(action) === "reject");
   const replaceAction = reviewActions.find((action) => getActionDecision(action) === "replace_url");
   const reviewNotes = typeof candidate.notes === "string" ? candidate.notes : "";
+  const evidence = candidate.evidence_json;
+  const searchedQueries = candidate.searched_queries_json;
+  const errorValue =
+    getJsonSection(evidence, ["error", "error_message", "message", "error_code"]) ??
+    getJsonSection(candidate, ["error", "error_message", "error_code"]);
 
   return (
     <section
@@ -508,15 +571,6 @@ function CandidateReviewPanel({
 
       <div className="source-url-inline-review-grid">
         <section className="candidate-detail-card source-url-review-decision-card">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Decision</p>
-              <h3>Review</h3>
-            </div>
-            <span className={`status-badge ${statusClass(candidate.status)}`}>
-              {normalizeLabel(candidate.status ?? null)}
-            </span>
-          </div>
           <div className="button-row source-url-review-actions">
             {candidate.candidate_url ? (
               <a
@@ -558,6 +612,14 @@ function CandidateReviewPanel({
                 {getActionLabel(replaceAction)}
               </button>
             ) : null}
+            <button
+              className="button secondary"
+              type="button"
+              aria-expanded={isDebugOpen}
+              onClick={() => setIsDebugOpen((current) => !current)}
+            >
+              Debug
+            </button>
           </div>
           {isReplaceOpen && replaceAction ? (
             <div className="source-url-replace-inline-row">
@@ -578,6 +640,94 @@ function CandidateReviewPanel({
               >
                 {isPending ? "Submitting..." : "Submit replacement"}
               </button>
+            </div>
+          ) : null}
+          {isDebugOpen ? (
+            <div className="source-url-debug-panel">
+              <dl className="candidate-detail-list source-url-debug-detail-list">
+                <div>
+                  <dt>Status</dt>
+                  <dd>
+                    <span className={`status-badge ${statusClass(candidate.status)}`}>
+                      {normalizeLabel(candidate.status ?? null)}
+                    </span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Candidate URL</dt>
+                  <dd className="source-url-cell">{formatValue(candidate.candidate_url)}</dd>
+                </div>
+                <div>
+                  <dt>Canonical URL</dt>
+                  <dd className="source-url-cell">{formatValue(candidate.canonical_url)}</dd>
+                </div>
+                <div>
+                  <dt>Review notes</dt>
+                  <dd>{formatValue(candidate.notes)}</dd>
+                </div>
+                <div>
+                  <dt>Match method</dt>
+                  <dd>{formatValue(candidate.match_method)}</dd>
+                </div>
+                <div>
+                  <dt>Confidence</dt>
+                  <dd>{formatConfidence(candidate.confidence_score)}</dd>
+                </div>
+                <div>
+                  <dt>Created</dt>
+                  <dd>{formatDate(candidate.created_at)}</dd>
+                </div>
+                <div>
+                  <dt>Run id</dt>
+                  <dd>{formatValue(candidate.run_id)}</dd>
+                </div>
+                <div>
+                  <dt>Source candidate id</dt>
+                  <dd>{formatValue(candidate.id)}</dd>
+                </div>
+              </dl>
+              <section className="source-url-debug-json-section">
+                <h4>Searched queries</h4>
+                <JsonDetail value={searchedQueries} />
+              </section>
+              <section className="source-url-debug-json-section">
+                <h4>Matching details</h4>
+                <dl className="candidate-evidence-grid">
+                  <EvidenceSection
+                    title="MPN evidence"
+                    value={getJsonSection(evidence, ["mpn_evidence", "mpn", "mpn_match"])}
+                  />
+                  <EvidenceSection
+                    title="Model evidence"
+                    value={getJsonSection(evidence, ["model_evidence", "model", "model_match"])}
+                  />
+                  <EvidenceSection
+                    title="Brand evidence"
+                    value={getJsonSection(evidence, ["brand_evidence", "brand", "manufacturer"])}
+                  />
+                  <EvidenceSection
+                    title="Category evidence"
+                    value={getJsonSection(evidence, ["category_evidence", "category"])}
+                  />
+                  <EvidenceSection
+                    title="Price evidence"
+                    value={getJsonSection(evidence, ["price_evidence", "price"])}
+                  />
+                  <EvidenceSection
+                    title="Title similarity"
+                    value={getJsonSection(evidence, ["title_similarity", "similarity"])}
+                  />
+                  <EvidenceSection
+                    title="Title-only flag"
+                    value={getJsonSection(evidence, ["title_only", "title_only_match"])}
+                  />
+                  <EvidenceSection title="Error" value={errorValue} />
+                </dl>
+              </section>
+              <section className="source-url-debug-json-section">
+                <h4>Raw evidence JSON</h4>
+                <JsonDetail value={evidence} />
+              </section>
             </div>
           ) : null}
         </section>

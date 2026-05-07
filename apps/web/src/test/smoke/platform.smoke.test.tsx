@@ -457,6 +457,8 @@ describe("platform mocked page smoke tests", () => {
     const panel = await screen.findByRole("region", { name: "Vendor source candidate 501 review" });
     expect(row?.nextElementSibling).toBe(panel.closest("tr"));
     expect(screen.queryByRole("dialog", { name: /Vendor source candidate/i })).not.toBeInTheDocument();
+    expect(within(panel).queryByText("Decision")).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("heading", { name: "Review" })).not.toBeInTheDocument();
     expect(within(panel).queryByText("Catalog product")).not.toBeInTheDocument();
     expect(within(panel).queryByText("Candidate source")).not.toBeInTheDocument();
     expect(within(panel).queryByText("MPN")).not.toBeInTheDocument();
@@ -464,6 +466,7 @@ describe("platform mocked page smoke tests", () => {
     expect(within(panel).queryByText("Candidate price")).not.toBeInTheDocument();
     expect(within(panel).queryByText("Own price")).not.toBeInTheDocument();
     expect(within(panel).queryByText("Debug details")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("Matching details")).not.toBeInTheDocument();
     const openCandidateLink = within(panel).getByRole("link", { name: "Open candidate URL" });
     expect(openCandidateLink).toHaveAttribute(
       "href",
@@ -483,6 +486,9 @@ describe("platform mocked page smoke tests", () => {
     expect(within(panel).getByRole("button", { name: "Accept" })).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Reject" })).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Replace URL" })).toBeInTheDocument();
+    fireEvent.click(within(panel).getByRole("button", { name: "Debug" }));
+    expect(within(panel).getByText("Matching details")).toBeInTheDocument();
+    expect(within(panel).getByText("Raw evidence JSON")).toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /Needs/i })).not.toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /Not found/i })).not.toBeInTheDocument();
     expect(within(panel).queryByLabelText("Replacement URL")).not.toBeInTheDocument();

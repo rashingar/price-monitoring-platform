@@ -1188,6 +1188,27 @@ textarea {
   gap: 8px;
 }
 
+.source-url-debug-panel {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.source-url-debug-detail-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.source-url-debug-json-section {
+  display: grid;
+  gap: 8px;
+}
+
+.source-url-debug-json-section h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
 .candidate-product-summary {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -1893,6 +1914,7 @@ code {
   .source-url-agent-summary-grid,
   .source-url-inline-review-grid,
   .source-url-replace-inline-row,
+  .source-url-debug-detail-list,
   .vendor-source-coverage-grid,
   .vendor-source-count-grid,
   .source-url-product-summary,
