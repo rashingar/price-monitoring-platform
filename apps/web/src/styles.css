@@ -1163,27 +1163,18 @@ textarea {
 
 .source-url-inline-review-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(240px, 0.72fr);
-  gap: 12px;
+  gap: 8px;
 }
 
-.source-url-review-summary-card {
-  align-content: start;
-}
-
-.source-url-review-summary-card h3,
 .source-url-review-decision-card h3 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.source-url-review-compact-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .source-url-review-decision-card {
   align-content: start;
+  padding: 10px 12px;
 }
 
 .source-url-review-actions {
@@ -1195,38 +1186,6 @@ textarea {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 8px;
-}
-
-.source-url-debug-details {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: #fbfcfc;
-}
-
-.source-url-debug-details summary {
-  width: fit-content;
-  cursor: pointer;
-  font-weight: 800;
-}
-
-.source-url-debug-details[open] {
-  display: grid;
-  gap: 12px;
-}
-
-.source-url-debug-detail-list {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.source-url-debug-json-section {
-  display: grid;
-  gap: 8px;
-}
-
-.source-url-debug-json-section h4 {
-  margin: 0;
-  font-size: 14px;
 }
 
 .candidate-product-summary {
@@ -1934,7 +1893,6 @@ code {
   .source-url-agent-summary-grid,
   .source-url-inline-review-grid,
   .source-url-replace-inline-row,
-  .source-url-debug-detail-list,
   .vendor-source-coverage-grid,
   .vendor-source-count-grid,
   .source-url-product-summary,

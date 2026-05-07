@@ -141,62 +141,6 @@ function candidateId(candidate: SourceUrlCandidate): string {
   return String(candidate.id);
 }
 
-function getJsonSection(source: unknown, keys: string[]): unknown {
-  if (!isRecord(source)) {
-    return undefined;
-  }
-
-  for (const key of keys) {
-    if (source[key] !== undefined) {
-      return source[key];
-    }
-  }
-
-  return undefined;
-}
-
-function renderJsonValue(value: unknown): string {
-  if (value === undefined || value === null || value === "") {
-    return "-";
-  }
-
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-
-  return JSON.stringify(value, null, 2);
-}
-
-function JsonDetail({ value }: { value: unknown }) {
-  const rendered = renderJsonValue(value);
-  if (rendered === "-") {
-    return <span className="muted">-</span>;
-  }
-
-  if (typeof value === "object" && value !== null) {
-    return <pre className="json-block compact-json-block">{rendered}</pre>;
-  }
-
-  return <span>{rendered}</span>;
-}
-
-function EvidenceSection({
-  title,
-  value,
-}: {
-  title: string;
-  value: unknown;
-}) {
-  return (
-    <div className="candidate-evidence-section">
-      <dt>{title}</dt>
-      <dd>
-        <JsonDetail value={value} />
-      </dd>
-    </div>
-  );
-}
-
 function passesCreatedDateFilter(candidate: SourceUrlCandidate, filters: CandidateFilters): boolean {
   if (!filters.createdFrom && !filters.createdTo) {
     return true;
@@ -365,39 +309,6 @@ function renderCandidateCell(candidate: SourceUrlCandidate, key: string): ReactN
     default:
       return formatValue(getCandidateField(candidate, key));
   }
-}
-
-function sourceDisplayName(candidate: SourceUrlCandidate): string {
-  const sourceName = typeof candidate.source_name === "string" ? candidate.source_name : "";
-  const sourceDomain = typeof candidate.source_domain === "string" ? candidate.source_domain : "";
-  if (sourceName && sourceDomain && sourceName !== sourceDomain) {
-    return `${sourceName} / ${sourceDomain}`;
-  }
-  return sourceName || sourceDomain || "-";
-}
-
-function normalizeUrlForComparison(value: string | null | undefined): string {
-  if (!value) {
-    return "";
-  }
-
-  try {
-    const url = new URL(value);
-    url.hash = "";
-    url.hostname = url.hostname.toLowerCase();
-    return url.toString().replace(/\/$/, "");
-  } catch {
-    return value.trim().replace(/\/$/, "");
-  }
-}
-
-function shouldShowCanonicalUrl(candidate: SourceUrlCandidate): boolean {
-  const canonicalUrl = typeof candidate.canonical_url === "string" ? candidate.canonical_url.trim() : "";
-  if (!canonicalUrl) {
-    return false;
-  }
-
-  return normalizeUrlForComparison(candidate.candidate_url) !== normalizeUrlForComparison(canonicalUrl);
 }
 
 function isInteractiveClick(target: EventTarget | null): boolean {
@@ -582,11 +493,6 @@ function CandidateReviewPanel({
     return null;
   }
 
-  const evidence = candidate.evidence_json;
-  const searchedQueries = candidate.searched_queries_json;
-  const errorValue =
-    getJsonSection(evidence, ["error", "error_message", "message", "error_code"]) ??
-    getJsonSection(candidate, ["error", "error_message", "error_code"]);
   const reviewActions = getReviewActions(layout, candidate);
   const acceptAction = reviewActions.find((action) => getActionDecision(action) === "accept");
   const rejectAction = reviewActions.find((action) => getActionDecision(action) === "reject");
@@ -601,74 +507,6 @@ function CandidateReviewPanel({
       {isLoading ? <LoadingState label="Loading candidate details..." /> : null}
 
       <div className="source-url-inline-review-grid">
-        <section className="candidate-detail-card source-url-review-summary-card">
-          <div>
-            <p className="eyebrow">Catalog product</p>
-            <h3>{formatValue(candidate.model)}</h3>
-          </div>
-          <dl className="candidate-detail-list source-url-review-compact-list">
-            <div>
-              <dt>Catalog product id</dt>
-              <dd>{formatValue(candidate.catalog_product_id)}</dd>
-            </div>
-            <div>
-              <dt>Model</dt>
-              <dd>{formatValue(candidate.model)}</dd>
-            </div>
-            <div>
-              <dt>MPN</dt>
-              <dd>{formatValue(candidate.mpn)}</dd>
-            </div>
-            <div>
-              <dt>Manufacturer</dt>
-              <dd>{formatValue(candidate.manufacturer)}</dd>
-            </div>
-            <div>
-              <dt>Product</dt>
-              <dd>{formatValue(candidate.product_name)}</dd>
-            </div>
-            <div>
-              <dt>Own price</dt>
-              <dd>{formatMoney(candidate.own_price)}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section className="candidate-detail-card source-url-review-summary-card">
-          <div>
-            <p className="eyebrow">Candidate source</p>
-            <h3>{sourceDisplayName(candidate)}</h3>
-          </div>
-          <dl className="candidate-detail-list source-url-review-compact-list">
-            <div>
-              <dt>Candidate title</dt>
-              <dd>{formatValue(candidate.candidate_title)}</dd>
-            </div>
-            <div>
-              <dt>Candidate price</dt>
-              <dd>{formatMoney(candidate.candidate_price)}</dd>
-            </div>
-            <div>
-              <dt>Candidate URL</dt>
-              <dd>
-                {candidate.candidate_url ? (
-                  <a href={candidate.candidate_url} target="_blank" rel="noreferrer">
-                    Open candidate
-                  </a>
-                ) : (
-                  "-"
-                )}
-              </dd>
-            </div>
-            {shouldShowCanonicalUrl(candidate) ? (
-              <div>
-                <dt>Canonical URL</dt>
-                <dd className="source-url-cell">{formatValue(candidate.canonical_url)}</dd>
-              </div>
-            ) : null}
-          </dl>
-        </section>
-
         <section className="candidate-detail-card source-url-review-decision-card">
           <div className="section-heading">
             <div>
@@ -680,6 +518,16 @@ function CandidateReviewPanel({
             </span>
           </div>
           <div className="button-row source-url-review-actions">
+            {candidate.candidate_url ? (
+              <a
+                className="button secondary"
+                href={candidate.candidate_url}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                Open candidate URL
+              </a>
+            ) : null}
             {acceptAction ? (
               <button
                 className={actionButtonClass(acceptAction)}
@@ -734,86 +582,6 @@ function CandidateReviewPanel({
           ) : null}
         </section>
       </div>
-
-      <details className="source-url-debug-details">
-        <summary>Debug details</summary>
-        <dl className="candidate-detail-list source-url-debug-detail-list">
-          <div>
-            <dt>Candidate URL</dt>
-            <dd className="source-url-cell">{formatValue(candidate.candidate_url)}</dd>
-          </div>
-          <div>
-            <dt>Canonical URL</dt>
-            <dd className="source-url-cell">{formatValue(candidate.canonical_url)}</dd>
-          </div>
-          <div>
-            <dt>Review notes</dt>
-            <dd>{formatValue(candidate.notes)}</dd>
-          </div>
-          <div>
-            <dt>Match method</dt>
-            <dd>{formatValue(candidate.match_method)}</dd>
-          </div>
-          <div>
-            <dt>Confidence</dt>
-            <dd>{formatConfidence(candidate.confidence_score)}</dd>
-          </div>
-          <div>
-            <dt>Created</dt>
-            <dd>{formatDate(candidate.created_at)}</dd>
-          </div>
-          <div>
-            <dt>Run id</dt>
-            <dd>{formatValue(candidate.run_id)}</dd>
-          </div>
-          <div>
-            <dt>Source candidate id</dt>
-            <dd>{formatValue(candidate.id)}</dd>
-          </div>
-        </dl>
-        <section className="source-url-debug-json-section">
-          <h4>Searched queries</h4>
-          <JsonDetail value={searchedQueries} />
-        </section>
-        <section className="source-url-debug-json-section">
-          <h4>Matching details</h4>
-          <dl className="candidate-evidence-grid">
-            <EvidenceSection
-              title="MPN evidence"
-              value={getJsonSection(evidence, ["mpn_evidence", "mpn", "mpn_match"])}
-            />
-            <EvidenceSection
-              title="Model evidence"
-              value={getJsonSection(evidence, ["model_evidence", "model", "model_match"])}
-            />
-            <EvidenceSection
-              title="Brand evidence"
-              value={getJsonSection(evidence, ["brand_evidence", "brand", "manufacturer"])}
-            />
-            <EvidenceSection
-              title="Category evidence"
-              value={getJsonSection(evidence, ["category_evidence", "category"])}
-            />
-            <EvidenceSection
-              title="Price evidence"
-              value={getJsonSection(evidence, ["price_evidence", "price"])}
-            />
-            <EvidenceSection
-              title="Title similarity"
-              value={getJsonSection(evidence, ["title_similarity", "similarity"])}
-            />
-            <EvidenceSection
-              title="Title-only flag"
-              value={getJsonSection(evidence, ["title_only", "title_only_match"])}
-            />
-            <EvidenceSection title="Error" value={errorValue} />
-          </dl>
-        </section>
-        <section className="source-url-debug-json-section">
-          <h4>Raw evidence JSON</h4>
-          <JsonDetail value={evidence} />
-        </section>
-      </details>
     </section>
   );
 }

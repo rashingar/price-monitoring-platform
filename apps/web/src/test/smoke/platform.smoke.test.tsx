@@ -445,7 +445,7 @@ describe("platform mocked page smoke tests", () => {
   });
 
   it("expands Vendor Source candidate inline review panel with decision details", async () => {
-    installMockFetch(allRoutes);
+    const mockFetch = installMockFetch(allRoutes);
 
     renderWithRouter("/vendor-sources/candidates");
 
@@ -457,21 +457,35 @@ describe("platform mocked page smoke tests", () => {
     const panel = await screen.findByRole("region", { name: "Vendor source candidate 501 review" });
     expect(row?.nextElementSibling).toBe(panel.closest("tr"));
     expect(screen.queryByRole("dialog", { name: /Vendor source candidate/i })).not.toBeInTheDocument();
-    expect(within(panel).getByText("Catalog product")).toBeInTheDocument();
-    expect(within(panel).getByText("Candidate source")).toBeInTheDocument();
-    expect(within(panel).getByRole("link", { name: "Open candidate" })).toHaveAttribute(
+    expect(within(panel).queryByText("Catalog product")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("Candidate source")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("MPN")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("Manufacturer")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("Candidate price")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("Own price")).not.toBeInTheDocument();
+    expect(within(panel).queryByText("Debug details")).not.toBeInTheDocument();
+    const openCandidateLink = within(panel).getByRole("link", { name: "Open candidate URL" });
+    expect(openCandidateLink).toHaveAttribute(
       "href",
       "https://www.skroutz.gr/s/999/midea-md-20l-candidate.html",
     );
+    expect(openCandidateLink).toHaveAttribute("target", "_blank");
+    expect(openCandidateLink).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+    expect(openCandidateLink).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    fireEvent.click(openCandidateLink);
+    expect(
+      mockFetch.requests.some(
+        (request) =>
+          request.method === "PATCH" &&
+          request.pathname === "/commerce-api/vendor-sources/candidates/501/review",
+      ),
+    ).toBe(false);
     expect(within(panel).getByRole("button", { name: "Accept" })).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Reject" })).toBeInTheDocument();
     expect(within(panel).getByRole("button", { name: "Replace URL" })).toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /Needs/i })).not.toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /Not found/i })).not.toBeInTheDocument();
     expect(within(panel).queryByLabelText("Replacement URL")).not.toBeInTheDocument();
-    const debugDetails = within(panel).getByText("Debug details").closest("details");
-    expect(debugDetails).not.toBeNull();
-    expect(debugDetails).not.toHaveAttribute("open");
   });
 
   it("selecting another Vendor Source candidate closes the previous expanded row", async () => {
