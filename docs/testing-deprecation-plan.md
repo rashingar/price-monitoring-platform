@@ -6,8 +6,8 @@
 | Product Factory | Full Skroutz prepare/render fixture workflow | Broad service orchestration through frozen fixtures; expensive for default Codex checks; the old `307497` golden expectation was stale | Narrow parser, taxonomy, section extraction, deterministic render-row, and validation snapshots | Replaced by `test_skroutz_golden_snapshots.py`; stale `307497` HTML/CSV fixtures removed | Complete |
 | Product Factory | Broad Skroutz taxonomy fixture loops | Large fixture sweep can dominate routine feedback | Representative golden taxonomy cases plus targeted unit coverage for taxonomy rules | Replacement target is implemented and validated | Reclassified as slow/golden |
 | Ecommerce API | Price Monitoring fetch execution/run tests | Simulates fetch execution, worker state, subprocess results, cancellation, and run artifacts | Smaller route contracts plus focused runtime fetch execution coverage | Replacement target is implemented and validated | Reclassified as runtime |
-| Ecommerce API | Source URL agent tests | Exercises source URL agent run orchestration, artifacts, persistence, and review flows | Smaller pure scoring/matching contracts plus focused runtime agent coverage | Replacement target is implemented and validated | Reclassified as runtime |
-| Ecommerce API | Source URL agent API run tests | Enqueues or simulates source URL agent runs and persists candidates/artifacts | Route-shape contract tests plus focused runtime API run coverage | Replacement target is implemented and validated | Selected tests reclassified as runtime |
+| Ecommerce API | Source URL agent tests | Exercises source URL agent run orchestration, artifacts, persistence, and review flows | Narrow evidence/scoring/candidate/registry/search-query snapshots, SQLite `db_contract` persistence tests, and opt-in runtime agent coverage | Replaced by `test_source_url_agent_snapshots.py`, `test_source_url_agent_db_contract.py`, and `test_source_url_agent_runtime.py` | Split into golden/db_contract/runtime |
+| Ecommerce API | Source URL agent API run tests | Enqueues or simulates source URL agent runs and persists candidates/artifacts | Route-shape and candidate review contract tests plus focused runtime API run coverage | Runtime run orchestration lives in `test_source_url_agent_runtime.py` | Split into contract/db_contract/runtime |
 | Ecommerce API | Source capture parser/scoring/direct endpoint tests | Mixed pure parser, sanitization, direct endpoint, DB, and runtime capture behavior in one runtime-marked module | Narrow parser, scoring, sanitization, and direct Skroutz endpoint golden snapshots plus separate DB contracts | Replaced by `test_source_capture_snapshots.py`, `test_skroutz_direct_capture_snapshots.py`, and `test_source_capture_db_contracts.py` | Complete |
 | Ecommerce API | Vendor source capture tests | Simulates capture runs, source URL selection, persistence, and artifact generation | Smaller selection, run-result, and API response golden snapshots plus focused runtime capture coverage | Replaced by `test_vendor_sources_snapshots.py`; runtime run-history/artifact orchestration remains opt-in | Split into db_contract/golden/runtime |
 | Ecommerce API | Price Monitoring DB-heavy tests | Broad SQLite-backed database workflows, migrations, observations, and alert behavior can dominate default Codex checks | Smaller route/serialization contracts plus explicit runtime database workflow coverage | Replacement target is implemented and validated | Reclassified as runtime where broad |
@@ -76,3 +76,29 @@ source URL mirroring, active-status filtering, source health updates, and
 append-only observations. Runtime/vendor orchestration, run history, artifact
 writing, scheduled capture, and Price Monitoring fetch handoff remain opt-in
 runtime or `db_integration` coverage and are not part of root fast.
+
+## Completed Ecommerce Source URL Agent Split
+
+Ecommerce Source URL Agent coverage is split into fast golden snapshots, safe
+SQLite DB contracts, and opt-in runtime execution tests. The snapshots live
+under
+`apps/ecommerce-api/tests/fixtures/golden_snapshots/source_url_agent/` and cover
+evidence extraction, scoring outcomes, candidate result shaping, source
+registry URL-shape rules, search query generation, and URL normalization.
+
+Source URL Agent `db_contract` tests use deterministic temporary SQLite only
+for repository and persistence behavior such as source URL writes, high
+confidence promotion thresholds, review CSV application, candidate row
+persistence, and export/import relinking. Full Source URL Agent execution,
+multi-file artifact writing, job wrappers, and API run orchestration are
+classified as runtime, with `db_integration` when they persist discovery runs
+through the broader service path.
+
+Root fast includes only fast/golden/`db_contract`-safe Source URL Agent checks.
+Runtime, `db_integration`, `postgres_required`, external, e2e, legacy, and slow
+Source URL Agent tests remain opt-in. Source URL Agent golden snapshots must not
+include temp paths, live timestamps, secrets, authorization/session/cookie
+headers, large raw HTML captures, or full run artifacts; expected files must
+not be updated unless the prompt explicitly says `Approve snapshot updates`.
+Always run these tests with verbose output so it is clear whether a check is
+hanging or simply taking longer.

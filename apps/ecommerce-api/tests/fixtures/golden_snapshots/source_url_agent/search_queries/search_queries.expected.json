@@ -1,0 +1,7 @@
+{
+  "normalization_keeps_meaningful_query": "https://www.bestprice.gr/item/1/lg.html?sku=abc&variant=black",
+  "normalized_url": "https://www.skroutz.gr/s/123?sku=abc",
+  "search_queries": [
+    "LG MR25GB"
+  ]
+}

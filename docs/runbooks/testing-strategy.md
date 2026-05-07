@@ -233,6 +233,27 @@ source persistence coverage belongs in `db_contract`; vendor capture run
 history, artifact writing, scheduled capture, and Price Monitoring capture
 handoff remain runtime opt-in.
 
+Ecommerce Source URL Agent coverage follows the same split. Fast golden
+snapshots under
+`apps/ecommerce-api/tests/fixtures/golden_snapshots/source_url_agent/` cover
+evidence extraction, scoring, candidate result shaping, source registry
+URL-shape rules, search query generation, and URL normalization. Those
+snapshots must remain small, stable, human-readable JSON and must not include
+absolute temp paths, live timestamps, random run IDs, secrets,
+authorization/session/cookie headers, full HTML dumps, generated CSVs, or full
+run artifacts. Snapshot expected files must not be updated unless the prompt
+explicitly says `Approve snapshot updates`.
+
+Source URL Agent `db_contract` tests use deterministic temporary SQLite for
+repository and persistence behavior such as candidate source URL writes,
+high-confidence threshold promotion, review CSV application, candidate row
+persistence, and export/import relinking. Full Source URL Agent execution,
+multi-file artifact writing, job wrappers, and API run orchestration are
+runtime opt-in, with `db_integration` when they persist discovery runs and
+candidates through a broader service path. Root fast includes only
+fast/golden/`db_contract`-safe Source URL Agent checks, not runtime,
+`db_integration`, `postgres_required`, external, e2e, legacy, or slow coverage.
+
 Ecommerce DB tests are split by profile:
 
 ```powershell

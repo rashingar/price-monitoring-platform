@@ -1,0 +1,301 @@
+{
+  "cloudflare_analytics_script": {
+    "blocked_detector": false,
+    "evidence": {
+      "blocked_or_captcha": false,
+      "body_text_sample": "LG MR25GB Magic Remote Control | Skroutz.gr LG MR25GB Magic Remote Control TV Control",
+      "brand": {
+        "found": true,
+        "fragment": "LG"
+      },
+      "candidate_price": "",
+      "canonical_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+      "category": {
+        "compatible": true,
+        "fragment": "control control"
+      },
+      "error_code": "",
+      "error_message": "",
+      "final_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+      "jsonld_products": [
+        {
+          "@type": "Product",
+          "brand": "LG",
+          "category": "TV Control",
+          "mpn": "MR25GB",
+          "name": "LG MR25GB Magic Remote Control"
+        }
+      ],
+      "model": {
+        "expected": "",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "mpn": {
+        "expected": "",
+        "found": true,
+        "fragment": "MR25GB",
+        "source": "jsonld"
+      },
+      "price": {
+        "compatible": null
+      },
+      "requested_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+      "title": "LG MR25GB Magic Remote Control | Skroutz.gr",
+      "title_matched_tokens": [
+        "lg",
+        "mr25gb",
+        "magic",
+        "remote",
+        "control"
+      ],
+      "title_only": false,
+      "title_similarity": 0.9613
+    }
+  },
+  "marketplace_body_only_mpn": {
+    "blocked_or_captcha": false,
+    "body_text_sample": "JBL Partybox Encore 2 | BestPrice.gr Related searches LG MR25GB Magic Remote",
+    "brand": {
+      "found": true,
+      "fragment": "LG"
+    },
+    "candidate_price": "",
+    "canonical_url": "https://www.bestprice.gr/item/999/jbl-partybox.html",
+    "category": {
+      "compatible": false,
+      "fragment": ""
+    },
+    "error_code": "",
+    "error_message": "",
+    "final_url": "https://www.bestprice.gr/item/999/jbl-partybox.html",
+    "jsonld_products": [],
+    "model": {
+      "expected": "",
+      "found": false,
+      "fragment": "",
+      "source": ""
+    },
+    "mpn": {
+      "expected": "",
+      "found": true,
+      "fragment": "MR25GB",
+      "source": "body"
+    },
+    "price": {
+      "compatible": null
+    },
+    "requested_url": "https://www.bestprice.gr/item/999/jbl-partybox.html",
+    "title": "JBL Partybox Encore 2 | BestPrice.gr",
+    "title_matched_tokens": [],
+    "title_only": false,
+    "title_similarity": 0.0
+  },
+  "review_canonical_rejected": {
+    "blocked_or_captcha": false,
+    "body_text_sample": "LG MR25GB Magic Remote Control LG MR25GB Magic Remote Control",
+    "brand": {
+      "found": false,
+      "fragment": ""
+    },
+    "candidate_price": "",
+    "canonical_url": "https://www.bestprice.gr/item/2160770054/tesla-43e655bus.html",
+    "category": {
+      "compatible": false,
+      "fragment": ""
+    },
+    "error_code": "not_public_product_page",
+    "error_message": "Rejected review page: canonical_url_ends_with_review.",
+    "final_url": "https://www.bestprice.gr/item/2160770054/tesla-43e655bus.html",
+    "jsonld_products": [],
+    "model": {
+      "expected": "",
+      "found": false,
+      "fragment": "",
+      "source": ""
+    },
+    "mpn": {
+      "expected": "",
+      "found": false,
+      "fragment": "",
+      "source": ""
+    },
+    "price": {
+      "compatible": null
+    },
+    "requested_url": "https://www.bestprice.gr/item/2160770054/tesla-43e655bus.html",
+    "title": "LG MR25GB Magic Remote Control",
+    "title_matched_tokens": [],
+    "title_only": false,
+    "title_similarity": 0.0
+  },
+  "review_title_markers_rejected": {
+    "LG MR25GB Review": {
+      "blocked_or_captcha": false,
+      "body_text_sample": "LG MR25GB Review LG MR25GB Magic Remote Control",
+      "brand": {
+        "found": false,
+        "fragment": ""
+      },
+      "candidate_price": "",
+      "canonical_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "category": {
+        "compatible": false,
+        "fragment": ""
+      },
+      "error_code": "not_public_product_page",
+      "error_message": "Rejected review page: title_contains_review_marker.",
+      "final_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "jsonld_products": [],
+      "model": {
+        "expected": "",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "mpn": {
+        "expected": "",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "price": {
+        "compatible": null
+      },
+      "requested_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "title": "LG MR25GB Review",
+      "title_matched_tokens": [],
+      "title_only": false,
+      "title_similarity": 0.0
+    },
+    "Αξιολογήστε LG MR25GB": {
+      "blocked_or_captcha": false,
+      "body_text_sample": "Αξιολογήστε LG MR25GB LG MR25GB Magic Remote Control",
+      "brand": {
+        "found": false,
+        "fragment": ""
+      },
+      "candidate_price": "",
+      "canonical_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "category": {
+        "compatible": false,
+        "fragment": ""
+      },
+      "error_code": "not_public_product_page",
+      "error_message": "Rejected review page: title_contains_review_marker.",
+      "final_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "jsonld_products": [],
+      "model": {
+        "expected": "",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "mpn": {
+        "expected": "",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "price": {
+        "compatible": null
+      },
+      "requested_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "title": "Αξιολογήστε LG MR25GB",
+      "title_matched_tokens": [],
+      "title_only": false,
+      "title_similarity": 0.0
+    },
+    "Αξιολόγησε LG MR25GB": {
+      "blocked_or_captcha": false,
+      "body_text_sample": "Αξιολόγησε LG MR25GB LG MR25GB Magic Remote Control",
+      "brand": {
+        "found": false,
+        "fragment": ""
+      },
+      "candidate_price": "",
+      "canonical_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "category": {
+        "compatible": false,
+        "fragment": ""
+      },
+      "error_code": "not_public_product_page",
+      "error_message": "Rejected review page: title_contains_review_marker.",
+      "final_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "jsonld_products": [],
+      "model": {
+        "expected": "",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "mpn": {
+        "expected": "",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "price": {
+        "compatible": null
+      },
+      "requested_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "title": "Αξιολόγησε LG MR25GB",
+      "title_matched_tokens": [],
+      "title_only": false,
+      "title_similarity": 0.0
+    }
+  },
+  "valid_product_exact_mpn_brand": {
+    "blocked_or_captcha": false,
+    "body_text_sample": "LG MR25GB Magic Remote Control Brand LG MPN MR25GB TV Control 19,00 €",
+    "brand": {
+      "found": true,
+      "fragment": "LG"
+    },
+    "candidate_price": "19.00",
+    "canonical_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+    "category": {
+      "compatible": true,
+      "fragment": "control control"
+    },
+    "error_code": "",
+    "error_message": "",
+    "final_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+    "jsonld_products": [
+      {
+        "@type": "Product",
+        "brand": "LG",
+        "category": "TV Control",
+        "mpn": "MR25GB",
+        "name": "LG MR25GB Magic Remote Control"
+      }
+    ],
+    "model": {
+      "expected": "",
+      "found": false,
+      "fragment": "",
+      "source": ""
+    },
+    "mpn": {
+      "expected": "",
+      "found": true,
+      "fragment": "MR25GB",
+      "source": "jsonld"
+    },
+    "price": {
+      "compatible": null
+    },
+    "requested_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+    "title": "LG MR25GB Magic Remote Control",
+    "title_matched_tokens": [
+      "lg",
+      "mr25gb",
+      "magic",
+      "remote",
+      "control"
+    ],
+    "title_only": false,
+    "title_similarity": 1.0
+  }
+}

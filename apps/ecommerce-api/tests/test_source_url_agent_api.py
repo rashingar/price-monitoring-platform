@@ -8,13 +8,10 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.api import routes_source_url_agent  # noqa: E402
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, UiViewPreference  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, UiViewPreference  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.source_url_agent.evidence import PageEvidence  # noqa: E402
-from ecommerce.source_url_agent.search import SourceSearchResult  # noqa: E402
 
 
 NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
@@ -119,86 +116,6 @@ def _source_url(session, product: CatalogProductRow, *, url: str) -> SourceUrl:
     return row
 
 
-def _allow_source_url_agent_run_database(monkeypatch) -> None:
-    monkeypatch.setattr(routes_source_url_agent, "_require_source_url_agent_run_database_ready", lambda: None)
-
-
-def _fake_resolver(product, source) -> SourceSearchResult:
-    url = f"https://{source.source_domain}/item/{product.model}/lg-remote.html"
-    evidence = PageEvidence(
-        requested_url=url,
-        final_url=url,
-        canonical_url=url,
-        title=f"{product.manufacturer} {product.mpn} remote control",
-        body_text_sample=f"{product.manufacturer} {product.mpn}",
-        candidate_price=Decimal("18.50"),
-        exact_mpn_found=True,
-        exact_mpn_fragment=product.mpn,
-        exact_mpn_source="title",
-        exact_model_found=False,
-        exact_model_fragment="",
-        exact_model_source="",
-        brand_found=True,
-        brand_fragment=product.manufacturer,
-        category_compatible=True,
-        category_fragment=product.category,
-        title_similarity=0.95,
-        title_matched_tokens=(product.manufacturer.lower(), product.mpn.lower()),
-        price_compatible=None,
-        jsonld_products=(),
-    )
-    return SourceSearchResult(evidence=[evidence], searched_queries=[f"{product.manufacturer} {product.mpn}"], searched_urls=[], errors=[])
-
-
-def _run_api_client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
-    monkeypatch.chdir(tmp_path)
-    _allow_source_url_agent_run_database(monkeypatch)
-    monkeypatch.setattr(routes_source_url_agent, "SOURCE_URL_AGENT_API_RESOLVER", _fake_resolver)
-    return _client(tmp_path, monkeypatch)
-
-
-def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidates(tmp_path: Path, monkeypatch) -> None:
-    client, database_url = _run_api_client(tmp_path, monkeypatch)
-    with session_scope(database_url) as session:
-        product = _catalog_product(session)
-
-    response = client.post(
-        "/api/vendor-sources/agent/runs",
-        json={
-            "source": "bestprice",
-            "mode": "catalog",
-            "catalog_product_id": product.id,
-            "limit": 1,
-            "dry_run": True,
-            "max_products_per_batch": 1,
-        },
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["run_id"]
-    assert payload["dry_run"] is True
-    assert payload["summary"]["selected_count"] == 1
-    assert payload["summary"]["matched_count"] == 1
-    assert payload["summary"]["persisted_candidate_count"] == 1
-    assert any(item["artifact_key"] == "source_url_run_summary" for item in payload["artifacts"])
-    assert all(item["is_allowed"] for item in payload["artifacts"])
-    with session_scope(database_url) as session:
-        run = session.query(SourceUrlDiscoveryRun).one()
-        candidate = session.query(SourceUrlCandidate).one()
-        assert run.run_id == payload["run_id"]
-        assert run.source_name == "bestprice"
-        assert candidate.run_id == payload["run_id"]
-        assert candidate.match_status == "matched"
-    history = client.get("/api/vendor-sources/agent/runs")
-    detail = client.get(f"/api/vendor-sources/agent/runs/{payload['run_id']}")
-    assert history.status_code == 200
-    assert history.json()["items"][0]["run_id"] == payload["run_id"]
-    assert detail.status_code == 200
-    assert detail.json()["run_id"] == payload["run_id"]
-    assert detail.json()["artifacts"]
-
-
 def test_vendor_sources_api_returns_discovery_and_capture_capabilities() -> None:
     response = TestClient(create_app()).get("/api/vendor-sources/sources")
 
@@ -218,32 +135,6 @@ def test_vendor_sources_api_returns_discovery_and_capture_capabilities() -> None
         assert items[source_name]["capture_implemented"] is False
         assert "discovery-only" in items[source_name]["notes"]
 
-
-def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_path: Path, monkeypatch) -> None:
-    client, database_url = _run_api_client(tmp_path, monkeypatch)
-    with session_scope(database_url) as session:
-        product = _catalog_product(session)
-
-    response = client.post(
-        "/api/vendor-sources/agent/runs",
-        json={
-            "source": "electronet",
-            "mode": "catalog",
-            "catalog_product_id": product.id,
-            "limit": 1,
-            "dry_run": True,
-            "max_products_per_batch": 1,
-        },
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["source"] == "electronet"
-    history = client.get("/api/vendor-sources/agent/runs")
-    assert history.status_code == 200
-    assert history.json()["items"][0]["run_id"] == payload["run_id"]
-
-
 def test_source_url_agent_run_api_rejects_missing_database(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(DATABASE_URL_ENV_VAR, raising=False)
@@ -253,44 +144,6 @@ def test_source_url_agent_run_api_rejects_missing_database(tmp_path: Path, monke
 
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "source_url_agent_database_required"
-
-
-def test_source_url_agent_run_api_enforces_bounded_default_limit(tmp_path: Path, monkeypatch) -> None:
-    client, database_url = _run_api_client(tmp_path, monkeypatch)
-    monkeypatch.setattr(routes_source_url_agent, "DEFAULT_API_MAX_PRODUCTS_PER_BATCH", 2)
-    with session_scope(database_url) as session:
-        for index in range(4):
-            _catalog_product(session, model=f"MODEL-{index}", mpn=f"MPN-{index}")
-
-    response = client.post("/api/vendor-sources/agent/runs", json={"source": "bestprice", "mode": "catalog"})
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["summary"]["selected_count"] == 2
-    with session_scope(database_url) as session:
-        assert session.query(SourceUrlCandidate).count() == 2
-
-
-def test_source_url_agent_run_artifact_endpoint_returns_safe_metadata(tmp_path: Path, monkeypatch) -> None:
-    client, database_url = _run_api_client(tmp_path, monkeypatch)
-    with session_scope(database_url) as session:
-        product = _catalog_product(session)
-
-    run_response = client.post(
-        "/api/vendor-sources/agent/runs",
-        json={"source": "bestprice", "mode": "catalog", "catalog_product_id": product.id, "limit": 1},
-    )
-    run_id = run_response.json()["run_id"]
-    artifact_response = client.get(f"/api/vendor-sources/agent/runs/{run_id}/artifacts")
-
-    assert artifact_response.status_code == 200
-    payload = artifact_response.json()
-    assert payload["run_id"] == run_id
-    names = {item["name"] for item in payload["items"]}
-    assert "source_url_run_summary.json" in names
-    assert all(item["is_allowed"] for item in payload["items"])
-    assert all(item["read_url"].startswith("/api/artifacts/read?path=") for item in payload["items"])
-
 
 def test_get_source_url_agent_candidates_returns_persisted_candidates(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _client(tmp_path, monkeypatch)

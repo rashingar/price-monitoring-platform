@@ -1,0 +1,324 @@
+{
+  "error": {
+    "artifact_row": {
+      "candidate_price": "",
+      "candidate_title": "",
+      "candidate_url": "https://www.skroutz.gr/search?keyphrase=LG+MR25GB",
+      "canonical_url": "https://www.skroutz.gr/search?keyphrase=LG+MR25GB",
+      "catalog_name": "LG MR25GB Magic Remote Control",
+      "catalog_product_id": 5606,
+      "category": "ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+      "checked_at": "2026-05-03T12:00:00+00:00",
+      "competing_candidates_count": 0,
+      "confidence_score": "0.0000",
+      "evidence_brand": "missing",
+      "evidence_category": "missing",
+      "evidence_model": "missing",
+      "evidence_mpn": "missing",
+      "evidence_price": "unknown",
+      "expected_listing": "listed",
+      "manufacturer": "LG",
+      "match_method": "blocked_or_captcha",
+      "match_status": "error",
+      "model": "005606",
+      "mpn": "MR25GB",
+      "notes": "Blocked page or CAPTCHA marker detected.",
+      "own_price": "",
+      "review_decision": "",
+      "review_notes": "",
+      "reviewed_at": "",
+      "reviewed_by": "",
+      "reviewed_url": "",
+      "searched_queries": "LG MR25GB",
+      "source_domain": "www.skroutz.gr",
+      "source_name": "skroutz",
+      "source_type": "marketplace"
+    },
+    "candidate_price": "",
+    "candidate_title": "",
+    "candidate_url": "https://www.skroutz.gr/search?keyphrase=LG+MR25GB",
+    "canonical_url": "https://www.skroutz.gr/search?keyphrase=LG+MR25GB",
+    "checked_at": "2026-05-03T12:00:00+00:00",
+    "competing_candidates_count": 0,
+    "confidence_score": 0.0,
+    "evidence_json": {
+      "blocked_or_captcha": true,
+      "body_text_sample": "",
+      "brand": {
+        "expected": "LG",
+        "found": false,
+        "fragment": ""
+      },
+      "candidate_price": "",
+      "canonical_url": "https://www.skroutz.gr/search?keyphrase=LG+MR25GB",
+      "category": {
+        "compatible": false,
+        "expected": "ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+        "fragment": ""
+      },
+      "error_code": "blocked_or_captcha",
+      "error_message": "Blocked page or CAPTCHA marker detected.",
+      "final_url": "https://www.skroutz.gr/search?keyphrase=LG+MR25GB",
+      "jsonld_products": [],
+      "model": {
+        "expected": "005606",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "mpn": {
+        "expected": "MR25GB",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "price": {
+        "compatible": null
+      },
+      "requested_url": "https://www.skroutz.gr/search?keyphrase=LG+MR25GB",
+      "title": "",
+      "title_matched_tokens": [],
+      "title_only": false,
+      "title_similarity": 0.0
+    },
+    "expected_listing": "listed",
+    "manufacturer": "LG",
+    "match_method": "blocked_or_captcha",
+    "match_status": "error",
+    "model": "005606",
+    "mpn": "MR25GB",
+    "notes": "Blocked page or CAPTCHA marker detected.",
+    "run_id": "snapshot-run",
+    "searched_queries": [
+      "LG MR25GB"
+    ],
+    "source_domain": "www.skroutz.gr",
+    "source_name": "skroutz",
+    "source_type": "marketplace",
+    "status": "error"
+  },
+  "high_confidence_match": {
+    "artifact_row": {
+      "candidate_price": "19.00",
+      "candidate_title": "LG MR25GB Magic Remote Control",
+      "candidate_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+      "canonical_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+      "catalog_name": "LG MR25GB Magic Remote Control",
+      "catalog_product_id": 5606,
+      "category": "ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+      "checked_at": "2026-05-03T12:00:00+00:00",
+      "competing_candidates_count": 0,
+      "confidence_score": "1.0000",
+      "evidence_brand": "found:LG",
+      "evidence_category": "found:control control",
+      "evidence_model": "missing",
+      "evidence_mpn": "found:MR25GB",
+      "evidence_price": "unknown",
+      "expected_listing": "listed",
+      "manufacturer": "LG",
+      "match_method": "exact_mpn_and_brand",
+      "match_status": "matched",
+      "model": "005606",
+      "mpn": "MR25GB",
+      "notes": "",
+      "own_price": "",
+      "review_decision": "",
+      "review_notes": "",
+      "reviewed_at": "",
+      "reviewed_by": "",
+      "reviewed_url": "",
+      "searched_queries": "LG MR25GB",
+      "source_domain": "www.skroutz.gr",
+      "source_name": "skroutz",
+      "source_type": "marketplace"
+    },
+    "candidate_price": "19.00",
+    "candidate_title": "LG MR25GB Magic Remote Control",
+    "candidate_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+    "canonical_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+    "checked_at": "2026-05-03T12:00:00+00:00",
+    "competing_candidates_count": 0,
+    "confidence_score": 1.0,
+    "evidence_json": {
+      "blocked_or_captcha": false,
+      "body_text_sample": "LG MR25GB Magic Remote Control Brand LG MPN MR25GB TV Control 19,00 €",
+      "brand": {
+        "expected": "LG",
+        "found": true,
+        "fragment": "LG"
+      },
+      "candidate_price": "19.00",
+      "canonical_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+      "category": {
+        "compatible": true,
+        "expected": "ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+        "fragment": "control control"
+      },
+      "error_code": "",
+      "error_message": "",
+      "final_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+      "jsonld_products": [
+        {
+          "@type": "Product",
+          "brand": "LG",
+          "category": "TV Control",
+          "mpn": "MR25GB",
+          "name": "LG MR25GB Magic Remote Control"
+        }
+      ],
+      "model": {
+        "expected": "005606",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "mpn": {
+        "expected": "MR25GB",
+        "found": true,
+        "fragment": "MR25GB",
+        "source": "jsonld"
+      },
+      "price": {
+        "compatible": null
+      },
+      "requested_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+      "title": "LG MR25GB Magic Remote Control",
+      "title_matched_tokens": [
+        "lg",
+        "mr25gb",
+        "magic",
+        "remote",
+        "control"
+      ],
+      "title_only": false,
+      "title_similarity": 1.0
+    },
+    "expected_listing": "listed",
+    "manufacturer": "LG",
+    "match_method": "exact_mpn_and_brand",
+    "match_status": "matched",
+    "model": "005606",
+    "mpn": "MR25GB",
+    "notes": "",
+    "run_id": "snapshot-run",
+    "searched_queries": [
+      "LG MR25GB"
+    ],
+    "source_domain": "www.skroutz.gr",
+    "source_name": "skroutz",
+    "source_type": "marketplace",
+    "status": "pending"
+  },
+  "needs_review": {
+    "artifact_row": {
+      "candidate_price": "19.00",
+      "candidate_title": "LG MR25GB Magic Remote Control",
+      "candidate_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "canonical_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "catalog_name": "LG MR25GB Magic Remote Control",
+      "catalog_product_id": 5606,
+      "category": "ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+      "checked_at": "2026-05-03T12:00:00+00:00",
+      "competing_candidates_count": 0,
+      "confidence_score": "0.8500",
+      "evidence_brand": "missing",
+      "evidence_category": "found:control control",
+      "evidence_model": "missing",
+      "evidence_mpn": "found:MR25GB",
+      "evidence_price": "unknown",
+      "expected_listing": "listed",
+      "manufacturer": "Sony",
+      "match_method": "manual_review_required",
+      "match_status": "needs_review",
+      "model": "005606",
+      "mpn": "MR25GB",
+      "notes": "Exact MPN found without matching brand evidence.",
+      "own_price": "",
+      "review_decision": "",
+      "review_notes": "",
+      "reviewed_at": "",
+      "reviewed_by": "",
+      "reviewed_url": "",
+      "searched_queries": "Sony MR25GB",
+      "source_domain": "www.electronet.gr",
+      "source_name": "electronet",
+      "source_type": "direct_vendor"
+    },
+    "candidate_price": "19.00",
+    "candidate_title": "LG MR25GB Magic Remote Control",
+    "candidate_url": "https://www.electronet.gr/product/lg-magic-remote",
+    "canonical_url": "https://www.electronet.gr/product/lg-magic-remote",
+    "checked_at": "2026-05-03T12:00:00+00:00",
+    "competing_candidates_count": 0,
+    "confidence_score": 0.85,
+    "evidence_json": {
+      "blocked_or_captcha": false,
+      "body_text_sample": "LG MR25GB Magic Remote Control Brand LG MPN MR25GB TV Control 19,00 €",
+      "brand": {
+        "expected": "Sony",
+        "found": false,
+        "fragment": ""
+      },
+      "candidate_price": "19.00",
+      "canonical_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "category": {
+        "compatible": true,
+        "expected": "ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+        "fragment": "control control"
+      },
+      "error_code": "",
+      "error_message": "",
+      "final_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "jsonld_products": [
+        {
+          "@type": "Product",
+          "brand": "LG",
+          "category": "TV Control",
+          "mpn": "MR25GB",
+          "name": "LG MR25GB Magic Remote Control"
+        }
+      ],
+      "model": {
+        "expected": "005606",
+        "found": false,
+        "fragment": "",
+        "source": ""
+      },
+      "mpn": {
+        "expected": "MR25GB",
+        "found": true,
+        "fragment": "MR25GB",
+        "source": "jsonld"
+      },
+      "price": {
+        "compatible": null
+      },
+      "requested_url": "https://www.electronet.gr/product/lg-magic-remote",
+      "title": "LG MR25GB Magic Remote Control",
+      "title_matched_tokens": [
+        "lg",
+        "mr25gb",
+        "magic",
+        "remote",
+        "control"
+      ],
+      "title_only": false,
+      "title_similarity": 1.0
+    },
+    "expected_listing": "listed",
+    "manufacturer": "Sony",
+    "match_method": "manual_review_required",
+    "match_status": "needs_review",
+    "model": "005606",
+    "mpn": "MR25GB",
+    "notes": "Exact MPN found without matching brand evidence.",
+    "run_id": "snapshot-run",
+    "searched_queries": [
+      "Sony MR25GB"
+    ],
+    "source_domain": "www.electronet.gr",
+    "source_name": "electronet",
+    "source_type": "direct_vendor",
+    "status": "needs_review"
+  }
+}

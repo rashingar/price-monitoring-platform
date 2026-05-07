@@ -1,0 +1,38 @@
+{
+  "bestprice": {
+    "invalid_listing_url_rejected": true,
+    "source_domain": "www.bestprice.gr",
+    "source_type": "marketplace",
+    "valid_product_url_accepted": true
+  },
+  "electronet": {
+    "invalid_listing_url_rejected": true,
+    "source_domain": "www.electronet.gr",
+    "source_type": "direct_vendor",
+    "valid_product_url_accepted": true
+  },
+  "kotsovolos": {
+    "invalid_listing_url_rejected": true,
+    "source_domain": "www.kotsovolos.gr",
+    "source_type": "direct_vendor",
+    "valid_product_url_accepted": true
+  },
+  "plaisio": {
+    "invalid_listing_url_rejected": true,
+    "source_domain": "www.plaisio.gr",
+    "source_type": "direct_vendor",
+    "valid_product_url_accepted": true
+  },
+  "public": {
+    "invalid_listing_url_rejected": true,
+    "source_domain": "www.public.gr",
+    "source_type": "direct_vendor",
+    "valid_product_url_accepted": true
+  },
+  "skroutz": {
+    "invalid_listing_url_rejected": true,
+    "source_domain": "www.skroutz.gr",
+    "source_type": "marketplace",
+    "valid_product_url_accepted": true
+  }
+}

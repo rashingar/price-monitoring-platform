@@ -1,0 +1,488 @@
+import csv
+import sys
+from datetime import datetime, timezone
+from decimal import Decimal
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from ecommerce.api import routes_source_url_agent  # noqa: E402
+from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.jobs import source_url_agent as source_url_agent_job  # noqa: E402
+from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent  # noqa: E402
+from ecommerce.source_url_agent.artifacts import write_run_artifacts  # noqa: E402
+from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
+from ecommerce.source_url_agent.evidence import PageEvidence, extract_page_evidence  # noqa: E402
+from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
+from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
+from ecommerce.source_url_agent.search import SourceSearchResult  # noqa: E402
+from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
+
+
+NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
+
+
+def _sqlite_url(tmp_path: Path) -> str:
+    return f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+
+
+def _create_schema(database_url: str) -> None:
+    Base.metadata.create_all(get_engine(database_url))
+
+
+def _product(**overrides) -> AgentProduct:
+    values = {
+        "catalog_product_id": None,
+        "catalog_source": "sourceCata",
+        "model": "005606",
+        "mpn": "MR25GB",
+        "name": "LG MR25GB Magic Remote Control",
+        "category": "ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+        "manufacturer": "LG",
+        "price": None,
+        "quantity": 1,
+        "status": 1,
+        "bestprice_status": 1,
+        "skroutz_status": 1,
+    }
+    values.update(overrides)
+    return AgentProduct(**values)
+
+
+def _catalog_product(session, *, model: str = "005606", mpn: str = "MR25GB") -> CatalogProductRow:
+    row = CatalogProductRow(
+        catalog_source="sourceCata",
+        model=model,
+        mpn=mpn,
+        name="LG MR25GB Magic Remote Control",
+        category="ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+        raw_category="ΕΙΚΟΝΑ & ΗΧΟΣ///Αξεσουάρ///TV Control",
+        manufacturer="LG",
+        status=1,
+        active=True,
+        imported_at=NOW,
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def _html(*, include_mpn: bool = True, title: str = "LG MR25GB Magic Remote Control") -> str:
+    mpn = "MR25GB" if include_mpn else "OTHER"
+    return f"""
+    <html>
+      <head>
+        <title>{title}</title>
+        <link rel="canonical" href="https://www.skroutz.gr/s/123/LG-MR25GB.html" />
+        <script type="application/ld+json">
+        {{
+          "@type": "Product",
+          "name": "{title}",
+          "brand": {{"name": "LG"}},
+          "mpn": "{mpn}",
+          "category": "TV Control",
+          "offers": {{"price": "19.00", "priceCurrency": "EUR"}}
+        }}
+        </script>
+      </head>
+      <body>Brand LG MPN {mpn} TV Control 19,00 €</body>
+    </html>
+    """
+
+
+def _candidate(product: AgentProduct, source_name: str = "skroutz"):
+    source = load_source_registry().get(source_name)
+    evidence = extract_page_evidence(
+        product=product,
+        source=source,
+        requested_url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+        final_url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+        html_text=_html(),
+    )
+    score = score_candidate(product=product, source=source, evidence=evidence)
+    return candidate_from_evidence(
+        run_id="run-1",
+        product=product,
+        source=source,
+        evidence=evidence,
+        score=score,
+        expected_listing="listed",
+        competing_candidates_count=0,
+        searched_queries=["MR25GB"],
+    )
+
+
+def _allow_source_url_agent_run_database(monkeypatch) -> None:
+    monkeypatch.setattr(routes_source_url_agent, "_require_source_url_agent_run_database_ready", lambda: None)
+
+
+def _fake_resolver(product, source) -> SourceSearchResult:
+    url = f"https://{source.source_domain}/item/{product.model}/lg-remote.html"
+    evidence = PageEvidence(
+        requested_url=url,
+        final_url=url,
+        canonical_url=url,
+        title=f"{product.manufacturer} {product.mpn} remote control",
+        body_text_sample=f"{product.manufacturer} {product.mpn}",
+        candidate_price=Decimal("18.50"),
+        exact_mpn_found=True,
+        exact_mpn_fragment=product.mpn,
+        exact_mpn_source="title",
+        exact_model_found=False,
+        exact_model_fragment="",
+        exact_model_source="",
+        brand_found=True,
+        brand_fragment=product.manufacturer,
+        category_compatible=True,
+        category_fragment=product.category,
+        title_similarity=0.95,
+        title_matched_tokens=(product.manufacturer.lower(), product.mpn.lower()),
+        price_compatible=None,
+        jsonld_products=(),
+    )
+    return SourceSearchResult(evidence=[evidence], searched_queries=[f"{product.manufacturer} {product.mpn}"], searched_urls=[], errors=[])
+
+
+def _run_api_client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
+    monkeypatch.chdir(tmp_path)
+    _allow_source_url_agent_run_database(monkeypatch)
+    monkeypatch.setattr(routes_source_url_agent, "SOURCE_URL_AGENT_API_RESOLVER", _fake_resolver)
+    database_url = _sqlite_url(tmp_path)
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    _create_schema(database_url)
+    return TestClient(create_app()), database_url
+
+
+def test_artifact_writing_creates_required_files(tmp_path: Path) -> None:
+    product = _product()
+    candidate = _candidate(product)
+
+    paths = write_run_artifacts(
+        run_id="run-1",
+        candidates=[candidate],
+        summary={"run_id": "run-1", "selected_count": 1},
+        output_dir=tmp_path,
+    )
+
+    assert paths.source_url_results.exists()
+    assert paths.approved_source_urls.exists()
+    assert paths.needs_review_source_urls.exists()
+    assert paths.not_found_source_urls.exists()
+    assert paths.errors.exists()
+    assert paths.source_url_run_summary.exists()
+    assert paths.searched_queries.exists()
+    assert paths.rule_suggestions.exists()
+
+
+def test_agent_persists_run_and_candidate_models_when_apply_high_confidence(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    registry = load_source_registry()
+    with session_scope(database_url) as session:
+        row = _catalog_product(session)
+        product = _product(catalog_product_id=row.id)
+        source = registry.get("skroutz")
+        evidence = extract_page_evidence(
+            product=product,
+            source=source,
+            requested_url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+            final_url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+            html_text=_html(),
+        )
+
+        def resolver(_product, _source):
+            return SourceSearchResult(evidence=[evidence], searched_queries=["MR25GB"], searched_urls=[], errors=[])
+
+        result = run_source_url_agent(
+            products=[product],
+            options=SourceUrlAgentOptions(
+                mode="csv",
+                source="skroutz",
+                output_dir=tmp_path / "runs",
+                dry_run=False,
+                apply_high_confidence=True,
+            ),
+            registry=registry,
+            session=session,
+            resolver=resolver,
+        )
+
+        assert session.query(SourceUrlDiscoveryRun).count() == 1
+        assert session.query(SourceUrlCandidate).count() == 1
+        assert session.query(SourceUrl).count() == 1
+
+    assert result.summary["matched_count"] == 1
+
+
+def test_agent_persists_high_confidence_needs_review_candidates_during_dry_run(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    registry = load_source_registry()
+    with session_scope(database_url) as session:
+        row = _catalog_product(session)
+        product = _product(catalog_product_id=row.id)
+        source = registry.get("electronet")
+        evidence = extract_page_evidence(
+            product=product,
+            source=source,
+            requested_url="https://www.electronet.gr/lg-remote",
+            final_url="https://www.electronet.gr/lg-remote",
+            html_text="""
+            <html>
+              <head>
+                <title>Magic Remote</title>
+                <link rel="canonical" href="https://www.electronet.gr/lg-remote" />
+              </head>
+              <body>Compatible with MR25GB remote controls</body>
+            </html>
+            """,
+        )
+
+        def resolver(_product, _source):
+            return SourceSearchResult(evidence=[evidence], searched_queries=["LG MR25GB"], searched_urls=[], errors=[])
+
+        result = run_source_url_agent(
+            products=[product],
+            options=SourceUrlAgentOptions(
+                mode="catalog",
+                source="electronet",
+                output_dir=tmp_path / "runs",
+                dry_run=True,
+                apply_high_confidence=False,
+            ),
+            registry=registry,
+            session=session,
+            resolver=resolver,
+        )
+
+        stored_candidate = session.query(SourceUrlCandidate).one()
+
+        assert session.query(SourceUrlDiscoveryRun).count() == 1
+        assert session.query(SourceUrl).count() == 0
+        assert stored_candidate.match_status == "needs_review"
+        assert stored_candidate.status == "needs_review"
+        assert stored_candidate.confidence_score >= Decimal("0.8000")
+        assert stored_candidate.candidate_url == "https://www.electronet.gr/lg-remote"
+
+    assert result.summary["needs_review_count"] == 1
+    assert result.summary["persisted_candidate_count"] == 1
+
+
+def test_agent_discards_low_confidence_candidates_from_storage_and_artifacts(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    registry = load_source_registry()
+    with session_scope(database_url) as session:
+        row = _catalog_product(session)
+        product = _product(catalog_product_id=row.id)
+        source = registry.get("bestprice")
+        evidence = extract_page_evidence(
+            product=product,
+            source=source,
+            requested_url="https://www.bestprice.gr/item/999/lg-remote.html",
+            final_url="https://www.bestprice.gr/item/999/lg-remote.html",
+            html_text="""
+            <html>
+              <head>
+                <title>LG Magic Remote | BestPrice.gr</title>
+                <link rel="canonical" href="https://www.bestprice.gr/item/999/lg-remote.html" />
+              </head>
+              <body>Brand LG compatible with MR25GB remote controls</body>
+            </html>
+            """,
+        )
+
+        def resolver(_product, _source):
+            return SourceSearchResult(evidence=[evidence], searched_queries=["LG MR25GB"], searched_urls=[], errors=[])
+
+        result = run_source_url_agent(
+            products=[product],
+            options=SourceUrlAgentOptions(
+                mode="catalog",
+                source="bestprice",
+                output_dir=tmp_path / "runs",
+                dry_run=True,
+                apply_high_confidence=False,
+            ),
+            registry=registry,
+            session=session,
+            resolver=resolver,
+        )
+
+        assert session.query(SourceUrlDiscoveryRun).count() == 1
+        assert session.query(SourceUrlCandidate).count() == 0
+        assert session.query(SourceUrl).count() == 0
+
+    with result.artifacts.source_url_results.open("r", encoding="utf-8", newline="") as handle:
+        assert list(csv.DictReader(handle)) == []
+    assert result.summary["needs_review_count"] == 1
+    assert result.summary["persisted_candidate_count"] == 0
+    assert result.summary["discarded_low_confidence_candidate_count"] == 1
+
+
+def test_agent_persists_matched_candidates_during_dry_run_without_source_url_write(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    registry = load_source_registry()
+    with session_scope(database_url) as session:
+        row = _catalog_product(session)
+        product = _product(catalog_product_id=row.id)
+        source = registry.get("skroutz")
+        evidence = extract_page_evidence(
+            product=product,
+            source=source,
+            requested_url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+            final_url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+            html_text=_html(),
+        )
+
+        def resolver(_product, _source):
+            return SourceSearchResult(evidence=[evidence], searched_queries=["MR25GB"], searched_urls=[], errors=[])
+
+        result = run_source_url_agent(
+            products=[product],
+            options=SourceUrlAgentOptions(
+                mode="catalog",
+                source="skroutz",
+                output_dir=tmp_path / "runs",
+                dry_run=True,
+                apply_high_confidence=False,
+            ),
+            registry=registry,
+            session=session,
+            resolver=resolver,
+        )
+
+        stored_candidate = session.query(SourceUrlCandidate).one()
+
+        assert session.query(SourceUrlDiscoveryRun).count() == 1
+        assert session.query(SourceUrl).count() == 0
+        assert stored_candidate.match_status == "matched"
+        assert stored_candidate.status == "pending"
+
+    assert result.summary["matched_count"] == 1
+    assert result.summary["persisted_candidate_count"] == 1
+
+
+def test_source_url_agent_csv_run_requires_database_for_direct_persistence(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
+    monkeypatch.chdir(tmp_path)
+    input_path = tmp_path / "input.csv"
+    input_path.write_text("model,mpn,name\n005606,MR25GB,LG Remote\n", encoding="utf-8")
+
+    code = source_url_agent_job.main(["run", "--input", str(input_path), "--source", "skroutz"])
+
+    assert code == 1
+    assert "requires ECOMMERCE_DATABASE_URL" in capsys.readouterr().err
+
+
+def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidates(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+
+    response = client.post(
+        "/api/vendor-sources/agent/runs",
+        json={
+            "source": "bestprice",
+            "mode": "catalog",
+            "catalog_product_id": product.id,
+            "limit": 1,
+            "dry_run": True,
+            "max_products_per_batch": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_id"]
+    assert payload["dry_run"] is True
+    assert payload["summary"]["selected_count"] == 1
+    assert payload["summary"]["matched_count"] == 1
+    assert payload["summary"]["persisted_candidate_count"] == 1
+    assert any(item["artifact_key"] == "source_url_run_summary" for item in payload["artifacts"])
+    assert all(item["is_allowed"] for item in payload["artifacts"])
+    with session_scope(database_url) as session:
+        run = session.query(SourceUrlDiscoveryRun).one()
+        candidate = session.query(SourceUrlCandidate).one()
+        assert run.run_id == payload["run_id"]
+        assert run.source_name == "bestprice"
+        assert candidate.run_id == payload["run_id"]
+        assert candidate.match_status == "matched"
+    history = client.get("/api/vendor-sources/agent/runs")
+    detail = client.get(f"/api/vendor-sources/agent/runs/{payload['run_id']}")
+    assert history.status_code == 200
+    assert history.json()["items"][0]["run_id"] == payload["run_id"]
+    assert detail.status_code == 200
+    assert detail.json()["run_id"] == payload["run_id"]
+    assert detail.json()["artifacts"]
+
+
+def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+
+    response = client.post(
+        "/api/vendor-sources/agent/runs",
+        json={
+            "source": "electronet",
+            "mode": "catalog",
+            "catalog_product_id": product.id,
+            "limit": 1,
+            "dry_run": True,
+            "max_products_per_batch": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "electronet"
+    history = client.get("/api/vendor-sources/agent/runs")
+    assert history.status_code == 200
+    assert history.json()["items"][0]["run_id"] == payload["run_id"]
+
+
+def test_source_url_agent_run_api_enforces_bounded_default_limit(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+    monkeypatch.setattr(routes_source_url_agent, "DEFAULT_API_MAX_PRODUCTS_PER_BATCH", 2)
+    with session_scope(database_url) as session:
+        for index in range(4):
+            _catalog_product(session, model=f"MODEL-{index}", mpn=f"MPN-{index}")
+
+    response = client.post("/api/vendor-sources/agent/runs", json={"source": "bestprice", "mode": "catalog"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["summary"]["selected_count"] == 2
+    with session_scope(database_url) as session:
+        assert session.query(SourceUrlCandidate).count() == 2
+
+
+def test_source_url_agent_run_artifact_endpoint_returns_safe_metadata(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+
+    run_response = client.post(
+        "/api/vendor-sources/agent/runs",
+        json={"source": "bestprice", "mode": "catalog", "catalog_product_id": product.id, "limit": 1},
+    )
+    run_id = run_response.json()["run_id"]
+    artifact_response = client.get(f"/api/vendor-sources/agent/runs/{run_id}/artifacts")
+
+    assert artifact_response.status_code == 200
+    payload = artifact_response.json()
+    assert payload["run_id"] == run_id
+    names = {item["name"] for item in payload["items"]}
+    assert "source_url_run_summary.json" in names
+    assert all(item["is_allowed"] for item in payload["items"])
+    assert all(item["read_url"].startswith("/api/artifacts/read?path=") for item in payload["items"])

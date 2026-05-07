@@ -46,8 +46,11 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_source_capture_snapshots.py": ("contract", "golden"),
     "test_source_capture_unified.py": ("integration", "db_integration", "runtime"),
     "test_source_catalog.py": ("contract",),
-    "test_source_url_agent.py": ("integration", "db_integration", "runtime"),
-    "test_source_url_agent_api.py": ("smoke", "integration", "db_integration"),
+    "test_source_url_agent.py": ("contract",),
+    "test_source_url_agent_api.py": ("smoke", "integration", "db_contract"),
+    "test_source_url_agent_db_contract.py": ("integration", "db_contract"),
+    "test_source_url_agent_runtime.py": ("integration", "db_integration", "runtime"),
+    "test_source_url_agent_snapshots.py": ("contract", "golden"),
     "test_source_url_import.py": ("integration", "db_contract"),
     "test_source_url_import_api.py": ("smoke", "integration", "db_integration"),
     "test_source_urls_api.py": ("smoke",),
@@ -58,10 +61,6 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
 _TEST_MARKERS: dict[tuple[str, str], tuple[str, ...]] = {
     ("test_price_monitoring_alerts.py", "test_fetch_integration_evaluates_active_alert_rules"): ("runtime",),
     ("test_price_monitoring_alerts.py", "test_fetch_integration_skips_when_no_active_rules"): ("runtime",),
-    ("test_source_url_agent_api.py", "test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidates"): ("runtime",),
-    ("test_source_url_agent_api.py", "test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent"): ("runtime",),
-    ("test_source_url_agent_api.py", "test_source_url_agent_run_api_enforces_bounded_default_limit"): ("runtime",),
-    ("test_source_url_agent_api.py", "test_source_url_agent_run_artifact_endpoint_returns_safe_metadata"): ("runtime",),
 }
 
 _FAST_EXCLUDED_MARKERS = {

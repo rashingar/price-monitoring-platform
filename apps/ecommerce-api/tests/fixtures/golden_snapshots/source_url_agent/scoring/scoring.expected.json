@@ -1,0 +1,50 @@
+{
+  "blocked_non_product_url_remains_error": {
+    "confidence_score": 0.0,
+    "match_method": "blocked_or_captcha",
+    "match_status": "error",
+    "notes": "Blocked page or CAPTCHA marker detected."
+  },
+  "blocked_valid_product_url_kept_for_review": {
+    "confidence_score": 0.8,
+    "match_method": "blocked_product_url",
+    "match_status": "needs_review",
+    "notes": "Candidate URL matches source product URL rules but the page was blocked during fetch."
+  },
+  "exact_mpn_brand_at_threshold_needs_review": {
+    "confidence_score": 0.9,
+    "match_method": "exact_mpn_and_brand",
+    "match_status": "needs_review",
+    "notes": "Visible price is far from own price."
+  },
+  "exact_mpn_without_brand_needs_review": {
+    "confidence_score": 0.85,
+    "match_method": "manual_review_required",
+    "match_status": "needs_review",
+    "notes": "Exact MPN found without matching brand evidence."
+  },
+  "high_confidence_exact_mpn_brand": {
+    "confidence_score": 1.0,
+    "match_method": "exact_mpn_and_brand",
+    "match_status": "matched",
+    "notes": ""
+  },
+  "marketplace_body_only_mpn_not_high_confidence": {
+    "confidence_score": 0.6,
+    "match_method": "exact_mpn_and_brand",
+    "match_status": "needs_review",
+    "notes": "Marketplace MPN evidence was found only in body text, not title or structured data."
+  },
+  "multiple_plausible_candidates_needs_review": {
+    "confidence_score": 1.0,
+    "match_method": "exact_mpn_and_brand",
+    "match_status": "needs_review",
+    "notes": "2 plausible candidates found."
+  },
+  "title_only_forced_needs_review": {
+    "confidence_score": 0.5,
+    "match_method": "manual_review_required",
+    "match_status": "needs_review",
+    "notes": "Candidate does not satisfy exact MPN and brand matching. Title-only matches are never auto-applied."
+  }
+}
