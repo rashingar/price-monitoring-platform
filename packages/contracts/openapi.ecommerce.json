@@ -1013,6 +1013,13 @@
             ],
             "title": "Rate Limit Seconds"
           },
+          "selected_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Selected Models",
+            "type": "array"
+          },
           "source": {
             "default": "all",
             "title": "Source",

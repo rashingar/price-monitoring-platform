@@ -406,15 +406,14 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
     assert payload["run_id"]
     assert payload["dry_run"] is True
     assert payload["summary"]["selected_count"] == 1
-    assert payload["summary"]["matched_count"] == 1
-    assert payload["summary"]["persisted_candidate_count"] == 1
-    assert any(item["artifact_key"] == "source_url_run_summary" for item in payload["artifacts"])
-    assert all(item["is_allowed"] for item in payload["artifacts"])
+    assert payload["status"] == "queued"
+    assert payload["summary"]["task_total_count"] == 1
     with session_scope(database_url) as session:
         run = session.query(SourceUrlDiscoveryRun).one()
         candidate = session.query(SourceUrlCandidate).one()
         assert run.run_id == payload["run_id"]
         assert run.source_name == "bestprice"
+        assert run.status == "completed"
         assert candidate.run_id == payload["run_id"]
         assert candidate.match_status == "matched"
     history = client.get("/api/vendor-sources/agent/runs")
@@ -423,6 +422,8 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
     assert history.json()["items"][0]["run_id"] == payload["run_id"]
     assert detail.status_code == 200
     assert detail.json()["run_id"] == payload["run_id"]
+    assert detail.json()["summary"]["matched_count"] == 1
+    assert detail.json()["summary"]["task_finished_count"] == 1
     assert detail.json()["artifacts"]
 
 
@@ -449,6 +450,35 @@ def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_pa
     history = client.get("/api/vendor-sources/agent/runs")
     assert history.status_code == 200
     assert history.json()["items"][0]["run_id"] == payload["run_id"]
+
+
+def test_source_url_agent_run_api_accepts_selected_models(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        _catalog_product(session, model="SELECT-1", mpn="MPN-1")
+        _catalog_product(session, model="SELECT-2", mpn="MPN-2")
+        _catalog_product(session, model="SKIP-1", mpn="MPN-3")
+
+    response = client.post(
+        "/api/vendor-sources/agent/runs",
+        json={
+            "source": "bestprice",
+            "mode": "catalog",
+            "selected_models": ["SELECT-1", "SELECT-2"],
+            "limit": 2,
+            "dry_run": True,
+            "max_products_per_batch": 2,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["summary"]["selected_count"] == 2
+    with session_scope(database_url) as session:
+        run = session.query(SourceUrlDiscoveryRun).one()
+        assert run.filters_json["selected_models"] == ["SELECT-1", "SELECT-2"]
+        candidate_models = {candidate.model for candidate in session.query(SourceUrlCandidate).all()}
+        assert candidate_models == {"SELECT-1", "SELECT-2"}
 
 
 def test_source_url_agent_run_api_enforces_bounded_default_limit(tmp_path: Path, monkeypatch) -> None:

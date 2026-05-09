@@ -76,6 +76,7 @@ import type {
   SourceUrlAgentRun,
   SourceUrlAgentRunArtifactsResponse,
   SourceUrlAgentRunRequest,
+  SourceUrlAgentTask,
   SourceUrlAgentRunSummary,
   SkroutzNetworkCapturedEndpoint,
   SkroutzNetworkDiagnosticReport,
@@ -786,6 +787,8 @@ const SOURCE_URL_AGENT_RUN_COUNTERS = [
   "high_confidence_count",
   "applied_count",
   "skipped_count",
+  "task_total_count",
+  "task_finished_count",
 ] as const;
 
 function normalizeSourceUrlAgentRunSummary(payload: unknown): SourceUrlAgentRunSummary {
@@ -794,7 +797,30 @@ function normalizeSourceUrlAgentRunSummary(payload: unknown): SourceUrlAgentRunS
   return SOURCE_URL_AGENT_RUN_COUNTERS.reduce<SourceUrlAgentRunSummary>((summary, key) => {
     summary[key] = normalizeCounter(source[key]);
     return summary;
-  }, {});
+  }, { task_counts: normalizeNumberRecord(source.task_counts) });
+}
+
+function normalizeSourceUrlAgentTask(value: unknown): SourceUrlAgentTask | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    ...value,
+    id: normalizeNullableId(value.id),
+    run_id: normalizeNullableId(value.run_id),
+    catalog_product_id: normalizeNullableId(value.catalog_product_id),
+    model: normalizeNullableString(value.model),
+    source_name: normalizeNullableString(value.source_name),
+    status: normalizeNullableString(value.status) ?? "unknown",
+    match_status: normalizeNullableString(value.match_status),
+    candidate_count: normalizeCounter(value.candidate_count),
+    error_message: normalizeNullableString(value.error_message),
+    started_at: normalizeNullableString(value.started_at),
+    completed_at: normalizeNullableString(value.completed_at),
+    created_at: normalizeNullableString(value.created_at),
+    updated_at: normalizeNullableString(value.updated_at),
+  };
 }
 
 function normalizeSourceUrlAgentRun(value: unknown): SourceUrlAgentRun | null {
@@ -814,6 +840,10 @@ function normalizeSourceUrlAgentRun(value: unknown): SourceUrlAgentRun | null {
   const summarySource = isRecord(source.summary) ? source.summary : source;
   const summary = normalizeSourceUrlAgentRunSummary(summarySource);
   const runId = normalizeNullableId(source.run_id ?? source.id);
+  const taskCounts = normalizeNumberRecord(source.task_counts ?? summary.task_counts);
+  const tasks = getArrayPayload(source.tasks, ["items", "tasks", "data", "results"])
+    .map(normalizeSourceUrlAgentTask)
+    .filter((item): item is SourceUrlAgentTask => item !== null);
   const artifacts = getArrayPayload(source.artifacts, ["items", "artifacts", "data", "results"])
     .map(normalizeCommerceArtifact)
     .filter((item): item is ArtifactItem => item !== null);
@@ -834,7 +864,11 @@ function normalizeSourceUrlAgentRun(value: unknown): SourceUrlAgentRun | null {
     limit: normalizeOptionalNumber(source.limit),
     rate_limit_seconds: normalizeOptionalNumber(source.rate_limit_seconds),
     output_dir: normalizeNullableString(source.output_dir),
-    summary,
+    task_counts: taskCounts,
+    task_total_count: normalizeCounter(source.task_total_count ?? summary.task_total_count),
+    task_finished_count: normalizeCounter(source.task_finished_count ?? summary.task_finished_count),
+    tasks,
+    summary: { ...summary, task_counts: taskCounts },
     artifacts,
     warnings: normalizeStringArray(source.warnings),
     created_at: normalizeNullableString(source.created_at),

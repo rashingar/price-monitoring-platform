@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Literal
+from uuid import uuid4
 
-from fastapi import HTTPException, Query
+from fastapi import BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,15 +18,16 @@ from sqlalchemy.orm import Session
 from ecommerce.artifacts import ArtifactPathError, ArtifactPathForbiddenError, artifact_link_payload, list_run_artifacts
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import sanitize_database_error
-from ecommerce.db.models import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, UiViewPreference
+from ecommerce.db.models import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask, UiViewPreference
 from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness, require_database_ready_for_catalog
 from ecommerce.db.repositories import json_safe_value
 from ecommerce.db.session import session_scope
 from ecommerce.db.source_url_repository import create_or_update_imported_source_url, source_url_to_dict
 from ecommerce.source_urls import normalize_source_url
 from ecommerce.source_url_agent.agent import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult, run_source_url_agent
-from ecommerce.source_url_agent.products import SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
-from ecommerce.source_url_agent.sources import SOURCE_CHOICES, load_source_registry
+from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate
+from ecommerce.source_url_agent.products import AgentProduct, SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
+from ecommerce.source_url_agent.sources import SOURCE_CHOICES, SourceDefinition, load_source_registry
 
 ReviewDecision = Literal["accept", "reject", "replace_url"]
 SourceUrlAgentRunMode = Literal["catalog", "csv"]
@@ -85,6 +87,7 @@ class SourceUrlAgentRunRequest(BaseModel):
     offset: int = Field(default=0, ge=0)
     catalog_product_id: int | None = Field(default=None, ge=1)
     model: str | None = None
+    selected_models: list[str] = Field(default_factory=list)
     missing_only: bool = False
     active_only: bool = True
     dry_run: bool = True
@@ -127,6 +130,7 @@ def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, 
         offset=request.offset,
         catalog_product_id=request.catalog_product_id,
         model=_optional_text(request.model),
+        selected_models=_selected_models(request.selected_models),
         missing_only=bool(request.missing_only),
         active_only=bool(request.active_only),
         dry_run=bool(request.dry_run),
@@ -158,6 +162,7 @@ def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, 
                     offset=request.offset,
                     catalog_product_id=request.catalog_product_id,
                     model=request.model,
+                    selected_models=_selected_models(request.selected_models),
                 )
             result = run_source_url_agent(
                 products=products,
@@ -174,6 +179,313 @@ def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, 
     return _source_url_agent_result_payload(result)
 
 
+def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
+    _require_source_url_agent_run_database_ready()
+    _validate_source_choice(request.source)
+    if request.apply_high_confidence and request.dry_run:
+        raise HTTPException(status_code=400, detail="apply_high_confidence requires dry_run=false.")
+
+    run_id = _make_api_run_id()
+    limit = _api_run_limit(request)
+    input_path = _source_url_agent_input_path(request)
+    selected_models = _selected_models(request.selected_models)
+    source_name = request.source.strip().lower()
+    try:
+        sources = load_source_registry().selected(source_name)
+        with session_scope() as session:
+            products = _products_for_request(
+                session,
+                request=request,
+                limit=limit,
+                input_path=input_path,
+                selected_models=selected_models,
+            )
+            row = _create_queued_discovery_run(
+                session,
+                run_id=run_id,
+                request=request,
+                source_name=source_name,
+                input_path=input_path,
+                selected_count=len(products),
+                task_count=len(products) * len(sources),
+                selected_models=selected_models,
+            )
+            _create_queued_discovery_tasks(session, run_id=run_id, products=products, sources=sources)
+            payload = _discovery_run_to_dict(row, session=session, include_tasks=True)
+    except (FileNotFoundError, SourceUrlAgentInputError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Source URL Agent run enqueue failed: {_safe_db_error(exc)}") from exc
+
+    background_tasks.add_task(_run_enqueued_source_url_agent, run_id, request)
+    return payload
+
+
+def _run_enqueued_source_url_agent(run_id: str, request: SourceUrlAgentRunRequest) -> None:
+    _mark_discovery_run_running(run_id)
+    limit = _api_run_limit(request)
+    max_products_per_batch = request.max_products_per_batch or DEFAULT_API_MAX_PRODUCTS_PER_BATCH
+    input_path = _source_url_agent_input_path(request)
+    selected_models = _selected_models(request.selected_models)
+    options = SourceUrlAgentOptions(
+        mode=request.mode,
+        run_id=run_id,
+        source=request.source.strip().lower(),
+        input_path=input_path,
+        limit=limit,
+        offset=request.offset,
+        catalog_product_id=request.catalog_product_id,
+        model=_optional_text(request.model),
+        selected_models=selected_models,
+        missing_only=bool(request.missing_only),
+        active_only=bool(request.active_only),
+        dry_run=bool(request.dry_run),
+        apply_high_confidence=bool(request.apply_high_confidence),
+        max_products_per_batch=max_products_per_batch,
+        max_searches_per_product_source=request.max_searches_per_product_source,
+        rate_limit_seconds=request.rate_limit_seconds,
+        headed=bool(request.headed),
+        no_browser_cache=bool(request.no_browser_cache),
+        progress_callback=lambda event, product, source, candidates, error: _record_discovery_task_progress(
+            run_id,
+            event=event,
+            product=product,
+            source=source,
+            candidates=candidates,
+            error_message=error,
+        ),
+    )
+    try:
+        with session_scope() as session:
+            products = _products_for_request(
+                session,
+                request=request,
+                limit=limit,
+                input_path=input_path,
+                selected_models=selected_models,
+            )
+            run_source_url_agent(
+                products=products,
+                options=options,
+                session=session,
+                resolver=SOURCE_URL_AGENT_API_RESOLVER,
+            )
+    except Exception as exc:
+        _mark_discovery_run_failed(run_id, str(exc).strip() or exc.__class__.__name__)
+
+
+def _products_for_request(
+    session: Session,
+    *,
+    request: SourceUrlAgentRunRequest,
+    limit: int,
+    input_path: Path | None,
+    selected_models: list[str],
+) -> list[AgentProduct]:
+    if request.mode == "csv":
+        return read_products_from_csv(
+            input_path or Path(),
+            catalog_source=DEFAULT_CATALOG_SOURCE,
+            active_only=request.active_only,
+            limit=limit,
+            offset=request.offset,
+            model=request.model,
+        )
+    return read_products_from_catalog(
+        session,
+        catalog_source=DEFAULT_CATALOG_SOURCE,
+        active_only=request.active_only,
+        limit=limit,
+        offset=request.offset,
+        catalog_product_id=request.catalog_product_id,
+        model=request.model,
+        selected_models=selected_models,
+    )
+
+
+def _create_queued_discovery_run(
+    session: Session,
+    *,
+    run_id: str,
+    request: SourceUrlAgentRunRequest,
+    source_name: str,
+    input_path: Path | None,
+    selected_count: int,
+    task_count: int,
+    selected_models: list[str],
+) -> SourceUrlDiscoveryRun:
+    timestamp = _now()
+    row = SourceUrlDiscoveryRun(
+        run_id=run_id,
+        source_name=source_name,
+        mode=request.mode,
+        status="queued",
+        input_path=str(input_path) if input_path else None,
+        filters_json={
+            "source": source_name,
+            "limit": _api_run_limit(request),
+            "offset": request.offset,
+            "catalog_product_id": request.catalog_product_id,
+            "model": request.model,
+            "selected_models": selected_models,
+            "missing_only": request.missing_only,
+            "active_only": request.active_only,
+            "dry_run": request.dry_run,
+            "apply_high_confidence": request.apply_high_confidence,
+            "max_products_per_batch": request.max_products_per_batch,
+            "max_searches_per_product_source": request.max_searches_per_product_source,
+            "rate_limit_seconds": request.rate_limit_seconds,
+            "headed": request.headed,
+            "no_browser_cache": request.no_browser_cache,
+            "task_count": task_count,
+        },
+        selected_count=selected_count,
+        candidate_count=0,
+        matched_count=0,
+        needs_review_count=0,
+        not_found_count=0,
+        error_count=0,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def _create_queued_discovery_tasks(
+    session: Session,
+    *,
+    run_id: str,
+    products: list[AgentProduct],
+    sources: list[SourceDefinition],
+) -> None:
+    timestamp = _now()
+    for product in products:
+        for source in sources:
+            session.add(
+                SourceUrlDiscoveryTask(
+                    run_id=run_id,
+                    catalog_product_id=product.catalog_product_id,
+                    model=product.model,
+                    source_name=source.source_name,
+                    status="queued",
+                    candidate_count=0,
+                    created_at=timestamp,
+                    updated_at=timestamp,
+                )
+            )
+    session.flush()
+
+
+def _mark_discovery_run_running(run_id: str) -> None:
+    with session_scope() as session:
+        row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
+        if row is None:
+            return
+        timestamp = _now()
+        row.status = "running"
+        row.started_at = row.started_at or timestamp
+        row.updated_at = timestamp
+
+
+def _mark_discovery_run_failed(run_id: str, message: str) -> None:
+    with session_scope() as session:
+        timestamp = _now()
+        row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
+        if row is not None:
+            row.status = "failed"
+            row.completed_at = timestamp
+            row.updated_at = timestamp
+        tasks = session.execute(
+            select(SourceUrlDiscoveryTask).where(
+                SourceUrlDiscoveryTask.run_id == run_id,
+                SourceUrlDiscoveryTask.status.in_(("queued", "running")),
+            )
+        ).scalars().all()
+        for task in tasks:
+            task.status = "failed"
+            task.error_message = message
+            task.completed_at = timestamp
+            task.updated_at = timestamp
+
+
+def _record_discovery_task_progress(
+    run_id: str,
+    *,
+    event: str,
+    product: AgentProduct,
+    source: SourceDefinition,
+    candidates: list[SourceUrlAgentCandidate],
+    error_message: str | None,
+) -> None:
+    with session_scope() as session:
+        task = _find_discovery_task(session, run_id=run_id, product=product, source=source)
+        if task is None:
+            return
+        timestamp = _now()
+        if event == "started":
+            task.status = "running"
+            task.started_at = task.started_at or timestamp
+        else:
+            match_status = _task_match_status(candidates)
+            task.match_status = match_status
+            task.candidate_count = len(candidates)
+            task.error_message = error_message or _task_error_message(candidates)
+            task.status = "failed" if match_status == "error" else "completed"
+            if match_status == "skipped":
+                task.status = "skipped"
+            task.completed_at = timestamp
+        task.updated_at = timestamp
+        _refresh_discovery_run_progress(session, run_id)
+
+
+def _find_discovery_task(
+    session: Session,
+    *,
+    run_id: str,
+    product: AgentProduct,
+    source: SourceDefinition,
+) -> SourceUrlDiscoveryTask | None:
+    statement = select(SourceUrlDiscoveryTask).where(
+        SourceUrlDiscoveryTask.run_id == run_id,
+        SourceUrlDiscoveryTask.source_name == source.source_name,
+    )
+    if product.catalog_product_id is not None:
+        statement = statement.where(SourceUrlDiscoveryTask.catalog_product_id == product.catalog_product_id)
+    else:
+        statement = statement.where(SourceUrlDiscoveryTask.model == product.model)
+    return session.execute(statement.limit(1)).scalar_one_or_none()
+
+
+def _task_match_status(candidates: list[SourceUrlAgentCandidate]) -> str | None:
+    statuses = [candidate.match_status for candidate in candidates]
+    for status in ("error", "needs_review", "matched", "not_found", "skipped"):
+        if status in statuses:
+            return status
+    return statuses[0] if statuses else None
+
+
+def _task_error_message(candidates: list[SourceUrlAgentCandidate]) -> str | None:
+    for candidate in candidates:
+        if candidate.match_status == "error" and candidate.notes:
+            return candidate.notes
+    return None
+
+
+def _refresh_discovery_run_progress(session: Session, run_id: str) -> None:
+    row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
+    if row is None or row.status == "completed":
+        return
+    tasks = session.execute(select(SourceUrlDiscoveryTask).where(SourceUrlDiscoveryTask.run_id == run_id)).scalars().all()
+    row.candidate_count = sum(int(task.candidate_count or 0) for task in tasks)
+    row.matched_count = sum(1 for task in tasks if task.match_status == "matched")
+    row.needs_review_count = sum(1 for task in tasks if task.match_status == "needs_review")
+    row.not_found_count = sum(1 for task in tasks if task.match_status == "not_found")
+    row.error_count = sum(1 for task in tasks if task.match_status == "error" or task.status == "failed")
+    row.updated_at = _now()
+
+
 def list_source_url_agent_runs(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -188,7 +500,7 @@ def list_source_url_agent_runs(
                 .limit(limit)
                 .offset(offset)
             )
-            items = [_discovery_run_to_dict(row) for row in session.execute(statement).scalars().all()]
+            items = [_discovery_run_to_dict(row, session=session) for row in session.execute(statement).scalars().all()]
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Source URL Agent run history query failed: {_safe_db_error(exc)}") from exc
     return {"items": items, "total": total, "limit": limit, "offset": offset}
@@ -201,7 +513,7 @@ def get_source_url_agent_run(run_id: str) -> dict[str, Any]:
             row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
             if row is None:
                 raise HTTPException(status_code=404, detail="Source URL Agent run not found.")
-            payload = _discovery_run_to_dict(row)
+            payload = _discovery_run_to_dict(row, session=session, include_tasks=True)
             payload["artifacts"] = _source_url_agent_artifact_items(run_id)
             return payload
     except HTTPException:
@@ -510,6 +822,18 @@ def _api_run_limit(request: SourceUrlAgentRunRequest) -> int:
     return min(int(limit), int(max_batch), MAX_API_SOURCE_URL_AGENT_LIMIT)
 
 
+def _selected_models(values: list[str]) -> list[str]:
+    selected: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value).strip()
+        if not text or text in seen:
+            continue
+        selected.append(text)
+        seen.add(text)
+    return selected
+
+
 def _source_url_agent_input_path(request: SourceUrlAgentRunRequest) -> Path | None:
     if request.mode != "csv":
         return None
@@ -540,8 +864,15 @@ def _source_url_agent_result_payload(result: SourceUrlAgentResult) -> dict[str, 
     }
 
 
-def _discovery_run_to_dict(row: SourceUrlDiscoveryRun) -> dict[str, Any]:
-    return {
+def _discovery_run_to_dict(
+    row: SourceUrlDiscoveryRun,
+    *,
+    session: Session | None = None,
+    include_tasks: bool = False,
+) -> dict[str, Any]:
+    task_counts = _discovery_task_counts(session, row.run_id) if session is not None else {}
+    filters = row.filters_json if isinstance(row.filters_json, dict) else {}
+    payload = {
         "id": row.id,
         "run_id": row.run_id,
         "source": row.source_name,
@@ -550,6 +881,10 @@ def _discovery_run_to_dict(row: SourceUrlDiscoveryRun) -> dict[str, Any]:
         "status": row.status,
         "input_path": row.input_path,
         "filters_json": json_safe_value(row.filters_json),
+        "dry_run": bool(filters.get("dry_run", True)),
+        "apply_high_confidence": bool(filters.get("apply_high_confidence", False)),
+        "limit": filters.get("limit"),
+        "rate_limit_seconds": filters.get("rate_limit_seconds"),
         "selected_count": row.selected_count,
         "candidate_count": row.candidate_count,
         "matched_count": row.matched_count,
@@ -560,7 +895,59 @@ def _discovery_run_to_dict(row: SourceUrlDiscoveryRun) -> dict[str, Any]:
         "completed_at": json_safe_value(row.completed_at),
         "created_at": json_safe_value(row.created_at),
         "updated_at": json_safe_value(row.updated_at),
+        "task_counts": task_counts,
+        "task_total_count": sum(task_counts.values()) if task_counts else 0,
+        "task_finished_count": sum(int(task_counts.get(status, 0)) for status in ("completed", "failed", "skipped")),
     }
+    payload["summary"] = {
+        "selected_count": row.selected_count,
+        "candidate_count": row.candidate_count,
+        "matched_count": row.matched_count,
+        "needs_review_count": row.needs_review_count,
+        "not_found_count": row.not_found_count,
+        "error_count": row.error_count,
+        "task_counts": task_counts,
+        "task_total_count": payload["task_total_count"],
+        "task_finished_count": payload["task_finished_count"],
+    }
+    if include_tasks and session is not None:
+        payload["tasks"] = _discovery_task_items(session, row.run_id)
+    return payload
+
+
+def _discovery_task_counts(session: Session, run_id: str) -> dict[str, int]:
+    rows = session.execute(
+        select(SourceUrlDiscoveryTask.status, func.count(SourceUrlDiscoveryTask.id))
+        .where(SourceUrlDiscoveryTask.run_id == run_id)
+        .group_by(SourceUrlDiscoveryTask.status)
+    ).all()
+    return {str(status): int(count) for status, count in rows}
+
+
+def _discovery_task_items(session: Session, run_id: str) -> list[dict[str, Any]]:
+    rows = session.execute(
+        select(SourceUrlDiscoveryTask)
+        .where(SourceUrlDiscoveryTask.run_id == run_id)
+        .order_by(SourceUrlDiscoveryTask.id.asc())
+    ).scalars().all()
+    return [
+        {
+            "id": row.id,
+            "run_id": row.run_id,
+            "catalog_product_id": row.catalog_product_id,
+            "model": row.model,
+            "source_name": row.source_name,
+            "status": row.status,
+            "match_status": row.match_status,
+            "candidate_count": row.candidate_count,
+            "error_message": row.error_message,
+            "started_at": json_safe_value(row.started_at),
+            "completed_at": json_safe_value(row.completed_at),
+            "created_at": json_safe_value(row.created_at),
+            "updated_at": json_safe_value(row.updated_at),
+        }
+        for row in rows
+    ]
 
 
 def _source_url_agent_artifact_listing(run_id: str) -> dict[str, Any]:
@@ -881,6 +1268,10 @@ def _require_catalog_database_ready() -> None:
 def _safe_db_error(exc: Exception) -> str:
     message = str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
     return sanitize_database_error(message) or exc.__class__.__name__
+
+
+def _make_api_run_id() -> str:
+    return f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid4().hex[:8]}"
 
 
 def _now() -> datetime:

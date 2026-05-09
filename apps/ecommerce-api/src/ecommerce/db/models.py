@@ -157,6 +157,30 @@ class SourceUrlDiscoveryRun(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class SourceUrlDiscoveryTask(Base):
+    __tablename__ = "source_url_discovery_tasks"
+    __table_args__ = (
+        Index("ix_source_url_discovery_tasks_run_id", "run_id"),
+        Index("ix_source_url_discovery_tasks_status", "status"),
+        Index("ix_source_url_discovery_tasks_model", "model"),
+        Index("ix_source_url_discovery_tasks_source_name", "source_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[str] = mapped_column(String, nullable=False)
+    catalog_product_id: Mapped[int | None] = mapped_column(ForeignKey("catalog_products.id", ondelete="SET NULL"), nullable=True)
+    model: Mapped[str] = mapped_column(String, nullable=False)
+    source_name: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="queued", server_default="queued")
+    match_status: Mapped[str | None] = mapped_column(String, nullable=True)
+    candidate_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class SourceUrlCandidate(Base):
     __tablename__ = "source_url_candidates"
     __table_args__ = (

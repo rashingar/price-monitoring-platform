@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CommerceApiError,
   commerceClient,
@@ -469,6 +470,7 @@ function CatalogReadinessBanner({
 }
 
 export function CatalogPage() {
+  const navigate = useNavigate();
   const initialLayoutPreferences = useMemo(() => readCatalogLayoutPreferences(), []);
   const filterResetMountedRef = useRef(false);
   const [persistedState, setPersistedState, resetPersistedState] =
@@ -526,6 +528,8 @@ export function CatalogPage() {
   const [runResult, setRunResult] = useState<PriceMonitoringSelectionResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [isRunLoading, setIsRunLoading] = useState(false);
+
+  const [discoveryRunError, setDiscoveryRunError] = useState<string | null>(null);
 
   const isColumnVisible = useCallback(
     (columnId: CatalogColumnId) => visibleColumnIds.has(columnId),
@@ -859,6 +863,7 @@ export function CatalogPage() {
     setSourceUrlProduct(null);
     setPreviewResult(null);
     setRunResult(null);
+    setDiscoveryRunError(null);
   };
 
   const buildSelectionBody = (dryRun: boolean) =>
@@ -903,6 +908,22 @@ export function CatalogPage() {
     } finally {
       setIsRunLoading(false);
     }
+  };
+
+  const createVendorSourceDiscoveryRun = async () => {
+    const selected = Array.from(selectedModels);
+    if (selected.length === 0) {
+      setDiscoveryRunError("Select at least one product before creating a vendor source discovery run.");
+      return;
+    }
+
+    setDiscoveryRunError(null);
+    const params = new URLSearchParams({
+      models: selected.join(","),
+      source: "all",
+      auto_launch: "1",
+    });
+    navigate(`/vendor-sources/runs?${params.toString()}`);
   };
 
   const totalPages = Math.max(
@@ -1187,6 +1208,19 @@ export function CatalogPage() {
             >
               {isRunLoading ? "Creating..." : "Create price monitoring run"}
             </button>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => void createVendorSourceDiscoveryRun()}
+              disabled={
+                isRunLoading ||
+                isPreviewLoading ||
+                isCatalogLocked ||
+                selectedModels.size === 0
+              }
+            >
+              Create vendor source discovery run
+            </button>
           </div>
         </div>
 
@@ -1206,6 +1240,7 @@ export function CatalogPage() {
           </div>
         ) : null}
 
+        {discoveryRunError ? <ErrorState message={discoveryRunError} /> : null}
         {areProductsLoading ? <LoadingState label="Loading catalog products..." /> : null}
         {productsError ? (
           <>

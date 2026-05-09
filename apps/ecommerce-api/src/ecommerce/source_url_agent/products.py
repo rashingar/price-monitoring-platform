@@ -114,6 +114,7 @@ def read_products_from_catalog(
     offset: int = 0,
     catalog_product_id: int | None = None,
     model: str | None = None,
+    selected_models: list[str] | None = None,
 ) -> list[AgentProduct]:
     statement = select(CatalogProductRow).where(CatalogProductRow.catalog_source == catalog_source)
     if active_only:
@@ -123,6 +124,9 @@ def read_products_from_catalog(
     selected_model = _optional_text(model)
     if selected_model:
         statement = statement.where(CatalogProductRow.model == selected_model)
+    selected_model_set = _normalized_text_set(selected_models or [])
+    if selected_model_set:
+        statement = statement.where(CatalogProductRow.model.in_(selected_model_set))
     statement = statement.order_by(CatalogProductRow.id.asc()).offset(max(0, offset))
     if limit is not None:
         statement = statement.limit(max(0, limit))
@@ -187,6 +191,10 @@ def _optional_text(value: object) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _normalized_text_set(values: list[str]) -> set[str]:
+    return {text for value in values if (text := _text(value))}
 
 
 def _text(value: object) -> str:

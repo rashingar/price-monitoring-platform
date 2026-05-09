@@ -39,11 +39,13 @@ from ecommerce.source_url_agent.sources import SourceDefinition, SourceRegistry,
 
 
 Resolver = Callable[[AgentProduct, SourceDefinition], SourceSearchResult]
+ProgressCallback = Callable[[str, AgentProduct, SourceDefinition, list[SourceUrlAgentCandidate], str | None], None]
 
 
 @dataclass(frozen=True)
 class SourceUrlAgentOptions:
     mode: str
+    run_id: str | None = None
     source: str = "all"
     input_path: Path | None = None
     output_dir: Path | None = None
@@ -51,6 +53,7 @@ class SourceUrlAgentOptions:
     offset: int = 0
     catalog_product_id: int | None = None
     model: str | None = None
+    selected_models: list[str] | None = None
     missing_only: bool = False
     active_only: bool = True
     dry_run: bool = True
@@ -60,6 +63,7 @@ class SourceUrlAgentOptions:
     rate_limit_seconds: float | None = None
     headed: bool = False
     no_browser_cache: bool = False
+    progress_callback: ProgressCallback | None = None
 
 
 @dataclass(frozen=True)
@@ -81,7 +85,7 @@ def run_source_url_agent(
 ) -> SourceUrlAgentResult:
     registry = registry or load_source_registry()
     sources = registry.selected(options.source)
-    run_id = _make_run_id()
+    run_id = options.run_id or _make_run_id()
     started_at = _now()
     warnings: list[str] = []
     selected_products = _limited_products(products, options)
@@ -208,9 +212,11 @@ def _run_with_resolver(
     for product in products:
         for source in sources:
             expected_listing = product.expected_listing(source.source_name)
+            if options.progress_callback is not None:
+                options.progress_callback("started", product, source, [], None)
             if options.missing_only and session is not None and product.catalog_product_id is not None:
                 if _has_active_source_url(session, product.catalog_product_id, source.source_name):
-                    candidates.append(
+                    source_candidates = [
                         synthetic_candidate(
                             run_id=run_id,
                             product=product,
@@ -222,7 +228,10 @@ def _run_with_resolver(
                             searched_queries=[],
                             notes="Skipped because active source URL already exists for this source.",
                         )
-                    )
+                    ]
+                    candidates.extend(source_candidates)
+                    if options.progress_callback is not None:
+                        options.progress_callback("completed", product, source, source_candidates, None)
                     continue
             search_result = resolver(product, source)
             source_candidates = _candidates_from_search_result(
@@ -233,6 +242,8 @@ def _run_with_resolver(
                 result=search_result,
             )
             candidates.extend(source_candidates)
+            if options.progress_callback is not None:
+                options.progress_callback("completed", product, source, source_candidates, None)
     return candidates
 
 
@@ -311,7 +322,7 @@ def _browser_unavailable_candidates(
     for product in products:
         for source in sources:
             out.append(
-                synthetic_candidate(
+                candidate := synthetic_candidate(
                     run_id=run_id,
                     product=product,
                     source=source,
@@ -323,6 +334,8 @@ def _browser_unavailable_candidates(
                     notes=message,
                 )
             )
+            if options.progress_callback is not None:
+                options.progress_callback("completed", product, source, [candidate], message)
     return out
 
 
@@ -374,11 +387,13 @@ def _limited_products(products: list[AgentProduct], options: SourceUrlAgentOptio
 
 def _filters_json(options: SourceUrlAgentOptions) -> dict:
     return {
+        "run_id": options.run_id,
         "source": options.source,
         "limit": options.limit,
         "offset": options.offset,
         "catalog_product_id": options.catalog_product_id,
         "model": options.model,
+        "selected_models": options.selected_models or [],
         "missing_only": options.missing_only,
         "active_only": options.active_only,
         "dry_run": options.dry_run,

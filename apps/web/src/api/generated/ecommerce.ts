@@ -684,6 +684,8 @@ export interface components {
       offset?: number;
       /** Rate Limit Seconds */
       rate_limit_seconds?: number | null;
+      /** Selected Models */
+      selected_models?: string[];
       /**
        * Source
        * @default all

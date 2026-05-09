@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -201,8 +201,8 @@ def get_vendor_source_capture_run_artifacts(run_id: str) -> dict[str, Any]:
 
 
 @router.post("/agent/runs")
-def launch_vendor_source_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, Any]:
-    return source_url_agent.launch_source_url_agent_run(request)
+def launch_vendor_source_agent_run(request: SourceUrlAgentRunRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
+    return source_url_agent.enqueue_source_url_agent_run(request, background_tasks)
 
 
 @router.get("/agent/runs")

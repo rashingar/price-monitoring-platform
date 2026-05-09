@@ -422,6 +422,7 @@ export interface SourceUrlCandidateListResponse {
 export interface SourceUrlAgentRunRequest {
   mode: "catalog" | string;
   source: "all" | SourceName | string;
+  selected_models?: string[];
   missing_only: boolean;
   active_only: boolean;
   dry_run: boolean;
@@ -441,6 +442,26 @@ export interface SourceUrlAgentRunSummary {
   high_confidence_count?: number;
   applied_count?: number;
   skipped_count?: number;
+  task_total_count?: number;
+  task_finished_count?: number;
+  task_counts?: Record<string, number>;
+  [key: string]: unknown;
+}
+
+export interface SourceUrlAgentTask {
+  id?: string | number | null;
+  run_id?: string | number | null;
+  catalog_product_id?: string | number | null;
+  model?: string | null;
+  source_name?: string | null;
+  status?: string | null;
+  match_status?: string | null;
+  candidate_count?: number;
+  error_message?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   [key: string]: unknown;
 }
 
@@ -458,6 +479,10 @@ export interface SourceUrlAgentRun extends SourceUrlAgentRunSummary {
   rate_limit_seconds?: number | null;
   output_dir?: string | null;
   summary?: SourceUrlAgentRunSummary | null;
+  task_counts?: Record<string, number>;
+  task_total_count?: number;
+  task_finished_count?: number;
+  tasks?: SourceUrlAgentTask[];
   artifacts?: ArtifactItem[];
   warnings?: string[];
   created_at?: string | null;

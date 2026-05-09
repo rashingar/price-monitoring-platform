@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { commerceClient, getCommerceApiErrorMessage } from "../api/commerceClient";
 import type {
   ArtifactItem,
@@ -14,6 +14,7 @@ import { EmptyState, ErrorState, LoadingState } from "../components/layout/State
 const DEFAULT_RUN_REQUEST: SourceUrlAgentRunRequest = {
   mode: "catalog",
   source: "all",
+  selected_models: [],
   missing_only: true,
   active_only: true,
   dry_run: true,
@@ -21,6 +22,38 @@ const DEFAULT_RUN_REQUEST: SourceUrlAgentRunRequest = {
   limit: 20,
   rate_limit_seconds: 2,
 };
+
+function parseSelectedModelsParam(value: string | null): string[] {
+  if (!value) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => {
+      if (!item || seen.has(item)) {
+        return false;
+      }
+      seen.add(item);
+      return true;
+    });
+}
+
+function buildRunRequestFromHandoff(searchParams: URLSearchParams): SourceUrlAgentRunRequest {
+  const selectedModels = parseSelectedModelsParam(searchParams.get("models"));
+  const source = searchParams.get("source")?.trim() || DEFAULT_RUN_REQUEST.source;
+  const selectedCount = selectedModels.length;
+
+  return {
+    ...DEFAULT_RUN_REQUEST,
+    source,
+    selected_models: selectedModels,
+    limit: selectedCount > 0 ? selectedCount : DEFAULT_RUN_REQUEST.limit,
+    max_products_per_batch: selectedCount > 0 ? selectedCount : undefined,
+  };
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -94,17 +127,47 @@ function statusClass(status: unknown): string {
   return "neutral";
 }
 
+function isActiveStatus(status: unknown): boolean {
+  const normalized = typeof status === "string" ? status.toLowerCase() : "";
+  return normalized === "queued" || normalized === "running";
+}
+
 function getCounter(run: SourceUrlAgentRun, key: keyof SourceUrlAgentRun): number {
   const summary = isRecord(run.summary) ? run.summary : {};
   return parseNumberLike(run[key] ?? summary[key]);
 }
 
+function getTaskProgress(run: SourceUrlAgentRun): { finished: number; total: number } {
+  const summary = isRecord(run.summary) ? run.summary : {};
+  const total = parseNumberLike(run.task_total_count ?? summary.task_total_count);
+  const finished = parseNumberLike(run.task_finished_count ?? summary.task_finished_count);
+  return { finished, total };
+}
+
+function formatTaskProgress(run: SourceUrlAgentRun): string {
+  const { finished, total } = getTaskProgress(run);
+  return total > 0 ? `${finished.toLocaleString()} / ${total.toLocaleString()}` : "-";
+}
+
 function makeRunRequest(form: SourceUrlAgentRunRequest): SourceUrlAgentRunRequest {
+  const selectedModels = Array.isArray(form.selected_models)
+    ? parseSelectedModelsParam(form.selected_models.join(","))
+    : [];
+  const selectedCount = selectedModels.length;
+
   return {
     ...form,
     mode: String(form.mode || "catalog"),
     source: String(form.source || "all"),
-    limit: form.limit === null ? null : Math.max(1, Number(form.limit) || DEFAULT_RUN_REQUEST.limit || 20),
+    selected_models: selectedModels,
+    limit:
+      form.limit === null
+        ? null
+        : Math.max(selectedCount || 1, Number(form.limit) || DEFAULT_RUN_REQUEST.limit || 20),
+    max_products_per_batch:
+      selectedCount > 0
+        ? Math.max(selectedCount, Number(form.max_products_per_batch) || selectedCount)
+        : form.max_products_per_batch,
     rate_limit_seconds:
       form.rate_limit_seconds === null
         ? null
@@ -170,7 +233,12 @@ function SummaryItem({ label, value }: { label: string; value: unknown }) {
 }
 
 export function SourceUrlAgentRunsPage() {
-  const [form, setForm] = useState<SourceUrlAgentRunRequest>(DEFAULT_RUN_REQUEST);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handoffModels = useMemo(() => parseSelectedModelsParam(searchParams.get("models")), [searchParams]);
+  const shouldAutoLaunch = searchParams.get("auto_launch") === "1";
+  const autoLaunchKey = searchParams.toString();
+  const autoLaunchStartedRef = useRef<string | null>(null);
+  const [form, setForm] = useState<SourceUrlAgentRunRequest>(() => buildRunRequestFromHandoff(searchParams));
   const [runs, setRuns] = useState<SourceUrlAgentRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -272,11 +340,11 @@ export function SourceUrlAgentRunsPage() {
     [vendorSources],
   );
 
-  const launchRun = async () => {
+  const launchRun = async (requestOverride?: SourceUrlAgentRunRequest) => {
     setIsLaunching(true);
     setNotice(null);
     try {
-      const createdRun = await commerceClient.createSourceUrlAgentRun(makeRunRequest(form));
+      const createdRun = await commerceClient.createSourceUrlAgentRun(makeRunRequest(requestOverride ?? form));
       setRuns((current) => mergeRun(current, createdRun));
       setNotice(`Vendor source discovery run ${getRunId(createdRun)} launched.`);
     } catch (launchError) {
@@ -285,6 +353,24 @@ export function SourceUrlAgentRunsPage() {
       setIsLaunching(false);
     }
   };
+
+  useEffect(() => {
+    const nextRequest = buildRunRequestFromHandoff(searchParams);
+    setForm(nextRequest);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!shouldAutoLaunch || handoffModels.length === 0 || autoLaunchStartedRef.current === autoLaunchKey) {
+      return;
+    }
+
+    autoLaunchStartedRef.current = autoLaunchKey;
+    void launchRun(buildRunRequestFromHandoff(searchParams)).finally(() => {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("auto_launch");
+      setSearchParams(nextParams, { replace: true });
+    });
+  }, [autoLaunchKey, handoffModels.length, searchParams, setSearchParams, shouldAutoLaunch]);
 
   const refreshRun = async (run: SourceUrlAgentRun) => {
     const runId = getRunId(run);
@@ -332,6 +418,18 @@ export function SourceUrlAgentRunsPage() {
   };
 
   const artifacts = artifactResponse?.items ?? [];
+  const hasActiveRuns = runs.some((run) => isActiveStatus(run.status));
+
+  useEffect(() => {
+    if (!hasActiveRuns) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void loadRuns();
+    }, 2_500);
+    return () => window.clearInterval(timer);
+  }, [hasActiveRuns, loadRuns]);
 
   return (
     <div className="page-stack source-url-agent-page">
@@ -348,6 +446,35 @@ export function SourceUrlAgentRunsPage() {
           <li>Do not run full catalog until a 5-product dry-run is verified.</li>
         </ul>
       </section>
+
+      {handoffModels.length > 0 ? (
+        <section className="panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Catalog handoff</p>
+              <h3>
+                {handoffModels.length.toLocaleString()} selected{" "}
+                {handoffModels.length === 1 ? "model" : "models"}
+              </h3>
+            </div>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
+              disabled={isLaunching}
+            >
+              Clear handoff
+            </button>
+          </div>
+          <p className="muted">
+            Discovery is scoped to the selected Catalog models and existing missing-only defaults.
+          </p>
+          <p className="muted">{handoffModels.slice(0, 40).join(", ")}</p>
+          {handoffModels.length > 40 ? (
+            <p className="muted">Showing 40 of {handoffModels.length.toLocaleString()} selected models.</p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="panel">
         <div className="section-heading">
@@ -478,6 +605,9 @@ export function SourceUrlAgentRunsPage() {
           {!form.dry_run ? (
             <p className="form-warning">This is not a dry-run. Verify a 5-product dry-run first.</p>
           ) : null}
+          {isLaunching ? (
+            <LoadingState label="Running browser-based Vendor Sources discovery. This can take several minutes for multi-model selections..." />
+          ) : null}
 
           <div className="button-row">
             <button className="button primary" type="submit" disabled={isLaunching}>
@@ -504,6 +634,13 @@ export function SourceUrlAgentRunsPage() {
           <SummaryItem label="Candidates" value={totals.candidate_count} />
           <SummaryItem label="Needs review" value={totals.needs_review_count} />
           <SummaryItem label="Errors" value={totals.error_count} />
+          <SummaryItem
+            label="Active tasks"
+            value={runs.reduce((count, run) => {
+              const taskCounts = isRecord(run.task_counts) ? run.task_counts : {};
+              return count + parseNumberLike(taskCounts.queued) + parseNumberLike(taskCounts.running);
+            }, 0)}
+          />
         </dl>
 
         {notice ? <p className="form-warning">{notice}</p> : null}
@@ -527,6 +664,7 @@ export function SourceUrlAgentRunsPage() {
                   <th>status</th>
                   <th>selected_count</th>
                   <th>candidate_count</th>
+                  <th>task progress</th>
                   <th>matched_count</th>
                   <th>needs_review_count</th>
                   <th>not_found_count</th>
@@ -553,6 +691,7 @@ export function SourceUrlAgentRunsPage() {
                       </td>
                       <td>{formatNumber(getCounter(run, "selected_count"))}</td>
                       <td>{formatNumber(getCounter(run, "candidate_count"))}</td>
+                      <td>{formatTaskProgress(run)}</td>
                       <td>{formatNumber(getCounter(run, "matched_count"))}</td>
                       <td>{formatNumber(getCounter(run, "needs_review_count"))}</td>
                       <td>{formatNumber(getCounter(run, "not_found_count"))}</td>
