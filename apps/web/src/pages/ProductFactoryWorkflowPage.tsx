@@ -174,6 +174,44 @@ function toStringList(value: unknown): string[] {
     .filter((item) => item.trim().length > 0 && item !== "-");
 }
 
+function getFilterReviewGroupLabel(value: unknown): string {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (isRecord(value)) {
+    for (const key of ["group_name", "group_id", "name", "id"]) {
+      const candidate = value[key];
+      if (typeof candidate === "string" && candidate.trim().length > 0) {
+        return candidate.trim();
+      }
+      if (typeof candidate === "number") {
+        return String(candidate);
+      }
+    }
+  }
+
+  return formatOptional(value);
+}
+
+function getMissingRequiredFilterLabels(filterReview: FilterReview | null): string[] {
+  if (!filterReview || !Array.isArray(filterReview.missing_required_groups)) {
+    return [];
+  }
+
+  return filterReview.missing_required_groups
+    .map((group) => getFilterReviewGroupLabel(group))
+    .filter((group) => group.length > 0 && group !== "-");
+}
+
+function getBlockingMissingRequiredFilterLabels(filterReview: FilterReview | null): string[] {
+  if (!filterReview || (filterReview.approved === true && filterReview.render_blocked !== true)) {
+    return [];
+  }
+
+  return getMissingRequiredFilterLabels(filterReview);
+}
+
 function isArtifactRecord(artifact: Artifact): artifact is Exclude<Artifact, string> {
   return typeof artifact === "object" && artifact !== null;
 }
@@ -354,7 +392,7 @@ function getFilterReviewWarnings(filterReview: FilterReview | null): string[] {
   toStringList(filterReview.render_block_reasons).forEach((reason) => {
     warnings.add(reason);
   });
-  toStringList(filterReview.missing_required_groups).forEach((group) => {
+  getBlockingMissingRequiredFilterLabels(filterReview).forEach((group) => {
     warnings.add(`Missing required filter: ${group}`);
   });
   (filterReview.groups ?? []).forEach((group) => {
@@ -417,7 +455,7 @@ function hasBlockingFilterReviewWork(review: FilterReview | null): boolean {
     return true;
   }
 
-  if (review.render_blocked === true || toStringList(review.missing_required_groups).length > 0) {
+  if (review.render_blocked === true || getBlockingMissingRequiredFilterLabels(review).length > 0) {
     return true;
   }
 
@@ -1127,6 +1165,7 @@ export function ProductFactoryWorkflowPage() {
 
   const authoringBlockReasons = toStringList(authoringStatus?.render_block_reasons);
   const filterWarnings = getFilterReviewWarnings(filterReview);
+  const missingRequiredFilterLabels = getBlockingMissingRequiredFilterLabels(filterReview);
   const visibleFilterReviewWarnings = toStringList(filterReview?.warnings).filter(
     (warning) => warning !== "category_filter_review_not_approved",
   );
@@ -1285,6 +1324,18 @@ export function ProductFactoryWorkflowPage() {
     setActionState((current) => ({
       ...current,
       errors: { ...current.errors, [key]: error },
+    }));
+  }
+
+  function clearFilterReviewErrors() {
+    setActionState((current) => ({
+      ...current,
+      errors: {
+        ...current.errors,
+        filter_load: undefined,
+        filter_save: undefined,
+        filter_approve: undefined,
+      },
     }));
   }
 
@@ -1505,7 +1556,7 @@ export function ProductFactoryWorkflowPage() {
       const review = await apiClient.getFilterReview(targetModel);
       setFilterReview(review);
       if (hasBlockingFilterReviewWork(review)) {
-        const missing = toStringList(review.missing_required_groups);
+        const missing = getBlockingMissingRequiredFilterLabels(review);
         const message = missing.length > 0
           ? `Filter Review requires manual review: missing required filters: ${missing.join(", ")}.`
           : "Filter Review requires manual review before render.";
@@ -1513,6 +1564,7 @@ export function ProductFactoryWorkflowPage() {
         throw new WorkflowHalted(message);
       }
 
+      clearFilterReviewErrors();
       setActionMessage("filter_load", "Filter review loaded with no render blockers.");
       return review;
     } catch (error) {
@@ -1580,6 +1632,7 @@ export function ProductFactoryWorkflowPage() {
         actionKey,
         async () => {
           setFilterReview(await apiClient.getFilterReview(model));
+          clearFilterReviewErrors();
         },
         "Filter review loaded.",
         "Could not load filter review.",
@@ -1668,6 +1721,7 @@ export function ProductFactoryWorkflowPage() {
       async () => {
         await apiClient.saveFilterReview(model, makeFilterReviewSavePayload(filterReview));
         setFilterReview(await apiClient.getFilterReview(model));
+        clearFilterReviewErrors();
       },
       "Filter review saved.",
       "Could not save filter review.",
@@ -1689,6 +1743,7 @@ export function ProductFactoryWorkflowPage() {
       async () => {
         await apiClient.approveFilterReview(model);
         setFilterReview(await apiClient.getFilterReview(model));
+        clearFilterReviewErrors();
       },
       "Filter review approval requested.",
       "Could not approve filter review.",
@@ -2095,11 +2150,11 @@ export function ProductFactoryWorkflowPage() {
                 </ul>
               </div>
             ) : null}
-            {toStringList(filterReview.missing_required_groups).length > 0 ? (
+            {missingRequiredFilterLabels.length > 0 ? (
               <div className="form-warning">
                 <strong>Missing required groups</strong>
                 <ul>
-                  {toStringList(filterReview.missing_required_groups).map((group) => (
+                  {missingRequiredFilterLabels.map((group) => (
                     <li key={group}>{group}</li>
                   ))}
                 </ul>
@@ -2274,7 +2329,9 @@ export function ProductFactoryWorkflowPage() {
       </WorkflowStage>
       ) : null}
 
-      <SettingsPanel disabled={writeDisabled} state={actionState} setActionState={setActionState} />
+      {activeTab === "authoring" ? (
+        <SettingsPanel disabled={writeDisabled} state={actionState} setActionState={setActionState} />
+      ) : null}
 
       <section className="panel">
         <div className="section-heading">

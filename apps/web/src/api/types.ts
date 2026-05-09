@@ -196,7 +196,7 @@ export interface FilterReview {
   approved_at?: string | null;
   render_blocked?: boolean;
   render_block_reasons?: string[];
-  missing_required_groups?: string[];
+  missing_required_groups?: FilterReviewGroup[];
   groups?: FilterReviewGroup[];
   warnings?: string[];
   review_artifact_path?: string | null;

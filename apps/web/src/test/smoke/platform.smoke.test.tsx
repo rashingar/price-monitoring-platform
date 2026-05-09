@@ -1371,6 +1371,62 @@ describe("platform mocked page smoke tests", () => {
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
   });
 
+  it("treats approved Filter Review object-shaped missing groups as non-blocking and hides Authoring defaults outside Authoring", async () => {
+    installMockFetch([
+      { method: "GET", path: "/api/health", response: productFactoryHealth },
+      { method: "GET", path: "/api/settings", response: productFactorySettings },
+      { method: "GET", path: "/api/jobs/by-model/005606", response: { jobs: [] } },
+      {
+        method: "GET",
+        path: "/api/filter-review/005606",
+        response: {
+          model: "005606",
+          category_id: "cat_tv",
+          taxonomy_path: "TV > OLED",
+          filter_category_found: true,
+          approved: true,
+          approved_at: "2026-05-09T08:34:19+00:00",
+          render_blocked: false,
+          render_block_reasons: [],
+          missing_required_groups: [
+            { group_id: "resolution", group_name: "Ανάλυση", required: true, status: "active" },
+          ],
+          groups: [
+            {
+              group_id: "resolution",
+              group_name: "Ανάλυση",
+              required: true,
+              status: "active",
+              resolved_value: "",
+              reviewed_value: "4K UHD",
+              effective_value: "4K UHD",
+              source: "manual_review",
+            },
+          ],
+          warnings: [],
+          review_artifact_path: "work/005606/review/category_filters.override.json",
+        },
+      },
+    ]);
+
+    renderWithRouter("/product-factory/005606");
+
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Filter Review/i }));
+    expect(screen.queryByText("Authoring defaults")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Load Filter Review" }));
+
+    await expect(screen.findByText("Filter Review is ready. Advanced to Render.")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Render" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Filter Reviewsucceeded/i })).toBeInTheDocument();
+    expect(screen.queryByText(/\[object Object\]/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Missing required groups")).not.toBeInTheDocument();
+
+    expect(screen.queryByText("Authoring defaults")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Publish/i }));
+    expect(screen.queryByText("Authoring defaults")).not.toBeInTheDocument();
+  });
+
   it("keeps SEO Meta runnable when Intro Text job fails", async () => {
     const mockFetch = installMockFetch([
       { method: "GET", path: "/api/health", response: productFactoryHealth },
