@@ -18,6 +18,8 @@ WRITING RULES
 - Do not use CTA language or purchase prompts.
 - Do not invent specs, technologies, or claims.
 - Base the copy on the provided product facts, hero summary, and safe key specs only.
+- Use `product.copy_name` as the product name in prose when present.
+- When `product.model_name` is present, use it as the product identifier in prose instead of the raw MPN.
 - Use emphasis only for human readability and topical clarity, not keyword stuffing.
 - Bold only verified facts from context.
 - Prefer bolding the most important factual identifiers and differentiators when verified: brand + model / MPN, product type, size/capacity/dimensions, resolution or performance class, platform/OS/technology family, core technologies, connectivity, energy class, and major verified specs that help a human scan the paragraph.

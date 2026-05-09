@@ -9,8 +9,9 @@ from .intro_text_markup import (
     normalize_intro_text_markup,
     strip_intro_text_markup,
 )
+from .deterministic_fields import extract_commercial_family_from_title
 from .mapping import serialize_meta_keywords
-from .models import CLIInput, ParsedProduct, TaxonomyResolution
+from .models import CLIInput, ParsedProduct, SourceProductData, TaxonomyResolution
 from .normalize import normalize_whitespace
 from .text_health import detect_text_issues
 
@@ -31,6 +32,7 @@ def build_intro_text_context(
     intro_policy: Any | None = None,
 ) -> dict[str, Any]:
     source = parsed.source
+    product_identity = _build_product_identity(source, deterministic_product, taxonomy)
     intro_word_min = _policy_int(intro_policy, "min_words", INTRO_MIN_WORDS)
     intro_word_max = _policy_int(intro_policy, "max_words", INTRO_MAX_WORDS)
     intro_max_emphasized_word_ratio = _policy_float(
@@ -45,10 +47,7 @@ def build_intro_text_context(
             "url": cli.url,
         },
         "product": {
-            "name": str(deterministic_product.get("name", "") or source.name or "").strip(),
-            "brand": str(deterministic_product.get("brand", "") or source.brand or "").strip(),
-            "mpn": str(deterministic_product.get("mpn", "") or source.mpn or "").strip(),
-            "category": str(deterministic_product.get("category_phrase", "") or taxonomy.leaf_category or "").strip(),
+            **product_identity,
             "sub_category": str(taxonomy.sub_category or "").strip(),
         },
         "evidence": {
@@ -85,8 +84,9 @@ def build_seo_meta_context(
     deterministic_product: dict[str, Any],
 ) -> dict[str, Any]:
     source = parsed.source
-    brand = str(deterministic_product.get("brand", "") or source.brand or "").strip()
-    mpn = str(deterministic_product.get("mpn", "") or source.mpn or "").strip()
+    product_identity = _build_product_identity(source, deterministic_product, taxonomy)
+    brand = product_identity["brand"]
+    preferred_identifier = product_identity["preferred_identifier"]
     return {
         "task": SEO_META_TASK,
         "input": {
@@ -94,16 +94,16 @@ def build_seo_meta_context(
             "url": cli.url,
         },
         "product": {
-            "name": str(deterministic_product.get("name", "") or source.name or "").strip(),
-            "brand": brand,
-            "mpn": mpn,
-            "category": str(deterministic_product.get("category_phrase", "") or taxonomy.leaf_category or "").strip(),
+            **product_identity,
             "sub_category": str(taxonomy.sub_category or "").strip(),
             "meta_title": str(deterministic_product.get("meta_title", "") or "").strip(),
             "seo_keyword": str(deterministic_product.get("seo_keyword", "") or "").strip(),
         },
         "evidence": {
-            "meta_description_draft": str(deterministic_product.get("meta_description_draft", "") or "").strip(),
+            "meta_description_draft": _apply_preferred_identifier(
+                str(deterministic_product.get("meta_description_draft", "") or ""),
+                product_identity,
+            ),
             "hero_summary": normalize_whitespace(source.hero_summary),
             "key_specs": _compact_key_specs(source.key_specs),
             "deterministic_differentiators": _compact_values(deterministic_product.get("name_differentiators", [])),
@@ -113,14 +113,15 @@ def build_seo_meta_context(
             "llm_owned_fields": ["product.meta_description", "product.meta_keywords"],
             "meta_description_rule": (
                 "Prefer 2 natural Greek sentences using verified evidence only and no HTML. "
-                "Sentence 1 identifies the product using brand + mpn + category + strongest verified differentiators. "
+                "Sentence 1 identifies the product using brand + preferred_identifier + category + strongest verified differentiators. "
+                "When product.model_name is present, preferred_identifier is the model name and must be used in prose instead of the raw MPN. "
                 "Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context, with evidence priority: "
                 "1. `hero_summary` 2. `key_specs` 3. `deterministic_differentiators`. "
                 "For TVs prefer `115 ιντσών` rather than `115\"`; if `4K` is verified, prefer `4K Ultra HD ανάλυση`; if `8K` is verified, prefer `8K Ultra HD ανάλυση`. "
                 "Aim for roughly `160-260` characters unless verified detail clearly justifies somewhat more."
             ),
-            "meta_keywords_rule": "Return a structured JSON array of verified keywords only. Do not serialize as CSV. Always include brand and mpn/model.",
-            "required_keywords": [value for value in [brand, mpn] if value],
+            "meta_keywords_rule": "Return a structured JSON array of verified keywords only. Do not serialize as CSV. Always include brand and preferred_identifier; when product.model_name is present, prefer it over product.mpn.",
+            "required_keywords": [value for value in [brand, preferred_identifier] if value],
         },
     }
 
@@ -229,6 +230,83 @@ def validate_seo_meta_output(payload: dict[str, Any]) -> tuple[dict[str, Any], l
 
 def count_plain_text_words(value: str) -> int:
     return count_intro_text_words(value)
+
+
+def _build_product_identity(
+    source: SourceProductData,
+    deterministic_product: dict[str, Any],
+    taxonomy: TaxonomyResolution,
+) -> dict[str, str]:
+    name = str(deterministic_product.get("name", "") or source.name or "").strip()
+    brand = str(deterministic_product.get("brand", "") or source.brand or "").strip()
+    mpn = str(deterministic_product.get("mpn", "") or source.mpn or "").strip()
+    category = str(deterministic_product.get("category_phrase", "") or taxonomy.leaf_category or "").strip()
+    model_name = _extract_model_name(source, deterministic_product, brand, mpn)
+    preferred_identifier = model_name or mpn
+    copy_name = _build_copy_name(name, brand, preferred_identifier, category)
+    return {
+        "name": name,
+        "copy_name": copy_name,
+        "brand": brand,
+        "model_name": model_name,
+        "mpn": mpn,
+        "preferred_identifier": preferred_identifier,
+        "category": category,
+    }
+
+
+def _extract_model_name(source: SourceProductData, deterministic_product: dict[str, Any], brand: str, mpn: str) -> str:
+    explicit_candidates = [
+        deterministic_product.get("model_name", ""),
+        deterministic_product.get("commercial_model_name", ""),
+        deterministic_product.get("model_family", ""),
+        source.skroutz_family,
+    ]
+    for candidate in explicit_candidates:
+        model_name = normalize_whitespace(str(candidate or ""))
+        if _looks_like_model_name(model_name, brand, mpn):
+            return model_name
+
+    for title in [source.name, deterministic_product.get("source_name", ""), deterministic_product.get("name", "")]:
+        family = extract_commercial_family_from_title(str(title or ""), brand, mpn)
+        if _looks_like_model_name(family, brand, mpn):
+            return family
+    return ""
+
+
+def _build_copy_name(name: str, brand: str, preferred_identifier: str, category: str) -> str:
+    if not brand or not preferred_identifier:
+        return name
+    parts = [brand, preferred_identifier]
+    if category and category.casefold() not in {brand.casefold(), preferred_identifier.casefold()}:
+        parts.append(category)
+    return normalize_whitespace(" ".join(parts))
+
+
+def _apply_preferred_identifier(value: str, product_identity: dict[str, str]) -> str:
+    normalized = normalize_whitespace(value)
+    model_name = product_identity.get("model_name", "")
+    mpn = product_identity.get("mpn", "")
+    if not normalized or not model_name or not mpn:
+        return normalized
+    return normalize_whitespace(re.sub(re.escape(mpn), model_name, normalized, flags=re.IGNORECASE))
+
+
+def _looks_like_model_name(value: str, brand: str, mpn: str) -> bool:
+    normalized = normalize_whitespace(value)
+    if not normalized:
+        return False
+    lowered = normalized.casefold()
+    if lowered in {brand.casefold(), mpn.casefold()}:
+        return False
+    if not any(char.isalpha() for char in normalized):
+        return False
+    tokens = normalized.split()
+    if len(tokens) > 6:
+        return False
+    if len(tokens) == 1 and re.fullmatch(r"[A-Z0-9._/-]+", normalized):
+        return False
+    return True
 
 
 def _compact_key_specs(items: list[Any]) -> list[dict[str, str]]:

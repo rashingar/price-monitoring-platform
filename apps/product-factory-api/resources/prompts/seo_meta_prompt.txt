@@ -18,7 +18,9 @@ YOU MUST RETURN THIS EXACT TOP-LEVEL SHAPE
 
 WRITING RULES
 - `meta_description`: prefer 2 natural Greek sentences, using verified evidence only and no HTML.
-- Sentence 1 identifies the product using brand + mpn + category + strongest verified differentiators.
+- Use `product.copy_name` as the product name in prose when present.
+- Sentence 1 identifies the product using brand + preferred_identifier + category + strongest verified differentiators.
+- When `product.model_name` is present, `preferred_identifier` is the model name and must be used in prose instead of the raw MPN.
 - Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context.
 - Evidence priority for sentence 2:
   1. `hero_summary`
@@ -29,7 +31,7 @@ WRITING RULES
   - if `4K` is verified, prefer `4K Ultra HD ανάλυση`
   - if `8K` is verified, prefer `8K Ultra HD ανάλυση`
 - Aim for roughly `160-260` characters unless verified detail clearly justifies somewhat more.
-- `meta_keywords`: return a JSON array of verified keywords only, not CSV, and always include the provided brand and mpn/model values.
+- `meta_keywords`: return a JSON array of verified keywords only, not CSV, and always include the provided brand and preferred_identifier values.
 - Do not invent claims, filters, categories, or extra fields.
 
 LLM_CONTEXT_JSON

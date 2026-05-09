@@ -96,6 +96,61 @@ def test_build_seo_meta_context_includes_required_keyword_evidence() -> None:
     assert "Smooth the Greek grammar" not in context["writer_rules"]["meta_description_rule"]
 
 
+def test_build_intro_text_context_prefers_model_name_over_raw_mpn() -> None:
+    context = build_intro_text_context(
+        cli=CLIInput(model="414520", url="https://example.test/product"),
+        parsed=ParsedProduct(
+            source=SourceProductData(
+                brand="Ariete",
+                mpn="00P414520AR0",
+                name="Ariete XVapor Comfort 00P414520AR0 Steam Cleaner",
+                hero_summary="Steam cleaner for home use.",
+            )
+        ),
+        taxonomy=TaxonomyResolution(leaf_category="Steam Cleaner", sub_category="Cleaning"),
+        deterministic_product={
+            "name": "Ariete 00P414520AR0 Steam Cleaner",
+            "brand": "Ariete",
+            "mpn": "00P414520AR0",
+            "category_phrase": "Steam Cleaner",
+        },
+    )
+
+    assert context["product"]["model_name"] == "XVapor Comfort"
+    assert context["product"]["copy_name"] == "Ariete XVapor Comfort Steam Cleaner"
+    assert context["product"]["mpn"] == "00P414520AR0"
+    assert context["product"]["preferred_identifier"] == "XVapor Comfort"
+
+
+def test_build_seo_meta_context_requires_model_name_when_available() -> None:
+    context = build_seo_meta_context(
+        cli=CLIInput(model="414520", url="https://example.test/product"),
+        parsed=ParsedProduct(
+            source=SourceProductData(
+                brand="Ariete",
+                mpn="00P414520AR0",
+                name="Ariete XVapor Comfort 00P414520AR0 Steam Cleaner",
+                hero_summary="Steam cleaner for home use.",
+            )
+        ),
+        taxonomy=TaxonomyResolution(leaf_category="Steam Cleaner", sub_category="Cleaning"),
+        deterministic_product={
+            "name": "Ariete 00P414520AR0 Steam Cleaner",
+            "brand": "Ariete",
+            "mpn": "00P414520AR0",
+            "category_phrase": "Steam Cleaner",
+            "meta_description_draft": "The Ariete 00P414520AR0 is a Steam Cleaner.",
+        },
+    )
+
+    assert context["product"]["model_name"] == "XVapor Comfort"
+    assert context["product"]["copy_name"] == "Ariete XVapor Comfort Steam Cleaner"
+    assert context["product"]["preferred_identifier"] == "XVapor Comfort"
+    assert context["evidence"]["meta_description_draft"] == "The Ariete XVapor Comfort is a Steam Cleaner."
+    assert context["writer_rules"]["required_keywords"] == ["Ariete", "XVapor Comfort"]
+    assert "instead of the raw MPN" in context["writer_rules"]["meta_description_rule"]
+
+
 def test_validate_intro_text_output_accepts_plain_text_only() -> None:
     normalized, errors = validate_intro_text_output(" ".join(["λέξη"] * INTRO_MIN_WORDS))
 
@@ -280,5 +335,7 @@ def test_seo_meta_prompt_source_uses_repo_root_relative_path_and_updated_guidanc
     assert prompt_path.is_file()
     assert "exactly one sentence" not in lowered
     assert "verified evidence" in lowered
+    assert "product.copy_name" in prompt
+    assert "preferred_identifier" in prompt
     assert "return json only" in lowered
 
