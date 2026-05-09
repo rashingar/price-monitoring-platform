@@ -48,7 +48,15 @@ def isolated_repo(tmp_path: Path, monkeypatch):
     return tmp_path
 
 
-def _write_settings(path: Path, *, min_words=80, max_words=180, max_attempts=3, max_chars=260) -> None:
+def _write_settings(
+    path: Path,
+    *,
+    min_words=80,
+    max_words=180,
+    max_attempts=3,
+    max_emphasized_words_percent=35,
+    max_chars=260,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     write_json(
         path,
@@ -60,6 +68,7 @@ def _write_settings(path: Path, *, min_words=80, max_words=180, max_attempts=3, 
                         "min_words": min_words,
                         "max_words": max_words,
                         "max_attempts": max_attempts,
+                        "max_emphasized_words_percent": max_emphasized_words_percent,
                     },
                     "by_source": {"electronet": {"default": {"min_words": 90}}},
                     "by_category": {"cat-1": {"default": {"max_words": 120}}},
@@ -121,14 +130,26 @@ def test_missing_settings_file_loads_defaults(isolated_repo: Path) -> None:
     assert settings.intro_text_default.min_words == INTRO_MIN_WORDS
     assert settings.intro_text_default.max_words == INTRO_MAX_WORDS
     assert settings.intro_text_default.max_attempts == 3
+    assert settings.intro_text_default.max_emphasized_words_percent == 35
 
 
 def test_existing_settings_file_loads_valid_values(isolated_repo: Path) -> None:
-    _write_settings(repo_paths.PRODUCT_FACTORY_SETTINGS_PATH, min_words=60, max_words=140, max_attempts=5)
+    _write_settings(
+        repo_paths.PRODUCT_FACTORY_SETTINGS_PATH,
+        min_words=60,
+        max_words=140,
+        max_attempts=5,
+        max_emphasized_words_percent=45,
+    )
 
     policy = get_intro_text_policy()
 
-    assert policy == IntroTextPolicy(min_words=60, max_words=140, max_attempts=5)
+    assert policy == IntroTextPolicy(
+        min_words=60,
+        max_words=140,
+        max_attempts=5,
+        max_emphasized_words_percent=45,
+    )
 
 
 @pytest.mark.parametrize(
@@ -140,6 +161,8 @@ def test_existing_settings_file_loads_valid_values(isolated_repo: Path) -> None:
         ({"max_words": 501}, "less than or equal to 500"),
         ({"max_attempts": 0}, "between 1 and 10"),
         ({"max_attempts": 11}, "between 1 and 10"),
+        ({"max_emphasized_words_percent": -1}, "between 0 and 100"),
+        ({"max_emphasized_words_percent": 101}, "between 0 and 100"),
     ],
 )
 def test_invalid_settings_are_rejected(isolated_repo: Path, overrides: dict[str, int], message: str) -> None:
@@ -160,7 +183,7 @@ def test_settings_api_get_and_patch_preserves_override_keys(isolated_repo: Path)
     get_response = client.get("/api/settings")
     patch_response = client.patch(
         "/api/settings",
-        json={"authoring": {"intro_text": {"default": {"min_words": 70, "max_words": 150}}}},
+        json={"authoring": {"intro_text": {"default": {"min_words": 70, "max_words": 150, "max_emphasized_words_percent": 40}}}},
     )
 
     assert get_response.status_code == 200
@@ -168,6 +191,7 @@ def test_settings_api_get_and_patch_preserves_override_keys(isolated_repo: Path)
     body = patch_response.json()
     assert body["authoring"]["intro_text"]["default"]["min_words"] == 70
     assert body["authoring"]["intro_text"]["default"]["max_words"] == 150
+    assert body["authoring"]["intro_text"]["default"]["max_emphasized_words_percent"] == 40
     assert "by_source" in body["authoring"]["intro_text"]
     assert "by_category" in body["authoring"]["intro_text"]
 
@@ -178,10 +202,11 @@ def test_build_intro_text_context_uses_configured_word_range() -> None:
         parsed=ParsedProduct(source=SourceProductData(name="Product")),
         taxonomy=TaxonomyResolution(leaf_category="Category"),
         deterministic_product={},
-        intro_policy=IntroTextPolicy(min_words=40, max_words=90, max_attempts=2),
+        intro_policy=IntroTextPolicy(min_words=40, max_words=90, max_attempts=2, max_emphasized_words_percent=45),
     )
 
     assert context["writer_rules"]["word_count_range"] == {"min": 40, "max": 90}
+    assert context["writer_rules"]["emphasis_policy"]["max_emphasized_word_ratio"] == 0.45
 
 
 def test_validate_intro_text_output_uses_configured_range_and_defaults_remain() -> None:

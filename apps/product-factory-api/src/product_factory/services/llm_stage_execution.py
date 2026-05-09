@@ -11,6 +11,7 @@ from typing import Any
 from ..llm_contract import (
     INTRO_MAX_WORDS,
     INTRO_MIN_WORDS,
+    MAX_EMPHASIZED_WORD_RATIO,
     count_plain_text_words,
     validate_intro_text_output,
     validate_seo_meta_output,
@@ -130,6 +131,11 @@ def run_intro_text_with_retry(
 ) -> str:
     intro_word_min = _policy_int(intro_policy, "min_words", INTRO_MIN_WORDS)
     intro_word_max = _policy_int(intro_policy, "max_words", INTRO_MAX_WORDS)
+    intro_max_emphasized_word_ratio = _policy_float(
+        intro_policy,
+        "max_emphasized_word_ratio",
+        MAX_EMPHASIZED_WORD_RATIO,
+    )
     resolved_max_attempts = _policy_int(intro_policy, "max_attempts", max_attempts)
     resolver = resolve_intro_text_fn
     trace_path = intro_text_output_path.with_name("intro_text.retry_trace.json")
@@ -183,6 +189,7 @@ def run_intro_text_with_retry(
             intro_payload,
             intro_word_min=intro_word_min,
             intro_word_max=intro_word_max,
+            intro_max_emphasized_word_ratio=intro_max_emphasized_word_ratio,
         )
         word_count = count_plain_text_words(normalized_intro)
         if not intro_errors:
@@ -578,6 +585,16 @@ def _policy_int(policy: Any | None, field_name: str, default: int) -> int:
     else:
         value = getattr(policy, field_name, default)
     return value if isinstance(value, int) and not isinstance(value, bool) else default
+
+
+def _policy_float(policy: Any | None, field_name: str, default: float) -> float:
+    if policy is None:
+        return default
+    if isinstance(policy, Mapping):
+        value = policy.get(field_name, default)
+    else:
+        value = getattr(policy, field_name, default)
+    return float(value) if isinstance(value, (float, int)) and not isinstance(value, bool) else default
 
 
 def _build_stage_validation_error(

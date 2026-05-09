@@ -5,7 +5,13 @@ from pathlib import Path
 
 from ..csv_writer import write_csv_row
 from ..html_builders import extract_presentation_blocks
-from ..llm_contract import INTRO_MAX_WORDS, INTRO_MIN_WORDS, validate_intro_text_output, validate_seo_meta_output
+from ..llm_contract import (
+    INTRO_MAX_WORDS,
+    INTRO_MIN_WORDS,
+    MAX_EMPHASIZED_WORD_RATIO,
+    validate_intro_text_output,
+    validate_seo_meta_output,
+)
 from ..mapping import build_row
 from ..models import GalleryImage, SourceProductData, SpecItem, SpecSection
 from ..presentation_sections import normalize_presentation_sections
@@ -301,6 +307,7 @@ def _build_llm_validation_backstop_errors(split_llm_result: SplitLLMStageResult,
         split_llm_result.intro_text,
         intro_word_min=getattr(intro_policy, "min_words", INTRO_MIN_WORDS),
         intro_word_max=getattr(intro_policy, "max_words", INTRO_MAX_WORDS),
+        intro_max_emphasized_word_ratio=getattr(intro_policy, "max_emphasized_word_ratio", MAX_EMPHASIZED_WORD_RATIO),
     )
     _, seo_errors = validate_seo_meta_output(
         {

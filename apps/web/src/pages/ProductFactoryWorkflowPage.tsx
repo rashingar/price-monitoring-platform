@@ -106,6 +106,7 @@ interface SettingsFormState {
   introMinWords: string;
   introMaxWords: string;
   introMaxAttempts: string;
+  introMaxEmphasizedWordsPercent: string;
   seoMetaDescriptionMaxChars: string;
 }
 
@@ -568,6 +569,7 @@ function makeSettingsForm(settings: ProductFactorySettings | null): SettingsForm
     introMinWords: formatOptional(introDefaults?.min_words).replace("-", ""),
     introMaxWords: formatOptional(introDefaults?.max_words).replace("-", ""),
     introMaxAttempts: formatOptional(introDefaults?.max_attempts).replace("-", ""),
+    introMaxEmphasizedWordsPercent: formatOptional(introDefaults?.max_emphasized_words_percent).replace("-", ""),
     seoMetaDescriptionMaxChars: formatOptional(seoDefaults?.meta_description_max_chars).replace("-", ""),
   };
 }
@@ -584,6 +586,7 @@ function makeSettingsPayload(form: SettingsFormState): {
   const minWords = parseSettingsNumber(form.introMinWords);
   const maxWords = parseSettingsNumber(form.introMaxWords);
   const maxAttempts = parseSettingsNumber(form.introMaxAttempts);
+  const maxEmphasizedWordsPercent = parseSettingsNumber(form.introMaxEmphasizedWordsPercent);
   const seoMaxChars = parseSettingsNumber(form.seoMetaDescriptionMaxChars);
 
   if (minWords === null || minWords <= 0) {
@@ -598,6 +601,10 @@ function makeSettingsPayload(form: SettingsFormState): {
     return { payload: null, error: "Intro max attempts must be between 1 and 10." };
   }
 
+  if (maxEmphasizedWordsPercent === null || maxEmphasizedWordsPercent < 0 || maxEmphasizedWordsPercent > 100) {
+    return { payload: null, error: "Intro max emphasized words must be between 0 and 100 percent." };
+  }
+
   if (seoMaxChars === null || seoMaxChars <= 0) {
     return { payload: null, error: "SEO meta description max chars must be a positive whole number." };
   }
@@ -610,6 +617,7 @@ function makeSettingsPayload(form: SettingsFormState): {
             min_words: minWords,
             max_words: maxWords,
             max_attempts: maxAttempts,
+            max_emphasized_words_percent: maxEmphasizedWordsPercent,
           },
         },
         seo_meta: {
@@ -1138,6 +1146,17 @@ function SettingsPanel({
               max="10"
               value={form.introMaxAttempts}
               onChange={(event) => updateField("introMaxAttempts", event.target.value)}
+            />
+          </label>
+          <label>
+            <span>Max emphasized words (%)</span>
+            <input
+              inputMode="numeric"
+              type="number"
+              min="0"
+              max="100"
+              value={form.introMaxEmphasizedWordsPercent}
+              onChange={(event) => updateField("introMaxEmphasizedWordsPercent", event.target.value)}
             />
           </label>
           <label>

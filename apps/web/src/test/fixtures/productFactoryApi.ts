@@ -108,6 +108,7 @@ export const productFactorySettings = {
         min_words: 80,
         max_words: 140,
         max_attempts: 3,
+        max_emphasized_words_percent: 35,
       },
     },
     seo_meta: {
@@ -124,6 +125,7 @@ export const productFactorySettings = {
           min_words: 80,
           max_words: 140,
           max_attempts: 3,
+          max_emphasized_words_percent: 35,
         },
       },
       seo_meta: {

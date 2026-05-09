@@ -210,6 +210,7 @@ export interface ProductFactorySettings {
         min_words?: number;
         max_words?: number;
         max_attempts?: number;
+        max_emphasized_words_percent?: number;
         [key: string]: unknown;
       };
       [key: string]: unknown;

@@ -1595,6 +1595,7 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.queryByText("Intro emphasis missing")).not.toBeInTheDocument();
     expect(screen.queryByText("Output path")).not.toBeInTheDocument();
     expect(screen.queryByText("Trace path")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText("Max emphasized words (%)")).toHaveValue(35));
   });
 
   it("renders a yellow intro emphasis warning without blocking render", async () => {

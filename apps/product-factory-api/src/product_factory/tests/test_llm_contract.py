@@ -50,6 +50,7 @@ def test_build_intro_text_context_excludes_section_generation() -> None:
     assert context["writer_rules"]["allowed_inline_html_tags"] == ["strong"]
     assert context["writer_rules"]["forbidden_outputs"] == ["json", "markdown", "bullets", "cta_language", "unsupported_html"]
     assert context["writer_rules"]["emphasis_policy"]["scope"] == "generic_all_categories"
+    assert context["writer_rules"]["emphasis_policy"]["max_emphasized_word_ratio"] == 0.35
     assert "presentation_source_sections" not in context
     assert "sections" not in context
 
@@ -166,6 +167,18 @@ def test_validate_intro_text_output_rejects_overused_emphasis() -> None:
     _, errors = validate_intro_text_output(f"<strong>{bold_words}</strong> {plain_words}")
 
     assert "llm_intro_text_emphasis_overused" in errors
+
+
+def test_validate_intro_text_output_uses_configured_emphasis_ratio() -> None:
+    bold_words = " ".join(["λέξη"] * 40)
+    plain_words = " ".join(["λέξη"] * 60)
+
+    _, errors = validate_intro_text_output(
+        f"<strong>{bold_words}</strong> {plain_words}",
+        intro_max_emphasized_word_ratio=0.45,
+    )
+
+    assert errors == []
 
 
 def test_validate_intro_text_output_allows_many_short_emphasis_spans_under_ratio_limit() -> None:

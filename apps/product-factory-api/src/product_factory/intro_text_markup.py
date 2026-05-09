@@ -31,7 +31,11 @@ def strip_intro_text_markup(value: str) -> str:
     return normalize_whitespace(text)
 
 
-def normalize_intro_text_markup(value: str) -> tuple[str, list[str]]:
+def normalize_intro_text_markup(
+    value: str,
+    *,
+    max_emphasized_word_ratio: float = MAX_EMPHASIZED_WORD_RATIO,
+) -> tuple[str, list[str]]:
     raw = str(value or "")
     errors: list[str] = []
     if any(pattern.search(raw) for pattern in _FORBIDDEN_MARKDOWN_RES):
@@ -86,7 +90,7 @@ def normalize_intro_text_markup(value: str) -> tuple[str, list[str]]:
     visible_word_count = count_intro_text_words(raw)
     emphasized_word_count = sum(count_intro_text_words(item) for item in strong_spans)
     ratio = emphasized_word_count / visible_word_count if visible_word_count else 0.0
-    if ratio > MAX_EMPHASIZED_WORD_RATIO:
+    if ratio > max_emphasized_word_ratio:
         errors.append(INTRO_TEXT_EMPHASIS_OVERUSED)
 
     if errors:
@@ -101,8 +105,15 @@ def count_intro_text_words(value: str) -> int:
     return len([token for token in text.split(" ") if token])
 
 
-def summarize_intro_text_emphasis(value: str) -> dict[str, Any]:
-    normalized, errors = normalize_intro_text_markup(value)
+def summarize_intro_text_emphasis(
+    value: str,
+    *,
+    max_emphasized_word_ratio: float = MAX_EMPHASIZED_WORD_RATIO,
+) -> dict[str, Any]:
+    normalized, errors = normalize_intro_text_markup(
+        value,
+        max_emphasized_word_ratio=max_emphasized_word_ratio,
+    )
     strong_spans = _extract_valid_strong_spans(normalized) if not errors else []
     visible_word_count = count_intro_text_words(value)
     emphasized_word_count = sum(count_intro_text_words(item) for item in strong_spans)
@@ -119,8 +130,15 @@ def summarize_intro_text_emphasis(value: str) -> dict[str, Any]:
     }
 
 
-def render_intro_text_markup_html(value: str) -> tuple[str, list[str]]:
-    normalized, errors = normalize_intro_text_markup(value)
+def render_intro_text_markup_html(
+    value: str,
+    *,
+    max_emphasized_word_ratio: float = MAX_EMPHASIZED_WORD_RATIO,
+) -> tuple[str, list[str]]:
+    normalized, errors = normalize_intro_text_markup(
+        value,
+        max_emphasized_word_ratio=max_emphasized_word_ratio,
+    )
     if errors:
         return escape(strip_intro_text_markup(value)), errors
     out: list[str] = []

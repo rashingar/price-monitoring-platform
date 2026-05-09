@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from .intro_text_markup import (
+    MAX_EMPHASIZED_WORD_RATIO,
     count_intro_text_words,
     normalize_intro_text_markup,
     strip_intro_text_markup,
@@ -32,6 +33,11 @@ def build_intro_text_context(
     source = parsed.source
     intro_word_min = _policy_int(intro_policy, "min_words", INTRO_MIN_WORDS)
     intro_word_max = _policy_int(intro_policy, "max_words", INTRO_MAX_WORDS)
+    intro_max_emphasized_word_ratio = _policy_float(
+        intro_policy,
+        "max_emphasized_word_ratio",
+        MAX_EMPHASIZED_WORD_RATIO,
+    )
     return {
         "task": INTRO_TEXT_TASK,
         "input": {
@@ -63,7 +69,7 @@ def build_intro_text_context(
                 "scope": "generic_all_categories",
                 "purpose": "human_readability_and_topical_clarity",
                 "preferred_span_count": {"min": 3, "max": 7},
-                "max_emphasized_word_ratio": 0.35,
+                "max_emphasized_word_ratio": intro_max_emphasized_word_ratio,
                 "bold_verified_facts_only": True,
                 "avoid_full_sentence_emphasis": True,
                 "avoid_generic_benefit_emphasis": True,
@@ -164,12 +170,16 @@ def validate_intro_text_output(
     *,
     intro_word_min: int = INTRO_MIN_WORDS,
     intro_word_max: int = INTRO_MAX_WORDS,
+    intro_max_emphasized_word_ratio: float = MAX_EMPHASIZED_WORD_RATIO,
 ) -> tuple[str, list[str]]:
     errors: list[str] = []
     value = payload.get("intro_text", "") if isinstance(payload, dict) else payload
     if not isinstance(value, str):
         return "", ["llm_intro_text_invalid"]
-    normalized, markup_errors = normalize_intro_text_markup(value)
+    normalized, markup_errors = normalize_intro_text_markup(
+        value,
+        max_emphasized_word_ratio=intro_max_emphasized_word_ratio,
+    )
     unsupported_tags = [
         tag for tag in HTML_DETECT_RE.findall(value)
         if tag.lower() not in {"<strong>", "</strong>"}
@@ -264,6 +274,16 @@ def _policy_int(policy: Any | None, field_name: str, default: int) -> int:
     else:
         value = getattr(policy, field_name, default)
     return value if isinstance(value, int) and not isinstance(value, bool) else default
+
+
+def _policy_float(policy: Any | None, field_name: str, default: float) -> float:
+    if policy is None:
+        return default
+    if isinstance(policy, dict):
+        value = policy.get(field_name, default)
+    else:
+        value = getattr(policy, field_name, default)
+    return float(value) if isinstance(value, (float, int)) and not isinstance(value, bool) else default
 
 
 def _unique_codes(codes: list[str]) -> list[str]:

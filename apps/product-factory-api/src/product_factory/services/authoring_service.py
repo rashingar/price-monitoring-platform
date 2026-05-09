@@ -170,8 +170,12 @@ def _intro_text_status(context: PreparedProductContext) -> IntroTextTaskStatus:
             raw_text,
             intro_word_min=policy.min_words,
             intro_word_max=policy.max_words,
+            intro_max_emphasized_word_ratio=policy.max_emphasized_word_ratio,
         )
-        diagnostics = summarize_intro_text_emphasis(raw_text)
+        diagnostics = summarize_intro_text_emphasis(
+            raw_text,
+            max_emphasized_word_ratio=policy.max_emphasized_word_ratio,
+        )
         word_count = count_plain_text_words(normalized)
     except Exception as exc:
         errors = [f"llm_intro_text_read_error:{exc}"]

@@ -5,7 +5,8 @@
       "default": {
         "min_words": 70,
         "max_words": 180,
-        "max_attempts": 3
+        "max_attempts": 3,
+        "max_emphasized_words_percent": 35
       },
       "by_source": {},
       "by_category": {}
