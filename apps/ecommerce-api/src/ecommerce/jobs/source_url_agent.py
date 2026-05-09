@@ -17,7 +17,12 @@ from ecommerce.db.session import session_scope
 from ecommerce.env import load_local_env_if_present
 from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent
 from ecommerce.source_url_agent.analysis import analyze_run_artifacts
-from ecommerce.source_url_agent.candidate_transfer import export_source_url_candidates, import_source_url_candidates
+from ecommerce.source_url_agent.candidate_transfer import (
+    export_source_url_candidates,
+    export_source_url_transfer,
+    import_source_url_candidates,
+    import_source_url_transfer,
+)
 from ecommerce.source_url_agent.products import read_products_from_catalog, read_products_from_csv
 from ecommerce.source_url_agent.review import apply_review_csv
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES
@@ -56,6 +61,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     import_parser.add_argument("--apply", action="store_true", help="Write imported candidates into the configured DB.")
     import_parser.add_argument("--json", action="store_true")
 
+    export_transfer_parser = subparsers.add_parser("export-url-transfer", help="Export source_urls and source URL candidates to one portable JSON file.")
+    export_transfer_parser.add_argument("--output", type=Path, default=Path("output/ecommerce/source-url-agent/source_url_transfer_export.json"))
+    export_transfer_parser.add_argument("--json", action="store_true")
+
+    import_transfer_parser = subparsers.add_parser("import-url-transfer", help="Import a portable source_urls and candidate JSON export.")
+    import_transfer_parser.add_argument("--input", type=Path, required=True)
+    import_transfer_parser.add_argument("--dry-run", action="store_true", help="Preview import actions without DB writes.")
+    import_transfer_parser.add_argument("--apply", action="store_true", help="Write imported source URLs and candidates into the configured DB.")
+    import_transfer_parser.add_argument("--json", action="store_true")
+
     args = parser.parse_args(argv)
     try:
         if args.command == "run":
@@ -70,6 +85,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _export_candidates(args)
         if args.command == "import-candidates":
             return _import_candidates(args)
+        if args.command == "export-url-transfer":
+            return _export_url_transfer(args)
+        if args.command == "import-url-transfer":
+            return _import_url_transfer(args)
     except SQLAlchemyError as exc:
         print(f"Source URL Agent DB error: {sanitize_database_error(str(exc)) or exc.__class__.__name__}", file=sys.stderr)
         return 1
@@ -179,6 +198,29 @@ def _import_candidates(args: argparse.Namespace) -> int:
     apply = bool(args.apply and not args.dry_run)
     with session_scope() as session:
         result = import_source_url_candidates(session, args.input, apply=apply)
+    payload = result.to_dict()
+    payload["mode"] = "apply" if apply else "dry-run"
+    _print_transfer_result(payload, json_output=args.json)
+    return 0
+
+
+def _export_url_transfer(args: argparse.Namespace) -> int:
+    if not is_database_configured():
+        print("export-url-transfer requires ECOMMERCE_DATABASE_URL.", file=sys.stderr)
+        return 1
+    with session_scope() as session:
+        result = export_source_url_transfer(session, args.output)
+    _print_transfer_result(result.to_dict(), json_output=args.json)
+    return 0
+
+
+def _import_url_transfer(args: argparse.Namespace) -> int:
+    if not is_database_configured():
+        print("import-url-transfer requires ECOMMERCE_DATABASE_URL.", file=sys.stderr)
+        return 1
+    apply = bool(args.apply and not args.dry_run)
+    with session_scope() as session:
+        result = import_source_url_transfer(session, args.input, apply=apply)
     payload = result.to_dict()
     payload["mode"] = "apply" if apply else "dry-run"
     _print_transfer_result(payload, json_output=args.json)

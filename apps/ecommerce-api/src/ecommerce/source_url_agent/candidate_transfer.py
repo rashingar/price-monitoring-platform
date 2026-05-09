@@ -13,9 +13,12 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import CatalogProductRow, SourceUrlCandidate, SourceUrlDiscoveryRun
+from ecommerce.db.models import CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun
+from ecommerce.db.source_convergence import sync_source_url_to_product_source
+from ecommerce.source_urls import SourceUrlValidationError, normalize_source_url
 
 EXPORT_FORMAT = "ecommerce.source_url_candidates.v1"
+SOURCE_URL_TRANSFER_FORMAT = "ecommerce.source_urls_and_candidates.v1"
 
 RUN_FIELDS = (
     "run_id",
@@ -68,8 +71,41 @@ CANDIDATE_FIELDS = (
     "updated_at",
 )
 
+SOURCE_URL_FIELDS = (
+    "catalog_product_id",
+    "catalog_source",
+    "model",
+    "mpn",
+    "manufacturer",
+    "source_name",
+    "source_domain",
+    "url",
+    "url_normalized",
+    "status",
+    "url_type",
+    "trust_level",
+    "added_by",
+    "notes",
+    "last_seen_at",
+    "last_success_at",
+    "last_failed_at",
+    "failure_count",
+    "last_error",
+    "created_at",
+    "updated_at",
+)
+
 DECIMAL_FIELDS = {"own_price", "candidate_price", "confidence_score"}
-DATETIME_FIELDS = {"started_at", "completed_at", "created_at", "updated_at", "reviewed_at"}
+DATETIME_FIELDS = {
+    "started_at",
+    "completed_at",
+    "created_at",
+    "updated_at",
+    "reviewed_at",
+    "last_seen_at",
+    "last_success_at",
+    "last_failed_at",
+}
 INT_FIELDS = {
     "catalog_product_id",
     "selected_count",
@@ -79,6 +115,7 @@ INT_FIELDS = {
     "not_found_count",
     "error_count",
     "competing_candidates_count",
+    "failure_count",
 }
 
 
@@ -115,6 +152,29 @@ def export_source_url_candidates(session: Session, output_path: Path) -> Candida
     return result
 
 
+def export_source_url_transfer(session: Session, output_path: Path) -> CandidateTransferResult:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    source_urls = list(session.execute(select(SourceUrl).order_by(SourceUrl.catalog_source, SourceUrl.model, SourceUrl.id)).scalars())
+    runs = list(session.execute(select(SourceUrlDiscoveryRun).order_by(SourceUrlDiscoveryRun.created_at, SourceUrlDiscoveryRun.id)).scalars())
+    candidates = list(session.execute(select(SourceUrlCandidate).order_by(SourceUrlCandidate.created_at, SourceUrlCandidate.id)).scalars())
+    payload = {
+        "format": SOURCE_URL_TRANSFER_FORMAT,
+        "exported_at": _json_value(_now()),
+        "source_url_count": len(source_urls),
+        "run_count": len(runs),
+        "candidate_count": len(candidates),
+        "source_urls": [_row_payload(row, SOURCE_URL_FIELDS, original_id=True) for row in source_urls],
+        "runs": [_row_payload(row, RUN_FIELDS, original_id=True) for row in runs],
+        "candidates": [_row_payload(row, CANDIDATE_FIELDS, original_id=True) for row in candidates],
+    }
+    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    result = CandidateTransferResult(path=str(output_path))
+    result.counters["source_url_count"] = len(source_urls)
+    result.counters["run_count"] = len(runs)
+    result.counters["candidate_count"] = len(candidates)
+    return result
+
+
 def import_source_url_candidates(session: Session, input_path: Path, *, apply: bool = False) -> CandidateTransferResult:
     payload = json.loads(input_path.read_text(encoding="utf-8"))
     if payload.get("format") != EXPORT_FORMAT:
@@ -128,6 +188,69 @@ def import_source_url_candidates(session: Session, input_path: Path, *, apply: b
     if apply:
         session.flush()
     return result
+
+
+def import_source_url_transfer(session: Session, input_path: Path, *, apply: bool = False) -> CandidateTransferResult:
+    payload = json.loads(input_path.read_text(encoding="utf-8"))
+    if payload.get("format") != SOURCE_URL_TRANSFER_FORMAT:
+        raise ValueError(f"Unsupported source URL transfer export format: {payload.get('format')!r}")
+
+    result = CandidateTransferResult(path=str(input_path))
+    for source_url_payload in payload.get("source_urls") or []:
+        _import_source_url(session, source_url_payload, result=result, apply=apply)
+    for run_payload in payload.get("runs") or []:
+        _import_run(session, run_payload, result=result, apply=apply)
+    for candidate_payload in payload.get("candidates") or []:
+        _import_candidate(session, candidate_payload, result=result, apply=apply)
+    if apply:
+        session.flush()
+    return result
+
+
+def _import_source_url(
+    session: Session,
+    payload: dict[str, Any],
+    *,
+    result: CandidateTransferResult,
+    apply: bool,
+) -> None:
+    product = _resolve_catalog_product(session, payload)
+    if product is None:
+        result.counters["missing_source_url_product_count"] += 1
+        result.warnings.append(
+            f"No catalog product matched {payload.get('catalog_source')}/{payload.get('model')}; skipped source URL original_id={payload.get('id')!r}."
+        )
+        return
+
+    url = str(payload.get("url") or "").strip()
+    normalized = str(payload.get("url_normalized") or "").strip()
+    if not url:
+        result.counters["invalid_source_url_count"] += 1
+        result.warnings.append(f"Skipped source URL original_id={payload.get('id')!r} without url.")
+        return
+    if not normalized:
+        try:
+            normalized = normalize_source_url(url)
+        except SourceUrlValidationError as exc:
+            result.counters["invalid_source_url_count"] += 1
+            result.warnings.append(f"Skipped source URL original_id={payload.get('id')!r}: {exc}")
+            return
+
+    row = session.execute(
+        select(SourceUrl).where(
+            SourceUrl.catalog_product_id == product.id,
+            SourceUrl.url_normalized == normalized,
+        )
+    ).scalar_one_or_none()
+    action = "updated_source_url_count" if row is not None else "created_source_url_count"
+    if apply:
+        if row is None:
+            row = SourceUrl(**_default_source_url_values(payload, product, normalized))
+            session.add(row)
+        _assign_source_url_fields(row, payload, product, normalized)
+        session.flush()
+        sync_source_url_to_product_source(session, row)
+    result.counters[action] += 1
 
 
 def _import_run(
@@ -235,6 +358,17 @@ def _assign_fields(row: object, payload: dict[str, Any], fields: tuple[str, ...]
         setattr(row, field_name, _db_value(field_name, payload.get(field_name)))
 
 
+def _assign_source_url_fields(row: SourceUrl, payload: dict[str, Any], product: CatalogProductRow, normalized_url: str) -> None:
+    _assign_fields(row, payload, SOURCE_URL_FIELDS)
+    row.catalog_product_id = product.id
+    row.catalog_source = product.catalog_source
+    row.model = product.model
+    row.mpn = product.mpn or ""
+    row.manufacturer = product.manufacturer or ""
+    row.url = str(payload.get("url") or "").strip()
+    row.url_normalized = normalized_url
+
+
 def _default_candidate_values(payload: dict[str, Any]) -> dict[str, Any]:
     now = _now()
     return {
@@ -252,6 +386,27 @@ def _default_candidate_values(payload: dict[str, Any]) -> dict[str, Any]:
         "match_method": str(payload.get("match_method") or ""),
         "status": str(payload.get("status") or "needs_review"),
         "competing_candidates_count": _int_or_none(payload.get("competing_candidates_count")) or 0,
+        "created_at": _db_value("created_at", payload.get("created_at")) or now,
+        "updated_at": _db_value("updated_at", payload.get("updated_at")) or now,
+    }
+
+
+def _default_source_url_values(payload: dict[str, Any], product: CatalogProductRow, normalized_url: str) -> dict[str, Any]:
+    now = _now()
+    return {
+        "catalog_product_id": product.id,
+        "catalog_source": product.catalog_source,
+        "model": product.model,
+        "mpn": product.mpn or "",
+        "manufacturer": product.manufacturer or "",
+        "source_name": str(payload.get("source_name") or ""),
+        "source_domain": str(payload.get("source_domain") or ""),
+        "url": str(payload.get("url") or "").strip(),
+        "url_normalized": normalized_url,
+        "status": str(payload.get("status") or "needs_review"),
+        "url_type": str(payload.get("url_type") or "imported"),
+        "trust_level": str(payload.get("trust_level") or "imported"),
+        "failure_count": _int_or_none(payload.get("failure_count")) or 0,
         "created_at": _db_value("created_at", payload.get("created_at")) or now,
         "updated_at": _db_value("updated_at", payload.get("updated_at")) or now,
     }

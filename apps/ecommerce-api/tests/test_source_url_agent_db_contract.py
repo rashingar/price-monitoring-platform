@@ -8,7 +8,12 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.source_url_agent.candidate_transfer import export_source_url_candidates, import_source_url_candidates  # noqa: E402
+from ecommerce.source_url_agent.candidate_transfer import (  # noqa: E402
+    export_source_url_candidates,
+    export_source_url_transfer,
+    import_source_url_candidates,
+    import_source_url_transfer,
+)
 from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
 from ecommerce.source_url_agent.evidence import extract_page_evidence  # noqa: E402
 from ecommerce.source_url_agent.persistence import (  # noqa: E402
@@ -303,4 +308,97 @@ def test_source_url_candidate_export_import_relinks_catalog_product(tmp_path: Pa
     assert export_result.counters["candidate_count"] == 1
     assert dry_result.counters["created_candidate_count"] == 1
     assert applied_result.counters["created_candidate_count"] == 1
+    assert second_apply.counters["updated_candidate_count"] == 1
+
+
+def test_source_url_transfer_exports_sources_and_candidates(tmp_path: Path) -> None:
+    source_dir = tmp_path / "source"
+    target_dir = tmp_path / "target"
+    source_dir.mkdir()
+    target_dir.mkdir()
+    source_database_url = _sqlite_url(source_dir)
+    target_database_url = _sqlite_url(target_dir)
+    _create_schema(source_database_url)
+    _create_schema(target_database_url)
+    export_path = tmp_path / "source-url-transfer.json"
+
+    with session_scope(source_database_url) as session:
+        product = _catalog_product(session)
+        session.add(
+            SourceUrl(
+                catalog_product_id=product.id,
+                catalog_source=product.catalog_source,
+                model=product.model,
+                mpn=product.mpn,
+                manufacturer=product.manufacturer,
+                source_name="skroutz",
+                source_domain="www.skroutz.gr",
+                url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+                url_normalized="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+                status="active",
+                url_type="manual",
+                trust_level="manual",
+                added_by="tester",
+                notes="portable",
+                failure_count=0,
+                created_at=NOW,
+                updated_at=NOW,
+            )
+        )
+        session.add(
+            SourceUrlCandidate(
+                run_id="run-transfer",
+                catalog_product_id=product.id,
+                catalog_source=product.catalog_source,
+                model=product.model,
+                mpn=product.mpn,
+                manufacturer=product.manufacturer,
+                product_name=product.name,
+                category=product.category,
+                own_price=Decimal("19.00"),
+                source_name="skroutz",
+                source_domain="www.skroutz.gr",
+                source_type="marketplace",
+                candidate_url="https://www.skroutz.gr/s/124/LG-MR25GB.html",
+                canonical_url="https://www.skroutz.gr/s/124/LG-MR25GB.html",
+                candidate_title="LG MR25GB",
+                match_status="needs_review",
+                confidence_score=Decimal("0.7000"),
+                match_method="manual_review_required",
+                competing_candidates_count=1,
+                status="needs_review",
+                created_at=NOW,
+                updated_at=NOW,
+            )
+        )
+        session.flush()
+        export_result = export_source_url_transfer(session, export_path)
+
+    with session_scope(target_database_url) as session:
+        target_product = _catalog_product(session)
+        dry_result = import_source_url_transfer(session, export_path, apply=False)
+        assert session.query(SourceUrl).count() == 0
+        assert session.query(SourceUrlCandidate).count() == 0
+
+        applied_result = import_source_url_transfer(session, export_path, apply=True)
+        imported_source_url = session.query(SourceUrl).one()
+        imported_candidate = session.query(SourceUrlCandidate).one()
+
+        assert imported_source_url.catalog_product_id == target_product.id
+        assert imported_source_url.url == "https://www.skroutz.gr/s/123/LG-MR25GB.html"
+        assert imported_source_url.trust_level == "manual"
+        assert imported_candidate.catalog_product_id == target_product.id
+        assert imported_candidate.candidate_url == "https://www.skroutz.gr/s/124/LG-MR25GB.html"
+
+        second_apply = import_source_url_transfer(session, export_path, apply=True)
+        assert session.query(SourceUrl).count() == 1
+        assert session.query(SourceUrlCandidate).count() == 1
+
+    assert export_result.counters["source_url_count"] == 1
+    assert export_result.counters["candidate_count"] == 1
+    assert dry_result.counters["created_source_url_count"] == 1
+    assert dry_result.counters["created_candidate_count"] == 1
+    assert applied_result.counters["created_source_url_count"] == 1
+    assert applied_result.counters["created_candidate_count"] == 1
+    assert second_apply.counters["updated_source_url_count"] == 1
     assert second_apply.counters["updated_candidate_count"] == 1
