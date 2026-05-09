@@ -2,7 +2,6 @@ import { render } from "@testing-library/react";
 import { Navigate, createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { CatalogPage } from "../pages/CatalogPage";
-import { CsvBridgePage } from "../pages/CsvBridgePage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { FiltersManagerPage } from "../pages/FiltersManagerPage";
 import { JobDetailPage } from "../pages/JobDetailPage";
@@ -33,7 +32,6 @@ const routes = [
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "catalog", element: <CatalogPage /> },
-      { path: "csv-bridge", element: <CsvBridgePage /> },
       { path: "price-monitoring", element: <PriceMonitoringPage /> },
       { path: "price-monitoring/executions", element: <PriceMonitoringExecutionsPage /> },
       { path: "price-monitoring/alerts", element: <PriceMonitoringAlertsPage /> },

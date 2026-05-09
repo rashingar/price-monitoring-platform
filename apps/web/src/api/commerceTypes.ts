@@ -8,7 +8,6 @@ export type EcommerceContractAlertRuleCreateRequest =
   EcommerceSchema<"AlertRuleCreateRequest">;
 export type EcommerceContractAlertRuleUpdateRequest =
   EcommerceSchema<"AlertRuleUpdateRequest">;
-export type EcommerceContractBridgeRunRequest = EcommerceSchema<"BridgeRunRequest">;
 export type EcommerceContractCsvReadRequest = EcommerceSchema<"CsvReadRequest">;
 export type EcommerceContractCsvSaveRequest = EcommerceSchema<"CsvSaveRequest">;
 export type EcommerceContractCsvSaveCopyRequest = EcommerceSchema<"CsvSaveCopyRequest">;
@@ -619,6 +618,7 @@ export interface CatalogSummary {
   active?: number;
   atomic_products?: number;
   atomic?: number;
+  composite_or_invalid_models?: number;
   composite_products?: number;
   composite_invalid_models?: number;
   non_atomic_products?: number;
@@ -1205,38 +1205,6 @@ export interface SaveCsvResponse {
   [key: string]: unknown;
 }
 
-export interface BridgeRunBody {
-  opencart_export_path: string;
-  stock_csv_path: string | null;
-  output_dir: string | null;
-}
-
-export interface BridgeArtifact {
-  name?: string | null;
-  path?: string | null;
-  extension?: string | null;
-  size_bytes?: number | null;
-  modified_at?: string | null;
-  download_url?: string | null;
-  read_url?: string | null;
-  is_allowed?: boolean | null;
-  can_read?: boolean | null;
-  can_download?: boolean | null;
-  warning?: string | null;
-  [key: string]: unknown;
-}
-
-export interface BridgeRunResponse {
-  run_id?: string | number | null;
-  status?: string | null;
-  stock_csv_path?: string | null;
-  opencart_export_path?: string | null;
-  output_dir?: string | null;
-  artifacts?: BridgeArtifact[];
-  summary?: Record<string, number>;
-  [key: string]: unknown;
-}
-
 export interface ArtifactRoot {
   path: string;
   exists?: boolean | null;
@@ -1309,5 +1277,4 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<ReadCsvFileBody, EcommerceContractCsvReadRequest>,
   AssertAssignable<SaveCsvFileBody, EcommerceContractCsvSaveRequest>,
   AssertAssignable<SaveCsvCopyBody, EcommerceContractCsvSaveCopyRequest>,
-  AssertAssignable<BridgeRunBody, EcommerceContractBridgeRunRequest>,
 ];

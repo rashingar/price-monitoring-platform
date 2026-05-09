@@ -19,7 +19,7 @@ not reuse Price Monitoring run history.
 
 ## Database Setup
 
-PostgreSQL is mandatory for Catalog and Price Monitoring workflows. `sourceCata.csv` is imported into PostgreSQL and is no longer read directly by Catalog or Price Monitoring selection. Bridge, CSV/file editor, path, health, and artifact routes remain usable when no database is configured.
+PostgreSQL is mandatory for Catalog and Price Monitoring workflows. `sourceCata.csv` is imported into PostgreSQL and is no longer read directly by Catalog or Price Monitoring selection. CSV/file editor, path, health, and artifact routes remain usable when no database is configured.
 
 Set `ECOMMERCE_DATABASE_URL` before using Catalog browsing/import, Price Monitoring, alerts, observations, or history:
 

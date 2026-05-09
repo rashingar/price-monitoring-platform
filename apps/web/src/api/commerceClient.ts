@@ -11,8 +11,6 @@ import type {
   ArtifactPayload,
   ArtifactReadResponse,
   ArtifactRoot,
-  BridgeRunBody,
-  BridgeRunResponse,
   CatalogBrandOption,
   CatalogCategoryHierarchyResponse,
   CatalogCategoryNode,
@@ -2074,9 +2072,9 @@ async function request<T>(path: string, options: CommerceRequestOptions = {}): P
         : "";
     const dbHint =
       response.status === 503 && path.startsWith("/price-monitoring/")
-        ? " PostgreSQL is required for Price Monitoring; CSV/Bridge, files, paths, artifacts, and general commerce health may still be available."
+        ? " PostgreSQL is required for Price Monitoring; files, paths, artifacts, and general commerce health may still be available."
         : response.status === 503 && path.startsWith("/catalog/")
-          ? " Catalog database/import required. Configure ECOMMERCE_DATABASE_URL, run alembic upgrade head, run python -m ecommerce.jobs.ingest_catalog, then reload the Catalog page. CSV/Bridge, files, paths, artifacts, and general commerce health may still be available."
+          ? " Catalog database/import required. Configure ECOMMERCE_DATABASE_URL, run alembic upgrade head, run python -m ecommerce.jobs.ingest_catalog, then reload the Catalog page. Files, paths, artifacts, and general commerce health may still be available."
         : "";
     const message = `Commerce API ${response.status} at ${path}: ${backendMessage}${pathHint}${setupHint}${dbHint}`;
     throw new CommerceApiError(message, response.status, payload, path);
@@ -2614,17 +2612,6 @@ export const commerceClient = {
     return normalizePathRoots(await request<unknown>("/paths/roots", { signal }));
   },
 
-  async listBridgeRunArtifacts(
-    runId: string,
-    signal?: AbortSignal,
-  ): Promise<ArtifactListResponse> {
-    return normalizeArtifactList(
-      await request<unknown>(`/artifacts/bridge/runs/${encodeURIComponent(runId)}`, {
-        signal,
-      }),
-    );
-  },
-
   async listPriceMonitoringRunArtifacts(
     runId: string,
     signal?: AbortSignal,
@@ -3133,11 +3120,4 @@ export const commerceClient = {
     });
   },
 
-  runBridge(body: BridgeRunBody, signal?: AbortSignal): Promise<BridgeRunResponse> {
-    return request<BridgeRunResponse>("/bridge/run", {
-      method: "POST",
-      body,
-      signal,
-    });
-  },
 };

@@ -23,7 +23,6 @@ from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 def _client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.chdir(tmp_path)
     artifact_roots = [
-        tmp_path / "output" / "ecommerce" / "bridge" / "runs",
         tmp_path / "output" / "ecommerce" / "monitoring" / "runs",
         tmp_path / "extra-artifacts",
     ]
@@ -153,12 +152,12 @@ def test_artifact_roots_endpoint_shape(tmp_path: Path, monkeypatch: pytest.Monke
 @pytest.mark.smoke
 def test_artifact_link_payload_public_shape(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client(tmp_path, monkeypatch)
-    run_dir = tmp_path / "output" / "ecommerce" / "bridge" / "runs" / "run-1"
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     artifact = run_dir / "summary.csv"
     artifact.parent.mkdir(parents=True, exist_ok=True)
     artifact.write_text("metric,value\nupdated,1\n", encoding="utf-8")
 
-    response = client.get("/api/artifacts/bridge/runs/run-1")
+    response = client.get("/api/artifacts/price-monitoring/runs/run-1")
 
     assert response.status_code == 200
     item = response.json()["items"][0]

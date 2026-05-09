@@ -33,7 +33,7 @@ Ecommerce provides a local backend for:
 - exposing generated artifacts through safe API download and preview endpoints
 
 Generated run files are written under `output/` by default. Catalog and Price
-Monitoring workflows require PostgreSQL. Health, bridge, safe file editing,
+Monitoring workflows require PostgreSQL. Health, safe file editing,
 paths, and artifact routes can still be useful while the database is being set
 up.
 

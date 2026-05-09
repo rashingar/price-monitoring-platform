@@ -25,11 +25,6 @@ def get_roots() -> dict:
     return {"roots": [{"path": str(root), "exists": root.exists()} for root in get_artifact_roots()]}
 
 
-@router.get("/bridge/runs/{run_id}")
-def get_bridge_run_artifacts(run_id: str) -> dict:
-    return _run_artifacts_response("bridge", run_id)
-
-
 @router.get("/price-monitoring/runs/{run_id}")
 def get_price_monitoring_run_artifacts(run_id: str) -> dict:
     return _run_artifacts_response("price_monitoring", run_id)

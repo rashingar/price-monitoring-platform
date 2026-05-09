@@ -71,7 +71,6 @@ def test_openapi_snapshot_contains_ui_facing_routes() -> None:
         ("POST", "/api/files/save-copy"),
         ("GET", "/api/paths/roots"),
         ("GET", "/api/artifacts/roots"),
-        ("GET", "/api/artifacts/bridge/runs/{run_id}"),
         ("GET", "/api/artifacts/price-monitoring/runs/{run_id}"),
         ("GET", "/api/artifacts/read"),
         ("GET", "/api/artifacts/download"),
@@ -105,7 +104,6 @@ def test_openapi_snapshot_contains_ui_facing_routes() -> None:
         ("POST", "/api/price-monitoring/alerts/events/{event_id}/acknowledge"),
         ("POST", "/api/price-monitoring/alerts/events/{event_id}/resolve"),
         ("POST", "/api/price-monitoring/alerts/evaluate/{run_id}"),
-        ("POST", "/api/bridge/run"),
     }
 
     missing = sorted(

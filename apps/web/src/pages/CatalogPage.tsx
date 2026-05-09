@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   CommerceApiError,
   commerceClient,
@@ -20,8 +20,11 @@ import type {
   CatalogSummary,
   MarketplaceFilter,
   PriceMonitoringSelectionBody,
+  PriceMonitoringSelectionItem,
   PriceMonitoringSelectionResult,
   PriceMonitoringSource,
+  SourceUrlAgentRun,
+  SourceUrlAgentRunRequest,
 } from "../api/commerceTypes";
 import {
   CatalogSourceUrlManager,
@@ -40,7 +43,7 @@ import {
 
 const DEFAULT_PAGE_SIZE = 100;
 const CATALOG_COLUMNS_STORAGE_KEY = "productFactoryUi.catalog.columns.v1";
-const CATALOG_STATE_KEY = "product-factory-ui:catalog:v1";
+const CATALOG_STATE_KEY = "product-factory-ui:catalog:v2";
 
 type CatalogColumnId =
   | "select"
@@ -135,7 +138,7 @@ const initialCatalogPageState: CatalogPageState = {
   selectedSubCategory: "",
   manufacturer: "",
   marketplace: "all",
-  source: "skroutz",
+  source: "bestprice",
   showComposite: false,
   includeIgnored: false,
   page: 1,
@@ -264,6 +267,74 @@ function getSelectionBlocker(product: CatalogProduct): string | null {
   }
 
   return null;
+}
+
+function getSourceUrlAgentRunId(run: SourceUrlAgentRun | null): string | null {
+  const value = run?.run_id ?? run?.id;
+  return value === null || value === undefined || value === "" ? null : String(value);
+}
+
+function isActiveSourceUrlAgentRun(run: SourceUrlAgentRun | null): boolean {
+  const status = typeof run?.status === "string" ? run.status.toLowerCase() : "";
+  return status === "queued" || status === "running";
+}
+
+function getSourceUrlAgentRunCount(run: SourceUrlAgentRun | null, key: keyof SourceUrlAgentRun): number {
+  const summary = typeof run?.summary === "object" && run.summary !== null ? run.summary : {};
+  const value = run?.[key] ?? summary[key];
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
+function getSourceUrlAgentTaskProgress(run: SourceUrlAgentRun | null): string {
+  const total = getSourceUrlAgentRunCount(run, "task_total_count");
+  const finished = getSourceUrlAgentRunCount(run, "task_finished_count");
+  return total > 0 ? `${finished.toLocaleString()} / ${total.toLocaleString()}` : "-";
+}
+
+function getSkippedMissingSourceUrlModels(result: PriceMonitoringSelectionResult | null): string[] {
+  if (!result) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const addModel = (value: unknown) => {
+    if (typeof value !== "string") {
+      return;
+    }
+
+    const model = value.trim();
+    if (model.length > 0) {
+      seen.add(model);
+    }
+  };
+
+  const addSkippedItem = (item: PriceMonitoringSelectionItem) => {
+    const reason = String(item.skip_reason ?? item.reason ?? "").toLowerCase();
+    const coverage = item.source_url_coverage;
+    const isMissing =
+      reason.includes("missing_active_source_url") ||
+      reason.includes("no_active_source_url") ||
+      coverage?.has_active_source_url === false ||
+      (coverage?.active_source_url_count !== undefined && coverage.active_source_url_count <= 0);
+
+    if (isMissing) {
+      addModel(item.model);
+    }
+  };
+
+  result.skipped_items?.forEach(addSkippedItem);
+  result.source_url_coverage?.missing_source_url_models?.forEach(addModel);
+
+  return Array.from(seen);
 }
 
 function getMarketplaceStatus(value: number | null | undefined): string {
@@ -450,8 +521,8 @@ function CatalogReadinessBanner({
       <p>{block.message}</p>
       <p className="muted">
         Catalog browsing reads from PostgreSQL after sourceCata.csv has been imported. This does not
-        mean CSV/Bridge, files, paths, artifacts, or general commerce health are unavailable when
-        their endpoints are running.
+        mean files, paths, artifacts, or general commerce health are unavailable when their endpoints
+        are running.
       </p>
       {block.details.length > 0 ? (
         <ul className="db-status-hints">
@@ -470,8 +541,8 @@ function CatalogReadinessBanner({
 }
 
 export function CatalogPage() {
-  const navigate = useNavigate();
   const initialLayoutPreferences = useMemo(() => readCatalogLayoutPreferences(), []);
+  const discoveryPollIntervalRef = useRef<number | null>(null);
   const filterResetMountedRef = useRef(false);
   const [persistedState, setPersistedState, resetPersistedState] =
     usePersistentPageState<CatalogPageState>(CATALOG_STATE_KEY, {
@@ -530,6 +601,8 @@ export function CatalogPage() {
   const [isRunLoading, setIsRunLoading] = useState(false);
 
   const [discoveryRunError, setDiscoveryRunError] = useState<string | null>(null);
+  const [discoveryRun, setDiscoveryRun] = useState<SourceUrlAgentRun | null>(null);
+  const [isDiscoveryLaunching, setIsDiscoveryLaunching] = useState(false);
 
   const isColumnVisible = useCallback(
     (columnId: CatalogColumnId) => visibleColumnIds.has(columnId),
@@ -711,6 +784,15 @@ export function CatalogPage() {
     void loadProducts(controller.signal);
     return () => controller.abort();
   }, [loadProducts]);
+
+  useEffect(
+    () => () => {
+      if (discoveryPollIntervalRef.current !== null) {
+        window.clearInterval(discoveryPollIntervalRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     writeCatalogLayoutPreferences({
@@ -910,20 +992,98 @@ export function CatalogPage() {
     }
   };
 
+  const stopDiscoveryPolling = () => {
+    if (discoveryPollIntervalRef.current !== null) {
+      window.clearInterval(discoveryPollIntervalRef.current);
+      discoveryPollIntervalRef.current = null;
+    }
+  };
+
+  const pollDiscoveryRun = (runId: string) => {
+    stopDiscoveryPolling();
+    const refresh = () => {
+      commerceClient
+        .getSourceUrlAgentRun(runId)
+        .then((nextRun) => {
+          setDiscoveryRun(nextRun);
+          if (!isActiveSourceUrlAgentRun(nextRun)) {
+            stopDiscoveryPolling();
+          }
+        })
+        .catch((error) => {
+          setDiscoveryRunError(getCommerceApiErrorMessage(error));
+          stopDiscoveryPolling();
+        });
+    };
+
+    refresh();
+    discoveryPollIntervalRef.current = window.setInterval(refresh, 2_500);
+  };
+
   const createVendorSourceDiscoveryRun = async () => {
-    const selected = Array.from(selectedModels);
-    if (selected.length === 0) {
-      setDiscoveryRunError("Select at least one product before creating a vendor source discovery run.");
+    let result = previewResult;
+    if (!result) {
+      setIsPreviewLoading(true);
+      setPreviewError(null);
+      try {
+        result = await commerceClient.previewPriceMonitoringSelection(buildSelectionBody(true));
+        setPreviewResult(result);
+      } catch (error) {
+        setPreviewError(getCommerceApiErrorMessage(error));
+        return;
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    }
+
+    const missingModels = getSkippedMissingSourceUrlModels(result);
+    if (missingModels.length === 0) {
+      setDiscoveryRunError("No skipped products with missing active source URLs were found in the selection preview.");
       return;
     }
 
     setDiscoveryRunError(null);
+    setIsDiscoveryLaunching(true);
+    stopDiscoveryPolling();
+    try {
+      const request: SourceUrlAgentRunRequest = {
+        mode: "catalog",
+        source: "all",
+        selected_models: missingModels,
+        missing_only: true,
+        active_only: true,
+        dry_run: true,
+        apply_high_confidence: false,
+        limit: missingModels.length,
+        max_products_per_batch: missingModels.length,
+        rate_limit_seconds: 2,
+      };
+      const createdRun = await commerceClient.createSourceUrlAgentRun(request);
+      setDiscoveryRun(createdRun);
+      const runId = getSourceUrlAgentRunId(createdRun);
+      if (runId && isActiveSourceUrlAgentRun(createdRun)) {
+        pollDiscoveryRun(runId);
+      }
+    } catch (error) {
+      setDiscoveryRunError(getCommerceApiErrorMessage(error));
+    } finally {
+      setIsDiscoveryLaunching(false);
+    }
+  };
+
+  const missingSourceUrlModelCount = getSkippedMissingSourceUrlModels(previewResult).length;
+  const isDiscoveryPolling = isActiveSourceUrlAgentRun(discoveryRun);
+  const discoveryRunId = getSourceUrlAgentRunId(discoveryRun);
+
+  const getDiscoveryReviewLink = () => {
+    if (!discoveryRunId) {
+      return "/vendor-sources/candidates";
+    }
+
     const params = new URLSearchParams({
-      models: selected.join(","),
-      source: "all",
-      auto_launch: "1",
+      run_id: discoveryRunId,
     });
-    navigate(`/vendor-sources/runs?${params.toString()}`);
+    return `/vendor-sources/candidates?${params.toString()}`;
   };
 
   const totalPages = Math.max(
@@ -981,6 +1141,7 @@ export function CatalogPage() {
             <SummaryCard
               label="Composite/invalid"
               value={getSummaryNumber(summary, [
+                "composite_or_invalid_models",
                 "composite_invalid_models",
                 "composite_products",
                 "non_atomic_products",
@@ -1118,13 +1279,13 @@ export function CatalogPage() {
           </label>
 
           <label title="Marketplace monitoring source. Direct vendor source URL capture uses Vendor Sources.">
-            Marketplace source (Skroutz / BestPrice)
+            Marketplace source (BestPrice / Skroutz)
             <select
               value={source}
               onChange={(event) => setSource(event.target.value as PriceMonitoringSource)}
             >
-              <option value="skroutz">Skroutz</option>
               <option value="bestprice">BestPrice</option>
+              <option value="skroutz">Skroutz</option>
             </select>
           </label>
 
@@ -1198,7 +1359,7 @@ export function CatalogPage() {
               onClick={() => void previewSelection()}
               disabled={isPreviewLoading || isRunLoading || isCatalogLocked}
             >
-              {isPreviewLoading ? "Previewing..." : "Preview selection"}
+              {isPreviewLoading ? "Previewing..." : "Preview"}
             </button>
             <button
               className="button primary"
@@ -1206,7 +1367,7 @@ export function CatalogPage() {
               onClick={() => void createRun()}
               disabled={isRunLoading || isPreviewLoading || isCatalogLocked}
             >
-              {isRunLoading ? "Creating..." : "Create price monitoring run"}
+              {isRunLoading ? "Creating..." : "Create run"}
             </button>
             <button
               className="button secondary"
@@ -1215,11 +1376,18 @@ export function CatalogPage() {
               disabled={
                 isRunLoading ||
                 isPreviewLoading ||
+                isDiscoveryLaunching ||
+                isDiscoveryPolling ||
                 isCatalogLocked ||
                 selectedModels.size === 0
               }
+              title={
+                previewResult
+                  ? `Find source URLs for ${missingSourceUrlModelCount.toLocaleString()} skipped products missing active source URLs.`
+                  : "Preview the selection, then find source URLs for skipped products missing active source URLs."
+              }
             >
-              Create vendor source discovery run
+              {isDiscoveryLaunching || isDiscoveryPolling ? "Finding..." : "Find more"}
             </button>
           </div>
         </div>
@@ -1241,6 +1409,27 @@ export function CatalogPage() {
         ) : null}
 
         {discoveryRunError ? <ErrorState message={discoveryRunError} /> : null}
+        {discoveryRun ? (
+          <div className="state-block">
+            <strong>Find more</strong>
+            <dl className="summary-grid">
+              <SummaryText label="Run ID" value={discoveryRunId} />
+              <SummaryText label="Status" value={discoveryRun.status} />
+              <SummaryText label="Selected" value={getSourceUrlAgentRunCount(discoveryRun, "selected_count")} />
+              <SummaryText label="Candidates" value={getSourceUrlAgentRunCount(discoveryRun, "candidate_count")} />
+              <SummaryText label="Needs review" value={getSourceUrlAgentRunCount(discoveryRun, "needs_review_count")} />
+              <SummaryText label="Task progress" value={getSourceUrlAgentTaskProgress(discoveryRun)} />
+            </dl>
+            <p className="button-row">
+              <Link className="button secondary" to="/vendor-sources/runs">
+                View runs
+              </Link>
+              <Link className="button secondary" to={getDiscoveryReviewLink()}>
+                Review candidates
+              </Link>
+            </p>
+          </div>
+        ) : null}
         {areProductsLoading ? <LoadingState label="Loading catalog products..." /> : null}
         {productsError ? (
           <>

@@ -107,10 +107,6 @@ def test_non_monitoring_routes_are_not_db_blocked(tmp_path: Path, monkeypatch) -
     artifact_root = tmp_path / "output" / "ecommerce" / "monitoring" / "runs"
     run_dir = artifact_root / "run-1"
     _write_run(run_dir)
-    stock_csv = tmp_path / "stock.csv"
-    stock_csv.write_text("model,quantity\n005606,3\n", encoding="utf-8")
-    opencart_csv = tmp_path / "opencart.csv"
-    opencart_csv.write_text("model,name,quantity,price,status\n005606,Product,1,10.00,0\n", encoding="utf-8")
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
     monkeypatch.setenv(FILE_ROOTS_ENV_VAR, str(file_root))
     monkeypatch.setenv(ARTIFACT_ROOTS_ENV_VAR, str(artifact_root))
@@ -123,14 +119,6 @@ def test_non_monitoring_routes_are_not_db_blocked(tmp_path: Path, monkeypatch) -
     assert client.get("/api/files/roots").status_code == 200
     assert client.post("/api/files/read", json={"path": str(editable)}).status_code == 200
     assert client.get("/api/artifacts/price-monitoring/runs/run-1").status_code == 200
-    assert client.post(
-        "/api/bridge/run",
-        json={
-            "opencart_export_path": str(opencart_csv),
-            "stock_csv_path": str(stock_csv),
-            "output_dir": str(tmp_path / "bridge-out"),
-        },
-    ).status_code == 200
 
 
 def test_mocked_db_ready_allows_monitoring_routes_to_reach_normal_validation(tmp_path: Path, monkeypatch) -> None:

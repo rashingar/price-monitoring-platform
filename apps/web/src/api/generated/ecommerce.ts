@@ -5,10 +5,6 @@
 
 
 export interface paths {
-  "/api/artifacts/bridge/runs/{run_id}": {
-    /** Get Bridge Run Artifacts */
-    get: operations["get_bridge_run_artifacts_api_artifacts_bridge_runs__run_id__get"];
-  };
   "/api/artifacts/download": {
     /** Download Artifact */
     get: operations["download_artifact_api_artifacts_download_get"];
@@ -24,10 +20,6 @@ export interface paths {
   "/api/artifacts/roots": {
     /** Get Roots */
     get: operations["get_roots_api_artifacts_roots_get"];
-  };
-  "/api/bridge/run": {
-    /** Run Bridge */
-    post: operations["run_bridge_api_bridge_run_post"];
   };
   "/api/catalog/brands": {
     /** Get Brands */
@@ -381,15 +373,6 @@ export interface components {
       threshold_amount?: number | string | null;
       /** Threshold Percent */
       threshold_percent?: number | string | null;
-    };
-    /** BridgeRunRequest */
-    BridgeRunRequest: {
-      /** Opencart Export Path */
-      opencart_export_path: string;
-      /** Output Dir */
-      output_dir?: string | null;
-      /** Stock Csv Path */
-      stock_csv_path?: string | null;
     };
     /** CsvReadRequest */
     CsvReadRequest: {
@@ -1005,30 +988,6 @@ export type external = Record<string, never>;
 
 export interface operations {
 
-  /** Get Bridge Run Artifacts */
-  get_bridge_run_artifacts_api_artifacts_bridge_runs__run_id__get: {
-    parameters: {
-      path: {
-        run_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Download Artifact */
   download_artifact_api_artifacts_download_get: {
     parameters: {
@@ -1109,30 +1068,6 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
-        };
-      };
-    };
-  };
-  /** Run Bridge */
-  run_bridge_api_bridge_run_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["BridgeRunRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

@@ -69,7 +69,7 @@ not a full commerce backend outage and not a Price Monitoring DB lock. An empty 
 products fixture with an active-catalog-empty warning is also kept so the UI preserves import
 warnings without converting them into generic empty search results.
 
-CSV/Bridge, file, path, artifact, and general commerce health fixtures stay independent from
+File, path, artifact, and general commerce health fixtures stay independent from
 Price Monitoring DB readiness and Catalog database/import readiness. Price Monitoring
 DB-not-ready fixtures set `non_db_workflows_available: true` to make that contract explicit.
 

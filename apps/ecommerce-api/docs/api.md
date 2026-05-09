@@ -68,7 +68,6 @@ configured, reachable, migrated PostgreSQL database.
 These routes are useful without PostgreSQL:
 
 - `GET /api/health`
-- bridge routes
 - safe CSV file routes
 - paths and artifact diagnostics
 - artifact preview and download for files under allowed roots
@@ -101,31 +100,11 @@ GET /api/health
 Returns a lightweight service health payload. This endpoint does not require
 catalog files, artifact folders, or PostgreSQL.
 
-### Bridge
-
-```text
-POST /api/bridge/run
-```
-
-Runs the local OpenCart stock bridge and writes bridge artifacts. Request body:
-
-```json
-{
-  "opencart_export_path": "C:\\Exports\\export_2026-04-28.csv",
-  "stock_csv_path": null,
-  "output_dir": null
-}
-```
-
-When `output_dir` is empty, artifacts are written under
-`output/ecommerce/bridge/runs/{run_id}`.
-
 ### Paths And Artifacts
 
 ```text
 GET /api/paths/roots
 GET /api/artifacts/roots
-GET /api/artifacts/bridge/runs/{run_id}
 GET /api/artifacts/price-monitoring/runs/{run_id}
 GET /api/artifacts/read
 GET /api/artifacts/download

@@ -10,7 +10,7 @@ export const catalogSummary = {
   total_products: 3,
   active_products: 3,
   atomic_products: 2,
-  composite_invalid_models: 1,
+  composite_or_invalid_models: 1,
   bestprice_products: 2,
   skroutz_products: 2,
   missing_mpn: 1,

@@ -1,7 +1,7 @@
 import type { PriceMonitoringDbStatus } from "./commerceTypes";
 
 export const PRICE_MONITORING_DB_REQUIRED_MESSAGE =
-  "PostgreSQL is required for Price Monitoring. CSV/Bridge, files, paths, artifacts, and general commerce health may still be available.";
+  "PostgreSQL is required for Price Monitoring. Files, paths, artifacts, and general commerce health may still be available.";
 
 export function isPriceMonitoringDbReady(status: PriceMonitoringDbStatus | null): boolean {
   return status?.ready_for_price_monitoring === true;

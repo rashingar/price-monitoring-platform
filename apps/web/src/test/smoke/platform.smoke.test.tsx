@@ -69,6 +69,8 @@ describe("platform mocked page smoke tests", () => {
     expect(within(primaryNav).getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Catalog" })).toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Price Monitoring" })).toBeInTheDocument();
+    expect(within(primaryNav).queryByRole("link", { name: "CSV/Bridge" })).not.toBeInTheDocument();
+    expect(within(primaryNav).queryByRole("link", { name: "Price Alerts" })).not.toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Vendor Sources" })).toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Product Factory" })).toBeInTheDocument();
     await expect(screen.findByRole("heading", { name: "Local backend control surface" })).resolves.toBeInTheDocument();
@@ -90,6 +92,7 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/catalog");
 
     await expect(screen.findByRole("heading", { name: "Commerce catalog" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("Composite/invalid").closest("div")).toHaveTextContent("1");
     await expect(screen.findByText("005606")).resolves.toBeInTheDocument();
     await expect(screen.findByText("Midea Αφυγραντήρας 20L")).resolves.toBeInTheDocument();
     expect(screen.getByText("Αφυγραντήρες")).toBeInTheDocument();
@@ -778,11 +781,11 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getAllByText(/Catalog database\/import required/).length).toBeGreaterThan(0);
     expect(screen.getByText("Run alembic upgrade head.")).toBeInTheDocument();
     expect(screen.getByText("Run python -m ecommerce.jobs.ingest_catalog.")).toBeInTheDocument();
-    expect(screen.getByText(/CSV\/Bridge, files, paths, artifacts, or general commerce health/)).toBeInTheDocument();
+    expect(screen.getByText(/files, paths, artifacts, or general commerce health/)).toBeInTheDocument();
     expect(screen.queryByText(/Commerce API unreachable/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Preview selection" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Create price monitoring run" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Create vendor source discovery run" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Create run" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Find more" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Expand" }));
     expect(screen.getByRole("button", { name: "Preview import" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Apply import" })).toBeDisabled();
@@ -939,7 +942,7 @@ describe("platform mocked page smoke tests", () => {
 
     await expect(
       screen.findAllByText(
-        "PostgreSQL is required for Price Monitoring. CSV/Bridge, files, paths, artifacts, and general commerce health may still be available.",
+        "PostgreSQL is required for Price Monitoring. Files, paths, artifacts, and general commerce health may still be available.",
       ),
     ).resolves.not.toHaveLength(0);
     expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled();
@@ -1063,50 +1066,83 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.queryByText("Database not ready")).not.toBeInTheDocument();
   });
 
-  it("routes selected Catalog products to Vendor Sources discovery progress", async () => {
+  it("finds more source URLs for skipped Catalog products missing source URLs", async () => {
     const mockFetch = installMockFetch([
       {
         method: "POST",
         path: "/commerce-api/vendor-sources/agent/runs",
-        response: async () => {
-          await new Promise((resolve) => setTimeout(resolve, 1_000));
-          return {
-            run_id: "source-run-002",
-            source: "all",
-            mode: "catalog",
-            dry_run: true,
-            apply_high_confidence: false,
-            limit: 1,
-            status: "queued",
+        response: {
+          run_id: "source-run-002",
+          source: "all",
+          mode: "catalog",
+          dry_run: true,
+          apply_high_confidence: false,
+          limit: 1,
+          status: "queued",
+          selected_count: 1,
+          candidate_count: 0,
+          needs_review_count: 0,
+          task_total_count: 1,
+          task_finished_count: 0,
+          summary: {
             selected_count: 1,
             candidate_count: 0,
             needs_review_count: 0,
-            summary: { selected_count: 1, candidate_count: 0, needs_review_count: 0 },
-          };
+            task_total_count: 1,
+            task_finished_count: 0,
+          },
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/vendor-sources/agent/runs/source-run-002",
+        response: {
+          run_id: "source-run-002",
+          source: "all",
+          mode: "catalog",
+          dry_run: true,
+          apply_high_confidence: false,
+          limit: 1,
+          status: "succeeded",
+          selected_count: 1,
+          candidate_count: 1,
+          needs_review_count: 1,
+          task_total_count: 1,
+          task_finished_count: 1,
+          summary: {
+            selected_count: 1,
+            candidate_count: 1,
+            needs_review_count: 1,
+            task_total_count: 1,
+            task_finished_count: 1,
+          },
         },
       },
       ...allRoutes,
     ]);
 
-    const { router } = renderWithRouter("/catalog");
+    renderWithRouter("/catalog");
 
     await expect(screen.findByRole("heading", { name: "Commerce catalog" })).resolves.toBeInTheDocument();
     await expect(screen.findByText("005606")).resolves.toBeInTheDocument();
-    const discoveryButton = screen.getByRole("button", { name: "Create vendor source discovery run" });
+    expect(screen.getByLabelText("Marketplace source (BestPrice / Skroutz)")).toHaveValue("bestprice");
+    const discoveryButton = screen.getByRole("button", { name: "Find more" });
     expect(discoveryButton).toBeDisabled();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Select all visible eligible products" }));
     await waitFor(() => expect(discoveryButton).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    await expect(screen.findByText("Selection preview")).resolves.toBeInTheDocument();
+    expect(screen.getByText("missing_active_source_url: 1")).toBeInTheDocument();
+
     fireEvent.click(discoveryButton);
 
-    await expect(screen.findByRole("heading", { name: "Vendor Source Discovery Runs" })).resolves.toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/vendor-sources/runs");
-    expect(router.state.location.search).toContain("models=");
-    await expect(screen.findByRole("heading", { name: "1 selected model" })).resolves.toBeInTheDocument();
-    await expect(
-      screen.findByText("Running browser-based Vendor Sources discovery. This can take several minutes for multi-model selections..."),
-    ).resolves.toBeInTheDocument();
     await expect(screen.findByText("source-run-002")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("succeeded")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review candidates" })).toHaveAttribute(
+      "href",
+      "/vendor-sources/candidates?run_id=source-run-002",
+    );
     expect(
       mockFetch.requests.some(
         (request) =>
@@ -1116,31 +1152,14 @@ describe("platform mocked page smoke tests", () => {
           request.body !== null &&
           !Array.isArray(request.body) &&
           Array.isArray(request.body.selected_models) &&
-          request.body.selected_models.includes("005606") &&
+          request.body.selected_models.length === 1 &&
+          request.body.selected_models.includes("AB-123") &&
           request.body.source === "all" &&
           request.body.missing_only === true &&
           request.body.dry_run === true &&
           request.body.limit === request.body.selected_models.length,
       ),
     ).toBe(true);
-  });
-
-  it("keeps CSV/Bridge usable when Price Monitoring DB is not ready", async () => {
-    installMockFetch([
-      {
-        method: "GET",
-        path: "/commerce-api/price-monitoring/db/status",
-        response: dbStatusUnavailable,
-      },
-      ...commerceDbRequiredFixtureRoutes,
-      ...allRoutes,
-    ]);
-
-    renderWithRouter("/csv-bridge");
-
-    await expect(screen.findByRole("heading", { name: "CSV bridge workspace" })).resolves.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Safe file browser" })).toBeInTheDocument();
-    expect(screen.queryByText("Database not ready")).not.toBeInTheDocument();
   });
 
   it("renders Jobs with active and terminal statuses", async () => {

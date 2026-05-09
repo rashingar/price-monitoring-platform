@@ -5,9 +5,7 @@ import { PipelineRunProvider } from "../../hooks/usePipelineRun";
 const platformNavItems = [
   { to: "/", label: "Dashboard" },
   { to: "/catalog", label: "Catalog" },
-  { to: "/csv-bridge", label: "CSV/Bridge" },
   { to: "/price-monitoring", label: "Price Monitoring" },
-  { to: "/price-monitoring/alerts", label: "Price Alerts" },
   { to: "/vendor-sources", label: "Vendor Sources" },
   { to: "/product-factory", label: "Product Factory" },
 ];

@@ -5,7 +5,7 @@ local Product Factory and ecommerce-api services.
 
 The UI does not run backend jobs itself. It sends requests to the Product Factory API for
 prepare, render, publish, authoring, and filter-review workflows, and to the commerce API
-for catalog browsing, source URL management, CSV bridge work, price monitoring, execution
+for catalog browsing, source URL management, price monitoring, execution
 history, and alerts.
 
 ## What It Provides
@@ -16,7 +16,6 @@ history, and alerts.
   publish operations.
 - A Filters Manager for category filter groups and values.
 - A commerce catalog browser with source URL management and source URL import review.
-- A CSV bridge workspace for backend-approved CSV files and bridge runs.
 - Price Monitoring workflow, execution history, review actions, export, and alert pages.
 
 This is a UI-only app. Product Factory job execution, commerce catalog imports,
@@ -100,8 +99,8 @@ timeout from `vitest.config.ts`.
 
 Catalog and Price Monitoring depend on PostgreSQL and an active imported catalog. When those
 backend requirements are missing, the UI shows locked states for the affected workflows while
-keeping unrelated workflows, such as CSV Bridge and artifact browsing, usable when their
-commerce endpoints are available.
+keeping unrelated workflows, such as artifact browsing, usable when their commerce endpoints
+are available.
 
 Price Monitoring export produces a CSV file only. The UI does not update OpenCart directly.
 

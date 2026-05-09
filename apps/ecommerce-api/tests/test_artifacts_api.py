@@ -20,22 +20,11 @@ def _client(tmp_path: Path, monkeypatch) -> TestClient:
     monkeypatch.setenv(
         ARTIFACT_ROOTS_ENV_VAR,
         (
-            f"{tmp_path / 'output' / 'ecommerce' / 'bridge' / 'runs'};"
             f"{tmp_path / 'output' / 'ecommerce' / 'monitoring' / 'runs'};"
             f"{tmp_path / 'extra_artifacts'}"
         ),
     )
     return TestClient(create_app())
-
-
-def _write_bridge_run(tmp_path: Path, run_id: str = "run-1") -> Path:
-    run_dir = tmp_path / "output" / "ecommerce" / "bridge" / "runs" / run_id
-    run_dir.mkdir(parents=True)
-    (run_dir / "oc_import.csv").write_text("model,quantity\n005606,3\n", encoding="utf-8-sig")
-    (run_dir / "summary.csv").write_text("metric,value\nupdated,1\n", encoding="utf-8")
-    (run_dir / "notes.xlsx").write_text("not previewable\n", encoding="utf-8")
-    (run_dir / "nested").mkdir()
-    return run_dir
 
 
 def _write_price_monitoring_run(tmp_path: Path, run_id: str = "pm-1") -> Path:
@@ -46,6 +35,8 @@ def _write_price_monitoring_run(tmp_path: Path, run_id: str = "pm-1") -> Path:
         json.dumps({"run_id": run_id, "source": "skroutz"}),
         encoding="utf-8",
     )
+    (run_dir / "notes.xlsx").write_text("not previewable\n", encoding="utf-8")
+    (run_dir / "nested").mkdir()
     return run_dir
 
 
@@ -63,7 +54,6 @@ def test_health_endpoint_returns_ok_without_catalog_or_export_files(tmp_path: Pa
 
 
 def test_artifact_roots_endpoint_uses_temp_roots(tmp_path: Path, monkeypatch) -> None:
-    _write_bridge_run(tmp_path)
     _write_price_monitoring_run(tmp_path)
     client = _client(tmp_path, monkeypatch)
 
@@ -71,40 +61,17 @@ def test_artifact_roots_endpoint_uses_temp_roots(tmp_path: Path, monkeypatch) ->
 
     assert response.status_code == 200
     roots = response.json()["roots"]
-    assert any(root["path"] == str(Path("output") / "ecommerce" / "bridge" / "runs") and root["exists"] for root in roots)
     assert any(root["path"] == str(Path("output") / "ecommerce" / "monitoring" / "runs") and root["exists"] for root in roots)
     assert any(str(tmp_path / "extra_artifacts") == root["path"] for root in roots)
 
 
-def test_bridge_run_artifact_listing(tmp_path: Path, monkeypatch) -> None:
-    _write_bridge_run(tmp_path)
-    client = _client(tmp_path, monkeypatch)
-
-    response = client.get("/api/artifacts/bridge/runs/run-1")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["run_id"] == "run-1"
-    assert payload["run_type"] == "bridge"
-    assert [item["name"] for item in payload["items"]] == ["notes.xlsx", "oc_import.csv", "summary.csv"]
-    item = payload["items"][1]
-    assert item["extension"] == ".csv"
-    assert item["size_bytes"] > 0
-    assert item["download_url"].startswith("/api/artifacts/download?path=")
-    assert item["read_url"].startswith("/api/artifacts/read?path=")
-    assert item["is_allowed"] is True
-    assert item["can_read"] is True
-    assert item["can_download"] is True
-    assert item["warning"] == ""
-
-
 def test_artifact_link_payload_allowed_path_includes_access_metadata(tmp_path: Path, monkeypatch) -> None:
-    run_dir = _write_bridge_run(tmp_path)
+    run_dir = _write_price_monitoring_run(tmp_path)
     _client(tmp_path, monkeypatch)
 
-    payload = artifact_link_payload(run_dir / "oc_import.csv")
+    payload = artifact_link_payload(run_dir / "review.csv")
 
-    assert payload["name"] == "oc_import.csv"
+    assert payload["name"] == "review.csv"
     assert payload["download_url"].startswith("/api/artifacts/download?path=")
     assert payload["read_url"].startswith("/api/artifacts/read?path=")
     assert payload["is_allowed"] is True
@@ -139,20 +106,20 @@ def test_price_monitoring_run_artifact_listing(tmp_path: Path, monkeypatch) -> N
     payload = response.json()
     assert payload["run_id"] == "pm-1"
     assert payload["run_type"] == "price-monitoring"
-    assert [item["name"] for item in payload["items"]] == ["review.csv", "selection_summary.json"]
+    assert [item["name"] for item in payload["items"]] == ["notes.xlsx", "review.csv", "selection_summary.json"]
 
 
 def test_read_csv_artifact(tmp_path: Path, monkeypatch) -> None:
-    run_dir = _write_bridge_run(tmp_path)
+    run_dir = _write_price_monitoring_run(tmp_path)
     client = _client(tmp_path, monkeypatch)
 
-    response = client.get("/api/artifacts/read", params={"path": str(run_dir / "oc_import.csv")})
+    response = client.get("/api/artifacts/read", params={"path": str(run_dir / "review.csv")})
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["filename"] == "oc_import.csv"
+    assert payload["filename"] == "review.csv"
     assert payload["extension"] == ".csv"
-    assert payload["content"].startswith("model,quantity")
+    assert payload["content"].startswith("model,price")
     assert payload["truncated"] is False
 
 
@@ -169,7 +136,7 @@ def test_read_json_artifact(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_read_rejects_unsupported_extension(tmp_path: Path, monkeypatch) -> None:
-    run_dir = _write_bridge_run(tmp_path)
+    run_dir = _write_price_monitoring_run(tmp_path)
     client = _client(tmp_path, monkeypatch)
 
     response = client.get("/api/artifacts/read", params={"path": str(run_dir / "notes.xlsx")})
@@ -179,18 +146,18 @@ def test_read_rejects_unsupported_extension(tmp_path: Path, monkeypatch) -> None
 
 
 def test_download_returns_file(tmp_path: Path, monkeypatch) -> None:
-    run_dir = _write_bridge_run(tmp_path)
+    run_dir = _write_price_monitoring_run(tmp_path)
     client = _client(tmp_path, monkeypatch)
 
-    response = client.get("/api/artifacts/download", params={"path": str(run_dir / "oc_import.csv")})
+    response = client.get("/api/artifacts/download", params={"path": str(run_dir / "review.csv")})
 
     assert response.status_code == 200
-    assert response.content.startswith("model,quantity".encode("utf-8-sig"))
-    assert "oc_import.csv" in response.headers["content-disposition"]
+    assert response.content.startswith(b"model,price")
+    assert "review.csv" in response.headers["content-disposition"]
 
 
 def test_missing_artifact_returns_404(tmp_path: Path, monkeypatch) -> None:
-    run_dir = _write_bridge_run(tmp_path)
+    run_dir = _write_price_monitoring_run(tmp_path)
     client = _client(tmp_path, monkeypatch)
 
     response = client.get("/api/artifacts/download", params={"path": str(run_dir / "missing.csv")})
@@ -200,12 +167,12 @@ def test_missing_artifact_returns_404(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_path_traversal_is_rejected(tmp_path: Path, monkeypatch) -> None:
-    _write_bridge_run(tmp_path)
+    _write_price_monitoring_run(tmp_path, run_id="run-1")
     client = _client(tmp_path, monkeypatch)
 
     response = client.get(
         "/api/artifacts/read",
-        params={"path": str(Path("output") / "ecommerce" / "bridge" / "runs" / "run-1" / ".." / "run-1" / "oc_import.csv")},
+        params={"path": str(Path("output") / "ecommerce" / "monitoring" / "runs" / "run-1" / ".." / "run-1" / "review.csv")},
     )
 
     assert response.status_code == 400

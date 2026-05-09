@@ -12,19 +12,16 @@ from ecommerce.env import load_local_env_if_present
 
 ARTIFACT_ROOTS_ENV_VAR = "ECOMMERCE_ARTIFACT_ROOTS"
 DEFAULT_ARTIFACT_ROOTS = (
-    Path("output") / "ecommerce" / "bridge" / "runs",
     Path("output") / "ecommerce" / "monitoring" / "runs",
     Path("output") / "ecommerce" / "source-url-agent" / "runs",
     Path("output") / "vendor_sources" / "captures" / "runs",
 )
 RUN_TYPE_ROOTS = {
-    "bridge": DEFAULT_ARTIFACT_ROOTS[0],
-    "price_monitoring": DEFAULT_ARTIFACT_ROOTS[1],
-    "source_url_agent": DEFAULT_ARTIFACT_ROOTS[2],
-    "vendor_sources": DEFAULT_ARTIFACT_ROOTS[3],
+    "price_monitoring": DEFAULT_ARTIFACT_ROOTS[0],
+    "source_url_agent": DEFAULT_ARTIFACT_ROOTS[1],
+    "vendor_sources": DEFAULT_ARTIFACT_ROOTS[2],
 }
 RUN_TYPE_PATH_SEGMENTS = {
-    "bridge": "bridge",
     "price_monitoring": "monitoring",
     "source_url_agent": "source-url-agent",
     "vendor_sources": "vendor_sources",
@@ -213,7 +210,7 @@ def _artifact_item(path: Path) -> ArtifactItem:
 def _normalize_run_type(run_type: str) -> str:
     normalized = run_type.strip().lower().replace("-", "_")
     if normalized not in RUN_TYPE_ROOTS:
-        raise ArtifactPathError("run_type must be one of: bridge, price_monitoring, source_url_agent, vendor_sources")
+        raise ArtifactPathError("run_type must be one of: price_monitoring, source_url_agent, vendor_sources")
     return normalized
 
 

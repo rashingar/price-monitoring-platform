@@ -262,42 +262,6 @@
         "title": "AlertRuleUpdateRequest",
         "type": "object"
       },
-      "BridgeRunRequest": {
-        "properties": {
-          "opencart_export_path": {
-            "minLength": 1,
-            "title": "Opencart Export Path",
-            "type": "string"
-          },
-          "output_dir": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output Dir"
-          },
-          "stock_csv_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Stock Csv Path"
-          }
-        },
-        "required": [
-          "opencart_export_path"
-        ],
-        "title": "BridgeRunRequest",
-        "type": "object"
-      },
       "CsvReadRequest": {
         "properties": {
           "delimiter": {
@@ -1839,50 +1803,6 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/api/artifacts/bridge/runs/{run_id}": {
-      "get": {
-        "operationId": "get_bridge_run_artifacts_api_artifacts_bridge_runs__run_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "run_id",
-            "required": true,
-            "schema": {
-              "title": "Run Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Bridge Run Artifacts Api Artifacts Bridge Runs  Run Id  Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Bridge Run Artifacts",
-        "tags": [
-          "artifacts"
-        ]
-      }
-    },
     "/api/artifacts/download": {
       "get": {
         "operationId": "download_artifact_api_artifacts_download_get",
@@ -2055,49 +1975,6 @@
         "summary": "Get Roots",
         "tags": [
           "artifacts"
-        ]
-      }
-    },
-    "/api/bridge/run": {
-      "post": {
-        "operationId": "run_bridge_api_bridge_run_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BridgeRunRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Run Bridge Api Bridge Run Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Run Bridge",
-        "tags": [
-          "bridge"
         ]
       }
     },

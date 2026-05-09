@@ -32,7 +32,7 @@ echo Health: http://127.0.0.1:8001/api/health
 echo Catalog summary: http://127.0.0.1:8001/api/catalog/summary
 echo Price Monitoring DB status: http://127.0.0.1:8001/api/price-monitoring/db/status
 echo NOTE: PostgreSQL is required for Catalog browsing and Price Monitoring workflows.
-echo NOTE: PostgreSQL is not required for backend startup, health, CSV/Bridge, files, paths, or artifacts.
+echo NOTE: PostgreSQL is not required for backend startup, health, files, paths, or artifacts.
 echo.
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%REPO_ROOT%\scripts\dev\ecommerce-api.ps1"

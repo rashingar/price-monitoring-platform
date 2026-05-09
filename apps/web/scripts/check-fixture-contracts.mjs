@@ -317,6 +317,7 @@ const commerceCritical = [
       "total_products",
       "active_products",
       "atomic_products",
+      "composite_or_invalid_models",
       "bestprice_products",
       "skroutz_products",
       "manufacturer_count",

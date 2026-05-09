@@ -261,7 +261,6 @@ GET    /commerce-api/vendor-sources/source-urls/{source_url_id}/diagnostics/skro
 
 GET    /commerce-api/paths/roots
 GET    /commerce-api/artifacts/roots
-GET    /commerce-api/artifacts/bridge/runs/{run_id}
 GET    /commerce-api/artifacts/price-monitoring/runs/{run_id}
 GET    /commerce-api/artifacts/read?path=...
 GET    /commerce-api/artifacts/download?path=...
@@ -305,7 +304,6 @@ GET    /commerce-api/files/list
 POST   /commerce-api/files/read
 POST   /commerce-api/files/save
 POST   /commerce-api/files/save-copy
-POST   /commerce-api/bridge/run
 ```
 
 ### Catalog Contracts
@@ -389,7 +387,7 @@ enables Price Monitoring preview, run creation, fetch, review, export, execution
 alert workflows.
 
 A DB-not-ready response locks Price Monitoring only. It should not imply that commerce health,
-CSV Bridge, file roots, path roots, or artifacts are unavailable.
+file roots, path roots, or artifacts are unavailable.
 
 Review actions use:
 
@@ -427,25 +425,13 @@ Alert rules support the current rule type:
 Rule bodies include optional product identity fields, optional amount or percent thresholds,
 and an `active` flag. Alert events support `open`, `acknowledged`, and `resolved` statuses.
 
-### CSV Bridge Contracts
+### Safe CSV File Contracts
 
 CSV file reads and writes preserve values as strings so values such as leading-zero product
 models are not changed by the browser.
 
 `POST /commerce-api/files/save-copy` is the normal safe write path. Save in place is available
 through `POST /commerce-api/files/save` and should remain guarded by the UI.
-
-Bridge runs accept:
-
-```ts
-{
-  opencart_export_path: string;
-  stock_csv_path: string | null;
-  output_dir: string | null;
-}
-```
-
-When `stock_csv_path` is omitted, the backend default is used.
 
 ### Artifact Contracts
 
