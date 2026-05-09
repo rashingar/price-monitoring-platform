@@ -226,6 +226,52 @@ describe("Product Factory API client contract fixtures", () => {
     expect(status.intro_text?.emphasized_word_count).toBeUndefined();
   });
 
+  it("normalizes queued authoring job responses", async () => {
+    installMockFetch([
+      {
+        method: "POST",
+        path: "/api/authoring/005606/intro-text",
+        response: { job: { job_id: "005606-authoring_intro-abc", job_type: "authoring_intro", model: "005606", status: "queued" } },
+      },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/intro-text/retry",
+        response: { job: { job_id: "005606-authoring_intro-retry", job_type: "authoring_intro", model: "005606", status: "queued" } },
+      },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/seo-meta",
+        response: { job: { job_id: "005606-authoring_seo-abc", job_type: "authoring_seo", model: "005606", status: "queued" } },
+      },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/seo-meta/retry",
+        response: { job: { job_id: "005606-authoring_seo-retry", job_type: "authoring_seo", model: "005606", status: "queued" } },
+      },
+    ]);
+
+    await expect(apiClient.runIntroText("005606")).resolves.toMatchObject({
+      job_id: "005606-authoring_intro-abc",
+      job_type: "authoring_intro",
+      client_stage: "authoring",
+    });
+    await expect(apiClient.retryIntroText("005606")).resolves.toMatchObject({
+      job_id: "005606-authoring_intro-retry",
+      job_type: "authoring_intro",
+      client_stage: "authoring",
+    });
+    await expect(apiClient.runSeoMeta("005606")).resolves.toMatchObject({
+      job_id: "005606-authoring_seo-abc",
+      job_type: "authoring_seo",
+      client_stage: "authoring",
+    });
+    await expect(apiClient.retrySeoMeta("005606")).resolves.toMatchObject({
+      job_id: "005606-authoring_seo-retry",
+      job_type: "authoring_seo",
+      client_stage: "authoring",
+    });
+  });
+
   it("sends backend-valid prepare payloads", async () => {
     const mock = installMockFetch([
       {

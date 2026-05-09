@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 
 from ..repo_paths import REPO_ROOT, category_filter_review_path
@@ -12,6 +13,8 @@ class ResolvedArtifact:
     name: str
     path: str
     kind: str | None = None
+    content_type: str | None = None
+    content: str | None = None
 
 
 def resolve_job_artifacts(
@@ -22,7 +25,7 @@ def resolve_job_artifacts(
     paths = _existing_expected_paths(record, repo_root=repo_root)
     paths.update(record.artifacts)
     return [
-        ResolvedArtifact(name=name, path=path, kind=_artifact_kind(Path(path)))
+        _resolved_artifact(name, path)
         for name, path in sorted(paths.items())
         if path
     ]
@@ -60,14 +63,37 @@ def _expected_paths(job_type: JobType, model: str, *, repo_root: Path) -> dict[s
         "intro_text_prompt_path": llm_dir / "intro_text.prompt.txt",
         "intro_text_output_path": llm_dir / "intro_text.output.txt",
         "intro_text_trace_path": llm_dir / "intro_text.retry_trace.json",
+        "intro_text_preview_path": llm_dir / "intro_text.preview.html",
         "seo_meta_context_path": llm_dir / "seo_meta.context.json",
         "seo_meta_prompt_path": llm_dir / "seo_meta.prompt.txt",
         "seo_meta_output_path": llm_dir / "seo_meta.output.json",
+        "seo_meta_preview_path": llm_dir / "seo_meta.preview.json",
         "category_filter_review_path": review_path,
         "metadata_path": model_root / "prepare.run.json",
     }
     if job_type == JobType.PREPARE:
         return prepare_paths
+    if job_type == JobType.AUTHORING_INTRO:
+        return {
+            "model_root": model_root,
+            "llm_dir": llm_dir,
+            "llm_task_manifest_path": llm_dir / "task_manifest.json",
+            "intro_text_context_path": llm_dir / "intro_text.context.json",
+            "intro_text_prompt_path": llm_dir / "intro_text.prompt.txt",
+            "intro_text_output_path": llm_dir / "intro_text.output.txt",
+            "intro_text_trace_path": llm_dir / "intro_text.retry_trace.json",
+            "intro_text_preview_path": llm_dir / "intro_text.preview.html",
+        }
+    if job_type == JobType.AUTHORING_SEO:
+        return {
+            "model_root": model_root,
+            "llm_dir": llm_dir,
+            "llm_task_manifest_path": llm_dir / "task_manifest.json",
+            "seo_meta_context_path": llm_dir / "seo_meta.context.json",
+            "seo_meta_prompt_path": llm_dir / "seo_meta.prompt.txt",
+            "seo_meta_output_path": llm_dir / "seo_meta.output.json",
+            "seo_meta_preview_path": llm_dir / "seo_meta.preview.json",
+        }
     if job_type == JobType.RENDER:
         return {
             "model_root": model_root,
@@ -103,5 +129,40 @@ def _artifact_kind(path: Path) -> str | None:
     if path.is_dir():
         return "directory"
     if path.is_file():
+        if path.name.endswith(".preview.html"):
+            return "text_preview"
+        if path.name.endswith(".preview.json"):
+            return "json_preview"
         return "file"
     return None
+
+
+def _resolved_artifact(name: str, path: str) -> ResolvedArtifact:
+    resolved_path = Path(path)
+    kind = _artifact_kind(resolved_path)
+    content_type, content = _preview_content(resolved_path, kind)
+    return ResolvedArtifact(
+        name=name,
+        path=path,
+        kind=kind,
+        content_type=content_type,
+        content=content,
+    )
+
+
+def _preview_content(path: Path, kind: str | None) -> tuple[str | None, str | None]:
+    if kind not in {"text_preview", "json_preview"} or not path.is_file():
+        return None, None
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return None, None
+    if len(content) > 20_000:
+        content = content[:20_000] + "\n...[truncated]"
+    if kind == "json_preview":
+        try:
+            content = json.dumps(json.loads(content), ensure_ascii=False, indent=2)
+        except json.JSONDecodeError:
+            pass
+        return "application/json", content
+    return "text/html", content

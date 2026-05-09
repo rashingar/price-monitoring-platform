@@ -51,10 +51,10 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 | Method | Browser path | Request body | Success response |
 | --- | --- | --- | --- |
 | GET | `/api/authoring/{model}` | - | `AuthoringStatusResponse` |
-| POST | `/api/authoring/{model}/intro-text` | - | `AuthoringStatusResponse` |
-| POST | `/api/authoring/{model}/intro-text/retry` | - | `AuthoringStatusResponse` |
-| POST | `/api/authoring/{model}/seo-meta` | - | `AuthoringStatusResponse` |
-| POST | `/api/authoring/{model}/seo-meta/retry` | - | `AuthoringStatusResponse` |
+| POST | `/api/authoring/{model}/intro-text` | - | `JobResponse` |
+| POST | `/api/authoring/{model}/intro-text/retry` | - | `JobResponse` |
+| POST | `/api/authoring/{model}/seo-meta` | - | `JobResponse` |
+| POST | `/api/authoring/{model}/seo-meta/retry` | - | `JobResponse` |
 | GET | `/api/filter-review/{model}` | - | `FilterReviewResponse` |
 | PUT | `/api/filter-review/{model}` | `FilterReviewUpdateRequest` | `FilterReviewResponse` |
 | POST | `/api/filter-review/{model}/approve` | - | `FilterReviewResponse` |
@@ -76,6 +76,8 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 | GET | `/api/jobs/{job_id}/logs` | - | `JobLogsResponse` |
 | POST | `/api/jobs/{job_id}/retry` | - | `JobResponse` |
 | POST | `/api/jobs/{job_id}/stop` | - | `JobResponse` |
+| POST | `/api/jobs/authoring/intro-text` | `AuthoringIntroJobRequest` | `JobResponse` |
+| POST | `/api/jobs/authoring/seo-meta` | `AuthoringSeoJobRequest` | `JobResponse` |
 | GET | `/api/jobs/by-model/{model}` | - | `JobListResponse` |
 | POST | `/api/jobs/prepare` | `PrepareJobRequest` | `JobResponse` |
 | POST | `/api/jobs/publish` | `PublishJobRequest` | `JobResponse` |
@@ -117,6 +119,24 @@ Generated from `packages/contracts/openapi.product-factory.json`.
   expected_revision?: string | null;
   status?: "active" | "inactive" | "deprecated"; // default: "active"
   value: string;
+}
+```
+
+### AuthoringIntroJobRequest
+
+```ts
+{
+  model: string;
+  retry?: boolean; // default: false
+}
+```
+
+### AuthoringSeoJobRequest
+
+```ts
+{
+  model: string;
+  retry?: boolean; // default: false
 }
 ```
 

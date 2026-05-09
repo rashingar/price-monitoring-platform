@@ -383,35 +383,47 @@ export const apiClient = {
     );
   },
 
-  async runIntroText(model: string): Promise<AuthoringStatus> {
-    return normalizeAuthoringStatus(
-      await request<unknown>(`/api/authoring/${encodeURIComponent(model)}/intro-text`, {
-        method: "POST",
-      }),
+  async runIntroText(model: string): Promise<Job> {
+    return withJobStage(
+      normalizeJob(
+        await request<unknown>(`/api/authoring/${encodeURIComponent(model)}/intro-text`, {
+          method: "POST",
+        }),
+      ),
+      "authoring",
     );
   },
 
-  async retryIntroText(model: string): Promise<AuthoringStatus> {
-    return normalizeAuthoringStatus(
-      await request<unknown>(`/api/authoring/${encodeURIComponent(model)}/intro-text/retry`, {
-        method: "POST",
-      }),
+  async retryIntroText(model: string): Promise<Job> {
+    return withJobStage(
+      normalizeJob(
+        await request<unknown>(`/api/authoring/${encodeURIComponent(model)}/intro-text/retry`, {
+          method: "POST",
+        }),
+      ),
+      "authoring",
     );
   },
 
-  async runSeoMeta(model: string): Promise<AuthoringStatus> {
-    return normalizeAuthoringStatus(
-      await request<unknown>(`/api/authoring/${encodeURIComponent(model)}/seo-meta`, {
-        method: "POST",
-      }),
+  async runSeoMeta(model: string): Promise<Job> {
+    return withJobStage(
+      normalizeJob(
+        await request<unknown>(`/api/authoring/${encodeURIComponent(model)}/seo-meta`, {
+          method: "POST",
+        }),
+      ),
+      "authoring",
     );
   },
 
-  async retrySeoMeta(model: string): Promise<AuthoringStatus> {
-    return normalizeAuthoringStatus(
-      await request<unknown>(`/api/authoring/${encodeURIComponent(model)}/seo-meta/retry`, {
-        method: "POST",
-      }),
+  async retrySeoMeta(model: string): Promise<Job> {
+    return withJobStage(
+      normalizeJob(
+        await request<unknown>(`/api/authoring/${encodeURIComponent(model)}/seo-meta/retry`, {
+          method: "POST",
+        }),
+      ),
+      "authoring",
     );
   },
 

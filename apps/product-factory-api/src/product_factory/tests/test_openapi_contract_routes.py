@@ -11,6 +11,8 @@ REQUIRED_ENDPOINTS: dict[str, set[str]] = {
     "/api/health": {"get"},
     "/api/jobs": {"get"},
     "/api/jobs/prepare": {"post"},
+    "/api/jobs/authoring/intro-text": {"post"},
+    "/api/jobs/authoring/seo-meta": {"post"},
     "/api/jobs/render": {"post"},
     "/api/jobs/publish": {"post"},
     "/api/jobs/{job_id}": {"get"},
@@ -53,3 +55,22 @@ def test_openapi_snapshot_contains_ui_facing_product_factory_routes() -> None:
                 missing.append(f"{method.upper()} {path}")
 
     assert not missing, f"Missing Product Factory API contract routes: {missing}"
+
+
+def test_openapi_snapshot_documents_authoring_posts_as_queued_jobs() -> None:
+    snapshot = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    paths = snapshot["paths"]
+
+    for path in [
+        "/api/authoring/{model}/intro-text",
+        "/api/authoring/{model}/intro-text/retry",
+        "/api/authoring/{model}/seo-meta",
+        "/api/authoring/{model}/seo-meta/retry",
+    ]:
+        operation = paths[path]["post"]
+        assert "202" in operation["responses"]
+        schema_ref = operation["responses"]["202"]["content"]["application/json"]["schema"]["$ref"]
+        assert schema_ref.endswith("/JobResponse")
+
+    job_type_schema = snapshot["components"]["schemas"]["JobType"]
+    assert {"authoring_intro", "authoring_seo"}.issubset(set(job_type_schema["enum"]))

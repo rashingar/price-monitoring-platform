@@ -8,6 +8,8 @@ from typing import Any, Mapping
 
 class JobType(str, Enum):
     PREPARE = "prepare"
+    AUTHORING_INTRO = "authoring_intro"
+    AUTHORING_SEO = "authoring_seo"
     RENDER = "render"
     PUBLISH = "publish"
 

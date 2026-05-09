@@ -31,6 +31,32 @@ class PublishJobRequest(BaseModel):
     current_job_product_file: str | None = None
 
 
+class AuthoringIntroJobRequest(BaseModel):
+    model: str
+    retry: bool = False
+
+    @field_validator("model")
+    @classmethod
+    def _model_not_empty(cls, value: str) -> str:
+        value = str(value or "").strip()
+        if not value:
+            raise ValueError("model must not be empty")
+        return value
+
+
+class AuthoringSeoJobRequest(BaseModel):
+    model: str
+    retry: bool = False
+
+    @field_validator("model")
+    @classmethod
+    def _model_not_empty(cls, value: str) -> str:
+        value = str(value or "").strip()
+        if not value:
+            raise ValueError("model must not be empty")
+        return value
+
+
 class StopJobRequest(BaseModel):
     reason: str | None = None
 
@@ -78,6 +104,8 @@ class JobArtifact(BaseModel):
     name: str
     path: str
     kind: str | None = None
+    content_type: str | None = None
+    content: str | None = None
 
 
 class JobArtifactsResponse(BaseModel):
@@ -89,7 +117,13 @@ class JobArtifactsResponse(BaseModel):
         return cls(
             job_id=job_id,
             artifacts=[
-                JobArtifact(name=artifact.name, path=artifact.path, kind=artifact.kind)
+                JobArtifact(
+                    name=artifact.name,
+                    path=artifact.path,
+                    kind=artifact.kind,
+                    content_type=artifact.content_type,
+                    content=artifact.content,
+                )
                 for artifact in artifacts
             ],
         )

@@ -10,6 +10,8 @@ from .job_runner import SequentialJobRunner
 from .job_store import JobStore
 from .schemas import (
     ErrorResponse,
+    AuthoringIntroJobRequest,
+    AuthoringSeoJobRequest,
     JobArtifactsResponse,
     JobListResponse,
     JobLogsResponse,
@@ -86,6 +88,24 @@ def render_job(request: RenderJobRequest, api_request: Request) -> JobResponse:
 )
 def publish_job(request: PublishJobRequest, api_request: Request) -> JobResponse:
     return _enqueue_job(api_request, JobType.PUBLISH, _request_payload(request))
+
+
+@router.post(
+    "/authoring/intro-text",
+    response_model=JobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def authoring_intro_job(request: AuthoringIntroJobRequest, api_request: Request) -> JobResponse:
+    return _enqueue_job(api_request, JobType.AUTHORING_INTRO, _request_payload(request))
+
+
+@router.post(
+    "/authoring/seo-meta",
+    response_model=JobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def authoring_seo_job(request: AuthoringSeoJobRequest, api_request: Request) -> JobResponse:
+    return _enqueue_job(api_request, JobType.AUTHORING_SEO, _request_payload(request))
 
 
 @router.post("/{job_id}/stop", response_model=JobResponse, responses=_NOT_FOUND_RESPONSE)

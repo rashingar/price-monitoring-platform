@@ -5,7 +5,15 @@ import sys
 from pathlib import Path
 
 from ..api.job_models import JobRecord, JobStatus, JobType, is_terminal_job_status
-from ..api.job_runner import JobRunResult, LogCallback, run_prepare_job, run_publish_job, run_render_job
+from ..api.job_runner import (
+    JobRunResult,
+    LogCallback,
+    run_authoring_intro_job,
+    run_authoring_seo_job,
+    run_prepare_job,
+    run_publish_job,
+    run_render_job,
+)
 from ..api.job_store import DEFAULT_JOBS_DIR, JobStore
 from ..services import ServiceError
 
@@ -85,6 +93,10 @@ def _run_record(record: JobRecord, log: LogCallback) -> JobRunResult | None:
     log(f"Worker accepted {record.job_type.value} job.")
     if record.job_type == JobType.PREPARE:
         return run_prepare_job(record, log)
+    if record.job_type == JobType.AUTHORING_INTRO:
+        return run_authoring_intro_job(record, log)
+    if record.job_type == JobType.AUTHORING_SEO:
+        return run_authoring_seo_job(record, log)
     if record.job_type == JobType.RENDER:
         return run_render_job(record, log)
     if record.job_type == JobType.PUBLISH:

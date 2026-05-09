@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
 from collections import deque
+import json
 import os
 from pathlib import Path
 import signal
@@ -20,6 +21,11 @@ from ..services import (
     prepare_product,
     publish_product,
     render_product,
+)
+from ..services.authoring_service import (
+    AuthoringStatus,
+    run_intro_text_authoring,
+    run_seo_meta_authoring,
 )
 from ..services.models import RunStatus
 from .job_models import JobRecord, JobStatus, JobType, is_terminal_job_status, utc_now_iso
@@ -52,6 +58,10 @@ def stub_runner_callback(record: JobRecord, log: LogCallback) -> None:
 def service_runner_callback(record: JobRecord, log: LogCallback) -> JobRunResult | None:
     if record.job_type == JobType.PREPARE:
         return run_prepare_job(record, log)
+    if record.job_type == JobType.AUTHORING_INTRO:
+        return run_authoring_intro_job(record, log)
+    if record.job_type == JobType.AUTHORING_SEO:
+        return run_authoring_seo_job(record, log)
     if record.job_type == JobType.RENDER:
         return run_render_job(record, log)
     if record.job_type == JobType.PUBLISH:
@@ -128,6 +138,64 @@ def run_publish_job(
     )
 
 
+def run_authoring_intro_job(
+    record: JobRecord,
+    log: LogCallback,
+    *,
+    run_intro_text_authoring_fn: Callable[..., AuthoringStatus] | None = None,
+) -> JobRunResult:
+    run_intro_text_authoring_fn = run_intro_text_authoring_fn or run_intro_text_authoring
+    model = str(record.payload["model"])
+    retry = bool(record.payload.get("retry", False))
+    log("Calling intro text authoring service.")
+    try:
+        status = run_intro_text_authoring_fn(model, retry=retry)
+    except ServiceError as exc:
+        log(f"Intro text authoring failed: {exc.message}")
+        return _failed_authoring_result("Intro text authoring failed.", exc)
+    log("Intro text authoring succeeded.")
+    return JobRunResult(
+        status=JobStatus.SUCCEEDED,
+        message="Intro text authoring succeeded.",
+        artifacts=_authoring_artifacts(status, "intro_text"),
+    )
+
+
+def run_authoring_seo_job(
+    record: JobRecord,
+    log: LogCallback,
+    *,
+    run_seo_meta_authoring_fn: Callable[..., AuthoringStatus] | None = None,
+) -> JobRunResult:
+    run_seo_meta_authoring_fn = run_seo_meta_authoring_fn or run_seo_meta_authoring
+    model = str(record.payload["model"])
+    retry = bool(record.payload.get("retry", False))
+    log("Calling SEO meta authoring service.")
+    try:
+        status = run_seo_meta_authoring_fn(model, retry=retry)
+    except ServiceError as exc:
+        log(f"SEO meta authoring failed: {exc.message}")
+        return _failed_authoring_result("SEO meta authoring failed.", exc)
+    log("SEO meta authoring succeeded.")
+    return JobRunResult(
+        status=JobStatus.SUCCEEDED,
+        message="SEO meta authoring succeeded.",
+        artifacts=_authoring_artifacts(status, "seo_meta"),
+    )
+
+
+def _failed_authoring_result(message: str, exc: ServiceError) -> JobRunResult:
+    detail_code = exc.details.get("error_code")
+    error_code = str(detail_code) if detail_code else exc.code
+    return JobRunResult(
+        status=JobStatus.FAILED,
+        message=message,
+        error=exc.message,
+        error_code=error_code,
+        artifacts=_authoring_error_artifacts(exc),
+    )
+
+
 def _job_result_from_service_result(
     operation: str,
     result: ServiceResult,
@@ -172,6 +240,74 @@ def _artifact_paths(result: ServiceResult) -> dict[str, str]:
         if name.endswith("_path") and value is not None:
             paths[name] = str(value)
     return paths
+
+
+def _authoring_artifacts(status: AuthoringStatus, stage: str) -> dict[str, str]:
+    llm_dir = Path(status.llm_dir)
+    paths: dict[str, Path | None] = {
+        "llm_dir": llm_dir,
+        "llm_task_manifest_path": llm_dir / "task_manifest.json",
+    }
+    if stage == "intro_text":
+        output_path = Path(status.intro_text.output_path)
+        paths.update(
+            {
+                "intro_text_output_path": output_path,
+                "intro_text_prompt_path": llm_dir / "intro_text.prompt.txt",
+                "intro_text_context_path": llm_dir / "intro_text.context.json",
+                "intro_text_trace_path": Path(status.intro_text.trace_path) if status.intro_text.trace_path else None,
+                "intro_text_preview_path": _write_intro_preview(output_path),
+            }
+        )
+    if stage == "seo_meta":
+        output_path = Path(status.seo_meta.output_path)
+        paths.update(
+            {
+                "seo_meta_output_path": output_path,
+                "seo_meta_prompt_path": llm_dir / "seo_meta.prompt.txt",
+                "seo_meta_context_path": llm_dir / "seo_meta.context.json",
+                "seo_meta_trace_path": llm_dir / "seo_meta.retry_trace.json",
+                "seo_meta_preview_path": _write_seo_preview(output_path),
+            }
+        )
+    return {name: str(path) for name, path in paths.items() if path is not None}
+
+
+def _authoring_error_artifacts(exc: ServiceError) -> dict[str, str]:
+    artifacts: dict[str, str] = {}
+    for name in ("output_path", "trace_path"):
+        value = exc.details.get(name)
+        if value:
+            artifacts[name] = str(value)
+    return artifacts
+
+
+def _write_intro_preview(output_path: Path) -> Path | None:
+    if not output_path.exists():
+        return None
+    preview_path = output_path.with_name("intro_text.preview.html")
+    preview_path.write_text(output_path.read_text(encoding="utf-8"), encoding="utf-8")
+    return preview_path
+
+
+def _write_seo_preview(output_path: Path) -> Path | None:
+    if not output_path.exists():
+        return None
+    preview_path = output_path.with_name("seo_meta.preview.json")
+    try:
+        payload = json.loads(output_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        preview_path.write_text(output_path.read_text(encoding="utf-8"), encoding="utf-8")
+        return preview_path
+    product = payload.get("product", {}) if isinstance(payload, dict) else {}
+    preview = {
+        "meta_title": product.get("meta_title") if isinstance(product, dict) else None,
+        "meta_description": product.get("meta_description") if isinstance(product, dict) else None,
+        "meta_keywords": product.get("meta_keywords") if isinstance(product, dict) else None,
+        "seo_keyword": product.get("seo_keyword") if isinstance(product, dict) else None,
+    }
+    preview_path.write_text(json.dumps(preview, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return preview_path
 
 
 def configured_max_workers(env: MappingLike | None = None) -> int:

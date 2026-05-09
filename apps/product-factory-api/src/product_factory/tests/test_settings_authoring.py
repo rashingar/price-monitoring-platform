@@ -304,34 +304,23 @@ def test_seo_authoring_retry_rewrites_only_seo(isolated_repo: Path) -> None:
     assert json.loads((llm_dir / "seo_meta.output.json").read_text(encoding="utf-8"))["product"]["meta_keywords"] == ["LG", "New"]
 
 
-def test_authoring_api_routes_are_included_and_map_errors(isolated_repo: Path, monkeypatch) -> None:
+def test_authoring_api_routes_are_included_and_queue_jobs(isolated_repo: Path) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
-    import product_factory.api.routes_authoring as routes_authoring
     from product_factory.api.app import create_app
-    from product_factory.services.errors import ServiceError, ServiceErrorCode
+    from product_factory.api.job_runner import SequentialJobRunner
+    from product_factory.api.job_store import JobStore
 
     _write_prepared_authoring_artifacts(isolated_repo)
-    monkeypatch.setattr(
-        routes_authoring,
-        "run_intro_text_authoring",
-        lambda model, retry=False: get_authoring_status(model),
-    )
-    monkeypatch.setattr(
-        routes_authoring,
-        "run_seo_meta_authoring",
-        lambda model, retry=False: get_authoring_status(model),
-    )
-    client = fastapi_testclient.TestClient(create_app())
+    store = JobStore(isolated_repo / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: None)
+    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
 
-    assert client.get(f"/api/authoring/{MODEL}").status_code == 200
-    assert client.post(f"/api/authoring/{MODEL}/intro-text").status_code == 200
-    assert client.post(f"/api/authoring/{MODEL}/intro-text/retry").status_code == 200
-    assert client.post(f"/api/authoring/{MODEL}/seo-meta").status_code == 200
-    assert client.post(f"/api/authoring/{MODEL}/seo-meta/retry").status_code == 200
-
-    def fail_intro(model, retry=False):
-        raise ServiceError(ServiceErrorCode.VALIDATION_FAILURE.value, "invalid intro")
-
-    monkeypatch.setattr(routes_authoring, "run_intro_text_authoring", fail_intro)
-    assert client.post(f"/api/authoring/{MODEL}/intro-text").status_code == 409
-    assert client.get("/api/authoring/missing").status_code == 404
+    try:
+        assert client.get(f"/api/authoring/{MODEL}").status_code == 200
+        assert client.post(f"/api/authoring/{MODEL}/intro-text").status_code == 202
+        assert client.post(f"/api/authoring/{MODEL}/intro-text/retry").status_code == 202
+        assert client.post(f"/api/authoring/{MODEL}/seo-meta").status_code == 202
+        assert client.post(f"/api/authoring/{MODEL}/seo-meta/retry").status_code == 202
+        assert client.get("/api/authoring/missing").status_code == 404
+    finally:
+        runner.stop()

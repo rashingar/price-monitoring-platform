@@ -1120,7 +1120,7 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByRole("tab", { name: /Filter Review/i })).toBeInTheDocument();
   });
 
-  it("runs Product Factory workflow end to end after Prepare succeeds", async () => {
+  it("advances to Authoring after Prepare succeeds without auto-starting Authoring jobs", async () => {
     const mockFetch = installMockFetch([
       { method: "GET", path: "/api/health", response: productFactoryHealth },
       { method: "GET", path: "/api/settings", response: productFactorySettings },
@@ -1129,30 +1129,6 @@ describe("platform mocked page smoke tests", () => {
         method: "POST",
         path: "/api/jobs/prepare",
         response: { job: { job_id: "prepare-1", job_type: "prepare", model: "005606", status: "succeeded" } },
-      },
-      {
-        method: "POST",
-        path: "/api/authoring/005606/intro-text",
-        response: {
-          model: "005606",
-          intro_text: { status: "valid", errors: [] },
-          seo_meta: { status: "missing", errors: [] },
-          ready_for_render: false,
-          render_block_reasons: ["seo_meta_missing"],
-          warnings: [],
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/authoring/005606/seo-meta",
-        response: {
-          model: "005606",
-          intro_text: { status: "valid", errors: [] },
-          seo_meta: { status: "valid", errors: [] },
-          ready_for_render: true,
-          render_block_reasons: [],
-          warnings: [],
-        },
       },
       {
         method: "GET",
@@ -1164,6 +1140,80 @@ describe("platform mocked page smoke tests", () => {
           ready_for_render: false,
           render_block_reasons: ["intro_text_missing", "seo_meta_missing"],
           warnings: [],
+        },
+      },
+    ]);
+
+    renderWithRouter("/product-factory");
+
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
+    fireEvent.change(screen.getAllByLabelText("Model")[1], { target: { value: "005606" } });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run Prepare" }));
+
+    await expect(screen.findByText(/Authoring needs queued jobs/)).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Authoring" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Preparesucceeded/i })).toBeInTheDocument();
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/intro-text")).toBe(false);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/seo-meta")).toBe(false);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(false);
+  });
+
+  it("queues separate Authoring jobs, shows previews, and advances to Filter Review when ready", async () => {
+    let authoringReads = 0;
+    const mockFetch = installMockFetch([
+      { method: "GET", path: "/api/health", response: productFactoryHealth },
+      { method: "GET", path: "/api/settings", response: productFactorySettings },
+      { method: "GET", path: "/api/jobs/by-model/005606", response: { jobs: [] } },
+      {
+        method: "GET",
+        path: "/api/authoring/005606",
+        response: () => {
+          authoringReads += 1;
+          return {
+            model: "005606",
+            intro_text: { status: authoringReads >= 1 ? "valid" : "missing", errors: [] },
+            seo_meta: { status: authoringReads >= 2 ? "valid" : "missing", errors: [] },
+            ready_for_render: authoringReads >= 2,
+            render_block_reasons: authoringReads >= 2 ? [] : ["seo_meta_missing"],
+            warnings: [],
+          };
+        },
+      },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/intro-text",
+        response: { job: { job_id: "005606-authoring_intro-a1", job_type: "authoring_intro", model: "005606", status: "succeeded" } },
+      },
+      { method: "GET", path: "/api/jobs/005606-authoring_intro-a1/logs", response: { lines: ["Intro text authoring succeeded."] } },
+      {
+        method: "GET",
+        path: "/api/jobs/005606-authoring_intro-a1/artifacts",
+        response: {
+          artifacts: [
+            { name: "intro_text_preview_path", kind: "text_preview", content_type: "text/html", content: "Generated <strong>intro</strong> text." },
+          ],
+        },
+      },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/seo-meta",
+        response: { job: { job_id: "005606-authoring_seo-a1", job_type: "authoring_seo", model: "005606", status: "succeeded" } },
+      },
+      { method: "GET", path: "/api/jobs/005606-authoring_seo-a1/logs", response: { lines: ["SEO meta authoring succeeded."] } },
+      {
+        method: "GET",
+        path: "/api/jobs/005606-authoring_seo-a1/artifacts",
+        response: {
+          artifacts: [
+            {
+              name: "seo_meta_preview_path",
+              kind: "json_preview",
+              content_type: "application/json",
+              content: JSON.stringify({ meta_description: "Generated description", meta_keywords: ["tv", "oled"] }),
+            },
+          ],
         },
       },
       {
@@ -1178,41 +1228,25 @@ describe("platform mocked page smoke tests", () => {
           warnings: [],
         },
       },
-      {
-        method: "POST",
-        path: "/api/jobs/render",
-        response: { job: { job_id: "render-1", job_type: "render", model: "005606", status: "succeeded" } },
-      },
-      {
-        method: "POST",
-        path: "/api/jobs/publish",
-        response: { job: { job_id: "publish-1", job_type: "publish", model: "005606", status: "succeeded" } },
-      },
-      { method: "GET", path: "/api/jobs/publish-1/logs", response: { lines: [] } },
-      { method: "GET", path: "/api/jobs/publish-1/artifacts", response: { artifacts: [] } },
     ]);
 
-    renderWithRouter("/product-factory");
+    renderWithRouter("/product-factory/005606");
 
     await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
-    fireEvent.change(screen.getAllByLabelText("Model")[1], { target: { value: "005606" } });
-    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
-    fireEvent.click(screen.getByRole("button", { name: "Run Prepare" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Run Intro Text" }));
+    await expect(screen.findByText("Intro text job succeeded.")).resolves.toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText("005606-authoring_intro-a1").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText(/Generated/).length).toBeGreaterThan(0));
 
-    await expect(screen.findByText("Workflow completed end to end.")).resolves.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Publish" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Preparesucceeded/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Authoringsucceeded/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Filter Reviewsucceeded/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Rendersucceeded/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Publishsucceeded/i })).toBeInTheDocument();
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/intro-text")).toBe(true);
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/seo-meta")).toBe(true);
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(true);
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(true);
-    fireEvent.click(screen.getByRole("tab", { name: /Filter Reviewsucceeded/i }));
-    expect(screen.queryByText("Filter warnings")).not.toBeInTheDocument();
-    expect(screen.queryByText("category_filter_review_not_approved")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Run SEO Meta" }));
+    await expect(screen.findByText("Authoring is ready. Advanced to Filter Review.")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Filter Review" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
+    await waitFor(() => expect(screen.getAllByText("005606-authoring_seo-a1").length).toBeGreaterThan(0));
+    expect(screen.getByText("Generated description")).toBeInTheDocument();
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(false);
   });
 
   it("advances to Publish after Render succeeds without starting Publish", async () => {
@@ -1311,21 +1345,11 @@ describe("platform mocked page smoke tests", () => {
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
   });
 
-  it("stops on Authoring when intro text generation fails after queued Prepare completes", async () => {
+  it("keeps SEO Meta runnable when Intro Text job fails", async () => {
     const mockFetch = installMockFetch([
       { method: "GET", path: "/api/health", response: productFactoryHealth },
       { method: "GET", path: "/api/settings", response: productFactorySettings },
       { method: "GET", path: "/api/jobs/by-model/005606", response: { jobs: [] } },
-      {
-        method: "POST",
-        path: "/api/jobs/prepare",
-        response: { job: { job_id: "prepare-1", job_type: "prepare", model: "005606", status: "queued" } },
-      },
-      {
-        method: "GET",
-        path: "/api/jobs/prepare-1",
-        response: { job: { job_id: "prepare-1", job_type: "prepare", model: "005606", status: "succeeded" } },
-      },
       {
         method: "GET",
         path: "/api/authoring/005606",
@@ -1341,27 +1365,21 @@ describe("platform mocked page smoke tests", () => {
       {
         method: "POST",
         path: "/api/authoring/005606/intro-text",
-        response: {
-          status: 409,
-          body: {
-            detail: {
-              message: "LLM stage validation failed.",
-              error_code: "llm_intro_text_emphasis_overused",
-            },
-          },
-        },
+        response: { job: { job_id: "005606-authoring_intro-failed", job_type: "authoring_intro", model: "005606", status: "failed", error: "LLM stage validation failed." } },
       },
+      { method: "GET", path: "/api/jobs/005606-authoring_intro-failed/logs", response: { lines: ["Intro text authoring failed."] } },
+      { method: "GET", path: "/api/jobs/005606-authoring_intro-failed/artifacts", response: { artifacts: [] } },
     ]);
 
-    renderWithRouter("/product-factory");
+    renderWithRouter("/product-factory/005606");
 
     await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
-    fireEvent.change(screen.getAllByLabelText("Model")[1], { target: { value: "005606" } });
-    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
-    fireEvent.click(screen.getByRole("button", { name: "Run Prepare" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Run Intro Text" }));
 
     await expect(screen.findByText(/LLM stage validation failed/, {}, { timeout: 4_000 })).resolves.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Authoring" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run SEO Meta" })).not.toBeDisabled();
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
   });
 

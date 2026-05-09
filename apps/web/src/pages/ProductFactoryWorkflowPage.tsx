@@ -4,6 +4,7 @@ import { apiClient, ApiError, getApiErrorMessage } from "../api/client";
 import {
   canRetryJob,
   compareJobsByUpdatedDesc,
+  getAuthoringJobSubtype,
   getJobIdentifier,
   getJobStage,
   getJobStatus,
@@ -173,6 +174,30 @@ function toStringList(value: unknown): string[] {
     .filter((item) => item.trim().length > 0 && item !== "-");
 }
 
+function isArtifactRecord(artifact: Artifact): artifact is Exclude<Artifact, string> {
+  return typeof artifact === "object" && artifact !== null;
+}
+
+function findPreviewArtifact(artifacts: Artifact[], kind: "text_preview" | "json_preview"): Exclude<Artifact, string> | null {
+  return artifacts.find((artifact): artifact is Exclude<Artifact, string> => isArtifactRecord(artifact) && artifact.kind === kind && typeof artifact.content === "string" && artifact.content.trim().length > 0) ?? null;
+}
+
+function stripUnsafeIntroMarkup(value: string): string {
+  return value
+    .replace(/<(?!\/?strong\b)[^>]*>/gi, "")
+    .replace(/<strong\b[^>]*>/gi, "<strong>")
+    .replace(/<\/strong\s*>/gi, "</strong>");
+}
+
+function parseSeoPreview(value: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function getJobMessage(job: Job): string | null {
   for (const value of [job.message, job.error, job.detail]) {
     if (typeof value === "string" && value.trim().length > 0) {
@@ -258,6 +283,12 @@ function getWorkflowTabForJob(job: Job, model: string): WorkflowTab | undefined 
 function getLatestJobForTab(jobs: Job[], tab: WorkflowTab, model: string): Job | null {
   return jobs
     .filter((job) => getWorkflowTabForJob(job, model) === tab)
+    .sort(compareJobsByUpdatedDesc)[0] ?? null;
+}
+
+function getLatestAuthoringJob(jobs: Job[], subtype: "intro_text" | "seo_meta", model: string): Job | null {
+  return jobs
+    .filter((job) => getWorkflowTabForJob(job, model) === "authoring" && getAuthoringJobSubtype(job) === subtype)
     .sort(compareJobsByUpdatedDesc)[0] ?? null;
 }
 
@@ -698,7 +729,15 @@ function AuthoringTaskCard({
   );
 }
 
-function JobAssets({ jobId, isJobActive }: { jobId: string; isJobActive: boolean }) {
+function JobAssets({
+  jobId,
+  isJobActive,
+  previewKind,
+}: {
+  jobId: string;
+  isJobActive: boolean;
+  previewKind?: "intro_text" | "seo_meta";
+}) {
   const [assets, setAssets] = useState<JobAssetsState>({
     logs: [],
     artifacts: [],
@@ -753,6 +792,8 @@ function JobAssets({ jobId, isJobActive }: { jobId: string; isJobActive: boolean
     <div className="stage-job-assets">
       {assets.isLoading ? <p className="muted">Loading job logs and artifacts...</p> : null}
       {assets.error ? <ErrorState message={assets.error} onRetry={() => void loadAssets()} /> : null}
+      {previewKind === "intro_text" ? <IntroTextPreview artifacts={assets.artifacts} /> : null}
+      {previewKind === "seo_meta" ? <SeoMetaPreview artifacts={assets.artifacts} /> : null}
       <details>
         <summary>Logs ({assets.logs.length})</summary>
         <LogsPanel logs={assets.logs} />
@@ -765,6 +806,49 @@ function JobAssets({ jobId, isJobActive }: { jobId: string; isJobActive: boolean
   );
 }
 
+function IntroTextPreview({ artifacts }: { artifacts: Artifact[] }) {
+  const preview = findPreviewArtifact(artifacts, "text_preview");
+  if (!preview?.content) {
+    return null;
+  }
+  return (
+    <details className="authoring-preview" open={preview.content.length < 900}>
+      <summary>Intro Text Preview</summary>
+      <div
+        className="authoring-preview-content"
+        dangerouslySetInnerHTML={{ __html: stripUnsafeIntroMarkup(preview.content) }}
+      />
+    </details>
+  );
+}
+
+function SeoMetaPreview({ artifacts }: { artifacts: Artifact[] }) {
+  const preview = findPreviewArtifact(artifacts, "json_preview");
+  if (!preview?.content) {
+    return null;
+  }
+  const payload = parseSeoPreview(preview.content);
+  if (!payload) {
+    return (
+      <details className="authoring-preview">
+        <summary>SEO Meta Preview</summary>
+        <pre className="json-block">{preview.content}</pre>
+      </details>
+    );
+  }
+  return (
+    <details className="authoring-preview" open>
+      <summary>SEO Meta Preview</summary>
+      <dl className="summary-grid workflow-summary-grid">
+        <PathValue label="Meta title" value={payload.meta_title} />
+        <PathValue label="Meta description" value={payload.meta_description} />
+        <PathValue label="Meta keywords" value={Array.isArray(payload.meta_keywords) ? payload.meta_keywords.join(", ") : payload.meta_keywords} />
+        <PathValue label="SEO keyword" value={payload.seo_keyword} />
+      </dl>
+    </details>
+  );
+}
+
 function StageJobPanel({
   job,
   label,
@@ -773,6 +857,7 @@ function StageJobPanel({
   isRetrying,
   retryError,
   retryMessage,
+  previewKind,
 }: {
   job: Job | null;
   label: string;
@@ -781,6 +866,7 @@ function StageJobPanel({
   isRetrying?: boolean;
   retryError?: string;
   retryMessage?: string;
+  previewKind?: "intro_text" | "seo_meta";
 }) {
   const jobId = job ? getJobIdentifier(job) : undefined;
   if (!job || !jobId) {
@@ -824,7 +910,7 @@ function StageJobPanel({
         </div>
       ) : null}
       <MessageBlock message={retryMessage} error={retryError} />
-      <JobAssets jobId={jobId} isJobActive={isActiveJob(job)} />
+      <JobAssets jobId={jobId} isJobActive={isActiveJob(job)} previewKind={previewKind} />
     </div>
   );
 }
@@ -1033,6 +1119,8 @@ export function ProductFactoryWorkflowPage() {
   const isBackendAvailable = isApiHealthy(health, healthError);
   const latestPrepareJob = useMemo(() => getLatestJobForTab(modelJobs, "prepare", model), [modelJobs, model]);
   const latestAuthoringJob = useMemo(() => getLatestJobForTab(modelJobs, "authoring", model), [modelJobs, model]);
+  const latestIntroTextJob = useMemo(() => getLatestAuthoringJob(modelJobs, "intro_text", model), [modelJobs, model]);
+  const latestSeoMetaJob = useMemo(() => getLatestAuthoringJob(modelJobs, "seo_meta", model), [modelJobs, model]);
   const latestFilterReviewJob = useMemo(() => getLatestJobForTab(modelJobs, "filter_review", model), [modelJobs, model]);
   const latestRenderJob = useMemo(() => getLatestJobForTab(modelJobs, "render", model), [modelJobs, model]);
   const latestPublishJob = useMemo(() => getLatestJobForTab(modelJobs, "publish", model), [modelJobs, model]);
@@ -1265,7 +1353,7 @@ export function ProductFactoryWorkflowPage() {
 
   async function runAuthoringWorkflow(targetModel: string): Promise<AuthoringStatus> {
     setActiveTab("authoring");
-    setAutoAdvanceMessage("Prepare succeeded. Running Authoring.");
+    setAutoAdvanceMessage("Prepare succeeded. Advanced to Authoring.");
     setActionBusy("authoring_load", true);
     setActionError("authoring_load", undefined);
     setActionError("intro_run", undefined);
@@ -1284,47 +1372,56 @@ export function ProductFactoryWorkflowPage() {
       setActionBusy("authoring_load", false);
     }
 
-    if (!isAuthoringTaskValid(status.intro_text)) {
-      setActionBusy("intro_run", true);
-      try {
-        status = await apiClient.runIntroText(targetModel);
-        setAuthoringStatus(status);
-        setActionMessage("intro_run", "Intro text run completed.");
-      } catch (error) {
-        const message = getErrorHint(error, "Could not run intro text.");
-        setActionError("intro_run", message);
-        throw new WorkflowHalted(message);
-      } finally {
-        setActionBusy("intro_run", false);
-      }
-    }
-
-    if (!isAuthoringTaskValid(status.seo_meta)) {
-      setActionBusy("seo_run", true);
-      try {
-        status = await apiClient.runSeoMeta(targetModel);
-        setAuthoringStatus(status);
-        setActionMessage("seo_run", "SEO meta run completed.");
-      } catch (error) {
-        const message = getErrorHint(error, "Could not run SEO meta.");
-        setActionError("seo_run", message);
-        throw new WorkflowHalted(message);
-      } finally {
-        setActionBusy("seo_run", false);
-      }
-    }
-
     if (!isAuthoringReadyForRender(status)) {
       const reasons = toStringList(status.render_block_reasons);
       const message = reasons.length > 0
-        ? `Authoring blocked: ${reasons.join("; ")}`
-        : "Authoring blocked: intro text and SEO metadata must be valid.";
-      setActionError("authoring_load", message);
+        ? `Authoring needs queued jobs: ${reasons.join("; ")}`
+        : "Authoring needs Intro Text and SEO Meta jobs.";
+      setActionMessage("authoring_load", message);
       throw new WorkflowHalted(message);
     }
 
-    setActionMessage("authoring_load", "Authoring completed.");
+    setActionMessage("authoring_load", "Authoring already ready.");
     return status;
+  }
+
+  async function runSingleAuthoringJob(
+    actionKey: ActionKey,
+    createJob: () => Promise<Job>,
+    successMessage: string,
+    failureMessage: string,
+  ): Promise<void> {
+    markOperatorStageStarted("authoring");
+    setActiveTab("authoring");
+    setActionBusy(actionKey, true);
+    setActionError(actionKey, undefined);
+    setActionMessage(actionKey, undefined);
+    try {
+      const queuedJob = await createJob();
+      recordJob(queuedJob);
+      setActionMessage(actionKey, "Authoring job queued.");
+      const completedJob = await waitForTerminalJob(queuedJob, "authoring", model);
+      if (!isSuccessfulJob(completedJob)) {
+        throw new Error(getJobFailureMessage(completedJob, failureMessage));
+      }
+      const nextStatus = await apiClient.getAuthoringStatus(model);
+      setAuthoringStatus(nextStatus);
+      setActionMessage(actionKey, successMessage);
+      if (isAuthoringReadyForRender(nextStatus)) {
+        try {
+          await runFilterReviewWorkflow(model);
+          setAutoAdvanceMessage("Authoring is ready. Advanced to Filter Review.");
+        } catch (error) {
+          if (!(error instanceof WorkflowHalted)) {
+            setActionError(actionKey, getErrorHint(error, "Could not load filter review."));
+          }
+        }
+      }
+    } catch (error) {
+      setActionError(actionKey, getErrorHint(error, failureMessage));
+    } finally {
+      setActionBusy(actionKey, false);
+    }
   }
 
   async function runFilterReviewWorkflow(targetModel: string): Promise<FilterReview> {
@@ -1371,11 +1468,7 @@ export function ProductFactoryWorkflowPage() {
 
     await runAuthoringWorkflow(targetModel);
     await runFilterReviewWorkflow(targetModel);
-    setAutoAdvanceMessage("Filter Review has no blockers. Running Render.");
-    await runQueuedWorkflowJob("render", "render", targetModel, () => apiClient.createRenderJob({ model: targetModel }), "Render completed.");
-    setAutoAdvanceMessage("Render succeeded. Running Publish.");
-    await runQueuedWorkflowJob("publish", "publish", targetModel, () => apiClient.createPublishJob({ model: targetModel }), "Publish completed.");
-    setAutoAdvanceMessage("Workflow completed end to end.");
+    setAutoAdvanceMessage("Filter Review has no blockers. Ready to Render.");
   }
 
   const loadAuthoring = useCallback(
@@ -1801,25 +1894,19 @@ export function ProductFactoryWorkflowPage() {
             title="Intro Text"
             task={authoringStatus?.intro_text}
             onRun={() =>
-              void runAction(
+              void runSingleAuthoringJob(
                 "intro_run",
-                async () => {
-                  await apiClient.runIntroText(model);
-                  await loadAuthoring("intro_run");
-                },
-                "Intro text run completed.",
-                "Could not run intro text.",
+                () => apiClient.runIntroText(model),
+                "Intro text job succeeded.",
+                "Intro text job failed.",
               )
             }
             onRetry={() =>
-              void runAction(
+              void runSingleAuthoringJob(
                 "intro_retry",
-                async () => {
-                  await apiClient.retryIntroText(model);
-                  await loadAuthoring("intro_retry");
-                },
-                "Intro text retry completed.",
-                "Could not retry intro text.",
+                () => apiClient.retryIntroText(model),
+                "Intro text retry job succeeded.",
+                "Intro text retry job failed.",
               )
             }
             isRunBusy={Boolean(actionState.busy.intro_run)}
@@ -1833,25 +1920,19 @@ export function ProductFactoryWorkflowPage() {
             title="SEO Meta"
             task={authoringStatus?.seo_meta}
             onRun={() =>
-              void runAction(
+              void runSingleAuthoringJob(
                 "seo_run",
-                async () => {
-                  await apiClient.runSeoMeta(model);
-                  await loadAuthoring("seo_run");
-                },
-                "SEO meta run completed.",
-                "Could not run SEO meta.",
+                () => apiClient.runSeoMeta(model),
+                "SEO meta job succeeded.",
+                "SEO meta job failed.",
               )
             }
             onRetry={() =>
-              void runAction(
+              void runSingleAuthoringJob(
                 "seo_retry",
-                async () => {
-                  await apiClient.retrySeoMeta(model);
-                  await loadAuthoring("seo_retry");
-                },
-                "SEO meta retry completed.",
-                "Could not retry SEO meta.",
+                () => apiClient.retrySeoMeta(model),
+                "SEO meta retry job succeeded.",
+                "SEO meta retry job failed.",
               )
             }
             isRunBusy={Boolean(actionState.busy.seo_run)}
@@ -1861,7 +1942,10 @@ export function ProductFactoryWorkflowPage() {
             disabled={modelRequiredDisabled}
           />
         </div>
-        <MessageBlock error={actionState.errors.intro_run ?? actionState.errors.intro_retry ?? actionState.errors.seo_run ?? actionState.errors.seo_retry} />
+        <MessageBlock
+          message={actionState.messages.intro_run ?? actionState.messages.intro_retry ?? actionState.messages.seo_run ?? actionState.messages.seo_retry}
+          error={actionState.errors.intro_run ?? actionState.errors.intro_retry ?? actionState.errors.seo_run ?? actionState.errors.seo_retry}
+        />
         {authoringStatus ? (
           <>
             <dl className="summary-grid workflow-summary-grid">
@@ -1874,14 +1958,26 @@ export function ProductFactoryWorkflowPage() {
             ) : null}
           </>
         ) : null}
-        <StageJobPanel
-          job={latestAuthoringJob}
-          label="authoring"
-          onRetry={() => void handleRetryStage("authoring", latestAuthoringJob)}
-          isRetrying={Boolean(actionState.busy.retry_authoring)}
-          retryMessage={actionState.messages.retry_authoring}
-          retryError={actionState.errors.retry_authoring}
-        />
+        <div className="split-grid">
+          <StageJobPanel
+            job={latestIntroTextJob}
+            label="Intro Text"
+            onRetry={() => void runSingleAuthoringJob("intro_retry", () => apiClient.retryIntroText(model), "Intro text retry job succeeded.", "Intro text retry job failed.")}
+            isRetrying={Boolean(actionState.busy.intro_retry)}
+            retryMessage={actionState.messages.intro_retry}
+            retryError={actionState.errors.intro_retry}
+            previewKind="intro_text"
+          />
+          <StageJobPanel
+            job={latestSeoMetaJob}
+            label="SEO Meta"
+            onRetry={() => void runSingleAuthoringJob("seo_retry", () => apiClient.retrySeoMeta(model), "SEO meta retry job succeeded.", "SEO meta retry job failed.")}
+            isRetrying={Boolean(actionState.busy.seo_retry)}
+            retryMessage={actionState.messages.seo_retry}
+            retryError={actionState.errors.seo_retry}
+            previewKind="seo_meta"
+          />
+        </div>
       </WorkflowStage>
       ) : null}
 

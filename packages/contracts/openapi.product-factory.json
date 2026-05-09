@@ -76,6 +76,42 @@
         "title": "AddFilterValueRequest",
         "type": "object"
       },
+      "AuthoringIntroJobRequest": {
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "retry": {
+            "default": false,
+            "title": "Retry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "AuthoringIntroJobRequest",
+        "type": "object"
+      },
+      "AuthoringSeoJobRequest": {
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "retry": {
+            "default": false,
+            "title": "Retry",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "AuthoringSeoJobRequest",
+        "type": "object"
+      },
       "AuthoringStatusResponse": {
         "properties": {
           "intro_text": {
@@ -1106,6 +1142,28 @@
       },
       "JobArtifact": {
         "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type"
+          },
           "kind": {
             "anyOf": [
               {
@@ -1304,6 +1362,8 @@
       "JobType": {
         "enum": [
           "prepare",
+          "authoring_intro",
+          "authoring_seo",
           "render",
           "publish"
         ],
@@ -1693,35 +1753,15 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthoringStatusResponse"
+                  "$ref": "#/components/schemas/JobResponse"
                 }
               }
             },
             "description": "Successful Response"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Prepared artifacts not found."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Authoring validation failed."
           },
           "422": {
             "content": {
@@ -1755,35 +1795,15 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthoringStatusResponse"
+                  "$ref": "#/components/schemas/JobResponse"
                 }
               }
             },
             "description": "Successful Response"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Prepared artifacts not found."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Authoring validation failed."
           },
           "422": {
             "content": {
@@ -1817,35 +1837,15 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthoringStatusResponse"
+                  "$ref": "#/components/schemas/JobResponse"
                 }
               }
             },
             "description": "Successful Response"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Prepared artifacts not found."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Authoring validation failed."
           },
           "422": {
             "content": {
@@ -1879,35 +1879,15 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuthoringStatusResponse"
+                  "$ref": "#/components/schemas/JobResponse"
                 }
               }
             },
             "description": "Successful Response"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Prepared artifacts not found."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Authoring validation failed."
           },
           "422": {
             "content": {
@@ -3049,6 +3029,88 @@
           }
         },
         "summary": "List Jobs",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/authoring/intro-text": {
+      "post": {
+        "operationId": "authoring_intro_job_api_jobs_authoring_intro_text_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthoringIntroJobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Authoring Intro Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/authoring/seo-meta": {
+      "post": {
+        "operationId": "authoring_seo_job_api_jobs_authoring_seo_meta_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthoringSeoJobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Authoring Seo Job",
         "tags": [
           "jobs"
         ]

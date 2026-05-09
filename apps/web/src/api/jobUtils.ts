@@ -1,4 +1,4 @@
-import type { Job, WorkflowType } from "./types";
+import type { AuthoringJobSubtype, Job, WorkflowType } from "./types";
 
 const ACTIVE_STATUSES = new Set([
   "queued",
@@ -16,12 +16,21 @@ const CANCELLED_STATUSES = new Set(["cancelled", "canceled"]);
 export type JobStatusBucket = "active" | "succeeded" | "failed" | "cancelled" | "unknown";
 const WORKFLOW_LABELS: Record<WorkflowType, string> = {
   prepare: "Prepare",
+  authoring: "Authoring",
+  filter_review: "Filter Review",
   render: "Render",
   publish: "Publish",
 };
 
 const STAGE_STATUSES: Record<string, WorkflowType> = {
   preparing: "prepare",
+  authoring: "authoring",
+  authoring_intro: "authoring",
+  authoring_seo: "authoring",
+  intro_text: "authoring",
+  seo_meta: "authoring",
+  filter_review: "filter_review",
+  "filter-review": "filter_review",
   rendering: "render",
   publishing: "publish",
 };
@@ -32,8 +41,21 @@ function normalizeStageValue(value: unknown): WorkflowType | undefined {
   }
 
   const normalized = value.trim().toLowerCase();
-  if (normalized === "prepare" || normalized === "render" || normalized === "publish") {
+  if (
+    normalized === "prepare" ||
+    normalized === "authoring" ||
+    normalized === "filter_review" ||
+    normalized === "render" ||
+    normalized === "publish"
+  ) {
     return normalized;
+  }
+
+  if (normalized === "authoring_intro" || normalized === "authoring_seo" || normalized === "intro_text" || normalized === "seo_meta") {
+    return "authoring";
+  }
+  if (normalized === "filter-review") {
+    return "filter_review";
   }
 
   return undefined;
@@ -160,6 +182,32 @@ export function getJobStage(job: Job): WorkflowType | undefined {
 export function getJobStageLabel(job: Job): string {
   const stage = getJobStage(job);
   return stage ? WORKFLOW_LABELS[stage] : getJobWorkflow(job);
+}
+
+export function getAuthoringJobSubtype(job: Job | undefined): AuthoringJobSubtype | undefined {
+  if (!job) {
+    return undefined;
+  }
+
+  const values = [job.job_type, job.type, job.kind, job.stage, job.workflow_stage, job.pipeline_stage, job.workflow]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim().toLowerCase());
+  if (values.some((value) => value === "authoring_intro" || value === "intro_text")) {
+    return "intro_text";
+  }
+  if (values.some((value) => value === "authoring_seo" || value === "seo_meta")) {
+    return "seo_meta";
+  }
+
+  const jobId = getJobIdentifier(job)?.toLowerCase() ?? "";
+  if (jobId.includes("-authoring_intro-")) {
+    return "intro_text";
+  }
+  if (jobId.includes("-authoring_seo-")) {
+    return "seo_meta";
+  }
+
+  return undefined;
 }
 
 export function getRequestPayload(job: Job): unknown {

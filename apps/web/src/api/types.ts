@@ -6,6 +6,10 @@ type AssertAssignable<Actual extends Expected, Expected> = true;
 
 export type ProductFactoryContractHealthResponse = ProductFactorySchema<"HealthResponse">;
 export type ProductFactoryContractJobResponse = ProductFactorySchema<"JobResponse">;
+export type ProductFactoryContractAuthoringIntroJobRequest =
+  ProductFactorySchema<"AuthoringIntroJobRequest">;
+export type ProductFactoryContractAuthoringSeoJobRequest =
+  ProductFactorySchema<"AuthoringSeoJobRequest">;
 export type ProductFactoryContractAuthoringStatusResponse =
   ProductFactorySchema<"AuthoringStatusResponse">;
 export type ProductFactoryContractFilterCategoryListItem =
@@ -28,7 +32,8 @@ export type ProductFactoryContractUpdateFilterValueRequest =
 
 export type JobStatus = string;
 
-export type WorkflowType = "prepare" | "render" | "publish";
+export type WorkflowType = "prepare" | "authoring" | "filter_review" | "render" | "publish";
+export type AuthoringJobSubtype = "intro_text" | "seo_meta";
 
 export type ProductFactoryStageName =
   | "prepare"
@@ -43,6 +48,9 @@ export type PrepareJobRequest = ProductFactoryContractPrepareJobRequest;
 export interface ModelJobRequest {
   model: string;
 }
+
+export type AuthoringIntroJobRequest = ProductFactoryContractAuthoringIntroJobRequest;
+export type AuthoringSeoJobRequest = ProductFactoryContractAuthoringSeoJobRequest;
 
 export type RenderJobRequest = ModelJobRequest;
 
@@ -91,6 +99,9 @@ export interface ArtifactRecord {
   path?: string;
   url?: string;
   type?: string;
+  kind?: string | null;
+  content_type?: string | null;
+  content?: string | null;
   size?: number;
   [key: string]: unknown;
 }
@@ -327,6 +338,8 @@ type _ProductFactoryGeneratedContractChecks = [
   AssertAssignable<PrepareJobRequest, ProductFactoryContractPrepareJobRequest>,
   AssertAssignable<ProductFactoryContractFilterCategoryListItem, FilterCategoryListItem>,
   AssertAssignable<ProductFactoryContractFilterCategoryResponse, FilterCategoryDetail>,
+  AssertAssignable<AuthoringIntroJobRequest, ProductFactoryContractAuthoringIntroJobRequest>,
+  AssertAssignable<AuthoringSeoJobRequest, ProductFactoryContractAuthoringSeoJobRequest>,
   AssertAssignable<RenderJobRequest, ProductFactoryContractRenderJobRequest>,
   AssertAssignable<PublishJobRequest, ProductFactoryContractPublishJobRequest>,
   AssertAssignable<StopJobRequest, ProductFactoryContractStopJobRequest>,

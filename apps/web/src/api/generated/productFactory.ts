@@ -107,6 +107,14 @@ export interface paths {
     /** Stop Job */
     post: operations["stop_job_api_jobs__job_id__stop_post"];
   };
+  "/api/jobs/authoring/intro-text": {
+    /** Authoring Intro Job */
+    post: operations["authoring_intro_job_api_jobs_authoring_intro_text_post"];
+  };
+  "/api/jobs/authoring/seo-meta": {
+    /** Authoring Seo Job */
+    post: operations["authoring_seo_job_api_jobs_authoring_seo_meta_post"];
+  };
   "/api/jobs/by-model/{model}": {
     /** List Jobs By Model */
     get: operations["list_jobs_by_model_api_jobs_by_model__model__get"];
@@ -165,6 +173,26 @@ export interface components {
       status?: "active" | "inactive" | "deprecated";
       /** Value */
       value: string;
+    };
+    /** AuthoringIntroJobRequest */
+    AuthoringIntroJobRequest: {
+      /** Model */
+      model: string;
+      /**
+       * Retry
+       * @default false
+       */
+      retry?: boolean;
+    };
+    /** AuthoringSeoJobRequest */
+    AuthoringSeoJobRequest: {
+      /** Model */
+      model: string;
+      /**
+       * Retry
+       * @default false
+       */
+      retry?: boolean;
     };
     /** AuthoringStatusResponse */
     AuthoringStatusResponse: {
@@ -567,6 +595,10 @@ export interface components {
     };
     /** JobArtifact */
     JobArtifact: {
+      /** Content */
+      content?: string | null;
+      /** Content Type */
+      content_type?: string | null;
       /** Kind */
       kind?: string | null;
       /** Name */
@@ -625,7 +657,7 @@ export interface components {
      * JobType
      * @enum {string}
      */
-    JobType: "prepare" | "render" | "publish";
+    JobType: "prepare" | "authoring_intro" | "authoring_seo" | "render" | "publish";
     /** PrepareJobRequest */
     PrepareJobRequest: {
       /**
@@ -787,21 +819,9 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": components["schemas"]["AuthoringStatusResponse"];
-        };
-      };
-      /** @description Prepared artifacts not found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Authoring validation failed. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["JobResponse"];
         };
       };
       /** @description Validation Error */
@@ -821,21 +841,9 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": components["schemas"]["AuthoringStatusResponse"];
-        };
-      };
-      /** @description Prepared artifacts not found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Authoring validation failed. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["JobResponse"];
         };
       };
       /** @description Validation Error */
@@ -855,21 +863,9 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": components["schemas"]["AuthoringStatusResponse"];
-        };
-      };
-      /** @description Prepared artifacts not found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Authoring validation failed. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["JobResponse"];
         };
       };
       /** @description Validation Error */
@@ -889,21 +885,9 @@ export interface operations {
     };
     responses: {
       /** @description Successful Response */
-      200: {
+      202: {
         content: {
-          "application/json": components["schemas"]["AuthoringStatusResponse"];
-        };
-      };
-      /** @description Prepared artifacts not found. */
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
-        };
-      };
-      /** @description Authoring validation failed. */
-      409: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse"];
+          "application/json": components["schemas"]["JobResponse"];
         };
       };
       /** @description Validation Error */
@@ -1665,6 +1649,50 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Authoring Intro Job */
+  authoring_intro_job_api_jobs_authoring_intro_text_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AuthoringIntroJobRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["JobResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Authoring Seo Job */
+  authoring_seo_job_api_jobs_authoring_seo_meta_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AuthoringSeoJobRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["JobResponse"];
         };
       };
       /** @description Validation Error */

@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from ..services.authoring_service import (
     PreparedAuthoringArtifactsNotFoundError,
     get_authoring_status,
-    run_intro_text_authoring,
-    run_seo_meta_authoring,
 )
-from ..services.errors import ServiceError, ServiceErrorCode
-from .schemas import AuthoringStatusResponse, ErrorResponse
+from .job_models import JobType
+from .schemas import AuthoringStatusResponse, ErrorResponse, JobResponse
 
 
 router = APIRouter(prefix="/authoring", tags=["authoring"])
@@ -28,47 +26,46 @@ def get_authoring(model: str) -> AuthoringStatusResponse:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
-@router.post("/{model}/intro-text", response_model=AuthoringStatusResponse, responses=_ERROR_RESPONSES)
-def post_intro_text(model: str) -> AuthoringStatusResponse:
-    return _run_authoring(lambda: run_intro_text_authoring(model, retry=False))
+@router.post(
+    "/{model}/intro-text",
+    response_model=JobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def post_intro_text(model: str, api_request: Request) -> JobResponse:
+    return _enqueue_authoring_job(api_request, JobType.AUTHORING_INTRO, model, retry=False)
 
 
-@router.post("/{model}/intro-text/retry", response_model=AuthoringStatusResponse, responses=_ERROR_RESPONSES)
-def post_intro_text_retry(model: str) -> AuthoringStatusResponse:
-    return _run_authoring(lambda: run_intro_text_authoring(model, retry=True))
+@router.post(
+    "/{model}/intro-text/retry",
+    response_model=JobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def post_intro_text_retry(model: str, api_request: Request) -> JobResponse:
+    return _enqueue_authoring_job(api_request, JobType.AUTHORING_INTRO, model, retry=True)
 
 
-@router.post("/{model}/seo-meta", response_model=AuthoringStatusResponse, responses=_ERROR_RESPONSES)
-def post_seo_meta(model: str) -> AuthoringStatusResponse:
-    return _run_authoring(lambda: run_seo_meta_authoring(model, retry=False))
+@router.post(
+    "/{model}/seo-meta",
+    response_model=JobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def post_seo_meta(model: str, api_request: Request) -> JobResponse:
+    return _enqueue_authoring_job(api_request, JobType.AUTHORING_SEO, model, retry=False)
 
 
-@router.post("/{model}/seo-meta/retry", response_model=AuthoringStatusResponse, responses=_ERROR_RESPONSES)
-def post_seo_meta_retry(model: str) -> AuthoringStatusResponse:
-    return _run_authoring(lambda: run_seo_meta_authoring(model, retry=True))
+@router.post(
+    "/{model}/seo-meta/retry",
+    response_model=JobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def post_seo_meta_retry(model: str, api_request: Request) -> JobResponse:
+    return _enqueue_authoring_job(api_request, JobType.AUTHORING_SEO, model, retry=True)
 
 
-def _run_authoring(callback):
-    try:
-        status_response = callback()
-    except PreparedAuthoringArtifactsNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except ServiceError as exc:
-        if exc.code == ServiceErrorCode.VALIDATION_FAILURE.value:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"message": exc.message, **exc.details}) from exc
-        raise
-    if not status_response.ready_for_render:
-        invalid = [
-            task
-            for task in (status_response.intro_text, status_response.seo_meta)
-            if task.status == "invalid"
-        ]
-        if invalid:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "message": "Authoring validation failed.",
-                    "render_block_reasons": status_response.render_block_reasons,
-                },
-            )
-    return status_response
+def _enqueue_authoring_job(api_request: Request, job_type: JobType, model: str, *, retry: bool) -> JobResponse:
+    normalized_model = str(model or "").strip()
+    if not normalized_model:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="model must not be empty")
+    record = api_request.app.state.job_store.enqueue(job_type, {"model": normalized_model, "retry": retry})
+    api_request.app.state.job_runner.enqueue(record.job_id)
+    return JobResponse.from_record(record)
