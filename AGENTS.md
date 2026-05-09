@@ -53,3 +53,9 @@ If `model` is missing or not exactly 6 digits, fail with:
 ```text
 Generation failed, provide 6-digit model
 ```
+
+## Source URL Agent / Find Source Namespace
+
+Source URL Agent, shown in the UI as Find Source, owns product source URL discovery, candidate runs, candidate review, and source URL candidate promotion. Its canonical backend namespace is `/api/source-url-agent/...`; through the web proxy, frontend calls must resolve as `/commerce-api/source-url-agent/...`.
+
+Vendor Sources owns vendor/source health, source URL capture, diagnostics, and capture run history. Do not place Source URL Agent routes under `/api/vendor-sources/...`, and do not reintroduce DB-backed candidate review layout preferences unless explicitly requested. Candidate review layout stays frontend-local.

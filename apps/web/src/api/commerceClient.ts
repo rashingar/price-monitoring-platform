@@ -2285,13 +2285,19 @@ export const commerceClient = {
     );
   },
 
+  async listSourceUrlAgentSources(signal?: AbortSignal): Promise<VendorSourceCapability[]> {
+    return normalizeVendorSourceCapabilityList(
+      await request<unknown>("/source-url-agent/sources", { signal }),
+    );
+  },
+
   async createSourceUrlAgentRun(
     body: SourceUrlAgentRunRequest,
     signal?: AbortSignal,
   ): Promise<SourceUrlAgentRun> {
     return (
       normalizeSourceUrlAgentRun(
-        await request<unknown>("/vendor-sources/agent/runs", {
+        await request<unknown>("/source-url-agent/runs", {
           method: "POST",
           body,
           signal,
@@ -2302,7 +2308,7 @@ export const commerceClient = {
 
   async listSourceUrlAgentRuns(signal?: AbortSignal): Promise<SourceUrlAgentRun[]> {
     return normalizeSourceUrlAgentRunList(
-      await request<unknown>("/vendor-sources/agent/runs", { signal }),
+      await request<unknown>("/source-url-agent/runs", { signal }),
     );
   },
 
@@ -2313,7 +2319,7 @@ export const commerceClient = {
     return (
       normalizeSourceUrlAgentRun(
         await request<unknown>(
-          `/vendor-sources/agent/runs/${encodeURIComponent(String(runId))}`,
+          `/source-url-agent/runs/${encodeURIComponent(String(runId))}`,
           { signal },
         ),
       ) ?? {}
@@ -2326,7 +2332,7 @@ export const commerceClient = {
   ): Promise<SourceUrlAgentRunArtifactsResponse> {
     return normalizeSourceUrlAgentRunArtifacts(
       await request<unknown>(
-        `/vendor-sources/agent/runs/${encodeURIComponent(String(runId))}/artifacts`,
+        `/source-url-agent/runs/${encodeURIComponent(String(runId))}/artifacts`,
         { signal },
       ),
     );
@@ -2385,7 +2391,7 @@ export const commerceClient = {
   ): Promise<SourceUrlCandidateListResponse> {
     return normalizeSourceUrlCandidateList(
       await request<unknown>(
-        appendQuery("/vendor-sources/candidates", params as QueryParams),
+        appendQuery("/source-url-agent/candidates", params as QueryParams),
         { signal },
       ),
     );
@@ -2397,7 +2403,7 @@ export const commerceClient = {
   ): Promise<SourceUrlCandidate> {
     return normalizeSourceUrlCandidateDetail(
       await request<unknown>(
-        `/vendor-sources/candidates/${encodeURIComponent(String(candidateId))}`,
+        `/source-url-agent/candidates/${encodeURIComponent(String(candidateId))}`,
         { signal },
       ),
     );
@@ -2411,7 +2417,7 @@ export const commerceClient = {
     return (
       normalizeSourceUrlCandidate(
         await request<unknown>(
-          `/vendor-sources/candidates/${encodeURIComponent(String(candidateId))}/review`,
+          `/source-url-agent/candidates/${encodeURIComponent(String(candidateId))}/review`,
           {
             method: "PATCH",
             body,

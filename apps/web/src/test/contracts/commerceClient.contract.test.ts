@@ -210,7 +210,7 @@ describe("commerce API client contract fixtures", () => {
   it("constructs Source URL Agent run URLs and normalizes run artifacts", async () => {
     const mockFetch = installMockFetch(commerceFixtureRoutes);
 
-    await expect(commerceClient.listVendorSources()).resolves.toEqual([
+    await expect(commerceClient.listSourceUrlAgentSources()).resolves.toEqual([
       expect.objectContaining({
         source_name: "skroutz",
         source_type: "marketplace",
@@ -279,11 +279,11 @@ describe("commerce API client contract fixtures", () => {
 
     expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toEqual(
       expect.arrayContaining([
-        "GET /commerce-api/vendor-sources/sources",
-        "GET /commerce-api/vendor-sources/agent/runs",
-        "POST /commerce-api/vendor-sources/agent/runs",
-        "GET /commerce-api/vendor-sources/agent/runs/source-run-001",
-        "GET /commerce-api/vendor-sources/agent/runs/source-run-001/artifacts",
+        "GET /commerce-api/source-url-agent/sources",
+        "GET /commerce-api/source-url-agent/runs",
+        "POST /commerce-api/source-url-agent/runs",
+        "GET /commerce-api/source-url-agent/runs/source-run-001",
+        "GET /commerce-api/source-url-agent/runs/source-run-001/artifacts",
       ]),
     );
   });

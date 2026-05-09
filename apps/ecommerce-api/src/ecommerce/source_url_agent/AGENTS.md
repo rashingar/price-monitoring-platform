@@ -643,16 +643,22 @@ Do not add API endpoints before the CLI path is reliable unless explicitly reque
 
 If API endpoints are added later, they should call the same service-layer code as the CLI. Do not duplicate orchestration logic in route handlers.
 
-Canonical Vendor Sources routes:
+Canonical Source URL Agent routes:
 
 
-POST /api/vendor-sources/agent/runs
-GET  /api/vendor-sources/agent/runs
-GET  /api/vendor-sources/agent/runs/{run_id}
-GET  /api/vendor-sources/agent/runs/{run_id}/artifacts
-GET  /api/vendor-sources/candidates
-GET  /api/vendor-sources/candidates/{candidate_id}
-PATCH /api/vendor-sources/candidates/{candidate_id}/review
+GET   /api/source-url-agent/sources
+POST  /api/source-url-agent/runs
+POST  /api/source-url-agent/runs/sync
+GET   /api/source-url-agent/runs
+GET   /api/source-url-agent/runs/{run_id}
+GET   /api/source-url-agent/runs/{run_id}/artifacts
+GET   /api/source-url-agent/candidates
+GET   /api/source-url-agent/candidates/{candidate_id}
+PATCH /api/source-url-agent/candidates/{candidate_id}/review
+
+Do not add Source URL Agent aliases under `/api/vendor-sources/...`. Vendor
+Sources owns vendor/source health, source URL capture, diagnostics, and capture
+run history.
 
 
 ## Testing Rules

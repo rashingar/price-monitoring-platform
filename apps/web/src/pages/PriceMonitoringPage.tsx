@@ -559,10 +559,10 @@ function VendorSourcesActionLink() {
   return (
     <p className="button-row">
       <Link className="button secondary" to="/vendor-sources/source-urls">
-        Create/review source URLs in Vendor Sources
+        View source URL coverage
       </Link>
-      <Link className="button secondary" to="/vendor-sources/runs">
-        Run Vendor Sources discovery
+      <Link className="button secondary" to="/find-source/runs">
+        Find Source
       </Link>
     </p>
   );
@@ -2953,7 +2953,7 @@ export function PriceMonitoringPage() {
         <p className="eyebrow">Price Monitoring</p>
         <h2>Competitor price workflow</h2>
         <p>Monitor catalog products that already have active source URLs, review actions, and export CSV only.</p>
-        <p>Vendor Sources is where source URLs are discovered, reviewed, imported, and captured.</p>
+        <p>Use Find Source for URL discovery and review; Vendor Sources covers health and capture.</p>
         <button className="text-button" type="button" onClick={resetSavedWorkflowState}>
           Reset saved Price Monitoring state
         </button>

@@ -1,9 +1,11 @@
 # Unified Source Capture
 
-Vendor Sources owns first-class product source discovery, source URL review,
-source URL capture, and source health. Price Monitoring calls Vendor Sources
-capture services during fetch and requires existing active source URLs; it does
-not discover URLs or fall back to marketplace MPN/search fetch.
+Find Source / Source URL Agent owns product source discovery, source URL
+candidate review, and candidate promotion. Vendor Sources owns source URL
+capture, diagnostics, source health, and capture run history. Price Monitoring
+calls Vendor Sources capture services during fetch and requires existing active
+source URLs; it does not discover URLs or fall back to marketplace MPN/search
+fetch.
 Price Monitoring requires exactly one source/vendor per run. All-source capture
 is retained only as an explicit admin diagnostic Vendor Sources operation.
 
@@ -75,21 +77,22 @@ URL, status, resource type, content type, body size, JSON key summaries,
 classification, derived-endpoint match, capped body sample, and parse errors.
 The workflow never persists request headers, cookies, auth headers, CSRF/session
 tokens, fingerprint-sensitive headers, or full unbounded response bodies.
-Operators can launch the diagnostic from Vendor Source Candidate Review for a
+Operators can launch the diagnostic from Find Source for a
 linked Skroutz source URL and then inspect whether `filter_products.json`,
 `shops_details.json`, another product-data endpoint, or a block/challenge was
 observed.
 
 Price Monitoring reports source URL coverage during selection and skips products
 without active source URLs using `missing_active_source_url`. Products without
-active source URLs are not eligible for Price Monitoring until Vendor Sources
-discovers or imports a reviewed active URL.
+active source URLs are not eligible for Price Monitoring until Find Source or
+an import workflow promotes a reviewed active URL.
 
 ## Removed Marketplace Fetch
 
 Marketplace fetch/search code has been removed from Price Monitoring run fetch.
 Monitoring work must use active `source_urls`/`product_sources`; Vendor Sources
-owns URL discovery, candidate review, capture, and source health.
+owns capture and source health, while Find Source owns URL discovery and
+candidate review.
 
 Product Factory source URL handoff artifacts can be imported directly from:
 

@@ -11,11 +11,13 @@ call marketplace MPN/search fallback or try to discover URLs during a run fetch.
 
 New monitoring work must use existing active `source_urls`/`product_sources`.
 Products without active source URLs are skipped with
-`missing_active_source_url` and cannot be monitored until Vendor Sources
-discovers, imports, or reviews an active URL. URL discovery, source URL review,
-source URL capture, and source health belong to Vendor Sources. Vendor Source
-Capture has its own durable run history in `vendor_source_capture_runs`; it must
-not reuse Price Monitoring run history.
+`missing_active_source_url` and cannot be monitored until Find Source or an
+import workflow promotes a reviewed active URL. URL discovery, candidate
+review, and candidate promotion belong to Find Source / Source URL Agent. Source
+URL capture,
+diagnostics, and source health belong to Vendor Sources. Vendor Source Capture
+has its own durable run history in `vendor_source_capture_runs`; it must not
+reuse Price Monitoring run history.
 
 ## Database Setup
 

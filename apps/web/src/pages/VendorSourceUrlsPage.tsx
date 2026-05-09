@@ -265,7 +265,7 @@ export function VendorSourceUrlsPage() {
         <h2>Source URLs / Coverage</h2>
         <p>Price Monitoring requires at least one active source URL.</p>
         <p>Price Monitoring requires an active URL for the selected source/vendor.</p>
-        <p>Use Vendor Sources discovery/candidate review/imports to create source URLs.</p>
+        <p>Use Find Source to discover and review candidate URLs before capture.</p>
         <p>Broken, disabled, redirected, and needs-review URLs are not monitorable.</p>
       </header>
 
@@ -331,8 +331,8 @@ export function VendorSourceUrlsPage() {
                 <p className="eyebrow">Monitorability</p>
                 <h3>Products without active source URLs</h3>
               </div>
-              <Link className="button secondary" to="/vendor-sources/candidates">
-                Review candidates
+              <Link className="button secondary" to="/find-source/candidates">
+                Find Source
               </Link>
             </div>
             {productsWithoutActive > 0 ? (

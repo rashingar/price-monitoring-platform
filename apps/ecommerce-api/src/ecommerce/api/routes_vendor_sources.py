@@ -5,15 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 
-from ecommerce.api import routes_source_url_agent as source_url_agent
-from ecommerce.api.routes_source_url_agent import (
-    SourceUrlAgentRunRequest,
-    SourceUrlCandidateReviewRequest,
-)
 from ecommerce.artifacts import artifact_link_payload
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.policy import require_database_ready_for_price_monitoring
@@ -197,68 +192,6 @@ def get_vendor_source_capture_run_artifacts(run_id: str) -> dict[str, Any]:
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Vendor source capture artifact lookup failed: {_safe_db_error(exc)}") from exc
     return {"run_id": run_id, "items": [artifact_link_payload(Path(path)) for path in artifact_paths]}
-
-
-@router.post("/agent/runs")
-def launch_vendor_source_agent_run(request: SourceUrlAgentRunRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
-    return source_url_agent.enqueue_source_url_agent_run(request, background_tasks)
-
-
-@router.get("/agent/runs")
-def list_vendor_source_agent_runs(
-    limit: int = Query(default=50, ge=1, le=500),
-    offset: int = Query(default=0, ge=0),
-) -> dict[str, Any]:
-    return source_url_agent.list_source_url_agent_runs(limit=limit, offset=offset)
-
-
-@router.get("/agent/runs/{run_id}")
-def get_vendor_source_agent_run(run_id: str) -> dict[str, Any]:
-    return source_url_agent.get_source_url_agent_run(run_id)
-
-
-@router.get("/agent/runs/{run_id}/artifacts")
-def get_vendor_source_agent_run_artifacts(run_id: str) -> dict[str, Any]:
-    return source_url_agent.get_source_url_agent_run_artifacts(run_id)
-
-
-@router.get("/candidates")
-def list_vendor_source_candidates(
-    status: str | None = None,
-    source_name: str | None = None,
-    run_id: str | None = None,
-    model: str | None = None,
-    catalog_product_id: str | None = None,
-    min_confidence: str | None = None,
-    max_confidence: str | None = None,
-    limit: int = Query(default=50, ge=1, le=500),
-    offset: int = Query(default=0, ge=0),
-) -> dict[str, Any]:
-    return source_url_agent.list_source_url_agent_candidates(
-        status=status,
-        source_name=source_name,
-        run_id=run_id,
-        model=model,
-        catalog_product_id=catalog_product_id,
-        min_confidence=min_confidence,
-        max_confidence=max_confidence,
-        limit=limit,
-        offset=offset,
-    )
-
-
-@router.get("/candidates/{candidate_id}")
-def get_vendor_source_candidate(candidate_id: int) -> dict[str, Any]:
-    payload = source_url_agent.get_source_url_agent_candidate(candidate_id)
-    review_panel = payload.get("review_panel")
-    if isinstance(review_panel, dict):
-        review_panel["review_endpoint"] = f"/api/vendor-sources/candidates/{candidate_id}/review"
-    return payload
-
-
-@router.patch("/candidates/{candidate_id}/review")
-def review_vendor_source_candidate(candidate_id: int, request: SourceUrlCandidateReviewRequest) -> dict[str, Any]:
-    return source_url_agent.review_source_url_agent_candidate(candidate_id, request)
 
 
 def _require_vendor_sources_database_ready() -> None:

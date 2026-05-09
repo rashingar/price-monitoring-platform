@@ -1089,13 +1089,13 @@ export function CatalogPage() {
 
   const getDiscoveryReviewLink = () => {
     if (!discoveryRunId) {
-      return "/vendor-sources/candidates";
+      return "/find-source/candidates";
     }
 
     const params = new URLSearchParams({
       run_id: discoveryRunId,
     });
-    return `/vendor-sources/candidates?${params.toString()}`;
+    return `/find-source/candidates?${params.toString()}`;
   };
 
   const totalPages = Math.max(

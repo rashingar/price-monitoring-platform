@@ -76,8 +76,8 @@ function ImportResultReport({
           <Link className="button secondary" to="/vendor-sources/source-urls">
             Source URL coverage
           </Link>
-          <Link className="button secondary" to="/vendor-sources/candidates">
-            Review candidates
+          <Link className="button secondary" to="/find-source/candidates">
+            Find Source
           </Link>
         </div>
       </div>

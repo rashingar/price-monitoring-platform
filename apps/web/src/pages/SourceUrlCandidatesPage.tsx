@@ -872,7 +872,7 @@ function CandidateReviewPanel({
     <section
       className="source-url-inline-review-panel"
       role="region"
-      aria-label={`Vendor source candidate ${candidate.id} review`}
+      aria-label={`Find Source candidate ${candidate.id} review`}
     >
       {isLoading ? <LoadingState label="Loading candidate details..." /> : null}
 
@@ -1233,8 +1233,8 @@ export function SourceUrlCandidatesPage() {
   return (
     <div className="page-stack source-url-candidates-page">
       <header className="page-header">
-        <p className="eyebrow">Vendor Sources</p>
-        <h2>Vendor Source Candidate Review</h2>
+        <p className="eyebrow">Find Source</p>
+        <h2>Find Source</h2>
         <p>Review discovered product URLs before explicit promotion into monitored source URLs.</p>
       </header>
 
@@ -1366,11 +1366,11 @@ export function SourceUrlCandidatesPage() {
         </div>
 
         {notice ? <p className="form-warning">{notice}</p> : null}
-        {isLoading ? <LoadingState label="Loading vendor source candidates..." /> : null}
+        {isLoading ? <LoadingState label="Loading Find Source candidates..." /> : null}
         {error ? <ErrorState message={error} onRetry={() => void loadCandidates()} /> : null}
         {!isLoading && !error && visibleCandidates.length === 0 ? (
           <EmptyState
-            title="No vendor source candidates"
+            title="No Find Source candidates"
             message="There are no candidates for the active filters."
           />
         ) : null}

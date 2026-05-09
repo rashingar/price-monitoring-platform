@@ -6,6 +6,7 @@ const platformNavItems = [
   { to: "/", label: "Dashboard" },
   { to: "/catalog", label: "Catalog" },
   { to: "/price-monitoring", label: "Price Monitoring" },
+  { to: "/find-source", label: "Find Source" },
   { to: "/vendor-sources", label: "Vendor Sources" },
   { to: "/product-factory", label: "Product Factory" },
 ];
@@ -15,11 +16,14 @@ const catalogNavItems = [
 ];
 
 const vendorSourcesNavItems = [
-  { to: "/vendor-sources/runs", label: "Discovery Runs" },
-  { to: "/vendor-sources/candidates", label: "Candidates" },
   { to: "/vendor-sources/source-urls", label: "Source URLs / Coverage" },
   { to: "/vendor-sources/captures", label: "Capture Runs" },
   { to: "/vendor-sources/imports", label: "Imports" },
+];
+
+const findSourceNavItems = [
+  { to: "/find-source/runs", label: "Runs" },
+  { to: "/find-source/candidates", label: "Candidates" },
 ];
 
 const productFactoryNavItems = [
@@ -56,6 +60,7 @@ export function AppShell() {
     location.pathname.startsWith("/jobs/");
   const isPriceMonitoringSection = location.pathname.startsWith("/price-monitoring");
   const isCatalogSection = location.pathname.startsWith("/catalog");
+  const isFindSourceSection = location.pathname.startsWith("/find-source");
   const isVendorSourcesSection = location.pathname.startsWith("/vendor-sources");
 
   return (
@@ -76,12 +81,15 @@ export function AppShell() {
                 const isPriceMonitoringActive =
                   item.to === "/price-monitoring" && isPriceMonitoringSection;
                 const isCatalogActive = item.to === "/catalog" && isCatalogSection;
+                const isFindSourceActive =
+                  item.to === "/find-source" && isFindSourceSection;
                 const isVendorSourcesActive =
                   item.to === "/vendor-sources" && isVendorSourcesSection;
                 return isActive ||
                   isProductFactoryActive ||
                   isPriceMonitoringActive ||
                   isCatalogActive ||
+                  isFindSourceActive ||
                   isVendorSourcesActive
                   ? "nav-link active"
                   : "nav-link";
@@ -133,6 +141,20 @@ export function AppShell() {
                 item.to === "/vendor-sources/captures" ||
                 item.to === "/vendor-sources/imports"
               }
+              className={({ isActive }) => (isActive ? "subnav-link active" : "subnav-link")}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+      ) : null}
+      {isFindSourceSection ? (
+        <nav className="subnav find-source-subnav" aria-label="Find Source navigation">
+          {findSourceNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/find-source/runs"}
               className={({ isActive }) => (isActive ? "subnav-link active" : "subnav-link")}
             >
               {item.label}

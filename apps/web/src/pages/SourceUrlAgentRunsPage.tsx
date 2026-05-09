@@ -283,7 +283,7 @@ export function SourceUrlAgentRunsPage() {
     const controller = new AbortController();
     setIsSourcesLoading(true);
     commerceClient
-      .listVendorSources(controller.signal)
+      .listSourceUrlAgentSources(controller.signal)
       .then((sources) => {
         if (!controller.signal.aborted) {
           setVendorSources(dedupeCapabilities(sources));
@@ -346,7 +346,7 @@ export function SourceUrlAgentRunsPage() {
     try {
       const createdRun = await commerceClient.createSourceUrlAgentRun(makeRunRequest(requestOverride ?? form));
       setRuns((current) => mergeRun(current, createdRun));
-      setNotice(`Vendor source discovery run ${getRunId(createdRun)} launched.`);
+      setNotice(`Find Source run ${getRunId(createdRun)} launched.`);
     } catch (launchError) {
       setNotice(getCommerceApiErrorMessage(launchError));
     } finally {
@@ -434,12 +434,12 @@ export function SourceUrlAgentRunsPage() {
   return (
     <div className="page-stack source-url-agent-page">
       <header className="page-header">
-        <p className="eyebrow">Vendor Sources</p>
-        <h2>Vendor Source Discovery Runs</h2>
-        <p>Launch bounded vendor source discovery runs and review the candidates they produce.</p>
+        <p className="eyebrow">Find Source</p>
+        <h2>Find Source</h2>
+        <p>Launch bounded source discovery runs and review the candidates they produce.</p>
       </header>
 
-      <section className="panel source-url-agent-warning-panel" aria-label="Vendor Sources warnings">
+      <section className="panel source-url-agent-warning-panel" aria-label="Find Source warnings">
         <ul className="source-url-warning-list">
           <li>Dry-run does not activate URLs.</li>
           <li>Apply-high-confidence writes DB rows.</li>
@@ -510,7 +510,7 @@ export function SourceUrlAgentRunsPage() {
               </select>
             </label>
             <label title="Vendor source_name filter. Direct vendors appear when the backend reports discovery_enabled=true.">
-              Vendor source filter
+              Source filter
               <select
                 value={String(form.source)}
                 onChange={(event) => updateForm("source", event.target.value)}
@@ -580,7 +580,7 @@ export function SourceUrlAgentRunsPage() {
           </div>
 
           <div className="source-capability-strip" aria-label="Vendor source capabilities">
-            {isSourcesLoading ? <span className="muted">Loading vendor sources...</span> : null}
+            {isSourcesLoading ? <span className="muted">Loading sources...</span> : null}
             {!isSourcesLoading && sourceError ? <span className="form-warning">{sourceError}</span> : null}
             {!isSourcesLoading && discoverySourceOptions.length > 0
               ? discoverySourceOptions.map((source) => (
@@ -606,7 +606,7 @@ export function SourceUrlAgentRunsPage() {
             <p className="form-warning">This is not a dry-run. Verify a 5-product dry-run first.</p>
           ) : null}
           {isLaunching ? (
-            <LoadingState label="Running browser-based Vendor Sources discovery. This can take several minutes for multi-model selections..." />
+            <LoadingState label="Running browser-based Find Source discovery. This can take several minutes for multi-model selections..." />
           ) : null}
 
           <div className="button-row">
@@ -644,11 +644,11 @@ export function SourceUrlAgentRunsPage() {
         </dl>
 
         {notice ? <p className="form-warning">{notice}</p> : null}
-        {isLoading ? <LoadingState label="Loading vendor source discovery runs..." /> : null}
+        {isLoading ? <LoadingState label="Loading Find Source runs..." /> : null}
         {error ? <ErrorState message={error} onRetry={() => void loadRuns()} /> : null}
         {!isLoading && !error && runs.length === 0 ? (
           <EmptyState
-            title="No vendor source discovery runs"
+            title="No Find Source runs"
             message="Launch a bounded dry-run to create candidate URLs for review."
           />
         ) : null}
@@ -711,7 +711,7 @@ export function SourceUrlAgentRunsPage() {
                           </button>
                           <Link
                             className="button secondary compact-button"
-                            to={`/vendor-sources/candidates?run_id=${encodeURIComponent(runId)}`}
+                            to={`/find-source/candidates?run_id=${encodeURIComponent(runId)}`}
                           >
                             Review candidates
                           </Link>
@@ -757,7 +757,7 @@ export function SourceUrlAgentRunsPage() {
           {artifactError ? <p className="form-warning">{artifactError}</p> : null}
           {!isArtifactsLoading ? (
             <ArtifactList
-              title={`Vendor source discovery artifacts for ${artifactRunId}`}
+              title={`Find Source artifacts for ${artifactRunId}`}
               items={artifacts as ArtifactItem[]}
               onPreview={previewArtifact}
               getDownloadUrl={commerceClient.getArtifactDownloadUrl}

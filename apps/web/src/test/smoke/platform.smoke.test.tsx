@@ -70,6 +70,7 @@ describe("platform mocked page smoke tests", () => {
     expect(within(primaryNav).getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Catalog" })).toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Price Monitoring" })).toBeInTheDocument();
+    expect(within(primaryNav).getByRole("link", { name: "Find Source" })).toBeInTheDocument();
     expect(within(primaryNav).queryByRole("link", { name: "CSV/Bridge" })).not.toBeInTheDocument();
     expect(within(primaryNav).queryByRole("link", { name: "Price Alerts" })).not.toBeInTheDocument();
     expect(within(primaryNav).getByRole("link", { name: "Vendor Sources" })).toBeInTheDocument();
@@ -171,13 +172,13 @@ describe("platform mocked page smoke tests", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Source URLs" })).not.toBeInTheDocument());
   });
 
-  it("renders Vendor Source Candidate Review table", async () => {
+  it("renders Find Source table", async () => {
     localStorage.removeItem(SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY);
     const mockFetch = installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
-    await expect(screen.findByRole("heading", { name: "Vendor Source Candidate Review" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("heading", { name: "Find Source" })).resolves.toBeInTheDocument();
     await expect(screen.findByText("Midea MD-20L Αφυγραντήρας 20L")).resolves.toBeInTheDocument();
     expect(screen.getByText("Table settings")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
@@ -230,10 +231,10 @@ describe("platform mocked page smoke tests", () => {
       expect(localStorage.getItem(SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY)).toContain('"columns"'),
     );
     expect(mockFetch.requests.map((request) => request.pathname)).not.toContain(
-      "/commerce-api/vendor-sources/candidates/review-layout",
+      "/commerce-api/source-url-agent/candidates/review-layout",
     );
     expect(mockFetch.requests.map((request) => request.pathname)).not.toContain(
-      "/commerce-api/vendor-sources/candidates/review-layout/reset",
+      "/commerce-api/source-url-agent/candidates/review-layout/reset",
     );
     expect(screen.getByText("0.9823")).toBeInTheDocument();
     expect(screen.getAllByText("needs review").length).toBeGreaterThan(0);
@@ -246,7 +247,7 @@ describe("platform mocked page smoke tests", () => {
 
     fireEvent.click(screen.getByText("Midea MD-20L Αφυγραντήρας 20L"));
 
-    const reviewPanel = await screen.findByRole("region", { name: "Vendor source candidate 501 review" });
+    const reviewPanel = await screen.findByRole("region", { name: "Find Source candidate 501 review" });
     expect(reviewPanel).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(within(reviewPanel).getByRole("link", { name: "Open candidate URL" })).toBeInTheDocument();
@@ -266,7 +267,7 @@ describe("platform mocked page smoke tests", () => {
   it("runs Skroutz browser diagnostics from candidate review and renders endpoint details", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     fireEvent.click(await screen.findByText("Midea MD-20L Αφυγραντήρας 20L"));
 
@@ -295,7 +296,7 @@ describe("platform mocked page smoke tests", () => {
   it("does not show Skroutz browser diagnostics for non-Skroutz candidates", async () => {
     installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     await expect(screen.findByText("Keyboard mouse bundle")).resolves.toBeInTheDocument();
     fireEvent.click(screen.getByText("Keyboard mouse bundle"));
@@ -329,7 +330,7 @@ describe("platform mocked page smoke tests", () => {
       ...allRoutes,
     ]);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     fireEvent.click(await screen.findByText("Midea MD-20L Αφυγραντήρας 20L"));
     fireEvent.click(await screen.findByRole("button", { name: "Run browser diagnostic" }));
@@ -337,36 +338,24 @@ describe("platform mocked page smoke tests", () => {
     expect(await screen.findByRole("button", { name: "Running..." })).toBeDisabled();
   });
 
-  it("renders Vendor Source discovery runs with backend source capabilities and candidate review links", async () => {
+  it("renders Find Source runs with backend source capabilities and candidate review links", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/runs");
+    renderWithRouter("/find-source/runs");
 
-    await expect(screen.findByRole("heading", { name: "Vendor Source Discovery Runs" })).resolves.toBeInTheDocument();
-    const vendorSourcesNav = screen.getByRole("navigation", { name: "Vendor Sources navigation" });
-    expect(vendorSourcesNav).toBeInTheDocument();
-    expect(within(vendorSourcesNav).getByRole("link", { name: "Discovery Runs" })).toHaveAttribute(
+    await expect(screen.findByRole("heading", { name: "Find Source" })).resolves.toBeInTheDocument();
+    const findSourceNav = screen.getByRole("navigation", { name: "Find Source navigation" });
+    expect(findSourceNav).toBeInTheDocument();
+    expect(within(findSourceNav).getByRole("link", { name: "Runs" })).toHaveAttribute(
       "href",
-      "/vendor-sources/runs",
+      "/find-source/runs",
     );
-    expect(within(vendorSourcesNav).getByRole("link", { name: "Candidates" })).toHaveAttribute(
+    expect(within(findSourceNav).getByRole("link", { name: "Candidates" })).toHaveAttribute(
       "href",
-      "/vendor-sources/candidates",
-    );
-    expect(within(vendorSourcesNav).getByRole("link", { name: "Source URLs / Coverage" })).toHaveAttribute(
-      "href",
-      "/vendor-sources/source-urls",
-    );
-    expect(within(vendorSourcesNav).getByRole("link", { name: "Capture Runs" })).toHaveAttribute(
-      "href",
-      "/vendor-sources/captures",
-    );
-    expect(within(vendorSourcesNav).getByRole("link", { name: "Imports" })).toHaveAttribute(
-      "href",
-      "/vendor-sources/imports",
+      "/find-source/candidates",
     );
     expect(screen.getByLabelText("Mode")).toHaveValue("catalog");
-    expect(screen.getByLabelText("Vendor source filter")).toHaveValue("all");
+    expect(screen.getByLabelText("Source filter")).toHaveValue("all");
     await expect(screen.findByRole("option", { name: "electronet" })).resolves.toBeInTheDocument();
     expect(screen.getByRole("option", { name: "skroutz" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "bestprice" })).toBeInTheDocument();
@@ -387,7 +376,7 @@ describe("platform mocked page smoke tests", () => {
     expect(row).not.toBeNull();
     expect(within(row as HTMLTableRowElement).getByRole("link", { name: "Review candidates" })).toHaveAttribute(
       "href",
-      "/vendor-sources/candidates?run_id=source-run-001",
+      "/find-source/candidates?run_id=source-run-001",
     );
 
     fireEvent.click(within(row as HTMLTableRowElement).getByRole("button", { name: "Open artifacts" }));
@@ -395,12 +384,12 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("candidates.csv")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Launch run" }));
-    await expect(screen.findByText("Vendor source discovery run source-run-002 launched.")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Find Source run source-run-002 launched.")).resolves.toBeInTheDocument();
     expect(
       mockFetch.requests.some(
         (request) =>
           request.method === "POST" &&
-          request.pathname === "/commerce-api/vendor-sources/agent/runs" &&
+          request.pathname === "/commerce-api/source-url-agent/runs" &&
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&
@@ -417,7 +406,7 @@ describe("platform mocked page smoke tests", () => {
 
     await expect(screen.findByRole("heading", { name: "Source URLs / Coverage" })).resolves.toBeInTheDocument();
     expect(screen.getByText("Price Monitoring requires at least one active source URL.")).toBeInTheDocument();
-    expect(screen.getByText("Use Vendor Sources discovery/candidate review/imports to create source URLs.")).toBeInTheDocument();
+    expect(screen.getByText("Use Find Source to discover and review candidate URLs before capture.")).toBeInTheDocument();
     expect(screen.getByText("Broken, disabled, redirected, and needs-review URLs are not monitorable.")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Vendor Sources navigation" })).toHaveTextContent("Source URLs / Coverage");
     expect(
@@ -553,10 +542,11 @@ describe("platform mocked page smoke tests", () => {
       "href",
       "/vendor-sources/source-urls",
     );
-    expect(screen.getAllByRole("link", { name: "Review candidates" })[0]).toHaveAttribute(
-      "href",
-      "/vendor-sources/candidates",
-    );
+    expect(
+      screen
+        .getAllByRole("link", { name: "Find Source" })
+        .some((link) => link.getAttribute("href") === "/find-source/candidates"),
+    ).toBe(true);
     expect(
       mockFetch.requests.some(
         (request) =>
@@ -578,12 +568,12 @@ describe("platform mocked page smoke tests", () => {
     ).toBe(true);
   });
 
-  it("applies run_id query params to Vendor Source Candidate Review", async () => {
+  it("applies run_id query params to Find Source", async () => {
     installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates?run_id=source-run-001");
+    renderWithRouter("/find-source/candidates?run_id=source-run-001");
 
-    await expect(screen.findByRole("heading", { name: "Vendor Source Candidate Review" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("heading", { name: "Find Source" })).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("Run id filter")).toHaveValue("source-run-001");
     await expect(screen.findAllByText(/Midea MD-20L/)).resolves.not.toHaveLength(0);
   });
@@ -591,7 +581,7 @@ describe("platform mocked page smoke tests", () => {
   it("filters Vendor Source candidates by status and source", async () => {
     installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     await expect(screen.findByText("Midea MD-20L Αφυγραντήρας 20L")).resolves.toBeInTheDocument();
 
@@ -605,14 +595,14 @@ describe("platform mocked page smoke tests", () => {
   it("expands Vendor Source candidate inline review panel with decision details", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     await expect(screen.findByText("Midea MD-20L Αφυγραντήρας 20L")).resolves.toBeInTheDocument();
     const row = screen.getByText("Midea MD-20L Αφυγραντήρας 20L").closest("tr");
     expect(row).not.toBeNull();
     fireEvent.click(row as HTMLTableRowElement);
 
-    const panel = await screen.findByRole("region", { name: "Vendor source candidate 501 review" });
+    const panel = await screen.findByRole("region", { name: "Find Source candidate 501 review" });
     expect(row?.nextElementSibling).toBe(panel.closest("tr"));
     expect(screen.queryByRole("dialog", { name: /Vendor source candidate/i })).not.toBeInTheDocument();
     expect(within(panel).queryByText("Decision")).not.toBeInTheDocument();
@@ -638,7 +628,7 @@ describe("platform mocked page smoke tests", () => {
       mockFetch.requests.some(
         (request) =>
           request.method === "PATCH" &&
-          request.pathname === "/commerce-api/vendor-sources/candidates/501/review",
+          request.pathname === "/commerce-api/source-url-agent/candidates/501/review",
       ),
     ).toBe(false);
     expect(within(panel).getByRole("button", { name: "Accept" })).toBeInTheDocument();
@@ -655,7 +645,7 @@ describe("platform mocked page smoke tests", () => {
   it("selecting another Vendor Source candidate closes the previous expanded row", async () => {
     installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     await expect(screen.findAllByText(/Midea MD-20L/)).resolves.not.toHaveLength(0);
     const firstRow = screen.getAllByText(/Midea MD-20L/)[0].closest("tr");
@@ -664,23 +654,23 @@ describe("platform mocked page smoke tests", () => {
     expect(secondRow).not.toBeNull();
 
     fireEvent.click(firstRow as HTMLTableRowElement);
-    await expect(screen.findByRole("region", { name: "Vendor source candidate 501 review" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("region", { name: "Find Source candidate 501 review" })).resolves.toBeInTheDocument();
 
     fireEvent.click(secondRow as HTMLTableRowElement);
-    await expect(screen.findByRole("region", { name: "Vendor source candidate 502 review" })).resolves.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Vendor source candidate 501 review" })).not.toBeInTheDocument();
+    await expect(screen.findByRole("region", { name: "Find Source candidate 502 review" })).resolves.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Find Source candidate 501 review" })).not.toBeInTheDocument();
   });
 
   it("submits Vendor Source candidate accept and reject actions", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     await expect(screen.findByText("Midea MD-20L Αφυγραντήρας 20L")).resolves.toBeInTheDocument();
     const row = screen.getByText("Midea MD-20L Αφυγραντήρας 20L").closest("tr");
     expect(row).not.toBeNull();
     fireEvent.click(row as HTMLTableRowElement);
-    const panel = await screen.findByRole("region", { name: "Vendor source candidate 501 review" });
+    const panel = await screen.findByRole("region", { name: "Find Source candidate 501 review" });
     fireEvent.click(within(panel).getByRole("button", { name: "Accept" }));
 
     await expect(screen.findByText("Candidate 501 marked accepted.")).resolves.toBeInTheDocument();
@@ -689,7 +679,7 @@ describe("platform mocked page smoke tests", () => {
       mockFetch.requests.some(
         (request) =>
           request.method === "PATCH" &&
-          request.pathname === "/commerce-api/vendor-sources/candidates/501/review" &&
+          request.pathname === "/commerce-api/source-url-agent/candidates/501/review" &&
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&
@@ -697,7 +687,7 @@ describe("platform mocked page smoke tests", () => {
       ),
     ).toBe(true);
 
-    const secondPanel = await screen.findByRole("region", { name: "Vendor source candidate 501 review" });
+    const secondPanel = await screen.findByRole("region", { name: "Find Source candidate 501 review" });
     await waitFor(() => expect(within(secondPanel).getByRole("button", { name: "Reject" })).toBeEnabled());
     fireEvent.click(within(secondPanel).getByRole("button", { name: "Reject" }));
 
@@ -706,7 +696,7 @@ describe("platform mocked page smoke tests", () => {
       mockFetch.requests.some(
         (request) =>
           request.method === "PATCH" &&
-          request.pathname === "/commerce-api/vendor-sources/candidates/501/review" &&
+          request.pathname === "/commerce-api/source-url-agent/candidates/501/review" &&
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&
@@ -718,14 +708,14 @@ describe("platform mocked page smoke tests", () => {
   it("keeps Replace URL hidden until requested and submits the replacement URL", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     await expect(screen.findAllByText(/Midea MD-20L/)).resolves.not.toHaveLength(0);
     const row = screen.getAllByText(/Midea MD-20L/)[0].closest("tr");
     expect(row).not.toBeNull();
     fireEvent.click(row as HTMLTableRowElement);
 
-    const panel = await screen.findByRole("region", { name: "Vendor source candidate 501 review" });
+    const panel = await screen.findByRole("region", { name: "Find Source candidate 501 review" });
     expect(within(panel).queryByLabelText("Replacement URL")).not.toBeInTheDocument();
 
     fireEvent.click(within(panel).getByRole("button", { name: "Replace URL" }));
@@ -742,7 +732,7 @@ describe("platform mocked page smoke tests", () => {
       mockFetch.requests.some(
         (request) =>
           request.method === "PATCH" &&
-          request.pathname === "/commerce-api/vendor-sources/candidates/501/review" &&
+          request.pathname === "/commerce-api/source-url-agent/candidates/501/review" &&
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&
@@ -755,25 +745,25 @@ describe("platform mocked page smoke tests", () => {
   it("collapses a Vendor Source candidate without changing its needs-review status", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
     await expect(screen.findAllByText(/Midea MD-20L/)).resolves.not.toHaveLength(0);
     const row = screen.getAllByText(/Midea MD-20L/)[0].closest("tr");
     expect(row).not.toBeNull();
 
     fireEvent.click(row as HTMLTableRowElement);
-    await expect(screen.findByRole("region", { name: "Vendor source candidate 501 review" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("region", { name: "Find Source candidate 501 review" })).resolves.toBeInTheDocument();
     fireEvent.click(row as HTMLTableRowElement);
 
     await waitFor(() =>
-      expect(screen.queryByRole("region", { name: "Vendor source candidate 501 review" })).not.toBeInTheDocument(),
+      expect(screen.queryByRole("region", { name: "Find Source candidate 501 review" })).not.toBeInTheDocument(),
     );
     expect(within(row as HTMLTableRowElement).getByText("needs review")).toBeInTheDocument();
     expect(
       mockFetch.requests.some(
         (request) =>
           request.method === "PATCH" &&
-          request.pathname === "/commerce-api/vendor-sources/candidates/501/review",
+          request.pathname === "/commerce-api/source-url-agent/candidates/501/review",
       ),
     ).toBe(false);
   });
@@ -782,15 +772,15 @@ describe("platform mocked page smoke tests", () => {
     installMockFetch([
       {
         method: "GET",
-        path: "/commerce-api/vendor-sources/candidates",
+        path: "/commerce-api/source-url-agent/candidates",
         response: { items: [], total: 0, limit: 50, offset: 0 },
       },
       ...allRoutes,
     ]);
 
-    renderWithRouter("/vendor-sources/candidates");
+    renderWithRouter("/find-source/candidates");
 
-    await expect(screen.findByText("No vendor source candidates")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("No Find Source candidates")).resolves.toBeInTheDocument();
     expect(screen.getByText("There are no candidates for the active filters.")).toBeInTheDocument();
   });
 
@@ -915,7 +905,7 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("Skipped missing active URL")).toBeInTheDocument();
     expect(screen.getByText("Products missing active source URLs were skipped. Price Monitoring consumes only existing active source URLs.")).toBeInTheDocument();
     expect(screen.getAllByText("electronet").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: "Create/review source URLs in Vendor Sources" })[0]).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "View source URL coverage" })[0]).toHaveAttribute(
       "href",
       "/vendor-sources/source-urls",
     );
@@ -948,14 +938,15 @@ describe("platform mocked page smoke tests", () => {
     await expect(
       screen.findAllByText("This product cannot be monitored until it has an active URL for electronet."),
     ).resolves.not.toHaveLength(0);
-    expect(screen.getByRole("link", { name: "Create/review source URLs in Vendor Sources" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View source URL coverage" })).toHaveAttribute(
       "href",
       "/vendor-sources/source-urls",
     );
-    expect(screen.getByRole("link", { name: "Run Vendor Sources discovery" })).toHaveAttribute(
-      "href",
-      "/vendor-sources/runs",
-    );
+    expect(
+      screen
+        .getAllByRole("link", { name: "Find Source" })
+        .some((link) => link.getAttribute("href") === "/find-source/runs"),
+    ).toBe(true);
   });
 
   it("shows no monitorable products when run creation returns only missing source URL skips", async () => {
@@ -980,14 +971,15 @@ describe("platform mocked page smoke tests", () => {
       ).toBeGreaterThan(0),
     );
     expect(screen.getByText("No products with active source URLs were selected.")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Create/review source URLs in Vendor Sources" })[0]).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "View source URL coverage" })[0]).toHaveAttribute(
       "href",
       "/vendor-sources/source-urls",
     );
-    expect(screen.getAllByRole("link", { name: "Run Vendor Sources discovery" })[0]).toHaveAttribute(
-      "href",
-      "/vendor-sources/runs",
-    );
+    expect(
+      screen
+        .getAllByRole("link", { name: "Find Source" })
+        .some((link) => link.getAttribute("href") === "/find-source/runs"),
+    ).toBe(true);
   });
 
   it("shows the Price Monitoring DB-required banner and disables primary actions when DB is not ready", async () => {
@@ -1133,7 +1125,7 @@ describe("platform mocked page smoke tests", () => {
     const mockFetch = installMockFetch([
       {
         method: "POST",
-        path: "/commerce-api/vendor-sources/agent/runs",
+        path: "/commerce-api/source-url-agent/runs",
         response: {
           run_id: "source-run-002",
           source: "all",
@@ -1158,7 +1150,7 @@ describe("platform mocked page smoke tests", () => {
       },
       {
         method: "GET",
-        path: "/commerce-api/vendor-sources/agent/runs/source-run-002",
+        path: "/commerce-api/source-url-agent/runs/source-run-002",
         response: {
           run_id: "source-run-002",
           source: "all",
@@ -1204,13 +1196,13 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findByText("succeeded")).resolves.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review candidates" })).toHaveAttribute(
       "href",
-      "/vendor-sources/candidates?run_id=source-run-002",
+      "/find-source/candidates?run_id=source-run-002",
     );
     expect(
       mockFetch.requests.some(
         (request) =>
           request.method === "POST" &&
-          request.pathname === "/commerce-api/vendor-sources/agent/runs" &&
+          request.pathname === "/commerce-api/source-url-agent/runs" &&
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&

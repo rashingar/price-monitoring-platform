@@ -253,9 +253,15 @@ POST   /commerce-api/catalog/source-urls/import/apply
 
 GET    /commerce-api/vendor-sources/source-urls/summary
 GET    /commerce-api/vendor-sources/sources
-GET    /commerce-api/vendor-sources/agent/runs
-POST   /commerce-api/vendor-sources/agent/runs
-GET    /commerce-api/vendor-sources/candidates
+GET    /commerce-api/source-url-agent/sources
+GET    /commerce-api/source-url-agent/runs
+POST   /commerce-api/source-url-agent/runs
+POST   /commerce-api/source-url-agent/runs/sync
+GET    /commerce-api/source-url-agent/runs/{run_id}
+GET    /commerce-api/source-url-agent/runs/{run_id}/artifacts
+GET    /commerce-api/source-url-agent/candidates
+GET    /commerce-api/source-url-agent/candidates/{candidate_id}
+PATCH  /commerce-api/source-url-agent/candidates/{candidate_id}/review
 POST   /commerce-api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network
 GET    /commerce-api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network/latest
 

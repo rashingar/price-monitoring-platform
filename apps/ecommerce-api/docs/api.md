@@ -208,17 +208,11 @@ POST  /api/vendor-sources/captures/runs
 GET   /api/vendor-sources/captures/runs
 GET   /api/vendor-sources/captures/runs/{run_id}
 GET   /api/vendor-sources/captures/runs/{run_id}/artifacts
-POST  /api/vendor-sources/agent/runs
-GET   /api/vendor-sources/agent/runs
-GET   /api/vendor-sources/agent/runs/{run_id}
-GET   /api/vendor-sources/agent/runs/{run_id}/artifacts
-GET   /api/vendor-sources/candidates
-GET   /api/vendor-sources/candidates/{candidate_id}
-PATCH /api/vendor-sources/candidates/{candidate_id}/review
 ```
 
-This namespace is the direct-vendor workflow surface. Use Vendor Sources
-directly for discovery runs, candidate review, capture, and source health.
+This namespace is the vendor/source health, diagnostics, and capture workflow
+surface. Use Find Source / Source URL Agent for discovery runs, candidate
+review, and candidate promotion.
 `GET /api/vendor-sources/sources` returns discovery and capture capabilities so
 clients can distinguish marketplace monitoring sources from direct vendor
 sources and avoid assuming capture support for discovery-only vendors.

@@ -1969,7 +1969,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   { method: "GET", path: "/commerce-api/vendor-sources/source-urls/summary", response: vendorSourceUrlSummary },
   {
     method: "POST",
-    path: "/commerce-api/vendor-sources/agent/runs",
+    path: "/commerce-api/source-url-agent/runs",
     requestExample: {
       mode: "catalog",
       source: "all",
@@ -1983,15 +1983,16 @@ export const commerceFixtureRoutes: MockRoute[] = [
     response: createSourceUrlAgentRunResponse,
   },
   { method: "GET", path: "/commerce-api/vendor-sources/sources", response: vendorSourceCapabilities },
-  { method: "GET", path: "/commerce-api/vendor-sources/agent/runs", response: sourceUrlAgentRuns },
+  { method: "GET", path: "/commerce-api/source-url-agent/sources", response: vendorSourceCapabilities },
+  { method: "GET", path: "/commerce-api/source-url-agent/runs", response: sourceUrlAgentRuns },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/agent/runs/source-run-001",
+    path: "/commerce-api/source-url-agent/runs/source-run-001",
     response: sourceUrlAgentRunDetail,
   },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/agent/runs/source-run-001/artifacts",
+    path: "/commerce-api/source-url-agent/runs/source-run-001/artifacts",
     response: sourceUrlAgentArtifacts,
   },
   {
@@ -2017,20 +2018,20 @@ export const commerceFixtureRoutes: MockRoute[] = [
     path: "/commerce-api/vendor-sources/captures/runs/capture-run-001/artifacts",
     response: vendorSourceCaptureArtifacts,
   },
-  { method: "GET", path: "/commerce-api/vendor-sources/candidates", response: sourceUrlCandidatesResponse },
+  { method: "GET", path: "/commerce-api/source-url-agent/candidates", response: sourceUrlCandidatesResponse },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/candidates/501",
+    path: "/commerce-api/source-url-agent/candidates/501",
     response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/candidates/502",
+    path: "/commerce-api/source-url-agent/candidates/502",
     response: { candidate: { ...sourceUrlCandidates.items[1], review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
   {
     method: "PATCH",
-    path: "/commerce-api/vendor-sources/candidates/501/review",
+    path: "/commerce-api/source-url-agent/candidates/501/review",
     requestExample: {
       decision: "accept",
       reviewed_url: null,
@@ -2052,7 +2053,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   },
   {
     method: "POST",
-    path: "/commerce-api/vendor-sources/agent/runs",
+    path: "/commerce-api/source-url-agent/runs",
     requestExample: {
       mode: "catalog",
       source: "all",
@@ -2065,31 +2066,31 @@ export const commerceFixtureRoutes: MockRoute[] = [
     },
     response: createSourceUrlAgentRunResponse,
   },
-  { method: "GET", path: "/commerce-api/vendor-sources/agent/runs", response: sourceUrlAgentRuns },
+  { method: "GET", path: "/commerce-api/source-url-agent/runs", response: sourceUrlAgentRuns },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/agent/runs/source-run-001",
+    path: "/commerce-api/source-url-agent/runs/source-run-001",
     response: sourceUrlAgentRunDetail,
   },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/agent/runs/source-run-001/artifacts",
+    path: "/commerce-api/source-url-agent/runs/source-run-001/artifacts",
     response: sourceUrlAgentArtifacts,
   },
-  { method: "GET", path: "/commerce-api/vendor-sources/candidates", response: sourceUrlCandidatesResponse },
+  { method: "GET", path: "/commerce-api/source-url-agent/candidates", response: sourceUrlCandidatesResponse },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/candidates/501",
+    path: "/commerce-api/source-url-agent/candidates/501",
     response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/candidates/502",
+    path: "/commerce-api/source-url-agent/candidates/502",
     response: { candidate: { ...sourceUrlCandidates.items[1], review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
   {
     method: "PATCH",
-    path: "/commerce-api/vendor-sources/candidates/501/review",
+    path: "/commerce-api/source-url-agent/candidates/501/review",
     requestExample: {
       decision: "accept",
       reviewed_url: null,

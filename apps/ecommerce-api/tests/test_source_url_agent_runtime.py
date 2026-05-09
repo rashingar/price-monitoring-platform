@@ -390,7 +390,7 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
         product = _catalog_product(session)
 
     response = client.post(
-        "/api/vendor-sources/agent/runs",
+        "/api/source-url-agent/runs",
         json={
             "source": "bestprice",
             "mode": "catalog",
@@ -416,8 +416,8 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
         assert run.status == "completed"
         assert candidate.run_id == payload["run_id"]
         assert candidate.match_status == "matched"
-    history = client.get("/api/vendor-sources/agent/runs")
-    detail = client.get(f"/api/vendor-sources/agent/runs/{payload['run_id']}")
+    history = client.get("/api/source-url-agent/runs")
+    detail = client.get(f"/api/source-url-agent/runs/{payload['run_id']}")
     assert history.status_code == 200
     assert history.json()["items"][0]["run_id"] == payload["run_id"]
     assert detail.status_code == 200
@@ -433,7 +433,7 @@ def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_pa
         product = _catalog_product(session)
 
     response = client.post(
-        "/api/vendor-sources/agent/runs",
+        "/api/source-url-agent/runs",
         json={
             "source": "electronet",
             "mode": "catalog",
@@ -447,7 +447,7 @@ def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_pa
     assert response.status_code == 200
     payload = response.json()
     assert payload["source"] == "electronet"
-    history = client.get("/api/vendor-sources/agent/runs")
+    history = client.get("/api/source-url-agent/runs")
     assert history.status_code == 200
     assert history.json()["items"][0]["run_id"] == payload["run_id"]
 
@@ -460,7 +460,7 @@ def test_source_url_agent_run_api_accepts_selected_models(tmp_path: Path, monkey
         _catalog_product(session, model="SKIP-1", mpn="MPN-3")
 
     response = client.post(
-        "/api/vendor-sources/agent/runs",
+        "/api/source-url-agent/runs",
         json={
             "source": "bestprice",
             "mode": "catalog",
@@ -488,7 +488,7 @@ def test_source_url_agent_run_api_enforces_bounded_default_limit(tmp_path: Path,
         for index in range(4):
             _catalog_product(session, model=f"MODEL-{index}", mpn=f"MPN-{index}")
 
-    response = client.post("/api/vendor-sources/agent/runs", json={"source": "bestprice", "mode": "catalog"})
+    response = client.post("/api/source-url-agent/runs", json={"source": "bestprice", "mode": "catalog"})
 
     assert response.status_code == 200
     payload = response.json()
@@ -503,11 +503,11 @@ def test_source_url_agent_run_artifact_endpoint_returns_safe_metadata(tmp_path: 
         product = _catalog_product(session)
 
     run_response = client.post(
-        "/api/vendor-sources/agent/runs",
+        "/api/source-url-agent/runs",
         json={"source": "bestprice", "mode": "catalog", "catalog_product_id": product.id, "limit": 1},
     )
     run_id = run_response.json()["run_id"]
-    artifact_response = client.get(f"/api/vendor-sources/agent/runs/{run_id}/artifacts")
+    artifact_response = client.get(f"/api/source-url-agent/runs/{run_id}/artifacts")
 
     assert artifact_response.status_code == 200
     payload = artifact_response.json()
