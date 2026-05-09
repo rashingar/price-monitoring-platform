@@ -607,6 +607,7 @@ export interface CatalogProductsParams {
   page?: number;
   page_size?: number;
   atomic_only?: boolean;
+  has_source_url?: boolean;
   ignored?: IgnoredFilter;
   automation_eligible_only?: boolean;
 }

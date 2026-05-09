@@ -12,6 +12,7 @@ from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.db.source_url_repository import create_or_update_manual_source_url  # noqa: E402
 from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 RAW_COOKWARE = (
@@ -180,6 +181,24 @@ def test_catalog_products_search_mpn_atomic_and_automation_filters(tmp_path: Pat
     assert [item["model"] for item in has_mpn["items"]] == ["233374-233203"]
     assert {item["model"] for item in atomic["items"]} == {"005606", "123456"}
     assert [item["model"] for item in eligible["items"]] == ["005606"]
+
+
+def test_catalog_products_source_url_filter(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    with session_scope(database_url) as session:
+        product_id = client.get("/api/catalog/products", params={"q": "Vacuum Two"}).json()["items"][0]["catalog_product_id"]
+        create_or_update_manual_source_url(
+            session,
+            product_id,
+            {"url": "https://www.skroutz.gr/s/123/vacuum-two.html"},
+        )
+
+    with_source_url = client.get("/api/catalog/products", params={"has_source_url": "true"}).json()
+    without_source_url = client.get("/api/catalog/products", params={"has_source_url": "false"}).json()
+
+    assert [item["model"] for item in with_source_url["items"]] == ["123456"]
+    assert {item["model"] for item in without_source_url["items"]} == {"005606", "233374-233203", "ABC123"}
 
 
 def test_catalog_categories(tmp_path: Path, monkeypatch) -> None:

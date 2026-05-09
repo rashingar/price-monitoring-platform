@@ -6,12 +6,15 @@ from collections import Counter
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from ecommerce.catalog import CatalogProduct
 from ecommerce.catalog_db import load_active_catalog_products
 from ecommerce.db.config import sanitize_database_error
+from ecommerce.db.models import SourceUrl
 from ecommerce.db.policy import require_database_ready_for_catalog
+from ecommerce.db.session import session_scope
 from ecommerce.ignore import MissingIgnoreColumnsError, load_ignored_products
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
@@ -32,6 +35,7 @@ def get_products(
     manufacturer: str | None = None,
     marketplace: MarketplaceFilter | None = None,
     has_mpn: bool | None = None,
+    has_source_url: bool | None = None,
     ignored: IgnoredFilter = "exclude",
     atomic_only: bool = False,
     automation_eligible_only: bool = False,
@@ -42,9 +46,11 @@ def get_products(
 ) -> dict:
     products = _load_catalog_or_raise()
     ignored_models = _load_ignored_models_or_raise()
+    source_url_product_ids = _load_source_url_product_ids_or_raise() if has_source_url is not None else None
     filtered = _filter_products(
         products,
         ignored_models=ignored_models,
+        source_url_product_ids=source_url_product_ids,
         q=q,
         category=category,
         family=family,
@@ -53,6 +59,7 @@ def get_products(
         manufacturer=manufacturer,
         marketplace=marketplace,
         has_mpn=has_mpn,
+        has_source_url=has_source_url,
         ignored=ignored,
         atomic_only=atomic_only,
         automation_eligible_only=automation_eligible_only,
@@ -192,10 +199,25 @@ def _load_ignored_models_or_raise() -> set[str]:
         raise HTTPException(status_code=500, detail="Ignore list loading failed.") from exc
 
 
+def _load_source_url_product_ids_or_raise() -> set[int]:
+    try:
+        with session_scope() as session:
+            return {
+                int(product_id)
+                for product_id in session.execute(select(SourceUrl.catalog_product_id).distinct()).scalars().all()
+                if product_id is not None
+            }
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Source URL query failed: {_safe_db_error(exc)}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Source URL query failed.") from exc
+
+
 def _filter_products(
     products: list[CatalogProduct],
     *,
     ignored_models: set[str],
+    source_url_product_ids: set[int] | None,
     q: str | None,
     category: str | None,
     family: str | None,
@@ -204,6 +226,7 @@ def _filter_products(
     manufacturer: str | None,
     marketplace: MarketplaceFilter | None,
     has_mpn: bool | None,
+    has_source_url: bool | None,
     ignored: IgnoredFilter,
     atomic_only: bool,
     automation_eligible_only: bool,
@@ -238,6 +261,15 @@ def _filter_products(
             continue
         if has_mpn is not None and bool(product.mpn) is not has_mpn:
             continue
+        if has_source_url is not None:
+            product_id = product.catalog_product_id
+            product_has_source_url = (
+                isinstance(product_id, int)
+                and source_url_product_ids is not None
+                and product_id in source_url_product_ids
+            )
+            if product_has_source_url is not has_source_url:
+                continue
         if atomic_only and not product.is_atomic_model:
             continue
         if automation_eligible_only and not _is_automation_eligible(product, is_ignored):

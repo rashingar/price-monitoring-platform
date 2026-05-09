@@ -87,6 +87,7 @@ interface CatalogPageState {
   source: PriceMonitoringSource;
   showComposite: boolean;
   includeIgnored: boolean;
+  sourceUrlsOnly: boolean;
   page: number;
   pageSize: number;
   visibleColumnIds: CatalogColumnId[];
@@ -141,6 +142,7 @@ const initialCatalogPageState: CatalogPageState = {
   source: "bestprice",
   showComposite: false,
   includeIgnored: false,
+  sourceUrlsOnly: false,
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   visibleColumnIds: DEFAULT_VISIBLE_CATALOG_COLUMNS,
@@ -583,6 +585,7 @@ export function CatalogPage() {
   const [source, setSource] = useState<PriceMonitoringSource>(persistedState.source);
   const [showComposite, setShowComposite] = useState(persistedState.showComposite);
   const [includeIgnored, setIncludeIgnored] = useState(persistedState.includeIgnored);
+  const [sourceUrlsOnly, setSourceUrlsOnly] = useState(persistedState.sourceUrlsOnly === true);
   const [page, setPage] = useState(persistedState.page);
   const [pageSize, setPageSize] = useState(persistedState.pageSize);
   const [visibleColumnIds, setVisibleColumnIds] = useState<Set<CatalogColumnId>>(
@@ -704,6 +707,10 @@ export function CatalogPage() {
         ignored: includeIgnored ? "include" : "exclude",
       };
 
+      if (sourceUrlsOnly) {
+        params.has_source_url = true;
+      }
+
       if (trimmedQ.length > 0) {
         params.q = trimmedQ;
       }
@@ -738,6 +745,7 @@ export function CatalogPage() {
       selectedFamily,
       selectedSubCategory,
       showComposite,
+      sourceUrlsOnly,
     ],
   );
 
@@ -814,6 +822,7 @@ export function CatalogPage() {
       source,
       showComposite,
       includeIgnored,
+      sourceUrlsOnly,
       page,
       pageSize,
       visibleColumnIds: CATALOG_COLUMNS.map((column) => column.id).filter((columnId) =>
@@ -832,6 +841,7 @@ export function CatalogPage() {
     selectedSubCategory,
     setPersistedState,
     showComposite,
+    sourceUrlsOnly,
     source,
     visibleColumnIds,
   ]);
@@ -856,6 +866,7 @@ export function CatalogPage() {
     selectedFamily,
     selectedSubCategory,
     showComposite,
+    sourceUrlsOnly,
   ]);
 
   const eligibleVisibleModels = useMemo(
@@ -938,6 +949,7 @@ export function CatalogPage() {
     setSource(initialCatalogPageState.source);
     setShowComposite(initialCatalogPageState.showComposite);
     setIncludeIgnored(initialCatalogPageState.includeIgnored);
+    setSourceUrlsOnly(initialCatalogPageState.sourceUrlsOnly);
     setPage(initialCatalogPageState.page);
     setPageSize(initialCatalogPageState.pageSize);
     setVisibleColumnIds(new Set(initialCatalogPageState.visibleColumnIds));
@@ -1304,10 +1316,10 @@ export function CatalogPage() {
           <label className="checkbox-row">
             <input
               type="checkbox"
-              checked={showComposite}
-              onChange={(event) => setShowComposite(event.target.checked)}
+              checked={sourceUrlsOnly}
+              onChange={(event) => setSourceUrlsOnly(event.target.checked)}
             />
-            Show composite models
+            Source URLs
           </label>
 
           <label className="checkbox-row">
@@ -1317,6 +1329,15 @@ export function CatalogPage() {
               onChange={(event) => setIncludeIgnored(event.target.checked)}
             />
             Include ignored
+          </label>
+
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={showComposite}
+              onChange={(event) => setShowComposite(event.target.checked)}
+            />
+            Show composite models
           </label>
         </div>
 

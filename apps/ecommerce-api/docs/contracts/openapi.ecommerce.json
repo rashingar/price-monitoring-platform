@@ -2187,6 +2187,22 @@
           },
           {
             "in": "query",
+            "name": "has_source_url",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Source Url"
+            }
+          },
+          {
+            "in": "query",
             "name": "ignored",
             "required": false,
             "schema": {

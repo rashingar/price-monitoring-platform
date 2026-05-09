@@ -87,7 +87,7 @@ describe("platform mocked page smoke tests", () => {
   });
 
   it("renders Catalog summary filters and product rows", async () => {
-    installMockFetch(allRoutes);
+    const mockFetch = installMockFetch(allRoutes);
 
     renderWithRouter("/catalog");
 
@@ -100,6 +100,18 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findByText("Source URL Import")).resolves.toBeInTheDocument();
     await expect(screen.findByText(/Coverage:/)).resolves.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Preview import" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Include ignored")).toBeInTheDocument();
+    expect(screen.getByLabelText("Show composite models")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Source URLs"));
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.pathname === "/commerce-api/catalog/products" &&
+            request.searchParams.get("has_source_url") === "true",
+        ),
+      ).toBe(true),
+    );
   });
 
   it("expands source URL import and keeps apply guarded by preview and confirmation", async () => {
