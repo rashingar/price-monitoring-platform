@@ -1532,10 +1532,10 @@ export function ProductFactoryWorkflowPage() {
       if (isAuthoringReadyForRender(nextStatus)) {
         try {
           await runFilterReviewWorkflow(model);
-          setAutoAdvanceMessage("Authoring is ready. Advanced to Filter Review.");
+          await runRenderPublishWorkflow(model);
         } catch (error) {
           if (!(error instanceof WorkflowHalted)) {
-            setActionError(actionKey, getErrorHint(error, "Could not load filter review."));
+            setActionError(actionKey, getErrorHint(error, "Could not continue workflow after authoring."));
           }
         }
       }
@@ -1579,6 +1579,27 @@ export function ProductFactoryWorkflowPage() {
     }
   }
 
+  async function runRenderPublishWorkflow(targetModel: string): Promise<void> {
+    setAutoAdvanceMessage("Filter Review has no blockers. Running Render.");
+    await runQueuedWorkflowJob(
+      "render",
+      "render",
+      targetModel,
+      () => apiClient.createRenderJob({ model: targetModel }),
+      "Render succeeded.",
+    );
+
+    setAutoAdvanceMessage("Render succeeded. Running Publish.");
+    await runQueuedWorkflowJob(
+      "publish",
+      "publish",
+      targetModel,
+      () => apiClient.createPublishJob({ model: targetModel }),
+      "Publish succeeded.",
+    );
+    setAutoAdvanceMessage("Publish succeeded.");
+  }
+
   async function runEndToEndWorkflow(request: PrepareJobRequest) {
     const targetModel = request.model;
     setAutoAdvanceMessage("Prepare queued. Waiting for completion.");
@@ -1591,7 +1612,7 @@ export function ProductFactoryWorkflowPage() {
 
     await runAuthoringWorkflow(targetModel);
     await runFilterReviewWorkflow(targetModel);
-    setAutoAdvanceMessage("Filter Review has no blockers. Ready to Render.");
+    await runRenderPublishWorkflow(targetModel);
   }
 
   const loadAuthoring = useCallback(
@@ -1631,8 +1652,12 @@ export function ProductFactoryWorkflowPage() {
       await runAction(
         actionKey,
         async () => {
-          setFilterReview(await apiClient.getFilterReview(model));
+          const nextReview = await apiClient.getFilterReview(model);
+          setFilterReview(nextReview);
           clearFilterReviewErrors();
+          if (isFilterReviewReadyForRender(nextReview)) {
+            await runRenderPublishWorkflow(model);
+          }
         },
         "Filter review loaded.",
         "Could not load filter review.",
@@ -1673,16 +1698,13 @@ export function ProductFactoryWorkflowPage() {
       return;
     }
 
-    await runAction(
-      "render",
-      async () => {
-        const job = await apiClient.createRenderJob({ model });
-        trackJob(job);
-        await loadModelJobs();
-      },
-      "Render job started.",
-      "Could not start render job.",
-    );
+    try {
+      await runRenderPublishWorkflow(model);
+    } catch (error) {
+      if (!(error instanceof WorkflowHalted)) {
+        setActionError("render", getErrorHint(error, "Could not run render and publish."));
+      }
+    }
   }
 
   async function handlePublish() {
@@ -1720,8 +1742,12 @@ export function ProductFactoryWorkflowPage() {
       "filter_save",
       async () => {
         await apiClient.saveFilterReview(model, makeFilterReviewSavePayload(filterReview));
-        setFilterReview(await apiClient.getFilterReview(model));
+        const nextReview = await apiClient.getFilterReview(model);
+        setFilterReview(nextReview);
         clearFilterReviewErrors();
+        if (isFilterReviewReadyForRender(nextReview)) {
+          await runRenderPublishWorkflow(model);
+        }
       },
       "Filter review saved.",
       "Could not save filter review.",
@@ -1742,8 +1768,12 @@ export function ProductFactoryWorkflowPage() {
       "filter_approve",
       async () => {
         await apiClient.approveFilterReview(model);
-        setFilterReview(await apiClient.getFilterReview(model));
+        const nextReview = await apiClient.getFilterReview(model);
+        setFilterReview(nextReview);
         clearFilterReviewErrors();
+        if (isFilterReviewReadyForRender(nextReview)) {
+          await runRenderPublishWorkflow(model);
+        }
       },
       "Filter review approval requested.",
       "Could not approve filter review.",

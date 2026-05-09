@@ -1168,6 +1168,16 @@ describe("platform mocked page smoke tests", () => {
           warnings: [],
         },
       },
+      {
+        method: "POST",
+        path: "/api/jobs/render",
+        response: { job: { job_id: "005606-render-a1", job_type: "render", model: "005606", status: "succeeded" } },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/publish",
+        response: { job: { job_id: "005606-publish-a1", job_type: "publish", model: "005606", status: "succeeded" } },
+      },
     ]);
 
     renderWithRouter("/product-factory");
@@ -1177,13 +1187,13 @@ describe("platform mocked page smoke tests", () => {
     fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
     fireEvent.click(screen.getByRole("button", { name: "Run Prepare" }));
 
-    await expect(screen.findByText("Filter Review has no blockers. Ready to Render.")).resolves.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Filter Review" })).toBeInTheDocument();
+    await expect(screen.findByText("Publish succeeded.")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Publish" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Preparesucceeded/i })).toBeInTheDocument();
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/intro-text")).toBe(true);
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/seo-meta")).toBe(true);
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(false);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(true);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(true);
   });
 
   it("queues separate Authoring jobs, shows previews, and advances to Filter Review when ready", async () => {
@@ -1254,6 +1264,16 @@ describe("platform mocked page smoke tests", () => {
           warnings: [],
         },
       },
+      {
+        method: "POST",
+        path: "/api/jobs/render",
+        response: { job: { job_id: "005606-render-a1", job_type: "render", model: "005606", status: "succeeded" } },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/publish",
+        response: { job: { job_id: "005606-publish-a1", job_type: "publish", model: "005606", status: "succeeded" } },
+      },
     ]);
 
     renderWithRouter("/product-factory/005606");
@@ -1266,16 +1286,16 @@ describe("platform mocked page smoke tests", () => {
     await waitFor(() => expect(screen.getAllByText(/Generated/).length).toBeGreaterThan(0));
 
     fireEvent.click(screen.getByRole("button", { name: "Run SEO Meta" }));
-    await expect(screen.findByText("Authoring is ready. Advanced to Filter Review.")).resolves.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Filter Review" })).toBeInTheDocument();
+    await expect(screen.findByText("Publish succeeded.")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Publish" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
     await waitFor(() => expect(screen.getAllByText("005606-authoring_seo-a1").length).toBeGreaterThan(0));
     expect(screen.getByText("Generated description")).toBeInTheDocument();
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(false);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(true);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(true);
   });
 
-  it("advances to Publish after Render succeeds without starting Publish", async () => {
+  it("starts Publish automatically after Render succeeds", async () => {
     let rendered = false;
     const mockFetch = installMockFetch([
       { method: "GET", path: "/api/health", response: productFactoryHealth },
@@ -1297,6 +1317,11 @@ describe("platform mocked page smoke tests", () => {
           return { job: { job_id: "render-1", job_type: "render", model: "005606", status: "succeeded" } };
         },
       },
+      {
+        method: "POST",
+        path: "/api/jobs/publish",
+        response: { job: { job_id: "publish-1", job_type: "publish", model: "005606", status: "succeeded" } },
+      },
     ]);
 
     renderWithRouter("/product-factory/005606");
@@ -1306,9 +1331,9 @@ describe("platform mocked page smoke tests", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Render" })).not.toBeDisabled());
     fireEvent.click(screen.getByRole("button", { name: "Render" }));
 
-    await expect(screen.findByText("Render succeeded. Advanced to Publish.")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Publish succeeded.")).resolves.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Publish" })).toBeInTheDocument();
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(false);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(true);
   });
 
   it("stops on Filter Review when values are outside supported filters", async () => {
@@ -1407,6 +1432,16 @@ describe("platform mocked page smoke tests", () => {
           review_artifact_path: "work/005606/review/category_filters.override.json",
         },
       },
+      {
+        method: "POST",
+        path: "/api/jobs/render",
+        response: { job: { job_id: "005606-render-a1", job_type: "render", model: "005606", status: "succeeded" } },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/publish",
+        response: { job: { job_id: "005606-publish-a1", job_type: "publish", model: "005606", status: "succeeded" } },
+      },
     ]);
 
     renderWithRouter("/product-factory/005606");
@@ -1416,14 +1451,12 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.queryByText("Authoring defaults")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Load Filter Review" }));
 
-    await expect(screen.findByText("Filter Review is ready. Advanced to Render.")).resolves.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Render" })).toBeInTheDocument();
+    await expect(screen.findByText("Publish succeeded.")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Publish" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Filter Reviewsucceeded/i })).toBeInTheDocument();
     expect(screen.queryByText(/\[object Object\]/)).not.toBeInTheDocument();
     expect(screen.queryByText("Missing required groups")).not.toBeInTheDocument();
 
-    expect(screen.queryByText("Authoring defaults")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /Publish/i }));
     expect(screen.queryByText("Authoring defaults")).not.toBeInTheDocument();
   });
 
