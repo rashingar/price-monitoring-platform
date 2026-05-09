@@ -1247,7 +1247,7 @@ describe("platform mocked page smoke tests", () => {
               name: "seo_meta_preview_path",
               kind: "json_preview",
               content_type: "application/json",
-              content: JSON.stringify({ meta_description: "Generated description", meta_keywords: ["tv", "oled"] }),
+              content: JSON.stringify({ meta_description: "Generated <strong>description</strong>", meta_keywords: ["tv", "oled"] }),
             },
           ],
         },
@@ -1290,7 +1290,13 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByRole("heading", { name: "Publish" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
     await waitFor(() => expect(screen.getAllByText("005606-authoring_seo-a1").length).toBeGreaterThan(0));
-    expect(screen.getByText("Generated description")).toBeInTheDocument();
+    const metaDescriptionCard = screen.getByText("Meta description").closest(".authoring-preview-card");
+    const metaKeywordsCard = screen.getByText("Meta keywords").closest(".authoring-preview-card");
+    expect(metaDescriptionCard).not.toBeNull();
+    expect(metaKeywordsCard).not.toBeNull();
+    expect(within(metaDescriptionCard as HTMLElement).getByText("Generated")).toBeInTheDocument();
+    expect(within(metaDescriptionCard as HTMLElement).getByText("description").tagName).toBe("STRONG");
+    expect(metaDescriptionCard?.nextElementSibling).toBe(metaKeywordsCard);
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(true);
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(true);
   });
@@ -1498,6 +1504,80 @@ describe("platform mocked page smoke tests", () => {
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
   });
 
+  it("clears stale authoring validation errors after a later Intro Text success", async () => {
+    const validationError = "LLM stage validation failed: stage=intro_text; error_code=llm_intro_text_emphasis_overused; attempt_count=1; reason=intro validation failed with a non-retryable error";
+    let introValid = false;
+    installMockFetch([
+      { method: "GET", path: "/api/health", response: productFactoryHealth },
+      { method: "GET", path: "/api/settings", response: productFactorySettings },
+      { method: "GET", path: "/api/jobs/by-model/005606", response: { jobs: [] } },
+      {
+        method: "GET",
+        path: "/api/authoring/005606",
+        response: () => ({
+          model: "005606",
+          intro_text: { status: introValid ? "valid" : "missing", errors: [] },
+          seo_meta: { status: "valid", errors: [] },
+          ready_for_render: introValid,
+          render_block_reasons: introValid ? [] : ["intro_text_missing"],
+          warnings: [],
+        }),
+      },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/intro-text",
+        response: { job: { job_id: "005606-authoring_intro-failed", job_type: "authoring_intro", model: "005606", status: "failed", error: validationError } },
+      },
+      { method: "GET", path: "/api/jobs/005606-authoring_intro-failed/logs", response: { lines: ["Intro text authoring failed."] } },
+      { method: "GET", path: "/api/jobs/005606-authoring_intro-failed/artifacts", response: { artifacts: [] } },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/intro-text/retry",
+        response: () => {
+          introValid = true;
+          return { job: { job_id: "005606-authoring_intro-succeeded", job_type: "authoring_intro", model: "005606", status: "succeeded" } };
+        },
+      },
+      { method: "GET", path: "/api/jobs/005606-authoring_intro-succeeded/logs", response: { lines: ["Intro text authoring succeeded."] } },
+      { method: "GET", path: "/api/jobs/005606-authoring_intro-succeeded/artifacts", response: { artifacts: [] } },
+      {
+        method: "GET",
+        path: "/api/filter-review/005606",
+        response: {
+          model: "005606",
+          approved: true,
+          render_blocked: false,
+          missing_required_groups: [],
+          groups: [],
+          warnings: [],
+        },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/render",
+        response: { job: { job_id: "005606-render-a1", job_type: "render", model: "005606", status: "succeeded" } },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/publish",
+        response: { job: { job_id: "005606-publish-a1", job_type: "publish", model: "005606", status: "succeeded" } },
+      },
+    ]);
+
+    renderWithRouter("/product-factory/005606");
+
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Run Intro Text" }));
+    await expect(screen.findByText(validationError, {}, { timeout: 4_000 })).resolves.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry Intro Text" }));
+    await expect(screen.findByText("Publish succeeded.")).resolves.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
+
+    expect(screen.queryByText(validationError)).not.toBeInTheDocument();
+  });
+
   it("does not render intro emphasis warning when diagnostics are missing", async () => {
     installMockFetch(makeGenericWorkflowRoutes("GENERIC-001", genericAuthoringStatus()));
 
@@ -1513,6 +1593,8 @@ describe("platform mocked page smoke tests", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
     expect(screen.getByText("Authoring status loaded.")).toBeInTheDocument();
     expect(screen.queryByText("Intro emphasis missing")).not.toBeInTheDocument();
+    expect(screen.queryByText("Output path")).not.toBeInTheDocument();
+    expect(screen.queryByText("Trace path")).not.toBeInTheDocument();
   });
 
   it("renders a yellow intro emphasis warning without blocking render", async () => {

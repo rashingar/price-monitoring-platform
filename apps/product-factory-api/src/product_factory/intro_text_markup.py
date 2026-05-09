@@ -9,7 +9,6 @@ from .normalize import normalize_whitespace
 INTRO_TEXT_EMPHASIS_INVALID = "llm_intro_text_emphasis_invalid"
 INTRO_TEXT_EMPHASIS_MISSING = "llm_intro_text_emphasis_missing"
 INTRO_TEXT_EMPHASIS_OVERUSED = "llm_intro_text_emphasis_overused"
-MAX_STRONG_SPANS = 8
 MAX_EMPHASIZED_WORD_RATIO = 0.35
 
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -87,7 +86,7 @@ def normalize_intro_text_markup(value: str) -> tuple[str, list[str]]:
     visible_word_count = count_intro_text_words(raw)
     emphasized_word_count = sum(count_intro_text_words(item) for item in strong_spans)
     ratio = emphasized_word_count / visible_word_count if visible_word_count else 0.0
-    if len(strong_spans) > MAX_STRONG_SPANS or ratio > MAX_EMPHASIZED_WORD_RATIO:
+    if ratio > MAX_EMPHASIZED_WORD_RATIO:
         errors.append(INTRO_TEXT_EMPHASIS_OVERUSED)
 
     if errors:

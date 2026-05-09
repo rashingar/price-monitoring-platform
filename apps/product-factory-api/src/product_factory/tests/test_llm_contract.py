@@ -168,6 +168,15 @@ def test_validate_intro_text_output_rejects_overused_emphasis() -> None:
     assert "llm_intro_text_emphasis_overused" in errors
 
 
+def test_validate_intro_text_output_allows_many_short_emphasis_spans_under_ratio_limit() -> None:
+    emphasized = " ".join(["<strong>word</strong>"] * 11)
+    plain_words = " ".join(["word"] * 75)
+
+    _, errors = validate_intro_text_output(f"{emphasized} {plain_words}")
+
+    assert errors == []
+
+
 def test_intro_emphasis_missing_is_diagnostic_not_validation_error() -> None:
     intro = " ".join(["λέξη"] * INTRO_MIN_WORDS)
 

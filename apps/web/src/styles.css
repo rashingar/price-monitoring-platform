@@ -1697,6 +1697,41 @@ code {
   font-weight: 800;
 }
 
+.authoring-preview-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.authoring-preview-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfc;
+}
+
+.authoring-preview-card dt {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.authoring-preview-card dd,
+.authoring-preview-content {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.authoring-preview-card strong,
+.authoring-preview-content strong {
+  font-weight: 800;
+}
+
 .diagnostic-details {
   display: grid;
   gap: 12px;

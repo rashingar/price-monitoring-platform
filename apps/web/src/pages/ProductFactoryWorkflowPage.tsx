@@ -227,6 +227,30 @@ function stripUnsafeIntroMarkup(value: string): string {
     .replace(/<\/strong\s*>/gi, "</strong>");
 }
 
+function StrongText({ value }: { value: unknown }) {
+  const parts = stripUnsafeIntroMarkup(formatOptional(value)).split(/(<strong>|<\/strong>)/i);
+  let inStrong = false;
+  return (
+    <>
+      {parts.map((part, index) => {
+        const token = part.toLowerCase();
+        if (token === "<strong>") {
+          inStrong = true;
+          return null;
+        }
+        if (token === "</strong>") {
+          inStrong = false;
+          return null;
+        }
+        if (part.length === 0) {
+          return null;
+        }
+        return inStrong ? <strong key={`${part}-${index}`}>{part}</strong> : <span key={`${part}-${index}`}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 function parseSeoPreview(value: string): Record<string, unknown> | null {
   try {
     const parsed = JSON.parse(value) as unknown;
@@ -736,8 +760,6 @@ function AuthoringTaskCard({
         <PathValue label="Min words" value={task?.min_words} />
         <PathValue label="Max words" value={task?.max_words} />
         <PathValue label="Max attempts" value={task?.max_attempts} />
-        <PathValue label="Output path" value={task?.output_path} />
-        <PathValue label="Trace path" value={task?.trace_path} />
       </dl>
 
       {showEmphasisDiagnostics ? (
@@ -852,11 +874,25 @@ function IntroTextPreview({ artifacts }: { artifacts: Artifact[] }) {
   return (
     <details className="authoring-preview" open={preview.content.length < 900}>
       <summary>Intro Text Preview</summary>
-      <div
-        className="authoring-preview-content"
-        dangerouslySetInnerHTML={{ __html: stripUnsafeIntroMarkup(preview.content) }}
-      />
+      <div className="authoring-preview-content">
+        <StrongText value={preview.content} />
+      </div>
     </details>
+  );
+}
+
+function SeoMetaPreviewCard({ label, value }: { label: string; value: unknown }) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  return (
+    <div className="authoring-preview-card">
+      <dt>{label}</dt>
+      <dd>
+        <StrongText value={value} />
+      </dd>
+    </div>
   );
 }
 
@@ -877,11 +913,9 @@ function SeoMetaPreview({ artifacts }: { artifacts: Artifact[] }) {
   return (
     <details className="authoring-preview" open>
       <summary>SEO Meta Preview</summary>
-      <dl className="summary-grid workflow-summary-grid">
-        <PathValue label="Meta title" value={payload.meta_title} />
-        <PathValue label="Meta description" value={payload.meta_description} />
-        <PathValue label="Meta keywords" value={Array.isArray(payload.meta_keywords) ? payload.meta_keywords.join(", ") : payload.meta_keywords} />
-        <PathValue label="SEO keyword" value={payload.seo_keyword} />
+      <dl className="authoring-preview-list">
+        <SeoMetaPreviewCard label="Meta description" value={payload.meta_description} />
+        <SeoMetaPreviewCard label="Meta keywords" value={Array.isArray(payload.meta_keywords) ? payload.meta_keywords.join(", ") : payload.meta_keywords} />
       </dl>
     </details>
   );
@@ -1339,9 +1373,26 @@ export function ProductFactoryWorkflowPage() {
     }));
   }
 
+  function clearAuthoringActionErrors() {
+    setActionState((current) => ({
+      ...current,
+      errors: {
+        ...current.errors,
+        authoring_load: undefined,
+        intro_run: undefined,
+        intro_retry: undefined,
+        seo_run: undefined,
+        seo_retry: undefined,
+      },
+    }));
+  }
+
   function recordJob(job: Job) {
     trackJob(job);
-    setModelJobs((current) => upsertJobById(current, job));
+    const observedJob = typeof job.updated_at === "string" && job.updated_at.trim().length > 0
+      ? job
+      : { ...job, updated_at: new Date().toISOString() };
+    setModelJobs((current) => upsertJobById(current, observedJob));
   }
 
   async function waitForTerminalJob(initialJob: Job, tab: WorkflowTab, targetModel: string): Promise<Job> {
@@ -1406,9 +1457,7 @@ export function ProductFactoryWorkflowPage() {
     setActiveTab("authoring");
     setAutoAdvanceMessage("Prepare succeeded. Running Authoring.");
     setActionBusy("authoring_load", true);
-    setActionError("authoring_load", undefined);
-    setActionError("intro_run", undefined);
-    setActionError("seo_run", undefined);
+    clearAuthoringActionErrors();
 
     let status: AuthoringStatus;
     try {
@@ -1503,6 +1552,7 @@ export function ProductFactoryWorkflowPage() {
       throw new WorkflowHalted(message);
     }
 
+    clearAuthoringActionErrors();
     setActionMessage("authoring_load", "Authoring succeeded.");
     return status;
   }
@@ -1516,7 +1566,7 @@ export function ProductFactoryWorkflowPage() {
     markOperatorStageStarted("authoring");
     setActiveTab("authoring");
     setActionBusy(actionKey, true);
-    setActionError(actionKey, undefined);
+    clearAuthoringActionErrors();
     setActionMessage(actionKey, undefined);
     try {
       const queuedJob = await createJob();
@@ -1528,6 +1578,7 @@ export function ProductFactoryWorkflowPage() {
       }
       const nextStatus = await apiClient.getAuthoringStatus(model);
       setAuthoringStatus(nextStatus);
+      clearAuthoringActionErrors();
       setActionMessage(actionKey, successMessage);
       if (isAuthoringReadyForRender(nextStatus)) {
         try {
@@ -2120,8 +2171,6 @@ export function ProductFactoryWorkflowPage() {
             label="Intro Text"
             onRetry={() => void runSingleAuthoringJob("intro_retry", () => apiClient.retryIntroText(model), "Intro text retry job succeeded.", "Intro text retry job failed.")}
             isRetrying={Boolean(actionState.busy.intro_retry)}
-            retryMessage={actionState.messages.intro_retry}
-            retryError={actionState.errors.intro_retry}
             previewKind="intro_text"
           />
           <StageJobPanel
@@ -2129,8 +2178,6 @@ export function ProductFactoryWorkflowPage() {
             label="SEO Meta"
             onRetry={() => void runSingleAuthoringJob("seo_retry", () => apiClient.retrySeoMeta(model), "SEO meta retry job succeeded.", "SEO meta retry job failed.")}
             isRetrying={Boolean(actionState.busy.seo_retry)}
-            retryMessage={actionState.messages.seo_retry}
-            retryError={actionState.errors.seo_retry}
             previewKind="seo_meta"
           />
         </div>

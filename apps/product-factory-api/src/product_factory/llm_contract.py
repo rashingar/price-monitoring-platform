@@ -63,7 +63,6 @@ def build_intro_text_context(
                 "scope": "generic_all_categories",
                 "purpose": "human_readability_and_topical_clarity",
                 "preferred_span_count": {"min": 3, "max": 7},
-                "max_span_count": 8,
                 "max_emphasized_word_ratio": 0.35,
                 "bold_verified_facts_only": True,
                 "avoid_full_sentence_emphasis": True,
