@@ -1120,7 +1120,8 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByRole("tab", { name: /Filter Review/i })).toBeInTheDocument();
   });
 
-  it("advances to Authoring after Prepare succeeds without auto-starting Authoring jobs", async () => {
+  it("starts Authoring jobs automatically after Prepare succeeds", async () => {
+    let authoringReads = 0;
     const mockFetch = installMockFetch([
       { method: "GET", path: "/api/health", response: productFactoryHealth },
       { method: "GET", path: "/api/settings", response: productFactorySettings },
@@ -1133,12 +1134,37 @@ describe("platform mocked page smoke tests", () => {
       {
         method: "GET",
         path: "/api/authoring/005606",
+        response: () => {
+          authoringReads += 1;
+          return {
+            model: "005606",
+            intro_text: { status: authoringReads >= 2 ? "valid" : "missing", errors: [] },
+            seo_meta: { status: authoringReads >= 2 ? "valid" : "missing", errors: [] },
+            ready_for_render: authoringReads >= 2,
+            render_block_reasons: authoringReads >= 2 ? [] : ["intro_text_missing", "seo_meta_missing"],
+            warnings: [],
+          };
+        },
+      },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/intro-text",
+        response: { job: { job_id: "005606-authoring_intro-a1", job_type: "authoring_intro", model: "005606", status: "succeeded" } },
+      },
+      {
+        method: "POST",
+        path: "/api/authoring/005606/seo-meta",
+        response: { job: { job_id: "005606-authoring_seo-a1", job_type: "authoring_seo", model: "005606", status: "succeeded" } },
+      },
+      {
+        method: "GET",
+        path: "/api/filter-review/005606",
         response: {
           model: "005606",
-          intro_text: { status: "missing", errors: [] },
-          seo_meta: { status: "missing", errors: [] },
-          ready_for_render: false,
-          render_block_reasons: ["intro_text_missing", "seo_meta_missing"],
+          approved: false,
+          render_blocked: false,
+          missing_required_groups: [],
+          groups: [],
           warnings: [],
         },
       },
@@ -1151,11 +1177,11 @@ describe("platform mocked page smoke tests", () => {
     fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
     fireEvent.click(screen.getByRole("button", { name: "Run Prepare" }));
 
-    await expect(screen.findByText(/Authoring needs queued jobs/)).resolves.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Authoring" })).toBeInTheDocument();
+    await expect(screen.findByText("Filter Review has no blockers. Ready to Render.")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Filter Review" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Preparesucceeded/i })).toBeInTheDocument();
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/intro-text")).toBe(false);
-    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/seo-meta")).toBe(false);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/intro-text")).toBe(true);
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/authoring/005606/seo-meta")).toBe(true);
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/render")).toBe(false);
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(false);
   });

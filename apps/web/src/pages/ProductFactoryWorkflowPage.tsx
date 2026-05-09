@@ -1353,7 +1353,7 @@ export function ProductFactoryWorkflowPage() {
 
   async function runAuthoringWorkflow(targetModel: string): Promise<AuthoringStatus> {
     setActiveTab("authoring");
-    setAutoAdvanceMessage("Prepare succeeded. Advanced to Authoring.");
+    setAutoAdvanceMessage("Prepare succeeded. Running Authoring.");
     setActionBusy("authoring_load", true);
     setActionError("authoring_load", undefined);
     setActionError("intro_run", undefined);
@@ -1373,15 +1373,86 @@ export function ProductFactoryWorkflowPage() {
     }
 
     if (!isAuthoringReadyForRender(status)) {
+      const authoringJobs: Promise<Job>[] = [];
+
+      if (!isAuthoringTaskValid(status.intro_text)) {
+        setActionBusy("intro_run", true);
+        setActionMessage("intro_run", undefined);
+        authoringJobs.push(
+          (async () => {
+            try {
+              const queuedJob = await apiClient.runIntroText(targetModel);
+              recordJob(queuedJob);
+              setActionMessage("intro_run", "Intro text job queued.");
+              const completedJob = await waitForTerminalJob(queuedJob, "authoring", targetModel);
+              if (!isSuccessfulJob(completedJob)) {
+                throw new Error(getJobFailureMessage(completedJob, "Intro text job failed."));
+              }
+              setActionMessage("intro_run", "Intro text job succeeded.");
+              return completedJob;
+            } finally {
+              setActionBusy("intro_run", false);
+            }
+          })(),
+        );
+      }
+
+      if (!isAuthoringTaskValid(status.seo_meta)) {
+        setActionBusy("seo_run", true);
+        setActionMessage("seo_run", undefined);
+        authoringJobs.push(
+          (async () => {
+            try {
+              const queuedJob = await apiClient.runSeoMeta(targetModel);
+              recordJob(queuedJob);
+              setActionMessage("seo_run", "SEO meta job queued.");
+              const completedJob = await waitForTerminalJob(queuedJob, "authoring", targetModel);
+              if (!isSuccessfulJob(completedJob)) {
+                throw new Error(getJobFailureMessage(completedJob, "SEO meta job failed."));
+              }
+              setActionMessage("seo_run", "SEO meta job succeeded.");
+              return completedJob;
+            } finally {
+              setActionBusy("seo_run", false);
+            }
+          })(),
+        );
+      }
+
+      if (authoringJobs.length > 0) {
+        setActionMessage("authoring_load", "Authoring jobs queued.");
+        const results = await Promise.allSettled(authoringJobs);
+        const failures = results
+          .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+          .map((result) => getApiErrorMessage(result.reason) || getErrorHint(result.reason, "Authoring job failed."));
+
+        if (failures.length > 0) {
+          const message = failures.join(" ");
+          setActionError("authoring_load", message);
+          throw new WorkflowHalted(message);
+        }
+
+        try {
+          status = await apiClient.getAuthoringStatus(targetModel);
+          setAuthoringStatus(status);
+        } catch (error) {
+          const message = getErrorHint(error, "Could not refresh authoring status.");
+          setActionError("authoring_load", message);
+          throw new WorkflowHalted(message);
+        }
+      }
+    }
+
+    if (!isAuthoringReadyForRender(status)) {
       const reasons = toStringList(status.render_block_reasons);
       const message = reasons.length > 0
-        ? `Authoring needs queued jobs: ${reasons.join("; ")}`
-        : "Authoring needs Intro Text and SEO Meta jobs.";
+        ? `Authoring is blocked: ${reasons.join("; ")}`
+        : "Authoring is blocked until Intro Text and SEO Meta are valid.";
       setActionMessage("authoring_load", message);
       throw new WorkflowHalted(message);
     }
 
-    setActionMessage("authoring_load", "Authoring already ready.");
+    setActionMessage("authoring_load", "Authoring succeeded.");
     return status;
   }
 
