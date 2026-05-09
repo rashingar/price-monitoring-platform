@@ -909,6 +909,18 @@
       ]
     },
     {
+      "template_id": "skroutz_steam_cleaner_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_sub": "Ατμοκαθαριστές"
+      },
+      "preferred_schema_source_files": [
+        "atmokatharistes.json"
+      ],
+      "render_mode": "raw_spec_sections",
+      "sections": []
+    },
+    {
       "template_id": "skroutz_built_in_hob_v1",
       "match": {
         "source_name": "skroutz",

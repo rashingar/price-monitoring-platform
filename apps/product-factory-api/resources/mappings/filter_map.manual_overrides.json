@@ -4,6 +4,18 @@
     "schema_version": 1
   },
   "categories": {
+    "cat_20f12195304a": {
+      "category_id": "cat_20f12195304a",
+      "path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Εντοιχιζόμενες Συσκευές > Εστίες",
+      "groups": {
+        "fg_49e215b144da": {
+          "group_id": "fg_49e215b144da",
+          "name": "Ενεργειακή Κλάση",
+          "required": false,
+          "values": {}
+        }
+      }
+    },
     "cat_0eb2b340ab02": {
       "category_id": "cat_0eb2b340ab02",
       "path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Εντοιχιζόμενες Συσκευές > Φούρνοι",
@@ -22,6 +34,12 @@
             }
           }
         },
+        "fg_a6db7963afb3": {
+          "group_id": "fg_a6db7963afb3",
+          "name": "Ενεργειακή Κλάση Ψύξης",
+          "status": "inactive",
+          "values": {}
+        },
         "fg_07e775fadc08": {
           "group_id": "fg_07e775fadc08",
           "name": "Ηλεκτρονικό Ρολόι",
@@ -33,6 +51,17 @@
               "aliases": [
                 "Ναι"
               ]
+            }
+          }
+        },
+        "fg_91201c8b25f3": {
+          "group_id": "fg_91201c8b25f3",
+          "name": "Πλάτος cm",
+          "values": {
+            "fv_166e94694859": {
+              "value_id": "fv_166e94694859",
+              "value": "59,4 cm",
+              "status": "active"
             }
           }
         },
@@ -65,22 +94,84 @@
               ]
             }
           }
+        }
+      }
+    },
+    "cat_a3bd674b0123": {
+      "category_id": "cat_a3bd674b0123",
+      "path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Ψυγεία & Καταψύκτες > Καταψύκτες",
+      "groups": {
+        "fg_42f627b9d739": {
+          "group_id": "fg_42f627b9d739",
+          "name": "Ύψος cm",
+          "required": true,
+          "status": "active",
+          "values": {}
         },
-        "fg_91201c8b25f3": {
-          "group_id": "fg_91201c8b25f3",
+        "fg_6169bb9d72eb": {
+          "group_id": "fg_6169bb9d72eb",
+          "name": "Είδος Καταψύκτη",
+          "required": true,
+          "status": "active",
+          "values": {}
+        },
+        "fg_a18bf8a161e9": {
+          "group_id": "fg_a18bf8a161e9",
+          "name": "Ενεργειακή Κλάση",
+          "required": true,
+          "status": "active",
+          "values": {}
+        },
+        "fg_fe89c85bbddc": {
+          "group_id": "fg_fe89c85bbddc",
           "name": "Πλάτος cm",
+          "required": true,
+          "status": "active",
+          "values": {}
+        },
+        "fg_ff5ec7e3d59b": {
+          "group_id": "fg_ff5ec7e3d59b",
+          "name": "Χρώμα",
+          "required": true,
+          "status": "active",
+          "values": {}
+        },
+        "fg_81c11822ebb6": {
+          "group_id": "fg_81c11822ebb6",
+          "name": "Χωρητικότητα σε Λίτρα",
+          "required": true,
+          "status": "active",
           "values": {
-            "fv_166e94694859": {
-              "value_id": "fv_166e94694859",
-              "value": "59,4 cm",
+            "fv_baf16cc2cc04": {
+              "value_id": "fv_baf16cc2cc04",
+              "value": "246",
               "status": "active"
             }
           }
         },
-        "fg_a6db7963afb3": {
-          "group_id": "fg_a6db7963afb3",
-          "name": "Ενεργειακή Κλάση Ψύξης",
-          "status": "inactive"
+        "fg_f8eecb591acf": {
+          "group_id": "fg_f8eecb591acf",
+          "name": "Ψύξη",
+          "required": true,
+          "status": "active",
+          "values": {}
+        }
+      }
+    },
+    "cat_163ef4133501": {
+      "category_id": "cat_163ef4133501",
+      "path": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ > Μικροί Μάγειρες > Φριτέζες",
+      "groups": {
+        "fg_39a556bdb8af": {
+          "group_id": "fg_39a556bdb8af",
+          "name": "Χωρητικότητα σε Λίτρα",
+          "values": {
+            "fv_ad0dc862dfbe": {
+              "value_id": "fv_ad0dc862dfbe",
+              "value": "- 1.5 -",
+              "status": "active"
+            }
+          }
         }
       }
     },
@@ -101,36 +192,6 @@
         }
       }
     },
-    "cat_7579f53ec11b": {
-      "category_id": "cat_7579f53ec11b",
-      "path": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ > Σκούπισμα > Σκούπες Stick",
-      "groups": {
-        "fg_048a497f15b3": {
-          "group_id": "fg_048a497f15b3",
-          "name": "Τύπος Ηλεκτρικής Σκούπας",
-          "values": {
-            "fv_423eb779b281": {
-              "value_id": "fv_423eb779b281",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
-            },
-            "fv_f4e1dc14aae0": {
-              "value_id": "fv_f4e1dc14aae0",
-              "value": "Με σακούλα",
-              "status": "active"
-            },
-            "fv_4fa5b2426f3b": {
-              "value_id": "fv_4fa5b2426f3b",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
-            }
-          }
-        }
-      }
-    },
     "cat_5ca4c0070725": {
       "category_id": "cat_5ca4c0070725",
       "path": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ > Σκούπισμα > Σκούπες",
@@ -139,16 +200,6 @@
           "group_id": "fg_dc8551c907a9",
           "name": "Τύπος Ηλεκτρικής Σκούπας",
           "values": {
-            "fv_fa7147907142": {
-              "value_id": "fv_fa7147907142",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
-            },
-            "fv_1a23dccae930": {
-              "value_id": "fv_1a23dccae930",
-              "value": "Με σακούλα",
-              "status": "active"
-            },
             "fv_fcc8edb4ca61": {
               "value_id": "fv_fcc8edb4ca61",
               "value": "Με κάδο",
@@ -156,6 +207,46 @@
               "aliases": [
                 "Τροχήλατη με δοχείο συλλογής σκόνης"
               ]
+            },
+            "fv_1a23dccae930": {
+              "value_id": "fv_1a23dccae930",
+              "value": "Με σακούλα",
+              "status": "active"
+            },
+            "fv_fa7147907142": {
+              "value_id": "fv_fa7147907142",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
+            }
+          }
+        }
+      }
+    },
+    "cat_7579f53ec11b": {
+      "category_id": "cat_7579f53ec11b",
+      "path": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ > Σκούπισμα > Σκούπες Stick",
+      "groups": {
+        "fg_048a497f15b3": {
+          "group_id": "fg_048a497f15b3",
+          "name": "Τύπος Ηλεκτρικής Σκούπας",
+          "values": {
+            "fv_4fa5b2426f3b": {
+              "value_id": "fv_4fa5b2426f3b",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
+            },
+            "fv_f4e1dc14aae0": {
+              "value_id": "fv_f4e1dc14aae0",
+              "value": "Με σακούλα",
+              "status": "active"
+            },
+            "fv_423eb779b281": {
+              "value_id": "fv_423eb779b281",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           }
         }
@@ -169,16 +260,6 @@
           "group_id": "fg_261cd17c42fa",
           "name": "Τύπος Ηλεκτρικής Σκούπας",
           "values": {
-            "fv_a2e58ebedc52": {
-              "value_id": "fv_a2e58ebedc52",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
-            },
-            "fv_2616f8c6965d": {
-              "value_id": "fv_2616f8c6965d",
-              "value": "Με σακούλα",
-              "status": "active"
-            },
             "fv_82b00937c345": {
               "value_id": "fv_82b00937c345",
               "value": "Με κάδο",
@@ -186,33 +267,15 @@
               "aliases": [
                 "Τροχήλατη με δοχείο συλλογής σκόνης"
               ]
-            }
-          }
-        }
-      }
-    },
-    "cat_20f12195304a": {
-      "category_id": "cat_20f12195304a",
-      "path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Εντοιχιζόμενες Συσκευές > Εστίες",
-      "groups": {
-        "fg_49e215b144da": {
-          "group_id": "fg_49e215b144da",
-          "name": "Ενεργειακή Κλάση",
-          "required": false
-        }
-      }
-    },
-    "cat_163ef4133501": {
-      "category_id": "cat_163ef4133501",
-      "path": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ > Μικροί Μάγειρες > Φριτέζες",
-      "groups": {
-        "fg_39a556bdb8af": {
-          "group_id": "fg_39a556bdb8af",
-          "name": "Χωρητικότητα σε Λίτρα",
-          "values": {
-            "fv_ad0dc862dfbe": {
-              "value_id": "fv_ad0dc862dfbe",
-              "value": "- 1.5 -",
+            },
+            "fv_2616f8c6965d": {
+              "value_id": "fv_2616f8c6965d",
+              "value": "Με σακούλα",
+              "status": "active"
+            },
+            "fv_a2e58ebedc52": {
+              "value_id": "fv_a2e58ebedc52",
+              "value": "Υγρής και ξηρής αναρρόφησης",
               "status": "active"
             }
           }
@@ -240,8 +303,8 @@
   },
   "metadata": {
     "schema_version": 1,
-    "updated_at": "",
-    "revision": "",
-    "last_operation": ""
+    "updated_at": "2026-05-09T08:57:31Z",
+    "revision": "sha256:c7e89088eb4feefbf30f8fcda5538e4ad929cc2ca3b69dc1cf0aa705656b5d08",
+    "last_operation": "filter_review_global_update"
   }
 }

@@ -221,6 +221,15 @@ SKROUTZ_FAMILIES: dict[str, dict[str, Any]] = {
         "spec_mode": "raw",
         "taxonomy_mode": "family",
     },
+    "steam_cleaner": {
+        "category_labels": {"Ατμοκαθαριστές", "Ατμοκαθαριστής"},
+        "category_href_tokens": {"atmokatharistes", "atmokatharistis", "atmokathharistes"},
+        "title_tokens": {"atmokatharist", "ατμοκαθαριστ", "steam cleaner"},
+        "breadcrumbs": ["Αρχική", "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "Σκούπισμα", "Ατμοκαθαριστές"],
+        "sections": [],
+        "spec_mode": "raw",
+        "taxonomy_mode": "family",
+    },
     "lpg_heater": {
         "category_labels": {"Θερμαντικά"},
         "category_href_tokens": {"thermantika"},

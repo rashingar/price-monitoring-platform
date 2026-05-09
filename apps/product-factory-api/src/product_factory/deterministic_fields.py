@@ -888,6 +888,8 @@ def resolve_skroutz_family(taxonomy: TaxonomyResolution) -> str | None:
         return "tabletop_hob"
     if sub == normalize_for_match("Σιδερώστρες") or leaf == normalize_for_match("Σιδερώστρες"):
         return "ironing_board"
+    if sub == normalize_for_match("Ατμοκαθαριστές") or leaf == normalize_for_match("Ατμοκαθαριστές"):
+        return "steam_cleaner"
     return None
 
 

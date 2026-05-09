@@ -6139,6 +6139,11 @@
           "status": "active",
           "values": [
             {
+              "value_id": "fv_baf16cc2cc04",
+              "value": "246",
+              "status": "active"
+            },
+            {
               "value_id": "fv_2a09f730a144",
               "value": "- 200 -",
               "status": "active"
@@ -8481,9 +8486,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_423eb779b281",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_4fa5b2426f3b",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_f4e1dc14aae0",
@@ -8491,12 +8499,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_4fa5b2426f3b",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_423eb779b281",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         },
@@ -9884,9 +9889,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_fa7147907142",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_fcc8edb4ca61",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_1a23dccae930",
@@ -9894,12 +9902,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_fcc8edb4ca61",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_fa7147907142",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         },
@@ -10297,9 +10302,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_a2e58ebedc52",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_82b00937c345",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_2616f8c6965d",
@@ -10307,12 +10315,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_82b00937c345",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_a2e58ebedc52",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         }
@@ -20272,9 +20277,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_423eb779b281",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_4fa5b2426f3b",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_f4e1dc14aae0",
@@ -20282,12 +20290,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_4fa5b2426f3b",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_423eb779b281",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         },
@@ -21592,9 +21597,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_fa7147907142",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_fcc8edb4ca61",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_1a23dccae930",
@@ -21602,12 +21610,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_fcc8edb4ca61",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_fa7147907142",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         },
@@ -22005,9 +22010,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_a2e58ebedc52",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_82b00937c345",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_2616f8c6965d",
@@ -22015,12 +22023,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_82b00937c345",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_a2e58ebedc52",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         }
@@ -30376,6 +30381,11 @@
           "status": "active",
           "values": [
             {
+              "value_id": "fv_baf16cc2cc04",
+              "value": "246",
+              "status": "active"
+            },
+            {
               "value_id": "fv_2a09f730a144",
               "value": "- 200 -",
               "status": "active"
@@ -32718,9 +32728,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_423eb779b281",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_4fa5b2426f3b",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_f4e1dc14aae0",
@@ -32728,12 +32741,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_4fa5b2426f3b",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_423eb779b281",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         },
@@ -34121,9 +34131,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_fa7147907142",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_fcc8edb4ca61",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_1a23dccae930",
@@ -34131,12 +34144,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_fcc8edb4ca61",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_fa7147907142",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         },
@@ -34534,9 +34544,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_a2e58ebedc52",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_82b00937c345",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_2616f8c6965d",
@@ -34544,12 +34557,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_82b00937c345",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_a2e58ebedc52",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         }
@@ -43233,6 +43243,11 @@
           "status": "active",
           "values": [
             {
+              "value_id": "fv_baf16cc2cc04",
+              "value": "246",
+              "status": "active"
+            },
+            {
               "value_id": "fv_2a09f730a144",
               "value": "- 200 -",
               "status": "active"
@@ -45575,9 +45590,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_423eb779b281",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_4fa5b2426f3b",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_f4e1dc14aae0",
@@ -45585,12 +45603,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_4fa5b2426f3b",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_423eb779b281",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         },
@@ -46895,9 +46910,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_fa7147907142",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_fcc8edb4ca61",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_1a23dccae930",
@@ -46905,12 +46923,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_fcc8edb4ca61",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_fa7147907142",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         },
@@ -47308,9 +47323,12 @@
           "status": "active",
           "values": [
             {
-              "value_id": "fv_a2e58ebedc52",
-              "value": "Υγρής και ξηρής αναρρόφησης",
-              "status": "active"
+              "value_id": "fv_82b00937c345",
+              "value": "Με κάδο",
+              "status": "active",
+              "aliases": [
+                "Τροχήλατη με δοχείο συλλογής σκόνης"
+              ]
             },
             {
               "value_id": "fv_2616f8c6965d",
@@ -47318,12 +47336,9 @@
               "status": "active"
             },
             {
-              "value_id": "fv_82b00937c345",
-              "value": "Με κάδο",
-              "status": "active",
-              "aliases": [
-                "Τροχήλατη με δοχείο συλλογής σκόνης"
-              ]
+              "value_id": "fv_a2e58ebedc52",
+              "value": "Υγρής και ξηρής αναρρόφησης",
+              "status": "active"
             }
           ]
         }
