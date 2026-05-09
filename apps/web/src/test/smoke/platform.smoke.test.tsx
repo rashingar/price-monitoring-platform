@@ -168,19 +168,55 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("Table settings")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Confidence" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Model" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Model" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "MPN" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Manufacturer" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Manufacturer" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Brand" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Source" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Candidate price" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Candidate price" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Source price" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Own price" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Candidate title" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Candidate title" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Source title" })).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Table settings"));
+    const settingsPanel = screen.getByText("Table settings").closest("details") as HTMLElement;
+    expect(within(settingsPanel).getByLabelText("Status")).toBeChecked();
+    expect(within(settingsPanel).getByLabelText("Confidence")).toBeChecked();
+    expect(within(settingsPanel).getByLabelText("Model")).not.toBeChecked();
+    expect(within(settingsPanel).getByLabelText("Brand")).toBeChecked();
+    expect(within(settingsPanel).getByLabelText("Source")).toBeChecked();
+    const widthInputs = within(settingsPanel).getAllByLabelText("Width") as HTMLInputElement[];
+    expect(widthInputs.map((input) => input.value)).toEqual(["56", "32", "28", "48", "32", "32", "32", "32", "260"]);
+    expect(widthInputs.every((input) => input.getAttribute("min") === "28")).toBe(true);
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: "Move Status down" }));
+    expect((within(settingsPanel).getAllByLabelText("Width") as HTMLInputElement[]).map((input) => input.value)).toEqual([
+      "32",
+      "56",
+      "28",
+      "48",
+      "32",
+      "32",
+      "32",
+      "32",
+      "260",
+    ]);
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
+      "Confidence",
+      "Status",
+      "MPN",
+      "Brand",
+      "Source",
+      "Source price",
+      "Own price",
+      "Source title",
+    ]);
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: "Move Status up" }));
     expect(screen.getByText("0.9823")).toBeInTheDocument();
     expect(screen.getAllByText("needs review").length).toBeGreaterThan(0);
-    expect(screen.getByText("electronet")).toBeInTheDocument();
-    expect(screen.getByText("public")).toBeInTheDocument();
-    expect(screen.getByText("plaisio")).toBeInTheDocument();
-    expect(screen.getByText("kotsovolos")).toBeInTheDocument();
+    expect(screen.getByText("Midea MD-20L Electronet")).toBeInTheDocument();
+    expect(screen.getByText("Midea MD-20L Public")).toBeInTheDocument();
+    expect(screen.getByText("Midea MD-20L Plaisio")).toBeInTheDocument();
+    expect(screen.getByText("Midea MD-20L Kotsovolos")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
 

@@ -33,7 +33,7 @@ ReviewDecision = Literal["accept", "reject", "replace_url"]
 SourceUrlAgentRunMode = Literal["catalog", "csv"]
 SOURCE_URL_CANDIDATE_REVIEW_VIEW_KEY = "source_url_candidate_review"
 DEFAULT_USER_KEY = "default"
-MIN_COLUMN_WIDTH_PX = 80
+MIN_COLUMN_WIDTH_PX = 28
 MAX_COLUMN_WIDTH_PX = 800
 DEFAULT_API_MAX_PRODUCTS_PER_BATCH = 25
 MAX_API_SOURCE_URL_AGENT_LIMIT = 500
@@ -43,31 +43,31 @@ MAX_API_SOURCE_URL_AGENT_LIMIT = 500
 SOURCE_URL_AGENT_API_RESOLVER: Resolver | None = None
 
 DEFAULT_REVIEW_COLUMNS: list[dict[str, Any]] = [
-    {"key": "status", "label": "Status", "visible": True, "order": 10, "width_px": 120, "min_width_px": 96, "data_type": "status"},
-    {"key": "confidence_score", "label": "Confidence", "visible": True, "order": 20, "width_px": 120, "min_width_px": 104, "data_type": "decimal"},
-    {"key": "model", "label": "Model", "visible": True, "order": 30, "width_px": 140, "min_width_px": 104, "data_type": "text"},
-    {"key": "mpn", "label": "MPN", "visible": True, "order": 40, "width_px": 140, "min_width_px": 104, "data_type": "text"},
-    {"key": "manufacturer", "label": "Manufacturer", "visible": True, "order": 50, "width_px": 140, "min_width_px": 112, "data_type": "text"},
-    {"key": "source_name", "label": "Source", "visible": True, "order": 60, "width_px": 128, "min_width_px": 104, "data_type": "text"},
-    {"key": "candidate_price", "label": "Candidate Price", "visible": True, "order": 70, "width_px": 132, "min_width_px": 112, "data_type": "money"},
-    {"key": "own_price", "label": "Own Price", "visible": True, "order": 80, "width_px": 112, "min_width_px": 96, "data_type": "money"},
-    {"key": "candidate_title", "label": "Candidate Title", "visible": True, "order": 90, "width_px": 260, "min_width_px": 160, "data_type": "text"},
-    {"key": "candidate_url", "label": "Candidate URL", "visible": False, "order": 100, "width_px": 320, "min_width_px": 180, "data_type": "url"},
-    {"key": "canonical_url", "label": "Canonical URL", "visible": False, "order": 110, "width_px": 320, "min_width_px": 180, "data_type": "url"},
-    {"key": "match_method", "label": "Match Method", "visible": False, "order": 120, "width_px": 180, "min_width_px": 136, "data_type": "text"},
-    {"key": "match_status", "label": "Match Status", "visible": False, "order": 130, "width_px": 136, "min_width_px": 112, "data_type": "status"},
-    {"key": "competing_candidates_count", "label": "Competing", "visible": False, "order": 140, "width_px": 112, "min_width_px": 96, "data_type": "integer"},
-    {"key": "run_id", "label": "Run ID", "visible": False, "order": 150, "width_px": 180, "min_width_px": 120, "data_type": "text"},
-    {"key": "catalog_product_id", "label": "Catalog Product ID", "visible": False, "order": 160, "width_px": 136, "min_width_px": 112, "data_type": "integer"},
-    {"key": "product_name", "label": "Product Name", "visible": False, "order": 170, "width_px": 260, "min_width_px": 160, "data_type": "text"},
-    {"key": "category", "label": "Category", "visible": False, "order": 180, "width_px": 220, "min_width_px": 144, "data_type": "text"},
-    {"key": "expected_listing", "label": "Expected Listing", "visible": False, "order": 190, "width_px": 132, "min_width_px": 112, "data_type": "text"},
-    {"key": "source_domain", "label": "Source Domain", "visible": False, "order": 200, "width_px": 180, "min_width_px": 136, "data_type": "text"},
-    {"key": "source_type", "label": "Source Type", "visible": False, "order": 210, "width_px": 136, "min_width_px": 112, "data_type": "text"},
-    {"key": "created_at", "label": "Created", "visible": False, "order": 220, "width_px": 172, "min_width_px": 140, "data_type": "datetime"},
-    {"key": "updated_at", "label": "Updated", "visible": False, "order": 230, "width_px": 172, "min_width_px": 140, "data_type": "datetime"},
-    {"key": "reviewed_by", "label": "Reviewed By", "visible": False, "order": 240, "width_px": 140, "min_width_px": 112, "data_type": "text"},
-    {"key": "reviewed_at", "label": "Reviewed At", "visible": False, "order": 250, "width_px": 172, "min_width_px": 140, "data_type": "datetime"},
+    {"key": "status", "label": "Status", "visible": True, "order": 10, "width_px": 56, "min_width_px": 28, "data_type": "status"},
+    {"key": "confidence_score", "label": "Confidence", "visible": True, "order": 20, "width_px": 32, "min_width_px": 28, "data_type": "decimal"},
+    {"key": "model", "label": "Model", "visible": False, "order": 30, "width_px": 28, "min_width_px": 28, "data_type": "text"},
+    {"key": "mpn", "label": "MPN", "visible": True, "order": 40, "width_px": 48, "min_width_px": 28, "data_type": "text"},
+    {"key": "manufacturer", "label": "Brand", "visible": True, "order": 50, "width_px": 32, "min_width_px": 28, "data_type": "text"},
+    {"key": "source_name", "label": "Source", "visible": True, "order": 60, "width_px": 32, "min_width_px": 28, "data_type": "text"},
+    {"key": "candidate_price", "label": "Source price", "visible": True, "order": 70, "width_px": 32, "min_width_px": 28, "data_type": "money"},
+    {"key": "own_price", "label": "Own price", "visible": True, "order": 80, "width_px": 32, "min_width_px": 28, "data_type": "money"},
+    {"key": "candidate_title", "label": "Source title", "visible": True, "order": 90, "width_px": 260, "min_width_px": 28, "data_type": "text"},
+    {"key": "candidate_url", "label": "Candidate URL", "visible": False, "order": 100, "width_px": 320, "min_width_px": 28, "data_type": "url"},
+    {"key": "canonical_url", "label": "Canonical URL", "visible": False, "order": 110, "width_px": 320, "min_width_px": 28, "data_type": "url"},
+    {"key": "match_method", "label": "Match Method", "visible": False, "order": 120, "width_px": 180, "min_width_px": 28, "data_type": "text"},
+    {"key": "match_status", "label": "Match Status", "visible": False, "order": 130, "width_px": 136, "min_width_px": 28, "data_type": "status"},
+    {"key": "competing_candidates_count", "label": "Competing", "visible": False, "order": 140, "width_px": 112, "min_width_px": 28, "data_type": "integer"},
+    {"key": "run_id", "label": "Run ID", "visible": False, "order": 150, "width_px": 180, "min_width_px": 28, "data_type": "text"},
+    {"key": "catalog_product_id", "label": "Catalog Product ID", "visible": False, "order": 160, "width_px": 136, "min_width_px": 28, "data_type": "integer"},
+    {"key": "product_name", "label": "Product Name", "visible": False, "order": 170, "width_px": 260, "min_width_px": 28, "data_type": "text"},
+    {"key": "category", "label": "Category", "visible": False, "order": 180, "width_px": 220, "min_width_px": 28, "data_type": "text"},
+    {"key": "expected_listing", "label": "Expected Listing", "visible": False, "order": 190, "width_px": 132, "min_width_px": 28, "data_type": "text"},
+    {"key": "source_domain", "label": "Source Domain", "visible": False, "order": 200, "width_px": 180, "min_width_px": 28, "data_type": "text"},
+    {"key": "source_type", "label": "Source Type", "visible": False, "order": 210, "width_px": 136, "min_width_px": 28, "data_type": "text"},
+    {"key": "created_at", "label": "Created", "visible": False, "order": 220, "width_px": 172, "min_width_px": 28, "data_type": "datetime"},
+    {"key": "updated_at", "label": "Updated", "visible": False, "order": 230, "width_px": 172, "min_width_px": 28, "data_type": "datetime"},
+    {"key": "reviewed_by", "label": "Reviewed By", "visible": False, "order": 240, "width_px": 140, "min_width_px": 28, "data_type": "text"},
+    {"key": "reviewed_at", "label": "Reviewed At", "visible": False, "order": 250, "width_px": 172, "min_width_px": 28, "data_type": "datetime"},
 ]
 DEFAULT_REVIEW_COLUMN_KEYS = {column["key"] for column in DEFAULT_REVIEW_COLUMNS}
 

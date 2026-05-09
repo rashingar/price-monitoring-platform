@@ -21,6 +21,9 @@ import { EmptyState, ErrorState, LoadingState } from "../components/layout/State
 
 const DEFAULT_LIMIT = 50;
 const REVIEW_LAYOUT_USER_KEY = "default";
+const MIN_COLUMN_WIDTH_PX = 28;
+const MAX_COLUMN_WIDTH_PX = 800;
+const DEFAULT_COLUMN_WIDTH_PX = 80;
 const REVIEW_STATUSES: Array<SourceUrlCandidateStatus | "all"> = [
   "needs_review",
   "accepted",
@@ -31,15 +34,15 @@ const REVIEW_STATUSES: Array<SourceUrlCandidateStatus | "all"> = [
 ];
 
 const DEFAULT_COLUMNS: SourceUrlCandidateReviewLayoutColumn[] = [
-  { key: "status", label: "Status", visible: true, table_column_visible: true, width_px: 112, order: 0 },
-  { key: "confidence_score", label: "Confidence", visible: true, table_column_visible: true, width_px: 104, order: 1 },
-  { key: "model", label: "Model", visible: true, table_column_visible: true, width_px: 96, order: 2 },
-  { key: "mpn", label: "MPN", visible: true, table_column_visible: true, width_px: 110, order: 3 },
-  { key: "manufacturer", label: "Manufacturer", visible: true, table_column_visible: true, width_px: 130, order: 4 },
-  { key: "source_name", label: "Source", visible: true, table_column_visible: true, width_px: 116, order: 5 },
-  { key: "candidate_price", label: "Candidate price", visible: true, table_column_visible: true, width_px: 116, order: 6 },
-  { key: "own_price", label: "Own price", visible: true, table_column_visible: true, width_px: 104, order: 7 },
-  { key: "candidate_title", label: "Candidate title", visible: true, table_column_visible: true, width_px: 250, order: 8 },
+  { key: "status", label: "Status", visible: true, table_column_visible: true, width_px: 56, order: 0 },
+  { key: "confidence_score", label: "Confidence", visible: true, table_column_visible: true, width_px: 32, order: 1 },
+  { key: "model", label: "Model", visible: false, table_column_visible: false, width_px: 28, order: 2 },
+  { key: "mpn", label: "MPN", visible: true, table_column_visible: true, width_px: 48, order: 3 },
+  { key: "manufacturer", label: "Brand", visible: true, table_column_visible: true, width_px: 32, order: 4 },
+  { key: "source_name", label: "Source", visible: true, table_column_visible: true, width_px: 32, order: 5 },
+  { key: "candidate_price", label: "Source price", visible: true, table_column_visible: true, width_px: 32, order: 6 },
+  { key: "own_price", label: "Own price", visible: true, table_column_visible: true, width_px: 32, order: 7 },
+  { key: "candidate_title", label: "Source title", visible: true, table_column_visible: true, width_px: 260, order: 8 },
 ];
 
 const FALLBACK_REVIEW_ACTIONS: SourceUrlCandidateReviewActionConfig[] = [
@@ -319,10 +322,12 @@ function normalizeColumns(columns: SourceUrlCandidateReviewLayoutColumn[]): Sour
           ...sourceColumn,
           key: columnKey(defaultColumn),
           label: defaultColumn.label,
-          visible: typeof sourceColumn.visible === "boolean" ? sourceColumn.visible : true,
+          visible: typeof sourceColumn.visible === "boolean" ? sourceColumn.visible : defaultColumn.visible,
           table_column_visible:
-            typeof sourceColumn.table_column_visible === "boolean" ? sourceColumn.table_column_visible : true,
-          order: defaultColumn.order,
+            typeof sourceColumn.table_column_visible === "boolean"
+              ? sourceColumn.table_column_visible
+              : defaultColumn.table_column_visible,
+          order: typeof sourceColumn.order === "number" ? sourceColumn.order : defaultColumn.order,
           width_px: typeof sourceColumn.width_px === "number" ? sourceColumn.width_px : defaultColumn.width_px,
         }
       : defaultColumn;
@@ -336,7 +341,7 @@ function normalizeColumns(columns: SourceUrlCandidateReviewLayoutColumn[]): Sour
       label: columnLabel(column),
       visible: isColumnVisible(column),
       table_column_visible: isColumnVisible(column),
-      width_px: typeof column.width_px === "number" ? column.width_px : 140,
+      width_px: typeof column.width_px === "number" ? column.width_px : DEFAULT_COLUMN_WIDTH_PX,
       order: typeof column.order === "number" ? column.order : index,
     }))
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -352,8 +357,8 @@ function makeFallbackLayout(): SourceUrlCandidateReviewLayout {
 }
 
 function getColumnWidth(column: SourceUrlCandidateReviewLayoutColumn): number {
-  const width = typeof column.width_px === "number" ? column.width_px : 140;
-  return Math.min(260, Math.max(72, width));
+  const width = typeof column.width_px === "number" ? column.width_px : DEFAULT_COLUMN_WIDTH_PX;
+  return Math.min(MAX_COLUMN_WIDTH_PX, Math.max(MIN_COLUMN_WIDTH_PX, width));
 }
 
 function getCandidateField(candidate: SourceUrlCandidate, key: string): unknown {
@@ -478,29 +483,33 @@ function LayoutSettingsCard({
               <button
                 className="button secondary compact-button"
                 type="button"
+                aria-label={`Move ${columnLabel(column)} up`}
+                title={`Move ${columnLabel(column)} up`}
                 disabled={index === 0}
                 onClick={() => onChange({ ...layout, columns: moveColumn(columns, index, -1) })}
               >
-                Up
+                ↑
               </button>
               <button
                 className="button secondary compact-button"
                 type="button"
+                aria-label={`Move ${columnLabel(column)} down`}
+                title={`Move ${columnLabel(column)} down`}
                 disabled={index === columns.length - 1}
                 onClick={() => onChange({ ...layout, columns: moveColumn(columns, index, 1) })}
               >
-                Down
+                ↓
               </button>
               <label className="source-url-width-field">
                 <span>Width</span>
                 <input
                   type="number"
-                  min={72}
-                  max={320}
-                  step={8}
+                  min={MIN_COLUMN_WIDTH_PX}
+                  max={MAX_COLUMN_WIDTH_PX}
+                  step={1}
                   value={getColumnWidth(column)}
                   onChange={(event) =>
-                    updateColumn(index, { width_px: Number(event.target.value) || 140 })
+                    updateColumn(index, { width_px: Number(event.target.value) || DEFAULT_COLUMN_WIDTH_PX })
                   }
                 />
               </label>

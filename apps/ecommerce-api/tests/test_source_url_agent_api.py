@@ -231,6 +231,22 @@ def test_source_url_candidate_review_layout_defaults_and_persistence(tmp_path: P
     assert default_payload["review_panel"]["mode"] == "inline_row"
     assert default_payload["review_panel"]["open_on"] == "row_single_click"
     assert "actions" not in [column["key"] for column in default_payload["columns"]]
+    default_columns = {column["key"]: column for column in default_payload["columns"]}
+    assert default_columns["status"]["width_px"] == 56
+    assert default_columns["confidence_score"]["width_px"] == 32
+    assert default_columns["model"]["width_px"] == 28
+    assert default_columns["mpn"]["width_px"] == 48
+    assert default_columns["manufacturer"]["width_px"] == 32
+    assert default_columns["source_name"]["width_px"] == 32
+    assert default_columns["candidate_price"]["width_px"] == 32
+    assert default_columns["own_price"]["width_px"] == 32
+    assert default_columns["candidate_title"]["width_px"] == 260
+    assert default_columns["manufacturer"]["label"] == "Brand"
+    assert default_columns["candidate_price"]["label"] == "Source price"
+    assert default_columns["candidate_title"]["label"] == "Source title"
+    assert default_columns["model"]["visible"] is False
+    assert default_columns["manufacturer"]["visible"] is True
+    assert default_columns["source_name"]["visible"] is True
 
     save_response = client.put(
         "/api/vendor-sources/candidates/review-layout",
@@ -281,6 +297,10 @@ def test_source_url_candidate_review_layout_validates_columns_and_resets(tmp_pat
         "/api/vendor-sources/candidates/review-layout",
         json={"columns": [{"key": "status", "width_px": 20}]},
     )
+    min_width = client.put(
+        "/api/vendor-sources/candidates/review-layout",
+        json={"user_key": "tester", "columns": [{"key": "status", "width_px": 28}]},
+    )
     saved = client.put(
         "/api/vendor-sources/candidates/review-layout",
         json={"user_key": "tester", "columns": [{"key": "status", "visible": False}]},
@@ -291,6 +311,8 @@ def test_source_url_candidate_review_layout_validates_columns_and_resets(tmp_pat
     assert "Unknown" in unknown.json()["detail"]
     assert duplicate.status_code == 400
     assert bad_width.status_code == 400
+    assert min_width.status_code == 200
+    assert {column["key"]: column for column in min_width.json()["columns"]}["status"]["width_px"] == 28
     assert saved.status_code == 200
     assert reset.status_code == 200
     assert reset.json()["settings_card"]["collapsed"] is True
