@@ -36,6 +36,7 @@ import { useGlobalJobs } from "../hooks/useGlobalJobs";
 import { usePersistentPageState } from "../hooks/usePersistentPageState";
 
 const POLL_INTERVAL_MS = 2500;
+const JOB_COMPLETION_TIMEOUT_MS = 30 * 60 * 1000;
 const WORKFLOW_STORAGE_KEY = "product-factory-ui:workflow-shell:v1";
 const INTRO_EMPHASIS_MISSING_CODE = "llm_intro_text_emphasis_missing";
 const HARD_INTRO_EMPHASIS_CODES = new Set([
@@ -91,6 +92,13 @@ interface JobAssetsState {
   artifacts: Artifact[];
   error: string | null;
   isLoading: boolean;
+}
+
+class WorkflowHalted extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WorkflowHalted";
+  }
 }
 
 interface SettingsFormState {
@@ -264,6 +272,40 @@ function getJobWarnings(job: Job | null): string[] {
   ];
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function upsertJobById(jobs: Job[], job: Job): Job[] {
+  const jobId = getJobIdentifier(job);
+  if (!jobId) {
+    return [job, ...jobs].sort(compareJobsByUpdatedDesc);
+  }
+
+  return [
+    job,
+    ...jobs.filter((candidate) => getJobIdentifier(candidate) !== jobId),
+  ].sort(compareJobsByUpdatedDesc);
+}
+
+function getJobFailureMessage(job: Job, fallback: string): string {
+  const candidates = [
+    job.error,
+    isRecord(job.error) ? job.error.message : undefined,
+    isRecord(job.result) ? job.result.error : undefined,
+    isRecord(job.result) && isRecord(job.result.error) ? job.result.error.message : undefined,
+    job.error_code,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+
+  return fallback;
+}
+
 function getRetryActionKey(tab: WorkflowTab): ActionKey {
   return `retry_${tab}` as ActionKey;
 }
@@ -273,13 +315,22 @@ function getFilterReviewWarnings(filterReview: FilterReview | null): string[] {
     return [];
   }
 
-  const warnings = new Set<string>(toStringList(filterReview.warnings));
+  const warnings = new Set<string>(
+    toStringList(filterReview.warnings).filter(
+      (warning) => warning !== "category_filter_review_not_approved",
+    ),
+  );
+  toStringList(filterReview.render_block_reasons).forEach((reason) => {
+    warnings.add(reason);
+  });
   toStringList(filterReview.missing_required_groups).forEach((group) => {
     warnings.add(`Missing required filter: ${group}`);
   });
-  if (filterReview.approved !== true) {
-    warnings.add("category_filter_review_not_approved");
-  }
+  (filterReview.groups ?? []).forEach((group) => {
+    getGroupWarnings(group).forEach((warning) => {
+      warnings.add(`${formatOptional(group.group_name)}: ${warning}`);
+    });
+  });
 
   return Array.from(warnings);
 }
@@ -339,7 +390,8 @@ function hasBlockingFilterReviewWork(review: FilterReview | null): boolean {
     return true;
   }
 
-  return (review.groups ?? []).some((group) => group.missing_required === true);
+  const warnings = getFilterReviewWarnings(review);
+  return review.approved !== true && warnings.length > 0;
 }
 
 function isFilterReviewReadyForRender(review: FilterReview | null): boolean {
@@ -987,6 +1039,9 @@ export function ProductFactoryWorkflowPage() {
 
   const authoringBlockReasons = toStringList(authoringStatus?.render_block_reasons);
   const filterWarnings = getFilterReviewWarnings(filterReview);
+  const visibleFilterReviewWarnings = toStringList(filterReview?.warnings).filter(
+    (warning) => warning !== "category_filter_review_not_approved",
+  );
   const renderWarnings = filterWarnings;
   const renderBlockReasons = authoringBlockReasons;
   const renderBlocked =
@@ -1124,6 +1179,205 @@ export function ProductFactoryWorkflowPage() {
     setActiveTab(tab);
   }, []);
 
+  function setActionBusy(key: ActionKey, busy: boolean) {
+    setActionState((current) => ({
+      ...current,
+      busy: { ...current.busy, [key]: busy },
+    }));
+  }
+
+  function setActionMessage(key: ActionKey, message: string | undefined) {
+    setActionState((current) => ({
+      ...current,
+      messages: { ...current.messages, [key]: message },
+    }));
+  }
+
+  function setActionError(key: ActionKey, error: string | undefined) {
+    setActionState((current) => ({
+      ...current,
+      errors: { ...current.errors, [key]: error },
+    }));
+  }
+
+  function recordJob(job: Job) {
+    trackJob(job);
+    setModelJobs((current) => upsertJobById(current, job));
+  }
+
+  async function waitForTerminalJob(initialJob: Job, tab: WorkflowTab, targetModel: string): Promise<Job> {
+    let currentJob = initialJob;
+    recordJob(currentJob);
+
+    if (!isActiveJob(currentJob)) {
+      return currentJob;
+    }
+
+    const jobId = getJobIdentifier(currentJob);
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < JOB_COMPLETION_TIMEOUT_MS) {
+      await delay(POLL_INTERVAL_MS);
+      if (jobId) {
+        currentJob = await apiClient.getJob(jobId);
+        recordJob(currentJob);
+      } else {
+        const nextJobs = (await apiClient.listJobsByModel(targetModel)).sort(compareJobsByUpdatedDesc);
+        setModelJobs(nextJobs);
+        currentJob = getLatestJobForTab(nextJobs, tab, targetModel) ?? currentJob;
+      }
+
+      if (!isActiveJob(currentJob)) {
+        return currentJob;
+      }
+    }
+
+    throw new Error("Timed out waiting for the job to finish.");
+  }
+
+  async function runQueuedWorkflowJob(
+    tab: WorkflowTab,
+    actionKey: ActionKey,
+    targetModel: string,
+    createJob: () => Promise<Job>,
+    successMessage: string,
+  ): Promise<Job> {
+    setActiveTab(tab);
+    setActionBusy(actionKey, true);
+    setActionError(actionKey, undefined);
+    setActionMessage(actionKey, undefined);
+    try {
+      const queuedJob = await createJob();
+      const completedJob = await waitForTerminalJob(queuedJob, tab, targetModel);
+      if (!isSuccessfulJob(completedJob)) {
+        throw new Error(getJobFailureMessage(completedJob, `${WORKFLOW_TABS.find((stage) => stage.key === tab)?.label ?? "Stage"} failed.`));
+      }
+      setActionMessage(actionKey, successMessage);
+      return completedJob;
+    } catch (error) {
+      const message = getApiErrorMessage(error) || getErrorHint(error, "Workflow stage failed.");
+      setActionError(actionKey, message);
+      throw new WorkflowHalted(message);
+    } finally {
+      setActionBusy(actionKey, false);
+    }
+  }
+
+  async function runAuthoringWorkflow(targetModel: string): Promise<AuthoringStatus> {
+    setActiveTab("authoring");
+    setAutoAdvanceMessage("Prepare succeeded. Running Authoring.");
+    setActionBusy("authoring_load", true);
+    setActionError("authoring_load", undefined);
+    setActionError("intro_run", undefined);
+    setActionError("seo_run", undefined);
+
+    let status: AuthoringStatus;
+    try {
+      status = await apiClient.getAuthoringStatus(targetModel);
+      setAuthoringStatus(status);
+      setActionMessage("authoring_load", "Authoring status loaded.");
+    } catch (error) {
+      const message = getErrorHint(error, "Could not load authoring status.");
+      setActionError("authoring_load", message);
+      throw new WorkflowHalted(message);
+    } finally {
+      setActionBusy("authoring_load", false);
+    }
+
+    if (!isAuthoringTaskValid(status.intro_text)) {
+      setActionBusy("intro_run", true);
+      try {
+        status = await apiClient.runIntroText(targetModel);
+        setAuthoringStatus(status);
+        setActionMessage("intro_run", "Intro text run completed.");
+      } catch (error) {
+        const message = getErrorHint(error, "Could not run intro text.");
+        setActionError("intro_run", message);
+        throw new WorkflowHalted(message);
+      } finally {
+        setActionBusy("intro_run", false);
+      }
+    }
+
+    if (!isAuthoringTaskValid(status.seo_meta)) {
+      setActionBusy("seo_run", true);
+      try {
+        status = await apiClient.runSeoMeta(targetModel);
+        setAuthoringStatus(status);
+        setActionMessage("seo_run", "SEO meta run completed.");
+      } catch (error) {
+        const message = getErrorHint(error, "Could not run SEO meta.");
+        setActionError("seo_run", message);
+        throw new WorkflowHalted(message);
+      } finally {
+        setActionBusy("seo_run", false);
+      }
+    }
+
+    if (!isAuthoringReadyForRender(status)) {
+      const reasons = toStringList(status.render_block_reasons);
+      const message = reasons.length > 0
+        ? `Authoring blocked: ${reasons.join("; ")}`
+        : "Authoring blocked: intro text and SEO metadata must be valid.";
+      setActionError("authoring_load", message);
+      throw new WorkflowHalted(message);
+    }
+
+    setActionMessage("authoring_load", "Authoring completed.");
+    return status;
+  }
+
+  async function runFilterReviewWorkflow(targetModel: string): Promise<FilterReview> {
+    setActiveTab("filter_review");
+    setAutoAdvanceMessage("Authoring succeeded. Running Filter Review.");
+    setActionBusy("filter_load", true);
+    setActionError("filter_load", undefined);
+
+    try {
+      const review = await apiClient.getFilterReview(targetModel);
+      setFilterReview(review);
+      if (hasBlockingFilterReviewWork(review)) {
+        const missing = toStringList(review.missing_required_groups);
+        const message = missing.length > 0
+          ? `Filter Review requires manual review: missing required filters: ${missing.join(", ")}.`
+          : "Filter Review requires manual review before render.";
+        setActionError("filter_load", message);
+        throw new WorkflowHalted(message);
+      }
+
+      setActionMessage("filter_load", "Filter review loaded with no render blockers.");
+      return review;
+    } catch (error) {
+      if (error instanceof WorkflowHalted) {
+        throw error;
+      }
+      const message = getErrorHint(error, "Could not load filter review.");
+      setActionError("filter_load", message);
+      throw new WorkflowHalted(message);
+    } finally {
+      setActionBusy("filter_load", false);
+    }
+  }
+
+  async function runEndToEndWorkflow(request: PrepareJobRequest) {
+    const targetModel = request.model;
+    setAutoAdvanceMessage("Prepare queued. Waiting for completion.");
+    const prepareJob = await apiClient.createPrepareJob(request);
+    const completedPrepare = await waitForTerminalJob(prepareJob, "prepare", targetModel);
+    if (!isSuccessfulJob(completedPrepare)) {
+      throw new Error(getJobFailureMessage(completedPrepare, "Prepare failed."));
+    }
+    setActionMessage("prepare", "Prepare completed.");
+
+    await runAuthoringWorkflow(targetModel);
+    await runFilterReviewWorkflow(targetModel);
+    setAutoAdvanceMessage("Filter Review has no blockers. Running Render.");
+    await runQueuedWorkflowJob("render", "render", targetModel, () => apiClient.createRenderJob({ model: targetModel }), "Render completed.");
+    setAutoAdvanceMessage("Render succeeded. Running Publish.");
+    await runQueuedWorkflowJob("publish", "publish", targetModel, () => apiClient.createPublishJob({ model: targetModel }), "Publish completed.");
+    setAutoAdvanceMessage("Workflow completed end to end.");
+  }
+
   const loadAuthoring = useCallback(
     async (actionKey: ActionKey = "authoring_load") => {
       markOperatorStageStarted("authoring");
@@ -1172,17 +1426,24 @@ export function ProductFactoryWorkflowPage() {
 
   async function handlePrepareSubmit(request: PrepareJobRequest) {
     markOperatorStageStarted("prepare");
-    await runAction(
-      "prepare",
-      async () => {
-        const job = await apiClient.createPrepareJob(request);
-        trackJob(job);
-        setForm((current) => ({ ...current, model: request.model }));
-        await loadModelJobs();
-      },
-      "Prepare job started.",
-      "Could not start prepare job.",
-    );
+    setForm((current) => ({ ...current, model: request.model }));
+    setActiveTab("prepare");
+    setActionState((current) => ({
+      ...current,
+      busy: { ...current.busy, prepare: true },
+      errors: {},
+      messages: {},
+    }));
+
+    try {
+      await runEndToEndWorkflow(request);
+    } catch (error) {
+      if (!(error instanceof WorkflowHalted)) {
+        setActionError("prepare", getErrorHint(error, "Could not run Product Factory workflow."));
+      }
+    } finally {
+      setActionBusy("prepare", false);
+    }
   }
 
   async function handleRender() {
@@ -1362,6 +1623,38 @@ export function ProductFactoryWorkflowPage() {
     }),
     [authoringStatus, filterReview, latestPrepareJob, latestPublishJob, latestRenderJob],
   );
+  const authoringHasError = Boolean(
+    actionState.errors.authoring_load ?? actionState.errors.intro_run ?? actionState.errors.seo_run,
+  );
+  const filterReviewHasError = Boolean(
+    actionState.errors.filter_load ?? actionState.errors.filter_save ?? actionState.errors.filter_approve,
+  );
+  const filterReviewHasUnapprovedWarnings = Boolean(
+    filterReview && getFilterReviewWarnings(filterReview).length > 0 && filterReview.approved !== true,
+  );
+  const derivedTabStatuses: Record<WorkflowTab, string> = {
+    prepare: latestPrepareJob ? getJobStatus(latestPrepareJob) : "pending",
+    authoring: latestAuthoringJob
+      ? getJobStatus(latestAuthoringJob)
+      : authoringHasError
+        ? "failed"
+        : isAuthoringReadyForRender(authoringStatus)
+          ? "succeeded"
+          : authoringStatus
+            ? "blocked"
+            : "pending",
+    filter_review: latestFilterReviewJob
+      ? getJobStatus(latestFilterReviewJob)
+      : filterReviewHasError
+        ? "warning"
+        : filterReview
+          ? filterReviewHasUnapprovedWarnings
+            ? "warning"
+            : "succeeded"
+          : "pending",
+    render: latestRenderJob ? getJobStatus(latestRenderJob) : "pending",
+    publish: latestPublishJob ? getJobStatus(latestPublishJob) : "pending",
+  };
 
   useEffect(() => {
     const transitions: Array<{ from: WorkflowTab; to: WorkflowTab; message: string }> = [
@@ -1443,7 +1736,6 @@ export function ProductFactoryWorkflowPage() {
         {modelJobsError ? <ErrorState message={modelJobsError} onRetry={() => void loadModelJobs()} /> : null}
         <div className="workflow-tabs" role="tablist" aria-label="Workflow stages">
           {WORKFLOW_TABS.map((tab) => {
-            const job = activeJobsByTab[tab.key];
             return (
               <button
                 key={tab.key}
@@ -1454,7 +1746,7 @@ export function ProductFactoryWorkflowPage() {
                 onClick={() => selectWorkflowTab(tab.key)}
               >
                 <span>{tab.label}</span>
-                <StatusBadge status={job ? getJobStatus(job) : "pending"} />
+                <StatusBadge status={derivedTabStatuses[tab.key]} />
               </button>
             );
           })}
@@ -1471,7 +1763,7 @@ export function ProductFactoryWorkflowPage() {
         <PrepareJobForm
           key={resetSeq}
           actionLabel="Run Prepare"
-          busyLabel={writeDisabled ? "Backend unavailable" : "Starting prepare..."}
+          busyLabel={writeDisabled ? "Backend unavailable" : "Running workflow..."}
           error={actionState.errors.prepare ?? null}
           isSubmitting={Boolean(actionState.busy.prepare) || writeDisabled}
           initialForm={form}
@@ -1493,7 +1785,7 @@ export function ProductFactoryWorkflowPage() {
       {activeTab === "authoring" ? (
       <WorkflowStage
         title="Authoring"
-        status={authoringStatus ? (authoringStatus.ready_for_render ? "ready" : "blocked") : "not loaded"}
+        status={derivedTabStatuses.authoring}
         description="Load authoring state, run intro text, and run SEO metadata separately."
       >
         <div className="button-row">
@@ -1596,7 +1888,7 @@ export function ProductFactoryWorkflowPage() {
       {activeTab === "filter_review" ? (
       <WorkflowStage
         title="Filter Review"
-        status={filterReview ? (filterReview.approved ? "approved" : "warning") : "not loaded"}
+        status={derivedTabStatuses.filter_review}
         description="Review product-specific filter values before render."
       >
         <div className="button-row">
@@ -1646,7 +1938,7 @@ export function ProductFactoryWorkflowPage() {
                 </ul>
               </div>
             ) : null}
-            {toStringList(filterReview.warnings).length > 0 ? <p className="form-warning">{toStringList(filterReview.warnings).join("; ")}</p> : null}
+            {visibleFilterReviewWarnings.length > 0 ? <p className="form-warning">{visibleFilterReviewWarnings.join("; ")}</p> : null}
             <div className="table-wrap filter-review-table-wrap">
               <table>
                 <thead>
@@ -1744,7 +2036,7 @@ export function ProductFactoryWorkflowPage() {
       {activeTab === "render" ? (
       <WorkflowStage
         title="Render"
-        status={latestRenderJob ? getJobStatus(latestRenderJob) : renderBlocked ? "blocked" : "pending"}
+        status={latestRenderJob ? derivedTabStatuses.render : renderBlocked ? "blocked" : derivedTabStatuses.render}
         description="Queue render after authoring is ready; filter review issues are warnings unless the render job fails."
       >
         <BlockingReasons reasons={renderBlockReasons} />
@@ -1794,7 +2086,7 @@ export function ProductFactoryWorkflowPage() {
       {activeTab === "publish" ? (
       <WorkflowStage
         title="Publish"
-        status={latestPublishJob ? getJobStatus(latestPublishJob) : "pending"}
+        status={derivedTabStatuses.publish}
         description="Queue publish as a separate operator action after render."
       >
         <div className="button-row">
@@ -1837,7 +2129,7 @@ export function ProductFactoryWorkflowPage() {
                   <strong>{stage.label}</strong>
                   {jobId ? <Link to={`/jobs/${encodeURIComponent(jobId)}`}>{jobId}</Link> : <span className="muted">No job found</span>}
                 </div>
-                <StatusBadge status={job ? getJobStatus(job) : "pending"} />
+                <StatusBadge status={derivedTabStatuses[stage.key]} />
               </div>
             );
           })}

@@ -78,6 +78,10 @@ export function PrepareJobForm({
       setLocalError("Model and URL are required.");
       return;
     }
+    if (!/^\d{6}$/.test(model)) {
+      setLocalError("Model must be a 6-digit code.");
+      return;
+    }
 
     const priceInput = form.price.trim();
     const price = priceInput.length === 0 ? 0 : Number(priceInput);

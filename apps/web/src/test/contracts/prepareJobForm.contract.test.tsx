@@ -72,4 +72,15 @@ describe("PrepareJobForm contract", () => {
       price: 0,
     });
   });
+
+  it("requires a six-digit model code", () => {
+    const onSubmit = renderPrepareForm();
+
+    fireEvent.change(screen.getByLabelText("Model"), { target: { value: "00000" } });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Start prepare job" }).closest("form")!);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Model must be a 6-digit code.");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
