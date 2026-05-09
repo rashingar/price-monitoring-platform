@@ -13,6 +13,8 @@
     "test:fixture-contracts": "node scripts/check-fixture-contracts.mjs",
     "generate:api-types": "node scripts/generate-api-types.mjs",
     "check:api-types": "node scripts/check-api-types.mjs",
+    "generate:api-docs": "node scripts/generate-api-docs.mjs",
+    "check:api-docs": "node scripts/check-api-docs.mjs",
     "test:contracts": "vitest run src/test/contracts",
     "test:smoke": "vitest run src/test/smoke"
   },

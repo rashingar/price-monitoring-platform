@@ -29,67 +29,167 @@ fetch behavior.
 
 ## Product Factory API
 
-Current browser-facing endpoints:
+Regenerate this generated section from the OpenAPI mirror:
 
-```text
-GET    /api/health
-
-POST   /api/jobs/prepare
-POST   /api/jobs/render
-POST   /api/jobs/publish
-GET    /api/jobs
-GET    /api/jobs/{job_id}
-POST   /api/jobs/{job_id}/stop
-GET    /api/jobs/{job_id}/logs
-GET    /api/jobs/{job_id}/artifacts
-
-GET    /api/authoring/{model}
-POST   /api/authoring/{model}/intro-text
-POST   /api/authoring/{model}/intro-text/retry
-POST   /api/authoring/{model}/seo-meta
-POST   /api/authoring/{model}/seo-meta/retry
-
-GET    /api/filter-review/{model}
-PUT    /api/filter-review/{model}
-POST   /api/filter-review/{model}/approve
-
-GET    /api/settings
-PATCH  /api/settings
-
-GET    /api/filters/status
-GET    /api/filters/categories
-GET    /api/filters/categories/{category_id}
-PUT    /api/filters/categories/{category_id}/groups
-PATCH  /api/filters/categories/{category_id}/groups/{group_id}
-PUT    /api/filters/categories/{category_id}/groups/{group_id}/values
-PATCH  /api/filters/categories/{category_id}/groups/{group_id}/values/{value_id}
-POST   /api/filters/sync
-GET    /api/filters/sync-report
+```powershell
+Push-Location apps\web
+npm run generate:api-docs
+Pop-Location
 ```
 
-### Product Factory Contracts
+Check that the generated docs are current:
 
-`POST /api/jobs/prepare` accepts:
+```powershell
+Push-Location apps\web
+npm run check:api-docs
+Pop-Location
+```
+
+<!-- product-factory-api:generated:start -->
+Generated from `packages/contracts/openapi.product-factory.json`.
+
+| Method | Browser path | Request body | Success response |
+| --- | --- | --- | --- |
+| GET | `/api/authoring/{model}` | - | `AuthoringStatusResponse` |
+| POST | `/api/authoring/{model}/intro-text` | - | `AuthoringStatusResponse` |
+| POST | `/api/authoring/{model}/intro-text/retry` | - | `AuthoringStatusResponse` |
+| POST | `/api/authoring/{model}/seo-meta` | - | `AuthoringStatusResponse` |
+| POST | `/api/authoring/{model}/seo-meta/retry` | - | `AuthoringStatusResponse` |
+| GET | `/api/filter-review/{model}` | - | `FilterReviewResponse` |
+| PUT | `/api/filter-review/{model}` | `FilterReviewUpdateRequest` | `FilterReviewResponse` |
+| POST | `/api/filter-review/{model}/approve` | - | `FilterReviewResponse` |
+| GET | `/api/filters/backups` | - | `FilterBackupsResponse` |
+| POST | `/api/filters/backups/restore` | `RestoreFilterBackupRequest` | `FilterBackupRestoreResponse` |
+| GET | `/api/filters/categories` | - | `FilterCategoriesResponse` |
+| GET | `/api/filters/categories/{category_id}` | - | `FilterCategoryResponse` |
+| PUT | `/api/filters/categories/{category_id}/groups` | `AddFilterGroupRequest` | `FilterCategoryResponse` |
+| PATCH | `/api/filters/categories/{category_id}/groups/{group_id}` | `UpdateFilterGroupRequest` | `FilterCategoryResponse` |
+| PUT | `/api/filters/categories/{category_id}/groups/{group_id}/values` | `AddFilterValueRequest` | `FilterCategoryResponse` |
+| PATCH | `/api/filters/categories/{category_id}/groups/{group_id}/values/{value_id}` | `UpdateFilterValueRequest` | `FilterCategoryResponse` |
+| GET | `/api/filters/status` | - | `FilterStatusResponse` |
+| POST | `/api/filters/sync` | - | `FilterSyncResponse` |
+| GET | `/api/filters/sync-report` | - | `FilterSyncReportResponse` |
+| GET | `/api/health` | - | `HealthResponse` |
+| GET | `/api/jobs` | - | `JobListResponse` |
+| GET | `/api/jobs/{job_id}` | - | `JobResponse` |
+| GET | `/api/jobs/{job_id}/artifacts` | - | `JobArtifactsResponse` |
+| GET | `/api/jobs/{job_id}/logs` | - | `JobLogsResponse` |
+| POST | `/api/jobs/{job_id}/retry` | - | `JobResponse` |
+| POST | `/api/jobs/{job_id}/stop` | - | `JobResponse` |
+| GET | `/api/jobs/by-model/{model}` | - | `JobListResponse` |
+| POST | `/api/jobs/prepare` | `PrepareJobRequest` | `JobResponse` |
+| POST | `/api/jobs/publish` | `PublishJobRequest` | `JobResponse` |
+| POST | `/api/jobs/render` | `RenderJobRequest` | `JobResponse` |
+| GET | `/api/settings` | - | `SettingsResponse` |
+| PATCH | `/api/settings` | `SettingsPatchRequest` | `SettingsResponse` |
+
+## Product Factory Request Schemas
+
+### PrepareJobRequest
 
 ```ts
 {
+  boxnow?: number; // default: 0
   model: string;
+  photos?: number; // default: 1
+  price?: string | number; // default: 0
+  sections?: number; // default: 0
+  skroutz_status?: number; // default: 0
   url: string;
-  photos: number;
-  sections: number;
-  skroutz_status: number;
-  boxnow: number;
-  price: number | null;
 }
 ```
 
-`POST /api/jobs/render` and `POST /api/jobs/publish` accept:
+### AddFilterGroupRequest
+
+```ts
+{
+  expected_revision?: string | null;
+  name: string;
+  required?: boolean; // default: true
+  status?: "active" | "inactive" | "deprecated"; // default: "active"
+}
+```
+
+### AddFilterValueRequest
+
+```ts
+{
+  expected_revision?: string | null;
+  status?: "active" | "inactive" | "deprecated"; // default: "active"
+  value: string;
+}
+```
+
+### FilterReviewUpdateRequest
+
+```ts
+{
+  add_new_values_globally?: boolean; // default: true
+  group_updates?: FilterReviewGroupUpdate[];
+  new_groups?: FilterReviewNewGroup[];
+  values?: FilterReviewValueUpdate[];
+}
+```
+
+### PublishJobRequest
+
+```ts
+{
+  current_job_product_file?: string | null;
+  model: string;
+}
+```
+
+### RenderJobRequest
 
 ```ts
 {
   model: string;
 }
 ```
+
+### RestoreFilterBackupRequest
+
+```ts
+{
+  backup_name?: string | null;
+}
+```
+
+### SettingsPatchRequest
+
+```ts
+{
+  authoring?: object;
+}
+```
+
+### UpdateFilterGroupRequest
+
+```ts
+{
+  expected_revision?: string | null;
+  name?: string | null;
+  required?: boolean | null;
+  status?: "active" | "inactive" | "deprecated" | null;
+}
+```
+
+### UpdateFilterValueRequest
+
+```ts
+{
+  expected_revision?: string | null;
+  status?: "active" | "inactive" | "deprecated" | null;
+  value?: string | null;
+}
+```
+<!-- product-factory-api:generated:end -->
+
+### Product Factory UI Notes
+
+These notes are human-written because they describe frontend behavior rather than
+the exact backend request shape.
 
 Job responses should include a stable job identifier, status, timestamps where available,
 and the backend request/result/error payloads when available. `POST /api/jobs/{job_id}/stop`

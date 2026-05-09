@@ -38,15 +38,7 @@ export type ProductFactoryStageName =
   | "render"
   | "publish";
 
-export interface PrepareJobRequest {
-  model: string;
-  url: string;
-  photos: number;
-  sections: number;
-  skroutz_status: number;
-  boxnow: number;
-  price: number | null;
-}
+export type PrepareJobRequest = ProductFactoryContractPrepareJobRequest;
 
 export interface ModelJobRequest {
   model: string;
@@ -332,6 +324,7 @@ export interface FilterManagerStatusResponse {
 
 type _ProductFactoryGeneratedContractChecks = [
   AssertAssignable<HealthResponse, ProductFactoryContractHealthResponse>,
+  AssertAssignable<PrepareJobRequest, ProductFactoryContractPrepareJobRequest>,
   AssertAssignable<ProductFactoryContractFilterCategoryListItem, FilterCategoryListItem>,
   AssertAssignable<ProductFactoryContractFilterCategoryResponse, FilterCategoryDetail>,
   AssertAssignable<RenderJobRequest, ProductFactoryContractRenderJobRequest>,

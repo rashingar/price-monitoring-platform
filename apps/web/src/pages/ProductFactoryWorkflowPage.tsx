@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiClient, ApiError, getApiErrorMessage } from "../api/client";
 import {
@@ -8,6 +8,7 @@ import {
   getJobStage,
   getJobStatus,
   isActiveJob,
+  isSuccessfulJob,
 } from "../api/jobUtils";
 import type {
   Artifact,
@@ -71,6 +72,13 @@ const WORKFLOW_TABS: { key: WorkflowTab; label: string }[] = [
   { key: "render", label: "Render" },
   { key: "publish", label: "Publish" },
 ];
+const WORKFLOW_TAB_INDEX: Record<WorkflowTab, number> = {
+  prepare: 0,
+  authoring: 1,
+  filter_review: 2,
+  render: 3,
+  publish: 4,
+};
 
 interface StageActionState {
   busy: Partial<Record<ActionKey, boolean>>;
@@ -309,6 +317,33 @@ function getTaskStatus(task: AuthoringTaskStatus | null | undefined): string {
 function isAuthoringTaskValid(task: AuthoringTaskStatus | null | undefined): boolean {
   const status = getTaskStatus(task).trim().toLowerCase();
   return ["valid", "ready", "succeeded", "success", "completed", "done"].includes(status);
+}
+
+function isAuthoringReadyForRender(status: AuthoringStatus | null): boolean {
+  if (!status) {
+    return false;
+  }
+
+  return (
+    status.ready_for_render === true ||
+    (isAuthoringTaskValid(status.intro_text) && isAuthoringTaskValid(status.seo_meta))
+  );
+}
+
+function hasBlockingFilterReviewWork(review: FilterReview | null): boolean {
+  if (!review) {
+    return true;
+  }
+
+  if (review.render_blocked === true || toStringList(review.missing_required_groups).length > 0) {
+    return true;
+  }
+
+  return (review.groups ?? []).some((group) => group.missing_required === true);
+}
+
+function isFilterReviewReadyForRender(review: FilterReview | null): boolean {
+  return Boolean(review && (review.approved === true || !hasBlockingFilterReviewWork(review)));
 }
 
 function hasHardIntroEmphasisError(task: AuthoringTaskStatus | null | undefined): boolean {
@@ -918,11 +953,14 @@ function SettingsPanel({
 export function ProductFactoryWorkflowPage() {
   const { model: routeModel } = useParams<{ model?: string }>();
   const { trackJob } = useGlobalJobs();
+  const operatorStartedStagesRef = useRef<Set<WorkflowTab>>(new Set());
+  const previousStageReadyRef = useRef<Partial<Record<WorkflowTab, boolean>>>({});
   const [form, setForm, resetForm] = usePersistentPageState<PrepareFormState>(
     WORKFLOW_STORAGE_KEY,
     initialPrepareFormState,
   );
   const [activeTab, setActiveTab] = useState<WorkflowTab>("prepare");
+  const [autoAdvanceMessage, setAutoAdvanceMessage] = useState<string | null>(null);
   const [modelJobs, setModelJobs] = useState<Job[]>([]);
   const [isModelJobsLoading, setIsModelJobsLoading] = useState(false);
   const [modelJobsError, setModelJobsError] = useState<string | null>(null);
@@ -1077,8 +1115,18 @@ export function ProductFactoryWorkflowPage() {
     [],
   );
 
+  const markOperatorStageStarted = useCallback((stage: WorkflowTab) => {
+    operatorStartedStagesRef.current.add(stage);
+  }, []);
+
+  const selectWorkflowTab = useCallback((tab: WorkflowTab) => {
+    setAutoAdvanceMessage(null);
+    setActiveTab(tab);
+  }, []);
+
   const loadAuthoring = useCallback(
     async (actionKey: ActionKey = "authoring_load") => {
+      markOperatorStageStarted("authoring");
       if (!model) {
         setActionState((current) => ({
           ...current,
@@ -1096,11 +1144,12 @@ export function ProductFactoryWorkflowPage() {
         "Could not load authoring status.",
       );
     },
-    [model, runAction],
+    [markOperatorStageStarted, model, runAction],
   );
 
   const loadFilterReview = useCallback(
     async (actionKey: ActionKey = "filter_load") => {
+      markOperatorStageStarted("filter_review");
       if (!model) {
         setActionState((current) => ({
           ...current,
@@ -1118,10 +1167,11 @@ export function ProductFactoryWorkflowPage() {
         "Could not load filter review.",
       );
     },
-    [model, runAction],
+    [markOperatorStageStarted, model, runAction],
   );
 
   async function handlePrepareSubmit(request: PrepareJobRequest) {
+    markOperatorStageStarted("prepare");
     await runAction(
       "prepare",
       async () => {
@@ -1136,6 +1186,7 @@ export function ProductFactoryWorkflowPage() {
   }
 
   async function handleRender() {
+    markOperatorStageStarted("render");
     if (!model) {
       setActionState((current) => ({
         ...current,
@@ -1178,6 +1229,7 @@ export function ProductFactoryWorkflowPage() {
   }
 
   async function handleSaveFilterReview() {
+    markOperatorStageStarted("filter_review");
     if (!model || !filterReview) {
       setActionState((current) => ({
         ...current,
@@ -1198,6 +1250,7 @@ export function ProductFactoryWorkflowPage() {
   }
 
   async function handleApproveFilterReview() {
+    markOperatorStageStarted("filter_review");
     if (!model) {
       setActionState((current) => ({
         ...current,
@@ -1218,6 +1271,7 @@ export function ProductFactoryWorkflowPage() {
   }
 
   async function handleRetryStage(tab: WorkflowTab, job: Job | null) {
+    markOperatorStageStarted(tab);
     const jobId = job ? getJobIdentifier(job) : undefined;
     const actionKey = getRetryActionKey(tab);
     if (!jobId || !canRetryJob(job ?? undefined)) {
@@ -1281,6 +1335,9 @@ export function ProductFactoryWorkflowPage() {
     setAuthoringStatus(null);
     setFilterReview(null);
     setRenderOverride(false);
+    setAutoAdvanceMessage(null);
+    operatorStartedStagesRef.current.clear();
+    previousStageReadyRef.current = {};
     setResetSeq((current) => current + 1);
     setActionState({ busy: {}, messages: {}, errors: {} });
   }
@@ -1295,6 +1352,44 @@ export function ProductFactoryWorkflowPage() {
     render: latestRenderJob,
     publish: latestPublishJob,
   };
+  const workflowStageReady = useMemo(
+    () => ({
+      prepare: isSuccessfulJob(latestPrepareJob ?? undefined),
+      authoring: isAuthoringReadyForRender(authoringStatus),
+      filter_review: isFilterReviewReadyForRender(filterReview),
+      render: isSuccessfulJob(latestRenderJob ?? undefined),
+      publish: isSuccessfulJob(latestPublishJob ?? undefined),
+    }),
+    [authoringStatus, filterReview, latestPrepareJob, latestPublishJob, latestRenderJob],
+  );
+
+  useEffect(() => {
+    const transitions: Array<{ from: WorkflowTab; to: WorkflowTab; message: string }> = [
+      { from: "prepare", to: "authoring", message: "Prepare succeeded. Advanced to Authoring." },
+      { from: "authoring", to: "filter_review", message: "Authoring is ready. Advanced to Filter Review." },
+      { from: "filter_review", to: "render", message: "Filter Review is ready. Advanced to Render." },
+      { from: "render", to: "publish", message: "Render succeeded. Advanced to Publish." },
+    ];
+
+    const previous = previousStageReadyRef.current;
+    for (const transition of transitions) {
+      const isReady = workflowStageReady[transition.from];
+      const justBecameReady = isReady && previous[transition.from] !== true;
+      previous[transition.from] = isReady;
+
+      if (
+        justBecameReady &&
+        operatorStartedStagesRef.current.has(transition.from) &&
+        activeTab === transition.from &&
+        WORKFLOW_TAB_INDEX[transition.to] > WORKFLOW_TAB_INDEX[transition.from]
+      ) {
+        operatorStartedStagesRef.current.delete(transition.from);
+        setActiveTab(transition.to);
+        setAutoAdvanceMessage(transition.message);
+        break;
+      }
+    }
+  }, [activeTab, workflowStageReady]);
 
   return (
     <div className="page-stack">
@@ -1356,7 +1451,7 @@ export function ProductFactoryWorkflowPage() {
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => selectWorkflowTab(tab.key)}
               >
                 <span>{tab.label}</span>
                 <StatusBadge status={job ? getJobStatus(job) : "pending"} />
@@ -1364,6 +1459,7 @@ export function ProductFactoryWorkflowPage() {
             );
           })}
         </div>
+        {autoAdvanceMessage ? <p className="state-block">{autoAdvanceMessage}</p> : null}
       </section>
 
       {activeTab === "prepare" ? (

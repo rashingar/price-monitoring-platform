@@ -24,17 +24,17 @@ export interface PrepareFormState {
 export const initialPrepareFormState: PrepareFormState = {
   model: "",
   url: "",
-  photos: "",
-  sections: "",
+  photos: "1",
+  sections: "0",
   skroutz_status: false,
   boxnow: false,
-  price: "",
+  price: "0",
 };
 
-function parseWholeNumber(value: string): number | null {
+function parseWholeNumber(value: string, defaultValue: number): number | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) {
-    return null;
+    return defaultValue;
   }
 
   const parsed = Number(trimmed);
@@ -79,19 +79,20 @@ export function PrepareJobForm({
       return;
     }
 
-    const price = form.price.trim().length === 0 ? null : Number(form.price);
-    if (price !== null && Number.isNaN(price)) {
+    const priceInput = form.price.trim();
+    const price = priceInput.length === 0 ? 0 : Number(priceInput);
+    if (!Number.isFinite(price) || price < 0) {
       setLocalError("Price must be a number.");
       return;
     }
 
-    const photos = parseWholeNumber(form.photos);
+    const photos = parseWholeNumber(form.photos, 1);
     if (photos === null) {
       setLocalError("Photos must be a whole number.");
       return;
     }
 
-    const sections = parseWholeNumber(form.sections);
+    const sections = parseWholeNumber(form.sections, 0);
     if (sections === null) {
       setLocalError("Sections must be a whole number.");
       return;

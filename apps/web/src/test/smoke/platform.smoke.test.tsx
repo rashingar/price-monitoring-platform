@@ -17,6 +17,7 @@ import {
   productFactoryFilterRevision,
   productFactoryFixtureRoutes,
   productFactoryHealth,
+  productFactorySettings,
 } from "../fixtures/productFactoryApi";
 import { installMockFetch, type MockRoute } from "../mockFetch";
 import { renderWithRouter } from "../renderWithRouter";
@@ -26,6 +27,7 @@ const allRoutes = [...productFactoryFixtureRoutes, ...commerceFixtureRoutes];
 function makeGenericWorkflowRoutes(model: string, authoring: unknown): MockRoute[] {
   return [
     { method: "GET", path: "/api/health", response: productFactoryHealth },
+    { method: "GET", path: "/api/settings", response: productFactorySettings },
     { method: "GET", path: /^\/api\/jobs\/by-model\/[^/]+$/, response: { jobs: [] } },
     { method: "GET", path: `/api/authoring/${model}`, response: authoring },
   ];
@@ -1098,6 +1100,7 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/product-factory/filters?category_id=310");
 
     await expect(screen.findByRole("heading", { name: "Filters Manager" })).resolves.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Pipeline" })).not.toBeInTheDocument();
     await expect(screen.findByRole("heading", { name: "Filters API ready" })).resolves.toBeInTheDocument();
     await expect(screen.findByText(`Revision ${productFactoryFilterRevision.slice(0, 12)}`)).resolves.toBeInTheDocument();
     await expect(screen.findByText("Χωρητικότητα")).resolves.toBeInTheDocument();
@@ -1117,6 +1120,121 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByRole("tab", { name: /Filter Review/i })).toBeInTheDocument();
   });
 
+  it("advances from Prepare to Authoring after an operator-started prepare succeeds", async () => {
+    let prepared = false;
+    installMockFetch([
+      { method: "GET", path: "/api/health", response: productFactoryHealth },
+      { method: "GET", path: "/api/settings", response: productFactorySettings },
+      {
+        method: "GET",
+        path: "/api/jobs/by-model/005606",
+        response: () => ({
+          jobs: prepared
+            ? [{ job_id: "prepare-1", job_type: "prepare", model: "005606", status: "succeeded" }]
+            : [],
+        }),
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/prepare",
+        response: () => {
+          prepared = true;
+          return { job: { job_id: "prepare-1", job_type: "prepare", model: "005606", status: "succeeded" } };
+        },
+      },
+    ]);
+
+    renderWithRouter("/product-factory");
+
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
+    fireEvent.change(screen.getAllByLabelText("Model")[1], { target: { value: "005606" } });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run Prepare" }));
+
+    await expect(screen.findByText("Prepare succeeded. Advanced to Authoring.")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Authoring" })).toBeInTheDocument();
+  });
+
+  it("advances to Publish after Render succeeds without starting Publish", async () => {
+    let rendered = false;
+    const mockFetch = installMockFetch([
+      { method: "GET", path: "/api/health", response: productFactoryHealth },
+      { method: "GET", path: "/api/settings", response: productFactorySettings },
+      {
+        method: "GET",
+        path: "/api/jobs/by-model/005606",
+        response: () => ({
+          jobs: rendered
+            ? [{ job_id: "render-1", job_type: "render", model: "005606", status: "succeeded" }]
+            : [],
+        }),
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/render",
+        response: () => {
+          rendered = true;
+          return { job: { job_id: "render-1", job_type: "render", model: "005606", status: "succeeded" } };
+        },
+      },
+    ]);
+
+    renderWithRouter("/product-factory/005606");
+
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Render/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Render" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Render" }));
+
+    await expect(screen.findByText("Render succeeded. Advanced to Publish.")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Publish" })).toBeInTheDocument();
+    expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname === "/api/jobs/publish")).toBe(false);
+  });
+
+  it("does not override a manual tab selection while a stage completes", async () => {
+    let prepared = false;
+    installMockFetch([
+      { method: "GET", path: "/api/health", response: productFactoryHealth },
+      { method: "GET", path: "/api/settings", response: productFactorySettings },
+      {
+        method: "GET",
+        path: "/api/jobs/by-model/005606",
+        response: async () => {
+          if (prepared) {
+            await new Promise((resolve) => window.setTimeout(resolve, 50));
+          }
+          return {
+            jobs: prepared
+              ? [{ job_id: "prepare-1", job_type: "prepare", model: "005606", status: "succeeded" }]
+              : [],
+          };
+        },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/prepare",
+        response: () => {
+          prepared = true;
+          return { job: { job_id: "prepare-1", job_type: "prepare", model: "005606", status: "succeeded" } };
+        },
+      },
+    ]);
+
+    renderWithRouter("/product-factory");
+
+    await expect(screen.findByText("Product Factory API available")).resolves.toBeInTheDocument();
+    fireEvent.change(screen.getAllByLabelText("Model")[1], { target: { value: "005606" } });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run Prepare" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Render/i }));
+
+    await waitFor(() => expect(prepared).toBe(true));
+    await new Promise((resolve) => window.setTimeout(resolve, 75));
+
+    expect(screen.getByRole("heading", { name: "Render" })).toBeInTheDocument();
+    expect(screen.queryByText("Prepare succeeded. Advanced to Authoring.")).not.toBeInTheDocument();
+  });
+
   it("does not render intro emphasis warning when diagnostics are missing", async () => {
     installMockFetch(makeGenericWorkflowRoutes("GENERIC-001", genericAuthoringStatus()));
 
@@ -1128,7 +1246,9 @@ describe("platform mocked page smoke tests", () => {
     await waitFor(() => expect(refreshButton).not.toBeDisabled());
     fireEvent.click(refreshButton);
 
-    await expect(screen.findByText("Authoring status loaded.")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Authoring is ready. Advanced to Filter Review.")).resolves.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
+    expect(screen.getByText("Authoring status loaded.")).toBeInTheDocument();
     expect(screen.queryByText("Intro emphasis missing")).not.toBeInTheDocument();
   });
 
@@ -1163,6 +1283,8 @@ describe("platform mocked page smoke tests", () => {
     await waitFor(() => expect(refreshButton).not.toBeDisabled());
     fireEvent.click(refreshButton);
 
+    await expect(screen.findByText("Authoring is ready. Advanced to Filter Review.")).resolves.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Authoring/i }));
     const warningBadge = await screen.findByText("Intro emphasis missing");
     expect(warningBadge).toHaveClass("status-badge", "warning");
     expect(warningBadge).toHaveAttribute(

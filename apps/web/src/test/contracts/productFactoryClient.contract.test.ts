@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ApiError, apiClient } from "../../api/client";
+import type {
+  PrepareJobRequest,
+  ProductFactoryContractPrepareJobRequest,
+} from "../../api/types";
 import { installMockFetch } from "../mockFetch";
 import {
   productFactoryConflictError,
@@ -220,6 +224,31 @@ describe("Product Factory API client contract fixtures", () => {
       emphasized_word_ratio: 0,
     });
     expect(status.intro_text?.emphasized_word_count).toBeUndefined();
+  });
+
+  it("sends backend-valid prepare payloads", async () => {
+    const mock = installMockFetch([
+      {
+        method: "POST",
+        path: "/api/jobs/prepare",
+        response: { job: { job_id: "prepare-1", job_type: "prepare", status: "queued" } },
+      },
+    ]);
+    const payload = {
+      model: "005606",
+      url: "https://example.invalid/product",
+      photos: 1,
+      sections: 0,
+      skroutz_status: 0,
+      boxnow: 0,
+      price: 0,
+    } satisfies PrepareJobRequest;
+    const generatedPayload: ProductFactoryContractPrepareJobRequest = payload;
+
+    await apiClient.createPrepareJob(generatedPayload);
+
+    expect(mock.requests[0]?.body).toEqual(payload);
+    expect(mock.requests[0]?.body).not.toMatchObject({ price: null });
   });
 
   it("exposes useful API error messages for 409 and 422 responses", async () => {
