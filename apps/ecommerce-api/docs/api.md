@@ -215,9 +215,6 @@ GET   /api/vendor-sources/agent/runs/{run_id}/artifacts
 GET   /api/vendor-sources/candidates
 GET   /api/vendor-sources/candidates/{candidate_id}
 PATCH /api/vendor-sources/candidates/{candidate_id}/review
-GET   /api/vendor-sources/candidates/review-layout
-PUT   /api/vendor-sources/candidates/review-layout
-POST  /api/vendor-sources/candidates/review-layout/reset
 ```
 
 This namespace is the direct-vendor workflow surface. Use Vendor Sources
@@ -228,6 +225,24 @@ sources and avoid assuming capture support for discovery-only vendors.
 Vendor Sources owns source URL capture and health through
 `POST /api/vendor-sources/captures/runs`. Vendor Source Capture history is
 stored separately from Price Monitoring run history.
+
+### Source URL Agent
+
+```text
+GET   /api/source-url-agent/sources
+POST  /api/source-url-agent/runs
+POST  /api/source-url-agent/runs/sync
+GET   /api/source-url-agent/runs
+GET   /api/source-url-agent/runs/{run_id}
+GET   /api/source-url-agent/runs/{run_id}/artifacts
+GET   /api/source-url-agent/candidates
+GET   /api/source-url-agent/candidates/{candidate_id}
+PATCH /api/source-url-agent/candidates/{candidate_id}/review
+```
+
+This is the canonical Source URL Agent namespace. Candidate review layout
+preferences are frontend-local UI state and are not stored in the Ecommerce API
+database.
 
 ### Product Ignore
 

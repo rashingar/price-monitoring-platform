@@ -13,7 +13,12 @@ from product_factory.api.job_runner import (
     run_authoring_seo_job,
 )
 from product_factory.api.job_store import JobStore
-from product_factory.services.authoring_service import AuthoringStatus, IntroTextTaskStatus, SeoMetaTaskStatus
+from product_factory.services.authoring_service import (
+    AuthoringStatus,
+    IntroTextTaskStatus,
+    PreparedAuthoringArtifactsNotFoundError,
+    SeoMetaTaskStatus,
+)
 from product_factory.services.errors import ServiceError, ServiceErrorCode
 
 
@@ -195,6 +200,74 @@ def test_authoring_seo_runner_dispatches_independently_of_failed_intro(tmp_path:
     assert seo_result.status == JobStatus.SUCCEEDED
     assert seo_result.artifacts["seo_meta_preview_path"] == str(llm_dir / "seo_meta.preview.json")
     assert "Description" in (llm_dir / "seo_meta.preview.json").read_text(encoding="utf-8")
+
+
+def test_authoring_intro_runner_reports_missing_prepared_artifacts_as_structured_failure() -> None:
+    record = JobRecord(
+        job_id="000001-authoring_intro-test",
+        job_type=JobType.AUTHORING_INTRO,
+        status=JobStatus.RUNNING,
+        model="000001",
+        payload={"model": "000001"},
+    )
+    logs: list[str] = []
+
+    result = run_authoring_intro_job(
+        record,
+        logs.append,
+        run_intro_text_authoring_fn=lambda model, retry=False: (_ for _ in ()).throw(
+            PreparedAuthoringArtifactsNotFoundError(
+                f"Prepared authoring artifacts not found for model {model}. Run prepare first."
+            )
+        ),
+    )
+
+    assert result.status == JobStatus.FAILED
+    assert result.error_code == ServiceErrorCode.MISSING_ARTIFACT.value
+    assert "Run prepare first" in str(result.error)
+    assert any("missing_artifact" in line for line in logs)
+
+
+def test_authoring_intro_runner_reports_service_error_without_throwing() -> None:
+    record = JobRecord(
+        job_id="000001-authoring_intro-test",
+        job_type=JobType.AUTHORING_INTRO,
+        status=JobStatus.RUNNING,
+        model="000001",
+        payload={"model": "000001"},
+    )
+
+    result = run_authoring_intro_job(
+        record,
+        lambda line: None,
+        run_intro_text_authoring_fn=lambda model, retry=False: (_ for _ in ()).throw(
+            ServiceError(ServiceErrorCode.PROVIDER_FAILURE.value, "provider failed")
+        ),
+    )
+
+    assert result.status == JobStatus.FAILED
+    assert result.error == "provider failed"
+    assert result.error_code == ServiceErrorCode.PROVIDER_FAILURE.value
+
+
+def test_authoring_seo_runner_reports_unexpected_error_without_throwing() -> None:
+    record = JobRecord(
+        job_id="000001-authoring_seo-test",
+        job_type=JobType.AUTHORING_SEO,
+        status=JobStatus.RUNNING,
+        model="000001",
+        payload={"model": "000001"},
+    )
+
+    result = run_authoring_seo_job(
+        record,
+        lambda line: None,
+        run_seo_meta_authoring_fn=lambda model, retry=False: (_ for _ in ()).throw(RuntimeError("resolver exploded")),
+    )
+
+    assert result.status == JobStatus.FAILED
+    assert result.error == "resolver exploded"
+    assert result.error_code == ServiceErrorCode.UNEXPECTED_FAILURE.value
 
 
 def test_stop_route_returns_404_for_missing_or_invalid_job(tmp_path: Path) -> None:

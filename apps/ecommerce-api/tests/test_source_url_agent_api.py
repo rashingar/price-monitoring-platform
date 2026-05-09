@@ -10,7 +10,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, UiViewPreference  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 
 
@@ -162,6 +162,21 @@ def test_get_source_url_agent_candidates_returns_persisted_candidates(tmp_path: 
     assert payload["items"][0]["evidence_json"]["mpn"]["found"] is True
 
 
+def test_source_url_agent_canonical_namespace_returns_candidates_and_sources(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+        candidate = _candidate(session, product)
+
+    candidates_response = client.get("/api/source-url-agent/candidates?status=needs_review")
+    sources_response = client.get("/api/source-url-agent/sources")
+
+    assert candidates_response.status_code == 200
+    assert candidates_response.json()["items"][0]["id"] == candidate.id
+    assert sources_response.status_code == 200
+    assert {item["source_name"] for item in sources_response.json()["items"]} >= {"bestprice", "skroutz", "electronet"}
+
+
 def test_get_source_url_agent_candidates_filters(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
@@ -214,110 +229,6 @@ def test_get_source_url_agent_candidates_returns_empty_for_no_matches(tmp_path: 
 
     assert response.status_code == 200
     assert response.json() == {"items": [], "total": 0, "limit": 50, "offset": 0}
-
-
-def test_source_url_candidate_review_layout_defaults_and_persistence(tmp_path: Path, monkeypatch) -> None:
-    client, database_url = _client(tmp_path, monkeypatch)
-
-    default_response = client.get("/api/vendor-sources/candidates/review-layout")
-
-    assert default_response.status_code == 200
-    default_payload = default_response.json()
-    assert default_payload["view_key"] == "source_url_candidate_review"
-    assert default_payload["settings_card"]["collapsible"] is True
-    assert default_payload["settings_card"]["collapsed"] is True
-    assert default_payload["actions"]["table_column_visible"] is False
-    assert default_payload["actions"]["replacement"] == "inline_review_panel"
-    assert default_payload["review_panel"]["mode"] == "inline_row"
-    assert default_payload["review_panel"]["open_on"] == "row_single_click"
-    assert "actions" not in [column["key"] for column in default_payload["columns"]]
-    default_columns = {column["key"]: column for column in default_payload["columns"]}
-    assert default_columns["status"]["width_px"] == 56
-    assert default_columns["confidence_score"]["width_px"] == 32
-    assert default_columns["model"]["width_px"] == 28
-    assert default_columns["mpn"]["width_px"] == 48
-    assert default_columns["manufacturer"]["width_px"] == 32
-    assert default_columns["source_name"]["width_px"] == 32
-    assert default_columns["candidate_price"]["width_px"] == 32
-    assert default_columns["own_price"]["width_px"] == 32
-    assert default_columns["candidate_title"]["width_px"] == 260
-    assert default_columns["manufacturer"]["label"] == "Brand"
-    assert default_columns["candidate_price"]["label"] == "Source price"
-    assert default_columns["candidate_title"]["label"] == "Source title"
-    assert default_columns["model"]["visible"] is False
-    assert default_columns["manufacturer"]["visible"] is True
-    assert default_columns["source_name"]["visible"] is True
-
-    save_response = client.put(
-        "/api/vendor-sources/candidates/review-layout",
-        json={
-            "user_key": "tester",
-            "settings_card_collapsed": False,
-            "review_panel_width_px": 520,
-            "columns": [
-                {"key": "candidate_url", "visible": True, "order": 5, "width_px": 360},
-                {"key": "status", "visible": False, "order": 40, "width_px": 128},
-            ],
-        },
-    )
-
-    assert save_response.status_code == 200
-    saved_payload = save_response.json()
-    columns = {column["key"]: column for column in saved_payload["columns"]}
-    assert saved_payload["user_key"] == "tester"
-    assert saved_payload["settings_card"]["collapsed"] is False
-    assert saved_payload["review_panel"]["width_px"] == 520
-    assert columns["candidate_url"]["visible"] is True
-    assert columns["candidate_url"]["order"] == 5
-    assert columns["candidate_url"]["width_px"] == 360
-    assert columns["status"]["visible"] is False
-
-    persisted_response = client.get("/api/vendor-sources/candidates/review-layout", params={"user_key": "tester"})
-
-    assert persisted_response.status_code == 200
-    assert persisted_response.json()["columns"][0]["key"] == "candidate_url"
-    with session_scope(database_url) as session:
-        stored = session.query(UiViewPreference).one()
-        assert stored.view_key == "source_url_candidate_review"
-        assert stored.user_key == "tester"
-
-
-def test_source_url_candidate_review_layout_validates_columns_and_resets(tmp_path: Path, monkeypatch) -> None:
-    client, database_url = _client(tmp_path, monkeypatch)
-
-    unknown = client.put(
-        "/api/vendor-sources/candidates/review-layout",
-        json={"columns": [{"key": "actions", "visible": True}]},
-    )
-    duplicate = client.put(
-        "/api/vendor-sources/candidates/review-layout",
-        json={"columns": [{"key": "status"}, {"key": "status"}]},
-    )
-    bad_width = client.put(
-        "/api/vendor-sources/candidates/review-layout",
-        json={"columns": [{"key": "status", "width_px": 20}]},
-    )
-    min_width = client.put(
-        "/api/vendor-sources/candidates/review-layout",
-        json={"user_key": "tester", "columns": [{"key": "status", "width_px": 28}]},
-    )
-    saved = client.put(
-        "/api/vendor-sources/candidates/review-layout",
-        json={"user_key": "tester", "columns": [{"key": "status", "visible": False}]},
-    )
-    reset = client.post("/api/vendor-sources/candidates/review-layout/reset", params={"user_key": "tester"})
-
-    assert unknown.status_code == 400
-    assert "Unknown" in unknown.json()["detail"]
-    assert duplicate.status_code == 400
-    assert bad_width.status_code == 400
-    assert min_width.status_code == 200
-    assert {column["key"]: column for column in min_width.json()["columns"]}["status"]["width_px"] == 28
-    assert saved.status_code == 200
-    assert reset.status_code == 200
-    assert reset.json()["settings_card"]["collapsed"] is True
-    with session_scope(database_url) as session:
-        assert session.query(UiViewPreference).count() == 0
 
 
 def test_get_source_url_agent_candidate_returns_review_panel_payload(tmp_path: Path, monkeypatch) -> None:
@@ -462,8 +373,18 @@ def test_openapi_includes_source_url_agent_candidate_endpoints() -> None:
     assert "/api/vendor-sources/agent/runs/{run_id}" in paths
     assert "/api/vendor-sources/agent/runs/{run_id}/artifacts" in paths
     assert "/api/vendor-sources/candidates" in paths
+    assert "/api/vendor-sources/candidates/review-layout" not in paths
+    assert "/api/vendor-sources/candidates/review-layout/reset" not in paths
     assert "/api/vendor-sources/candidates/{candidate_id}/review" in paths
     assert "/api/vendor-sources/sources" in paths
+    assert "/api/source-url-agent/sources" in paths
+    assert "/api/source-url-agent/runs" in paths
+    assert "/api/source-url-agent/runs/sync" in paths
+    assert "/api/source-url-agent/runs/{run_id}" in paths
+    assert "/api/source-url-agent/runs/{run_id}/artifacts" in paths
+    assert "/api/source-url-agent/candidates" in paths
+    assert "/api/source-url-agent/candidates/{candidate_id}" in paths
+    assert "/api/source-url-agent/candidates/{candidate_id}/review" in paths
     assert "/api/vendor-sources/captures/runs" in paths
     assert "/api/vendor-sources/captures/runs/{run_id}" in paths
     assert "/api/vendor-sources/captures/runs/{run_id}/artifacts" in paths

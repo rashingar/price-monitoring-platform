@@ -67,10 +67,7 @@ import type {
   SourceUrlCandidate,
   SourceUrlCandidateListParams,
   SourceUrlCandidateListResponse,
-  SourceUrlCandidateReviewActionConfig,
   SourceUrlCandidateReviewBody,
-  SourceUrlCandidateReviewLayout,
-  SourceUrlCandidateReviewLayoutColumn,
   SourceUrlAgentRun,
   SourceUrlAgentRunArtifactsResponse,
   SourceUrlAgentRunRequest,
@@ -1040,60 +1037,6 @@ function normalizeSkroutzNetworkDiagnosticReport(payload: unknown): SkroutzNetwo
     completed_at: normalizeNullableString(source.completed_at),
     timeout_seconds: normalizeOptionalNumber(source.timeout_seconds),
     headed: typeof source.headed === "boolean" ? source.headed : null,
-  };
-}
-
-function normalizeLayoutColumn(value: unknown, index: number): SourceUrlCandidateReviewLayoutColumn | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const key = normalizeNullableString(value.key ?? value.id ?? value.field ?? value.name);
-  if (!key) {
-    return null;
-  }
-
-  return {
-    ...value,
-    key,
-    label: normalizeNullableString(value.label ?? value.title ?? key.replace(/_/g, " ")),
-    visible:
-      typeof value.visible === "boolean"
-        ? value.visible
-        : typeof value.table_column_visible === "boolean"
-          ? value.table_column_visible
-          : true,
-    table_column_visible:
-      typeof value.table_column_visible === "boolean"
-        ? value.table_column_visible
-        : typeof value.visible === "boolean"
-          ? value.visible
-          : true,
-    width_px: normalizeOptionalNumber(value.width_px) ?? null,
-    order: normalizeOptionalNumber(value.order) ?? index,
-  };
-}
-
-function normalizeSourceUrlCandidateReviewLayout(payload: unknown): SourceUrlCandidateReviewLayout {
-  const source = isRecord(payload)
-    ? payload.layout ?? payload.review_layout ?? payload.data ?? payload.result ?? payload
-    : {};
-  const record = isRecord(source) ? source : {};
-  const columns = getArrayPayload(record.columns, ["columns", "items", "data", "results"])
-    .map(normalizeLayoutColumn)
-    .filter((item): item is SourceUrlCandidateReviewLayoutColumn => item !== null);
-  const reviewPanel = isRecord(record.review_panel) ? record.review_panel : {};
-  const reviewActions = getArrayPayload(reviewPanel.review_actions, ["review_actions", "actions", "items"]);
-
-  return {
-    ...record,
-    user_key: normalizeNullableString(record.user_key),
-    columns,
-    actions: isRecord(record.actions) ? record.actions : null,
-    review_panel: {
-      ...reviewPanel,
-      review_actions: reviewActions.filter(isRecord) as SourceUrlCandidateReviewActionConfig[],
-    },
   };
 }
 
@@ -2444,50 +2387,6 @@ export const commerceClient = {
       await request<unknown>(
         appendQuery("/vendor-sources/candidates", params as QueryParams),
         { signal },
-      ),
-    );
-  },
-
-  async getSourceUrlCandidateReviewLayout(
-    userKey = "default",
-    signal?: AbortSignal,
-  ): Promise<SourceUrlCandidateReviewLayout> {
-    return normalizeSourceUrlCandidateReviewLayout(
-      await request<unknown>(
-        appendQuery("/vendor-sources/candidates/review-layout", {
-          user_key: userKey,
-        }),
-        { signal },
-      ),
-    );
-  },
-
-  async updateSourceUrlCandidateReviewLayout(
-    body: SourceUrlCandidateReviewLayout,
-    signal?: AbortSignal,
-  ): Promise<SourceUrlCandidateReviewLayout> {
-    return normalizeSourceUrlCandidateReviewLayout(
-      await request<unknown>("/vendor-sources/candidates/review-layout", {
-        method: "PUT",
-        body,
-        signal,
-      }),
-    );
-  },
-
-  async resetSourceUrlCandidateReviewLayout(
-    userKey = "default",
-    signal?: AbortSignal,
-  ): Promise<SourceUrlCandidateReviewLayout> {
-    return normalizeSourceUrlCandidateReviewLayout(
-      await request<unknown>(
-        appendQuery("/vendor-sources/candidates/review-layout/reset", {
-          user_key: userKey,
-        }),
-        {
-          method: "POST",
-          signal,
-        },
       ),
     );
   },

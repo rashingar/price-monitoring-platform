@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Literal
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,7 +17,7 @@ from sqlalchemy.orm import Session
 from ecommerce.artifacts import ArtifactPathError, ArtifactPathForbiddenError, artifact_link_payload, list_run_artifacts
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import sanitize_database_error
-from ecommerce.db.models import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask, UiViewPreference
+from ecommerce.db.models import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
 from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness, require_database_ready_for_catalog
 from ecommerce.db.repositories import json_safe_value
 from ecommerce.db.session import session_scope
@@ -31,46 +30,13 @@ from ecommerce.source_url_agent.sources import SOURCE_CHOICES, SourceDefinition,
 
 ReviewDecision = Literal["accept", "reject", "replace_url"]
 SourceUrlAgentRunMode = Literal["catalog", "csv"]
-SOURCE_URL_CANDIDATE_REVIEW_VIEW_KEY = "source_url_candidate_review"
-DEFAULT_USER_KEY = "default"
-MIN_COLUMN_WIDTH_PX = 28
-MAX_COLUMN_WIDTH_PX = 800
 DEFAULT_API_MAX_PRODUCTS_PER_BATCH = 25
 MAX_API_SOURCE_URL_AGENT_LIMIT = 500
+router = APIRouter(prefix="/api/source-url-agent", tags=["source-url-agent"])
 
 # Test hook for exercising the API orchestration with the real service layer
 # without launching browser-backed discovery.
 SOURCE_URL_AGENT_API_RESOLVER: Resolver | None = None
-
-DEFAULT_REVIEW_COLUMNS: list[dict[str, Any]] = [
-    {"key": "status", "label": "Status", "visible": True, "order": 10, "width_px": 56, "min_width_px": 28, "data_type": "status"},
-    {"key": "confidence_score", "label": "Confidence", "visible": True, "order": 20, "width_px": 32, "min_width_px": 28, "data_type": "decimal"},
-    {"key": "model", "label": "Model", "visible": False, "order": 30, "width_px": 28, "min_width_px": 28, "data_type": "text"},
-    {"key": "mpn", "label": "MPN", "visible": True, "order": 40, "width_px": 48, "min_width_px": 28, "data_type": "text"},
-    {"key": "manufacturer", "label": "Brand", "visible": True, "order": 50, "width_px": 32, "min_width_px": 28, "data_type": "text"},
-    {"key": "source_name", "label": "Source", "visible": True, "order": 60, "width_px": 32, "min_width_px": 28, "data_type": "text"},
-    {"key": "candidate_price", "label": "Source price", "visible": True, "order": 70, "width_px": 32, "min_width_px": 28, "data_type": "money"},
-    {"key": "own_price", "label": "Own price", "visible": True, "order": 80, "width_px": 32, "min_width_px": 28, "data_type": "money"},
-    {"key": "candidate_title", "label": "Source title", "visible": True, "order": 90, "width_px": 260, "min_width_px": 28, "data_type": "text"},
-    {"key": "candidate_url", "label": "Candidate URL", "visible": False, "order": 100, "width_px": 320, "min_width_px": 28, "data_type": "url"},
-    {"key": "canonical_url", "label": "Canonical URL", "visible": False, "order": 110, "width_px": 320, "min_width_px": 28, "data_type": "url"},
-    {"key": "match_method", "label": "Match Method", "visible": False, "order": 120, "width_px": 180, "min_width_px": 28, "data_type": "text"},
-    {"key": "match_status", "label": "Match Status", "visible": False, "order": 130, "width_px": 136, "min_width_px": 28, "data_type": "status"},
-    {"key": "competing_candidates_count", "label": "Competing", "visible": False, "order": 140, "width_px": 112, "min_width_px": 28, "data_type": "integer"},
-    {"key": "run_id", "label": "Run ID", "visible": False, "order": 150, "width_px": 180, "min_width_px": 28, "data_type": "text"},
-    {"key": "catalog_product_id", "label": "Catalog Product ID", "visible": False, "order": 160, "width_px": 136, "min_width_px": 28, "data_type": "integer"},
-    {"key": "product_name", "label": "Product Name", "visible": False, "order": 170, "width_px": 260, "min_width_px": 28, "data_type": "text"},
-    {"key": "category", "label": "Category", "visible": False, "order": 180, "width_px": 220, "min_width_px": 28, "data_type": "text"},
-    {"key": "expected_listing", "label": "Expected Listing", "visible": False, "order": 190, "width_px": 132, "min_width_px": 28, "data_type": "text"},
-    {"key": "source_domain", "label": "Source Domain", "visible": False, "order": 200, "width_px": 180, "min_width_px": 28, "data_type": "text"},
-    {"key": "source_type", "label": "Source Type", "visible": False, "order": 210, "width_px": 136, "min_width_px": 28, "data_type": "text"},
-    {"key": "created_at", "label": "Created", "visible": False, "order": 220, "width_px": 172, "min_width_px": 28, "data_type": "datetime"},
-    {"key": "updated_at", "label": "Updated", "visible": False, "order": 230, "width_px": 172, "min_width_px": 28, "data_type": "datetime"},
-    {"key": "reviewed_by", "label": "Reviewed By", "visible": False, "order": 240, "width_px": 140, "min_width_px": 28, "data_type": "text"},
-    {"key": "reviewed_at", "label": "Reviewed At", "visible": False, "order": 250, "width_px": 172, "min_width_px": 28, "data_type": "datetime"},
-]
-DEFAULT_REVIEW_COLUMN_KEYS = {column["key"] for column in DEFAULT_REVIEW_COLUMNS}
-
 
 class SourceUrlCandidateReviewRequest(BaseModel):
     decision: ReviewDecision
@@ -99,20 +65,12 @@ class SourceUrlAgentRunRequest(BaseModel):
     no_browser_cache: bool = False
 
 
-class SourceUrlCandidateReviewColumnPreference(BaseModel):
-    key: str
-    visible: bool | None = None
-    order: int | None = None
-    width_px: int | None = None
+@router.get("/sources")
+def list_source_url_agent_sources() -> dict[str, Any]:
+    return {"items": [_source_definition_to_dict(source) for source in load_source_registry().sources.values()]}
 
 
-class SourceUrlCandidateReviewLayoutRequest(BaseModel):
-    user_key: str | None = None
-    columns: list[SourceUrlCandidateReviewColumnPreference] | None = None
-    settings_card_collapsed: bool | None = None
-    review_panel_width_px: int | None = None
-
-
+@router.post("/runs/sync")
 def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, Any]:
     _require_source_url_agent_run_database_ready()
     _validate_source_choice(request.source)
@@ -179,6 +137,7 @@ def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, 
     return _source_url_agent_result_payload(result)
 
 
+@router.post("/runs")
 def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
     _require_source_url_agent_run_database_ready()
     _validate_source_choice(request.source)
@@ -486,6 +445,7 @@ def _refresh_discovery_run_progress(session: Session, run_id: str) -> None:
     row.updated_at = _now()
 
 
+@router.get("/runs")
 def list_source_url_agent_runs(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -506,6 +466,7 @@ def list_source_url_agent_runs(
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
+@router.get("/runs/{run_id}")
 def get_source_url_agent_run(run_id: str) -> dict[str, Any]:
     _require_source_url_agent_run_database_ready()
     try:
@@ -522,10 +483,12 @@ def get_source_url_agent_run(run_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Source URL Agent run query failed: {_safe_db_error(exc)}") from exc
 
 
+@router.get("/runs/{run_id}/artifacts")
 def get_source_url_agent_run_artifacts(run_id: str) -> dict[str, Any]:
     return _source_url_agent_artifact_listing(run_id)
 
 
+@router.get("/candidates")
 def list_source_url_agent_candidates(
     status: str | None = None,
     source_name: str | None = None,
@@ -565,59 +528,7 @@ def list_source_url_agent_candidates(
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
-def get_source_url_candidate_review_layout(user_key: str | None = None) -> dict[str, Any]:
-    _require_catalog_database_ready()
-    resolved_user_key = _preference_user_key(user_key)
-    try:
-        with session_scope() as session:
-            preference = _get_view_preference(session, resolved_user_key)
-            return _review_layout_payload(resolved_user_key, preference.preferences_json if preference is not None else None)
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate layout query failed: {_safe_db_error(exc)}") from exc
-
-
-def save_source_url_candidate_review_layout(request: SourceUrlCandidateReviewLayoutRequest) -> dict[str, Any]:
-    _require_catalog_database_ready()
-    resolved_user_key = _preference_user_key(request.user_key)
-    preferences = _normalize_review_layout_preferences(request)
-    try:
-        with session_scope() as session:
-            now = _now()
-            preference = _get_view_preference(session, resolved_user_key)
-            if preference is None:
-                preference = UiViewPreference(
-                    view_key=SOURCE_URL_CANDIDATE_REVIEW_VIEW_KEY,
-                    user_key=resolved_user_key,
-                    preferences_json=preferences,
-                    created_at=now,
-                    updated_at=now,
-                )
-                session.add(preference)
-            else:
-                preference.preferences_json = preferences
-                preference.updated_at = now
-            session.flush()
-            return _review_layout_payload(resolved_user_key, preference.preferences_json)
-    except HTTPException:
-        raise
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate layout save failed: {_safe_db_error(exc)}") from exc
-
-
-def reset_source_url_candidate_review_layout(user_key: str | None = None) -> dict[str, Any]:
-    _require_catalog_database_ready()
-    resolved_user_key = _preference_user_key(user_key)
-    try:
-        with session_scope() as session:
-            preference = _get_view_preference(session, resolved_user_key)
-            if preference is not None:
-                session.delete(preference)
-                session.flush()
-            return _review_layout_payload(resolved_user_key, None)
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate layout reset failed: {_safe_db_error(exc)}") from exc
-
-
+@router.get("/candidates/{candidate_id}")
 def get_source_url_agent_candidate(candidate_id: int) -> dict[str, Any]:
     _require_catalog_database_ready()
     try:
@@ -650,6 +561,7 @@ def _matching_source_url_id(session: Session, candidate: SourceUrlCandidate) -> 
     return int(value) if value is not None else None
 
 
+@router.patch("/candidates/{candidate_id}/review")
 def review_source_url_agent_candidate(candidate_id: int, request: SourceUrlCandidateReviewRequest) -> dict[str, Any]:
     _require_catalog_database_ready()
     try:
@@ -978,6 +890,21 @@ def _source_url_agent_artifact_items(run_id: str) -> list[dict[str, Any]]:
         raise
 
 
+def _source_definition_to_dict(source: SourceDefinition) -> dict[str, Any]:
+    return {
+        "source_name": source.source_name,
+        "source_domain": source.source_domain,
+        "source_type": source.source_type,
+        "enabled": source.enabled,
+        "discovery_enabled": source.enabled,
+        "expected_listing_field": source.expected_listing_field,
+        "rate_limit_seconds": source.rate_limit_seconds,
+        "max_candidates_per_product": source.max_candidates_per_product,
+        "max_searches_per_product": source.max_searches_per_product,
+        "notes": source.notes,
+    }
+
+
 def _artifact_refs_from_paths(paths: dict[str, str]) -> list[dict[str, Any]]:
     refs: list[dict[str, Any]] = []
     for key, value in paths.items():
@@ -1078,131 +1005,8 @@ def _candidate_review_panel_payload(row: SourceUrlCandidate) -> dict[str, Any]:
                 "promotes_source_url": False,
             },
         ],
-        "review_endpoint": f"/api/vendor-sources/candidates/{row.id}/review",
+        "review_endpoint": f"/api/source-url-agent/candidates/{row.id}/review",
     }
-
-
-def _get_view_preference(session: Session, user_key: str) -> UiViewPreference | None:
-    statement = select(UiViewPreference).where(
-        UiViewPreference.view_key == SOURCE_URL_CANDIDATE_REVIEW_VIEW_KEY,
-        UiViewPreference.user_key == user_key,
-    )
-    return session.execute(statement).scalar_one_or_none()
-
-
-def _review_layout_payload(user_key: str, preferences: dict[str, Any] | None) -> dict[str, Any]:
-    normalized = _merge_review_layout_preferences(preferences)
-    return {
-        "view_key": SOURCE_URL_CANDIDATE_REVIEW_VIEW_KEY,
-        "user_key": user_key,
-        "settings_card": {
-            "collapsible": True,
-            "collapsed": normalized["settings_card"]["collapsed"],
-            "sections": ["columns"],
-        },
-        "columns": normalized["columns"],
-        "actions": {
-            "table_column_visible": False,
-            "replacement": "inline_review_panel",
-            "review_endpoint_template": "/api/vendor-sources/candidates/{candidate_id}/review",
-        },
-        "review_panel": normalized["review_panel"],
-    }
-
-
-def _normalize_review_layout_preferences(request: SourceUrlCandidateReviewLayoutRequest) -> dict[str, Any]:
-    column_overrides: dict[str, dict[str, Any]] = {}
-    seen: set[str] = set()
-    for column in request.columns or []:
-        key = _optional_text(column.key)
-        if not key:
-            raise HTTPException(status_code=400, detail="Column key is required.")
-        if key not in DEFAULT_REVIEW_COLUMN_KEYS:
-            raise HTTPException(status_code=400, detail=f"Unknown Source URL Candidate Review column: {key}.")
-        if key in seen:
-            raise HTTPException(status_code=400, detail=f"Duplicate Source URL Candidate Review column: {key}.")
-        seen.add(key)
-        override: dict[str, Any] = {"key": key}
-        if column.visible is not None:
-            override["visible"] = bool(column.visible)
-        if column.order is not None:
-            if column.order < 0:
-                raise HTTPException(status_code=400, detail=f"Column order must be greater than or equal to 0: {key}.")
-            override["order"] = int(column.order)
-        if column.width_px is not None:
-            override["width_px"] = _bounded_width(column.width_px, f"Column width out of range for {key}.")
-        column_overrides[key] = override
-
-    review_panel_width = request.review_panel_width_px
-    if review_panel_width is not None:
-        review_panel_width = _bounded_width(review_panel_width, "Review panel width out of range.")
-
-    return {
-        "columns": list(column_overrides.values()),
-        "settings_card": {"collapsed": True if request.settings_card_collapsed is None else bool(request.settings_card_collapsed)},
-        "review_panel": {
-            "mode": "inline_row",
-            "open_on": "row_single_click",
-            "width_px": review_panel_width or 420,
-        },
-    }
-
-
-def _merge_review_layout_preferences(preferences: dict[str, Any] | None) -> dict[str, Any]:
-    columns = deepcopy(DEFAULT_REVIEW_COLUMNS)
-    by_key = {column["key"]: column for column in columns}
-    if isinstance(preferences, dict):
-        for override in preferences.get("columns") or []:
-            if not isinstance(override, dict):
-                continue
-            key = override.get("key")
-            if key not in by_key:
-                continue
-            target = by_key[key]
-            if isinstance(override.get("visible"), bool):
-                target["visible"] = override["visible"]
-            if isinstance(override.get("order"), int) and override["order"] >= 0:
-                target["order"] = override["order"]
-            if isinstance(override.get("width_px"), int):
-                target["width_px"] = _clamp_width(override["width_px"])
-    columns.sort(key=lambda item: (int(item["order"]), str(item["key"])))
-
-    stored_settings = preferences.get("settings_card") if isinstance(preferences, dict) else None
-    stored_review_panel = preferences.get("review_panel") if isinstance(preferences, dict) else None
-    collapsed = True
-    if isinstance(stored_settings, dict) and isinstance(stored_settings.get("collapsed"), bool):
-        collapsed = stored_settings["collapsed"]
-    width_px = 420
-    if isinstance(stored_review_panel, dict) and isinstance(stored_review_panel.get("width_px"), int):
-        width_px = _clamp_width(stored_review_panel["width_px"])
-
-    return {
-        "columns": columns,
-        "settings_card": {"collapsed": collapsed},
-        "review_panel": {
-            "mode": "inline_row",
-            "open_on": "row_single_click",
-            "width_px": width_px,
-            "preserve_row_selection": True,
-        },
-    }
-
-
-def _preference_user_key(value: str | None) -> str:
-    text = _optional_text(value) or DEFAULT_USER_KEY
-    if len(text) > 128:
-        raise HTTPException(status_code=400, detail="user_key must be 128 characters or fewer.")
-    return text
-
-
-def _bounded_width(value: int, detail: str) -> int:
-    if value < MIN_COLUMN_WIDTH_PX or value > MAX_COLUMN_WIDTH_PX:
-        raise HTTPException(status_code=400, detail=f"{detail} Expected {MIN_COLUMN_WIDTH_PX}-{MAX_COLUMN_WIDTH_PX}px.")
-    return int(value)
-
-
-def _clamp_width(value: int) -> int:
-    return min(MAX_COLUMN_WIDTH_PX, max(MIN_COLUMN_WIDTH_PX, int(value)))
 
 
 def _promotion_notes(

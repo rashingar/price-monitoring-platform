@@ -12,7 +12,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from ecommerce.api import routes_source_url_agent as source_url_agent
 from ecommerce.api.routes_source_url_agent import (
     SourceUrlAgentRunRequest,
-    SourceUrlCandidateReviewLayoutRequest,
     SourceUrlCandidateReviewRequest,
 )
 from ecommerce.artifacts import artifact_link_payload
@@ -248,24 +247,6 @@ def list_vendor_source_candidates(
     )
 
 
-@router.get("/candidates/review-layout")
-def get_vendor_source_candidate_review_layout(user_key: str | None = None) -> dict[str, Any]:
-    payload = source_url_agent.get_source_url_candidate_review_layout(user_key=user_key)
-    return _vendor_review_layout_payload(payload)
-
-
-@router.put("/candidates/review-layout")
-def save_vendor_source_candidate_review_layout(request: SourceUrlCandidateReviewLayoutRequest) -> dict[str, Any]:
-    payload = source_url_agent.save_source_url_candidate_review_layout(request)
-    return _vendor_review_layout_payload(payload)
-
-
-@router.post("/candidates/review-layout/reset")
-def reset_vendor_source_candidate_review_layout(user_key: str | None = None) -> dict[str, Any]:
-    payload = source_url_agent.reset_source_url_candidate_review_layout(user_key=user_key)
-    return _vendor_review_layout_payload(payload)
-
-
 @router.get("/candidates/{candidate_id}")
 def get_vendor_source_candidate(candidate_id: int) -> dict[str, Any]:
     payload = source_url_agent.get_source_url_agent_candidate(candidate_id)
@@ -278,13 +259,6 @@ def get_vendor_source_candidate(candidate_id: int) -> dict[str, Any]:
 @router.patch("/candidates/{candidate_id}/review")
 def review_vendor_source_candidate(candidate_id: int, request: SourceUrlCandidateReviewRequest) -> dict[str, Any]:
     return source_url_agent.review_source_url_agent_candidate(candidate_id, request)
-
-
-def _vendor_review_layout_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    actions = payload.get("actions")
-    if isinstance(actions, dict):
-        actions["review_endpoint_template"] = "/api/vendor-sources/candidates/{candidate_id}/review"
-    return payload
 
 
 def _require_vendor_sources_database_ready() -> None:

@@ -21,6 +21,8 @@ import { EmptyState, ErrorState, LoadingState } from "../components/layout/State
 
 const DEFAULT_LIMIT = 50;
 const REVIEW_LAYOUT_USER_KEY = "default";
+export const SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY =
+  "price-monitoring-platform:source-url-candidate-review-layout:v1";
 const MIN_COLUMN_WIDTH_PX = 28;
 const MAX_COLUMN_WIDTH_PX = 800;
 const DEFAULT_COLUMN_WIDTH_PX = 80;
@@ -354,6 +356,77 @@ function makeFallbackLayout(): SourceUrlCandidateReviewLayout {
     actions: { table_column_visible: false, replacement: "inline_panel" },
     review_panel: { mode: "inline_row", open_on: "row_single_click", review_actions: FALLBACK_REVIEW_ACTIONS },
   };
+}
+
+interface LocalReviewLayoutPreferences {
+  columns?: Array<{
+    key: string;
+    visible: boolean;
+    order: number;
+    width_px: number;
+  }>;
+}
+
+function localStorageOrNull(): Storage | null {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function serializeLocalReviewLayout(layout: SourceUrlCandidateReviewLayout): LocalReviewLayoutPreferences {
+  return {
+    columns: normalizeColumns(layout.columns).map((column, order) => ({
+      key: columnKey(column),
+      visible: isColumnVisible(column),
+      order,
+      width_px: getColumnWidth(column),
+    })),
+  };
+}
+
+export function loadLocalSourceUrlCandidateReviewLayout(): SourceUrlCandidateReviewLayout {
+  const fallback = makeFallbackLayout();
+  const storage = localStorageOrNull();
+  if (storage === null) {
+    return fallback;
+  }
+
+  try {
+    const rawValue = storage.getItem(SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY);
+    if (!rawValue) {
+      return fallback;
+    }
+    const payload = JSON.parse(rawValue) as LocalReviewLayoutPreferences;
+    const columns = Array.isArray(payload.columns) ? payload.columns : [];
+    return {
+      ...fallback,
+      columns: normalizeColumns(columns),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveLocalSourceUrlCandidateReviewLayout(layout: SourceUrlCandidateReviewLayout): SourceUrlCandidateReviewLayout {
+  const nextLayout = {
+    ...makeFallbackLayout(),
+    columns: normalizeColumns(layout.columns),
+  };
+  const storage = localStorageOrNull();
+  if (storage !== null) {
+    storage.setItem(
+      SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY,
+      JSON.stringify(serializeLocalReviewLayout(nextLayout)),
+    );
+  }
+  return nextLayout;
+}
+
+export function resetLocalSourceUrlCandidateReviewLayout(): SourceUrlCandidateReviewLayout {
+  localStorageOrNull()?.removeItem(SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY);
+  return makeFallbackLayout();
 }
 
 function getColumnWidth(column: SourceUrlCandidateReviewLayoutColumn): number {
@@ -985,7 +1058,7 @@ export function SourceUrlCandidatesPage() {
     limit: DEFAULT_LIMIT,
     offset: 0,
   });
-  const [layout, setLayout] = useState<SourceUrlCandidateReviewLayout>(makeFallbackLayout());
+  const [layout, setLayout] = useState<SourceUrlCandidateReviewLayout>(() => loadLocalSourceUrlCandidateReviewLayout());
   const [isLayoutSaving, setIsLayoutSaving] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1033,35 +1106,11 @@ export function SourceUrlCandidatesPage() {
     [filters, offset],
   );
 
-  const loadLayout = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const nextLayout = await commerceClient.getSourceUrlCandidateReviewLayout(
-        REVIEW_LAYOUT_USER_KEY,
-        signal,
-      );
-      if (!signal?.aborted) {
-        setLayout({ ...nextLayout, columns: normalizeColumns(nextLayout.columns) });
-        setLayoutError(null);
-      }
-    } catch (loadError) {
-      if (!signal?.aborted) {
-        setLayout(makeFallbackLayout());
-        setLayoutError(getCommerceApiErrorMessage(loadError));
-      }
-    }
-  }, []);
-
   useEffect(() => {
     const controller = new AbortController();
     void loadCandidates(controller.signal);
     return () => controller.abort();
   }, [loadCandidates]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadLayout(controller.signal);
-    return () => controller.abort();
-  }, [loadLayout]);
 
   const visibleCandidates = useMemo(
     () =>
@@ -1102,17 +1151,11 @@ export function SourceUrlCandidatesPage() {
     setIsLayoutSaving(true);
     setLayoutError(null);
     try {
-      const nextLayout = await commerceClient.updateSourceUrlCandidateReviewLayout({
-        ...layout,
-        user_key: layout.user_key ?? REVIEW_LAYOUT_USER_KEY,
-        columns: normalizeColumns(layout.columns),
-        actions: { ...(layout.actions ?? {}), table_column_visible: false, replacement: "inline_panel" },
-        review_panel: { ...(layout.review_panel ?? {}), mode: "inline_row", open_on: "row_single_click" },
-      });
-      setLayout({ ...nextLayout, columns: normalizeColumns(nextLayout.columns) });
+      const nextLayout = saveLocalSourceUrlCandidateReviewLayout(layout);
+      setLayout(nextLayout);
       setNotice("Review table layout saved.");
     } catch (saveError) {
-      setLayoutError(getCommerceApiErrorMessage(saveError));
+      setLayoutError(saveError instanceof Error ? saveError.message : "Review table layout could not be saved locally.");
     } finally {
       setIsLayoutSaving(false);
     }
@@ -1122,11 +1165,11 @@ export function SourceUrlCandidatesPage() {
     setIsLayoutSaving(true);
     setLayoutError(null);
     try {
-      const nextLayout = await commerceClient.resetSourceUrlCandidateReviewLayout(REVIEW_LAYOUT_USER_KEY);
-      setLayout({ ...nextLayout, columns: normalizeColumns(nextLayout.columns) });
+      const nextLayout = resetLocalSourceUrlCandidateReviewLayout();
+      setLayout(nextLayout);
       setNotice("Review table layout reset.");
     } catch (resetError) {
-      setLayoutError(getCommerceApiErrorMessage(resetError));
+      setLayoutError(resetError instanceof Error ? resetError.message : "Review table layout could not be reset locally.");
     } finally {
       setIsLayoutSaving(false);
     }

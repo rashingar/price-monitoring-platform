@@ -20,6 +20,7 @@ import {
   productFactorySettings,
 } from "../fixtures/productFactoryApi";
 import { installMockFetch, type MockRoute } from "../mockFetch";
+import { SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY } from "../../pages/SourceUrlCandidatesPage";
 import { renderWithRouter } from "../renderWithRouter";
 
 const allRoutes = [...productFactoryFixtureRoutes, ...commerceFixtureRoutes];
@@ -171,7 +172,8 @@ describe("platform mocked page smoke tests", () => {
   });
 
   it("renders Vendor Source Candidate Review table", async () => {
-    installMockFetch(allRoutes);
+    localStorage.removeItem(SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY);
+    const mockFetch = installMockFetch(allRoutes);
 
     renderWithRouter("/vendor-sources/candidates");
 
@@ -223,6 +225,16 @@ describe("platform mocked page smoke tests", () => {
       "Source title",
     ]);
     fireEvent.click(within(settingsPanel).getByRole("button", { name: "Move Status up" }));
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: "Save layout" }));
+    await waitFor(() =>
+      expect(localStorage.getItem(SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY)).toContain('"columns"'),
+    );
+    expect(mockFetch.requests.map((request) => request.pathname)).not.toContain(
+      "/commerce-api/vendor-sources/candidates/review-layout",
+    );
+    expect(mockFetch.requests.map((request) => request.pathname)).not.toContain(
+      "/commerce-api/vendor-sources/candidates/review-layout/reset",
+    );
     expect(screen.getByText("0.9823")).toBeInTheDocument();
     expect(screen.getAllByText("needs review").length).toBeGreaterThan(0);
     expect(screen.getByText("Midea MD-20L Electronet")).toBeInTheDocument();
@@ -246,6 +258,9 @@ describe("platform mocked page smoke tests", () => {
     expect(within(reviewPanel).queryByRole("button", { name: /needs manual review/i })).not.toBeInTheDocument();
     expect(within(reviewPanel).queryByText("Catalog product")).not.toBeInTheDocument();
     expect(within(reviewPanel).queryByText("Candidate source")).not.toBeInTheDocument();
+
+    fireEvent.click(within(settingsPanel).getByRole("button", { name: "Reset layout" }));
+    await waitFor(() => expect(localStorage.getItem(SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY)).toBeNull());
   });
 
   it("runs Skroutz browser diagnostics from candidate review and renders endpoint details", async () => {

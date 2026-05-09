@@ -288,6 +288,13 @@ describe("commerce API client contract fixtures", () => {
     );
   });
 
+  it("does not require a backend Source URL Candidate Review layout preference endpoint", () => {
+    expect("getSourceUrlCandidateReviewLayout" in commerceClient).toBe(false);
+    expect("updateSourceUrlCandidateReviewLayout" in commerceClient).toBe(false);
+    expect("resetSourceUrlCandidateReviewLayout" in commerceClient).toBe(false);
+    expect(commerceFixtureRoutes.some((route) => String(route.path).includes("candidates/review-layout"))).toBe(false);
+  });
+
   it("constructs Vendor Sources capture run URLs and normalizes capture artifacts", async () => {
     const mockFetch = installMockFetch(commerceFixtureRoutes);
 

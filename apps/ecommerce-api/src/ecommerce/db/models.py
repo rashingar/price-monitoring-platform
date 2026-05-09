@@ -261,21 +261,6 @@ class VendorSourceCaptureRun(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class UiViewPreference(Base):
-    __tablename__ = "ui_view_preferences"
-    __table_args__ = (
-        UniqueConstraint("view_key", "user_key", name="uq_ui_view_preferences_view_user"),
-        Index("ix_ui_view_preferences_view_key", "view_key"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    view_key: Mapped[str] = mapped_column(String, nullable=False)
-    user_key: Mapped[str] = mapped_column(String, nullable=False, default="default", server_default="default")
-    preferences_json: Mapped[dict[str, Any]] = mapped_column(JSON_DOCUMENT, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-
-
 class ProductSource(Base):
     __tablename__ = "product_sources"
     __table_args__ = (

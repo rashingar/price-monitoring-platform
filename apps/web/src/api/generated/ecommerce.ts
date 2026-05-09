@@ -242,6 +242,40 @@ export interface paths {
     /** Post Product From Source */
     post: operations["post_product_from_source_api_products_from_source_post"];
   };
+  "/api/source-url-agent/candidates": {
+    /** List Source Url Agent Candidates */
+    get: operations["list_source_url_agent_candidates_api_source_url_agent_candidates_get"];
+  };
+  "/api/source-url-agent/candidates/{candidate_id}": {
+    /** Get Source Url Agent Candidate */
+    get: operations["get_source_url_agent_candidate_api_source_url_agent_candidates__candidate_id__get"];
+  };
+  "/api/source-url-agent/candidates/{candidate_id}/review": {
+    /** Review Source Url Agent Candidate */
+    patch: operations["review_source_url_agent_candidate_api_source_url_agent_candidates__candidate_id__review_patch"];
+  };
+  "/api/source-url-agent/runs": {
+    /** List Source Url Agent Runs */
+    get: operations["list_source_url_agent_runs_api_source_url_agent_runs_get"];
+    /** Enqueue Source Url Agent Run */
+    post: operations["enqueue_source_url_agent_run_api_source_url_agent_runs_post"];
+  };
+  "/api/source-url-agent/runs/{run_id}": {
+    /** Get Source Url Agent Run */
+    get: operations["get_source_url_agent_run_api_source_url_agent_runs__run_id__get"];
+  };
+  "/api/source-url-agent/runs/{run_id}/artifacts": {
+    /** Get Source Url Agent Run Artifacts */
+    get: operations["get_source_url_agent_run_artifacts_api_source_url_agent_runs__run_id__artifacts_get"];
+  };
+  "/api/source-url-agent/runs/sync": {
+    /** Launch Source Url Agent Run */
+    post: operations["launch_source_url_agent_run_api_source_url_agent_runs_sync_post"];
+  };
+  "/api/source-url-agent/sources": {
+    /** List Source Url Agent Sources */
+    get: operations["list_source_url_agent_sources_api_source_url_agent_sources_get"];
+  };
   "/api/vendor-sources/agent/runs": {
     /** List Vendor Source Agent Runs */
     get: operations["list_vendor_source_agent_runs_api_vendor_sources_agent_runs_get"];
@@ -267,16 +301,6 @@ export interface paths {
   "/api/vendor-sources/candidates/{candidate_id}/review": {
     /** Review Vendor Source Candidate */
     patch: operations["review_vendor_source_candidate_api_vendor_sources_candidates__candidate_id__review_patch"];
-  };
-  "/api/vendor-sources/candidates/review-layout": {
-    /** Get Vendor Source Candidate Review Layout */
-    get: operations["get_vendor_source_candidate_review_layout_api_vendor_sources_candidates_review_layout_get"];
-    /** Save Vendor Source Candidate Review Layout */
-    put: operations["save_vendor_source_candidate_review_layout_api_vendor_sources_candidates_review_layout_put"];
-  };
-  "/api/vendor-sources/candidates/review-layout/reset": {
-    /** Reset Vendor Source Candidate Review Layout */
-    post: operations["reset_vendor_source_candidate_review_layout_api_vendor_sources_candidates_review_layout_reset_post"];
   };
   "/api/vendor-sources/captures/runs": {
     /** Get Vendor Source Capture Runs */
@@ -674,28 +698,6 @@ export interface components {
        * @default all
        */
       source?: string;
-    };
-    /** SourceUrlCandidateReviewColumnPreference */
-    SourceUrlCandidateReviewColumnPreference: {
-      /** Key */
-      key: string;
-      /** Order */
-      order?: number | null;
-      /** Visible */
-      visible?: boolean | null;
-      /** Width Px */
-      width_px?: number | null;
-    };
-    /** SourceUrlCandidateReviewLayoutRequest */
-    SourceUrlCandidateReviewLayoutRequest: {
-      /** Columns */
-      columns?: components["schemas"]["SourceUrlCandidateReviewColumnPreference"][] | null;
-      /** Review Panel Width Px */
-      review_panel_width_px?: number | null;
-      /** Settings Card Collapsed */
-      settings_card_collapsed?: boolean | null;
-      /** User Key */
-      user_key?: string | null;
     };
     /** SourceUrlCandidateReviewRequest */
     SourceUrlCandidateReviewRequest: {
@@ -2408,6 +2410,225 @@ export interface operations {
       };
     };
   };
+  /** List Source Url Agent Candidates */
+  list_source_url_agent_candidates_api_source_url_agent_candidates_get: {
+    parameters: {
+      query?: {
+        status?: string | null;
+        source_name?: string | null;
+        run_id?: string | null;
+        model?: string | null;
+        catalog_product_id?: string | null;
+        min_confidence?: string | null;
+        max_confidence?: string | null;
+        limit?: number;
+        offset?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Source Url Agent Candidate */
+  get_source_url_agent_candidate_api_source_url_agent_candidates__candidate_id__get: {
+    parameters: {
+      path: {
+        candidate_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Review Source Url Agent Candidate */
+  review_source_url_agent_candidate_api_source_url_agent_candidates__candidate_id__review_patch: {
+    parameters: {
+      path: {
+        candidate_id: number;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SourceUrlCandidateReviewRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Source Url Agent Runs */
+  list_source_url_agent_runs_api_source_url_agent_runs_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Enqueue Source Url Agent Run */
+  enqueue_source_url_agent_run_api_source_url_agent_runs_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SourceUrlAgentRunRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Source Url Agent Run */
+  get_source_url_agent_run_api_source_url_agent_runs__run_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Source Url Agent Run Artifacts */
+  get_source_url_agent_run_artifacts_api_source_url_agent_runs__run_id__artifacts_get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Launch Source Url Agent Run */
+  launch_source_url_agent_run_api_source_url_agent_runs_sync_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SourceUrlAgentRunRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Source Url Agent Sources */
+  list_source_url_agent_sources_api_source_url_agent_sources_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
   /** List Vendor Source Agent Runs */
   list_vendor_source_agent_runs_api_vendor_sources_agent_runs_get: {
     parameters: {
@@ -2571,78 +2792,6 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["SourceUrlCandidateReviewRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Vendor Source Candidate Review Layout */
-  get_vendor_source_candidate_review_layout_api_vendor_sources_candidates_review_layout_get: {
-    parameters: {
-      query?: {
-        user_key?: string | null;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Save Vendor Source Candidate Review Layout */
-  save_vendor_source_candidate_review_layout_api_vendor_sources_candidates_review_layout_put: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SourceUrlCandidateReviewLayoutRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Reset Vendor Source Candidate Review Layout */
-  reset_vendor_source_candidate_review_layout_api_vendor_sources_candidates_review_layout_reset_post: {
-    parameters: {
-      query?: {
-        user_key?: string | null;
       };
     };
     responses: {

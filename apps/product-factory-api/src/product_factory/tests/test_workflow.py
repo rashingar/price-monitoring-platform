@@ -205,7 +205,7 @@ def test_prepare_workflow_writes_prompt_artifacts(tmp_path: Path, monkeypatch) -
     assert seo_meta_context["task"] == "seo_meta"
     assert seo_meta_context["writer_rules"]["required_keywords"] == ["LG", "GSGV80PYLL"]
     assert seo_meta_context["product"]["meta_title"] == "LG GSGV80PYLL Ψυγείο Ντουλάπα 635Lt | eTranoulis"
-    assert "always include the provided brand and mpn/model values" in seo_meta_prompt
+    assert "always include the provided brand and preferred_identifier values" in seo_meta_prompt
     assert result.metadata_path.name == "prepare.run.json"
     assert metadata["run"]["model"] == "233541"
     assert metadata["run"]["run_type"] == "prepare"

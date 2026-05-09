@@ -24,6 +24,7 @@ from ..services import (
 )
 from ..services.authoring_service import (
     AuthoringStatus,
+    authoring_service_error_from_exception,
     run_intro_text_authoring,
     run_seo_meta_authoring,
 )
@@ -150,9 +151,10 @@ def run_authoring_intro_job(
     log("Calling intro text authoring service.")
     try:
         status = run_intro_text_authoring_fn(model, retry=retry)
-    except ServiceError as exc:
-        log(f"Intro text authoring failed: {exc.message}")
-        return _failed_authoring_result("Intro text authoring failed.", exc)
+    except Exception as exc:
+        service_error = authoring_service_error_from_exception(exc)
+        log(f"Intro text authoring failed [{service_error.code}]: {service_error.message}")
+        return _failed_authoring_result("Intro text authoring failed.", service_error)
     log("Intro text authoring succeeded.")
     return JobRunResult(
         status=JobStatus.SUCCEEDED,
@@ -173,9 +175,10 @@ def run_authoring_seo_job(
     log("Calling SEO meta authoring service.")
     try:
         status = run_seo_meta_authoring_fn(model, retry=retry)
-    except ServiceError as exc:
-        log(f"SEO meta authoring failed: {exc.message}")
-        return _failed_authoring_result("SEO meta authoring failed.", exc)
+    except Exception as exc:
+        service_error = authoring_service_error_from_exception(exc)
+        log(f"SEO meta authoring failed [{service_error.code}]: {service_error.message}")
+        return _failed_authoring_result("SEO meta authoring failed.", service_error)
     log("SEO meta authoring succeeded.")
     return JobRunResult(
         status=JobStatus.SUCCEEDED,

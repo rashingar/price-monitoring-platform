@@ -1,7 +1,7 @@
 """vendor source capture run history
 
 Revision ID: 20260505_0008
-Revises: 20260504_0007
+Revises: 20260503_0006
 Create Date: 2026-05-05 00:00:00.000000
 """
 
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision = "20260505_0008"
-down_revision = "20260504_0007"
+down_revision = "20260503_0006"
 branch_labels = None
 depends_on = None
 

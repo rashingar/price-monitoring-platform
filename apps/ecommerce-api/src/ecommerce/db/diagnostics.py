@@ -31,7 +31,6 @@ REQUIRED_PRICE_MONITORING_TABLES = (
     "offer_observations",
     "source_url_discovery_runs",
     "source_url_candidates",
-    "ui_view_preferences",
 )
 
 def get_alembic_head_revision() -> str | None:

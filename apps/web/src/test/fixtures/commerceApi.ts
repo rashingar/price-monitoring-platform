@@ -2020,21 +2020,6 @@ export const commerceFixtureRoutes: MockRoute[] = [
   { method: "GET", path: "/commerce-api/vendor-sources/candidates", response: sourceUrlCandidatesResponse },
   {
     method: "GET",
-    path: "/commerce-api/vendor-sources/candidates/review-layout",
-    response: sourceUrlCandidateReviewLayout,
-  },
-  {
-    method: "PUT",
-    path: "/commerce-api/vendor-sources/candidates/review-layout",
-    response: sourceUrlCandidateReviewLayout,
-  },
-  {
-    method: "POST",
-    path: "/commerce-api/vendor-sources/candidates/review-layout/reset",
-    response: sourceUrlCandidateReviewLayout,
-  },
-  {
-    method: "GET",
     path: "/commerce-api/vendor-sources/candidates/501",
     response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
@@ -2092,21 +2077,6 @@ export const commerceFixtureRoutes: MockRoute[] = [
     response: sourceUrlAgentArtifacts,
   },
   { method: "GET", path: "/commerce-api/vendor-sources/candidates", response: sourceUrlCandidatesResponse },
-  {
-    method: "GET",
-    path: "/commerce-api/vendor-sources/candidates/review-layout",
-    response: sourceUrlCandidateReviewLayout,
-  },
-  {
-    method: "PUT",
-    path: "/commerce-api/vendor-sources/candidates/review-layout",
-    response: sourceUrlCandidateReviewLayout,
-  },
-  {
-    method: "POST",
-    path: "/commerce-api/vendor-sources/candidates/review-layout/reset",
-    response: sourceUrlCandidateReviewLayout,
-  },
   {
     method: "GET",
     path: "/commerce-api/vendor-sources/candidates/501",
