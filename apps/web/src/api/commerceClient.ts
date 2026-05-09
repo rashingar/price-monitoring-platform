@@ -1050,16 +1050,16 @@ function normalizeSourceUrlCandidateReviewLayout(payload: unknown): SourceUrlCan
   const columns = getArrayPayload(record.columns, ["columns", "items", "data", "results"])
     .map(normalizeLayoutColumn)
     .filter((item): item is SourceUrlCandidateReviewLayoutColumn => item !== null);
-  const drawer = isRecord(record.drawer) ? record.drawer : {};
-  const reviewActions = getArrayPayload(drawer.review_actions, ["review_actions", "actions", "items"]);
+  const reviewPanel = isRecord(record.review_panel) ? record.review_panel : {};
+  const reviewActions = getArrayPayload(reviewPanel.review_actions, ["review_actions", "actions", "items"]);
 
   return {
     ...record,
     user_key: normalizeNullableString(record.user_key),
     columns,
     actions: isRecord(record.actions) ? record.actions : null,
-    drawer: {
-      ...drawer,
+    review_panel: {
+      ...reviewPanel,
       review_actions: reviewActions.filter(isRecord) as SourceUrlCandidateReviewActionConfig[],
     },
   };

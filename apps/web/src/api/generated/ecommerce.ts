@@ -703,10 +703,10 @@ export interface components {
     };
     /** SourceUrlCandidateReviewLayoutRequest */
     SourceUrlCandidateReviewLayoutRequest: {
-      /** Action Panel Width Px */
-      action_panel_width_px?: number | null;
       /** Columns */
       columns?: components["schemas"]["SourceUrlCandidateReviewColumnPreference"][] | null;
+      /** Review Panel Width Px */
+      review_panel_width_px?: number | null;
       /** Settings Card Collapsed */
       settings_card_collapsed?: boolean | null;
       /** User Key */
@@ -718,7 +718,7 @@ export interface components {
        * Decision
        * @enum {string}
        */
-      decision: "accept" | "reject" | "replace_url" | "not_found" | "needs_manual_review";
+      decision: "accept" | "reject" | "replace_url";
       /** Review Notes */
       review_notes?: string | null;
       /** Reviewed By */

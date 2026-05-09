@@ -1134,14 +1134,14 @@ export const sourceUrlCandidateReviewLayout = {
     { key: "created_at", label: "Created", visible: true, width_px: 155, order: 9 },
     { key: "actions", label: "Actions", visible: false, table_column_visible: false, width_px: 120, order: 10 },
   ],
-  actions: { table_column_visible: false, replacement: "drawer_panel" },
-  drawer: {
+  actions: { table_column_visible: false, replacement: "inline_review_panel" },
+  review_panel: {
+    mode: "inline_row",
+    open_on: "row_single_click",
     review_actions: [
       { decision: "accept", label: "Accept", style: "primary" },
-      { decision: "reject", label: "Reject", style: "danger" },
-      { decision: "not_found", label: "Not found", style: "secondary" },
-      { decision: "needs_manual_review", label: "Needs review", style: "secondary" },
       { decision: "replace_url", label: "Replace URL", style: "secondary", requires_url: true },
+      { decision: "reject", label: "Reject", style: "danger" },
     ],
   },
 };
@@ -1798,15 +1798,28 @@ function reviewSourceUrlCandidateResponse(request: MockRequest) {
     typeof request.body === "object" && request.body !== null && !Array.isArray(request.body)
       ? (request.body as Record<string, unknown>)
       : {};
-  const decision = typeof body.decision === "string" ? body.decision : "needs_manual_review";
+  const decision = typeof body.decision === "string" ? body.decision : "";
+  if (!["accept", "reject", "replace_url"].includes(decision)) {
+    return {
+      status: 422,
+      body: {
+        detail: [
+          {
+            type: "literal_error",
+            loc: ["body", "decision"],
+            msg: "Input should be 'accept', 'reject' or 'replace_url'",
+            input: decision,
+          },
+        ],
+      },
+    };
+  }
   const status =
     decision === "accept"
       ? "accepted"
       : decision === "reject"
         ? "rejected"
-        : decision === "not_found"
-          ? "not_found"
-          : "needs_review";
+        : "accepted";
 
   return {
     ...sourceUrlCandidates.items[0],
@@ -2020,12 +2033,12 @@ export const commerceFixtureRoutes: MockRoute[] = [
   {
     method: "GET",
     path: "/commerce-api/vendor-sources/candidates/501",
-    response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, drawer: sourceUrlCandidateReviewLayout.drawer } },
+    response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
   {
     method: "GET",
     path: "/commerce-api/vendor-sources/candidates/502",
-    response: { candidate: { ...sourceUrlCandidates.items[1], drawer: sourceUrlCandidateReviewLayout.drawer } },
+    response: { candidate: { ...sourceUrlCandidates.items[1], review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
   {
     method: "PATCH",
@@ -2094,12 +2107,12 @@ export const commerceFixtureRoutes: MockRoute[] = [
   {
     method: "GET",
     path: "/commerce-api/vendor-sources/candidates/501",
-    response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, drawer: sourceUrlCandidateReviewLayout.drawer } },
+    response: { candidate: { ...sourceUrlCandidates.items[0], source_url_id: 101, review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
   {
     method: "GET",
     path: "/commerce-api/vendor-sources/candidates/502",
-    response: { candidate: { ...sourceUrlCandidates.items[1], drawer: sourceUrlCandidateReviewLayout.drawer } },
+    response: { candidate: { ...sourceUrlCandidates.items[1], review_panel: sourceUrlCandidateReviewLayout.review_panel } },
   },
   {
     method: "PATCH",

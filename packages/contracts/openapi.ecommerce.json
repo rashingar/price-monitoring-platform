@@ -1070,17 +1070,6 @@
       },
       "SourceUrlCandidateReviewLayoutRequest": {
         "properties": {
-          "action_panel_width_px": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Action Panel Width Px"
-          },
           "columns": {
             "anyOf": [
               {
@@ -1094,6 +1083,17 @@
               }
             ],
             "title": "Columns"
+          },
+          "review_panel_width_px": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Panel Width Px"
           },
           "settings_card_collapsed": {
             "anyOf": [
@@ -1127,9 +1127,7 @@
             "enum": [
               "accept",
               "reject",
-              "replace_url",
-              "not_found",
-              "needs_manual_review"
+              "replace_url"
             ],
             "title": "Decision",
             "type": "string"

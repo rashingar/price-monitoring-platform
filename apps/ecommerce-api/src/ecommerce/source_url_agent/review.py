@@ -18,7 +18,7 @@ from ecommerce.source_url_agent.persistence import update_candidate_review_statu
 from ecommerce.source_url_agent.sources import SourceDefinition, load_source_registry
 
 
-VALID_REVIEW_DECISIONS = {"accept", "reject", "replace_url", "not_found", "needs_manual_review"}
+VALID_REVIEW_DECISIONS = {"accept", "reject", "replace_url"}
 
 
 @dataclass
@@ -60,7 +60,7 @@ def apply_review_csv(
             result.counters["invalid_count"] += 1
             result.warnings.append(f"Invalid review_decision for model {row.get('model')}: {decision}")
             continue
-        if decision in {"reject", "not_found", "needs_manual_review"}:
+        if decision == "reject":
             _record_non_write_decision(session, row, decision, result, run_id=run_id, apply=apply)
             continue
         _apply_accept_or_replace(session, row, decision, registry, result, run_id=run_id, apply=apply)
@@ -131,8 +131,6 @@ def _record_non_write_decision(
 ) -> None:
     status = {
         "reject": "rejected",
-        "not_found": "not_found",
-        "needs_manual_review": "needs_review",
     }[decision]
     if session is not None:
         _update_review_candidate(session, row, status, result, run_id=run_id, apply=apply)

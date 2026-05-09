@@ -40,19 +40,12 @@ const DEFAULT_COLUMNS: SourceUrlCandidateReviewLayoutColumn[] = [
   { key: "candidate_price", label: "Candidate price", visible: true, table_column_visible: true, width_px: 116, order: 6 },
   { key: "own_price", label: "Own price", visible: true, table_column_visible: true, width_px: 104, order: 7 },
   { key: "candidate_title", label: "Candidate title", visible: true, table_column_visible: true, width_px: 250, order: 8 },
-  { key: "review_action", label: "Review", visible: true, table_column_visible: true, width_px: 92, order: 9 },
 ];
 
 const FALLBACK_REVIEW_ACTIONS: SourceUrlCandidateReviewActionConfig[] = [
   { decision: "accept", label: "Accept", style: "primary" },
   { decision: "reject", label: "Reject", style: "danger" },
   { decision: "replace_url", label: "Replace URL", style: "secondary", requires_url: true },
-];
-
-const OPERATOR_REVIEW_DECISIONS: SourceUrlCandidateReviewDecision[] = [
-  "accept",
-  "reject",
-  "replace_url",
 ];
 
 interface CandidateFilters {
@@ -354,7 +347,7 @@ function makeFallbackLayout(): SourceUrlCandidateReviewLayout {
     user_key: REVIEW_LAYOUT_USER_KEY,
     columns: normalizeColumns(DEFAULT_COLUMNS),
     actions: { table_column_visible: false, replacement: "inline_panel" },
-    drawer: { review_actions: FALLBACK_REVIEW_ACTIONS },
+    review_panel: { mode: "inline_row", open_on: "row_single_click", review_actions: FALLBACK_REVIEW_ACTIONS },
   };
 }
 
@@ -528,24 +521,21 @@ function LayoutSettingsCard({
 }
 
 function getReviewActions(layout: SourceUrlCandidateReviewLayout, candidate: SourceUrlCandidate | null) {
-  const candidateDrawer = isRecord(candidate?.drawer) ? candidate?.drawer : null;
-  const candidateActions = Array.isArray(candidateDrawer?.review_actions)
-    ? candidateDrawer.review_actions
+  const candidateReviewPanel = isRecord(candidate?.review_panel) ? candidate?.review_panel : null;
+  const candidateActions = Array.isArray(candidateReviewPanel?.review_actions)
+    ? candidateReviewPanel.review_actions
     : [];
-  const layoutActions = layout.drawer?.review_actions ?? [];
+  const layoutActions = layout.review_panel?.review_actions ?? [];
   const actions = candidateActions.length > 0 ? candidateActions : layoutActions;
-  const operatorActions = (actions.length > 0 ? actions : FALLBACK_REVIEW_ACTIONS).filter((action) =>
-    OPERATOR_REVIEW_DECISIONS.includes(getActionDecision(action)),
-  );
-  return operatorActions.length > 0 ? operatorActions : FALLBACK_REVIEW_ACTIONS;
+  return actions.length > 0 ? actions : FALLBACK_REVIEW_ACTIONS;
 }
 
 function getActionDecision(action: SourceUrlCandidateReviewActionConfig): SourceUrlCandidateReviewDecision {
-  return (action.decision ?? "needs_manual_review") as SourceUrlCandidateReviewDecision;
+  return (action.decision ?? "reject") as SourceUrlCandidateReviewDecision;
 }
 
 function getActionLabel(action: SourceUrlCandidateReviewActionConfig): string {
-  return action.label ?? normalizeLabel(String(action.decision ?? "needs_manual_review"));
+  return action.label ?? normalizeLabel(String(action.decision ?? "reject"));
 }
 
 function actionRequiresUrl(action: SourceUrlCandidateReviewActionConfig): boolean {
@@ -799,6 +789,7 @@ function CandidateReviewPanel({
   return (
     <section
       className="source-url-inline-review-panel"
+      role="region"
       aria-label={`Vendor source candidate ${candidate.id} review`}
     >
       {isLoading ? <LoadingState label="Loading candidate details..." /> : null}
@@ -1107,6 +1098,7 @@ export function SourceUrlCandidatesPage() {
         user_key: layout.user_key ?? REVIEW_LAYOUT_USER_KEY,
         columns: normalizeColumns(layout.columns),
         actions: { ...(layout.actions ?? {}), table_column_visible: false, replacement: "inline_panel" },
+        review_panel: { ...(layout.review_panel ?? {}), mode: "inline_row", open_on: "row_single_click" },
       });
       setLayout({ ...nextLayout, columns: normalizeColumns(nextLayout.columns) });
       setNotice("Review table layout saved.");
@@ -1366,20 +1358,9 @@ export function SourceUrlCandidatesPage() {
                             const key = columnKey(column);
                             return (
                               <td key={key} className="source-url-candidate-cell">
-                                {key === "review_action" ? (
-                                  <button
-                                    className="button secondary compact-button"
-                                    type="button"
-                                    aria-expanded={isSelected}
-                                    onClick={() => void toggleCandidateReview(candidate)}
-                                  >
-                                    {isSelected ? "Collapse" : "Review"}
-                                  </button>
-                                ) : (
-                                  <span className="source-url-candidate-cell-content">
-                                    {renderCandidateCell(candidate, key)}
-                                  </span>
-                                )}
+                                <span className="source-url-candidate-cell-content">
+                                  {renderCandidateCell(candidate, key)}
+                                </span>
                               </td>
                             );
                           })}

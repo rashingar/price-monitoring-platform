@@ -269,9 +269,9 @@ def reset_vendor_source_candidate_review_layout(user_key: str | None = None) -> 
 @router.get("/candidates/{candidate_id}")
 def get_vendor_source_candidate(candidate_id: int) -> dict[str, Any]:
     payload = source_url_agent.get_source_url_agent_candidate(candidate_id)
-    drawer = payload.get("drawer")
-    if isinstance(drawer, dict):
-        drawer["review_endpoint"] = f"/api/vendor-sources/candidates/{candidate_id}/review"
+    review_panel = payload.get("review_panel")
+    if isinstance(review_panel, dict):
+        review_panel["review_endpoint"] = f"/api/vendor-sources/candidates/{candidate_id}/review"
     return payload
 
 

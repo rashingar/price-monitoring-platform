@@ -296,9 +296,7 @@ export type SourceUrlCandidateStatus =
 export type SourceUrlCandidateReviewDecision =
   | "accept"
   | "reject"
-  | "replace_url"
-  | "not_found"
-  | "needs_manual_review";
+  | "replace_url";
 
 export interface SourceUrlCandidate {
   id: number | string;
@@ -331,6 +329,12 @@ export interface SourceUrlCandidate {
   notes?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  review_panel?: {
+    mode?: string | null;
+    open_on?: string | null;
+    review_actions?: SourceUrlCandidateReviewActionConfig[];
+    [key: string]: unknown;
+  } | null;
   [key: string]: unknown;
 }
 
@@ -543,7 +547,9 @@ export interface SourceUrlCandidateReviewLayout {
     replacement?: string | null;
     [key: string]: unknown;
   } | null;
-  drawer?: {
+  review_panel?: {
+    mode?: string | null;
+    open_on?: string | null;
     review_actions?: SourceUrlCandidateReviewActionConfig[];
     [key: string]: unknown;
   } | null;

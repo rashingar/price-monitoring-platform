@@ -227,8 +227,9 @@ def test_source_url_candidate_review_layout_defaults_and_persistence(tmp_path: P
     assert default_payload["settings_card"]["collapsible"] is True
     assert default_payload["settings_card"]["collapsed"] is True
     assert default_payload["actions"]["table_column_visible"] is False
-    assert default_payload["action_panel"]["mode"] == "drawer"
-    assert default_payload["action_panel"]["open_on"] == "row_single_click"
+    assert default_payload["actions"]["replacement"] == "inline_review_panel"
+    assert default_payload["review_panel"]["mode"] == "inline_row"
+    assert default_payload["review_panel"]["open_on"] == "row_single_click"
     assert "actions" not in [column["key"] for column in default_payload["columns"]]
 
     save_response = client.put(
@@ -236,7 +237,7 @@ def test_source_url_candidate_review_layout_defaults_and_persistence(tmp_path: P
         json={
             "user_key": "tester",
             "settings_card_collapsed": False,
-            "action_panel_width_px": 520,
+            "review_panel_width_px": 520,
             "columns": [
                 {"key": "candidate_url", "visible": True, "order": 5, "width_px": 360},
                 {"key": "status", "visible": False, "order": 40, "width_px": 128},
@@ -249,7 +250,7 @@ def test_source_url_candidate_review_layout_defaults_and_persistence(tmp_path: P
     columns = {column["key"]: column for column in saved_payload["columns"]}
     assert saved_payload["user_key"] == "tester"
     assert saved_payload["settings_card"]["collapsed"] is False
-    assert saved_payload["action_panel"]["width_px"] == 520
+    assert saved_payload["review_panel"]["width_px"] == 520
     assert columns["candidate_url"]["visible"] is True
     assert columns["candidate_url"]["order"] == 5
     assert columns["candidate_url"]["width_px"] == 360
@@ -297,7 +298,7 @@ def test_source_url_candidate_review_layout_validates_columns_and_resets(tmp_pat
         assert session.query(UiViewPreference).count() == 0
 
 
-def test_get_source_url_agent_candidate_returns_drawer_payload(tmp_path: Path, monkeypatch) -> None:
+def test_get_source_url_agent_candidate_returns_review_panel_payload(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         product = _catalog_product(session)
@@ -309,14 +310,14 @@ def test_get_source_url_agent_candidate_returns_drawer_payload(tmp_path: Path, m
     assert response.status_code == 200
     payload = response.json()
     assert payload["id"] == candidate.id
-    assert payload["drawer"]["open_on"] == "row_single_click"
-    assert payload["drawer"]["review_endpoint"] == f"/api/vendor-sources/candidates/{candidate.id}/review"
-    assert [action["decision"] for action in payload["drawer"]["review_actions"]] == [
+    assert "drawer" not in payload
+    assert payload["review_panel"]["mode"] == "inline_row"
+    assert payload["review_panel"]["open_on"] == "row_single_click"
+    assert payload["review_panel"]["review_endpoint"] == f"/api/vendor-sources/candidates/{candidate.id}/review"
+    assert [action["decision"] for action in payload["review_panel"]["review_actions"]] == [
         "accept",
         "replace_url",
         "reject",
-        "not_found",
-        "needs_manual_review",
     ]
     assert missing.status_code == 404
 
@@ -361,34 +362,23 @@ def test_patch_reject_updates_candidate_without_source_url(tmp_path: Path, monke
         assert session.query(SourceUrl).count() == 0
 
 
-def test_patch_not_found_updates_candidate_without_source_url(tmp_path: Path, monkeypatch) -> None:
+def test_patch_removed_review_decisions_fail_validation(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         product = _catalog_product(session)
         candidate = _candidate(session, product)
 
-    response = client.patch(f"/api/vendor-sources/candidates/{candidate.id}/review", json={"decision": "not_found"})
-
-    assert response.status_code == 200
-    assert response.json()["status"] == "not_found"
-    with session_scope(database_url) as session:
-        assert session.query(SourceUrl).count() == 0
-
-
-def test_patch_needs_manual_review_keeps_candidate_in_review_without_source_url(tmp_path: Path, monkeypatch) -> None:
-    client, database_url = _client(tmp_path, monkeypatch)
-    with session_scope(database_url) as session:
-        product = _catalog_product(session)
-        candidate = _candidate(session, product, status="rejected")
-
-    response = client.patch(
+    not_found = client.patch(f"/api/vendor-sources/candidates/{candidate.id}/review", json={"decision": "not_found"})
+    needs_manual_review = client.patch(
         f"/api/vendor-sources/candidates/{candidate.id}/review",
         json={"decision": "needs_manual_review"},
     )
 
-    assert response.status_code == 200
-    assert response.json()["status"] == "needs_review"
+    assert not_found.status_code == 422
+    assert needs_manual_review.status_code == 422
     with session_scope(database_url) as session:
+        candidate_row = session.get(SourceUrlCandidate, candidate.id)
+        assert candidate_row.status == "needs_review"
         assert session.query(SourceUrl).count() == 0
 
 

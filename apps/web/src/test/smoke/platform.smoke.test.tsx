@@ -177,6 +177,22 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("plaisio")).toBeInTheDocument();
     expect(screen.getByText("kotsovolos")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Midea MD-20L Αφυγραντήρας 20L"));
+
+    const reviewPanel = await screen.findByRole("region", { name: "Vendor source candidate 501 review" });
+    expect(reviewPanel).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(within(reviewPanel).getByRole("link", { name: "Open candidate URL" })).toBeInTheDocument();
+    expect(within(reviewPanel).getByRole("button", { name: "Accept" })).toBeInTheDocument();
+    expect(within(reviewPanel).getByRole("button", { name: "Reject" })).toBeInTheDocument();
+    expect(within(reviewPanel).getByRole("button", { name: "Replace URL" })).toBeInTheDocument();
+    expect(within(reviewPanel).getByRole("button", { name: "Debug" })).toBeInTheDocument();
+    expect(within(reviewPanel).queryByRole("button", { name: /not found/i })).not.toBeInTheDocument();
+    expect(within(reviewPanel).queryByRole("button", { name: /needs manual review/i })).not.toBeInTheDocument();
+    expect(within(reviewPanel).queryByText("Catalog product")).not.toBeInTheDocument();
+    expect(within(reviewPanel).queryByText("Candidate source")).not.toBeInTheDocument();
   });
 
   it("runs Skroutz browser diagnostics from candidate review and renders endpoint details", async () => {
@@ -184,8 +200,7 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/vendor-sources/candidates");
 
-    const reviewButtons = await screen.findAllByRole("button", { name: "Review" });
-    fireEvent.click(reviewButtons[0]);
+    fireEvent.click(await screen.findByText("Midea MD-20L Αφυγραντήρας 20L"));
 
     const runButton = await screen.findByRole("button", { name: "Run browser diagnostic" });
     expect(runButton).toBeEnabled();
@@ -215,7 +230,7 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/vendor-sources/candidates");
 
     await expect(screen.findByText("Keyboard mouse bundle")).resolves.toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Review" })[1]);
+    fireEvent.click(screen.getByText("Keyboard mouse bundle"));
 
     await expect(screen.findByText("Open candidate URL")).resolves.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Run browser diagnostic" })).not.toBeInTheDocument();
@@ -248,8 +263,7 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/vendor-sources/candidates");
 
-    const reviewButtons = await screen.findAllByRole("button", { name: "Review" });
-    fireEvent.click(reviewButtons[0]);
+    fireEvent.click(await screen.findByText("Midea MD-20L Αφυγραντήρας 20L"));
     fireEvent.click(await screen.findByRole("button", { name: "Run browser diagnostic" }));
 
     expect(await screen.findByRole("button", { name: "Running..." })).toBeDisabled();
@@ -655,7 +669,7 @@ describe("platform mocked page smoke tests", () => {
     await waitFor(() => expect(submitButton).toBeEnabled());
     fireEvent.click(submitButton);
 
-    await expect(screen.findByText("Candidate 501 marked needs review.")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Candidate 501 marked accepted.")).resolves.toBeInTheDocument();
     expect(
       mockFetch.requests.some(
         (request) =>

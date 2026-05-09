@@ -27,7 +27,7 @@ from ecommerce.source_url_agent.agent import Resolver, SourceUrlAgentOptions, So
 from ecommerce.source_url_agent.products import SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES, load_source_registry
 
-ReviewDecision = Literal["accept", "reject", "replace_url", "not_found", "needs_manual_review"]
+ReviewDecision = Literal["accept", "reject", "replace_url"]
 SourceUrlAgentRunMode = Literal["catalog", "csv"]
 SOURCE_URL_CANDIDATE_REVIEW_VIEW_KEY = "source_url_candidate_review"
 DEFAULT_USER_KEY = "default"
@@ -107,7 +107,7 @@ class SourceUrlCandidateReviewLayoutRequest(BaseModel):
     user_key: str | None = None
     columns: list[SourceUrlCandidateReviewColumnPreference] | None = None
     settings_card_collapsed: bool | None = None
-    action_panel_width_px: int | None = None
+    review_panel_width_px: int | None = None
 
 
 def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, Any]:
@@ -315,7 +315,7 @@ def get_source_url_agent_candidate(candidate_id: int) -> dict[str, Any]:
                 raise HTTPException(status_code=404, detail="Source URL candidate not found.")
             payload = _candidate_to_dict(candidate)
             payload["source_url_id"] = _matching_source_url_id(session, candidate)
-            payload["drawer"] = _candidate_drawer_payload(candidate)
+            payload["review_panel"] = _candidate_review_panel_payload(candidate)
             return payload
     except HTTPException:
         raise
@@ -393,10 +393,6 @@ def _apply_candidate_review(
         )
     elif decision == "reject":
         candidate.status = "rejected"
-    elif decision == "not_found":
-        candidate.status = "not_found"
-    elif decision == "needs_manual_review":
-        candidate.status = "needs_review"
     else:
         raise HTTPException(status_code=400, detail="Invalid review decision.")
 
@@ -660,8 +656,9 @@ def _candidate_to_dict(row: SourceUrlCandidate) -> dict[str, Any]:
     }
 
 
-def _candidate_drawer_payload(row: SourceUrlCandidate) -> dict[str, Any]:
+def _candidate_review_panel_payload(row: SourceUrlCandidate) -> dict[str, Any]:
     return {
+        "mode": "inline_row",
         "open_on": "row_single_click",
         "primary_fields": {
             "id": row.id,
@@ -693,18 +690,6 @@ def _candidate_drawer_payload(row: SourceUrlCandidate) -> dict[str, Any]:
                 "requires_reviewed_url": False,
                 "promotes_source_url": False,
             },
-            {
-                "decision": "not_found",
-                "label": "Not Found",
-                "requires_reviewed_url": False,
-                "promotes_source_url": False,
-            },
-            {
-                "decision": "needs_manual_review",
-                "label": "Needs Manual Review",
-                "requires_reviewed_url": False,
-                "promotes_source_url": False,
-            },
         ],
         "review_endpoint": f"/api/vendor-sources/candidates/{row.id}/review",
     }
@@ -731,10 +716,10 @@ def _review_layout_payload(user_key: str, preferences: dict[str, Any] | None) ->
         "columns": normalized["columns"],
         "actions": {
             "table_column_visible": False,
-            "replacement": "drawer_panel",
+            "replacement": "inline_review_panel",
             "review_endpoint_template": "/api/vendor-sources/candidates/{candidate_id}/review",
         },
-        "action_panel": normalized["action_panel"],
+        "review_panel": normalized["review_panel"],
     }
 
 
@@ -761,18 +746,17 @@ def _normalize_review_layout_preferences(request: SourceUrlCandidateReviewLayout
             override["width_px"] = _bounded_width(column.width_px, f"Column width out of range for {key}.")
         column_overrides[key] = override
 
-    action_panel_width = request.action_panel_width_px
-    if action_panel_width is not None:
-        action_panel_width = _bounded_width(action_panel_width, "Action panel width out of range.")
+    review_panel_width = request.review_panel_width_px
+    if review_panel_width is not None:
+        review_panel_width = _bounded_width(review_panel_width, "Review panel width out of range.")
 
     return {
         "columns": list(column_overrides.values()),
         "settings_card": {"collapsed": True if request.settings_card_collapsed is None else bool(request.settings_card_collapsed)},
-        "action_panel": {
-            "mode": "drawer",
-            "placement": "right",
+        "review_panel": {
+            "mode": "inline_row",
             "open_on": "row_single_click",
-            "width_px": action_panel_width or 420,
+            "width_px": review_panel_width or 420,
         },
     }
 
@@ -797,23 +781,21 @@ def _merge_review_layout_preferences(preferences: dict[str, Any] | None) -> dict
     columns.sort(key=lambda item: (int(item["order"]), str(item["key"])))
 
     stored_settings = preferences.get("settings_card") if isinstance(preferences, dict) else None
-    stored_action_panel = preferences.get("action_panel") if isinstance(preferences, dict) else None
+    stored_review_panel = preferences.get("review_panel") if isinstance(preferences, dict) else None
     collapsed = True
     if isinstance(stored_settings, dict) and isinstance(stored_settings.get("collapsed"), bool):
         collapsed = stored_settings["collapsed"]
     width_px = 420
-    if isinstance(stored_action_panel, dict) and isinstance(stored_action_panel.get("width_px"), int):
-        width_px = _clamp_width(stored_action_panel["width_px"])
+    if isinstance(stored_review_panel, dict) and isinstance(stored_review_panel.get("width_px"), int):
+        width_px = _clamp_width(stored_review_panel["width_px"])
 
     return {
         "columns": columns,
         "settings_card": {"collapsed": collapsed},
-        "action_panel": {
-            "mode": "drawer",
-            "placement": "right",
+        "review_panel": {
+            "mode": "inline_row",
             "open_on": "row_single_click",
             "width_px": width_px,
-            "close_on_escape": True,
             "preserve_row_selection": True,
         },
     }
