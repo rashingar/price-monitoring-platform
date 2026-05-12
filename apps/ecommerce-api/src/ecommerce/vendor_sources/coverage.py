@@ -14,6 +14,7 @@ from ecommerce.source_capture.skroutz_network_diagnostic import CAPTURE_STRATEGY
 
 
 SOURCE_URL_STATUSES = ("active", "needs_review", "broken", "disabled", "redirected")
+SOURCE_URL_TYPES = ("manual", "imported", "discovered")
 
 
 def source_url_summary(session: Session, *, source_name: str | None = None) -> dict[str, Any]:
@@ -21,22 +22,64 @@ def source_url_summary(session: Session, *, source_name: str | None = None) -> d
     source_urls = _source_urls(session, normalized_source)
     product_sources = _product_sources(session, normalized_source)
     source_url_status_counts = Counter(str(row.status or "") for row in source_urls)
+    source_url_type_counts = Counter(str(row.url_type or "") for row in source_urls)
+    source_url_source_counts = Counter(str(row.source_name or "") for row in source_urls)
     products_with_active = {int(row.catalog_product_id) for row in source_urls if row.status == "active"}
-    active_catalog_product_ids = set(
-        session.execute(select(CatalogProductRow.id).where(CatalogProductRow.active.is_(True))).scalars().all()
+    active_catalog_products = list(
+        session.execute(select(CatalogProductRow).where(CatalogProductRow.active.is_(True))).scalars().all()
     )
+    active_catalog_product_ids = {int(row.id) for row in active_catalog_products}
+    missing_active_products = [
+        {
+            "catalog_product_id": row.id,
+            "model": row.model,
+            "mpn": row.mpn,
+            "manufacturer": row.manufacturer,
+            "name": row.name,
+            "reason": "missing_active_source_url",
+        }
+        for row in active_catalog_products
+        if int(row.id) not in products_with_active
+    ]
     product_source_health = Counter(_product_source_health(row) for row in product_sources)
     by_source: dict[str, Counter] = defaultdict(Counter)
     for row in source_urls:
         by_source[str(row.source_name or "")][str(row.status or "")] += 1
+    source_url_count = len(source_urls)
+    products_with_active_count = len(products_with_active & active_catalog_product_ids)
+    products_without_active_count = max(0, len(active_catalog_product_ids) - products_with_active_count)
+    coverage_percent = round((products_with_active_count / len(active_catalog_product_ids)) * 100, 2) if active_catalog_product_ids else 0.0
+    by_status = {status: int(source_url_status_counts[status]) for status in SOURCE_URL_STATUSES}
+    by_url_type = {url_type: int(source_url_type_counts[url_type]) for url_type in SOURCE_URL_TYPES}
+    by_source_name = dict(sorted((source, int(count)) for source, count in source_url_source_counts.items()))
     return {
         "source_name": normalized_source or None,
         "catalog_product_count": len(active_catalog_product_ids),
-        "source_url_count": len(source_urls),
+        "source_url_count": source_url_count,
+        "total_count": source_url_count,
         "active_source_url_count": source_url_status_counts["active"],
-        "products_with_active_source_urls": len(products_with_active),
-        "products_without_active_source_urls": max(0, len(active_catalog_product_ids) - len(products_with_active)),
-        "source_url_status_counts": {status: int(source_url_status_counts[status]) for status in SOURCE_URL_STATUSES},
+        "active_count": source_url_status_counts["active"],
+        "needs_review_count": source_url_status_counts["needs_review"],
+        "broken_count": source_url_status_counts["broken"],
+        "disabled_count": source_url_status_counts["disabled"],
+        "redirected_count": source_url_status_counts["redirected"],
+        "manual_count": source_url_type_counts["manual"],
+        "imported_count": source_url_type_counts["imported"],
+        "discovered_count": source_url_type_counts["discovered"],
+        "products_with_active_source_urls": products_with_active_count,
+        "products_without_active_source_urls": products_without_active_count,
+        "products_with_urls_count": products_with_active_count,
+        "products_without_urls_count": products_without_active_count,
+        "coverage_percent": coverage_percent,
+        "source_url_status_counts": by_status,
+        "by_status": by_status,
+        "by_source_name": by_source_name,
+        "by_source": by_source_name,
+        "by_url_type": by_url_type,
+        "by_type": by_url_type,
+        "missing_source_url_models": [str(row["model"]) for row in missing_active_products if row.get("model")],
+        "missing_source_url_catalog_product_ids": [row["catalog_product_id"] for row in missing_active_products],
+        "missing_active_source_url_products": missing_active_products,
         "product_source_count": len(product_sources),
         "active_product_source_count": sum(1 for row in product_sources if row.active),
         "product_source_health_counts": dict(sorted(product_source_health.items())),
@@ -98,6 +141,7 @@ def source_health_items(
 
 def _source_urls(session: Session, source_name: str | None) -> list[SourceUrl]:
     statement = select(SourceUrl).join(CatalogProductRow, CatalogProductRow.id == SourceUrl.catalog_product_id)
+    statement = statement.where(CatalogProductRow.active.is_(True))
     if source_name:
         statement = statement.where(SourceUrl.source_name == source_name)
     return list(session.execute(statement).scalars().all())

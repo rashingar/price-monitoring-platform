@@ -464,9 +464,19 @@ function normalizeMissingSourceUrlProduct(value: unknown): MissingSourceUrlProdu
 
 function normalizeSourceUrlSummary(payload: unknown): SourceUrlSummaryResponse {
   const source = isRecord(payload) ? payload : {};
-  const statusCounters = normalizeNumberRecord(source.by_status);
+  const statusCounters = normalizeNumberRecord(source.by_status ?? source.source_url_status_counts);
   const typeCounters = normalizeNumberRecord(source.by_type ?? source.by_url_type);
-  const sourceCounters = normalizeNumberRecord(source.by_source ?? source.by_source_name);
+  const sourceCounters = normalizeNumberRecord(
+    source.by_source ??
+      source.by_source_name ??
+      (Array.isArray(source.sources)
+        ? Object.fromEntries(
+            source.sources
+              .filter(isRecord)
+              .map((item) => [String(item.source_name ?? ""), normalizeCounter(item.source_url_count)]),
+          )
+        : undefined),
+  );
   const missingProducts = getArrayPayload(
     source.missing_active_source_url_products ??
       source.products_without_active_source_urls_items ??
@@ -2270,10 +2280,13 @@ export const commerceClient = {
     };
   },
 
-  async getVendorSourceUrlSummary(signal?: AbortSignal): Promise<SourceUrlSummaryResponse> {
+  async getVendorSourceUrlSummary(signal?: AbortSignal, sourceName?: string | null): Promise<SourceUrlSummaryResponse> {
     return {
       ...normalizeSourceUrlSummary(
-        await request<unknown>("/vendor-sources/source-urls/summary", { signal }),
+        await request<unknown>(
+          appendQuery("/vendor-sources/source-urls/summary", { source_name: sourceName }),
+          { signal },
+        ),
       ),
       summary_source: "vendor-sources",
     };

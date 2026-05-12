@@ -201,7 +201,7 @@ export function VendorSourceUrlsPage() {
   const loadPage = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     const [summaryResult, sourcesResult] = await Promise.allSettled([
-      commerceClient.getVendorSourceUrlSummary(signal),
+      commerceClient.getVendorSourceUrlSummary(signal, sourceFilter),
       commerceClient.listVendorSources(signal),
     ]);
 
@@ -226,7 +226,7 @@ export function VendorSourceUrlsPage() {
     }
 
     setIsLoading(false);
-  }, []);
+  }, [sourceFilter]);
 
   useEffect(() => {
     const controller = new AbortController();

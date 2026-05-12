@@ -321,10 +321,18 @@ function getSkippedMissingSourceUrlModels(result: PriceMonitoringSelectionResult
 
   const addSkippedItem = (item: PriceMonitoringSelectionItem) => {
     const reason = String(item.skip_reason ?? item.reason ?? "").toLowerCase();
+    const reasons = Array.isArray(item.reasons)
+      ? item.reasons.map((value) => String(value).toLowerCase())
+      : [];
     const coverage = item.source_url_coverage;
     const isMissing =
       reason.includes("missing_active_source_url") ||
       reason.includes("no_active_source_url") ||
+      reasons.some(
+        (itemReason) =>
+          itemReason.includes("missing_active_source_url") ||
+          itemReason.includes("no_active_source_url"),
+      ) ||
       coverage?.has_active_source_url === false ||
       (coverage?.active_source_url_count !== undefined && coverage.active_source_url_count <= 0);
 
@@ -1060,7 +1068,7 @@ export function CatalogPage() {
     try {
       const request: SourceUrlAgentRunRequest = {
         mode: "catalog",
-        source: "all",
+        source,
         selected_models: missingModels,
         missing_only: true,
         active_only: true,
@@ -1399,8 +1407,7 @@ export function CatalogPage() {
                 isPreviewLoading ||
                 isDiscoveryLaunching ||
                 isDiscoveryPolling ||
-                isCatalogLocked ||
-                selectedModels.size === 0
+                isCatalogLocked
               }
               title={
                 previewResult

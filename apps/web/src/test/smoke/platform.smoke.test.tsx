@@ -1128,7 +1128,7 @@ describe("platform mocked page smoke tests", () => {
         path: "/commerce-api/source-url-agent/runs",
         response: {
           run_id: "source-run-002",
-          source: "all",
+          source: "bestprice",
           mode: "catalog",
           dry_run: true,
           apply_high_confidence: false,
@@ -1153,7 +1153,7 @@ describe("platform mocked page smoke tests", () => {
         path: "/commerce-api/source-url-agent/runs/source-run-002",
         response: {
           run_id: "source-run-002",
-          source: "all",
+          source: "bestprice",
           mode: "catalog",
           dry_run: true,
           apply_high_confidence: false,
@@ -1182,10 +1182,8 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findByText("005606")).resolves.toBeInTheDocument();
     expect(screen.getByLabelText("Marketplace source (BestPrice / Skroutz)")).toHaveValue("bestprice");
     const discoveryButton = screen.getByRole("button", { name: "Find more" });
-    expect(discoveryButton).toBeDisabled();
+    expect(discoveryButton).toBeEnabled();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Select all visible eligible products" }));
-    await waitFor(() => expect(discoveryButton).not.toBeDisabled());
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
     await expect(screen.findByText("Selection preview")).resolves.toBeInTheDocument();
     expect(screen.getByText("missing_active_source_url: 1")).toBeInTheDocument();
@@ -1209,7 +1207,7 @@ describe("platform mocked page smoke tests", () => {
           Array.isArray(request.body.selected_models) &&
           request.body.selected_models.length === 1 &&
           request.body.selected_models.includes("AB-123") &&
-          request.body.source === "all" &&
+          request.body.source === "bestprice" &&
           request.body.missing_only === true &&
           request.body.dry_run === true &&
           request.body.limit === request.body.selected_models.length,
