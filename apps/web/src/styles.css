@@ -426,7 +426,7 @@ textarea {
   font-weight: 700;
 }
 
-.column-controls-panel input {
+.column-controls-panel input[type="checkbox"] {
   width: 18px;
   height: 18px;
 }
@@ -476,6 +476,8 @@ textarea {
 
 .column-width-input {
   width: 72px;
+  min-width: 72px;
+  height: 34px;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 7px 8px;

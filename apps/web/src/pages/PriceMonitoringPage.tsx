@@ -65,7 +65,7 @@ type PriceMonitoringSourceFilter = string;
 type StoredObservationMatchFilter = "all" | PriceObservationMatchStatus;
 const SOURCE_REQUIRED_MESSAGE = "Choose one source/vendor to monitor.";
 const REVIEW_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.reviewColumns.v1";
-const OBSERVATION_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.observationColumns.v1";
+const OBSERVATION_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.observationColumns.v2";
 const MIN_COLUMN_WIDTH = 72;
 const MAX_COLUMN_WIDTH = 640;
 
@@ -1645,19 +1645,6 @@ function ObservationTable({
   const columns = useMemo<Array<ManagedColumn<PriceObservation, ObservationColumnId>>>(
     () => [
       {
-        id: "match",
-        label: "Match",
-        defaultWidth: 116,
-        render: (item) => {
-          const matched = isObservationMatched(item);
-          return (
-            <span className={`status-badge ${matched ? "ok" : "warning"}`}>
-              {matched ? "Matched" : "Unmatched"}
-            </span>
-          );
-        },
-      },
-      {
         id: "model",
         label: "Model",
         defaultWidth: 104,
@@ -1795,6 +1782,19 @@ function ObservationTable({
               Create alert
             </span>
           ),
+      },
+      {
+        id: "match",
+        label: "Match",
+        defaultWidth: 116,
+        render: (item) => {
+          const matched = isObservationMatched(item);
+          return (
+            <span className={`status-badge ${matched ? "ok" : "warning"}`}>
+              {matched ? "Matched" : "Unmatched"}
+            </span>
+          );
+        },
       },
     ],
     [isDbAvailable, showHistoryColumns],
