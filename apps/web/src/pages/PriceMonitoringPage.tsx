@@ -65,7 +65,7 @@ type PriceMonitoringSourceFilter = string;
 type StoredObservationMatchFilter = "all" | PriceObservationMatchStatus;
 const SOURCE_REQUIRED_MESSAGE = "Choose one source/vendor to monitor.";
 const REVIEW_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.reviewColumns.v1";
-const OBSERVATION_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.observationColumns.v2";
+const OBSERVATION_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.observationColumns.v3";
 const MIN_COLUMN_WIDTH = 72;
 const MAX_COLUMN_WIDTH = 640;
 
@@ -1647,14 +1647,14 @@ function ObservationTable({
       {
         id: "model",
         label: "Model",
-        defaultWidth: 104,
+        defaultWidth: 72,
         className: "nowrap-cell",
         render: (item) => formatValue(item.model),
       },
       {
         id: "mpn",
         label: "MPN",
-        defaultWidth: 132,
+        defaultWidth: 92,
         className: "nowrap-cell",
         render: (item) => formatValue(item.mpn),
       },
@@ -1667,47 +1667,47 @@ function ObservationTable({
       {
         id: "source",
         label: "Source",
-        defaultWidth: 120,
+        defaultWidth: 92,
         render: (item) => formatValue(item.source),
       },
       {
         id: "competitor_name",
         label: "Competitor / Store",
-        defaultWidth: 180,
+        defaultWidth: 112,
         render: (item) => formatValue(item.competitor_name),
       },
       {
         id: "competitor_price",
         label: "Competitor price",
-        defaultWidth: 142,
+        defaultWidth: 102,
         className: "nowrap-cell",
         render: (item) => formatMoney(item.competitor_price, getCurrency(item.currency)),
       },
       {
         id: "own_price",
         label: "Own price",
-        defaultWidth: 126,
+        defaultWidth: 92,
         className: "nowrap-cell",
         render: (item) => formatMoney(item.own_price, getCurrency(item.currency)),
       },
       {
         id: "price_delta",
         label: "Delta",
-        defaultWidth: 112,
+        defaultWidth: 72,
         className: "nowrap-cell",
         render: (item) => formatNumber(item.price_delta),
       },
       {
         id: "price_delta_percent",
         label: "Delta %",
-        defaultWidth: 112,
+        defaultWidth: 72,
         className: "nowrap-cell",
         render: (item) => formatNumber(item.price_delta_percent),
       },
       {
         id: "availability",
         label: "Availability",
-        defaultWidth: 144,
+        defaultWidth: 102,
         render: (item) => formatValue(item.availability),
       },
       {
@@ -1726,14 +1726,14 @@ function ObservationTable({
       {
         id: "observed_at",
         label: "Observed at",
-        defaultWidth: 178,
+        defaultWidth: 212,
         className: "nowrap-cell",
         render: (item) => formatValue(item.observed_at),
       },
       {
         id: "fetch_attempt",
         label: "Attempt",
-        defaultWidth: 112,
+        defaultWidth: 82,
         available: showHistoryColumns,
         render: (item) => (
           <>
@@ -1759,7 +1759,7 @@ function ObservationTable({
       {
         id: "created_at",
         label: "Stored at",
-        defaultWidth: 178,
+        defaultWidth: 262,
         available: showHistoryColumns,
         className: "nowrap-cell",
         render: (item) => formatValue(item.created_at),
@@ -1767,7 +1767,7 @@ function ObservationTable({
       {
         id: "actions",
         label: "Actions",
-        defaultWidth: 138,
+        defaultWidth: 142,
         render: (item) =>
           isDbAvailable ? (
             <Link className="button secondary" to={getCreateAlertLink(item)}>
@@ -1786,7 +1786,7 @@ function ObservationTable({
       {
         id: "match",
         label: "Match",
-        defaultWidth: 116,
+        defaultWidth: 92,
         render: (item) => {
           const matched = isObservationMatched(item);
           return (
