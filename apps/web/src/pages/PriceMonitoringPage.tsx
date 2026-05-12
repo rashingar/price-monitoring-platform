@@ -1245,9 +1245,13 @@ function getPersistenceStatusClass(status: string): string {
 
 function FetchResultBlock({
   result,
+  runId,
+  observations,
   onPreview,
 }: {
   result: FetchPriceMonitoringResult;
+  runId: string;
+  observations: RunPriceObservationsResponse | null;
   onPreview: (path: string) => Promise<string>;
 }) {
   const fallbackArtifacts = artifactValuesToItems([
@@ -1260,6 +1264,15 @@ function FetchResultBlock({
   ]);
   const artifacts = result.artifacts && result.artifacts.length > 0 ? result.artifacts : fallbackArtifacts;
   const artifactsAreDiagnostic = shouldTreatArtifactsAsDiagnostic(result);
+  const displayRunId = result.run_id ?? runId;
+  const displayObservationCount =
+    result.observation_count ??
+    observations?.count ??
+    parseNumberLike(result.source_url_capture_succeeded_count);
+  const displayMatchedObservationCount =
+    result.matched_observation_count ?? observations?.matched_count;
+  const displayUnmatchedObservationCount =
+    result.unmatched_observation_count ?? observations?.unmatched_count;
 
   return (
     <div className="state-block">
@@ -1272,11 +1285,11 @@ function FetchResultBlock({
         </p>
       ) : null}
       <dl className="summary-grid workflow-summary-grid">
-        <SummaryItem label="Run ID" value={result.run_id} />
+        <SummaryItem label="Run ID" value={displayRunId} />
         <SummaryItem label="Source/vendor" value={formatSelectedSource(result.source)} />
-        <SummaryItem label="Stored observations" value={result.observation_count} />
-        <SummaryItem label="Matched observations" value={result.matched_observation_count} />
-        <SummaryItem label="Unmatched observations" value={result.unmatched_observation_count} />
+        <SummaryItem label="Stored observations" value={displayObservationCount} />
+        <SummaryItem label="Matched observations" value={displayMatchedObservationCount} />
+        <SummaryItem label="Unmatched observations" value={displayUnmatchedObservationCount} />
       </dl>
       {result.fetch_input_mode === "source_urls" ? (
         <p>
@@ -4028,7 +4041,14 @@ export function PriceMonitoringPage() {
             <PriceMonitoringSetupHint />
           </>
         ) : null}
-        {fetchResult ? <FetchResultBlock result={fetchResult} onPreview={previewArtifact} /> : null}
+        {fetchResult ? (
+          <FetchResultBlock
+            result={fetchResult}
+            runId={currentRunId.trim()}
+            observations={storedObservations}
+            onPreview={previewArtifact}
+          />
+        ) : null}
       </section>
 
       <StoredObservationsSection
