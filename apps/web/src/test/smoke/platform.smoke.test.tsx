@@ -886,13 +886,12 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("Run python -m ecommerce.jobs.ingest_catalog.")).toBeInTheDocument();
   });
 
-  it("renders Price Monitoring workflow with DB status and run list", async () => {
+  it("renders Price Monitoring workflow with run list", async () => {
     installMockFetch(allRoutes);
 
     renderWithRouter("/price-monitoring");
 
     await expect(screen.findByRole("heading", { name: "Competitor price workflow" })).resolves.toBeInTheDocument();
-    await expect(screen.findAllByText("Database ready")).resolves.not.toHaveLength(0);
     const sourceUrlFilter = screen.getByLabelText("Source/vendor");
     expect(sourceUrlFilter).toHaveValue("");
     expect(screen.getByText("Choose one source/vendor to monitor.")).toBeInTheDocument();
@@ -921,7 +920,7 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/price-monitoring");
 
-    await expect(screen.findAllByText("Database ready")).resolves.not.toHaveLength(0);
+    await expect(within(screen.getByLabelText("Source/vendor")).findByRole("option", { name: /electronet/i })).resolves.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Source/vendor"), { target: { value: "electronet" } });
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
 
@@ -955,7 +954,7 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/price-monitoring");
 
-    await expect(screen.findAllByText("Database ready")).resolves.not.toHaveLength(0);
+    await expect(within(screen.getByLabelText("Source/vendor")).findByRole("option", { name: /electronet/i })).resolves.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Source/vendor"), { target: { value: "electronet" } });
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
 
@@ -985,7 +984,7 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/price-monitoring");
 
-    await expect(screen.findAllByText("Database ready")).resolves.not.toHaveLength(0);
+    await expect(within(screen.getByLabelText("Source/vendor")).findByRole("option", { name: /electronet/i })).resolves.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Source/vendor"), { target: { value: "electronet" } });
     fireEvent.click(screen.getByRole("button", { name: "Create run" }));
 
@@ -1006,7 +1005,7 @@ describe("platform mocked page smoke tests", () => {
     ).toBe(true);
   });
 
-  it("shows the Price Monitoring DB-required banner and disables primary actions when DB is not ready", async () => {
+  it("hides Price Monitoring DB banners and disables primary actions when DB is not ready", async () => {
     installMockFetch([
       {
         method: "GET",
@@ -1019,12 +1018,14 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/price-monitoring");
 
-    await expect(
-      screen.findAllByText(
+    await expect(within(screen.getByLabelText("Source/vendor")).findByRole("option", { name: /electronet/i })).resolves.toBeInTheDocument();
+    expect(
+      screen.queryByText(
         "PostgreSQL is required for Price Monitoring. Files, paths, artifacts, and general commerce health may still be available.",
       ),
-    ).resolves.not.toHaveLength(0);
-    expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled();
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Source/vendor"), { target: { value: "electronet" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled());
     expect(screen.getByRole("button", { name: "Create run" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Monitor prices" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Load review" })).toBeDisabled();
@@ -1036,11 +1037,12 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/price-monitoring");
 
-    await expect(screen.findAllByText("Database ready")).resolves.not.toHaveLength(0);
+    await expect(within(screen.getByLabelText("Source/vendor")).findByRole("option", { name: /electronet/i })).resolves.toBeInTheDocument();
+    expect(screen.queryByText("Database ready")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Create run" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Source/vendor"), { target: { value: "electronet" } });
-    expect(screen.getByRole("button", { name: "Preview" })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Preview" })).toBeEnabled());
     expect(screen.getByRole("button", { name: "Create run" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Monitor prices" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Load review" })).toBeEnabled();

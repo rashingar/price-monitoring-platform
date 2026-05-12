@@ -45,10 +45,7 @@ import {
 } from "../api/priceMonitoringUtils";
 import { ArtifactList } from "../components/ArtifactList";
 import { EmptyState, ErrorState, LoadingState } from "../components/layout/StateBlocks";
-import {
-  isPriceMonitoringDbAvailable,
-  PriceMonitoringDbStatusBanner,
-} from "../components/priceMonitoring/PriceMonitoringDbStatusBanner";
+import { isPriceMonitoringDbAvailable } from "../components/priceMonitoring/PriceMonitoringDbStatusBanner";
 import { getPriceMonitoringDbBlockingMessage } from "../api/priceMonitoringDbGate";
 import { usePersistentPageState } from "../hooks/usePersistentPageState";
 import {
@@ -2198,8 +2195,6 @@ function ReviewResultsTable({
 function StoredObservationsSection({
   runId,
   dbStatus,
-  dbStatusError,
-  isDbStatusLoading,
   isLoading,
   observations,
   catalogSnapshot,
@@ -2215,12 +2210,9 @@ function StoredObservationsSection({
   onModelFilterChange,
   onMpnFilterChange,
   onRefresh,
-  onRetryDbStatus,
 }: {
   runId: string;
   dbStatus: PriceMonitoringDbStatus | null;
-  dbStatusError: string | null;
-  isDbStatusLoading: boolean;
   isLoading: boolean;
   observations: RunPriceObservationsResponse | null;
   catalogSnapshot: CatalogSnapshotResponse | null;
@@ -2236,7 +2228,6 @@ function StoredObservationsSection({
   onModelFilterChange: (value: string) => void;
   onMpnFilterChange: (value: string) => void;
   onRefresh: () => void;
-  onRetryDbStatus: () => void;
 }) {
   const filteredItems = filterStoredObservations(
     observations?.items ?? [],
@@ -2263,13 +2254,6 @@ function StoredObservationsSection({
           {isLoading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
-
-      <PriceMonitoringDbStatusBanner
-        status={dbStatus}
-        error={dbStatusError}
-        isLoading={isDbStatusLoading}
-        onRetry={onRetryDbStatus}
-      />
 
       {!runId ? (
         <EmptyState title="No run selected" message="Select or create a run to view stored observations." />
@@ -2628,8 +2612,8 @@ export function PriceMonitoringPage() {
   const [pathRootsError, setPathRootsError] = useState<string | null>(null);
   const [isPathRootsLoading, setIsPathRootsLoading] = useState(false);
   const [dbStatus, setDbStatus] = useState<PriceMonitoringDbStatus | null>(null);
-  const [dbStatusError, setDbStatusError] = useState<string | null>(null);
-  const [isDbStatusLoading, setIsDbStatusLoading] = useState(false);
+  const [, setDbStatusError] = useState<string | null>(null);
+  const [, setIsDbStatusLoading] = useState(false);
   const [storedObservations, setStoredObservations] =
     useState<RunPriceObservationsResponse | null>(null);
   const [catalogSnapshot, setCatalogSnapshot] = useState<CatalogSnapshotResponse | null>(null);
@@ -3656,13 +3640,6 @@ export function PriceMonitoringPage() {
         </button>
       </section>
 
-      <PriceMonitoringDbStatusBanner
-        status={dbStatus}
-        error={dbStatusError}
-        isLoading={isDbStatusLoading}
-        onRetry={() => void loadDbStatus()}
-      />
-
       <section className="panel">
         <div className="section-heading">
           <div>
@@ -4057,8 +4034,6 @@ export function PriceMonitoringPage() {
       <StoredObservationsSection
         runId={currentRunId.trim()}
         dbStatus={dbStatus}
-        dbStatusError={dbStatusError}
-        isDbStatusLoading={isDbStatusLoading}
         isLoading={isStoredObservationLoading}
         observations={storedObservations}
         catalogSnapshot={catalogSnapshot}
@@ -4074,7 +4049,6 @@ export function PriceMonitoringPage() {
         onModelFilterChange={setStoredModelFilter}
         onMpnFilterChange={setStoredMpnFilter}
         onRefresh={() => void loadStoredObservations(currentRunId.trim())}
-        onRetryDbStatus={() => void loadDbStatus()}
       />
 
       <section className="panel">
