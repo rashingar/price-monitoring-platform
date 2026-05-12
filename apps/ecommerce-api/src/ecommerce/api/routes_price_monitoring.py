@@ -53,8 +53,9 @@ from ecommerce.price_monitoring.persistence import (
 from ecommerce.price_monitoring.review import (
     PriceActionInput,
     PriceReviewError,
-    apply_price_actions,
+    apply_price_actions_to_rows,
     load_price_review_rows,
+    load_price_review_rows_from_observations,
     load_review_csv,
     summarize_review_rows,
 )
@@ -491,11 +492,13 @@ def get_price_review(run_id: str, enriched_csv_path: str | None = None) -> dict:
     run_dir = _resolve_run_dir(run_id)
     enriched_path = _optional_read_path(enriched_csv_path)
     try:
-        rows = load_price_review_rows(run_dir, enriched_path)
+        rows = _load_price_review_rows_for_route(run_id, run_dir, enriched_path)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PriceReviewError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Price review loading failed.") from exc
 
@@ -512,15 +515,18 @@ def post_price_review_actions(run_id: str, request: PriceReviewActionsApiRequest
     run_dir = _resolve_run_dir(run_id)
     enriched_path = _optional_read_path(request.enriched_csv_path)
     try:
-        result = apply_price_actions(
+        rows = _load_price_review_rows_for_route(run_id, run_dir, enriched_path)
+        result = apply_price_actions_to_rows(
             run_dir,
+            rows,
             [_to_action_input(action) for action in request.actions],
-            enriched_path,
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (PriceReviewError, MissingIgnoreColumnsError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Price review action application failed.") from exc
 
@@ -600,6 +606,34 @@ def _select_price_monitoring_products_with_source_url_coverage(
     with session_scope() as session:
         coverage = compute_source_url_coverage(session, result.items, result.source)
     return require_active_source_url_coverage(result, coverage)
+
+
+def _load_price_review_rows_for_route(
+    run_id: str,
+    run_dir: Path,
+    enriched_path: Path | None,
+):
+    try:
+        return load_price_review_rows(run_dir, enriched_path)
+    except FileNotFoundError:
+        if enriched_path is not None:
+            raise
+        return _load_price_review_rows_from_db_observations(run_id, run_dir)
+
+
+def _load_price_review_rows_from_db_observations(run_id: str, run_dir: Path):
+    with session_scope() as session:
+        observations, count = list_price_observations(
+            session,
+            run_id=run_id,
+            include_unmatched=True,
+            limit=5000,
+        )
+    if count <= 0 or not observations:
+        raise FileNotFoundError(
+            f"Enriched CSV not found in run folder and no persisted price observations found for run: {run_id}"
+        )
+    return load_price_review_rows_from_observations(run_dir, observations)
 
 
 def _marketplace_or_none(value: str | None) -> str | None:

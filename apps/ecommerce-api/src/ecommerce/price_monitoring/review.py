@@ -154,6 +154,40 @@ def load_price_review_rows(run_dir: Path, enriched_csv_path: Path | None = None)
     return rows
 
 
+def load_price_review_rows_from_observations(
+    run_dir: Path,
+    observations: list[dict[str, Any]],
+) -> list[PriceReviewRow]:
+    """Load review rows from DB-backed Vendor Sources price observations."""
+
+    run_dir = Path(run_dir)
+    if not run_dir.exists():
+        raise FileNotFoundError(f"Price monitoring run folder not found: {run_dir}")
+    if not observations:
+        raise FileNotFoundError(f"No persisted price observations found for run: {run_dir.name}")
+
+    input_csv_path = run_dir / "input.csv"
+    input_rows = _read_required_csv(input_csv_path, INPUT_COLUMNS, "input.csv")
+    run_source = _load_run_source(run_dir)
+    source = _source_from_observations(observations) or run_source
+    observations_by_model = _observations_by_key(observations, "model")
+    observations_by_mpn = _observations_by_key(observations, "mpn")
+    rows: list[PriceReviewRow] = []
+
+    for index, input_row in enumerate(input_rows):
+        model = _text(input_row.get("model"))
+        mpn = _text(input_row.get("mpn"))
+        observation = observations_by_model.get(model) or observations_by_mpn.get(mpn)
+        if observation is None and index < len(observations):
+            observation = observations[index]
+        enriched_row = _observation_to_enriched_row(observation or {}, source=source)
+        input_with_observed_price = dict(input_row)
+        if not _text(input_with_observed_price.get("price")):
+            input_with_observed_price["price"] = _text(enriched_row.get("current_price"))
+        rows.append(_build_review_row(input_with_observed_price, enriched_row, _text(enriched_row.get("source")) or source))
+    return rows
+
+
 def apply_price_actions(
     run_dir: Path,
     actions: list[PriceActionInput],
@@ -163,6 +197,17 @@ def apply_price_actions(
 
     run_dir = Path(run_dir)
     rows = load_price_review_rows(run_dir, enriched_csv_path)
+    return apply_price_actions_to_rows(run_dir, rows, actions)
+
+
+def apply_price_actions_to_rows(
+    run_dir: Path,
+    rows: list[PriceReviewRow],
+    actions: list[PriceActionInput],
+) -> PriceReviewResult:
+    """Apply manual pricing actions to already-loaded review rows."""
+
+    run_dir = Path(run_dir)
     action_by_model = _validate_action_list(actions)
     rows_by_model = {row.model: row for row in rows}
     warnings: list[str] = []
@@ -467,6 +512,63 @@ def _rows_by_model(rows: list[dict[str, str]]) -> dict[str, dict[str, str]]:
         if model and model not in result:
             result[model] = row
     return result
+
+
+def _observations_by_key(observations: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for observation in sorted(observations, key=_observation_priority_key):
+        value = _text(observation.get(key))
+        if value and value not in result:
+            result[value] = observation
+    return result
+
+
+def _observation_priority_key(observation: dict[str, Any]) -> tuple[int, Decimal]:
+    price = _parse_decimal(observation.get("competitor_price"))
+    if price is None or price <= 0:
+        return (1, Decimal("0"))
+    return (0, price)
+
+
+def _source_from_observations(observations: list[dict[str, Any]]) -> str:
+    for observation in observations:
+        source = _text(observation.get("source")).lower()
+        if source:
+            return source
+    return ""
+
+
+def _observation_to_enriched_row(observation: dict[str, Any], *, source: str) -> dict[str, str]:
+    raw = observation.get("raw_observation")
+    row = {str(key): _text(value) for key, value in raw.items()} if isinstance(raw, dict) else {}
+    resolved_source = _text(observation.get("source")).lower() or source
+    competitor_price = _text(observation.get("competitor_price"))
+    product_url = _text(observation.get("product_url"))
+    competitor_name = _text(observation.get("competitor_name")) or _text(observation.get("seller_name"))
+    row.update(
+        {
+            "model": _text(observation.get("model")) or row.get("model", ""),
+            "mpn": _text(observation.get("mpn")) or row.get("mpn", ""),
+            "name": _text(observation.get("product_name")) or row.get("name", ""),
+            "source": resolved_source,
+            "current_price": _text(observation.get("own_price")) or row.get("current_price", ""),
+            "competitor_price": competitor_price or row.get("competitor_price", ""),
+            "price_found": competitor_price or row.get("price_found", ""),
+            "competitor_store": competitor_name or row.get("competitor_store", ""),
+            "store": competitor_name or row.get("store", ""),
+            "competitor_url": product_url or row.get("competitor_url", ""),
+            "url": product_url or row.get("url", ""),
+            "price_delta": _text(observation.get("price_delta")) or row.get("price_delta", ""),
+            "price_delta_percent": _text(observation.get("price_delta_percent")) or row.get("price_delta_percent", ""),
+        }
+    )
+    if resolved_source:
+        row[f"{resolved_source}_price"] = competitor_price or row.get(f"{resolved_source}_price", "")
+        row[f"{resolved_source}_url"] = product_url or row.get(f"{resolved_source}_url", "")
+    if resolved_source == "bestprice":
+        row["bestprice_best_store"] = competitor_name or row.get("bestprice_best_store", "")
+        row["bestprice_best_store_price"] = competitor_price or row.get("bestprice_best_store_price", "")
+    return row
 
 
 def _competitor_price(row: dict[str, str], source: str) -> Decimal | None:

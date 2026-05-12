@@ -1,6 +1,7 @@
 import csv
 import json
 import sys
+from contextlib import contextmanager
 from decimal import Decimal
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from ecommerce.price_monitoring.review import (  # noqa: E402
     PriceReviewError,
     apply_price_actions,
     load_price_review_rows,
+    load_price_review_rows_from_observations,
     load_review_csv,
 )
 
@@ -67,6 +69,47 @@ def _write_run(run_dir: Path, *, source: str = "skroutz") -> Path:
     return enriched
 
 
+def _db_observations() -> list[dict[str, object]]:
+    return [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Store A",
+            "competitor_price": "118.50",
+            "own_price": "123.45",
+            "product_url": "https://skroutz.test/db-p1",
+            "match_status": "matched",
+            "raw_observation": {"source_url": "https://skroutz.test/db-p1"},
+        },
+        {
+            "model": "123456",
+            "mpn": "MPN-2",
+            "product_name": "Product Two",
+            "source": "skroutz",
+            "competitor_name": "Store B",
+            "competitor_price": "120.00",
+            "own_price": "100.00",
+            "product_url": "https://skroutz.test/db-p2",
+            "match_status": "matched",
+            "raw_observation": {},
+        },
+    ]
+
+
+def _install_db_observation_fallback(monkeypatch, observations: list[dict[str, object]]) -> None:
+    @contextmanager
+    def fake_session_scope(*_args, **_kwargs):
+        yield object()
+
+    def fake_list_price_observations(*_args, **_kwargs):
+        return observations, len(observations)
+
+    monkeypatch.setattr(routes_price_monitoring, "session_scope", fake_session_scope)
+    monkeypatch.setattr(routes_price_monitoring, "list_price_observations", fake_list_price_observations)
+
+
 def test_loading_review_rows_preserves_models_and_computes_deltas(tmp_path: Path) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir)
@@ -93,6 +136,23 @@ def test_bestprice_mapper_uses_existing_store_and_price_fields(tmp_path: Path) -
     assert rows[0].competitor_store == "Store A"
     assert rows[0].competitor_url == "https://bestprice.test/p1"
     assert rows[0].competitor_price == Decimal("119.90")
+
+
+def test_loading_review_rows_from_db_observations_preserves_price_review_behavior(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+
+    rows = load_price_review_rows_from_observations(run_dir, _db_observations())
+
+    assert rows[0].model == "005606"
+    assert rows[0].source == "skroutz"
+    assert rows[0].competitor_price == Decimal("118.50")
+    assert rows[0].competitor_store == "Store A"
+    assert rows[0].competitor_url == "https://skroutz.test/db-p1"
+    assert rows[0].price_delta == Decimal("4.95")
+    assert rows[0].recommended_action == "match_price"
+    assert rows[1].recommended_action == "ignore"
 
 
 def test_match_price_action_writes_review_artifacts(tmp_path: Path, monkeypatch) -> None:
@@ -350,3 +410,49 @@ def test_api_get_review_and_post_actions(tmp_path: Path, monkeypatch) -> None:
     assert post_payload["artifacts"][0]["is_allowed"] is True
     assert post_payload["artifacts"][0]["read_url"].startswith("/api/artifacts/read?path=")
     assert load_review_csv(Path(post_payload["review_csv_path"]))[0].target_price == Decimal("118.90")
+
+
+def test_api_get_review_falls_back_to_db_observations_when_enriched_csv_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    _install_db_observation_fallback(monkeypatch, _db_observations())
+
+    response = TestClient(create_app()).get("/api/price-monitoring/runs/run-1/review")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["model"] == "005606"
+    assert payload["items"][0]["competitor_price"] == 118.5
+    assert payload["items"][0]["competitor_store"] == "Store A"
+    assert payload["items"][0]["competitor_url"] == "https://skroutz.test/db-p1"
+    assert payload["summary"]["review_required"] == 2
+
+
+def test_api_post_review_actions_falls_back_to_db_observations_when_enriched_csv_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
+    _install_db_observation_fallback(monkeypatch, _db_observations())
+
+    response = TestClient(create_app()).post(
+        "/api/price-monitoring/runs/run-1/review/actions",
+        json={
+            "enriched_csv_path": None,
+            "actions": [{"model": "005606", "selected_action": "match_price"}],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "review_actions_applied"
+    assert load_review_csv(Path(payload["review_csv_path"]))[0].target_price == Decimal("118.50")
