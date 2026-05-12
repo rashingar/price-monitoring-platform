@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   CommerceApiError,
@@ -63,6 +64,10 @@ type SourceOverride = "" | PriceMonitoringSource;
 type PriceMonitoringSourceFilter = string;
 type StoredObservationMatchFilter = "all" | PriceObservationMatchStatus;
 const SOURCE_REQUIRED_MESSAGE = "Choose one source/vendor to monitor.";
+const REVIEW_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.reviewColumns.v1";
+const OBSERVATION_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.observationColumns.v1";
+const MIN_COLUMN_WIDTH = 72;
+const MAX_COLUMN_WIDTH = 640;
 
 function normalizeFetchStatus(status: unknown): string {
   if (typeof status !== "string" || status.trim().length === 0) {
@@ -140,6 +145,282 @@ interface RowActionState {
   selected_action: "" | PriceMonitoringAction;
   undercut_amount: string;
   reason: string;
+}
+
+interface ManagedColumn<Row, ColumnId extends string> {
+  id: ColumnId;
+  label: string;
+  defaultWidth: number;
+  minWidth?: number;
+  required?: boolean;
+  available?: boolean;
+  className?: string;
+  render: (row: Row) => ReactNode;
+}
+
+interface ColumnPreferences<ColumnId extends string> {
+  order: ColumnId[];
+  visible: ColumnId[];
+  widths: Partial<Record<ColumnId, number>>;
+}
+
+function clampColumnWidth(width: number, minWidth = MIN_COLUMN_WIDTH): number {
+  if (!Number.isFinite(width)) {
+    return minWidth;
+  }
+
+  return Math.min(MAX_COLUMN_WIDTH, Math.max(minWidth, Math.round(width)));
+}
+
+function defaultColumnPreferences<ColumnId extends string>(
+  columns: Array<ManagedColumn<unknown, ColumnId>>,
+): ColumnPreferences<ColumnId> {
+  return {
+    order: columns.map((column) => column.id),
+    visible: columns.map((column) => column.id),
+    widths: columns.reduce<Partial<Record<ColumnId, number>>>((widths, column) => {
+      widths[column.id] = clampColumnWidth(column.defaultWidth, column.minWidth);
+      return widths;
+    }, {}),
+  };
+}
+
+function normalizeColumnPreferences<ColumnId extends string>(
+  value: ColumnPreferences<ColumnId>,
+  columns: Array<ManagedColumn<unknown, ColumnId>>,
+): ColumnPreferences<ColumnId> {
+  const availableIds = new Set(columns.map((column) => column.id));
+  const requiredIds = columns.filter((column) => column.required).map((column) => column.id);
+  const ordered = value.order.filter((columnId) => availableIds.has(columnId));
+  const missing = columns.map((column) => column.id).filter((columnId) => !ordered.includes(columnId));
+  const visible = value.visible.filter((columnId) => availableIds.has(columnId));
+  const nextVisible = Array.from(new Set([...requiredIds, ...visible]));
+  const widths = columns.reduce<Partial<Record<ColumnId, number>>>((nextWidths, column) => {
+    nextWidths[column.id] = clampColumnWidth(
+      value.widths[column.id] ?? column.defaultWidth,
+      column.minWidth,
+    );
+    return nextWidths;
+  }, {});
+
+  return {
+    order: [...ordered, ...missing],
+    visible: nextVisible.length > 0 ? nextVisible : columns.slice(0, 1).map((column) => column.id),
+    widths,
+  };
+}
+
+function loadColumnPreferences<ColumnId extends string>(
+  storageKey: string,
+  columns: Array<ManagedColumn<unknown, ColumnId>>,
+): ColumnPreferences<ColumnId> {
+  const defaults = defaultColumnPreferences(columns);
+  if (typeof window === "undefined") {
+    return defaults;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      return defaults;
+    }
+    const parsed = JSON.parse(raw) as Partial<ColumnPreferences<ColumnId>>;
+    return normalizeColumnPreferences(
+      {
+        order: Array.isArray(parsed.order) ? parsed.order : defaults.order,
+        visible: Array.isArray(parsed.visible) ? parsed.visible : defaults.visible,
+        widths: isRecord(parsed.widths) ? parsed.widths as Partial<Record<ColumnId, number>> : defaults.widths,
+      },
+      columns,
+    );
+  } catch {
+    return defaults;
+  }
+}
+
+function useManagedColumns<Row, ColumnId extends string>(
+  storageKey: string,
+  columns: Array<ManagedColumn<Row, ColumnId>>,
+) {
+  const unknownColumns = columns as Array<ManagedColumn<unknown, ColumnId>>;
+  const [preferences, setPreferences] = useState<ColumnPreferences<ColumnId>>(() =>
+    loadColumnPreferences(storageKey, unknownColumns),
+  );
+  const normalizedPreferences = useMemo(
+    () => normalizeColumnPreferences(preferences, unknownColumns),
+    [preferences, unknownColumns],
+  );
+  const availableColumns = useMemo(
+    () => columns.filter((column) => column.available !== false),
+    [columns],
+  );
+  const visibleColumnIds = useMemo(() => new Set(normalizedPreferences.visible), [normalizedPreferences.visible]);
+  const activeColumns = useMemo(() => {
+    const byId = new Map(availableColumns.map((column) => [column.id, column]));
+    return normalizedPreferences.order
+      .map((columnId) => byId.get(columnId))
+      .filter((column): column is ManagedColumn<Row, ColumnId> => Boolean(column))
+      .filter((column) => visibleColumnIds.has(column.id));
+  }, [availableColumns, normalizedPreferences.order, visibleColumnIds]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(storageKey, JSON.stringify(normalizedPreferences));
+  }, [normalizedPreferences, storageKey]);
+
+  const toggleColumn = useCallback(
+    (columnId: ColumnId) => {
+      const column = columns.find((candidate) => candidate.id === columnId);
+      if (column?.required) {
+        return;
+      }
+      setPreferences((current) => {
+        const currentVisible = new Set(current.visible);
+        if (currentVisible.has(columnId)) {
+          currentVisible.delete(columnId);
+        } else {
+          currentVisible.add(columnId);
+        }
+        return { ...current, visible: Array.from(currentVisible) };
+      });
+    },
+    [columns],
+  );
+  const moveColumn = useCallback((columnId: ColumnId, direction: -1 | 1) => {
+    setPreferences((current) => {
+      const order = [...current.order];
+      const index = order.indexOf(columnId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= order.length) {
+        return current;
+      }
+      [order[index], order[nextIndex]] = [order[nextIndex], order[index]];
+      return { ...current, order };
+    });
+  }, []);
+  const resizeColumn = useCallback(
+    (columnId: ColumnId, width: number) => {
+      const column = columns.find((candidate) => candidate.id === columnId);
+      setPreferences((current) => ({
+        ...current,
+        widths: {
+          ...current.widths,
+          [columnId]: clampColumnWidth(width, column?.minWidth),
+        },
+      }));
+    },
+    [columns],
+  );
+  const resetColumns = useCallback(() => {
+    setPreferences(defaultColumnPreferences(unknownColumns));
+  }, [unknownColumns]);
+
+  return {
+    activeColumns,
+    availableColumns,
+    preferences: normalizedPreferences,
+    visibleColumnIds,
+    toggleColumn,
+    moveColumn,
+    resizeColumn,
+    resetColumns,
+  };
+}
+
+function getColumnWidth<Row, ColumnId extends string>(
+  column: ManagedColumn<Row, ColumnId>,
+  preferences: ColumnPreferences<ColumnId>,
+): number {
+  return clampColumnWidth(preferences.widths[column.id] ?? column.defaultWidth, column.minWidth);
+}
+
+function getManagedTableWidth<Row, ColumnId extends string>(
+  columns: Array<ManagedColumn<Row, ColumnId>>,
+  preferences: ColumnPreferences<ColumnId>,
+): number {
+  return columns.reduce((total, column) => total + getColumnWidth(column, preferences), 0);
+}
+
+function ColumnControls<Row, ColumnId extends string>({
+  columns,
+  preferences,
+  visibleColumnIds,
+  onToggleColumn,
+  onMoveColumn,
+  onResizeColumn,
+  onReset,
+}: {
+  columns: Array<ManagedColumn<Row, ColumnId>>;
+  preferences: ColumnPreferences<ColumnId>;
+  visibleColumnIds: Set<ColumnId>;
+  onToggleColumn: (columnId: ColumnId) => void;
+  onMoveColumn: (columnId: ColumnId, direction: -1 | 1) => void;
+  onResizeColumn: (columnId: ColumnId, width: number) => void;
+  onReset: () => void;
+}) {
+  const byId = new Map(columns.map((column) => [column.id, column]));
+  const orderedColumns = preferences.order
+    .map((columnId) => byId.get(columnId))
+    .filter((column): column is ManagedColumn<Row, ColumnId> => Boolean(column))
+    .filter((column) => column.available !== false);
+
+  return (
+    <details className="column-controls managed-column-controls">
+      <summary>Columns</summary>
+      <div className="column-controls-panel managed-column-controls-panel">
+        {orderedColumns.map((column, index) => (
+          <div className="column-control-row" key={column.id}>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={visibleColumnIds.has(column.id)}
+                disabled={column.required}
+                onChange={() => onToggleColumn(column.id)}
+              />
+              <span>{column.label}</span>
+            </label>
+            <div className="column-control-actions">
+              <button
+                className="button secondary icon-button"
+                type="button"
+                disabled={index === 0}
+                title="Move column left"
+                onClick={() => onMoveColumn(column.id, -1)}
+              >
+                {"<"}
+              </button>
+              <button
+                className="button secondary icon-button"
+                type="button"
+                disabled={index === orderedColumns.length - 1}
+                title="Move column right"
+                onClick={() => onMoveColumn(column.id, 1)}
+              >
+                {">"}
+              </button>
+              <label className="column-width-control">
+                Width
+                <input
+                  className="column-width-input"
+                  type="number"
+                  min={column.minWidth ?? MIN_COLUMN_WIDTH}
+                  max={MAX_COLUMN_WIDTH}
+                  step="10"
+                  value={getColumnWidth(column, preferences)}
+                  onChange={(event) => onResizeColumn(column.id, Number(event.target.value))}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+        <button className="button secondary inline-button" type="button" onClick={onReset}>
+          Reset columns
+        </button>
+      </div>
+    </details>
+  );
 }
 
 function formatValue(value: unknown): string {
@@ -1334,6 +1615,25 @@ function hasObservationHistoryMetadata(item: PriceObservation): boolean {
   );
 }
 
+type ObservationColumnId =
+  | "match"
+  | "model"
+  | "mpn"
+  | "product_name"
+  | "source"
+  | "competitor_name"
+  | "competitor_price"
+  | "own_price"
+  | "price_delta"
+  | "price_delta_percent"
+  | "availability"
+  | "product_url"
+  | "observed_at"
+  | "fetch_attempt"
+  | "batch_source"
+  | "created_at"
+  | "actions";
+
 function ObservationTable({
   items,
   isDbAvailable,
@@ -1341,104 +1641,221 @@ function ObservationTable({
   items: PriceObservation[];
   isDbAvailable: boolean;
 }) {
+  const showHistoryColumns = items.some(hasObservationHistoryMetadata);
+  const columns = useMemo<Array<ManagedColumn<PriceObservation, ObservationColumnId>>>(
+    () => [
+      {
+        id: "match",
+        label: "Match",
+        defaultWidth: 116,
+        render: (item) => {
+          const matched = isObservationMatched(item);
+          return (
+            <span className={`status-badge ${matched ? "ok" : "warning"}`}>
+              {matched ? "Matched" : "Unmatched"}
+            </span>
+          );
+        },
+      },
+      {
+        id: "model",
+        label: "Model",
+        defaultWidth: 104,
+        className: "nowrap-cell",
+        render: (item) => formatValue(item.model),
+      },
+      {
+        id: "mpn",
+        label: "MPN",
+        defaultWidth: 132,
+        className: "nowrap-cell",
+        render: (item) => formatValue(item.mpn),
+      },
+      {
+        id: "product_name",
+        label: "Product name",
+        defaultWidth: 260,
+        render: (item) => formatValue(item.product_name),
+      },
+      {
+        id: "source",
+        label: "Source",
+        defaultWidth: 120,
+        render: (item) => formatValue(item.source),
+      },
+      {
+        id: "competitor_name",
+        label: "Competitor / Store",
+        defaultWidth: 180,
+        render: (item) => formatValue(item.competitor_name),
+      },
+      {
+        id: "competitor_price",
+        label: "Competitor price",
+        defaultWidth: 142,
+        className: "nowrap-cell",
+        render: (item) => formatMoney(item.competitor_price, getCurrency(item.currency)),
+      },
+      {
+        id: "own_price",
+        label: "Own price",
+        defaultWidth: 126,
+        className: "nowrap-cell",
+        render: (item) => formatMoney(item.own_price, getCurrency(item.currency)),
+      },
+      {
+        id: "price_delta",
+        label: "Delta",
+        defaultWidth: 112,
+        className: "nowrap-cell",
+        render: (item) => formatNumber(item.price_delta),
+      },
+      {
+        id: "price_delta_percent",
+        label: "Delta %",
+        defaultWidth: 112,
+        className: "nowrap-cell",
+        render: (item) => formatNumber(item.price_delta_percent),
+      },
+      {
+        id: "availability",
+        label: "Availability",
+        defaultWidth: 144,
+        render: (item) => formatValue(item.availability),
+      },
+      {
+        id: "product_url",
+        label: "Product URL",
+        defaultWidth: 112,
+        render: (item) =>
+          item.product_url ? (
+            <a href={item.product_url} target="_blank" rel="noreferrer">
+              Open
+            </a>
+          ) : (
+            "-"
+          ),
+      },
+      {
+        id: "observed_at",
+        label: "Observed at",
+        defaultWidth: 178,
+        className: "nowrap-cell",
+        render: (item) => formatValue(item.observed_at),
+      },
+      {
+        id: "fetch_attempt",
+        label: "Attempt",
+        defaultWidth: 112,
+        available: showHistoryColumns,
+        render: (item) => (
+          <>
+            {formatValue(item.fetch_attempt)}
+            {item.was_refetch === true ? <small className="artifact-path">Refetch</small> : null}
+          </>
+        ),
+      },
+      {
+        id: "batch_source",
+        label: "Batch/source",
+        defaultWidth: 220,
+        available: showHistoryColumns,
+        render: (item) => (
+          <>
+            {formatValue(item.observation_batch_id ?? item.execution_id)}
+            <small className="artifact-path">
+              {formatValue(item.product_source_id ?? item.source_capture_snapshot_id)}
+            </small>
+          </>
+        ),
+      },
+      {
+        id: "created_at",
+        label: "Stored at",
+        defaultWidth: 178,
+        available: showHistoryColumns,
+        className: "nowrap-cell",
+        render: (item) => formatValue(item.created_at),
+      },
+      {
+        id: "actions",
+        label: "Actions",
+        defaultWidth: 138,
+        render: (item) =>
+          isDbAvailable ? (
+            <Link className="button secondary" to={getCreateAlertLink(item)}>
+              Create alert
+            </Link>
+          ) : (
+            <span
+              className="button secondary disabled-link"
+              aria-disabled="true"
+              title="Database is unavailable. Alert write actions are disabled."
+            >
+              Create alert
+            </span>
+          ),
+      },
+    ],
+    [isDbAvailable, showHistoryColumns],
+  );
+  const {
+    activeColumns,
+    availableColumns,
+    preferences,
+    visibleColumnIds,
+    toggleColumn,
+    moveColumn,
+    resizeColumn,
+    resetColumns,
+  } = useManagedColumns(OBSERVATION_COLUMNS_STORAGE_KEY, columns);
+
   if (items.length === 0) {
     return <EmptyState title="No stored observations" message="No observations matched the current filters." />;
   }
 
-  const showHistoryColumns = items.some(hasObservationHistoryMetadata);
-
   return (
-    <div className="table-wrap observation-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Match</th>
-            <th>Model</th>
-            <th>MPN</th>
-            <th>Product name</th>
-            <th>Source</th>
-            <th>Competitor / Store</th>
-            <th>Competitor price</th>
-            <th>Own price</th>
-            <th>Delta</th>
-            <th>Delta %</th>
-            <th>Availability</th>
-            <th>Product URL</th>
-            <th>Observed at</th>
-            {showHistoryColumns ? <th>Attempt</th> : null}
-            {showHistoryColumns ? <th>Batch/source</th> : null}
-            {showHistoryColumns ? <th>Stored at</th> : null}
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item, index) => {
-            const matched = isObservationMatched(item);
-            const currency = getCurrency(item.currency);
-
-            return (
+    <>
+      <ColumnControls
+        columns={availableColumns}
+        preferences={preferences}
+        visibleColumnIds={visibleColumnIds}
+        onToggleColumn={toggleColumn}
+        onMoveColumn={moveColumn}
+        onResizeColumn={resizeColumn}
+        onReset={resetColumns}
+      />
+      <div className="table-wrap observation-table-wrap">
+        <table
+          className="managed-column-table"
+          style={{ minWidth: `${getManagedTableWidth(activeColumns, preferences)}px` }}
+        >
+          <colgroup>
+            {activeColumns.map((column) => (
+              <col key={column.id} style={{ width: `${getColumnWidth(column, preferences)}px` }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              {activeColumns.map((column) => (
+                <th key={column.id}>{column.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
               <tr key={getStoredObservationKey(item, index)}>
-                <td>
-                  <span className={`status-badge ${matched ? "ok" : "warning"}`}>
-                    {matched ? "Matched" : "Unmatched"}
-                  </span>
-                </td>
-                <td className="nowrap-cell">{formatValue(item.model)}</td>
-                <td className="nowrap-cell">{formatValue(item.mpn)}</td>
-                <td>{formatValue(item.product_name)}</td>
-                <td>{formatValue(item.source)}</td>
-                <td>{formatValue(item.competitor_name)}</td>
-                <td className="nowrap-cell">{formatMoney(item.competitor_price, currency)}</td>
-                <td className="nowrap-cell">{formatMoney(item.own_price, currency)}</td>
-                <td className="nowrap-cell">{formatNumber(item.price_delta)}</td>
-                <td className="nowrap-cell">{formatNumber(item.price_delta_percent)}</td>
-                <td>{formatValue(item.availability)}</td>
-                <td>
-                  {item.product_url ? (
-                    <a href={item.product_url} target="_blank" rel="noreferrer">
-                      Open
-                    </a>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-                <td className="nowrap-cell">{formatValue(item.observed_at)}</td>
-                {showHistoryColumns ? (
-                  <td>
-                    {formatValue(item.fetch_attempt)}
-                    {item.was_refetch === true ? <small className="artifact-path">Refetch</small> : null}
+                {activeColumns.map((column) => (
+                  <td className={column.className} key={column.id}>
+                    {column.render(item)}
                   </td>
-                ) : null}
-                {showHistoryColumns ? (
-                  <td>
-                    {formatValue(item.observation_batch_id ?? item.execution_id)}
-                    <small className="artifact-path">
-                      {formatValue(item.product_source_id ?? item.source_capture_snapshot_id)}
-                    </small>
-                  </td>
-                ) : null}
-                {showHistoryColumns ? <td className="nowrap-cell">{formatValue(item.created_at)}</td> : null}
-                <td>
-                  {isDbAvailable ? (
-                    <Link className="button secondary" to={getCreateAlertLink(item)}>
-                      Create alert
-                    </Link>
-                  ) : (
-                    <span
-                      className="button secondary disabled-link"
-                      aria-disabled="true"
-                      title="Database is unavailable. Alert write actions are disabled."
-                    >
-                      Create alert
-                    </span>
-                  )}
-                </td>
+                ))}
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -1498,6 +1915,253 @@ function CatalogSnapshotTable({ snapshot }: { snapshot: CatalogSnapshotResponse 
         </div>
       )}
     </details>
+  );
+}
+
+type ReviewColumnId =
+  | "model"
+  | "name"
+  | "mpn"
+  | "current_price"
+  | "competitor_price"
+  | "competitor_store"
+  | "competitor_url"
+  | "price_delta"
+  | "price_delta_percent"
+  | "recommended_action"
+  | "selected_action"
+  | "undercut_amount"
+  | "target_price"
+  | "reason"
+  | "status"
+  | "warnings";
+
+function ReviewResultsTable({
+  items,
+  rowActions,
+  dbAvailable,
+  onUpdateRowAction,
+}: {
+  items: PriceMonitoringReviewItem[];
+  rowActions: Record<string, RowActionState>;
+  dbAvailable: boolean;
+  onUpdateRowAction: (model: string, patch: Partial<RowActionState>) => void;
+}) {
+  const columns = useMemo<Array<ManagedColumn<PriceMonitoringReviewItem, ReviewColumnId>>>(
+    () => [
+      {
+        id: "model",
+        label: "Model",
+        defaultWidth: 104,
+        className: "nowrap-cell",
+        render: (item) => item.model,
+      },
+      {
+        id: "name",
+        label: "Name",
+        defaultWidth: 260,
+        render: (item) => formatValue(item.name),
+      },
+      {
+        id: "mpn",
+        label: "MPN",
+        defaultWidth: 128,
+        className: "nowrap-cell",
+        render: (item) => formatValue(item.mpn),
+      },
+      {
+        id: "current_price",
+        label: "Current",
+        defaultWidth: 116,
+        className: "nowrap-cell",
+        render: (item) => formatMoney(item.current_price),
+      },
+      {
+        id: "competitor_price",
+        label: "Competitor",
+        defaultWidth: 126,
+        className: "nowrap-cell",
+        render: (item) => formatMoney(item.competitor_price),
+      },
+      {
+        id: "competitor_store",
+        label: "Store",
+        defaultWidth: 176,
+        render: (item) => formatValue(item.competitor_store),
+      },
+      {
+        id: "competitor_url",
+        label: "URL",
+        defaultWidth: 88,
+        className: "review-url-cell",
+        render: (item) =>
+          item.competitor_url ? (
+            <a href={item.competitor_url} target="_blank" rel="noreferrer">
+              Open
+            </a>
+          ) : (
+            "-"
+          ),
+      },
+      {
+        id: "price_delta",
+        label: "Delta",
+        defaultWidth: 112,
+        className: "nowrap-cell",
+        render: (item) => formatNumber(item.price_delta),
+      },
+      {
+        id: "price_delta_percent",
+        label: "Delta %",
+        defaultWidth: 112,
+        className: "nowrap-cell",
+        render: (item) => formatNumber(item.price_delta_percent),
+      },
+      {
+        id: "recommended_action",
+        label: "Recommended",
+        defaultWidth: 142,
+        render: (item) => formatValue(item.recommended_action),
+      },
+      {
+        id: "selected_action",
+        label: "Action",
+        defaultWidth: 180,
+        render: (item) => {
+          const state = getActionState(item, rowActions);
+          const actionError = getActionError(item, state);
+          return (
+            <>
+              <select
+                value={state.selected_action}
+                disabled={!dbAvailable}
+                onChange={(event) =>
+                  onUpdateRowAction(item.model, {
+                    selected_action: event.target.value as "" | PriceMonitoringAction,
+                  })
+                }
+              >
+                <option value="">No action</option>
+                <option value="match_price">match_price</option>
+                <option value="undercut">undercut</option>
+                <option value="ignore">ignore</option>
+              </select>
+              {actionError ? <small className="field-error">{actionError}</small> : null}
+            </>
+          );
+        },
+      },
+      {
+        id: "undercut_amount",
+        label: "Undercut",
+        defaultWidth: 132,
+        render: (item) => {
+          const state = getActionState(item, rowActions);
+          return (
+            <input
+              className="table-input small-input"
+              type="number"
+              min="0"
+              step="0.01"
+              value={state.undercut_amount}
+              disabled={state.selected_action !== "undercut" || !dbAvailable}
+              onChange={(event) => onUpdateRowAction(item.model, { undercut_amount: event.target.value })}
+            />
+          );
+        },
+      },
+      {
+        id: "target_price",
+        label: "Target",
+        defaultWidth: 116,
+        className: "nowrap-cell",
+        render: (item) => formatMoney(computeTargetPrice(item, getActionState(item, rowActions))),
+      },
+      {
+        id: "reason",
+        label: "Reason",
+        defaultWidth: 220,
+        render: (item) => {
+          const state = getActionState(item, rowActions);
+          return (
+            <input
+              className="table-input"
+              value={state.reason}
+              disabled={state.selected_action !== "ignore" || !dbAvailable}
+              onChange={(event) => onUpdateRowAction(item.model, { reason: event.target.value })}
+              placeholder="Optional"
+            />
+          );
+        },
+      },
+      {
+        id: "status",
+        label: "Status",
+        defaultWidth: 140,
+        render: (item) => formatValue(item.status),
+      },
+      {
+        id: "warnings",
+        label: "Warnings",
+        defaultWidth: 220,
+        render: (item) => item.warnings?.join(", ") || "-",
+      },
+    ],
+    [dbAvailable, onUpdateRowAction, rowActions],
+  );
+  const {
+    activeColumns,
+    availableColumns,
+    preferences,
+    visibleColumnIds,
+    toggleColumn,
+    moveColumn,
+    resizeColumn,
+    resetColumns,
+  } = useManagedColumns(REVIEW_COLUMNS_STORAGE_KEY, columns);
+
+  return (
+    <>
+      <ColumnControls
+        columns={availableColumns}
+        preferences={preferences}
+        visibleColumnIds={visibleColumnIds}
+        onToggleColumn={toggleColumn}
+        onMoveColumn={moveColumn}
+        onResizeColumn={resizeColumn}
+        onReset={resetColumns}
+      />
+      <div className="table-wrap review-table-wrap">
+        <table
+          className="managed-column-table"
+          style={{ minWidth: `${getManagedTableWidth(activeColumns, preferences)}px` }}
+        >
+          <colgroup>
+            {activeColumns.map((column) => (
+              <col key={column.id} style={{ width: `${getColumnWidth(column, preferences)}px` }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              {activeColumns.map((column) => (
+                <th key={column.id}>{column.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.model}>
+                {activeColumns.map((column) => (
+                  <td className={column.className} key={column.id}>
+                    {column.render(item)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -3446,102 +4110,12 @@ export function PriceMonitoringPage() {
             {review.items.length === 0 ? (
               <EmptyState title="No review rows" message="The backend returned an empty review." />
             ) : (
-              <div className="table-wrap review-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Model</th>
-                      <th>Name</th>
-                      <th>MPN</th>
-                      <th>Current</th>
-                      <th>Competitor</th>
-                      <th>Store</th>
-                      <th>URL</th>
-                      <th>Delta</th>
-                      <th>Delta %</th>
-                      <th>Recommended</th>
-                      <th>Action</th>
-                      <th>Undercut</th>
-                      <th>Target</th>
-                      <th>Reason</th>
-                      <th>Status</th>
-                      <th>Warnings</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {review.items.map((item) => {
-                      const state = getActionState(item, rowActions);
-                      const targetPrice = computeTargetPrice(item, state);
-                      const actionError = getActionError(item, state);
-
-                      return (
-                        <tr key={item.model}>
-                          <td className="nowrap-cell">{item.model}</td>
-                          <td>{formatValue(item.name)}</td>
-                          <td>{formatValue(item.mpn)}</td>
-                          <td className="nowrap-cell">{formatMoney(item.current_price)}</td>
-                          <td className="nowrap-cell">{formatMoney(item.competitor_price)}</td>
-                          <td>{formatValue(item.competitor_store)}</td>
-                          <td className="review-url-cell">
-                            {item.competitor_url ? (
-                              <a href={item.competitor_url} target="_blank" rel="noreferrer">
-                                Open
-                              </a>
-                            ) : (
-                              "-"
-                            )}
-                          </td>
-                          <td>{formatNumber(item.price_delta)}</td>
-                          <td>{formatNumber(item.price_delta_percent)}</td>
-                          <td>{formatValue(item.recommended_action)}</td>
-                          <td>
-                            <select
-                              value={state.selected_action}
-                              disabled={!dbAvailable}
-                              onChange={(event) =>
-                                updateRowAction(item.model, {
-                                  selected_action: event.target.value as "" | PriceMonitoringAction,
-                                })
-                              }
-                            >
-                              <option value="">No action</option>
-                              <option value="match_price">match_price</option>
-                              <option value="undercut">undercut</option>
-                              <option value="ignore">ignore</option>
-                            </select>
-                            {actionError ? <small className="field-error">{actionError}</small> : null}
-                          </td>
-                          <td>
-                            <input
-                              className="table-input small-input"
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={state.undercut_amount}
-                              disabled={state.selected_action !== "undercut" || !dbAvailable}
-                              onChange={(event) =>
-                                updateRowAction(item.model, { undercut_amount: event.target.value })
-                              }
-                            />
-                          </td>
-                          <td className="nowrap-cell">{formatMoney(targetPrice)}</td>
-                          <td>
-                            <input
-                              className="table-input"
-                              value={state.reason}
-                              disabled={state.selected_action !== "ignore" || !dbAvailable}
-                              onChange={(event) => updateRowAction(item.model, { reason: event.target.value })}
-                              placeholder="Optional"
-                            />
-                          </td>
-                          <td>{formatValue(item.status)}</td>
-                          <td>{item.warnings?.join(", ") || "-"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <ReviewResultsTable
+                items={review.items}
+                rowActions={rowActions}
+                dbAvailable={dbAvailable}
+                onUpdateRowAction={updateRowAction}
+              />
             )}
 
             {actionErrors.length > 0 ? (
