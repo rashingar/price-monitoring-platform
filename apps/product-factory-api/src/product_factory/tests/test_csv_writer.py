@@ -124,6 +124,34 @@ def test_air_conditioner_wall_taxonomy_uses_leaf_cta_text() -> None:
     assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερα Κλιματιστικά εδώ"
 
 
+def test_stand_fan_taxonomy_uses_combined_fan_cta_text() -> None:
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Ανεμιστήρες",
+        sub_category="Ορθοστάτης",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Ανεμιστήρες > Ορθοστάτης",
+        cta_url="https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/orthostatis",
+        gender="masc",
+        plural_label="Ορθοστάτες",
+    )
+
+    assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερους Ανεμιστήρες Ορθοστάτες εδώ"
+
+
+def test_ceiling_fan_taxonomy_uses_combined_fan_cta_text() -> None:
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Ανεμιστήρες",
+        sub_category="Οροφής",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Ανεμιστήρες > Οροφής",
+        cta_url="https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/orofhs",
+        gender="fem",
+        plural_label="Οροφής",
+    )
+
+    assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερους Ανεμιστήρες Οροφής εδώ"
+
+
 def test_presentation_blocks_extract_images_from_left_and_right_banner_layouts() -> None:
     presentation_html = """
     <div class="ck-text inline">

@@ -257,6 +257,11 @@ def _cta_text_for_taxonomy(taxonomy: TaxonomyResolution) -> str:
         return build_deterministic_cta("fem", taxonomy.leaf_category)
     if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Κλιματιστικά"):
         return build_deterministic_cta("neut", taxonomy.leaf_category)
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Ανεμιστήρες"):
+        if normalize_for_match(taxonomy.sub_category) == normalize_for_match("Ορθοστάτης"):
+            return "Δείτε περισσότερους Ανεμιστήρες Ορθοστάτες εδώ"
+        if normalize_for_match(taxonomy.sub_category) == normalize_for_match("Οροφής"):
+            return "Δείτε περισσότερους Ανεμιστήρες Οροφής εδώ"
     return build_deterministic_cta(taxonomy.gender, taxonomy.plural_label)
 
 
