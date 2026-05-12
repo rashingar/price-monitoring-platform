@@ -128,7 +128,7 @@ def test_vendor_sources_api_returns_discovery_and_capture_capabilities() -> None
     assert items["skroutz"]["source_type"] == "marketplace"
     assert items["skroutz"]["capture_implemented"] is True
     assert items["bestprice"]["discovery_enabled"] is True
-    assert items["bestprice"]["capture_implemented"] is False
+    assert items["bestprice"]["capture_implemented"] is True
     for source_name in ("plaisio", "public", "kotsovolos"):
         assert items[source_name]["source_type"] == "direct_vendor"
         assert items[source_name]["discovery_enabled"] is True

@@ -6,6 +6,7 @@ import csv
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,7 @@ from ecommerce.db.repositories import (
     update_monitoring_run_from_fetch,
 )
 from ecommerce.db.session import session_scope
-from ecommerce.db.models import PriceObservation
+from ecommerce.db.models import CatalogSnapshot, PriceObservation
 from ecommerce.price_monitoring.fetch_run import PriceMonitoringFetchResult
 from ecommerce.price_monitoring.observations import parse_price_observations_csv
 from ecommerce.price_monitoring.runs import PriceMonitoringRunRecord
@@ -145,6 +146,7 @@ def _attach_source_url_capture_observations(
         ).all()
     attached_at = datetime.now(timezone.utc)
     for row in rows:
+        product = row.product
         if row.product_id is None:
             product, matched_by = match_product_for_observation(
                 session,
@@ -155,6 +157,17 @@ def _attach_source_url_capture_observations(
             if product is not None:
                 row.product_id = product.id
                 row.matched_by = row.matched_by or matched_by
+        if row.own_price is None:
+            row.own_price = _resolved_own_price(session, monitoring_run, row, product)
+        if row.price_delta is None and row.own_price is not None and row.competitor_price is not None:
+            row.price_delta = row.own_price - row.competitor_price
+        if (
+            row.price_delta_percent is None
+            and row.price_delta is not None
+            and row.own_price is not None
+            and row.own_price != 0
+        ):
+            row.price_delta_percent = (row.price_delta / row.own_price) * Decimal("100")
         row.monitoring_run_id = monitoring_run.id
         row.run_id = monitoring_run.run_id
         raw_observation = dict(row.raw_observation or {})
@@ -166,6 +179,21 @@ def _attach_source_url_capture_observations(
         row.created_at = attached_at
     session.flush()
     return count_price_observations(session, monitoring_run.run_id)
+
+
+def _resolved_own_price(session, monitoring_run, row: PriceObservation, product) -> Any:
+    if product is not None and product.current_price is not None:
+        return product.current_price
+    snapshot_query = session.query(CatalogSnapshot).filter(CatalogSnapshot.monitoring_run_id == monitoring_run.id)
+    if row.model:
+        snapshot = snapshot_query.filter(CatalogSnapshot.model == row.model).first()
+        if snapshot is not None and snapshot.own_price is not None:
+            return snapshot.own_price
+    if row.mpn:
+        snapshot = snapshot_query.filter(CatalogSnapshot.mpn == row.mpn).first()
+        if snapshot is not None and snapshot.own_price is not None:
+            return snapshot.own_price
+    return None
 
 
 def _count_attached_source_url_observations(session, monitoring_run) -> int:
@@ -181,14 +209,28 @@ def _count_attached_source_url_observations(session, monitoring_run) -> int:
 
 def _recover_catalog_rows(run_dir: Path) -> list[dict[str, Any]]:
     summary = _read_json_object(run_dir / "selection_summary.json")
+    input_rows = _read_csv(run_dir / "input.csv") if (run_dir / "input.csv").exists() else []
     for key in ("selected_items", "items"):
         value = summary.get(key)
         if isinstance(value, list) and all(isinstance(item, dict) for item in value):
-            return [dict(item) for item in value]
-    input_path = run_dir / "input.csv"
-    if input_path.exists():
-        return _read_csv(input_path)
-    return []
+            return _merge_catalog_rows_with_input([dict(item) for item in value], input_rows)
+    return input_rows
+
+
+def _merge_catalog_rows_with_input(rows: list[dict[str, Any]], input_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
+    input_by_model = {str(row.get("model") or "").strip(): row for row in input_rows if str(row.get("model") or "").strip()}
+    input_by_mpn = {str(row.get("mpn") or "").strip(): row for row in input_rows if str(row.get("mpn") or "").strip()}
+    merged_rows: list[dict[str, Any]] = []
+    for row in rows:
+        model = str(row.get("model") or "").strip()
+        mpn = str(row.get("mpn") or "").strip()
+        input_row = input_by_model.get(model) or input_by_mpn.get(mpn) or {}
+        merged = dict(row)
+        for field in ("model", "mpn", "name", "price", "manufacturer", "category", "raw_category"):
+            if not str(merged.get(field) or "").strip() and str(input_row.get(field) or "").strip():
+                merged[field] = input_row[field]
+        merged_rows.append(merged)
+    return merged_rows
 
 
 def _apply_selection_summary_metadata(monitoring_run, summary: dict[str, Any]) -> None:

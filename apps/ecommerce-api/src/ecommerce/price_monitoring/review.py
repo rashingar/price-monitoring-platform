@@ -178,8 +178,6 @@ def load_price_review_rows_from_observations(
         model = _text(input_row.get("model"))
         mpn = _text(input_row.get("mpn"))
         observation = observations_by_model.get(model) or observations_by_mpn.get(mpn)
-        if observation is None and index < len(observations):
-            observation = observations[index]
         enriched_row = _observation_to_enriched_row(observation or {}, source=source)
         input_with_observed_price = dict(input_row)
         if not _text(input_with_observed_price.get("price")):
@@ -544,6 +542,8 @@ def _observation_to_enriched_row(observation: dict[str, Any], *, source: str) ->
     resolved_source = _text(observation.get("source")).lower() or source
     competitor_price = _text(observation.get("competitor_price"))
     product_url = _text(observation.get("product_url"))
+    competitor_url = _text(row.get("bestprice_best_store_url")) if resolved_source == "bestprice" else ""
+    competitor_url = competitor_url or product_url
     competitor_name = _text(observation.get("competitor_name")) or _text(observation.get("seller_name"))
     row.update(
         {
@@ -556,15 +556,15 @@ def _observation_to_enriched_row(observation: dict[str, Any], *, source: str) ->
             "price_found": competitor_price or row.get("price_found", ""),
             "competitor_store": competitor_name or row.get("competitor_store", ""),
             "store": competitor_name or row.get("store", ""),
-            "competitor_url": product_url or row.get("competitor_url", ""),
-            "url": product_url or row.get("url", ""),
+            "competitor_url": competitor_url or row.get("competitor_url", ""),
+            "url": competitor_url or row.get("url", ""),
             "price_delta": _text(observation.get("price_delta")) or row.get("price_delta", ""),
             "price_delta_percent": _text(observation.get("price_delta_percent")) or row.get("price_delta_percent", ""),
         }
     )
     if resolved_source:
         row[f"{resolved_source}_price"] = competitor_price or row.get(f"{resolved_source}_price", "")
-        row[f"{resolved_source}_url"] = product_url or row.get(f"{resolved_source}_url", "")
+        row[f"{resolved_source}_url"] = competitor_url or row.get(f"{resolved_source}_url", "")
     if resolved_source == "bestprice":
         row["bestprice_best_store"] = competitor_name or row.get("bestprice_best_store", "")
         row["bestprice_best_store_price"] = competitor_price or row.get("bestprice_best_store_price", "")

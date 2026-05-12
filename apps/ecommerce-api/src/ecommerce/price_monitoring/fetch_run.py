@@ -122,6 +122,29 @@ def run_price_monitoring_fetch(
             write_price_monitoring_fetch_result(fetch_result_path, result)
         raise PriceMonitoringFetchError(error, result=result)
 
+    if source_capture_result.succeeded_count <= 0:
+        completed_at = _now_iso()
+        error = _all_failed_source_capture_error(source_capture_result)
+        result = PriceMonitoringFetchResult(
+            run_id=run_dir.name,
+            source=resolved_source,
+            status="fetch_failed",
+            started_at=started_at,
+            completed_at=completed_at,
+            input_csv_path=input_csv_path,
+            enriched_csv_path=None,
+            fetch_summary_path=None,
+            fetch_result_path=fetch_result_path,
+            stdout="",
+            warnings=source_capture_warnings,
+            error=error,
+            source_filter=_source_filter(resolved_source),
+            **_source_capture_result_fields(source_capture_result),
+        )
+        if write_result:
+            write_price_monitoring_fetch_result(fetch_result_path, result)
+        raise PriceMonitoringFetchError(error, result=result)
+
     completed_at = _now_iso()
     result = PriceMonitoringFetchResult(
         run_id=run_dir.name,
@@ -279,6 +302,24 @@ def _source_capture_result_fields(result: SourceUrlCaptureRunResult) -> dict[str
         "source_url_capture_run_id": result.run_id,
         "observation_batch_id": result.observation_batch_id,
     }
+
+
+def _all_failed_source_capture_error(result: SourceUrlCaptureRunResult) -> str:
+    source = _optional_text(result.source) or "Vendor Sources"
+    reason = _first_capture_error_code(result) or _optional_text(result.status)
+    if reason:
+        return f"source_url_capture_failed: all {source} source URL captures failed ({reason})."
+    return f"source_url_capture_failed: all {source} source URL captures failed."
+
+
+def _first_capture_error_code(result: SourceUrlCaptureRunResult) -> str:
+    for item in result.items:
+        if not isinstance(item, dict):
+            continue
+        text = _optional_text(item.get("error_code"))
+        if text:
+            return text
+    return ""
 
 
 def _source_filter(source: str | None) -> str | None:

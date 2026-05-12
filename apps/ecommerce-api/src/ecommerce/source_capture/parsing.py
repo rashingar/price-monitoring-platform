@@ -10,10 +10,11 @@ from urllib.parse import urljoin
 from ecommerce.source_capture.types import ParsedOfferObservation, ParsedPriceObservation
 
 
+BESTPRICE_BASE_URL = "https://www.bestprice.gr"
 SKROUTZ_BASE_URL = "https://www.skroutz.gr"
 
 PRICE_KEYS = ("price", "final_price", "finalprice", "current_price", "currentprice", "sale_price", "saleprice", "amount", "price_with_vat")
-PRICE_SUMMARY_KEYS = ("price_min", "min_price", "minimum_price", "lowest_price", "best_price")
+PRICE_SUMMARY_KEYS = ("price_min", "min_price", "minimum_price", "lowest_price", "lowestprice", "low_price", "lowprice", "best_price")
 ORIGINAL_PRICE_KEYS = ("original_price", "originalprice", "old_price", "oldprice", "initial_price", "list_price", "retail_price")
 SELLER_KEYS = ("seller", "seller_name", "sellername", "shop", "shop_name", "shopname", "store", "store_name", "storename", "merchant")
 AVAILABILITY_KEYS = (
@@ -84,6 +85,75 @@ def parse_electronet_html(html: str, *, page_url: str) -> tuple[ParsedPriceObser
             "title": _clean_html_text(title),
             "availability": _clean_html_text(availability),
             "structured_data_found": bool(structured),
+        },
+    )
+    return observation, flags
+
+
+def parse_bestprice_html(html: str, *, page_url: str) -> tuple[ParsedPriceObservation, list[str]]:
+    flags: list[str] = []
+    structured = _extract_product_structured_data(html)
+    page_data = _extract_bestprice_page_data(html)
+    page_payload = page_data.get("PAGE") if isinstance(page_data.get("PAGE"), dict) else {}
+    best_price_data = page_payload.get("bestPrice") if isinstance(page_payload.get("bestPrice"), dict) else {}
+    offers = _nested_dict(structured, ("offers",))
+    title = _first_text_from_keys(structured, ("name", "title")) or _first_match(
+        html,
+        (
+            r"<meta(?=[^>]+(?:property|name)=[\"']og:title[\"'])(?=[^>]+content=[\"']([^\"']+)[\"'])[^>]*>",
+            r"<title[^>]*>(.*?)</title>",
+            r"<h1[^>]*>(.*?)</h1>",
+        ),
+    )
+    price = (
+        _bestprice_cents_to_decimal(best_price_data.get("price"))
+        or _first_decimal_from_keys(offers, PRICE_SUMMARY_KEYS + PRICE_KEYS)
+        or _first_decimal_from_keys(structured, tuple(f"offers_{key}" for key in PRICE_SUMMARY_KEYS + PRICE_KEYS))
+        or _first_decimal(
+            _first_match(
+                html,
+                (
+                    r"class=[\"'][^\"']*item-price-button__label[^\"']*[\"'][^>]*>.*?<strong[^>]*>([^<]+)",
+                    r"class=[\"'][^\"']*price[^\"']*[\"'][^>]*>\s*(?:Από\s*)?<strong[^>]*>([^<]+)",
+                    r"\"lowPrice\"\s*:\s*\"?([0-9]+(?:[.,][0-9]+)?)",
+                    r"\"low_price\"\s*:\s*\"?([0-9]+(?:[.,][0-9]+)?)",
+                ),
+            )
+        )
+    )
+    merchant = _clean_html_text(best_price_data.get("merchant"))
+    merchant_link = _absolute_bestprice_url(_clean_html_text(best_price_data.get("link")))
+    if price is None:
+        flags.append("PRICE_MISSING")
+    if not merchant:
+        flags.append("MERCHANT_MISSING")
+    availability = _normalize_availability(
+        _first_text_from_keys(offers, AVAILABILITY_KEYS) or _first_text_from_keys(structured, ("offers_availability", "availability"))
+    )
+    offer_count = _first_text_from_keys(offers, ("offer_count", "offercount")) or _first_text_from_keys(
+        structured,
+        ("offers_offercount", "offercount"),
+    )
+    observation = ParsedPriceObservation(
+        price=price,
+        currency=_first_text_from_keys(offers, ("price_currency", "pricecurrency", "currency"))
+        or _first_text_from_keys(structured, ("offers_pricecurrency", "currency"))
+        or "EUR",
+        availability=availability,
+        stock_status=availability,
+        seller_name=merchant,
+        product_name=_clean_html_text(title),
+        raw_observation={
+            "page_url": page_url,
+            "parser": "bestprice_html_v1",
+            "title": _clean_html_text(title),
+            "availability": availability,
+            "offer_count": offer_count,
+            "bestprice_best_store": merchant,
+            "bestprice_best_store_price": str(price) if price is not None else None,
+            "bestprice_best_store_url": merchant_link,
+            "structured_data_found": bool(structured),
+            "bp_data_found": bool(page_data),
         },
     )
     return observation, flags
@@ -241,6 +311,28 @@ def _absolute_skroutz_url(value: str | None) -> str | None:
     return urljoin(SKROUTZ_BASE_URL, value)
 
 
+def _absolute_bestprice_url(value: str | None) -> str | None:
+    if not value:
+        return None
+    return urljoin(BESTPRICE_BASE_URL, value)
+
+
+def _bestprice_cents_to_decimal(value: object) -> Decimal | None:
+    text = _clean_html_text(value)
+    if not text:
+        return None
+    try:
+        if "." in text or "," in text:
+            amount = Decimal(text.replace(",", "."))
+        else:
+            amount = Decimal(text) / Decimal("100")
+    except InvalidOperation:
+        return None
+    if amount <= 0:
+        return None
+    return amount.quantize(Decimal("0.01"))
+
+
 def _json_payload(payload: Any) -> Any:
     if isinstance(payload, str):
         try:
@@ -291,6 +383,24 @@ def _json_ld_payloads(html: str) -> Iterable[Any]:
             yield json.loads(text)
         except json.JSONDecodeError:
             continue
+
+
+def _extract_bestprice_page_data(html: str) -> dict[str, Any]:
+    match = re.search(
+        r"<script[^>]+id=[\"']bp-data[\"'][^>]*>(.*?)</script>",
+        html or "",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not match:
+        return {}
+    text = unescape(match.group(1)).strip()
+    if not text:
+        return {}
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _nested_dict(node: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
@@ -356,3 +466,19 @@ def _clean_html_text(value: object) -> str | None:
     text = re.sub(r"<[^>]+>", " ", str(value or ""))
     text = " ".join(unescape(text).split())
     return text or None
+
+
+def _normalize_availability(value: object) -> str | None:
+    text = _clean_html_text(value)
+    if not text:
+        return None
+    token = text.rstrip("/").rsplit("/", 1)[-1]
+    mapping = {
+        "InStock": "in_stock",
+        "OutOfStock": "out_of_stock",
+        "PreOrder": "pre_order",
+        "BackOrder": "back_order",
+        "LimitedAvailability": "limited_availability",
+        "Discontinued": "discontinued",
+    }
+    return mapping.get(token, text)

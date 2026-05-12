@@ -155,6 +155,58 @@ def test_loading_review_rows_from_db_observations_preserves_price_review_behavio
     assert rows[1].recommended_action == "ignore"
 
 
+def test_loading_bestprice_db_observation_uses_store_redirect_url(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir, source="bestprice")
+    enriched.unlink()
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "source": "bestprice",
+            "competitor_name": "eTranoulis",
+            "competitor_price": "94.90",
+            "own_price": "100.00",
+            "product_url": "https://www.bestprice.gr/item/2159389060/product.html",
+            "raw_observation": {
+                "bestprice_best_store": "eTranoulis",
+                "bestprice_best_store_price": "94.90",
+                "bestprice_best_store_url": "https://www.bestprice.gr/to/160584639/product.html",
+            },
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert rows[0].competitor_store == "eTranoulis"
+    assert rows[0].competitor_url == "https://www.bestprice.gr/to/160584639/product.html"
+
+
+def test_loading_review_rows_from_db_observations_does_not_match_by_position(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    observations = [
+        {
+            "model": "999999",
+            "mpn": "OTHER",
+            "source": "bestprice",
+            "competitor_name": "Other Store",
+            "competitor_price": "1.00",
+            "product_url": "https://bestprice.test/other",
+            "raw_observation": {},
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert rows[0].model == "005606"
+    assert rows[0].competitor_price is None
+    assert rows[0].competitor_store == ""
+    assert rows[0].status == "not_exportable"
+    assert "missing_or_invalid_competitor_price" in rows[0].warnings
+
+
 def test_match_price_action_writes_review_artifacts(tmp_path: Path, monkeypatch) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)

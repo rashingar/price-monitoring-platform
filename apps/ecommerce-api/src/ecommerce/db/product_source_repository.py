@@ -311,7 +311,7 @@ def _price_observation_row(
         model=product.model,
         mpn=product.mpn,
         product_name=observation.product_name or product.name,
-        competitor_name=vendor_slug,
+        competitor_name=observation.seller_name or vendor_slug,
         competitor_price=observation.price,
         original_price=observation.original_price,
         discount_percent=observation.discount_percent,

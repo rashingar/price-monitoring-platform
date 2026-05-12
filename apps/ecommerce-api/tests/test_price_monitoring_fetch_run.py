@@ -95,6 +95,29 @@ def _install_missing_source_capture(monkeypatch) -> None:
     monkeypatch.setattr("ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
 
 
+def _install_all_failed_source_capture(monkeypatch) -> None:
+    def fake_capture(run_dir: Path, source: str, **_kwargs) -> SourceUrlCaptureRunResult:
+        return SourceUrlCaptureRunResult(
+            status="completed_with_failures",
+            used_source_urls=True,
+            source=source,
+            vendor=source,
+            selected_catalog_product_count=1,
+            selected_source_url_count=1,
+            selected_product_source_count=1,
+            succeeded_count=0,
+            failed_count=1,
+            warnings=[],
+            items=[{"product_source_id": 1, "status": "failed", "error_code": "VENDOR_NOT_IMPLEMENTED"}],
+            source_urls=[{"id": 1, "status": "active", "source_name": source}],
+            result_path=Path(run_dir) / "source_url_capture_result.json",
+            run_id="vendor-capture-failed",
+            observation_batch_id="vendor-capture-failed",
+        )
+
+    monkeypatch.setattr("ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
+
+
 def test_source_is_read_from_selection_summary_when_not_supplied(tmp_path: Path, monkeypatch) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir, source="bestprice")
@@ -168,6 +191,21 @@ def test_fetch_missing_active_source_url_error_points_to_vendor_sources(tmp_path
     assert "missing_active_source_url" in str(exc_info.value)
     assert "Vendor Sources" in str(exc_info.value)
     assert exc_info.value.result is not None
+
+
+def test_fetch_all_failed_source_url_capture_is_failed_not_completed(tmp_path: Path, monkeypatch) -> None:
+    run_dir = tmp_path / "run-1"
+    _write_run(run_dir)
+    _install_all_failed_source_capture(monkeypatch)
+
+    with pytest.raises(PriceMonitoringFetchError) as exc_info:
+        run_price_monitoring_fetch(run_dir)
+
+    assert "source_url_capture_failed" in str(exc_info.value)
+    assert "VENDOR_NOT_IMPLEMENTED" in str(exc_info.value)
+    assert exc_info.value.result is not None
+    assert exc_info.value.result.status == "fetch_failed"
+    assert exc_info.value.result.source_url_capture_failed_count == 1
 
 
 def test_missing_selection_summary_rejects_fetch_without_one_source(tmp_path: Path, monkeypatch) -> None:
