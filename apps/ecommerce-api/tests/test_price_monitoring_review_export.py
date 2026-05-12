@@ -69,6 +69,21 @@ def _write_run(run_dir: Path, *, source: str = "skroutz") -> Path:
     return enriched
 
 
+def _set_input_price(run_dir: Path, price: str, *, model: str = "005606") -> None:
+    input_path = run_dir / "input.csv"
+    with input_path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        fieldnames = list(reader.fieldnames or [])
+    for row in rows:
+        if row.get("model") == model:
+            row["price"] = price
+    with input_path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def _db_observations() -> list[dict[str, object]]:
     return [
         {
@@ -153,6 +168,246 @@ def test_loading_review_rows_from_db_observations_preserves_price_review_behavio
     assert rows[0].price_delta == Decimal("4.95")
     assert rows[0].recommended_action == "match_price"
     assert rows[1].recommended_action == "ignore"
+
+
+def test_db_observations_build_top_three_listings_and_next_store_delta(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    _set_input_price(run_dir, "94.90")
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Our Marketplace Store",
+            "competitor_price": "94.90",
+            "own_price": "94.90",
+            "product_url": "https://skroutz.test/our",
+            "raw_observation": {},
+        },
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Next Store",
+            "competitor_price": "99.90",
+            "own_price": "94.90",
+            "product_url": "https://skroutz.test/next",
+            "raw_observation": {},
+        },
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Third Store",
+            "competitor_price": "101.00",
+            "own_price": "94.90",
+            "product_url": "https://skroutz.test/third",
+            "raw_observation": {},
+        },
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Fourth Store",
+            "competitor_price": "105.00",
+            "own_price": "94.90",
+            "product_url": "https://skroutz.test/fourth",
+            "raw_observation": {},
+        },
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert rows[0].competitor_price == Decimal("94.90")
+    assert rows[0].next_competitor_price == Decimal("99.90")
+    assert rows[0].price_delta == Decimal("-5.00")
+    assert rows[0].next_store_delta == Decimal("-5.00")
+    assert rows[0].delta_basis == "next_store"
+    assert [listing.store for listing in rows[0].top_listings or []] == [
+        "Our Marketplace Store",
+        "Next Store",
+        "Third Store",
+    ]
+
+
+def test_near_equal_top_listing_uses_next_store_delta_basis(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    _set_input_price(run_dir, "94.93")
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Top Store",
+            "competitor_price": "94.90",
+            "own_price": "94.93",
+            "product_url": "https://skroutz.test/top",
+            "raw_observation": {},
+        },
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Next Store",
+            "competitor_price": "99.90",
+            "own_price": "94.93",
+            "product_url": "https://skroutz.test/next",
+            "raw_observation": {},
+        },
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert rows[0].price_delta == Decimal("-4.97")
+    assert rows[0].delta_basis == "next_store"
+
+
+def test_skroutz_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    _set_input_price(run_dir, "94.90")
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Top Store",
+            "competitor_price": "94.90",
+            "own_price": "94.90",
+            "product_url": "https://skroutz.test/top",
+            "raw_observation": {
+                "product_cards": [
+                    {"shop_name": "Top Store", "final_price": "94.90", "shop_url": "https://skroutz.test/top"},
+                    {"seller_name": "Raw Next", "price": "99.90", "seller_url": "https://skroutz.test/raw-next"},
+                ]
+            },
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert [listing.store for listing in rows[0].top_listings or []] == ["Top Store", "Raw Next"]
+    assert rows[0].price_delta == Decimal("-5.00")
+    assert rows[0].delta_basis == "next_store"
+
+
+def test_bestprice_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir, source="bestprice")
+    enriched.unlink()
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "bestprice",
+            "competitor_name": "Best Store",
+            "competitor_price": "94.90",
+            "own_price": "94.90",
+            "product_url": "https://bestprice.test/best",
+            "raw_observation": {
+                "bestprice_best_store": "Best Store",
+                "bestprice_best_store_price": "94.90",
+                "bestprice_best_store_url": "https://bestprice.test/best",
+                "bestprice_next_store": "Next Best",
+                "bestprice_next_store_price": "99.90",
+                "bestprice_next_store_url": "https://bestprice.test/next",
+            },
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert [listing.store for listing in rows[0].top_listings or []] == ["Best Store", "Next Best"]
+    assert rows[0].next_competitor_store == "Next Best"
+
+
+def test_generic_raw_payload_extraction_handles_unknown_shapes(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "unknown-market",
+            "competitor_name": "Known Store",
+            "competitor_price": "94.90",
+            "own_price": "94.90",
+            "product_url": "https://market.test/known",
+            "raw_observation": {
+                "results": [
+                    {"merchant": "Known Store", "price": "94.90", "url": "https://market.test/known"},
+                    {"merchant": "Generic Next", "sale_price": "99.90", "href": "https://market.test/next"},
+                ]
+            },
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert [listing.store for listing in rows[0].top_listings or []] == ["Known Store", "Generic Next"]
+
+
+def test_malformed_raw_payloads_do_not_fail_review_loading(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "source": "skroutz",
+            "competitor_name": "Store A",
+            "competitor_price": "118.50",
+            "own_price": "123.45",
+            "product_url": "https://skroutz.test/a",
+            "raw_observation": "not json",
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert rows[0].competitor_price == Decimal("118.50")
+    assert [listing.store for listing in rows[0].top_listings or []] == ["Store A"]
+    assert rows[0].next_competitor_price is None
+
+
+def test_top_three_listings_do_not_add_synthetic_current_row(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "source": "skroutz",
+            "competitor_name": "Only Store",
+            "competitor_price": "99.90",
+            "own_price": "94.90",
+            "product_url": "https://skroutz.test/only",
+            "raw_observation": {},
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert len(rows[0].top_listings or []) == 1
+    assert rows[0].top_listings[0].store == "Only Store"
+    assert rows[0].next_competitor_price is None
 
 
 def test_loading_bestprice_db_observation_uses_store_redirect_url(tmp_path: Path) -> None:

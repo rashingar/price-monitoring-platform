@@ -776,6 +776,155 @@ textarea {
   min-width: 64px;
 }
 
+.price-review-list {
+  display: grid;
+  gap: 10px;
+}
+
+.price-review-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.price-review-row.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px #cfece8;
+}
+
+.price-review-row-button {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.price-review-row-button:focus {
+  outline: 3px solid #cfece8;
+  outline-offset: -3px;
+}
+
+.price-review-identity-row,
+.price-review-operational-row {
+  display: grid;
+  gap: 8px;
+}
+
+.price-review-identity-row {
+  grid-template-columns: 110px minmax(220px, 1fr) minmax(120px, 220px);
+}
+
+.price-review-operational-row {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.price-review-identity-row span,
+.price-review-operational-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.price-review-identity-row strong,
+.price-review-operational-row strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.price-review-inline-panel {
+  display: grid;
+  gap: 12px;
+  border-top: 3px solid var(--accent);
+  padding: 12px;
+  background: #f7fbfa;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.price-review-actions {
+  align-items: end;
+  gap: 8px;
+}
+
+.price-review-undercut-field {
+  min-width: 150px;
+  max-width: 180px;
+}
+
+.price-review-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.price-review-detail-grid div {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: #ffffff;
+}
+
+.price-review-detail-grid dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.price-review-detail-grid dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.price-review-reason-field {
+  max-width: 420px;
+}
+
+.price-review-top-listings {
+  display: grid;
+  gap: 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.price-review-top-listings-header,
+.price-review-top-listing-row {
+  display: grid;
+  grid-template-columns: 64px minmax(160px, 1fr) 120px 160px 80px;
+  gap: 8px;
+  align-items: center;
+  min-width: 650px;
+  padding: 8px 10px;
+}
+
+.price-review-top-listings-header {
+  background: #eef7f5;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.price-review-top-listing-row + .price-review-top-listing-row {
+  border-top: 1px solid var(--border);
+}
+
+.price-review-empty-top-listings {
+  margin: 0;
+}
+
 .small-input {
   min-width: 90px;
 }
@@ -2088,12 +2237,13 @@ code {
   .workflow-summary-grid,
   .artifact-preview-meta,
   .column-controls-panel,
-    .filter-grid,
-    .filters-manager-layout,
-    .filters-manager-filter-grid,
-    .filters-group-edit-grid,
-    .filters-value-form,
-    .browser-layout,
+  .price-review-identity-row,
+  .filter-grid,
+  .filters-manager-layout,
+  .filters-manager-filter-grid,
+  .filters-group-edit-grid,
+  .filters-value-form,
+  .browser-layout,
   .save-grid,
   .split-grid {
     grid-template-columns: 1fr;

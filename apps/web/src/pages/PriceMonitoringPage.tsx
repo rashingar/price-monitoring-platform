@@ -1987,221 +1987,266 @@ function ReviewResultsTable({
   dbAvailable: boolean;
   onUpdateRowAction: (model: string, patch: Partial<RowActionState>) => void;
 }) {
-  const columns = useMemo<Array<ManagedColumn<PriceMonitoringReviewItem, ReviewColumnId>>>(
-    () => [
-      {
-        id: "model",
-        label: "Model",
-        defaultWidth: 104,
-        className: "nowrap-cell",
-        render: (item) => item.model,
-      },
-      {
-        id: "name",
-        label: "Name",
-        defaultWidth: 260,
-        render: (item) => formatValue(item.name),
-      },
-      {
-        id: "mpn",
-        label: "MPN",
-        defaultWidth: 128,
-        className: "nowrap-cell",
-        render: (item) => formatValue(item.mpn),
-      },
-      {
-        id: "current_price",
-        label: "Current",
-        defaultWidth: 116,
-        className: "nowrap-cell",
-        render: (item) => formatMoney(item.current_price),
-      },
-      {
-        id: "competitor_price",
-        label: "Competitor",
-        defaultWidth: 126,
-        className: "nowrap-cell",
-        render: (item) => formatMoney(item.competitor_price),
-      },
-      {
-        id: "competitor_store",
-        label: "Store",
-        defaultWidth: 176,
-        render: (item) => formatValue(item.competitor_store),
-      },
-      {
-        id: "competitor_url",
-        label: "URL",
-        defaultWidth: 88,
-        className: "review-url-cell",
-        render: (item) =>
-          item.competitor_url ? (
-            <a href={item.competitor_url} target="_blank" rel="noreferrer">
-              Open
-            </a>
-          ) : (
-            "-"
-          ),
-      },
-      {
-        id: "price_delta",
-        label: "Delta",
-        defaultWidth: 112,
-        className: "nowrap-cell",
-        render: (item) => formatNumber(item.price_delta),
-      },
-      {
-        id: "price_delta_percent",
-        label: "Delta %",
-        defaultWidth: 112,
-        className: "nowrap-cell",
-        render: (item) => formatNumber(item.price_delta_percent),
-      },
-      {
-        id: "recommended_action",
-        label: "Recommended",
-        defaultWidth: 142,
-        render: (item) => formatValue(item.recommended_action),
-      },
-      {
-        id: "selected_action",
-        label: "Action",
-        defaultWidth: 180,
-        render: (item) => {
-          const state = getActionState(item, rowActions);
-          const actionError = getActionError(item, state);
-          return (
-            <>
-              <select
-                value={state.selected_action}
-                disabled={!dbAvailable}
-                onChange={(event) =>
-                  onUpdateRowAction(item.model, {
-                    selected_action: event.target.value as "" | PriceMonitoringAction,
-                  })
-                }
-              >
-                <option value="">No action</option>
-                <option value="match_price">match_price</option>
-                <option value="undercut">undercut</option>
-                <option value="ignore">ignore</option>
-              </select>
-              {actionError ? <small className="field-error">{actionError}</small> : null}
-            </>
-          );
-        },
-      },
-      {
-        id: "undercut_amount",
-        label: "Undercut",
-        defaultWidth: 132,
-        render: (item) => {
-          const state = getActionState(item, rowActions);
-          return (
-            <input
-              className="table-input small-input"
-              type="number"
-              min="0"
-              step="0.01"
-              value={state.undercut_amount}
-              disabled={state.selected_action !== "undercut" || !dbAvailable}
-              onChange={(event) => onUpdateRowAction(item.model, { undercut_amount: event.target.value })}
-            />
-          );
-        },
-      },
-      {
-        id: "target_price",
-        label: "Target",
-        defaultWidth: 116,
-        className: "nowrap-cell",
-        render: (item) => formatMoney(computeTargetPrice(item, getActionState(item, rowActions))),
-      },
-      {
-        id: "reason",
-        label: "Reason",
-        defaultWidth: 220,
-        render: (item) => {
-          const state = getActionState(item, rowActions);
-          return (
-            <input
-              className="table-input"
-              value={state.reason}
-              disabled={state.selected_action !== "ignore" || !dbAvailable}
-              onChange={(event) => onUpdateRowAction(item.model, { reason: event.target.value })}
-              placeholder="Optional"
-            />
-          );
-        },
-      },
-      {
-        id: "status",
-        label: "Status",
-        defaultWidth: 140,
-        render: (item) => formatValue(item.status),
-      },
-      {
-        id: "warnings",
-        label: "Warnings",
-        defaultWidth: 220,
-        render: (item) => item.warnings?.join(", ") || "-",
-      },
-    ],
-    [dbAvailable, onUpdateRowAction, rowActions],
-  );
-  const {
-    activeColumns,
-    availableColumns,
-    preferences,
-    visibleColumnIds,
-    toggleColumn,
-    moveColumn,
-    resizeColumn,
-    resetColumns,
-  } = useManagedColumns(REVIEW_COLUMNS_STORAGE_KEY, columns);
+  const [selectedModel, setSelectedModel] = useState<string | null>(items[0]?.model ?? null);
+  const [expandedTopListings, setExpandedTopListings] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setSelectedModel(null);
+      return;
+    }
+    if (!selectedModel || !items.some((item) => item.model === selectedModel)) {
+      setSelectedModel(items[0].model);
+    }
+  }, [items, selectedModel]);
+
+  const clearRowAction = (model: string) => {
+    onUpdateRowAction(model, { selected_action: "", undercut_amount: "", reason: "" });
+  };
 
   return (
-    <>
-      <ColumnControls
-        columns={availableColumns}
-        preferences={preferences}
-        visibleColumnIds={visibleColumnIds}
-        onToggleColumn={toggleColumn}
-        onMoveColumn={moveColumn}
-        onResizeColumn={resizeColumn}
-        onReset={resetColumns}
-      />
-      <div className="table-wrap review-table-wrap">
-        <table
-          className="managed-column-table"
-          style={{ minWidth: `${getManagedTableWidth(activeColumns, preferences)}px` }}
-        >
-          <colgroup>
-            {activeColumns.map((column) => (
-              <col key={column.id} style={{ width: `${getColumnWidth(column, preferences)}px` }} />
-            ))}
-          </colgroup>
-          <thead>
-            <tr>
-              {activeColumns.map((column) => (
-                <th key={column.id}>{column.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.model}>
-                {activeColumns.map((column) => (
-                  <td className={column.className} key={column.id}>
-                    {column.render(item)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="price-review-list" role="list">
+      {items.map((item) => {
+        const isSelected = selectedModel === item.model;
+        const state = getActionState(item, rowActions);
+        const targetPrice = computeTargetPrice(item, state);
+        const actionError = getActionError(item, state);
+        const showTopListings = Boolean(expandedTopListings[item.model]);
+        const topListings = item.top_listings ?? [];
+
+        return (
+          <section
+            className={`price-review-row${isSelected ? " selected" : ""}`}
+            key={item.model}
+            role="listitem"
+            onClick={() => setSelectedModel(item.model)}
+          >
+            <div
+              className="price-review-row-button"
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedModel(item.model)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setSelectedModel(item.model);
+                }
+              }}
+            >
+              <div className="price-review-identity-row">
+                <span>
+                  <strong>Model</strong>
+                  {formatValue(item.model)}
+                </span>
+                <span>
+                  <strong>Name</strong>
+                  {formatValue(item.name)}
+                </span>
+                <span>
+                  <strong>MPN</strong>
+                  {formatValue(item.mpn)}
+                </span>
+              </div>
+              <div className="price-review-operational-row">
+                <span>
+                  <strong>Current price</strong>
+                  {formatMoney(item.current_price)}
+                </span>
+                <span>
+                  <strong>Competitor price</strong>
+                  {formatMoney(item.competitor_price)}
+                </span>
+                <span>
+                  <strong>Store</strong>
+                  {formatValue(item.competitor_store)}
+                </span>
+                <span>
+                  <strong>URL</strong>
+                  {item.competitor_url ? (
+                    <a href={item.competitor_url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                      Open
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </span>
+                <span>
+                  <strong>Delta</strong>
+                  {formatNumber(item.price_delta)}
+                </span>
+                <span>
+                  <strong>Delta %</strong>
+                  {formatNumber(item.price_delta_percent)}
+                </span>
+              </div>
+            </div>
+
+            {isSelected ? (
+              <div className="price-review-inline-panel" onClick={(event) => event.stopPropagation()}>
+                <div className="button-row price-review-actions">
+                  <button
+                    className="button secondary"
+                    type="button"
+                    disabled={!dbAvailable}
+                    onClick={() => onUpdateRowAction(item.model, { selected_action: "match_price" })}
+                  >
+                    Match price
+                  </button>
+                  <button
+                    className="button secondary"
+                    type="button"
+                    disabled={!dbAvailable}
+                    onClick={() => onUpdateRowAction(item.model, { selected_action: "undercut" })}
+                  >
+                    Undercut
+                  </button>
+                  <label className="inline-field price-review-undercut-field">
+                    <span>Undercut amount</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={state.undercut_amount}
+                      disabled={!dbAvailable}
+                      onChange={(event) => onUpdateRowAction(item.model, { undercut_amount: event.target.value })}
+                    />
+                  </label>
+                  <button
+                    className="button secondary"
+                    type="button"
+                    disabled={!dbAvailable}
+                    onClick={() => onUpdateRowAction(item.model, { selected_action: "ignore" })}
+                  >
+                    Ignore
+                  </button>
+                  <button className="button secondary" type="button" disabled={!dbAvailable} onClick={() => clearRowAction(item.model)}>
+                    Clear row action
+                  </button>
+                  {item.competitor_url ? (
+                    <a className="button secondary" href={item.competitor_url} target="_blank" rel="noreferrer">
+                      Open competitor URL
+                    </a>
+                  ) : null}
+                  <button
+                    className="button secondary"
+                    type="button"
+                    aria-expanded={showTopListings}
+                    onClick={() =>
+                      setExpandedTopListings((current) => ({
+                        ...current,
+                        [item.model]: !current[item.model],
+                      }))
+                    }
+                  >
+                    Top 3 listings
+                  </button>
+                </div>
+
+                {actionError ? <small className="field-error">{actionError}</small> : null}
+
+                <dl className="price-review-detail-grid">
+                  <div>
+                    <dt>Status</dt>
+                    <dd>{formatValue(item.status)}</dd>
+                  </div>
+                  <div>
+                    <dt>Warnings</dt>
+                    <dd>{item.warnings?.join(", ") || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>Recommended action</dt>
+                    <dd>{formatValue(item.recommended_action)}</dd>
+                  </div>
+                  <div>
+                    <dt>Selected action</dt>
+                    <dd>{formatValue(state.selected_action || item.selected_action)}</dd>
+                  </div>
+                  <div>
+                    <dt>Target price</dt>
+                    <dd>{formatMoney(targetPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt>Delta basis</dt>
+                    <dd>{formatValue(item.delta_basis)}</dd>
+                  </div>
+                  <div>
+                    <dt>Next store</dt>
+                    <dd>{formatValue(item.next_competitor_store)}</dd>
+                  </div>
+                  <div>
+                    <dt>Next price</dt>
+                    <dd>{formatMoney(item.next_competitor_price)}</dd>
+                  </div>
+                </dl>
+
+                {state.selected_action === "ignore" ? (
+                  <label className="inline-field wide price-review-reason-field">
+                    <span>Ignore reason</span>
+                    <input
+                      value={state.reason}
+                      disabled={!dbAvailable}
+                      onChange={(event) => onUpdateRowAction(item.model, { reason: event.target.value })}
+                      placeholder="Optional"
+                    />
+                  </label>
+                ) : null}
+
+                {showTopListings ? (
+                  <TopListingsPanel currentPrice={item.current_price} listings={topListings} />
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function TopListingsPanel({
+  currentPrice,
+  listings,
+}: {
+  currentPrice: unknown;
+  listings: NonNullable<PriceMonitoringReviewItem["top_listings"]>;
+}) {
+  const current = parseNumberLike(currentPrice);
+
+  if (listings.length === 0) {
+    return <p className="muted price-review-empty-top-listings">No top listings available.</p>;
+  }
+
+  return (
+    <div className="price-review-top-listings">
+      <div className="price-review-top-listings-header">
+        <span>Rank</span>
+        <span>Store</span>
+        <span>Price</span>
+        <span>Difference vs current</span>
+        <span>URL</span>
       </div>
-    </>
+      {listings.map((listing, index) => {
+        const listingPrice = parseNumberLike(listing.price);
+        const difference = current !== null && listingPrice !== null ? current - listingPrice : null;
+        return (
+          <div className="price-review-top-listing-row" key={`${listing.rank ?? index}-${listing.store ?? ""}`}>
+            <span>{formatValue(listing.rank ?? index + 1)}</span>
+            <span>{formatValue(listing.store)}</span>
+            <span>{formatMoney(listing.price)}</span>
+            <span>{formatMoney(difference)}</span>
+            <span>
+              {listing.url ? (
+                <a href={listing.url} target="_blank" rel="noreferrer">
+                  Open
+                </a>
+              ) : (
+                "-"
+              )}
+            </span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

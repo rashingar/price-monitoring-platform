@@ -42,10 +42,50 @@ COMMON_ENRICHED_FILENAMES = (
 SUPPORTED_ACTIONS = {"match_price", "undercut", "ignore"}
 SUPPORTED_SOURCES = {"skroutz", "bestprice"}
 TWO_PLACES = Decimal("0.01")
+PRICE_EQUALITY_TOLERANCE = Decimal("0.05")
+
+GENERIC_LISTING_COLLECTION_KEYS = {
+    "offers",
+    "shops",
+    "stores",
+    "listings",
+    "product_cards",
+    "results",
+    "items",
+    "cards",
+}
+STORE_ALIASES = ("store", "shop", "shop_name", "seller", "seller_name", "merchant", "name")
+PRICE_ALIASES = ("price", "final_price", "sale_price", "competitor_price", "price_found", "best_store_price")
+URL_ALIASES = ("url", "product_url", "shop_url", "seller_url", "store_url", "href")
 
 
 class PriceReviewError(ValueError):
     """Raised for malformed review input or invalid manual actions."""
+
+
+@dataclass(frozen=True)
+class TopListing:
+    rank: int
+    store: str
+    price: Decimal
+    url: str
+    source: str
+    raw_source: str = ""
+    evidence_source: str = ""
+
+    def to_api_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "rank": self.rank,
+            "store": self.store,
+            "price": _decimal_to_float(self.price),
+            "url": self.url,
+            "source": self.source,
+        }
+        if self.raw_source:
+            payload["raw_source"] = self.raw_source
+        if self.evidence_source:
+            payload["evidence_source"] = self.evidence_source
+        return payload
 
 
 @dataclass(frozen=True)
@@ -74,6 +114,14 @@ class PriceReviewRow:
     target_price: Decimal | None
     status: str
     warnings: list[str]
+    competitor_rank: int | None = None
+    next_competitor_price: Decimal | None = None
+    next_competitor_store: str = ""
+    next_competitor_url: str = ""
+    next_store_delta: Decimal | None = None
+    next_store_delta_percent: Decimal | None = None
+    top_listings: list[TopListing] | None = None
+    delta_basis: str | None = None
 
     def to_api_dict(self) -> dict[str, Any]:
         return {
@@ -93,6 +141,14 @@ class PriceReviewRow:
             "target_price": _decimal_to_float(self.target_price),
             "status": self.status,
             "warnings": self.warnings,
+            "competitor_rank": self.competitor_rank,
+            "next_competitor_price": _decimal_to_float(self.next_competitor_price),
+            "next_competitor_store": self.next_competitor_store,
+            "next_competitor_url": self.next_competitor_url,
+            "next_store_delta": _decimal_to_float(self.next_store_delta),
+            "next_store_delta_percent": _decimal_to_float(self.next_store_delta_percent),
+            "top_listings": [listing.to_api_dict() for listing in self.top_listings or []],
+            "delta_basis": self.delta_basis,
         }
 
     def to_csv_dict(self) -> dict[str, str]:
@@ -172,17 +228,29 @@ def load_price_review_rows_from_observations(
     source = _source_from_observations(observations) or run_source
     observations_by_model = _observations_by_key(observations, "model")
     observations_by_mpn = _observations_by_key(observations, "mpn")
+    observations_grouped_by_model = _observations_grouped_by_key(observations, "model")
+    observations_grouped_by_mpn = _observations_grouped_by_key(observations, "mpn")
     rows: list[PriceReviewRow] = []
 
     for index, input_row in enumerate(input_rows):
         model = _text(input_row.get("model"))
         mpn = _text(input_row.get("mpn"))
+        product_observations = observations_grouped_by_model.get(model) or observations_grouped_by_mpn.get(mpn) or []
+        top_listings = _top_listings_from_observations(product_observations, fallback_source=source)
         observation = observations_by_model.get(model) or observations_by_mpn.get(mpn)
-        enriched_row = _observation_to_enriched_row(observation or {}, source=source)
+        enriched_observation = _observation_from_listing(observation or {}, top_listings[0]) if top_listings else observation
+        enriched_row = _observation_to_enriched_row(enriched_observation or {}, source=source)
         input_with_observed_price = dict(input_row)
         if not _text(input_with_observed_price.get("price")):
             input_with_observed_price["price"] = _text(enriched_row.get("current_price"))
-        rows.append(_build_review_row(input_with_observed_price, enriched_row, _text(enriched_row.get("source")) or source))
+        rows.append(
+            _build_review_row(
+                input_with_observed_price,
+                enriched_row,
+                _text(enriched_row.get("source")) or source,
+                top_listings=top_listings,
+            )
+        )
     return rows
 
 
@@ -305,14 +373,23 @@ def summarize_review_rows(rows: list[PriceReviewRow]) -> dict[str, int]:
     }
 
 
-def _build_review_row(input_row: dict[str, str], enriched_row: dict[str, str], source: str) -> PriceReviewRow:
+def _build_review_row(
+    input_row: dict[str, str],
+    enriched_row: dict[str, str],
+    source: str,
+    *,
+    top_listings: list[TopListing] | None = None,
+) -> PriceReviewRow:
     model = _text(input_row.get("model"))
     mpn = _text(input_row.get("mpn"))
     name = _text(input_row.get("name"))
     current_price = _parse_decimal(_first_present(input_row, ("current_price", "price")))
-    competitor_price = _competitor_price(enriched_row, source)
-    competitor_store = _competitor_store(enriched_row, source)
-    competitor_url = _competitor_url(enriched_row, source)
+    listings = list(top_listings or [])
+    best_listing = listings[0] if listings else None
+    next_listing = listings[1] if len(listings) > 1 else None
+    competitor_price = best_listing.price if best_listing else _competitor_price(enriched_row, source)
+    competitor_store = best_listing.store if best_listing else _competitor_store(enriched_row, source)
+    competitor_url = best_listing.url if best_listing else _competitor_url(enriched_row, source)
     warnings: list[str] = []
 
     if not is_atomic_model(model):
@@ -324,9 +401,20 @@ def _build_review_row(input_row: dict[str, str], enriched_row: dict[str, str], s
 
     price_delta: Decimal | None = None
     price_delta_percent: Decimal | None = None
+    delta_basis: str | None = None
+    next_store_delta: Decimal | None = None
+    next_store_delta_percent: Decimal | None = None
     if current_price is not None and current_price > 0 and competitor_price is not None and competitor_price > 0:
-        price_delta = current_price - competitor_price
+        delta_competitor_price = competitor_price
+        delta_basis = "best_competitor"
+        if best_listing is not None and next_listing is not None and prices_nearly_equal(current_price, best_listing.price):
+            delta_competitor_price = next_listing.price
+            delta_basis = "next_store"
+        price_delta = current_price - delta_competitor_price
         price_delta_percent = (price_delta / current_price) * Decimal("100")
+        if delta_basis == "next_store":
+            next_store_delta = price_delta
+            next_store_delta_percent = price_delta_percent
 
     recommended_action = _recommended_action(current_price, competitor_price)
     status = "review_required" if competitor_price is not None and competitor_price > 0 else "not_exportable"
@@ -348,6 +436,14 @@ def _build_review_row(input_row: dict[str, str], enriched_row: dict[str, str], s
         target_price=None,
         status=status,
         warnings=warnings,
+        competitor_rank=best_listing.rank if best_listing else None,
+        next_competitor_price=next_listing.price if next_listing else None,
+        next_competitor_store=next_listing.store if next_listing else "",
+        next_competitor_url=next_listing.url if next_listing else "",
+        next_store_delta=next_store_delta,
+        next_store_delta_percent=next_store_delta_percent,
+        top_listings=listings,
+        delta_basis=delta_basis,
     )
 
 
@@ -521,6 +617,15 @@ def _observations_by_key(observations: list[dict[str, Any]], key: str) -> dict[s
     return result
 
 
+def _observations_grouped_by_key(observations: list[dict[str, Any]], key: str) -> dict[str, list[dict[str, Any]]]:
+    result: dict[str, list[dict[str, Any]]] = {}
+    for observation in sorted(observations, key=_observation_priority_key):
+        value = _text(observation.get(key))
+        if value:
+            result.setdefault(value, []).append(observation)
+    return result
+
+
 def _observation_priority_key(observation: dict[str, Any]) -> tuple[int, Decimal]:
     price = _parse_decimal(observation.get("competitor_price"))
     if price is None or price <= 0:
@@ -569,6 +674,241 @@ def _observation_to_enriched_row(observation: dict[str, Any], *, source: str) ->
         row["bestprice_best_store"] = competitor_name or row.get("bestprice_best_store", "")
         row["bestprice_best_store_price"] = competitor_price or row.get("bestprice_best_store_price", "")
     return row
+
+
+def _observation_from_listing(observation: dict[str, Any], listing: TopListing) -> dict[str, Any]:
+    enriched = dict(observation)
+    enriched["competitor_name"] = listing.store
+    enriched["seller_name"] = listing.store
+    enriched["competitor_price"] = _money_text(listing.price)
+    enriched["product_url"] = listing.url or _text(observation.get("product_url"))
+    enriched["source"] = listing.source or _text(observation.get("source"))
+    return enriched
+
+
+def _top_listings_from_observations(observations: list[dict[str, Any]], *, fallback_source: str) -> list[TopListing]:
+    candidates: list[TopListing] = []
+    for observation in observations:
+        candidates.extend(_listing_from_normalized_observation(observation, fallback_source=fallback_source))
+    if len(_dedupe_and_rank_listings(candidates)) < 2:
+        for observation in observations:
+            source = _text(observation.get("source")).lower() or fallback_source
+            raw = _raw_payload(observation.get("raw_observation"))
+            if raw is None:
+                continue
+            if source == "skroutz":
+                candidates.extend(_extract_skroutz_raw_listings(raw, source=source))
+            elif source == "bestprice":
+                candidates.extend(_extract_bestprice_raw_listings(raw, source=source))
+            candidates.extend(_extract_generic_raw_listings(raw, source=source or fallback_source))
+    return _dedupe_and_rank_listings(candidates)[:3]
+
+
+def _listing_from_normalized_observation(observation: dict[str, Any], *, fallback_source: str) -> list[TopListing]:
+    price = _parse_decimal(observation.get("competitor_price"))
+    if price is None or price <= 0:
+        return []
+    source = _text(observation.get("source")).lower() or fallback_source
+    store = _text(observation.get("competitor_name")) or _text(observation.get("seller_name"))
+    url = _text(observation.get("product_url"))
+    raw = _raw_payload(observation.get("raw_observation"))
+    if isinstance(raw, dict):
+        if source == "bestprice":
+            url = _text(raw.get("bestprice_best_store_url")) or url
+        if not store:
+            store = _first_present_any(raw, STORE_ALIASES)
+        if not url:
+            url = _first_present_any(raw, URL_ALIASES)
+    return [
+        TopListing(
+            rank=0,
+            store=store,
+            price=price,
+            url=url,
+            source=source,
+            raw_source="db_observation",
+            evidence_source="normalized",
+        )
+    ]
+
+
+def _extract_skroutz_raw_listings(raw: object, *, source: str) -> list[TopListing]:
+    return _extract_from_collections(
+        raw,
+        collection_keys=("product_cards", "offers", "shops"),
+        source=source,
+        evidence_source="skroutz_raw",
+        store_aliases=("shop", "seller", "seller_name", "shop_name", "store", "name"),
+        price_aliases=("price", "final_price", "competitor_price", "price_found"),
+        url_aliases=("url", "seller_url", "shop_url", "product_url", "href"),
+    )
+
+
+def _extract_bestprice_raw_listings(raw: object, *, source: str) -> list[TopListing]:
+    candidates: list[TopListing] = []
+    if isinstance(raw, dict):
+        candidates.extend(
+            [
+                item
+                for item in (
+                    _listing_from_values(
+                        store=raw.get("bestprice_best_store"),
+                        price=raw.get("bestprice_best_store_price"),
+                        url=raw.get("bestprice_best_store_url"),
+                        source=source,
+                        raw_source="bestprice_best_store",
+                        evidence_source="bestprice_raw",
+                    ),
+                    _listing_from_values(
+                        store=raw.get("bestprice_next_store"),
+                        price=raw.get("bestprice_next_store_price"),
+                        url=raw.get("bestprice_next_store_url"),
+                        source=source,
+                        raw_source="bestprice_next_store",
+                        evidence_source="bestprice_raw",
+                    ),
+                )
+                if item is not None
+            ]
+        )
+    candidates.extend(
+        _extract_from_collections(
+            raw,
+            collection_keys=("stores", "shops", "offers"),
+            source=source,
+            evidence_source="bestprice_raw",
+            store_aliases=("merchant", "seller", "store", "shop", "shop_name", "seller_name", "name"),
+            price_aliases=("price", "final_price", "sale_price", "competitor_price", "best_store_price"),
+            url_aliases=("url", "product_url", "shop_url", "seller_url", "store_url", "href"),
+        )
+    )
+    return candidates
+
+
+def _extract_generic_raw_listings(raw: object, *, source: str) -> list[TopListing]:
+    return _extract_from_collections(
+        raw,
+        collection_keys=tuple(GENERIC_LISTING_COLLECTION_KEYS),
+        source=source,
+        evidence_source="generic_raw",
+        store_aliases=STORE_ALIASES,
+        price_aliases=PRICE_ALIASES,
+        url_aliases=URL_ALIASES,
+    )
+
+
+def _extract_from_collections(
+    raw: object,
+    *,
+    collection_keys: tuple[str, ...],
+    source: str,
+    evidence_source: str,
+    store_aliases: tuple[str, ...],
+    price_aliases: tuple[str, ...],
+    url_aliases: tuple[str, ...],
+) -> list[TopListing]:
+    candidates: list[TopListing] = []
+    for item, raw_source in _iter_listing_candidates(raw, collection_keys=collection_keys):
+        if not isinstance(item, dict):
+            continue
+        listing = _listing_from_values(
+            store=_first_present_any(item, store_aliases),
+            price=_first_present_any(item, price_aliases),
+            url=_first_present_any(item, url_aliases),
+            source=source,
+            raw_source=raw_source,
+            evidence_source=evidence_source,
+        )
+        if listing is not None:
+            candidates.append(listing)
+    return candidates
+
+
+def _iter_listing_candidates(raw: object, *, collection_keys: tuple[str, ...], prefix: str = "raw") -> list[tuple[object, str]]:
+    candidates: list[tuple[object, str]] = []
+    if isinstance(raw, list):
+        for index, item in enumerate(raw):
+            candidates.append((item, f"{prefix}[{index}]"))
+            candidates.extend(_iter_listing_candidates(item, collection_keys=collection_keys, prefix=f"{prefix}[{index}]"))
+        return candidates
+    if not isinstance(raw, dict):
+        return candidates
+    candidates.append((raw, prefix))
+    collection_key_set = {key.casefold() for key in collection_keys}
+    for key, value in raw.items():
+        key_text = str(key)
+        if key_text.casefold() in collection_key_set:
+            if isinstance(value, list):
+                for index, item in enumerate(value):
+                    candidates.append((item, f"{prefix}.{key_text}[{index}]"))
+                    candidates.extend(
+                        _iter_listing_candidates(item, collection_keys=collection_keys, prefix=f"{prefix}.{key_text}[{index}]")
+                    )
+            elif isinstance(value, dict):
+                candidates.append((value, f"{prefix}.{key_text}"))
+                candidates.extend(_iter_listing_candidates(value, collection_keys=collection_keys, prefix=f"{prefix}.{key_text}"))
+        elif isinstance(value, (dict, list)):
+            candidates.extend(_iter_listing_candidates(value, collection_keys=collection_keys, prefix=f"{prefix}.{key_text}"))
+    return candidates
+
+
+def _listing_from_values(
+    *,
+    store: object,
+    price: object,
+    url: object,
+    source: str,
+    raw_source: str,
+    evidence_source: str,
+) -> TopListing | None:
+    parsed_price = _parse_decimal(price)
+    if parsed_price is None or parsed_price <= 0:
+        return None
+    return TopListing(
+        rank=0,
+        store=_text(store),
+        price=parsed_price,
+        url=_text(url),
+        source=_text(source),
+        raw_source=raw_source,
+        evidence_source=evidence_source,
+    )
+
+
+def _dedupe_and_rank_listings(listings: list[TopListing]) -> list[TopListing]:
+    deduped: dict[tuple[str, str, str], TopListing] = {}
+    for listing in listings:
+        if listing.price <= 0:
+            continue
+        key = (listing.store.casefold(), _money_text(listing.price), listing.url.casefold())
+        if key not in deduped:
+            deduped[key] = listing
+    ranked: list[TopListing] = []
+    for index, listing in enumerate(sorted(deduped.values(), key=lambda item: (item.price, item.store.casefold(), item.url)), start=1):
+        ranked.append(
+            TopListing(
+                rank=index,
+                store=listing.store,
+                price=listing.price,
+                url=listing.url,
+                source=listing.source,
+                raw_source=listing.raw_source,
+                evidence_source=listing.evidence_source,
+            )
+        )
+    return ranked
+
+
+def _raw_payload(value: object) -> object | None:
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+        return parsed if isinstance(parsed, (dict, list)) else None
+    return None
 
 
 def _competitor_price(row: dict[str, str], source: str) -> Decimal | None:
@@ -641,11 +981,32 @@ def _first_present(row: dict[str, str], columns: tuple[str, ...]) -> str:
     return ""
 
 
+def _first_present_any(row: dict[str, Any], columns: tuple[str, ...]) -> str:
+    for column in columns:
+        value = _text(_value_by_case_any(row, column))
+        if value:
+            return value
+    return ""
+
+
 def _value_by_case(row: dict[str, str], column: str) -> str:
     for key, value in row.items():
         if key is not None and key.strip().casefold() == column.casefold():
             return value
     return ""
+
+
+def _value_by_case_any(row: dict[str, Any], column: str) -> object:
+    for key, value in row.items():
+        if key is not None and str(key).strip().casefold() == column.casefold():
+            return value
+    return ""
+
+
+def prices_nearly_equal(a: Decimal | None, b: Decimal | None) -> bool:
+    if a is None or b is None:
+        return False
+    return abs(a - b) <= PRICE_EQUALITY_TOLERANCE
 
 
 def _parse_decimal(value: object) -> Decimal | None:

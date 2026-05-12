@@ -1062,6 +1062,17 @@ export interface PriceMonitoringReviewParams {
   enriched_csv_path?: string | null;
 }
 
+export interface PriceMonitoringTopListing {
+  rank?: number | null;
+  store?: string | null;
+  price?: number | null;
+  url?: string | null;
+  source?: PriceMonitoringSource | string | null;
+  raw_source?: string | null;
+  evidence_source?: string | null;
+  [key: string]: unknown;
+}
+
 export interface PriceMonitoringReviewItem {
   model: string;
   mpn?: string | null;
@@ -1079,6 +1090,14 @@ export interface PriceMonitoringReviewItem {
   target_price?: number | null;
   status?: string | null;
   warnings?: string[];
+  competitor_rank?: number | null;
+  next_competitor_price?: number | null;
+  next_competitor_store?: string | null;
+  next_competitor_url?: string | null;
+  next_store_delta?: number | null;
+  next_store_delta_percent?: number | null;
+  top_listings?: PriceMonitoringTopListing[];
+  delta_basis?: string | null;
   [key: string]: unknown;
 }
 
