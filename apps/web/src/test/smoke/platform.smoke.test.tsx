@@ -592,6 +592,27 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByLabelText("Review status")).toHaveValue("needs_review");
   });
 
+  it("filters Find Source candidates by pending review status", async () => {
+    const mockFetch = installMockFetch(allRoutes);
+
+    renderWithRouter("/find-source/candidates");
+
+    await expect(screen.findAllByText(/Midea MD-20L/)).resolves.not.toHaveLength(0);
+
+    fireEvent.change(screen.getByLabelText("Review status"), { target: { value: "pending" } });
+
+    await expect(screen.findByText("Samsung DV90DG52A0ABLE Dryer")).resolves.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Midea MD-20L Electronet")).not.toBeInTheDocument());
+    expect(screen.getByLabelText("Review status")).toHaveValue("pending");
+    expect(
+      mockFetch.requests.some(
+        (request) =>
+          request.pathname === "/commerce-api/source-url-agent/candidates" &&
+          request.searchParams.get("status") === "pending",
+      ),
+    ).toBe(true);
+  });
+
   it("expands Vendor Source candidate inline review panel with decision details", async () => {
     const mockFetch = installMockFetch(allRoutes);
 

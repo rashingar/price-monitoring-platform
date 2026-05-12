@@ -7,7 +7,8 @@ from product_factory.html_builders import (
     build_description_html_from_intro_and_sections,
     extract_presentation_blocks,
 )
-from product_factory.models import SpecItem, SpecSection
+from product_factory.mapping import _cta_label_for_taxonomy, _cta_text_for_taxonomy
+from product_factory.models import SpecItem, SpecSection, TaxonomyResolution
 
 
 
@@ -106,6 +107,21 @@ def test_description_uses_parent_tv_cta_text() -> None:
     assert warnings == []
     assert 'href="https://www.etranoulis.gr/eikona-hxos/thleoraseis"' in description
     assert "Δείτε περισσότερες Τηλεοράσεις εδώ" in description
+
+
+def test_air_conditioner_wall_taxonomy_uses_leaf_cta_text() -> None:
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Τοίχου",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Κλιματιστικά > Τοίχου",
+        cta_url="https://www.etranoulis.gr/klimatismos-thermansi/klimatistika/toixou",
+        gender="neut",
+        plural_label="Τοίχου",
+    )
+
+    assert _cta_label_for_taxonomy(taxonomy) == "Κλιματιστικά"
+    assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερα Κλιματιστικά εδώ"
 
 
 def test_presentation_blocks_extract_images_from_left_and_right_banner_layouts() -> None:

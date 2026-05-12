@@ -27,6 +27,7 @@ const MIN_COLUMN_WIDTH_PX = 28;
 const MAX_COLUMN_WIDTH_PX = 800;
 const DEFAULT_COLUMN_WIDTH_PX = 80;
 const REVIEW_STATUSES: Array<SourceUrlCandidateStatus | "all"> = [
+  "pending",
   "needs_review",
   "accepted",
   "rejected",

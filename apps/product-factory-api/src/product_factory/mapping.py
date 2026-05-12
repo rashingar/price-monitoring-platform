@@ -247,12 +247,16 @@ def build_row(
 def _cta_label_for_taxonomy(taxonomy: TaxonomyResolution) -> str:
     if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Τηλεοράσεις"):
         return taxonomy.leaf_category
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Κλιματιστικά"):
+        return taxonomy.leaf_category
     return taxonomy.sub_category or taxonomy.leaf_category
 
 
 def _cta_text_for_taxonomy(taxonomy: TaxonomyResolution) -> str:
     if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Τηλεοράσεις"):
         return build_deterministic_cta("fem", taxonomy.leaf_category)
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Κλιματιστικά"):
+        return build_deterministic_cta("neut", taxonomy.leaf_category)
     return build_deterministic_cta(taxonomy.gender, taxonomy.plural_label)
 
 

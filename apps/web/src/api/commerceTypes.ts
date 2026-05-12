@@ -286,6 +286,7 @@ export interface SourceUrlImportOptionsResponse {
 }
 
 export type SourceUrlCandidateStatus =
+  | "pending"
   | "needs_review"
   | "accepted"
   | "rejected"
