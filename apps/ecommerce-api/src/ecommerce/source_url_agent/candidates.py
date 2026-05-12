@@ -148,6 +148,8 @@ def candidate_from_evidence(
     evidence_json["model"]["expected"] = product.model
     evidence_json["brand"]["expected"] = product.manufacturer
     evidence_json["category"]["expected"] = product.category
+    if score.composite is not None:
+        evidence_json["composite"] = score.composite.to_json()
     notes = score.notes
     if evidence.error_code and not notes:
         notes = evidence.error_message

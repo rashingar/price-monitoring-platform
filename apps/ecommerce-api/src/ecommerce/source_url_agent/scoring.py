@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ecommerce.source_url_agent.composite import CompositeMismatchResult, detect_composite_mismatch
 from ecommerce.source_url_agent.evidence import PageEvidence
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.sources import SourceDefinition
@@ -19,6 +20,7 @@ class CandidateScore:
     match_status: str
     match_method: str
     notes: str
+    composite: CompositeMismatchResult | None = None
 
 
 def score_candidate(
@@ -46,6 +48,16 @@ def score_candidate(
                 "Candidate URL matches source product URL rules but the page was blocked during fetch.",
             )
         return CandidateScore(0.0, "error", "blocked_or_captcha", "Blocked page or CAPTCHA marker detected.")
+
+    composite = detect_composite_mismatch(product, evidence)
+    if composite.is_mismatch:
+        return CandidateScore(
+            0.0,
+            "not_found",
+            "composite_product_mismatch",
+            _composite_notes(composite),
+            composite,
+        )
 
     confidence = 0.0
     method = "manual_review_required"
@@ -95,6 +107,15 @@ def score_candidate(
 
 def _notes(values: list[str]) -> str:
     return " ".join(dict.fromkeys(value for value in values if value))
+
+
+def _composite_notes(result: CompositeMismatchResult) -> str:
+    parts = [f"Composite product mismatch: {result.reason}."]
+    if result.markers:
+        parts.append(f"markers={', '.join(result.markers)}.")
+    if result.extra_identifiers:
+        parts.append(f"extra_identifiers={', '.join(result.extra_identifiers)}.")
+    return " ".join(parts)
 
 
 def _evidence_has_valid_product_url(source: SourceDefinition, evidence: PageEvidence) -> bool:
