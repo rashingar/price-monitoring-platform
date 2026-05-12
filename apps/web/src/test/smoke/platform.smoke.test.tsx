@@ -98,6 +98,8 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findByText("005606")).resolves.toBeInTheDocument();
     await expect(screen.findByText("Midea Αφυγραντήρας 20L")).resolves.toBeInTheDocument();
     expect(screen.getByText("Αφυγραντήρες")).toBeInTheDocument();
+    expect(screen.getByText("Eligible")).toBeInTheDocument();
+    expect(screen.getByText("Review")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Source URLs for 005606" })).toBeInTheDocument();
     await expect(screen.findByText("Source URL Import")).resolves.toBeInTheDocument();
     await expect(screen.findByText(/Coverage:/)).resolves.toBeInTheDocument();
@@ -110,7 +112,8 @@ describe("platform mocked page smoke tests", () => {
         mockFetch.requests.some(
           (request) =>
             request.pathname === "/commerce-api/catalog/products" &&
-            request.searchParams.get("has_source_url") === "true",
+            request.searchParams.get("has_source_url") === "true" &&
+            request.searchParams.get("source_name") === "bestprice",
         ),
       ).toBe(true),
     );

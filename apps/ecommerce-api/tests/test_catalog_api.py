@@ -12,7 +12,7 @@ from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.source_url_repository import create_or_update_manual_source_url  # noqa: E402
+from ecommerce.db.source_url_repository import create_or_update_imported_source_url, create_or_update_manual_source_url  # noqa: E402
 from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 RAW_COOKWARE = (
@@ -199,6 +199,43 @@ def test_catalog_products_source_url_filter(tmp_path: Path, monkeypatch) -> None
 
     assert [item["model"] for item in with_source_url["items"]] == ["123456"]
     assert {item["model"] for item in without_source_url["items"]} == {"005606", "233374-233203", "ABC123"}
+
+
+def test_catalog_products_include_source_url_eligibility_coverage(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    with session_scope(database_url) as session:
+        vacuum_one_id = client.get("/api/catalog/products", params={"q": "Vacuum One"}).json()["items"][0]["catalog_product_id"]
+        vacuum_two_id = client.get("/api/catalog/products", params={"q": "Vacuum Two"}).json()["items"][0]["catalog_product_id"]
+        create_or_update_imported_source_url(
+            session,
+            catalog_product_id=vacuum_one_id,
+            url="https://www.bestprice.gr/item/456/vacuum-one.html",
+            source_name="bestprice",
+            status="needs_review",
+        )
+        create_or_update_manual_source_url(
+            session,
+            vacuum_two_id,
+            {"url": "https://www.bestprice.gr/item/123/vacuum-two.html", "source_name": "bestprice"},
+        )
+
+    payload = client.get(
+        "/api/catalog/products",
+        params={"marketplace": "bestprice", "source_name": "bestprice", "atomic_only": "true"},
+    ).json()
+
+    by_model = {item["model"]: item for item in payload["items"]}
+    assert by_model["005606"]["source_url_coverage"]["has_active_source_url"] is False
+    assert by_model["005606"]["source_url_coverage"]["needs_review_source_url_count"] == 1
+    assert by_model["123456"]["source_url_coverage"]["has_active_source_url"] is True
+    assert by_model["123456"]["source_url_coverage"]["active_source_url_count"] == 1
+
+    with_active_source_url = client.get(
+        "/api/catalog/products",
+        params={"has_source_url": "true", "source_name": "bestprice"},
+    ).json()
+    assert [item["model"] for item in with_active_source_url["items"]] == ["123456"]
 
 
 def test_catalog_categories(tmp_path: Path, monkeypatch) -> None:

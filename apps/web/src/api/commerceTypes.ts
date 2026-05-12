@@ -88,6 +88,7 @@ export interface CatalogProduct {
   automation_eligible?: boolean | null;
   ignored?: boolean | null;
   warnings?: string[] | null;
+  source_url_coverage?: PriceMonitoringSourceUrlCoverage | null;
   [key: string]: unknown;
 }
 
@@ -605,6 +606,7 @@ export interface CatalogProductsParams {
   sub_category?: string | null;
   manufacturer?: string | null;
   marketplace?: MarketplaceFilter | null;
+  source_name?: PriceMonitoringSource | string | null;
   page?: number;
   page_size?: number;
   atomic_only?: boolean;

@@ -255,6 +255,34 @@ function getSummaryNumber(summary: CatalogSummary | null, keys: string[]): numbe
   return null;
 }
 
+function getSourceUrlStatusCount(product: CatalogProduct, status: string): number {
+  const coverage = product.source_url_coverage;
+  const directValue =
+    status === "active"
+      ? coverage?.active_source_url_count
+      : status === "needs_review"
+        ? coverage?.needs_review_source_url_count
+        : undefined;
+  if (typeof directValue === "number" && Number.isFinite(directValue)) {
+    return directValue;
+  }
+
+  const statusValue = coverage?.status_counts?.[status];
+  return typeof statusValue === "number" && Number.isFinite(statusValue) ? statusValue : 0;
+}
+
+function getSourceUrlEligibility(product: CatalogProduct): { label: string; className: string; blocker: string | null } {
+  const activeCount = getSourceUrlStatusCount(product, "active");
+  const reviewCount = getSourceUrlStatusCount(product, "needs_review");
+  if (activeCount > 0 || product.source_url_coverage?.has_active_source_url === true) {
+    return { label: "Eligible", className: "success", blocker: null };
+  }
+  if (reviewCount > 0) {
+    return { label: "Review", className: "warning", blocker: "Source URL review" };
+  }
+  return { label: "Missing", className: "danger", blocker: "Missing source URL" };
+}
+
 function getSelectionBlocker(product: CatalogProduct): string | null {
   if (product.is_atomic_model === false) {
     return "Composite model";
@@ -268,7 +296,7 @@ function getSelectionBlocker(product: CatalogProduct): string | null {
     return "Ignored";
   }
 
-  return null;
+  return getSourceUrlEligibility(product).blocker;
 }
 
 function getSourceUrlAgentRunId(run: SourceUrlAgentRun | null): string | null {
@@ -713,6 +741,7 @@ export function CatalogPage() {
         page_size: pageSize,
         atomic_only: !showComposite,
         ignored: includeIgnored ? "include" : "exclude",
+        source_name: source,
       };
 
       if (sourceUrlsOnly) {
@@ -753,6 +782,7 @@ export function CatalogPage() {
       selectedFamily,
       selectedSubCategory,
       showComposite,
+      source,
       sourceUrlsOnly,
     ],
   );
@@ -1517,6 +1547,7 @@ export function CatalogPage() {
                   {productsResponse.items.map((product) => {
                     const model = normalizeModel(product.model);
                     const selectionBlocker = getSelectionBlocker(product);
+                    const sourceUrlEligibility = getSourceUrlEligibility(product);
                     const isSelected = selectedModels.has(model);
                     const warnings = Array.isArray(product.warnings) ? product.warnings : [];
                     const rawCategory = product.raw_category ?? product.category ?? "";
@@ -1596,11 +1627,12 @@ export function CatalogPage() {
                         {isColumnVisible("warnings") ? (
                           <td>
                             <div className="eligibility-cell">
-                              {selectionBlocker ? (
+                              <span className={`status-badge ${sourceUrlEligibility.className}`}>
+                                {sourceUrlEligibility.label}
+                              </span>
+                              {selectionBlocker && selectionBlocker !== sourceUrlEligibility.blocker ? (
                                 <span className="status-badge queued">{selectionBlocker}</span>
-                              ) : (
-                                <span className="status-badge success">Eligible</span>
-                              )}
+                              ) : null}
                               {warnings.length > 0 ? (
                                 <span className="muted">{warnings.join(", ")}</span>
                               ) : null}

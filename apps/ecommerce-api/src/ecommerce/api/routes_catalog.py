@@ -6,7 +6,7 @@ from collections import Counter
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from ecommerce.catalog import CatalogProduct
@@ -34,6 +34,7 @@ def get_products(
     sub_category: str | None = None,
     manufacturer: str | None = None,
     marketplace: MarketplaceFilter | None = None,
+    source_name: str | None = None,
     has_mpn: bool | None = None,
     has_source_url: bool | None = None,
     ignored: IgnoredFilter = "exclude",
@@ -46,7 +47,8 @@ def get_products(
 ) -> dict:
     products = _load_catalog_or_raise()
     ignored_models = _load_ignored_models_or_raise()
-    source_url_product_ids = _load_source_url_product_ids_or_raise() if has_source_url is not None else None
+    source_filter = _source_filter(source_name)
+    source_url_product_ids = _load_active_source_url_product_ids_or_raise(source_filter) if has_source_url is not None else None
     filtered = _filter_products(
         products,
         ignored_models=ignored_models,
@@ -70,8 +72,21 @@ def get_products(
 
     start = (page - 1) * page_size
     end = start + page_size
+    page_items = filtered[start:end]
+    source_url_status_counts = _load_source_url_status_counts_or_raise(
+        [product.catalog_product_id for product in page_items],
+        source_filter,
+    )
     return {
-        "items": [_product_to_response(product, ignored_models) for product in filtered[start:end]],
+        "items": [
+            _product_to_response(
+                product,
+                ignored_models,
+                source_url_status_counts.get(product.catalog_product_id),
+                source_filter,
+            )
+            for product in page_items
+        ],
         "page": page,
         "page_size": page_size,
         "total": len(products),
@@ -199,14 +214,47 @@ def _load_ignored_models_or_raise() -> set[str]:
         raise HTTPException(status_code=500, detail="Ignore list loading failed.") from exc
 
 
-def _load_source_url_product_ids_or_raise() -> set[int]:
+def _load_active_source_url_product_ids_or_raise(source_filter: str | None) -> set[int]:
     try:
         with session_scope() as session:
-            return {
-                int(product_id)
-                for product_id in session.execute(select(SourceUrl.catalog_product_id).distinct()).scalars().all()
-                if product_id is not None
-            }
+            statement = select(SourceUrl.catalog_product_id).where(SourceUrl.status == "active").distinct()
+            if source_filter:
+                statement = statement.where(SourceUrl.source_name.ilike(source_filter))
+            return {int(product_id) for product_id in session.execute(statement).scalars().all() if product_id is not None}
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Source URL query failed: {_safe_db_error(exc)}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Source URL query failed.") from exc
+
+
+def _load_source_url_status_counts_or_raise(
+    catalog_product_ids: list[int | None],
+    source_filter: str | None,
+) -> dict[int, dict[str, int]]:
+    product_ids = sorted({int(product_id) for product_id in catalog_product_ids if product_id is not None})
+    if not product_ids:
+        return {}
+    try:
+        with session_scope() as session:
+            statement = (
+                select(SourceUrl.catalog_product_id, SourceUrl.status, func.count(SourceUrl.id))
+                .where(SourceUrl.catalog_product_id.in_(product_ids))
+                .group_by(SourceUrl.catalog_product_id, SourceUrl.status)
+            )
+            if source_filter:
+                statement = statement.where(SourceUrl.source_name.ilike(source_filter))
+            counts: dict[int, dict[str, int]] = {}
+            for product_id, status, count in session.execute(statement).all():
+                if product_id is None:
+                    continue
+                product_counts = counts.setdefault(
+                    int(product_id),
+                    {"active": 0, "needs_review": 0, "broken": 0, "disabled": 0, "redirected": 0},
+                )
+                status_text = str(status or "")
+                if status_text in product_counts:
+                    product_counts[status_text] = int(count or 0)
+            return counts
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Source URL query failed: {_safe_db_error(exc)}") from exc
     except Exception as exc:
@@ -291,11 +339,35 @@ def _category_to_response(category: str, count: int, products: list[CatalogProdu
     }
 
 
-def _product_to_response(product: CatalogProduct, ignored_models: set[str]) -> dict:
+def _product_to_response(
+    product: CatalogProduct,
+    ignored_models: set[str],
+    source_url_status_counts: dict[str, int] | None = None,
+    source_filter: str | None = None,
+) -> dict:
     is_ignored = product.model in ignored_models
+    status_counts = source_url_status_counts or {
+        "active": 0,
+        "needs_review": 0,
+        "broken": 0,
+        "disabled": 0,
+        "redirected": 0,
+    }
+    active_count = int(status_counts.get("active") or 0)
     payload = product.to_dict()
     payload["ignored"] = is_ignored
     payload["automation_eligible"] = _is_automation_eligible(product, is_ignored)
+    payload["source_url_coverage"] = {
+        "catalog_product_id": product.catalog_product_id,
+        "source": source_filter or "all",
+        "has_active_source_url": active_count > 0,
+        "active_source_url_count": active_count,
+        "needs_review_source_url_count": int(status_counts.get("needs_review") or 0),
+        "broken_source_url_count": int(status_counts.get("broken") or 0),
+        "disabled_source_url_count": int(status_counts.get("disabled") or 0),
+        "redirected_source_url_count": int(status_counts.get("redirected") or 0),
+        "status_counts": dict(status_counts),
+    }
     return payload
 
 
@@ -325,6 +397,13 @@ def _trimmed_or_none(value: str | None) -> str | None:
         return None
     text = value.strip()
     return text if text else None
+
+
+def _source_filter(value: str | None) -> str | None:
+    text = _trimmed_or_none(value)
+    if not text or text.casefold() == "all":
+        return None
+    return text.casefold()
 
 
 def _sort_value(product: CatalogProduct, sort_by: SortBy) -> tuple[bool, object]:

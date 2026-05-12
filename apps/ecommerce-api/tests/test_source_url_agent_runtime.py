@@ -372,6 +372,82 @@ def test_agent_persists_matched_candidates_during_dry_run_without_source_url_wri
     assert result.summary["persisted_candidate_count"] == 1
 
 
+def test_agent_persists_terminal_error_candidates_for_review_filtering(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    registry = load_source_registry()
+    with session_scope(database_url) as session:
+        row = _catalog_product(session)
+        product = _product(catalog_product_id=row.id)
+
+        def resolver(_product, _source):
+            return SourceSearchResult(
+                evidence=[],
+                searched_queries=["MR25GB"],
+                searched_urls=["https://www.bestprice.gr/search?q=MR25GB"],
+                errors=["https://www.bestprice.gr/search?q=MR25GB: http_500"],
+            )
+
+        result = run_source_url_agent(
+            products=[product],
+            options=SourceUrlAgentOptions(
+                mode="catalog",
+                source="bestprice",
+                output_dir=tmp_path / "runs",
+                dry_run=True,
+                apply_high_confidence=False,
+            ),
+            registry=registry,
+            session=session,
+            resolver=resolver,
+        )
+
+        stored_candidate = session.query(SourceUrlCandidate).one()
+
+        assert stored_candidate.match_status == "error"
+        assert stored_candidate.status == "error"
+        assert stored_candidate.confidence_score == Decimal("0.0000")
+        assert "http_500" in (stored_candidate.notes or "")
+
+    assert result.summary["error_count"] == 1
+    assert result.summary["persisted_candidate_count"] == 1
+
+
+def test_agent_persists_terminal_not_found_candidates_for_review_filtering(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    registry = load_source_registry()
+    with session_scope(database_url) as session:
+        row = _catalog_product(session)
+        product = _product(catalog_product_id=row.id)
+
+        def resolver(_product, _source):
+            return SourceSearchResult(evidence=[], searched_queries=["MR25GB"], searched_urls=[], errors=[])
+
+        result = run_source_url_agent(
+            products=[product],
+            options=SourceUrlAgentOptions(
+                mode="catalog",
+                source="bestprice",
+                output_dir=tmp_path / "runs",
+                dry_run=True,
+                apply_high_confidence=False,
+            ),
+            registry=registry,
+            session=session,
+            resolver=resolver,
+        )
+
+        stored_candidate = session.query(SourceUrlCandidate).one()
+
+        assert stored_candidate.match_status == "not_found"
+        assert stored_candidate.status == "not_found"
+        assert stored_candidate.confidence_score == Decimal("0.0000")
+
+    assert result.summary["not_found_count"] == 1
+    assert result.summary["persisted_candidate_count"] == 1
+
+
 def test_source_url_agent_csv_run_requires_database_for_direct_persistence(tmp_path: Path, monkeypatch, capsys) -> None:
     monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
     monkeypatch.chdir(tmp_path)
@@ -425,6 +501,50 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
     assert detail.json()["summary"]["matched_count"] == 1
     assert detail.json()["summary"]["task_finished_count"] == 1
     assert detail.json()["artifacts"]
+
+
+def test_source_url_agent_run_api_lists_persisted_error_candidates(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+
+    def error_resolver(product, source):
+        return SourceSearchResult(
+            evidence=[],
+            searched_queries=[f"{product.manufacturer} {product.mpn}"],
+            searched_urls=[f"https://{source.source_domain}/search?q={product.mpn}"],
+            errors=[f"https://{source.source_domain}/search?q={product.mpn}: http_500"],
+        )
+
+    monkeypatch.setattr(routes_source_url_agent, "SOURCE_URL_AGENT_API_RESOLVER", error_resolver)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+
+    response = client.post(
+        "/api/source-url-agent/runs",
+        json={
+            "source": "bestprice",
+            "mode": "catalog",
+            "catalog_product_id": product.id,
+            "limit": 1,
+            "dry_run": True,
+            "max_products_per_batch": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    run_id = response.json()["run_id"]
+    with session_scope(database_url) as session:
+        run = session.query(SourceUrlDiscoveryRun).one()
+        assert run.error_count == 1
+        assert session.query(SourceUrlCandidate).count() == 1
+
+    candidates = client.get("/api/source-url-agent/candidates", params={"status": "error", "run_id": run_id})
+
+    assert candidates.status_code == 200
+    payload = candidates.json()
+    assert payload["total"] == 1
+    assert payload["items"][0]["status"] == "error"
+    assert payload["items"][0]["match_status"] == "error"
+    assert "http_500" in payload["items"][0]["notes"]
 
 
 def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_path: Path, monkeypatch) -> None:

@@ -128,6 +128,13 @@ class SourceUrlAgentCandidate:
 
 
 def keep_candidate(candidate: SourceUrlAgentCandidate) -> bool:
+    if candidate.status == "error" or candidate.match_status == "error":
+        return True
+    if (
+        (candidate.status == "not_found" or candidate.match_status == "not_found")
+        and not candidate.candidate_url
+    ):
+        return True
     return candidate.confidence_score >= MIN_CANDIDATE_CONFIDENCE_TO_KEEP
 
 

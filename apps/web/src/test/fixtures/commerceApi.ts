@@ -114,6 +114,13 @@ export const catalogProducts = {
       automation_eligible: true,
       ignored: false,
       warnings: [],
+      source_url_coverage: {
+        source: "bestprice",
+        has_active_source_url: true,
+        active_source_url_count: 1,
+        needs_review_source_url_count: 0,
+        status_counts: { active: 1, needs_review: 0, broken: 0, disabled: 0, redirected: 0 },
+      },
       status: 1,
     },
     {
@@ -134,6 +141,13 @@ export const catalogProducts = {
       automation_eligible: false,
       ignored: false,
       warnings: ["Composite model"],
+      source_url_coverage: {
+        source: "bestprice",
+        has_active_source_url: false,
+        active_source_url_count: 0,
+        needs_review_source_url_count: 1,
+        status_counts: { active: 0, needs_review: 1, broken: 0, disabled: 0, redirected: 0 },
+      },
       status: 1,
     },
   ],

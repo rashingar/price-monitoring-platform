@@ -284,7 +284,10 @@ function normalizeProduct(value: unknown): CatalogProduct | null {
     return null;
   }
 
-  return value as CatalogProduct;
+  return {
+    ...value,
+    source_url_coverage: normalizeSourceUrlCoverage(value.source_url_coverage),
+  } as CatalogProduct;
 }
 
 function normalizeProductsResponse(payload: unknown): CatalogProductsResponse {
