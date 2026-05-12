@@ -1027,6 +1027,10 @@ function getActionError(row: PriceMonitoringReviewItem, state: RowActionState): 
   return null;
 }
 
+function getReviewOpenUrl(row: PriceMonitoringReviewItem): string {
+  return row.source_url || row.competitor_url || "";
+}
+
 function DebugDetails({
   title,
   count,
@@ -2013,6 +2017,7 @@ function ReviewResultsTable({
         const actionError = getActionError(item, state);
         const showTopListings = Boolean(expandedTopListings[item.model]);
         const topListings = item.top_listings ?? [];
+        const openUrl = getReviewOpenUrl(item);
 
         return (
           <section
@@ -2062,8 +2067,8 @@ function ReviewResultsTable({
                 </span>
                 <span>
                   <strong>URL</strong>
-                  {item.competitor_url ? (
-                    <a href={item.competitor_url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                  {openUrl ? (
+                    <a href={openUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
                       Open
                     </a>
                   ) : (
@@ -2096,7 +2101,12 @@ function ReviewResultsTable({
                     className="button secondary"
                     type="button"
                     disabled={!dbAvailable}
-                    onClick={() => onUpdateRowAction(item.model, { selected_action: "undercut" })}
+                    onClick={() =>
+                      onUpdateRowAction(item.model, {
+                        selected_action: "undercut",
+                        undercut_amount: state.undercut_amount || "0.01",
+                      })
+                    }
                   >
                     Undercut
                   </button>
@@ -2107,6 +2117,7 @@ function ReviewResultsTable({
                       min="0"
                       step="0.01"
                       value={state.undercut_amount}
+                      placeholder="0.01"
                       disabled={!dbAvailable}
                       onChange={(event) => onUpdateRowAction(item.model, { undercut_amount: event.target.value })}
                     />
@@ -2122,8 +2133,8 @@ function ReviewResultsTable({
                   <button className="button secondary" type="button" disabled={!dbAvailable} onClick={() => clearRowAction(item.model)}>
                     Clear row action
                   </button>
-                  {item.competitor_url ? (
-                    <a className="button secondary" href={item.competitor_url} target="_blank" rel="noreferrer">
+                  {openUrl ? (
+                    <a className="button secondary" href={openUrl} target="_blank" rel="noreferrer">
                       Open competitor URL
                     </a>
                   ) : null}

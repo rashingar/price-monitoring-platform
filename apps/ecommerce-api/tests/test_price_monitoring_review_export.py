@@ -324,14 +324,50 @@ def test_bestprice_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
                 "bestprice_next_store": "Next Best",
                 "bestprice_next_store_price": "99.90",
                 "bestprice_next_store_url": "https://bestprice.test/next",
+                "stores": [
+                    {"storeName": "Third Best", "finalPrice": "101.00", "url": "https://bestprice.test/third"},
+                ],
             },
         }
     ]
 
     rows = load_price_review_rows_from_observations(run_dir, observations)
 
-    assert [listing.store for listing in rows[0].top_listings or []] == ["Best Store", "Next Best"]
+    assert [listing.store for listing in rows[0].top_listings or []] == ["Best Store", "Next Best", "Third Best"]
     assert rows[0].next_competitor_store == "Next Best"
+
+
+def test_bestprice_raw_numbered_payload_extraction_adds_top_three(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir, source="bestprice")
+    enriched.unlink()
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "bestprice",
+            "competitor_name": "Best Store",
+            "competitor_price": "94.90",
+            "own_price": "94.90",
+            "product_url": "https://bestprice.test/product",
+            "raw_observation": {
+                "bestprice_store_1": "Best Store",
+                "bestprice_store_1_price": "94.90",
+                "bestprice_store_1_url": "https://bestprice.test/store-1",
+                "bestprice_store_2": "Second Store",
+                "bestprice_store_2_price": "99.90",
+                "bestprice_store_2_url": "https://bestprice.test/store-2",
+                "bestprice_store_3": "Third Store",
+                "bestprice_store_3_price": "101.00",
+                "bestprice_store_3_url": "https://bestprice.test/store-3",
+            },
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert [listing.store for listing in rows[0].top_listings or []] == ["Best Store", "Second Store", "Third Store"]
 
 
 def test_generic_raw_payload_extraction_handles_unknown_shapes(tmp_path: Path) -> None:
@@ -410,7 +446,7 @@ def test_top_three_listings_do_not_add_synthetic_current_row(tmp_path: Path) -> 
     assert rows[0].next_competitor_price is None
 
 
-def test_loading_bestprice_db_observation_uses_store_redirect_url(tmp_path: Path) -> None:
+def test_loading_bestprice_db_observation_uses_source_url_for_review_row(tmp_path: Path) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir, source="bestprice")
     enriched.unlink()
@@ -435,6 +471,8 @@ def test_loading_bestprice_db_observation_uses_store_redirect_url(tmp_path: Path
 
     assert rows[0].competitor_store == "eTranoulis"
     assert rows[0].competitor_url == "https://www.bestprice.gr/to/160584639/product.html"
+    assert rows[0].source_url == "https://www.bestprice.gr/item/2159389060/product.html"
+    assert rows[0].to_api_dict()["source_url"] == "https://www.bestprice.gr/item/2159389060/product.html"
 
 
 def test_loading_review_rows_from_db_observations_does_not_match_by_position(tmp_path: Path) -> None:

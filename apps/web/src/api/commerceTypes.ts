@@ -1082,6 +1082,7 @@ export interface PriceMonitoringReviewItem {
   competitor_price?: number | null;
   competitor_store?: string | null;
   competitor_url?: string | null;
+  source_url?: string | null;
   price_delta?: number | null;
   price_delta_percent?: number | null;
   recommended_action?: PriceMonitoringAction | "" | string | null;

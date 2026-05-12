@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -54,9 +55,33 @@ GENERIC_LISTING_COLLECTION_KEYS = {
     "items",
     "cards",
 }
-STORE_ALIASES = ("store", "shop", "shop_name", "seller", "seller_name", "merchant", "name")
-PRICE_ALIASES = ("price", "final_price", "sale_price", "competitor_price", "price_found", "best_store_price")
-URL_ALIASES = ("url", "product_url", "shop_url", "seller_url", "store_url", "href")
+STORE_ALIASES = (
+    "store",
+    "store_name",
+    "shop",
+    "shop_name",
+    "seller",
+    "seller_name",
+    "merchant",
+    "merchant_name",
+    "name",
+    "title",
+    "display_name",
+)
+PRICE_ALIASES = (
+    "price",
+    "final_price",
+    "finalPrice",
+    "sale_price",
+    "salePrice",
+    "competitor_price",
+    "price_found",
+    "best_store_price",
+    "amount",
+    "value",
+    "price_with_vat",
+)
+URL_ALIASES = ("url", "product_url", "shop_url", "seller_url", "store_url", "href", "link", "path", "web_uri", "relative_url")
 
 
 class PriceReviewError(ValueError):
@@ -106,6 +131,7 @@ class PriceReviewRow:
     competitor_price: Decimal | None
     competitor_store: str
     competitor_url: str
+    source_url: str
     price_delta: Decimal | None
     price_delta_percent: Decimal | None
     recommended_action: str
@@ -133,6 +159,7 @@ class PriceReviewRow:
             "competitor_price": _decimal_to_float(self.competitor_price),
             "competitor_store": self.competitor_store,
             "competitor_url": self.competitor_url,
+            "source_url": self.source_url,
             "price_delta": _decimal_to_float(self.price_delta),
             "price_delta_percent": _decimal_to_float(self.price_delta_percent),
             "recommended_action": self.recommended_action,
@@ -352,6 +379,7 @@ def load_review_csv(path: Path) -> list[PriceReviewRow]:
                 competitor_price=_parse_decimal(row.get("competitor_price")),
                 competitor_store=_text(row.get("competitor_store")),
                 competitor_url=_text(row.get("competitor_url")),
+                source_url="",
                 price_delta=_parse_decimal(row.get("price_delta")),
                 price_delta_percent=_parse_decimal(row.get("price_delta_percent")),
                 recommended_action=_text(row.get("recommended_action")),
@@ -390,6 +418,7 @@ def _build_review_row(
     competitor_price = best_listing.price if best_listing else _competitor_price(enriched_row, source)
     competitor_store = best_listing.store if best_listing else _competitor_store(enriched_row, source)
     competitor_url = best_listing.url if best_listing else _competitor_url(enriched_row, source)
+    source_url = _source_url(enriched_row, source) or competitor_url
     warnings: list[str] = []
 
     if not is_atomic_model(model):
@@ -428,6 +457,7 @@ def _build_review_row(
         competitor_price=competitor_price if competitor_price is not None and competitor_price > 0 else None,
         competitor_store=competitor_store,
         competitor_url=competitor_url,
+        source_url=source_url,
         price_delta=price_delta,
         price_delta_percent=price_delta_percent,
         recommended_action=recommended_action,
@@ -663,6 +693,7 @@ def _observation_to_enriched_row(observation: dict[str, Any], *, source: str) ->
             "store": competitor_name or row.get("store", ""),
             "competitor_url": competitor_url or row.get("competitor_url", ""),
             "url": competitor_url or row.get("url", ""),
+            "source_url": product_url or row.get("source_url", "") or row.get("page_url", ""),
             "price_delta": _text(observation.get("price_delta")) or row.get("price_delta", ""),
             "price_delta_percent": _text(observation.get("price_delta_percent")) or row.get("price_delta_percent", ""),
         }
@@ -681,7 +712,6 @@ def _observation_from_listing(observation: dict[str, Any], listing: TopListing) 
     enriched["competitor_name"] = listing.store
     enriched["seller_name"] = listing.store
     enriched["competitor_price"] = _money_text(listing.price)
-    enriched["product_url"] = listing.url or _text(observation.get("product_url"))
     enriched["source"] = listing.source or _text(observation.get("source"))
     return enriched
 
@@ -690,7 +720,7 @@ def _top_listings_from_observations(observations: list[dict[str, Any]], *, fallb
     candidates: list[TopListing] = []
     for observation in observations:
         candidates.extend(_listing_from_normalized_observation(observation, fallback_source=fallback_source))
-    if len(_dedupe_and_rank_listings(candidates)) < 2:
+    if len(_dedupe_and_rank_listings(candidates)) < 3:
         for observation in observations:
             source = _text(observation.get("source")).lower() or fallback_source
             raw = _raw_payload(observation.get("raw_observation"))
@@ -752,6 +782,15 @@ def _extract_bestprice_raw_listings(raw: object, *, source: str) -> list[TopList
                 item
                 for item in (
                     _listing_from_values(
+                        store=_first_present_any(raw.get("bestPrice") if isinstance(raw.get("bestPrice"), dict) else {}, STORE_ALIASES)
+                        or (raw.get("bestPrice") if isinstance(raw.get("bestPrice"), dict) else {}).get("merchant"),
+                        price=_bestprice_raw_price(raw.get("bestPrice") if isinstance(raw.get("bestPrice"), dict) else {}),
+                        url=_first_present_any(raw.get("bestPrice") if isinstance(raw.get("bestPrice"), dict) else {}, URL_ALIASES),
+                        source=source,
+                        raw_source="bestPrice",
+                        evidence_source="bestprice_raw",
+                    ),
+                    _listing_from_values(
                         store=raw.get("bestprice_best_store"),
                         price=raw.get("bestprice_best_store_price"),
                         url=raw.get("bestprice_best_store_url"),
@@ -771,18 +810,81 @@ def _extract_bestprice_raw_listings(raw: object, *, source: str) -> list[TopList
                 if item is not None
             ]
         )
+        candidates.extend(_extract_numbered_raw_listings(raw, source=source, evidence_source="bestprice_raw"))
     candidates.extend(
         _extract_from_collections(
             raw,
-            collection_keys=("stores", "shops", "offers"),
+            collection_keys=(
+                "stores",
+                "shops",
+                "offers",
+                "listings",
+                "results",
+                "items",
+                "prices",
+                "product_prices",
+                "merchant_prices",
+                "store_prices",
+                "storePrices",
+                "shopOffers",
+                "merchantOffers",
+                "offersData",
+            ),
             source=source,
             evidence_source="bestprice_raw",
-            store_aliases=("merchant", "seller", "store", "shop", "shop_name", "seller_name", "name"),
-            price_aliases=("price", "final_price", "sale_price", "competitor_price", "best_store_price"),
-            url_aliases=("url", "product_url", "shop_url", "seller_url", "store_url", "href"),
+            store_aliases=STORE_ALIASES,
+            price_aliases=PRICE_ALIASES,
+            url_aliases=URL_ALIASES,
         )
     )
     return candidates
+
+
+def _bestprice_raw_price(value: object) -> object:
+    if not isinstance(value, dict):
+        return ""
+    cents = value.get("price")
+    parsed_cents = _parse_decimal(cents)
+    if parsed_cents is not None and parsed_cents > 1000:
+        return str(parsed_cents / Decimal("100"))
+    price = _first_present_any(value, PRICE_ALIASES)
+    if price:
+        return price
+    return cents
+
+
+def _extract_numbered_raw_listings(raw: dict[str, Any], *, source: str, evidence_source: str) -> list[TopListing]:
+    grouped: dict[str, dict[str, object]] = {}
+    for key, value in raw.items():
+        key_text = str(key)
+        match = re.search(r"(?:^|_)(\d+)(?:_|$)", key_text)
+        if not match:
+            continue
+        index = match.group(1)
+        lowered = key_text.casefold()
+        role_text = lowered.replace("bestprice", "")
+        group = grouped.setdefault(index, {})
+        if any(token in role_text for token in ("store", "shop", "merchant", "seller")) and not any(
+            token in role_text for token in ("price", "url", "link", "href")
+        ):
+            group["store"] = value
+        elif "price" in role_text or "amount" in role_text:
+            group["price"] = value
+        elif "url" in role_text or "link" in role_text or "href" in role_text:
+            group["url"] = value
+    listings: list[TopListing] = []
+    for index, values in grouped.items():
+        listing = _listing_from_values(
+            store=values.get("store", ""),
+            price=values.get("price", ""),
+            url=values.get("url", ""),
+            source=source,
+            raw_source=f"numbered_fields[{index}]",
+            evidence_source=evidence_source,
+        )
+        if listing is not None:
+            listings.append(listing)
+    return listings
 
 
 def _extract_generic_raw_listings(raw: object, *, source: str) -> list[TopListing]:
@@ -877,12 +979,24 @@ def _listing_from_values(
 
 def _dedupe_and_rank_listings(listings: list[TopListing]) -> list[TopListing]:
     deduped: dict[tuple[str, str, str], TopListing] = {}
+    store_price_keys: dict[tuple[str, str], tuple[str, str, str]] = {}
     for listing in listings:
         if listing.price <= 0:
             continue
         key = (listing.store.casefold(), _money_text(listing.price), listing.url.casefold())
+        store_price_key = (listing.store.casefold(), _money_text(listing.price))
+        if listing.store and store_price_key in store_price_keys:
+            existing_key = store_price_keys[store_price_key]
+            existing = deduped[existing_key]
+            if not existing.url and listing.url:
+                deduped.pop(existing_key)
+                deduped[key] = listing
+                store_price_keys[store_price_key] = key
+            continue
         if key not in deduped:
             deduped[key] = listing
+            if listing.store:
+                store_price_keys[store_price_key] = key
     ranked: list[TopListing] = []
     for index, listing in enumerate(sorted(deduped.values(), key=lambda item: (item.price, item.store.casefold(), item.url)), start=1):
         ranked.append(
@@ -937,6 +1051,12 @@ def _competitor_url(row: dict[str, str], source: str) -> str:
     if source == "bestprice":
         return _first_present(row, ("bestprice_url", "competitor_url", "url"))
     return _first_present(row, ("skroutz_url", "competitor_url", "url"))
+
+
+def _source_url(row: dict[str, str], source: str) -> str:
+    if source == "bestprice":
+        return _first_present(row, ("source_url", "product_url", "page_url", "bestprice_source_url", "bestprice_url"))
+    return _first_present(row, ("source_url", "product_url", "page_url", "skroutz_source_url", "skroutz_url"))
 
 
 def _recommended_action(current_price: Decimal | None, competitor_price: Decimal | None) -> str:
@@ -997,8 +1117,9 @@ def _value_by_case(row: dict[str, str], column: str) -> str:
 
 
 def _value_by_case_any(row: dict[str, Any], column: str) -> object:
+    normalized_column = _normalize_field_key(column)
     for key, value in row.items():
-        if key is not None and str(key).strip().casefold() == column.casefold():
+        if key is not None and _normalize_field_key(str(key)) == normalized_column:
             return value
     return ""
 
@@ -1046,6 +1167,10 @@ def _text(value: object) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _normalize_field_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", value.casefold())
 
 
 def _now_iso() -> str:

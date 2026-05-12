@@ -859,6 +859,10 @@ textarea {
   max-width: 180px;
 }
 
+.price-review-undercut-field input::placeholder {
+  color: #8a95a3;
+}
+
 .price-review-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
