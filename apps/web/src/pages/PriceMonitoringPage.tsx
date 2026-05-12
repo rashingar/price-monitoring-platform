@@ -1030,6 +1030,26 @@ function getActionError(row: PriceMonitoringReviewItem, state: RowActionState): 
   return null;
 }
 
+function DebugDetails({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: ReactNode;
+}) {
+  return (
+    <details className="debug-card">
+      <summary>
+        <strong>{title}</strong>
+        {typeof count === "number" ? <span className="muted"> {count.toLocaleString()} items</span> : null}
+      </summary>
+      <div className="debug-card-body">{children}</div>
+    </details>
+  );
+}
+
 function SelectionResultBlock({
   result,
   filters,
@@ -1047,20 +1067,13 @@ function SelectionResultBlock({
   return (
     <div className="state-block">
       <strong>Selection result</strong>
-      <dl className="summary-grid">
+      <dl className="summary-grid workflow-summary-grid">
         <SummaryItem label="Run ID" value={result.run_id} />
         <SummaryItem label="Status" value={result.status} />
         <SummaryItem label="Source/vendor" value={formatSelectedSource(result.source)} />
-        <SummaryItem label="Output dir" value={result.output_dir} />
-        <SummaryItem label="Input CSV" value={result.input_csv_path} />
-        <SummaryItem label="Selection summary" value={result.selection_summary_path} />
         <SummaryItem label="Selected" value={result.selected_count} />
         <SummaryItem label="Skipped" value={result.skipped_count} />
-        <SummaryItem label="Skipped missing active URL" value={missingActiveSourceUrlSkipCount} />
       </dl>
-
-      <HierarchyFilterSummary filters={hierarchyFilters} />
-      <SourceUrlCoverageSummary coverage={result.source_url_coverage} />
 
       {hasNoMonitorableProducts ? (
         <NoMonitorableProductsActionCard source={formatSelectedSource(result.source)} />
@@ -1074,29 +1087,38 @@ function SelectionResultBlock({
         </div>
       ) : null}
 
-      {result.skipped_by_reason && Object.keys(result.skipped_by_reason).length > 0 ? (
-        <div className="compact-list">
-          <strong>Skipped by reason</strong>
-          <ul>
-            {Object.entries(result.skipped_by_reason).map(([reason, count]) => (
-              <li key={reason}>
-                {reason}: {count}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <SourceUrlEligibilityRows
-        title="Monitorable products"
-        items={selectedItems}
-        emptyMessage="No products with active source URLs were selected."
-      />
-      <SourceUrlEligibilityRows
-        title="Skipped products"
-        items={skippedItems}
-        showReason
-      />
+      <DebugDetails title="Selection debugging">
+        <dl className="summary-grid">
+          <SummaryItem label="Output dir" value={result.output_dir} />
+          <SummaryItem label="Input CSV" value={result.input_csv_path} />
+          <SummaryItem label="Selection summary" value={result.selection_summary_path} />
+          <SummaryItem label="Skipped missing active URL" value={missingActiveSourceUrlSkipCount} />
+        </dl>
+        <HierarchyFilterSummary filters={hierarchyFilters} />
+        <SourceUrlCoverageSummary coverage={result.source_url_coverage} />
+        {result.skipped_by_reason && Object.keys(result.skipped_by_reason).length > 0 ? (
+          <div className="compact-list">
+            <strong>Skipped by reason</strong>
+            <ul>
+              {Object.entries(result.skipped_by_reason).map(([reason, count]) => (
+                <li key={reason}>
+                  {reason}: {count}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <SourceUrlEligibilityRows
+          title="Monitorable products"
+          items={selectedItems}
+          emptyMessage="No products with active source URLs were selected."
+        />
+        <SourceUrlEligibilityRows
+          title="Skipped products"
+          items={skippedItems}
+          showReason
+        />
+      </DebugDetails>
     </div>
   );
 }
@@ -1114,26 +1136,13 @@ function RunSummaryBlock({
   return (
     <div className="state-block">
       <strong>Current run</strong>
-      <dl className="summary-grid">
+      <dl className="summary-grid workflow-summary-grid">
         <SummaryItem label="Run ID" value={getRunId(run)} />
         <SummaryItem label="Status" value={run.status} />
         <SummaryItem label="Source/vendor" value={formatSelectedSource(run.source)} />
-        <SummaryItem label="Output dir" value={run.output_dir} />
-        <SummaryItem label="Input CSV" value={run.input_csv_path} />
-        <SummaryItem label="Selection summary" value={run.selection_summary_path} />
         <SummaryItem label="Selected" value={run.selected_count} />
         <SummaryItem label="Skipped" value={run.skipped_count} />
-        <SummaryItem
-          label="Skipped missing active URL"
-          value={getMissingActiveSourceUrlSkipCount(run as PriceMonitoringSelectionResult)}
-        />
-        <SummaryItem label="Latest fetch execution" value={latestFetch?.execution_id} />
         <SummaryItem label="Latest fetch status" value={formatFetchStatus(latestFetch?.status)} />
-        <SummaryItem label="Latest fetch queued" value={latestFetch?.queued_at} />
-        <SummaryItem label="Latest fetch started" value={latestFetch?.started_at} />
-        <SummaryItem label="Latest fetch completed" value={latestFetch?.completed_at} />
-        <SummaryItem label="Latest fetch cancelled" value={latestFetch?.cancelled_at} />
-        <SummaryItem label="Latest fetch killed" value={latestFetch?.killed_at} />
       </dl>
       {latestFetch?.status ? (
         <p>
@@ -1143,8 +1152,6 @@ function RunSummaryBlock({
         </p>
       ) : null}
       {latestFetch?.error ? <p className="form-error">{latestFetch.error}</p> : null}
-      <HierarchyFilterSummary filters={hierarchyFilters} />
-      <SourceUrlCoverageSummary coverage={run.source_url_coverage} />
       {resultHasNoMonitorableProducts(run as PriceMonitoringSelectionResult) ? (
         <NoMonitorableProductsActionCard source={formatSelectedSource(run.source)} />
       ) : resultHasMissingActiveSourceUrls(run as PriceMonitoringSelectionResult) ? (
@@ -1156,18 +1163,37 @@ function RunSummaryBlock({
           <VendorSourcesActionLink />
         </div>
       ) : null}
-      {run.skipped_by_reason ? (
-        <div className="compact-list">
-          <strong>Skipped by reason</strong>
-          <ul>
-            {Object.entries(run.skipped_by_reason).map(([reason, count]) => (
-              <li key={reason}>
-                {reason}: {count}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <DebugDetails title="Run debugging">
+        <dl className="summary-grid">
+          <SummaryItem label="Output dir" value={run.output_dir} />
+          <SummaryItem label="Input CSV" value={run.input_csv_path} />
+          <SummaryItem label="Selection summary" value={run.selection_summary_path} />
+          <SummaryItem
+            label="Skipped missing active URL"
+            value={getMissingActiveSourceUrlSkipCount(run as PriceMonitoringSelectionResult)}
+          />
+          <SummaryItem label="Latest fetch execution" value={latestFetch?.execution_id} />
+          <SummaryItem label="Latest fetch queued" value={latestFetch?.queued_at} />
+          <SummaryItem label="Latest fetch started" value={latestFetch?.started_at} />
+          <SummaryItem label="Latest fetch completed" value={latestFetch?.completed_at} />
+          <SummaryItem label="Latest fetch cancelled" value={latestFetch?.cancelled_at} />
+          <SummaryItem label="Latest fetch killed" value={latestFetch?.killed_at} />
+        </dl>
+        <HierarchyFilterSummary filters={hierarchyFilters} />
+        <SourceUrlCoverageSummary coverage={run.source_url_coverage} />
+        {run.skipped_by_reason ? (
+          <div className="compact-list">
+            <strong>Skipped by reason</strong>
+            <ul>
+              {Object.entries(run.skipped_by_reason).map(([reason, count]) => (
+                <li key={reason}>
+                  {reason}: {count}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </DebugDetails>
     </div>
   );
 }
@@ -1248,42 +1274,12 @@ function FetchResultBlock({
           </span>
         </p>
       ) : null}
-      <dl className="summary-grid">
+      <dl className="summary-grid workflow-summary-grid">
         <SummaryItem label="Run ID" value={result.run_id} />
-        <SummaryItem label="Execution ID" value={result.execution_id} />
-        <SummaryItem label="Status" value={formatFetchStatus(result.status)} />
         <SummaryItem label="Source/vendor" value={formatSelectedSource(result.source)} />
-        <SummaryItem label="Fetch input mode" value={formatFetchInputMode(result.fetch_input_mode)} />
-        <SummaryItem label="Catalog URL diagnostic" value={result.catalog_url} />
-        <SummaryItem label="Queued" value={result.queued_at} />
-        <SummaryItem label="Started" value={result.started_at} />
-        <SummaryItem label="Completed" value={result.completed_at} />
-        <SummaryItem label="Cancelled" value={result.cancelled_at} />
-        <SummaryItem label="Killed" value={result.killed_at} />
-        <SummaryItem label="Cancel reason" value={result.cancel_reason} />
-        <SummaryItem label="Termination mode" value={result.termination_mode} />
-        <SummaryItem label="Exit code" value={result.exit_code} />
-        <SummaryItem label="Input CSV" value={getArtifactPath(result.input_csv_path)} />
-        <SummaryItem label="Enriched CSV" value={getArtifactPath(result.enriched_csv_path)} />
-        <SummaryItem label="Fetch summary" value={getArtifactPath(result.fetch_summary_path)} />
-        <SummaryItem label="Fetch result" value={getArtifactPath(result.fetch_result_path)} />
-        <SummaryItem label="Execution metadata" value={getArtifactPath(result.execution_path)} />
-        <SummaryItem label="Log path" value={getArtifactPath(result.log_path)} />
         <SummaryItem label="Stored observations" value={result.observation_count} />
-        <SummaryItem label="Appended observations" value={result.appended_observation_count} />
-        <SummaryItem label="Prior observations" value={getPriorObservationCount(result)} />
-        <SummaryItem label="Catalog snapshot" value={result.catalog_snapshot_count} />
         <SummaryItem label="Matched observations" value={result.matched_observation_count} />
         <SummaryItem label="Unmatched observations" value={result.unmatched_observation_count} />
-        <SummaryItem label="Fetch attempt" value={result.fetch_attempt} />
-        <SummaryItem label="Was refetch" value={formatBoolean(result.was_refetch)} />
-        <SummaryItem label="Observation batch" value={result.observation_batch_id} />
-        <SummaryItem label="Observation history" value={result.observation_history_count} />
-        <SummaryItem label="Persistence" value={result.persistence_status} />
-        <SummaryItem label="Alert evaluation status" value={result.alert_evaluation_status} />
-        <SummaryItem label="Alert events created" value={result.alert_event_count} />
-        <SummaryItem label="Alert duplicate count" value={result.alert_duplicate_count} />
-        <SummaryItem label="Error" value={result.error} />
       </dl>
       {result.fetch_input_mode === "source_urls" ? (
         <p>
@@ -1303,55 +1299,89 @@ function FetchResultBlock({
       {result.was_refetch ? (
         <p className="muted">Refetch completed. Previous observations remain in history; this fetch is shown as another observation batch.</p>
       ) : null}
-      {artifacts.length > 0 && artifactsAreDiagnostic ? (
-        <DiagnosticArtifactsBlock
-          warning={result.artifact_warning}
-          artifacts={artifacts}
-          onPreview={onPreview}
-        />
-      ) : null}
-      {artifacts.length > 0 && !artifactsAreDiagnostic && isCancelledFetchStatus(result.status) ? (
-        <CompactArtifactLinks title="Cancelled execution artifacts" artifacts={artifacts} />
-      ) : null}
-      {artifacts.length > 0 && !artifactsAreDiagnostic && !isCancelledFetchStatus(result.status) ? (
-        <ArtifactList
-          title="Fetch artifacts"
-          items={artifacts}
-          onPreview={onPreview}
-          getDownloadUrl={commerceClient.getArtifactDownloadUrl}
-        />
-      ) : null}
-      {result.warnings && result.warnings.length > 0 ? (
-        <div className="compact-list">
-          <strong>Warnings</strong>
-          <ul>
-            {result.warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {result.persistence_warnings && result.persistence_warnings.length > 0 ? (
-        <div className="compact-list">
-          <strong>Persistence warnings</strong>
-          <ul>
-            {result.persistence_warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {result.alert_warnings && result.alert_warnings.length > 0 ? (
-        <div className="compact-list">
-          <strong>Alert warnings</strong>
-          <ul>
-            {result.alert_warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
       {result.error ? <p className="form-error">{result.error}</p> : null}
+      <DebugDetails title="Fetch debugging">
+        <dl className="summary-grid">
+          <SummaryItem label="Execution ID" value={result.execution_id} />
+          <SummaryItem label="Status" value={formatFetchStatus(result.status)} />
+          <SummaryItem label="Fetch input mode" value={formatFetchInputMode(result.fetch_input_mode)} />
+          <SummaryItem label="Catalog URL diagnostic" value={result.catalog_url} />
+          <SummaryItem label="Queued" value={result.queued_at} />
+          <SummaryItem label="Started" value={result.started_at} />
+          <SummaryItem label="Completed" value={result.completed_at} />
+          <SummaryItem label="Cancelled" value={result.cancelled_at} />
+          <SummaryItem label="Killed" value={result.killed_at} />
+          <SummaryItem label="Cancel reason" value={result.cancel_reason} />
+          <SummaryItem label="Termination mode" value={result.termination_mode} />
+          <SummaryItem label="Exit code" value={result.exit_code} />
+          <SummaryItem label="Input CSV" value={getArtifactPath(result.input_csv_path)} />
+          <SummaryItem label="Enriched CSV" value={getArtifactPath(result.enriched_csv_path)} />
+          <SummaryItem label="Fetch summary" value={getArtifactPath(result.fetch_summary_path)} />
+          <SummaryItem label="Fetch result" value={getArtifactPath(result.fetch_result_path)} />
+          <SummaryItem label="Execution metadata" value={getArtifactPath(result.execution_path)} />
+          <SummaryItem label="Log path" value={getArtifactPath(result.log_path)} />
+          <SummaryItem label="Appended observations" value={result.appended_observation_count} />
+          <SummaryItem label="Prior observations" value={getPriorObservationCount(result)} />
+          <SummaryItem label="Catalog snapshot" value={result.catalog_snapshot_count} />
+          <SummaryItem label="Fetch attempt" value={result.fetch_attempt} />
+          <SummaryItem label="Was refetch" value={formatBoolean(result.was_refetch)} />
+          <SummaryItem label="Observation batch" value={result.observation_batch_id} />
+          <SummaryItem label="Observation history" value={result.observation_history_count} />
+          <SummaryItem label="Persistence" value={result.persistence_status} />
+          <SummaryItem label="Alert evaluation status" value={result.alert_evaluation_status} />
+          <SummaryItem label="Alert events created" value={result.alert_event_count} />
+          <SummaryItem label="Alert duplicate count" value={result.alert_duplicate_count} />
+          <SummaryItem label="Error" value={result.error} />
+        </dl>
+        {artifacts.length > 0 && artifactsAreDiagnostic ? (
+          <DiagnosticArtifactsBlock
+            warning={result.artifact_warning}
+            artifacts={artifacts}
+            onPreview={onPreview}
+          />
+        ) : null}
+        {artifacts.length > 0 && !artifactsAreDiagnostic && isCancelledFetchStatus(result.status) ? (
+          <CompactArtifactLinks title="Cancelled execution artifacts" artifacts={artifacts} />
+        ) : null}
+        {artifacts.length > 0 && !artifactsAreDiagnostic && !isCancelledFetchStatus(result.status) ? (
+          <ArtifactList
+            title="Fetch artifacts"
+            items={artifacts}
+            onPreview={onPreview}
+            getDownloadUrl={commerceClient.getArtifactDownloadUrl}
+          />
+        ) : null}
+        {result.warnings && result.warnings.length > 0 ? (
+          <div className="compact-list">
+            <strong>Warnings</strong>
+            <ul>
+              {result.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {result.persistence_warnings && result.persistence_warnings.length > 0 ? (
+          <div className="compact-list">
+            <strong>Persistence warnings</strong>
+            <ul>
+              {result.persistence_warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {result.alert_warnings && result.alert_warnings.length > 0 ? (
+          <div className="compact-list">
+            <strong>Alert warnings</strong>
+            <ul>
+              {result.alert_warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </DebugDetails>
     </div>
   );
 }
@@ -1421,7 +1451,7 @@ function FetchLogsPanel({
   const lines = logs?.lines ?? [];
 
   return (
-    <details className="state-block fetch-logs-panel" open={lines.length > 0 || Boolean(error)}>
+    <details className="state-block fetch-logs-panel debug-card">
       <summary>
         <strong>Fetch logs</strong>
         <span className="muted"> {lines.length.toLocaleString()} lines</span>
@@ -1863,7 +1893,7 @@ function CatalogSnapshotTable({ snapshot }: { snapshot: CatalogSnapshotResponse 
   const items = snapshot?.items ?? [];
 
   return (
-    <details className="state-block catalog-snapshot-block" open>
+    <details className="state-block catalog-snapshot-block debug-card">
       <summary>
         <strong>Catalog Snapshot</strong>
         <span className="muted"> {formatValue(snapshot?.count ?? items.length)} rows</span>
@@ -2245,7 +2275,7 @@ function StoredObservationsSection({
         <EmptyState title="No run selected" message="Select or create a run to view stored observations." />
       ) : (
         <>
-          <dl className="summary-grid">
+          <dl className="summary-grid workflow-summary-grid">
             <SummaryItem label="Run ID" value={observations?.run_id ?? runId} />
             <SummaryItem label="Total observations" value={observations?.count ?? fetchResult?.observation_count} />
             <SummaryItem
@@ -2256,24 +2286,28 @@ function StoredObservationsSection({
               label="Unmatched"
               value={observations?.unmatched_count ?? fetchResult?.unmatched_observation_count}
             />
-            <SummaryItem label="Fetch attempt" value={fetchResult?.fetch_attempt} />
-            <SummaryItem label="Was refetch" value={formatBoolean(fetchResult?.was_refetch)} />
-            <SummaryItem label="Prior observations" value={getPriorObservationCount(fetchResult)} />
-            <SummaryItem label="Observation batch" value={fetchResult?.observation_batch_id} />
-            <SummaryItem label="Observation history" value={fetchResult?.observation_history_count} />
-            <SummaryItem label="Persistence status" value={fetchResult?.persistence_status} />
           </dl>
 
-          {fetchResult?.persistence_warnings && fetchResult.persistence_warnings.length > 0 ? (
-            <div className="compact-list">
-              <strong>Persistence warnings</strong>
-              <ul>
-                {fetchResult.persistence_warnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+          <DebugDetails title="Stored observation debugging">
+            <dl className="summary-grid">
+              <SummaryItem label="Fetch attempt" value={fetchResult?.fetch_attempt} />
+              <SummaryItem label="Was refetch" value={formatBoolean(fetchResult?.was_refetch)} />
+              <SummaryItem label="Prior observations" value={getPriorObservationCount(fetchResult)} />
+              <SummaryItem label="Observation batch" value={fetchResult?.observation_batch_id} />
+              <SummaryItem label="Observation history" value={fetchResult?.observation_history_count} />
+              <SummaryItem label="Persistence status" value={fetchResult?.persistence_status} />
+            </dl>
+            {fetchResult?.persistence_warnings && fetchResult.persistence_warnings.length > 0 ? (
+              <div className="compact-list">
+                <strong>Persistence warnings</strong>
+                <ul>
+                  {fetchResult.persistence_warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </DebugDetails>
 
           <div className="filter-grid">
             <label>
@@ -2445,43 +2479,42 @@ function BackendPathsPanel({
   onRefresh: () => void;
 }) {
   return (
-    <section className="panel">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Diagnostics</p>
-          <h3>Backend Paths</h3>
-        </div>
+    <section className="panel diagnostics-panel">
+      <details className="debug-card">
+        <summary>
+          <strong>Backend path diagnostics</strong>
+        </summary>
         <button className="button secondary" type="button" onClick={onRefresh}>
           Refresh paths
         </button>
-      </div>
 
-      {isLoading ? <LoadingState label="Loading backend path roots..." /> : null}
-      {error ? <ErrorState message={error} /> : null}
-      {roots ? (
-        <>
-          <div className="diagnostics-list">
-            <RootList title="Artifact roots" roots={roots.artifact_roots} />
-            <RootList title="File/editor roots" roots={roots.file_roots} />
-            <RootList title="Output roots" roots={roots.output_roots} />
-          </div>
-          <div className="diagnostic-card">
-            <strong>Environment</strong>
-            <dl className="summary-grid diagnostics-summary-grid">
-              <SummaryItem
-                label="ECOMMERCE_ARTIFACT_ROOTS"
-                value={roots.env.ECOMMERCE_ARTIFACT_ROOTS ?? "not_reported"}
-              />
-              <SummaryItem
-                label="ECOMMERCE_FILE_ROOTS"
-                value={roots.env.ECOMMERCE_FILE_ROOTS ?? "not_reported"}
-              />
-              <SummaryItem label="Platform" value={roots.platform} />
-              <SummaryItem label="Separator" value={roots.path_separator} />
-            </dl>
-          </div>
-        </>
-      ) : null}
+        {isLoading ? <LoadingState label="Loading backend path roots..." /> : null}
+        {error ? <ErrorState message={error} /> : null}
+        {roots ? (
+          <>
+            <div className="diagnostics-list">
+              <RootList title="Artifact roots" roots={roots.artifact_roots} />
+              <RootList title="File/editor roots" roots={roots.file_roots} />
+              <RootList title="Output roots" roots={roots.output_roots} />
+            </div>
+            <div className="diagnostic-card">
+              <strong>Environment</strong>
+              <dl className="summary-grid diagnostics-summary-grid">
+                <SummaryItem
+                  label="ECOMMERCE_ARTIFACT_ROOTS"
+                  value={roots.env.ECOMMERCE_ARTIFACT_ROOTS ?? "not_reported"}
+                />
+                <SummaryItem
+                  label="ECOMMERCE_FILE_ROOTS"
+                  value={roots.env.ECOMMERCE_FILE_ROOTS ?? "not_reported"}
+                />
+                <SummaryItem label="Platform" value={roots.platform} />
+                <SummaryItem label="Separator" value={roots.path_separator} />
+              </dl>
+            </div>
+          </>
+        ) : null}
+      </details>
     </section>
   );
 }
@@ -3630,13 +3663,6 @@ export function PriceMonitoringPage() {
         onRetry={() => void loadDbStatus()}
       />
 
-      <BackendPathsPanel
-        roots={pathRoots}
-        isLoading={isPathRootsLoading}
-        error={pathRootsError}
-        onRefresh={() => void loadPathRoots()}
-      />
-
       <section className="panel">
         <div className="section-heading">
           <div>
@@ -3926,7 +3952,10 @@ export function PriceMonitoringPage() {
 
         {currentRun ? <RunSummaryBlock run={currentRun} filters={currentRunFilters} /> : null}
         {currentRunId.trim() ? (
-          <div className="state-block">
+          <details className="state-block debug-card">
+            <summary>
+              <strong>Run artifacts</strong>
+            </summary>
             <div className="section-heading">
               <strong>Run artifacts</strong>
               <button
@@ -3946,7 +3975,7 @@ export function PriceMonitoringPage() {
               onPreview={previewArtifact}
               getDownloadUrl={commerceClient.getArtifactDownloadUrl}
             />
-          </div>
+          </details>
         ) : null}
       </section>
 
@@ -3970,15 +3999,20 @@ export function PriceMonitoringPage() {
               ))}
             </select>
           </label>
-          <label>
-            Catalog URL diagnostic
-            <input
-              value={catalogUrl}
-              onChange={(event) => setCatalogUrl(event.target.value)}
-              placeholder="Optional backend diagnostic hint"
-            />
-          </label>
         </div>
+
+        <DebugDetails title="Monitoring debugging options">
+          <div className="filter-grid">
+            <label>
+              Catalog URL diagnostic
+              <input
+                value={catalogUrl}
+                onChange={(event) => setCatalogUrl(event.target.value)}
+                placeholder="Optional backend diagnostic hint"
+              />
+            </label>
+          </div>
+        </DebugDetails>
 
         <div className="button-row">
           <button
@@ -4018,12 +4052,6 @@ export function PriceMonitoringPage() {
           </>
         ) : null}
         {fetchResult ? <FetchResultBlock result={fetchResult} onPreview={previewArtifact} /> : null}
-        <FetchLogsPanel
-          logs={fetchLogs}
-          error={fetchLogsError}
-          isLoading={isFetchLogsLoading}
-          onRefresh={() => void loadFetchLogs(currentRunId.trim())}
-        />
       </section>
 
       <StoredObservationsSection
@@ -4099,13 +4127,20 @@ export function PriceMonitoringPage() {
         ) : null}
         {review ? (
           <>
-            <dl className="summary-grid">
+            <dl className="summary-grid workflow-summary-grid">
               <SummaryItem label="Run ID" value={review.run_id} />
-              {Object.entries(review.summary ?? {}).map(([key, value]) => (
-                <SummaryItem key={key} label={key} value={value} />
-              ))}
+              <SummaryItem label="Total" value={review.summary?.total} />
+              <SummaryItem label="Review required" value={review.summary?.review_required} />
+              <SummaryItem label="Not exportable" value={review.summary?.not_exportable} />
             </dl>
-            <ReviewArtifactsBlock review={review} onPreview={previewArtifact} />
+            <DebugDetails title="Review debugging">
+              <dl className="summary-grid">
+                {Object.entries(review.summary ?? {}).map(([key, value]) => (
+                  <SummaryItem key={key} label={key} value={value} />
+                ))}
+              </dl>
+              <ReviewArtifactsBlock review={review} onPreview={previewArtifact} />
+            </DebugDetails>
 
             {review.items.length === 0 ? (
               <EmptyState title="No review rows" message="The backend returned an empty review." />
@@ -4252,6 +4287,27 @@ export function PriceMonitoringPage() {
         ) : null}
         {exportResult ? <ExportResultBlock result={exportResult} onPreview={previewArtifact} /> : null}
       </section>
+
+      <section className="panel diagnostics-panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Diagnostics</p>
+            <h3>Debugging</h3>
+          </div>
+        </div>
+        <FetchLogsPanel
+          logs={fetchLogs}
+          error={fetchLogsError}
+          isLoading={isFetchLogsLoading}
+          onRefresh={() => void loadFetchLogs(currentRunId.trim())}
+        />
+      </section>
+      <BackendPathsPanel
+        roots={pathRoots}
+        isLoading={isPathRootsLoading}
+        error={pathRootsError}
+        onRefresh={() => void loadPathRoots()}
+      />
     </div>
   );
 }

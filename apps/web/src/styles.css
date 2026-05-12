@@ -865,6 +865,41 @@ textarea {
   cursor: pointer;
 }
 
+.debug-card {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfc;
+}
+
+.debug-card summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.debug-card-body {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.debug-card > .section-heading,
+.debug-card > .filter-grid,
+.debug-card > .compact-list,
+.debug-card > .table-wrap,
+.debug-card > .diagnostics-list,
+.debug-card > .diagnostic-card,
+.debug-card > .summary-grid,
+.debug-card > .state-block,
+.debug-card > p {
+  margin-top: 12px;
+}
+
+.diagnostics-panel {
+  background: #fbfcfc;
+}
+
 .current-run-header {
   display: grid;
   grid-template-columns: minmax(180px, 1.2fr) repeat(4, minmax(120px, 1fr)) auto;
