@@ -18,7 +18,7 @@ from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import sanitize_database_error  # noqa: E402
 from ecommerce.db.diagnostics import get_alembic_head_revision  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, CatalogSnapshot, MonitoringRun, PriceObservation, PriceObservationListing, Product, SourceUrl  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing, Product, SourceCaptureSnapshot, SourceUrl  # noqa: E402
 from ecommerce.db.repositories import (  # noqa: E402
     catalog_snapshot_to_dict,
     list_price_observations,
@@ -744,6 +744,95 @@ def test_get_fetch_result_reports_persisted_when_db_rows_exist(tmp_path: Path, m
     payload = response.json()
     assert payload["persistence_status"] == "persisted"
     assert payload["persistence_warnings"] == []
+
+
+def test_backfill_listings_endpoint_performs_explicit_mutation(tmp_path: Path, monkeypatch) -> None:
+    database_url = _sqlite_url(tmp_path)
+    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
+    monkeypatch.setattr(routes_price_monitoring, "require_database_ready_for_price_monitoring", lambda: None)
+    _create_schema(database_url)
+    now = datetime(2026, 4, 29, 12, tzinfo=timezone.utc)
+    with session_scope(database_url) as session:
+        product = Product(
+            catalog_source="sourceCata",
+            model="005606",
+            mpn="MPN-1",
+            name="Product One",
+            current_price=Decimal("123.45"),
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(product)
+        session.flush()
+        run = MonitoringRun(
+            run_id="run-1",
+            source="skroutz",
+            status="fetch_completed",
+            trigger_type="manual",
+            selected_count=1,
+            skipped_count=0,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(run)
+        session.flush()
+        snapshot = SourceCaptureSnapshot(
+            product_id=product.id,
+            capture_strategy="test",
+            page_url="https://skroutz.test/product",
+            captured_at=now,
+            created_at=now,
+        )
+        session.add(snapshot)
+        session.flush()
+        observation = PriceObservation(
+            monitoring_run_id=run.id,
+            product_id=product.id,
+            source_capture_snapshot_id=snapshot.id,
+            run_id="run-1",
+            catalog_source="sourceCata",
+            source="skroutz",
+            model="005606",
+            mpn="MPN-1",
+            product_name="Product One",
+            competitor_name="Collapsed Primary",
+            competitor_price=Decimal("999.00"),
+            own_price=Decimal("123.45"),
+            currency="EUR",
+            product_url="https://skroutz.test/product",
+            raw_observation={},
+            matched_by="model",
+            match_status="matched",
+            observed_at=now,
+            created_at=now,
+        )
+        session.add(observation)
+        session.add(
+            OfferObservation(
+                product_id=product.id,
+                source_capture_snapshot_id=snapshot.id,
+                observation_batch_id="batch-1",
+                seller_name="Store A",
+                seller_url="https://seller.test/a",
+                price=Decimal("118.50"),
+                currency="EUR",
+                raw_observation={"rank": 1},
+                observed_at=now,
+                created_at=now,
+            )
+        )
+
+    response = TestClient(create_app()).post("/api/price-monitoring/runs/run-1/backfill-listings")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["inserted_count"] == 1
+    assert payload["listing_count"] == 1
+    with session_scope(database_url) as session:
+        listings = session.query(PriceObservationListing).all()
+    assert len(listings) == 1
+    assert listings[0].seller_name == "Store A"
+    assert listings[0].price == Decimal("118.50")
 
 
 def test_run_detail_includes_db_status_without_breaking_file_first_response(tmp_path: Path, monkeypatch) -> None:

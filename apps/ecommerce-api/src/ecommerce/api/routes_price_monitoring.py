@@ -18,7 +18,6 @@ from ecommerce.db.policy import (
     require_database_ready_for_price_monitoring,
 )
 from ecommerce.db.repositories import (
-    backfill_price_observation_listings_from_offer_observations,
     count_run_observations_by_match_status,
     get_monitoring_run,
     list_catalog_snapshot,
@@ -32,6 +31,7 @@ from ecommerce.db.repositories import (
 from ecommerce.db.session import session_scope
 from ecommerce.file_editor.safe_paths import get_allowed_roots, is_path_allowed
 from ecommerce.ignore import MissingIgnoreColumnsError
+from ecommerce.price_monitoring.artifacts import build_run_artifact_evidence
 from ecommerce.price_monitoring.export import export_price_update_csv
 from ecommerce.price_monitoring.fetch_execution import (
     ActiveFetchExecutionError,
@@ -50,6 +50,7 @@ from ecommerce.price_monitoring.fetch_run import (
     load_price_monitoring_fetch_result,
 )
 from ecommerce.price_monitoring.persistence import (
+    backfill_run_listing_evidence,
     persist_run_creation_if_configured,
 )
 from ecommerce.price_monitoring.review import (
@@ -65,7 +66,6 @@ from ecommerce.price_monitoring.runs import (
     PRICE_MONITORING_RUNS_DIR,
     InvalidPriceMonitoringRunIdError,
     create_price_monitoring_run,
-    load_price_monitoring_run,
     resolve_price_monitoring_run_dir,
     run_record_to_response,
     selection_preview_to_response,
@@ -228,11 +228,7 @@ def get_run(run_id: str) -> dict:
             if run is None:
                 raise FileNotFoundError(f"DB-backed price monitoring run not found: {run_id}")
             db_payload = monitoring_run_to_dict(run)
-        output_dir = Path(str(db_payload.get("output_dir") or ""))
-        if output_dir.exists():
-            payload = load_price_monitoring_run(run_id)
-        else:
-            payload = _db_run_to_route_response(db_payload)
+        payload = _db_run_to_route_response(db_payload)
     except InvalidPriceMonitoringRunIdError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except FileNotFoundError as exc:
@@ -494,7 +490,12 @@ def get_price_review(run_id: str, enriched_csv_path: str | None = None, include_
     run_dir = _resolve_run_dir(run_id)
     enriched_path = _optional_read_path(enriched_csv_path)
     try:
-        rows = _load_price_review_rows_for_route(run_id, run_dir, enriched_path, include_all_listings=include_all_listings)
+        rows, warnings = _load_price_review_rows_for_route(
+            run_id,
+            run_dir,
+            enriched_path,
+            include_all_listings=include_all_listings,
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PriceReviewError as exc:
@@ -508,6 +509,25 @@ def get_price_review(run_id: str, enriched_csv_path: str | None = None, include_
         "run_id": run_id,
         "items": [row.to_api_dict() for row in rows],
         "summary": summarize_review_rows(rows),
+        "warnings": warnings,
+    }
+
+
+@router.post("/runs/{run_id}/backfill-listings")
+def post_price_review_listing_backfill(run_id: str) -> dict:
+    _require_price_monitoring_database_ready()
+    validate_run_id_for_db_route(run_id)
+    try:
+        result = backfill_run_listing_evidence(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+    return {
+        "run_id": run_id,
+        "status": "listings_backfilled",
+        "inserted_count": result.inserted_count,
+        "listing_count": result.listing_count,
     }
 
 
@@ -517,7 +537,7 @@ def post_price_review_actions(run_id: str, request: PriceReviewActionsApiRequest
     run_dir = _resolve_run_dir(run_id)
     enriched_path = _optional_read_path(request.enriched_csv_path)
     try:
-        rows = _load_price_review_rows_for_route(run_id, run_dir, enriched_path, include_all_listings=False)
+        rows, _warnings = _load_price_review_rows_for_route(run_id, run_dir, enriched_path, include_all_listings=False)
         result = apply_price_actions_to_rows(
             run_dir,
             rows,
@@ -618,7 +638,7 @@ def _load_price_review_rows_for_route(
     include_all_listings: bool = False,
 ):
     try:
-        return load_price_review_rows(run_dir, enriched_path)
+        return load_price_review_rows(run_dir, enriched_path), []
     except FileNotFoundError:
         if enriched_path is not None:
             raise
@@ -626,6 +646,7 @@ def _load_price_review_rows_for_route(
 
 
 def _load_price_review_rows_from_db_observations(run_id: str, run_dir: Path, *, include_all_listings: bool = False):
+    warnings: list[str] = []
     with session_scope() as session:
         observations, count = list_price_observations(
             session,
@@ -635,22 +656,37 @@ def _load_price_review_rows_from_db_observations(run_id: str, run_dir: Path, *, 
         )
         if hasattr(session, "execute") and observations:
             observation_ids = [int(item["id"]) for item in observations if item.get("id") is not None]
-            backfill_price_observation_listings_from_offer_observations(
-                session,
-                run_id=run_id,
-                price_observation_ids=observation_ids,
-            )
             listings = list_price_observation_listings(
                 session,
                 price_observation_ids=observation_ids,
                 limit=20_000,
             )
             _attach_price_observation_listings(observations, listings)
+            if _review_listing_backfill_needed(observations, listings):
+                warnings.append(
+                    "Persisted listing rows are missing for this run. "
+                    f"POST /api/price-monitoring/runs/{run_id}/backfill-listings to attach listing evidence, then reload review."
+                )
     if count <= 0 or not observations:
         raise FileNotFoundError(
             f"Enriched CSV not found in run folder and no persisted price observations found for run: {run_id}"
         )
-    return load_price_review_rows_from_observations(run_dir, observations, include_all_listings=include_all_listings)
+    return load_price_review_rows_from_observations(run_dir, observations, include_all_listings=include_all_listings), warnings
+
+
+def _review_listing_backfill_needed(observations: list[dict], listings: list[dict]) -> bool:
+    listed_observation_ids = {
+        int(listing["price_observation_id"])
+        for listing in listings
+        if listing.get("price_observation_id") is not None
+    }
+    for observation in observations:
+        observation_id = observation.get("id")
+        if observation_id is None:
+            continue
+        if observation.get("source_capture_snapshot_id") is not None and int(observation_id) not in listed_observation_ids:
+            return True
+    return False
 
 
 def _attach_price_observation_listings(observations: list[dict], listings: list[dict]) -> None:
@@ -774,44 +810,74 @@ def _run_db_payload(run_id: str) -> dict[str, object]:
 
 def _db_run_to_route_response(item: dict[str, object]) -> dict[str, object]:
     run_id = str(item.get("run_id") or "")
-    output_dir = Path(str(item.get("output_dir") or ""))
-    artifacts: list[dict[str, object]] = []
-    latest_fetch = None
-    selected_models: list[object] = []
-    skipped_models: list[object] = []
-    skipped_by_reason: dict[str, object] = {}
-    if output_dir.exists() and output_dir.is_dir():
-        try:
-            file_payload = load_price_monitoring_run(run_id)
-            artifacts = file_payload.get("artifacts", []) if isinstance(file_payload.get("artifacts"), list) else []
-            latest_fetch = file_payload.get("latest_fetch")
-            selected_models = file_payload.get("selected_models", []) if isinstance(file_payload.get("selected_models"), list) else []
-            skipped_models = file_payload.get("skipped_models", []) if isinstance(file_payload.get("skipped_models"), list) else []
-            skipped_by_reason = (
-                file_payload.get("skipped_by_reason", {}) if isinstance(file_payload.get("skipped_by_reason"), dict) else {}
-            )
-        except Exception:
-            artifacts = [
-                artifact_link_payload(path)
-                for path in sorted(output_dir.iterdir(), key=lambda child: child.name.casefold())
-                if path.is_file()
-            ]
+    evidence = build_run_artifact_evidence(item)
     return {
         "run_id": run_id,
         "status": str(item.get("status") or ""),
         "source": str(item.get("source") or ""),
+        "source_name": str(item.get("source") or ""),
+        "source_filter": str(item.get("source") or ""),
         "created_at": str(item.get("created_at") or ""),
+        "updated_at": str(item.get("updated_at") or ""),
+        "started_at": str(item.get("started_at") or ""),
+        "completed_at": str(item.get("completed_at") or ""),
         "output_dir": str(item.get("output_dir") or ""),
         "input_csv_path": str(item.get("input_csv_path") or ""),
         "selection_summary_path": str(item.get("selection_summary_path") or ""),
+        "fetch_result_path": str(item.get("fetch_result_path") or ""),
+        "enriched_csv_path": str(item.get("enriched_csv_path") or ""),
+        "fetch_summary_path": str(item.get("fetch_summary_path") or ""),
         "selected_count": item.get("selected_count"),
         "skipped_count": item.get("skipped_count"),
-        "skipped_by_reason": skipped_by_reason,
-        "selected_models": selected_models,
-        "skipped_models": skipped_models,
-        "latest_fetch": latest_fetch,
-        "artifacts": artifacts,
+        "skipped_by_reason": {},
+        "selected_models": [],
+        "skipped_models": [],
+        "latest_fetch": _db_latest_fetch_payload(item),
+        "artifacts": evidence.artifacts,
+        "artifact_warnings": evidence.warnings,
     }
+
+
+def _db_latest_fetch_payload(item: dict[str, object]) -> dict[str, object] | None:
+    has_fetch_state = any(
+        str(item.get(field) or "").strip()
+        for field in ("fetch_result_path", "enriched_csv_path", "fetch_summary_path", "started_at", "completed_at", "error_message")
+    )
+    status = str(item.get("status") or "")
+    if not has_fetch_state and not status.startswith("fetch_"):
+        return None
+    return {
+        "execution_id": "",
+        "execution_type": "fetch",
+        "status": _normalize_db_fetch_status(status),
+        "source": str(item.get("source") or ""),
+        "queued_at": "",
+        "started_at": str(item.get("started_at") or ""),
+        "completed_at": str(item.get("completed_at") or ""),
+        "cancelled_at": "",
+        "enriched_csv_path": str(item.get("enriched_csv_path") or ""),
+        "fetch_summary_path": str(item.get("fetch_summary_path") or ""),
+        "fetch_result_path": str(item.get("fetch_result_path") or ""),
+        "error": str(item.get("error_message") or ""),
+        "fetch_input_mode": "source_urls",
+        "source_url_capture_used": True,
+        "source_url_capture_status": "not_run",
+        "source_url_capture_selected_count": 0,
+        "source_url_capture_succeeded_count": 0,
+        "source_url_capture_failed_count": 0,
+        "source_url_capture_result_path": "",
+        "source_url_capture_warnings": [],
+        "source_url_capture_run_id": "",
+        "observation_batch_id": "",
+    }
+
+
+def _normalize_db_fetch_status(status: str) -> str:
+    if status == "fetch_completed":
+        return "succeeded"
+    if status == "fetch_failed":
+        return "failed"
+    return status
 
 
 def _require_price_monitoring_database_ready() -> None:

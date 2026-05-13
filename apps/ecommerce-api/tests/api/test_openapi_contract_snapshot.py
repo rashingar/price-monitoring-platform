@@ -89,6 +89,7 @@ def test_openapi_snapshot_contains_ui_facing_routes() -> None:
         ("POST", "/api/price-monitoring/runs/{run_id}/fetch/cancel"),
         ("POST", "/api/price-monitoring/runs/{run_id}/fetch/{execution_id}/cancel"),
         ("GET", "/api/price-monitoring/runs/{run_id}/review"),
+        ("POST", "/api/price-monitoring/runs/{run_id}/backfill-listings"),
         ("POST", "/api/price-monitoring/runs/{run_id}/review/actions"),
         ("POST", "/api/price-monitoring/runs/{run_id}/export-price-update"),
         ("GET", "/api/price-monitoring/db/status"),

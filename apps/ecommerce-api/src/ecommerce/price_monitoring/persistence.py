@@ -12,9 +12,12 @@ from typing import Any
 
 from ecommerce.db.config import is_database_configured
 from ecommerce.db.repositories import (
+    backfill_price_observation_listings_from_offer_observations,
     count_price_observations,
     ensure_catalog_snapshots_from_rows,
+    get_monitoring_run,
     persist_monitoring_run_creation,
+    list_price_observation_listings,
     match_product_for_observation,
     replace_price_observations,
     update_monitoring_run_from_fetch,
@@ -39,6 +42,13 @@ class FetchPersistenceResult:
     warnings: list[str]
 
 
+@dataclass(frozen=True)
+class ListingBackfillResult:
+    run_id: str
+    inserted_count: int
+    listing_count: int
+
+
 def persist_run_creation_if_configured(
     record: PriceMonitoringRunRecord,
     *,
@@ -49,6 +59,20 @@ def persist_run_creation_if_configured(
     with session_scope() as session:
         persist_monitoring_run_creation(session, record, trigger_type=trigger_type)
     return True
+
+
+def backfill_run_listing_evidence(run_id: str) -> ListingBackfillResult:
+    with session_scope() as session:
+        run = get_monitoring_run(session, run_id)
+        if run is None:
+            raise FileNotFoundError(f"DB-backed price monitoring run not found: {run_id}")
+        inserted_count = backfill_price_observation_listings_from_offer_observations(session, run_id=run_id)
+        listing_count = len(list_price_observation_listings(session, run_id=run_id, limit=20_000))
+    return ListingBackfillResult(
+        run_id=run_id,
+        inserted_count=inserted_count,
+        listing_count=listing_count,
+    )
 
 
 def persist_fetch_result_if_configured(

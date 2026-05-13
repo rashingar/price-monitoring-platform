@@ -891,6 +891,56 @@ def test_api_get_review_falls_back_to_db_observations_when_enriched_csv_is_missi
     assert payload["items"][0]["competitor_store"] == "Store A"
     assert payload["items"][0]["competitor_url"] == "https://skroutz.test/db-p1"
     assert payload["summary"]["review_required"] == 2
+    assert payload["warnings"] == []
+
+
+def test_api_get_review_does_not_backfill_listings_as_side_effect(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    observations = [
+        {
+            "id": 10,
+            "source_capture_snapshot_id": 99,
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Collapsed Primary",
+            "competitor_price": "118.50",
+            "own_price": "123.45",
+            "product_url": "https://skroutz.test/db-p1",
+            "match_status": "matched",
+            "raw_observation": {},
+        }
+    ]
+
+    class FakeSession:
+        def execute(self):  # pragma: no cover - only used for hasattr in the route helper
+            raise AssertionError("execute should not be called by this test")
+
+    @contextmanager
+    def fake_session_scope(*_args, **_kwargs):
+        yield FakeSession()
+
+    def fail_backfill(*_args, **_kwargs):
+        raise AssertionError("GET review must not backfill listing rows")
+
+    monkeypatch.setattr(routes_price_monitoring, "session_scope", fake_session_scope)
+    monkeypatch.setattr(routes_price_monitoring, "list_price_observations", lambda *_args, **_kwargs: (observations, 1))
+    monkeypatch.setattr(routes_price_monitoring, "list_price_observation_listings", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(routes_price_monitoring, "backfill_run_listing_evidence", fail_backfill)
+
+    response = TestClient(create_app()).get("/api/price-monitoring/runs/run-1/review")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["model"] == "005606"
+    assert any("backfill-listings" in warning for warning in payload["warnings"])
 
 
 def test_api_post_review_actions_falls_back_to_db_observations_when_enriched_csv_is_missing(

@@ -4406,6 +4406,50 @@
         ]
       }
     },
+    "/api/price-monitoring/runs/{run_id}/backfill-listings": {
+      "post": {
+        "operationId": "post_price_review_listing_backfill_api_price_monitoring_runs__run_id__backfill_listings_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Price Review Listing Backfill Api Price Monitoring Runs  Run Id  Backfill Listings Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Price Review Listing Backfill",
+        "tags": [
+          "price-monitoring"
+        ]
+      }
+    },
     "/api/price-monitoring/runs/{run_id}/catalog-snapshot": {
       "get": {
         "operationId": "get_price_monitoring_run_catalog_snapshot_api_price_monitoring_runs__run_id__catalog_snapshot_get",

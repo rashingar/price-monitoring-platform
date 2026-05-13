@@ -150,7 +150,19 @@ def _seed_default_active_source_urls(database_url: str) -> None:
         )
 
 
-def _insert_db_run(database_url: str, run_dir: Path, *, source: str = "bestprice", created_at: str = "2026-04-29T12:00:00+00:00", selected_count: int = 0) -> None:
+def _insert_db_run(
+    database_url: str,
+    run_dir: Path,
+    *,
+    source: str = "bestprice",
+    status: str = "selection_created",
+    created_at: str = "2026-04-29T12:00:00+00:00",
+    selected_count: int = 0,
+    skipped_count: int = 0,
+    fetch_result_path: str | None = None,
+    enriched_csv_path: str | None = None,
+    fetch_summary_path: str | None = None,
+) -> None:
     from datetime import datetime
 
     parsed_created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
@@ -159,15 +171,20 @@ def _insert_db_run(database_url: str, run_dir: Path, *, source: str = "bestprice
             MonitoringRun(
                 run_id=run_dir.name,
                 source=source,
-                status="selection_created",
+                status=status,
                 trigger_type="manual",
                 output_dir=str(run_dir),
                 input_csv_path=str(run_dir / "input.csv"),
                 selection_summary_path=str(run_dir / "selection_summary.json"),
+                fetch_result_path=fetch_result_path,
+                enriched_csv_path=enriched_csv_path,
+                fetch_summary_path=fetch_summary_path,
                 selected_count=selected_count,
-                skipped_count=0,
+                skipped_count=skipped_count,
                 created_at=parsed_created_at,
                 updated_at=parsed_created_at,
+                started_at=parsed_created_at if fetch_result_path else None,
+                completed_at=parsed_created_at if fetch_result_path else None,
             )
         )
 
@@ -479,8 +496,16 @@ def test_run_detail_returns_one_run_with_latest_fetch(tmp_path: Path, monkeypatc
     database_url = _setup_empty_db(tmp_path, monkeypatch)
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-120000-abcd1234"
     _write_run_metadata(run_dir, selected_models=["005606"])
-    _insert_db_run(database_url, run_dir, selected_count=1)
     fetch_result_path = run_dir / "fetch_result.json"
+    _insert_db_run(
+        database_url,
+        run_dir,
+        status="fetch_completed",
+        selected_count=1,
+        fetch_result_path=str(fetch_result_path),
+        enriched_csv_path=str(run_dir / "input_bestprice_enriched.csv"),
+        fetch_summary_path=str(run_dir / "input_summary.json"),
+    )
     fetch_result_path.write_text(
         json.dumps(
             {
@@ -502,11 +527,88 @@ def test_run_detail_returns_one_run_with_latest_fetch(tmp_path: Path, monkeypatc
     assert response.status_code == 200
     payload = response.json()
     assert payload["run_id"] == run_dir.name
-    assert payload["status"] == "selection_created"
+    assert payload["status"] == "fetch_completed"
     assert payload["source"] == "bestprice"
     assert payload["selected_count"] == 1
     assert payload["latest_fetch"]["status"] == "succeeded"
     assert payload["latest_fetch"]["fetch_result_path"] == str(fetch_result_path)
+
+
+def test_run_detail_uses_db_when_artifact_directory_is_missing(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    database_url = _setup_empty_db(tmp_path, monkeypatch)
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-130000-dbonly"
+    _insert_db_run(
+        database_url,
+        run_dir,
+        source="skroutz",
+        status="fetch_failed",
+        selected_count=7,
+        skipped_count=2,
+    )
+
+    response = TestClient(create_app()).get(f"/api/price-monitoring/runs/{run_dir.name}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_id"] == run_dir.name
+    assert payload["status"] == "fetch_failed"
+    assert payload["source"] == "skroutz"
+    assert payload["selected_count"] == 7
+    assert payload["skipped_count"] == 2
+    assert payload["artifacts"] == []
+    assert any("Run artifact directory is missing" in warning for warning in payload["artifact_warnings"])
+
+
+def test_run_detail_attaches_existing_artifacts_as_evidence(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    database_url = _setup_empty_db(tmp_path, monkeypatch)
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-140000-artifacts"
+    _write_run_metadata(run_dir, selected_models=["005606"])
+    extra_path = run_dir / "operator-note.txt"
+    extra_path.write_text("kept for inspection\n", encoding="utf-8")
+    _insert_db_run(database_url, run_dir, selected_count=1)
+
+    response = TestClient(create_app()).get(f"/api/price-monitoring/runs/{run_dir.name}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    artifact_names = {item["name"] for item in payload["artifacts"]}
+    assert {"input.csv", "selection_summary.json", "operator-note.txt"}.issubset(artifact_names)
+    assert all(item["is_allowed"] is True for item in payload["artifacts"])
+    assert payload["artifact_warnings"] == []
+
+
+def test_run_detail_db_fields_win_over_stale_artifact_content(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    database_url = _setup_empty_db(tmp_path, monkeypatch)
+    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-150000-stale"
+    _write_run_metadata(
+        run_dir,
+        source="stale-source",
+        created_at="2020-01-01T00:00:00+00:00",
+        selected_models=["111111", "222222"],
+    )
+    _insert_db_run(
+        database_url,
+        run_dir,
+        source="db-source",
+        status="fetch_completed",
+        created_at="2026-04-29T15:00:00+00:00",
+        selected_count=9,
+        skipped_count=3,
+    )
+
+    response = TestClient(create_app()).get(f"/api/price-monitoring/runs/{run_dir.name}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "db-source"
+    assert payload["status"] == "fetch_completed"
+    assert payload["created_at"] == "2026-04-29T15:00:00+00:00"
+    assert payload["selected_count"] == 9
+    assert payload["skipped_count"] == 3
+    assert payload["selected_models"] == []
 
 
 def test_run_detail_missing_run_returns_404(tmp_path: Path, monkeypatch) -> None:

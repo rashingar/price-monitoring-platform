@@ -190,6 +190,10 @@ export interface paths {
     /** Get Run */
     get: operations["get_run_api_price_monitoring_runs__run_id__get"];
   };
+  "/api/price-monitoring/runs/{run_id}/backfill-listings": {
+    /** Post Price Review Listing Backfill */
+    post: operations["post_price_review_listing_backfill_api_price_monitoring_runs__run_id__backfill_listings_post"];
+  };
   "/api/price-monitoring/runs/{run_id}/catalog-snapshot": {
     /** Get Price Monitoring Run Catalog Snapshot */
     get: operations["get_price_monitoring_run_catalog_snapshot_api_price_monitoring_runs__run_id__catalog_snapshot_get"];
@@ -2081,6 +2085,30 @@ export interface operations {
   };
   /** Get Run */
   get_run_api_price_monitoring_runs__run_id__get: {
+    parameters: {
+      path: {
+        run_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Post Price Review Listing Backfill */
+  post_price_review_listing_backfill_api_price_monitoring_runs__run_id__backfill_listings_post: {
     parameters: {
       path: {
         run_id: string;
