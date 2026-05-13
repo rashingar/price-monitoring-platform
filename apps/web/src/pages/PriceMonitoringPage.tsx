@@ -1028,8 +1028,8 @@ function getActionError(row: PriceMonitoringReviewItem, state: RowActionState): 
   return null;
 }
 
-function getReviewOpenUrl(row: PriceMonitoringReviewItem): string {
-  return row.source_url || row.competitor_url || "";
+function getReviewCompetitorUrl(row: PriceMonitoringReviewItem): string {
+  return row.competitor_url || "";
 }
 
 function DebugDetails({
@@ -1981,7 +1981,7 @@ type ReviewColumnId =
   | "status"
   | "warnings";
 
-function ReviewResultsTable({
+export function ReviewResultsTable({
   items,
   rowActions,
   dbAvailable,
@@ -1994,6 +1994,7 @@ function ReviewResultsTable({
 }) {
   const [selectedModel, setSelectedModel] = useState<string | null>(items[0]?.model ?? null);
   const [expandedTopListings, setExpandedTopListings] = useState<Record<string, boolean>>({});
+  const [expandedExtraDetailsModel, setExpandedExtraDetailsModel] = useState<string | null>(null);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -2004,6 +2005,10 @@ function ReviewResultsTable({
       setSelectedModel(items[0].model);
     }
   }, [items, selectedModel]);
+
+  useEffect(() => {
+    setExpandedExtraDetailsModel(null);
+  }, [selectedModel]);
 
   const clearRowAction = (model: string) => {
     onUpdateRowAction(model, { selected_action: "", undercut_amount: "", reason: "" });
@@ -2017,9 +2022,10 @@ function ReviewResultsTable({
         const targetPrice = computeTargetPrice(item, state);
         const actionError = getActionError(item, state);
         const showTopListings = Boolean(expandedTopListings[item.model]);
+        const showExtraDetails = expandedExtraDetailsModel === item.model;
         const topListings = item.top_listings ?? [];
         const listingWarning = getListingsIncompleteText(item, topListings.length);
-        const openUrl = getReviewOpenUrl(item);
+        const competitorUrl = getReviewCompetitorUrl(item);
 
         return (
           <section
@@ -2070,8 +2076,8 @@ function ReviewResultsTable({
                 </span>
                 <span>
                   <strong>URL</strong>
-                  {openUrl ? (
-                    <a href={openUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                  {competitorUrl ? (
+                    <a href={competitorUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
                       Open
                     </a>
                   ) : (
@@ -2114,8 +2120,8 @@ function ReviewResultsTable({
                     Undercut
                   </button>
                   <label className="inline-field price-review-undercut-field">
-                    <span>Undercut amount</span>
                     <input
+                      aria-label="Undercut amount"
                       type="number"
                       min="0"
                       step="0.01"
@@ -2136,8 +2142,8 @@ function ReviewResultsTable({
                   <button className="button secondary" type="button" disabled={!dbAvailable} onClick={() => clearRowAction(item.model)}>
                     Clear row action
                   </button>
-                  {openUrl ? (
-                    <a className="button secondary" href={openUrl} target="_blank" rel="noreferrer">
+                  {competitorUrl ? (
+                    <a className="button secondary" href={competitorUrl} target="_blank" rel="noreferrer">
                       Open competitor URL
                     </a>
                   ) : null}
@@ -2154,54 +2160,66 @@ function ReviewResultsTable({
                   >
                     Top 3 listings
                   </button>
+                  <button
+                    className="button secondary"
+                    type="button"
+                    aria-expanded={showExtraDetails}
+                    onClick={() => setExpandedExtraDetailsModel((current) => (current === item.model ? null : item.model))}
+                  >
+                    Extra
+                  </button>
                 </div>
 
                 {actionError ? <small className="field-error">{actionError}</small> : null}
 
-                <dl className="price-review-detail-grid">
-                  <div>
-                    <dt>Status</dt>
-                    <dd>{formatValue(item.status)}</dd>
-                  </div>
-                  <div>
-                    <dt>Warnings</dt>
-                    <dd>{item.warnings?.join(", ") || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>Recommended action</dt>
-                    <dd>{formatValue(item.recommended_action)}</dd>
-                  </div>
-                  <div>
-                    <dt>Selected action</dt>
-                    <dd>{formatValue(state.selected_action || item.selected_action)}</dd>
-                  </div>
-                  <div>
-                    <dt>Target price</dt>
-                    <dd>{formatMoney(targetPrice)}</dd>
-                  </div>
-                  <div>
-                    <dt>Delta basis</dt>
-                    <dd>{formatValue(item.delta_basis)}</dd>
-                  </div>
-                  <div>
-                    <dt>Next store</dt>
-                    <dd>{formatValue(item.next_competitor_store)}</dd>
-                  </div>
-                  <div>
-                    <dt>Next price</dt>
-                    <dd>{formatMoney(item.next_competitor_price)}</dd>
-                  </div>
-                  <div>
-                    <dt>Captured listings</dt>
-                    <dd>{formatValue(item.captured_listings_count ?? topListings.length)}</dd>
-                  </div>
-                </dl>
+                {showExtraDetails ? (
+                  <>
+                    <dl className="price-review-detail-grid">
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{formatValue(item.status)}</dd>
+                      </div>
+                      <div>
+                        <dt>Warnings</dt>
+                        <dd>{item.warnings?.join(", ") || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt>Recommended action</dt>
+                        <dd>{formatValue(item.recommended_action)}</dd>
+                      </div>
+                      <div>
+                        <dt>Selected action</dt>
+                        <dd>{formatValue(state.selected_action || item.selected_action)}</dd>
+                      </div>
+                      <div>
+                        <dt>Target price</dt>
+                        <dd>{formatMoney(targetPrice)}</dd>
+                      </div>
+                      <div>
+                        <dt>Delta basis</dt>
+                        <dd>{formatValue(item.delta_basis)}</dd>
+                      </div>
+                      <div>
+                        <dt>Next store</dt>
+                        <dd>{formatValue(item.next_competitor_store)}</dd>
+                      </div>
+                      <div>
+                        <dt>Next price</dt>
+                        <dd>{formatMoney(item.next_competitor_price)}</dd>
+                      </div>
+                      <div>
+                        <dt>Captured listings</dt>
+                        <dd>{formatValue(item.captured_listings_count ?? topListings.length)}</dd>
+                      </div>
+                    </dl>
 
-                {listingWarning ? (
-                  <p className="muted price-review-listings-detail-note">
-                    Top listings are incomplete. Capture returned only {item.captured_listings_count ?? topListings.length} marketplace listing
-                    {(item.captured_listings_count ?? topListings.length) === 1 ? "" : "s"}.
-                  </p>
+                    {listingWarning ? (
+                      <p className="muted price-review-listings-detail-note">
+                        Top listings are incomplete. Capture returned only {item.captured_listings_count ?? topListings.length} marketplace listing
+                        {(item.captured_listings_count ?? topListings.length) === 1 ? "" : "s"}.
+                      </p>
+                    ) : null}
+                  </>
                 ) : null}
 
                 {state.selected_action === "ignore" ? (
@@ -2278,7 +2296,7 @@ function TopListingsPanel({
             <span>{formatValue(listing.rank ?? index + 1)}</span>
             <span>{formatValue(listing.store)}</span>
             <span>{formatMoney(listing.price)}</span>
-            <span>{formatOptionalMoney(listing.shipping_cost)}</span>
+            <span>{formatShippingCost(listing.shipping_cost)}</span>
             <span>{formatLandedPrice(listing)}</span>
             <span>{formatMoney(difference)}</span>
             <span>
@@ -2298,9 +2316,9 @@ function TopListingsPanel({
   );
 }
 
-function formatOptionalMoney(value: unknown): string {
+function formatShippingCost(value: unknown): string {
   const parsed = parseNumberLike(value);
-  return parsed === null ? "-" : formatMoney(parsed);
+  return parsed === null ? "shipping unknown" : formatMoney(parsed);
 }
 
 function formatLandedPrice(listing: PriceMonitoringTopListing): string {
