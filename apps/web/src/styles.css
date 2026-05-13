@@ -840,6 +840,18 @@ textarea {
   text-transform: uppercase;
 }
 
+.price-review-listings-inline-note {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.price-review-listings-detail-note {
+  margin: 0;
+}
+
 .price-review-inline-panel {
   display: grid;
   gap: 12px;
@@ -906,10 +918,10 @@ textarea {
 .price-review-top-listings-header,
 .price-review-top-listing-row {
   display: grid;
-  grid-template-columns: 64px minmax(160px, 1fr) 120px 160px 80px;
+  grid-template-columns: 64px minmax(160px, 1fr) 120px 160px 80px 120px;
   gap: 8px;
   align-items: center;
-  min-width: 650px;
+  min-width: 780px;
   padding: 8px 10px;
 }
 

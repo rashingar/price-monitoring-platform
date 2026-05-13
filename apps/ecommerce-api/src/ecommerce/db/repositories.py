@@ -8,11 +8,11 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import Select, delete, func, select
+from sqlalchemy import Select, delete, exists, func, select
 from sqlalchemy.orm import Session, aliased
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models import CatalogSnapshot, MonitoringRun, PriceObservation, Product
+from ecommerce.db.models import CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing, Product
 from ecommerce.price_monitoring.fetch_run import PriceMonitoringFetchResult
 from ecommerce.price_monitoring.observations import ParsedPriceObservation
 from ecommerce.price_monitoring.runs import PriceMonitoringRunRecord
@@ -363,6 +363,103 @@ def list_price_observations(
     return items, count
 
 
+def list_price_observation_listings(
+    session: Session,
+    *,
+    price_observation_ids: list[int] | None = None,
+    run_id: str | None = None,
+    product_id: int | None = None,
+    model: str | None = None,
+    mpn: str | None = None,
+    limit: int = 5000,
+) -> list[dict[str, Any]]:
+    statement = select(PriceObservationListing)
+    if price_observation_ids is not None:
+        if not price_observation_ids:
+            return []
+        statement = statement.where(PriceObservationListing.price_observation_id.in_(price_observation_ids))
+    if run_id:
+        statement = statement.where(PriceObservationListing.run_id == run_id)
+    if product_id is not None:
+        statement = statement.where(PriceObservationListing.product_id == product_id)
+    if model or mpn:
+        statement = statement.join(PriceObservation, PriceObservation.id == PriceObservationListing.price_observation_id)
+        if model:
+            statement = statement.where(PriceObservation.model == model)
+        if mpn:
+            statement = statement.where(PriceObservation.mpn == mpn)
+    statement = statement.order_by(
+        PriceObservationListing.price.asc().nullslast(),
+        PriceObservationListing.rank.asc(),
+        PriceObservationListing.id.asc(),
+    ).limit(max(1, min(int(limit), 20_000)))
+    return [price_observation_listing_to_dict(item) for item in session.execute(statement).scalars().all()]
+
+
+def list_price_observation_listings_for_run(
+    session: Session,
+    run_id: str,
+    *,
+    product_id: int | None = None,
+    model: str | None = None,
+    mpn: str | None = None,
+    limit: int = 5000,
+) -> list[dict[str, Any]]:
+    return list_price_observation_listings(
+        session,
+        run_id=run_id,
+        product_id=product_id,
+        model=model,
+        mpn=mpn,
+        limit=limit,
+    )
+
+
+def backfill_price_observation_listings_from_offer_observations(
+    session: Session,
+    *,
+    run_id: str | None = None,
+    price_observation_ids: list[int] | None = None,
+    created_at: datetime | None = None,
+) -> int:
+    timestamp = created_at or _now()
+    statement = select(PriceObservation).where(
+        PriceObservation.source_capture_snapshot_id.is_not(None),
+        ~exists().where(PriceObservationListing.price_observation_id == PriceObservation.id),
+    )
+    if run_id:
+        statement = statement.where(PriceObservation.run_id == run_id)
+    if price_observation_ids is not None:
+        if not price_observation_ids:
+            return 0
+        statement = statement.where(PriceObservation.id.in_(price_observation_ids))
+    observations = session.execute(statement).scalars().all()
+    if not observations:
+        return 0
+    snapshot_ids = sorted({int(observation.source_capture_snapshot_id) for observation in observations if observation.source_capture_snapshot_id is not None})
+    offer_statement = select(OfferObservation).where(OfferObservation.source_capture_snapshot_id.in_(snapshot_ids))
+    offers_by_snapshot_product: dict[tuple[int | None, int | None], list[OfferObservation]] = {}
+    for offer in session.execute(offer_statement.order_by(OfferObservation.id.asc())).scalars().all():
+        offers_by_snapshot_product.setdefault((offer.source_capture_snapshot_id, offer.product_id), []).append(offer)
+    inserted = 0
+    for observation in observations:
+        offers = [
+            offer
+            for offer in offers_by_snapshot_product.get((observation.source_capture_snapshot_id, observation.product_id), [])
+            if (observation.product_source_id is None or offer.product_source_id == observation.product_source_id)
+            and (observation.vendor_id is None or offer.aggregator_vendor_id == observation.vendor_id)
+        ]
+        for rank, offer in enumerate(_rank_offer_observations(offers), start=1):
+            listing = _listing_from_offer_observation(observation, offer, rank=rank, created_at=timestamp)
+            if listing is None:
+                continue
+            session.add(listing)
+            inserted += 1
+    if inserted:
+        session.flush()
+    return inserted
+
+
 def count_run_observations_by_match_status(session: Session, run_id: str) -> tuple[int, int]:
     matched = int(
         session.execute(
@@ -518,7 +615,11 @@ def catalog_snapshot_to_dict(snapshot: CatalogSnapshot) -> dict[str, Any]:
 def price_observation_to_dict(observation: PriceObservation) -> dict[str, Any]:
     return {
         "id": observation.id,
+        "monitoring_run_id": observation.monitoring_run_id,
         "product_id": observation.product_id,
+        "product_source_id": observation.product_source_id,
+        "source_capture_snapshot_id": observation.source_capture_snapshot_id,
+        "vendor_id": observation.vendor_id,
         "run_id": observation.run_id,
         "observation_batch_id": observation.observation_batch_id,
         "catalog_source": observation.catalog_source,
@@ -541,6 +642,93 @@ def price_observation_to_dict(observation: PriceObservation) -> dict[str, Any]:
         "created_at": json_safe_value(observation.created_at),
         "raw_observation": json_safe_value(observation.raw_observation),
     }
+
+
+def price_observation_listing_to_dict(listing: PriceObservationListing) -> dict[str, Any]:
+    return {
+        "id": listing.id,
+        "price_observation_id": listing.price_observation_id,
+        "monitoring_run_id": listing.monitoring_run_id,
+        "run_id": listing.run_id,
+        "observation_batch_id": listing.observation_batch_id,
+        "product_id": listing.product_id,
+        "product_source_id": listing.product_source_id,
+        "source_capture_snapshot_id": listing.source_capture_snapshot_id,
+        "vendor_id": listing.vendor_id,
+        "source": listing.source,
+        "rank": listing.rank,
+        "seller_name": listing.seller_name,
+        "seller_url": listing.seller_url,
+        "price": json_safe_value(listing.price),
+        "original_price": json_safe_value(listing.original_price),
+        "currency": listing.currency,
+        "availability": listing.availability,
+        "stock_status": listing.stock_status,
+        "shipping_cost": json_safe_value(listing.shipping_cost),
+        "delivery_text": listing.delivery_text,
+        "product_url": listing.product_url,
+        "raw_listing": json_safe_value(listing.raw_listing),
+        "observed_at": json_safe_value(listing.observed_at),
+        "created_at": json_safe_value(listing.created_at),
+    }
+
+
+def _rank_offer_observations(offers: list[OfferObservation]) -> list[OfferObservation]:
+    valid = [offer for offer in offers if offer.price is not None and offer.price > 0]
+    if not valid:
+        return []
+    if any(_offer_raw_rank(offer) is not None for offer in valid):
+        return sorted(valid, key=lambda offer: (_offer_raw_rank(offer) or 1_000_000, offer.price or Decimal("0"), (offer.seller_name or "").casefold()))
+    return sorted(valid, key=lambda offer: (offer.price or Decimal("0"), (offer.seller_name or "").casefold(), offer.id))
+
+
+def _listing_from_offer_observation(
+    observation: PriceObservation,
+    offer: OfferObservation,
+    *,
+    rank: int,
+    created_at: datetime,
+) -> PriceObservationListing | None:
+    if offer.price is None or offer.price <= 0:
+        return None
+    return PriceObservationListing(
+        price_observation_id=observation.id,
+        monitoring_run_id=observation.monitoring_run_id,
+        run_id=observation.run_id,
+        observation_batch_id=observation.observation_batch_id or offer.observation_batch_id,
+        product_id=observation.product_id,
+        product_source_id=observation.product_source_id,
+        source_capture_snapshot_id=observation.source_capture_snapshot_id,
+        vendor_id=observation.vendor_id,
+        source=observation.source,
+        rank=rank,
+        seller_name=offer.seller_name,
+        seller_url=offer.seller_url,
+        price=offer.price,
+        original_price=offer.original_price,
+        currency=offer.currency or observation.currency or "EUR",
+        availability=offer.availability,
+        stock_status=offer.stock_status,
+        shipping_cost=offer.shipping_cost,
+        delivery_text=offer.delivery_text,
+        product_url=observation.product_url,
+        raw_listing=_json_safe(offer.raw_observation or {}),
+        observed_at=offer.observed_at or observation.observed_at,
+        created_at=created_at,
+    )
+
+
+def _offer_raw_rank(offer: OfferObservation) -> int | None:
+    raw = offer.raw_observation if isinstance(offer.raw_observation, dict) else {}
+    for key in ("rank", "position", "index", "listing_rank"):
+        value = raw.get(key)
+        try:
+            parsed = int(str(value).strip())
+        except (TypeError, ValueError):
+            continue
+        if parsed > 0:
+            return parsed
+    return None
 
 
 def _observation_filters(

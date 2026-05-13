@@ -2017,6 +2017,7 @@ function ReviewResultsTable({
         const actionError = getActionError(item, state);
         const showTopListings = Boolean(expandedTopListings[item.model]);
         const topListings = item.top_listings ?? [];
+        const listingWarning = getListingsIncompleteText(item, topListings.length);
         const openUrl = getReviewOpenUrl(item);
 
         return (
@@ -2064,6 +2065,7 @@ function ReviewResultsTable({
                 <span>
                   <strong>Store</strong>
                   {formatValue(item.competitor_store)}
+                  {listingWarning ? <small className="price-review-listings-inline-note">{listingWarning}</small> : null}
                 </span>
                 <span>
                   <strong>URL</strong>
@@ -2188,7 +2190,18 @@ function ReviewResultsTable({
                     <dt>Next price</dt>
                     <dd>{formatMoney(item.next_competitor_price)}</dd>
                   </div>
+                  <div>
+                    <dt>Captured listings</dt>
+                    <dd>{formatValue(item.captured_listings_count ?? topListings.length)}</dd>
+                  </div>
                 </dl>
+
+                {listingWarning ? (
+                  <p className="muted price-review-listings-detail-note">
+                    Top listings are incomplete. Capture returned only {item.captured_listings_count ?? topListings.length} marketplace listing
+                    {(item.captured_listings_count ?? topListings.length) === 1 ? "" : "s"}.
+                  </p>
+                ) : null}
 
                 {state.selected_action === "ignore" ? (
                   <label className="inline-field wide price-review-reason-field">
@@ -2214,6 +2227,23 @@ function ReviewResultsTable({
   );
 }
 
+function getListingsIncompleteText(item: PriceMonitoringReviewItem, topListingsLength: number): string {
+  const count = typeof item.captured_listings_count === "number" ? item.captured_listings_count : topListingsLength;
+  if (item.listings_incomplete !== true && topListingsLength >= 3) {
+    return "";
+  }
+  if (count <= 0) {
+    return "No listings captured";
+  }
+  if (count === 1) {
+    return "Only 1/3 listings captured";
+  }
+  if (count < 3) {
+    return `Only ${count}/3 listings captured`;
+  }
+  return "";
+}
+
 function TopListingsPanel({
   currentPrice,
   listings,
@@ -2224,7 +2254,7 @@ function TopListingsPanel({
   const current = parseNumberLike(currentPrice);
 
   if (listings.length === 0) {
-    return <p className="muted price-review-empty-top-listings">No top listings available.</p>;
+    return <p className="muted price-review-empty-top-listings">No listings captured.</p>;
   }
 
   return (
@@ -2235,6 +2265,7 @@ function TopListingsPanel({
         <span>Price</span>
         <span>Difference vs current</span>
         <span>URL</span>
+        <span>Evidence</span>
       </div>
       {listings.map((listing, index) => {
         const listingPrice = parseNumberLike(listing.price);
@@ -2254,6 +2285,7 @@ function TopListingsPanel({
                 "-"
               )}
             </span>
+            <span>{formatValue(listing.evidence_source ?? listing.raw_source)}</span>
           </div>
         );
       })}

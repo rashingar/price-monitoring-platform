@@ -29,6 +29,7 @@ REQUIRED_PRICE_MONITORING_TABLES = (
     "product_sources",
     "source_capture_snapshots",
     "offer_observations",
+    "price_observation_listings",
     "source_url_discovery_runs",
     "source_url_candidates",
 )

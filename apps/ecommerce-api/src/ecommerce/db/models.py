@@ -540,7 +540,54 @@ class PriceObservation(Base):
 
     monitoring_run: Mapped[MonitoringRun] = relationship(back_populates="price_observations")
     product: Mapped[Product | None] = relationship(back_populates="price_observations")
+    listings: Mapped[list["PriceObservationListing"]] = relationship(
+        back_populates="price_observation",
+        cascade="all, delete-orphan",
+    )
     alert_events: Mapped[list["AlertEvent"]] = relationship(back_populates="price_observation")
+
+
+class PriceObservationListing(Base):
+    __tablename__ = "price_observation_listings"
+    __table_args__ = (
+        Index("ix_price_observation_listings_price_observation_id", "price_observation_id"),
+        Index("ix_price_observation_listings_run_id", "run_id"),
+        Index("ix_price_observation_listings_observation_batch_id", "observation_batch_id"),
+        Index("ix_price_observation_listings_product_id", "product_id"),
+        Index("ix_price_observation_listings_source_capture_snapshot_id", "source_capture_snapshot_id"),
+        Index("ix_price_observation_listings_run_product_price", "run_id", "product_id", "price"),
+        Index("ix_price_observation_listings_observation_rank", "price_observation_id", "rank"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    price_observation_id: Mapped[int] = mapped_column(ForeignKey("price_observations.id", ondelete="CASCADE"), nullable=False)
+    monitoring_run_id: Mapped[int | None] = mapped_column(ForeignKey("monitoring_runs.id", ondelete="CASCADE"), nullable=True)
+    run_id: Mapped[str] = mapped_column(String, nullable=False)
+    observation_batch_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    product_source_id: Mapped[int | None] = mapped_column(ForeignKey("product_sources.id", ondelete="SET NULL"), nullable=True)
+    source_capture_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_capture_snapshots.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    vendor_id: Mapped[int | None] = mapped_column(ForeignKey("vendors.id", ondelete="SET NULL"), nullable=True)
+    source: Mapped[str] = mapped_column(String, nullable=False)
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    seller_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    seller_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    original_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    currency: Mapped[str] = mapped_column(String, nullable=False, default="EUR", server_default="EUR")
+    availability: Mapped[str | None] = mapped_column(String, nullable=True)
+    stock_status: Mapped[str | None] = mapped_column(String, nullable=True)
+    shipping_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    delivery_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    product_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_listing: Mapped[dict[str, Any] | None] = mapped_column(JSON_DOCUMENT, nullable=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    price_observation: Mapped[PriceObservation] = relationship(back_populates="listings")
 
 
 class OfferObservation(Base):

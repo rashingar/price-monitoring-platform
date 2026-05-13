@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models import OfferObservation, PriceObservation, Product, ProductSource, SourceCaptureSnapshot, Vendor
+from ecommerce.db.models import OfferObservation, PriceObservation, PriceObservationListing, Product, ProductSource, SourceCaptureSnapshot, Vendor
 from ecommerce.db.repositories import find_product_by_identity, json_safe_value, product_to_dict
 from ecommerce.db.source_convergence import sync_product_source_to_source_url
 from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
@@ -228,23 +228,46 @@ def persist_capture_result(
     )
     session.add(snapshot)
     session.flush()
-    for observation in result.price_observations:
-        session.add(
-            _price_observation_row(
-                product,
-                source,
-                snapshot,
-                vendor_id,
-                result.vendor_slug,
-                observation,
-                now,
-                run_id=run_id,
-                observation_batch_id=observation_batch_id,
-                monitoring_run_id=monitoring_run_id,
-            )
+    price_observations = tuple(result.price_observations)
+    if not price_observations:
+        primary_offer = next(iter(_rank_parsed_offer_observations(tuple(result.offer_observations))), None)
+        if primary_offer is not None:
+            price_observations = (_price_observation_from_offer(primary_offer),)
+
+    price_rows: list[PriceObservation] = []
+    for observation in price_observations:
+        row = _price_observation_row(
+            product,
+            source,
+            snapshot,
+            vendor_id,
+            result.vendor_slug,
+            observation,
+            now,
+            run_id=run_id,
+            observation_batch_id=observation_batch_id,
+            monitoring_run_id=monitoring_run_id,
         )
+        session.add(row)
+        price_rows.append(row)
+    if price_rows:
+        session.flush()
+
     for observation in result.offer_observations:
         session.add(_offer_observation_row(product, source, snapshot, vendor_id, observation, now, observation_batch_id=observation_batch_id))
+    if price_rows:
+        _add_price_observation_listings(
+            session,
+            price_rows[0],
+            product=product,
+            source=source,
+            snapshot=snapshot,
+            vendor_id=vendor_id,
+            vendor_slug=result.vendor_slug,
+            offers=tuple(result.offer_observations),
+            now=now,
+            observation_batch_id=observation_batch_id,
+        )
     _update_source_health(source, result, snapshot)
     session.flush()
     sync_product_source_to_source_url(session, source)
@@ -372,6 +395,90 @@ def _offer_observation_row(
         timestamp_source=timestamp_source,
         timestamp_quality=timestamp_quality,
         created_at=now,
+    )
+
+
+def _add_price_observation_listings(
+    session: Session,
+    price_observation: PriceObservation,
+    *,
+    product: Product,
+    source: ProductSource,
+    snapshot: SourceCaptureSnapshot,
+    vendor_id: int | None,
+    vendor_slug: str,
+    offers: tuple[ParsedOfferObservation, ...],
+    now: datetime,
+    observation_batch_id: str | None,
+) -> None:
+    observed_at = snapshot.parsed_at or snapshot.fetched_at or snapshot.captured_at or now
+    for rank, offer in enumerate(_rank_parsed_offer_observations(offers), start=1):
+        if offer.price is None or offer.price <= 0:
+            continue
+        session.add(
+            PriceObservationListing(
+                price_observation_id=price_observation.id,
+                monitoring_run_id=price_observation.monitoring_run_id,
+                run_id=price_observation.run_id,
+                observation_batch_id=observation_batch_id,
+                product_id=product.id,
+                product_source_id=source.id,
+                source_capture_snapshot_id=snapshot.id,
+                vendor_id=vendor_id,
+                source=vendor_slug,
+                rank=rank,
+                seller_name=offer.seller_name,
+                seller_url=offer.seller_url,
+                price=offer.price,
+                original_price=offer.original_price,
+                currency=offer.currency or product.currency or "EUR",
+                availability=offer.availability,
+                stock_status=offer.stock_status,
+                shipping_cost=offer.shipping_cost,
+                delivery_text=offer.delivery_text,
+                product_url=source.canonical_url,
+                raw_listing=sanitize_json(offer.raw_observation or {}),
+                observed_at=observed_at,
+                created_at=now,
+            )
+        )
+
+
+def _rank_parsed_offer_observations(offers: tuple[ParsedOfferObservation, ...]) -> list[ParsedOfferObservation]:
+    valid = [offer for offer in offers if offer.price is not None and offer.price > 0]
+    if any(_parsed_offer_rank(offer) is not None for offer in valid):
+        return sorted(valid, key=lambda offer: (_parsed_offer_rank(offer) or 1_000_000, offer.price or Decimal("0"), (offer.seller_name or "").casefold()))
+    return sorted(valid, key=lambda offer: (offer.price or Decimal("0"), (offer.seller_name or "").casefold(), offer.seller_url or ""))
+
+
+def _parsed_offer_rank(offer: ParsedOfferObservation) -> int | None:
+    raw = offer.raw_observation if isinstance(offer.raw_observation, dict) else {}
+    for key in ("rank", "position", "index", "listing_rank"):
+        value = raw.get(key)
+        try:
+            parsed = int(str(value).strip())
+        except (TypeError, ValueError):
+            continue
+        if parsed > 0:
+            return parsed
+    return None
+
+
+def _price_observation_from_offer(offer: ParsedOfferObservation) -> ParsedPriceObservation:
+    raw = dict(offer.raw_observation or {})
+    raw.setdefault("persistence_source", "offer_observation_primary_bridge")
+    return ParsedPriceObservation(
+        price=offer.price,
+        original_price=offer.original_price,
+        currency=offer.currency,
+        availability=offer.availability,
+        stock_status=offer.stock_status,
+        shipping_cost=offer.shipping_cost,
+        delivery_text=offer.delivery_text,
+        seller_name=offer.seller_name,
+        raw_observation=raw,
+        timestamp_source=offer.timestamp_source,
+        timestamp_quality=offer.timestamp_quality,
     )
 
 

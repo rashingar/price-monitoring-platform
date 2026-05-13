@@ -1098,6 +1098,9 @@ export interface PriceMonitoringReviewItem {
   next_store_delta?: number | null;
   next_store_delta_percent?: number | null;
   top_listings?: PriceMonitoringTopListing[];
+  captured_listings_count?: number | null;
+  listings_incomplete?: boolean | null;
+  all_listings?: PriceMonitoringTopListing[];
   delta_basis?: string | null;
   [key: string]: unknown;
 }

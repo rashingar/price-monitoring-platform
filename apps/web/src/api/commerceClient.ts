@@ -1447,6 +1447,7 @@ function normalizeReviewItem(value: unknown): PriceMonitoringReviewItem | null {
     model: value.model,
     warnings: normalizeStringArray(value.warnings),
     top_listings: getArrayPayload(value.top_listings, []),
+    all_listings: getArrayPayload(value.all_listings, []),
   } as PriceMonitoringReviewItem;
 }
 

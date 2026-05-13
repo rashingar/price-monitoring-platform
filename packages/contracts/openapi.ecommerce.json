@@ -2072,6 +2072,22 @@
           },
           {
             "in": "query",
+            "name": "source_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Name"
+            }
+          },
+          {
+            "in": "query",
             "name": "has_mpn",
             "required": false,
             "schema": {
@@ -4717,6 +4733,16 @@
                 }
               ],
               "title": "Enriched Csv Path"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_all_listings",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include All Listings",
+              "type": "boolean"
             }
           }
         ],

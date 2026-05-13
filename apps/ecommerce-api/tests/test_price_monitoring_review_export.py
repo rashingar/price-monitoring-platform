@@ -234,6 +234,45 @@ def test_db_observations_build_top_three_listings_and_next_store_delta(tmp_path:
         "Next Store",
         "Third Store",
     ]
+    assert rows[0].captured_listings_count == 4
+    assert rows[0].listings_incomplete is False
+
+
+def test_db_review_uses_persisted_listing_rows_before_primary_observations(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    _set_input_price(run_dir, "180.90")
+    observations = [
+        {
+            "id": 10,
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Collapsed Primary",
+            "competitor_price": "999.00",
+            "own_price": "180.90",
+            "product_url": "https://skroutz.test/product",
+            "raw_observation": {},
+            "price_observation_listings": [
+                {"id": 1, "price_observation_id": 10, "seller_name": "Store B", "price": "181.00", "seller_url": "https://store.test/b", "source": "skroutz"},
+                {"id": 2, "price_observation_id": 10, "seller_name": "Store A", "price": "180.90", "seller_url": "https://store.test/a", "source": "skroutz"},
+                {"id": 3, "price_observation_id": 10, "seller_name": "Store C", "price": "181.50", "seller_url": "https://store.test/c", "source": "skroutz"},
+                {"id": 4, "price_observation_id": 10, "seller_name": "Store D", "price": "182.00", "seller_url": "https://store.test/d", "source": "skroutz"},
+            ],
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations, include_all_listings=True)
+
+    assert [listing.store for listing in rows[0].top_listings or []] == ["Store A", "Store B", "Store C"]
+    assert rows[0].competitor_store == "Store A"
+    assert rows[0].next_competitor_store == "Store B"
+    assert rows[0].price_delta == Decimal("-0.10")
+    assert rows[0].delta_basis == "next_store"
+    assert rows[0].captured_listings_count == 4
+    assert len(rows[0].all_listings or []) == 4
 
 
 def test_near_equal_top_listing_uses_next_store_delta_basis(tmp_path: Path) -> None:
@@ -301,6 +340,35 @@ def test_skroutz_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
     assert [listing.store for listing in rows[0].top_listings or []] == ["Top Store", "Raw Next"]
     assert rows[0].price_delta == Decimal("-5.00")
     assert rows[0].delta_basis == "next_store"
+
+
+def test_offer_observation_listing_fallback_adds_listings(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-1"
+    enriched = _write_run(run_dir)
+    enriched.unlink()
+    observations = [
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "product_name": "Product One",
+            "source": "skroutz",
+            "competitor_name": "Collapsed Primary",
+            "competitor_price": "999.00",
+            "own_price": "123.45",
+            "product_url": "https://skroutz.test/product",
+            "raw_observation": {},
+            "offer_observation_listings": [
+                {"seller_name": "Offer A", "price": "118.50", "seller_url": "https://offer.test/a", "source": "skroutz"},
+                {"seller_name": "Offer B", "price": "119.90", "seller_url": "https://offer.test/b", "source": "skroutz"},
+                {"seller_name": "Offer C", "price": "120.00", "seller_url": "https://offer.test/c", "source": "skroutz"},
+            ],
+        }
+    ]
+
+    rows = load_price_review_rows_from_observations(run_dir, observations)
+
+    assert [listing.store for listing in rows[0].top_listings or []] == ["Offer A", "Offer B", "Offer C"]
+    assert rows[0].competitor_price == Decimal("118.50")
 
 
 def test_bestprice_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
@@ -444,6 +512,8 @@ def test_top_three_listings_do_not_add_synthetic_current_row(tmp_path: Path) -> 
     assert len(rows[0].top_listings or []) == 1
     assert rows[0].top_listings[0].store == "Only Store"
     assert rows[0].next_competitor_price is None
+    assert rows[0].captured_listings_count == 1
+    assert rows[0].listings_incomplete is True
 
 
 def test_loading_bestprice_db_observation_uses_source_url_for_review_row(tmp_path: Path) -> None:

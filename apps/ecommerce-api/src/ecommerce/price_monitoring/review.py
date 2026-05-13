@@ -147,10 +147,13 @@ class PriceReviewRow:
     next_store_delta: Decimal | None = None
     next_store_delta_percent: Decimal | None = None
     top_listings: list[TopListing] | None = None
+    captured_listings_count: int = 0
+    listings_incomplete: bool = False
+    all_listings: list[TopListing] | None = None
     delta_basis: str | None = None
 
     def to_api_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "model": self.model,
             "mpn": self.mpn,
             "name": self.name,
@@ -175,8 +178,13 @@ class PriceReviewRow:
             "next_store_delta": _decimal_to_float(self.next_store_delta),
             "next_store_delta_percent": _decimal_to_float(self.next_store_delta_percent),
             "top_listings": [listing.to_api_dict() for listing in self.top_listings or []],
+            "captured_listings_count": self.captured_listings_count,
+            "listings_incomplete": self.listings_incomplete,
             "delta_basis": self.delta_basis,
         }
+        if self.all_listings is not None:
+            payload["all_listings"] = [listing.to_api_dict() for listing in self.all_listings]
+        return payload
 
     def to_csv_dict(self) -> dict[str, str]:
         return {
@@ -240,6 +248,8 @@ def load_price_review_rows(run_dir: Path, enriched_csv_path: Path | None = None)
 def load_price_review_rows_from_observations(
     run_dir: Path,
     observations: list[dict[str, Any]],
+    *,
+    include_all_listings: bool = False,
 ) -> list[PriceReviewRow]:
     """Load review rows from DB-backed Vendor Sources price observations."""
 
@@ -263,8 +273,9 @@ def load_price_review_rows_from_observations(
         model = _text(input_row.get("model"))
         mpn = _text(input_row.get("mpn"))
         product_observations = observations_grouped_by_model.get(model) or observations_grouped_by_mpn.get(mpn) or []
-        top_listings = _top_listings_from_observations(product_observations, fallback_source=source)
         observation = observations_by_model.get(model) or observations_by_mpn.get(mpn)
+        captured_listings = _captured_listings_for_review(observation, product_observations, fallback_source=source)
+        top_listings = captured_listings[:3]
         enriched_observation = _observation_from_listing(observation or {}, top_listings[0]) if top_listings else observation
         enriched_row = _observation_to_enriched_row(enriched_observation or {}, source=source)
         input_with_observed_price = dict(input_row)
@@ -276,6 +287,9 @@ def load_price_review_rows_from_observations(
                 enriched_row,
                 _text(enriched_row.get("source")) or source,
                 top_listings=top_listings,
+                captured_listings_count=len(captured_listings),
+                listings_incomplete=len(captured_listings) < 3,
+                all_listings=captured_listings if include_all_listings else None,
             )
         )
     return rows
@@ -407,12 +421,16 @@ def _build_review_row(
     source: str,
     *,
     top_listings: list[TopListing] | None = None,
+    captured_listings_count: int | None = None,
+    listings_incomplete: bool | None = None,
+    all_listings: list[TopListing] | None = None,
 ) -> PriceReviewRow:
     model = _text(input_row.get("model"))
     mpn = _text(input_row.get("mpn"))
     name = _text(input_row.get("name"))
     current_price = _parse_decimal(_first_present(input_row, ("current_price", "price")))
     listings = list(top_listings or [])
+    listing_count = len(listings) if captured_listings_count is None else captured_listings_count
     best_listing = listings[0] if listings else None
     next_listing = listings[1] if len(listings) > 1 else None
     competitor_price = best_listing.price if best_listing else _competitor_price(enriched_row, source)
@@ -473,6 +491,9 @@ def _build_review_row(
         next_store_delta=next_store_delta,
         next_store_delta_percent=next_store_delta_percent,
         top_listings=listings,
+        captured_listings_count=listing_count,
+        listings_incomplete=(listing_count < 3) if listings_incomplete is None else listings_incomplete,
+        all_listings=all_listings,
         delta_basis=delta_basis,
     )
 
@@ -716,6 +737,56 @@ def _observation_from_listing(observation: dict[str, Any], listing: TopListing) 
     return enriched
 
 
+def _captured_listings_for_review(
+    observation: dict[str, Any] | None,
+    observations: list[dict[str, Any]],
+    *,
+    fallback_source: str,
+) -> list[TopListing]:
+    selected = observation or (observations[0] if observations else {})
+    persisted = _listings_from_rows(selected.get("price_observation_listings"), fallback_source=fallback_source, evidence_source="persisted")
+    if persisted:
+        return _dedupe_and_rank_listings(persisted)
+
+    offer_rows = _listings_from_rows(selected.get("offer_observation_listings"), fallback_source=fallback_source, evidence_source="offer_observation")
+    if offer_rows:
+        return _dedupe_and_rank_listings(offer_rows)
+
+    raw_candidates: list[TopListing] = []
+    source = _text(selected.get("source")).lower() or fallback_source
+    raw = _raw_payload(selected.get("raw_observation"))
+    if raw is not None:
+        if source == "skroutz":
+            raw_candidates.extend(_extract_skroutz_raw_listings(raw, source=source))
+        elif source == "bestprice":
+            raw_candidates.extend(_extract_bestprice_raw_listings(raw, source=source))
+        raw_candidates.extend(_extract_generic_raw_listings(raw, source=source or fallback_source))
+    if raw_candidates:
+        return _dedupe_and_rank_listings(raw_candidates)
+
+    return _top_listings_from_observations(observations, fallback_source=fallback_source)
+
+
+def _listings_from_rows(rows: object, *, fallback_source: str, evidence_source: str) -> list[TopListing]:
+    if not isinstance(rows, list):
+        return []
+    listings: list[TopListing] = []
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            continue
+        listing = _listing_from_values(
+            store=row.get("seller_name") or row.get("store") or row.get("competitor_name"),
+            price=row.get("price") or row.get("competitor_price"),
+            url=row.get("seller_url") or row.get("url") or row.get("product_url"),
+            source=_text(row.get("source")) or fallback_source,
+            raw_source=f"{evidence_source}[{row.get('id') or index}]",
+            evidence_source=evidence_source,
+        )
+        if listing is not None:
+            listings.append(listing)
+    return listings
+
+
 def _top_listings_from_observations(observations: list[dict[str, Any]], *, fallback_source: str) -> list[TopListing]:
     candidates: list[TopListing] = []
     for observation in observations:
@@ -731,7 +802,7 @@ def _top_listings_from_observations(observations: list[dict[str, Any]], *, fallb
             elif source == "bestprice":
                 candidates.extend(_extract_bestprice_raw_listings(raw, source=source))
             candidates.extend(_extract_generic_raw_listings(raw, source=source or fallback_source))
-    return _dedupe_and_rank_listings(candidates)[:3]
+    return _dedupe_and_rank_listings(candidates)
 
 
 def _listing_from_normalized_observation(observation: dict[str, Any], *, fallback_source: str) -> list[TopListing]:

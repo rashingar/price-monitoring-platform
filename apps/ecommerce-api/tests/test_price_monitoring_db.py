@@ -18,7 +18,7 @@ from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import sanitize_database_error  # noqa: E402
 from ecommerce.db.diagnostics import get_alembic_head_revision  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, CatalogSnapshot, MonitoringRun, PriceObservation, Product, SourceUrl  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, CatalogSnapshot, MonitoringRun, PriceObservation, PriceObservationListing, Product, SourceUrl  # noqa: E402
 from ecommerce.db.repositories import (  # noqa: E402
     catalog_snapshot_to_dict,
     list_price_observations,
@@ -315,7 +315,7 @@ def test_db_status_detects_missing_required_tables(tmp_path: Path, monkeypatch) 
 
 
 def test_model_metadata_contains_price_monitoring_tables() -> None:
-    assert {"catalog_products", "source_urls", "products", "monitoring_runs", "catalog_snapshots", "price_observations"}.issubset(
+    assert {"catalog_products", "source_urls", "products", "monitoring_runs", "catalog_snapshots", "price_observations", "price_observation_listings"}.issubset(
         Base.metadata.tables
     )
     assert CatalogProductRow.__table__.c.model.nullable is False
@@ -326,6 +326,8 @@ def test_model_metadata_contains_price_monitoring_tables() -> None:
     assert CatalogSnapshot.__table__.c.raw_catalog_row.type is not None
     assert PriceObservation.__table__.c.raw_observation.type is not None
     assert PriceObservation.__table__.c.product_id.nullable is True
+    assert PriceObservationListing.__table__.c.price_observation_id.nullable is False
+    assert PriceObservationListing.__table__.c.raw_listing.type is not None
     assert MonitoringRun.__table__.c.fetch_attempt.server_default is not None
     assert PriceObservation.__table__.c.match_status.server_default is not None
 
@@ -370,6 +372,11 @@ def test_alembic_configuration_has_price_monitoring_head_migration() -> None:
         encoding="utf-8"
     )
     assert "observation_batch_id" in observation_batch_migration
+    listings_migration = (PROJECT_ROOT / "migrations" / "versions" / "20260513_0011_price_observation_listings.py").read_text(
+        encoding="utf-8"
+    )
+    assert '"price_observation_listings"' in listings_migration
+    assert "ix_price_observation_listings_observation_rank" in listings_migration
 
 
 def test_sqlite_metadata_schema_contains_expected_indexes(tmp_path: Path) -> None:
@@ -385,11 +392,13 @@ def test_sqlite_metadata_schema_contains_expected_indexes(tmp_path: Path) -> Non
         "monitoring_runs",
         "catalog_snapshots",
         "price_observations",
+        "price_observation_listings",
     }
     catalog_indexes = {item["name"] for item in inspector.get_indexes("catalog_products")}
     source_url_indexes = {item["name"] for item in inspector.get_indexes("source_urls")}
     product_indexes = {item["name"] for item in inspector.get_indexes("products")}
     observation_indexes = {item["name"] for item in inspector.get_indexes("price_observations")}
+    listing_indexes = {item["name"] for item in inspector.get_indexes("price_observation_listings")}
     offer_indexes = {item["name"] for item in inspector.get_indexes("offer_observations")}
     vendor_capture_indexes = {item["name"] for item in inspector.get_indexes("vendor_source_capture_runs")}
     assert "uq_catalog_products_catalog_source_model" in catalog_indexes
@@ -398,6 +407,8 @@ def test_sqlite_metadata_schema_contains_expected_indexes(tmp_path: Path) -> Non
     assert "uq_products_catalog_source_model_present" in product_indexes
     assert "ix_price_observations_match_status" in observation_indexes
     assert "ix_price_observations_observation_batch_id" in observation_indexes
+    assert "ix_price_observation_listings_observation_rank" in listing_indexes
+    assert "ix_price_observation_listings_run_product_price" in listing_indexes
     assert "ix_offer_observations_observation_batch_id" in offer_indexes
     assert "ix_vendor_source_capture_runs_observation_batch_id" in vendor_capture_indexes
 

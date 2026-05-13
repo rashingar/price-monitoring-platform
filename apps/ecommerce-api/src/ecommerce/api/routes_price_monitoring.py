@@ -18,6 +18,7 @@ from ecommerce.db.policy import (
     require_database_ready_for_price_monitoring,
 )
 from ecommerce.db.repositories import (
+    backfill_price_observation_listings_from_offer_observations,
     count_run_observations_by_match_status,
     get_monitoring_run,
     list_catalog_snapshot,
@@ -25,6 +26,7 @@ from ecommerce.db.repositories import (
     list_model_price_history,
     list_product_price_history,
     list_price_observations,
+    list_price_observation_listings,
     monitoring_run_to_dict,
 )
 from ecommerce.db.session import session_scope
@@ -487,12 +489,12 @@ def get_price_monitoring_product_price_history(product_id: str) -> dict:
 
 
 @router.get("/runs/{run_id}/review")
-def get_price_review(run_id: str, enriched_csv_path: str | None = None) -> dict:
+def get_price_review(run_id: str, enriched_csv_path: str | None = None, include_all_listings: bool = False) -> dict:
     _require_price_monitoring_database_ready()
     run_dir = _resolve_run_dir(run_id)
     enriched_path = _optional_read_path(enriched_csv_path)
     try:
-        rows = _load_price_review_rows_for_route(run_id, run_dir, enriched_path)
+        rows = _load_price_review_rows_for_route(run_id, run_dir, enriched_path, include_all_listings=include_all_listings)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PriceReviewError as exc:
@@ -515,7 +517,7 @@ def post_price_review_actions(run_id: str, request: PriceReviewActionsApiRequest
     run_dir = _resolve_run_dir(run_id)
     enriched_path = _optional_read_path(request.enriched_csv_path)
     try:
-        rows = _load_price_review_rows_for_route(run_id, run_dir, enriched_path)
+        rows = _load_price_review_rows_for_route(run_id, run_dir, enriched_path, include_all_listings=False)
         result = apply_price_actions_to_rows(
             run_dir,
             rows,
@@ -612,16 +614,18 @@ def _load_price_review_rows_for_route(
     run_id: str,
     run_dir: Path,
     enriched_path: Path | None,
+    *,
+    include_all_listings: bool = False,
 ):
     try:
         return load_price_review_rows(run_dir, enriched_path)
     except FileNotFoundError:
         if enriched_path is not None:
             raise
-        return _load_price_review_rows_from_db_observations(run_id, run_dir)
+        return _load_price_review_rows_from_db_observations(run_id, run_dir, include_all_listings=include_all_listings)
 
 
-def _load_price_review_rows_from_db_observations(run_id: str, run_dir: Path):
+def _load_price_review_rows_from_db_observations(run_id: str, run_dir: Path, *, include_all_listings: bool = False):
     with session_scope() as session:
         observations, count = list_price_observations(
             session,
@@ -629,11 +633,38 @@ def _load_price_review_rows_from_db_observations(run_id: str, run_dir: Path):
             include_unmatched=True,
             limit=5000,
         )
+        if hasattr(session, "execute") and observations:
+            observation_ids = [int(item["id"]) for item in observations if item.get("id") is not None]
+            backfill_price_observation_listings_from_offer_observations(
+                session,
+                run_id=run_id,
+                price_observation_ids=observation_ids,
+            )
+            listings = list_price_observation_listings(
+                session,
+                price_observation_ids=observation_ids,
+                limit=20_000,
+            )
+            _attach_price_observation_listings(observations, listings)
     if count <= 0 or not observations:
         raise FileNotFoundError(
             f"Enriched CSV not found in run folder and no persisted price observations found for run: {run_id}"
         )
-    return load_price_review_rows_from_observations(run_dir, observations)
+    return load_price_review_rows_from_observations(run_dir, observations, include_all_listings=include_all_listings)
+
+
+def _attach_price_observation_listings(observations: list[dict], listings: list[dict]) -> None:
+    by_observation_id: dict[int, list[dict]] = {}
+    for listing in listings:
+        observation_id = listing.get("price_observation_id")
+        if observation_id is None:
+            continue
+        by_observation_id.setdefault(int(observation_id), []).append(listing)
+    for observation in observations:
+        observation_id = observation.get("id")
+        if observation_id is None:
+            continue
+        observation["price_observation_listings"] = by_observation_id.get(int(observation_id), [])
 
 
 def _marketplace_or_none(value: str | None) -> str | None:

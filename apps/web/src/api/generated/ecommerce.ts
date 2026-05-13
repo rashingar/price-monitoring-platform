@@ -1098,6 +1098,7 @@ export interface operations {
         sub_category?: string | null;
         manufacturer?: string | null;
         marketplace?: ("bestprice" | "skroutz" | "both" | "none") | null;
+        source_name?: string | null;
         has_mpn?: boolean | null;
         has_source_url?: boolean | null;
         ignored?: "include" | "exclude" | "only";
@@ -2282,6 +2283,7 @@ export interface operations {
     parameters: {
       query?: {
         enriched_csv_path?: string | null;
+        include_all_listings?: boolean;
       };
       path: {
         run_id: string;
