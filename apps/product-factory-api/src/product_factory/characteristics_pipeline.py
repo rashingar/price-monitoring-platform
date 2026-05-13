@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 from urllib.parse import urlparse
 from typing import Any, Callable
@@ -106,6 +107,9 @@ class CharacteristicsTemplateRegistry:
             if custom_template is not None:
                 return self.merge_template_overrides(schema_template, custom_template)
             return schema_template
+        electronet_blank_template = self.select_electronet_blank_template(source, taxonomy)
+        if electronet_blank_template is not None:
+            return electronet_blank_template
         if custom_template is not None:
             return {
                 **custom_template,
@@ -120,29 +124,154 @@ class CharacteristicsTemplateRegistry:
         schema = self.schemas_by_id.get(str(schema_id).strip())
         if schema is None:
             return None
+        return self._schema_to_template(
+            schema,
+            template_id=f"schema:{schema_id}",
+            template_source="schema_library",
+            matched_schema_id=schema_id,
+            include_aliases=True,
+        )
+
+    def select_electronet_blank_template(self, source: SourceProductData, taxonomy: TaxonomyResolution) -> dict[str, Any] | None:
+        if not _should_render_raw_source_characteristics(source):
+            return None
+        schema = self._select_electronet_blank_schema(source, taxonomy)
+        if schema is None:
+            return None
+        schema_id = str(schema.get("schema_id", "")).strip()
+        if not schema_id:
+            return None
+        return self._schema_to_template(
+            schema,
+            template_id=f"electronet_blank:{schema_id}",
+            template_source="electronet_blank_schema",
+            matched_schema_id=schema_id,
+            include_aliases=False,
+        )
+
+    def _schema_to_template(
+        self,
+        schema: dict[str, Any],
+        *,
+        template_id: str,
+        template_source: str,
+        matched_schema_id: str,
+        include_aliases: bool,
+    ) -> dict[str, Any]:
         sections: list[dict[str, Any]] = []
         for section_index, section in enumerate(schema.get("sections", []), start=1):
             section_title = normalize_whitespace(section.get("title", ""))
             if not section_title:
                 continue
             labels = [normalize_whitespace(label) for label in section.get("labels", []) if normalize_whitespace(label)]
-            fields = [
-                {
+            fields: list[dict[str, Any]] = []
+            for label_index, label in enumerate(labels, start=1):
+                field = {
                     "key": normalize_for_match(f"{section_title} {label}") or f"schema_{section_index}_{label_index}",
                     "label": label,
-                    "aliases": [label],
                     "section_title": section_title,
                 }
-                for label_index, label in enumerate(labels, start=1)
-            ]
+                if include_aliases:
+                    field["aliases"] = [label]
+                fields.append(field)
             sections.append({"title": section_title, "fields": fields})
         return {
-            "template_id": f"schema:{schema_id}",
-            "template_source": "schema_library",
-            "matched_schema_id": schema_id,
+            "template_id": template_id,
+            "template_source": template_source,
+            "matched_schema_id": matched_schema_id,
             "preferred_schema_source_files": list(schema.get("source_files", [])),
             "sections": sections,
         }
+
+    def _select_electronet_blank_schema(self, source: SourceProductData, taxonomy: TaxonomyResolution) -> dict[str, Any] | None:
+        candidates = self._active_schemas_for_taxonomy(taxonomy)
+        if not candidates:
+            return None
+
+        sub_key = normalize_for_match(taxonomy.sub_category or "")
+        if sub_key and sub_key != "-":
+            exact_sub = [schema for schema in candidates if normalize_for_match(schema.get("sub_category", "")) == sub_key]
+            if exact_sub:
+                return exact_sub[0]
+
+        specific_candidates = [schema for schema in candidates if not self._schema_is_generic_category(schema)]
+        scored_specific = sorted(
+            ((self._source_url_schema_score(source, schema), schema) for schema in specific_candidates),
+            key=lambda item: item[0],
+            reverse=True,
+        )
+        if scored_specific and scored_specific[0][0] >= 0.72:
+            return scored_specific[0][1]
+
+        taxonomy_path_key = normalize_for_match(taxonomy.taxonomy_path)
+        exact_path = [schema for schema in candidates if normalize_for_match(schema.get("category_path", "")) == taxonomy_path_key]
+        if exact_path:
+            return exact_path[0]
+        return candidates[0] if len(candidates) == 1 else None
+
+    def _active_schemas_for_taxonomy(self, taxonomy: TaxonomyResolution) -> list[dict[str, Any]]:
+        parent = normalize_for_match(taxonomy.parent_category)
+        leaf = normalize_for_match(taxonomy.leaf_category)
+        taxonomy_path = normalize_for_match(taxonomy.taxonomy_path)
+        candidates: list[dict[str, Any]] = []
+        for schema in self.schemas_by_id.values():
+            if normalize_for_match(schema.get("template_status", "")) != "active":
+                continue
+            if taxonomy_path and normalize_for_match(schema.get("category_path", "")) == taxonomy_path:
+                candidates.append(schema)
+                continue
+            if parent and leaf and normalize_for_match(schema.get("parent_category", "")) == parent and normalize_for_match(schema.get("leaf_category", "")) == leaf:
+                candidates.append(schema)
+        return candidates
+
+    @staticmethod
+    def _schema_is_generic_category(schema: dict[str, Any]) -> bool:
+        sub_category = normalize_for_match(schema.get("sub_category", ""))
+        return sub_category in {"", "-"}
+
+    def _source_url_schema_score(self, source: SourceProductData, schema: dict[str, Any]) -> float:
+        source_tokens = self._url_tokens(source.canonical_url or source.url)
+        if not source_tokens:
+            return 0.0
+        best = 0.0
+        for candidate in self._schema_url_tokens(schema):
+            if len(candidate) < 3:
+                continue
+            for token in source_tokens:
+                if len(token) < 3:
+                    continue
+                if candidate == token:
+                    best = max(best, 1.0)
+                elif candidate in token or token in candidate:
+                    best = max(best, 0.9)
+                else:
+                    best = max(best, SequenceMatcher(None, candidate, token).ratio())
+        return best
+
+    @staticmethod
+    def _url_tokens(url: str) -> set[str]:
+        tokens: set[str] = set()
+        for part in re.split(r"[/_\-.]+", urlparse(url).path):
+            token = normalize_for_match(part)
+            if token:
+                tokens.add(token)
+        return tokens
+
+    def _schema_url_tokens(self, schema: dict[str, Any]) -> set[str]:
+        tokens: set[str] = set()
+        for source_file in schema.get("source_files", []):
+            stem = Path(str(source_file)).stem
+            normalized_stem = normalize_for_match(stem)
+            if normalized_stem:
+                tokens.add(normalized_stem)
+            tokens.update(token for token in re.split(r"[_\-.]+", normalized_stem) if token)
+        cta_parts = [part for part in urlparse(str(schema.get("cta_url", ""))).path.split("/") if part]
+        if cta_parts:
+            for part in re.split(r"[_\-.]+", cta_parts[-1]):
+                token = normalize_for_match(part)
+                if token:
+                    tokens.add(token)
+        return tokens
 
     def merge_template_overrides(self, schema_template: dict[str, Any], custom_template: dict[str, Any]) -> dict[str, Any]:
         custom_sections = list(custom_template.get("sections", []))
@@ -224,7 +353,7 @@ def build_characteristics_for_product(
     schema_match: SchemaMatchResult | None = None,
     raw_html: str | None = None,
 ) -> tuple[str, dict[str, Any], list[str]]:
-    if _should_render_raw_source_characteristics(source):
+    if _should_render_raw_source_characteristics(source) and _effective_spec_sections(source):
         return _build_raw_spec_sections_result(source, schema_match=schema_match)
 
     registry = get_characteristics_registry()
@@ -273,6 +402,8 @@ def build_characteristics_for_product(
             if template_source == "schema_library_with_custom_overrides"
             else "matched_schema_template"
             if template_source == "schema_library"
+            else "electronet_blank_category_template"
+            if template_source == "electronet_blank_schema"
             else "taxonomy_template_match"
         ),
         "template_source": template_source,

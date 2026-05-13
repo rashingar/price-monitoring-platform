@@ -315,6 +315,35 @@ def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() ->
     ] == "10"
 
 
+def test_electronet_without_specs_uses_blank_template_for_specific_category_from_url() -> None:
+    source = SourceProductData(
+        source_name="electronet",
+        url="https://www.electronet.gr/klimatismos-thermansi/klimatistika/klimatistika-toihoy/ac-midea-rf-new-ms12fu-12hrdn1-qrd0gw",
+        canonical_url="https://www.electronet.gr/klimatismos-thermansi/klimatistika/klimatistika-toihoy/ac-midea-rf-new-ms12fu-12hrdn1-qrd0gw",
+        brand="Midea",
+        mpn="MS12FU-12HRDN1-QRD0GW",
+        name="A/C Midea RF New MS12FU-12HRDN1-QRD0GW 12000Btu",
+        hero_summary="Κλιματιστικό τοίχου inverter Midea RF New 12000Btu ενεργειακής κλάσης A++.",
+        spec_sections=[],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Κλιματιστικά > -",
+    )
+
+    html, diagnostics, warnings = build_characteristics_for_product(source, taxonomy)
+
+    values = [field["value"] for field in diagnostics["fields"]]
+    assert html
+    assert diagnostics["template_source"] == "electronet_blank_schema"
+    assert diagnostics["matched_schema_id"] == AIR_CONDITIONER_SCHEMA_ID
+    assert diagnostics["preferred_schema_source_files"] == ["toixoy.json"]
+    assert diagnostics["unresolved_count"] == len(values)
+    assert set(values) == {"-"}
+    assert f"characteristics_template_used:electronet_blank:{AIR_CONDITIONER_SCHEMA_ID}" in warnings
+
+
 def test_labels_related_treats_dimension_separators_as_equivalent() -> None:
     assert _labels_related(
         normalize_for_match("Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)"),

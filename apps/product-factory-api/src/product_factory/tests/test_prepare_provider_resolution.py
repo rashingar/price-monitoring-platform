@@ -258,6 +258,35 @@ def test_prepare_provider_resolution_keeps_electronet_product_code_mismatch_as_w
     assert result.parsed.warnings == ["source_product_code_mismatch:input=123456:page=654321"]
 
 
+def test_prepare_provider_resolution_keeps_missing_electronet_product_code_as_warning() -> None:
+    cli = _build_cli("https://www.electronet.gr/example")
+    registry = ProviderRegistry()
+    registry.register(
+        StaticProvider(
+            provider_id="electronet",
+            source_name="electronet",
+            product=_build_source(
+                source_name="electronet",
+                url=cli.url,
+                product_code="",
+            ),
+            fetch_method="httpx",
+        )
+    )
+
+    result = _resolve_with_registry(
+        cli,
+        registry,
+        source="electronet",
+        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
+    )
+
+    assert isinstance(result, PrepareProviderResolutionResult)
+    assert result.source == "electronet"
+    assert result.provider_id == "electronet"
+    assert result.parsed.warnings == ["source_product_code_missing:input=123456"]
+
+
 def test_prepare_provider_resolution_fails_for_skroutz_non_product_page() -> None:
     cli = _build_cli("https://www.skroutz.gr/s/123456/example.html")
     registry = ProviderRegistry()

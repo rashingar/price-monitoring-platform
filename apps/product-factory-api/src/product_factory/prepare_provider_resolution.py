@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Callable
 
 from .fetcher import ElectronetFetcher
-from .input_validation import FAIL_MESSAGE
 from .models import CLIInput, FetchResult, ParsedProduct
 from .parser_product_electronet import ElectronetProductParser
 from .parser_product_manufacturer import ManufacturerProductParser
@@ -74,6 +73,8 @@ def validate_prepare_provider_resolution_result(
     source = result.source
     parsed = result.parsed
     fetch = result.fetch
+    if not parsed.source.source_name:
+        parsed.source.source_name = source
 
     final_source, final_scope_ok, _final_scope_reason = validate_url_scope_fn(fetch.final_url)
     if final_source != source or not final_scope_ok:
@@ -82,8 +83,8 @@ def validate_prepare_provider_resolution_result(
     if source == "electronet":
         source_code = parsed.source.product_code
         if not source_code:
-            raise ValueError(FAIL_MESSAGE)
-        if source_code != cli.model:
+            parsed.warnings.append(f"source_product_code_missing:input={cli.model}")
+        elif source_code != cli.model:
             parsed.warnings.append(f"source_product_code_mismatch:input={cli.model}:page={source_code}")
     elif source == "skroutz":
         apply_skroutz_contract_hints(cli, parsed)
