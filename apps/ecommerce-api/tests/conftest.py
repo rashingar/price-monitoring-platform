@@ -21,6 +21,8 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_csv_validation.py": ("contract",),
     "test_durable_jobs.py": ("integration", "db_contract"),
     "test_durable_jobs_api.py": ("smoke", "integration", "db_contract"),
+    "test_egress_policy.py": ("contract",),
+    "test_egress_policy_integration.py": ("contract",),
     "test_fetch_matching.py": ("contract",),
     "test_file_editor.py": ("integration",),
     "test_files_api.py": ("smoke",),

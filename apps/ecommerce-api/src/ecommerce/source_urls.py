@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from ipaddress import ip_address
 from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-import httpx
+from ecommerce.source_capture.egress_policy import EgressPolicyError, EgressTimeoutConfig, safe_get
 
 
 class SourceUrlValidationError(ValueError):
@@ -98,18 +97,25 @@ def validate_source_url_reachability(url: str, *, timeout_seconds: float = 5.0) 
         normalized = normalize_source_url(url)
     except SourceUrlValidationError as exc:
         return SourceUrlValidationResult(status="failed", message=str(exc))
-    domain = extract_source_domain(normalized)
-    if _is_unsafe_validation_host(domain):
-        return SourceUrlValidationResult(status="inconclusive", message="URL host is not eligible for reachability validation.")
 
     try:
-        with httpx.Client(follow_redirects=True, timeout=timeout_seconds) as client:
-            response = client.get(normalized)
-    except httpx.TimeoutException:
-        return SourceUrlValidationResult(status="inconclusive", message="URL validation timed out.")
-    except httpx.RequestError as exc:
-        message = str(exc).strip() or exc.__class__.__name__
-        return SourceUrlValidationResult(status="inconclusive", message=_short_message(message))
+        response = safe_get(
+            normalized,
+            timeout=EgressTimeoutConfig(connect=min(timeout_seconds, 5.0), read=timeout_seconds, total=timeout_seconds),
+            max_response_bytes=256_000,
+        )
+    except EgressPolicyError as exc:
+        if exc.code in {"invalid_url", "unsupported_scheme"}:
+            return SourceUrlValidationResult(status="failed", message=exc.message)
+        if exc.code == "timeout":
+            return SourceUrlValidationResult(status="inconclusive", message="URL validation timed out.")
+        if exc.code == "blocked_private_host":
+            return SourceUrlValidationResult(status="inconclusive", message="URL host is not eligible for reachability validation.")
+        if exc.code == "response_too_large":
+            return SourceUrlValidationResult(status="inconclusive", message="URL validation response was too large.")
+        if exc.code == "redirect_blocked":
+            return SourceUrlValidationResult(status="inconclusive", message="URL redirect target is not eligible for reachability validation.")
+        return SourceUrlValidationResult(status="inconclusive", message=_short_message(exc.message))
 
     status_code = response.status_code
     if 200 <= status_code < 400:
@@ -154,14 +160,3 @@ def _short_message(message: str, *, limit: int = 240) -> str:
     if len(single_line) <= limit:
         return single_line
     return f"{single_line[: limit - 3]}..."
-
-
-def _is_unsafe_validation_host(hostname: str) -> bool:
-    host = hostname.strip().lower()
-    if host in {"localhost", "localhost.localdomain"} or host.endswith(".localhost") or host.endswith(".local"):
-        return True
-    try:
-        address = ip_address(host)
-    except ValueError:
-        return False
-    return address.is_private or address.is_loopback or address.is_link_local or address.is_multicast or address.is_unspecified

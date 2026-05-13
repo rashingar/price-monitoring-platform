@@ -15,6 +15,8 @@ The shared vendor capture implementation lives in `ecommerce.source_capture`:
 
 - `canonicalize_url.py` normalizes URLs and strips common tracking parameters.
 - `detect_vendor.py` maps vendor hosts to registered vendors.
+- `egress_policy.py` validates outbound URLs, blocks localhost/private/reserved
+  hosts, enforces vendor-domain redirects, and provides bounded safe HTTP GETs.
 - `runner.py` owns vendor capture strategy dispatch.
 - `skroutz_xhr.py` captures Skroutz through direct `filter_products.json` and `shops_details.json` endpoints derived from the product URL.
 - `skroutz_network_diagnostic.py` is an operator-triggered browser network diagnostic for Skroutz product pages.
@@ -52,6 +54,18 @@ The DB-backed selected source URL capture service lives in
 Current vendors are seeded in `vendors`: `electronet`, `skroutz`, `plaisio`, `public`, and `kotsovolos`. Electronet and Skroutz are active. Plaisio, Public, and Kotsovolos are scaffolded for future parsers.
 
 Raw capture records are stored in `source_capture_snapshots`. Request and response metadata is sanitized; cookies, auth headers, CSRF/session tokens, and fingerprinting-sensitive headers are not persisted. Price and offer observations are append-only and reference the snapshot that produced them.
+
+## Egress Safety
+
+Source URL validation and simple HTTP capture paths use the shared egress policy
+before outbound requests. Allowed URLs must use `http` or `https`, include a
+host, avoid obvious localhost/private/reserved IP targets, and keep redirects
+inside the originally detected vendor domain. The safe fetch helper applies
+explicit timeouts and a maximum response body size so validation and capture do
+not read unbounded responses.
+
+Tests for source validation, capture, and egress policy must use fakes,
+fixtures, or `httpx.MockTransport`; they must not hit live vendor websites.
 
 Product Factory can hand off initial capture to this API by setting `ECOMMERCE_API_BASE_URL`, for example `http://127.0.0.1:8001`. Product Factory treats failures as warnings so product preparation does not fail because source capture failed.
 
