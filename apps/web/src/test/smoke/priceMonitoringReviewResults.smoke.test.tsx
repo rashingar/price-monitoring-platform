@@ -117,19 +117,19 @@ describe("Price monitoring review results selected row", () => {
     expect(screen.getByLabelText("Undercut amount")).toBeInTheDocument();
   });
 
-  it("uses the competitor URL for the selected-row link", () => {
+  it("uses the competitor URL for the selected-row store link", () => {
     render(<TestReviewResultsTable />);
 
-    expect(screen.getByRole("link", { name: "Open competitor URL" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open Store URL" })).toHaveAttribute(
       "href",
       "https://competitor.example/products/111111",
     );
   });
 
-  it("uses the source product URL for the row URL link", () => {
+  it("uses the source product URL for the compact row store link", () => {
     render(<TestReviewResultsTable />);
 
-    expect(screen.getAllByRole("link", { name: "Open" })[0]).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Open Store" })[0]).toHaveAttribute(
       "href",
       "https://catalog.example/products/111111",
     );
@@ -148,7 +148,7 @@ describe("Price monitoring review results selected row", () => {
       />,
     );
 
-    expect(screen.queryByRole("link", { name: "Open competitor URL" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Store URL" })).not.toBeInTheDocument();
   });
 
   it("collapses Extra details when the selected row changes", () => {

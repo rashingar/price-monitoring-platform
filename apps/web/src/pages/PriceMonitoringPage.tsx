@@ -2085,7 +2085,7 @@ export function ReviewResultsTable({
                   <strong>URL</strong>
                   {sourceUrl ? (
                     <a href={sourceUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                      Open
+                      Open Store
                     </a>
                   ) : (
                     "-"
@@ -2151,7 +2151,7 @@ export function ReviewResultsTable({
                   </button>
                   {competitorUrl ? (
                     <a className="button secondary" href={competitorUrl} target="_blank" rel="noreferrer">
-                      Open competitor URL
+                      Open Store URL
                     </a>
                   ) : null}
                   <button
