@@ -1066,6 +1066,9 @@ export interface PriceMonitoringTopListing {
   rank?: number | null;
   store?: string | null;
   price?: number | null;
+  shipping_cost?: number | null;
+  landed_price?: number | null;
+  landed_price_source?: "explicit" | "computed" | "missing" | string | null;
   url?: string | null;
   source?: PriceMonitoringSource | string | null;
   raw_source?: string | null;

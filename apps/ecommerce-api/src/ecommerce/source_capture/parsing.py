@@ -14,6 +14,17 @@ BESTPRICE_BASE_URL = "https://www.bestprice.gr"
 SKROUTZ_BASE_URL = "https://www.skroutz.gr"
 
 PRICE_KEYS = ("price", "final_price", "finalprice", "current_price", "currentprice", "sale_price", "saleprice", "amount", "price_with_vat")
+LANDED_PRICE_KEYS = (
+    "landed_price",
+    "landedprice",
+    "total_price",
+    "totalprice",
+    "final_total",
+    "finaltotal",
+    "final_price_with_shipping",
+    "price_with_shipping",
+    "total_with_shipping",
+)
 PRICE_SUMMARY_KEYS = ("price_min", "min_price", "minimum_price", "lowest_price", "lowestprice", "low_price", "lowprice", "best_price")
 ORIGINAL_PRICE_KEYS = ("original_price", "originalprice", "old_price", "oldprice", "initial_price", "list_price", "retail_price")
 SELLER_KEYS = ("seller", "seller_name", "sellername", "shop", "shop_name", "shopname", "store", "store_name", "storename", "merchant")
@@ -193,16 +204,26 @@ def parse_bestprice_offers(html: str, *, page_url: str) -> tuple[list[ParsedOffe
             product_price = _bestprice_cents_to_decimal(product_attrs.get("data-price")) or _bestprice_cents_to_decimal(
                 product_link_attrs.get("data-price")
             ) or group_price
+            original_price = _bestprice_cents_to_decimal(product_attrs.get("data-original-price")) or _bestprice_cents_to_decimal(
+                product_link_attrs.get("data-original-price")
+            )
             product_title = _clean_html_text(product_link_attrs.get("title")) or _clean_html_text(
                 _first_match(product_html, (r"<h3[^>]*>(.*?)</h3>",))
             )
             availability = _bestprice_availability(product_html, product_attrs)
             shipping_cost = _bestprice_cents_to_decimal_allow_zero(product_attrs.get("data-shipping-cost"))
+            landed_price, landed_price_source, landed_field = _bestprice_landed_price(product_price, shipping_cost, product_attrs, product_link_attrs)
             raw = {
                 "parser": "bestprice_html_v1",
                 "rank": group_rank,
                 "product_index": product_index,
                 "product_title": product_title,
+                "item_price": str(product_price) if product_price is not None else None,
+                "original_price": str(original_price) if original_price is not None else None,
+                "shipping_cost": str(shipping_cost) if shipping_cost is not None else None,
+                "landed_price": str(landed_price) if landed_price is not None else None,
+                "landed_price_source": landed_price_source,
+                "landed_price_field": landed_field,
                 "group": _bestprice_raw_attrs(group_attrs),
                 "product": _bestprice_raw_attrs(product_attrs),
             }
@@ -210,6 +231,7 @@ def parse_bestprice_offers(html: str, *, page_url: str) -> tuple[list[ParsedOffe
                 seller_name=seller_name,
                 seller_url=product_url,
                 price=product_price,
+                original_price=original_price,
                 rank=group_rank,
                 availability=availability,
                 shipping_cost=shipping_cost,
@@ -386,6 +408,7 @@ def _bestprice_offer_from_values(
     seller_url: str | None,
     price: Decimal | None,
     rank: int,
+    original_price: Decimal | None = None,
     availability: str | None = None,
     shipping_cost: Decimal | None = None,
     raw: dict[str, Any] | None = None,
@@ -396,6 +419,7 @@ def _bestprice_offer_from_values(
         seller_name=seller_name,
         seller_url=seller_url,
         price=price,
+        original_price=original_price,
         currency="EUR",
         availability=availability,
         stock_status=availability,
@@ -437,6 +461,10 @@ def _bestprice_raw_attrs(attrs: dict[str, str]) -> dict[str, str]:
     allowed = {
         "data-id",
         "data-price",
+        "data-original-price",
+        "data-total-price",
+        "data-landed-price",
+        "data-price-with-shipping",
         "data-mid",
         "data-domain",
         "data-mrating",
@@ -446,6 +474,24 @@ def _bestprice_raw_attrs(attrs: dict[str, str]) -> dict[str, str]:
         "data-av",
     }
     return {key: value for key, value in attrs.items() if key in allowed and value != ""}
+
+
+def _bestprice_landed_price(
+    item_price: Decimal | None,
+    shipping_cost: Decimal | None,
+    *nodes: dict[str, str],
+) -> tuple[Decimal | None, str, str | None]:
+    for node in nodes:
+        for key in LANDED_PRICE_KEYS:
+            attr_key = f"data-{key.replace('_', '-')}"
+            if attr_key not in node:
+                continue
+            landed_price = _bestprice_cents_to_decimal(node.get(attr_key))
+            if landed_price is not None:
+                return landed_price, "explicit", attr_key
+    if item_price is not None and shipping_cost is not None:
+        return (item_price + shipping_cost).quantize(Decimal("0.01")), "computed", None
+    return None, "missing", None
 
 
 def _bestprice_cents_to_decimal(value: object) -> Decimal | None:

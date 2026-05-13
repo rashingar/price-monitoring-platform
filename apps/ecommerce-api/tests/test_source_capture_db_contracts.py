@@ -20,6 +20,7 @@ from ecommerce.price_monitoring.selection import SelectedPriceMonitoringProduct 
 from ecommerce.price_monitoring.source_url_coverage import compute_source_url_coverage  # noqa: E402
 from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url  # noqa: E402
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug  # noqa: E402
+from ecommerce.source_capture.parsing import parse_bestprice_offers  # noqa: E402
 from ecommerce.source_capture.scheduled import capture_due_product_sources  # noqa: E402
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedOfferObservation, ParsedPriceObservation  # noqa: E402
 from ecommerce.vendor_sources.capture import capture_selected_source_urls  # noqa: E402
@@ -470,6 +471,56 @@ def test_capture_persists_all_offer_listings_ranked_by_price(tmp_path: Path) -> 
         (3, "Store C", Decimal("205.00")),
     ]
     assert listings[0].seller_url == "https://seller.test/a"
+
+
+def test_bestprice_fixture_offers_persist_as_listing_rows_with_landed_price_evidence(tmp_path: Path) -> None:
+    database_url = _database_url(tmp_path)
+    fixture = json.loads(
+        (Path(__file__).resolve().parent / "fixtures" / "golden_snapshots" / "source_capture" / "bestprice_html" / "latest_run_multi_store.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    offers, flags = parse_bestprice_offers(fixture["html"], page_url="https://www.bestprice.gr/item/2160534094/product.html")
+
+    assert flags == []
+
+    def bestprice_capture(url: str, *, vendor_slug: str | None = None) -> CaptureResult:
+        return CaptureResult(
+            vendor_slug=vendor_slug or "bestprice",
+            status="success",
+            snapshot=CaptureSnapshotPayload(
+                capture_strategy="bestprice_httpx_html",
+                page_url=url,
+                captured_at=NOW,
+                fetched_at=NOW,
+                parsed_at=NOW,
+                parser_version="bestprice_html_v1",
+            ),
+            price_observations=(ParsedPriceObservation(price=Decimal("194.80"), availability="in_stock", seller_name="Store A"),),
+            offer_observations=tuple(offers),
+        )
+
+    with session_scope(database_url) as session:
+        create_product_from_source_urls(
+            session,
+            model="BP-1",
+            source_urls=["https://www.bestprice.gr/item/2160534094/product.html"],
+            capture_fn=bestprice_capture,
+        )
+        listings = session.query(PriceObservationListing).order_by(PriceObservationListing.rank.asc()).all()
+
+    assert len(listings) == 5
+    assert [(item.rank, item.seller_name, item.price, item.shipping_cost) for item in listings[:4]] == [
+        (1, "Store A", Decimal("194.80"), Decimal("2.90")),
+        (2, "Store B", Decimal("194.90"), Decimal("0.00")),
+        (3, "Store C", Decimal("195.00"), Decimal("0.00")),
+        (4, "Store D", Decimal("198.00"), None),
+    ]
+    assert listings[0].raw_listing["landed_price"] == "197.70"
+    assert listings[0].raw_listing["landed_price_source"] == "computed"
+    assert listings[2].raw_listing["landed_price"] == "195.00"
+    assert listings[2].raw_listing["landed_price_source"] == "explicit"
+    assert listings[3].raw_listing["landed_price_source"] == "missing"
 
 
 def test_backfill_price_observation_listings_from_offer_observations_is_idempotent(tmp_path: Path) -> None:

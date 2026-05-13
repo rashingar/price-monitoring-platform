@@ -918,10 +918,10 @@ textarea {
 .price-review-top-listings-header,
 .price-review-top-listing-row {
   display: grid;
-  grid-template-columns: 64px minmax(160px, 1fr) 120px 160px 80px 120px;
+  grid-template-columns: 64px minmax(160px, 1fr) 110px 100px minmax(190px, 1.2fr) 190px 80px 120px;
   gap: 8px;
   align-items: center;
-  min-width: 780px;
+  min-width: 1050px;
   padding: 8px 10px;
 }
 

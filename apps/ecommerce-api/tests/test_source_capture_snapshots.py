@@ -216,6 +216,32 @@ def test_bestprice_parser_reads_price_group_offers() -> None:
     assert offers[0].raw_observation["rank"] == 2
 
 
+def test_bestprice_latest_run_fixture_parses_all_store_offers(fixtures_root: Path) -> None:
+    fixture = _snapshot(fixtures_root, "source_capture", "bestprice_html", "latest_run_multi_store.json")
+
+    offers, flags = parse_bestprice_offers(fixture["html"], page_url="https://www.bestprice.gr/item/2160534094/product.html")
+
+    assert flags == []
+    assert len(offers) == 5
+    assert [(offer.seller_name, offer.price, offer.shipping_cost) for offer in offers] == [
+        ("Store A", Decimal("194.80"), Decimal("2.90")),
+        ("Store B", Decimal("194.90"), Decimal("0.00")),
+        ("Store C", Decimal("195.00"), Decimal("0.00")),
+        ("Store D", Decimal("198.00"), None),
+        ("Store E", Decimal("198.00"), None),
+    ]
+    assert [offer.raw_observation["rank"] for offer in offers] == [1, 2, 3, 4, 5]
+    assert offers[0].seller_url == "https://www.bestprice.gr/to/100001/product-a.html?from=2160534094&seq=1&bpref=itemPage"
+    assert offers[0].raw_observation["landed_price"] == "197.70"
+    assert offers[0].raw_observation["landed_price_source"] == "computed"
+    assert offers[2].raw_observation["landed_price"] == "195.00"
+    assert offers[2].raw_observation["landed_price_source"] == "explicit"
+    assert offers[2].raw_observation["landed_price_field"] == "data-total-price"
+    assert offers[3].raw_observation["shipping_cost"] is None
+    assert offers[3].raw_observation["landed_price"] is None
+    assert offers[3].raw_observation["landed_price_source"] == "missing"
+
+
 def test_source_capture_scoring_snapshot(fixtures_root: Path) -> None:
     candidates = {
         "analytics": ResponseCandidate(url="https://analytics.example/collect", body_text="ok", content_type="text/plain"),

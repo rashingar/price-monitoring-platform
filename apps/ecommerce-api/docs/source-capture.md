@@ -21,6 +21,24 @@ The shared vendor capture implementation lives in `ecommerce.source_capture`:
 - `parsing.py` contains normalized Electronet price and Skroutz direct JSON offer parsers.
 - `scheduled.py` lets Vendor Sources refresh due `product_sources` without duplicating vendor logic.
 
+## BestPrice Listings
+
+BestPrice HTML capture parses all available store listing groups rendered in the
+captured page, not only the primary/best store. The canonical parser regression
+fixture is
+`tests/fixtures/golden_snapshots/source_capture/bestprice_html/latest_run_multi_store.json`;
+it is anonymized from local Price Monitoring run `20260513-082508-276376e4`
+while preserving store rank, item price, shipping, landed price evidence, and
+listing structure.
+
+Price review displays item price, shipping, and landed price when listing data
+provides it. If BestPrice does not provide an explicit landed/total price but
+item price and shipping are present, landed price is computed as
+`item price + shipping`. Ranking, Top 3 slicing, and next-store delta currently
+use item price. Future landed-cost ranking should be added as a separate review
+toggle so the existing item-price workflow remains stable; shipping and landed
+price evidence is retained in listing raw payloads for that future mode.
+
 Testing is split by profile. Parser, scoring, sanitization, direct Skroutz
 endpoint, selection, run-result, and API response behavior uses small golden
 JSON snapshots under `tests/fixtures/golden_snapshots/`. Local source URL and

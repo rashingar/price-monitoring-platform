@@ -34,6 +34,7 @@ import type {
   PriceMonitoringSelectionResult,
   PriceMonitoringSourceUrlCoverage,
   PriceMonitoringSource,
+  PriceMonitoringTopListing,
   RunPriceObservationsResponse,
   VendorSourceCapability,
 } from "../api/commerceTypes";
@@ -2078,7 +2079,7 @@ function ReviewResultsTable({
                   )}
                 </span>
                 <span>
-                  <strong>Delta</strong>
+                  <strong>Delta vs current item price</strong>
                   {formatNumber(item.price_delta)}
                 </span>
                 <span>
@@ -2262,8 +2263,10 @@ function TopListingsPanel({
       <div className="price-review-top-listings-header">
         <span>Rank</span>
         <span>Store</span>
-        <span>Price</span>
-        <span>Difference vs current</span>
+        <span>Item price</span>
+        <span>Shipping</span>
+        <span>Landed price</span>
+        <span>Difference vs current item price</span>
         <span>URL</span>
         <span>Evidence</span>
       </div>
@@ -2275,6 +2278,8 @@ function TopListingsPanel({
             <span>{formatValue(listing.rank ?? index + 1)}</span>
             <span>{formatValue(listing.store)}</span>
             <span>{formatMoney(listing.price)}</span>
+            <span>{formatOptionalMoney(listing.shipping_cost)}</span>
+            <span>{formatLandedPrice(listing)}</span>
             <span>{formatMoney(difference)}</span>
             <span>
               {listing.url ? (
@@ -2291,6 +2296,24 @@ function TopListingsPanel({
       })}
     </div>
   );
+}
+
+function formatOptionalMoney(value: unknown): string {
+  const parsed = parseNumberLike(value);
+  return parsed === null ? "-" : formatMoney(parsed);
+}
+
+function formatLandedPrice(listing: PriceMonitoringTopListing): string {
+  const itemPrice = parseNumberLike(listing.price);
+  const shippingCost = parseNumberLike(listing.shipping_cost);
+  const landedPrice = parseNumberLike(listing.landed_price);
+  if (landedPrice === null) {
+    return "-";
+  }
+  if (itemPrice !== null && shippingCost !== null) {
+    return `${formatMoney(itemPrice)} + ${formatMoney(shippingCost)} = ${formatMoney(landedPrice)}`;
+  }
+  return formatMoney(landedPrice);
 }
 
 function StoredObservationsSection({

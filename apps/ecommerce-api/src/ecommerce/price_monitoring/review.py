@@ -82,6 +82,19 @@ PRICE_ALIASES = (
     "price_with_vat",
 )
 URL_ALIASES = ("url", "product_url", "shop_url", "seller_url", "store_url", "href", "link", "path", "web_uri", "relative_url")
+SHIPPING_ALIASES = ("shipping_cost", "shipping", "shippingCost", "delivery_cost", "deliveryCost", "shipping_price", "shippingPrice")
+LANDED_PRICE_ALIASES = (
+    "landed_price",
+    "landedPrice",
+    "total_price",
+    "totalPrice",
+    "final_total",
+    "finalTotal",
+    "price_with_shipping",
+    "priceWithShipping",
+    "total_with_shipping",
+    "totalWithShipping",
+)
 
 
 class PriceReviewError(ValueError):
@@ -95,6 +108,9 @@ class TopListing:
     price: Decimal
     url: str
     source: str
+    shipping_cost: Decimal | None = None
+    landed_price: Decimal | None = None
+    landed_price_source: str = "missing"
     raw_source: str = ""
     evidence_source: str = ""
 
@@ -105,6 +121,9 @@ class TopListing:
             "price": _decimal_to_float(self.price),
             "url": self.url,
             "source": self.source,
+            "shipping_cost": _decimal_to_float(self.shipping_cost),
+            "landed_price": _decimal_to_float(self.landed_price),
+            "landed_price_source": self.landed_price_source,
         }
         if self.raw_source:
             payload["raw_source"] = self.raw_source
@@ -774,11 +793,16 @@ def _listings_from_rows(rows: object, *, fallback_source: str, evidence_source: 
     for index, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
             continue
+        raw_listing = row.get("raw_listing") if isinstance(row.get("raw_listing"), dict) else {}
         listing = _listing_from_values(
             store=row.get("seller_name") or row.get("store") or row.get("competitor_name"),
             price=row.get("price") or row.get("competitor_price"),
             url=row.get("seller_url") or row.get("url") or row.get("product_url"),
             source=_text(row.get("source")) or fallback_source,
+            shipping_cost=_first_not_none(row.get("shipping_cost"), _first_present_any(raw_listing, SHIPPING_ALIASES)),
+            landed_price=_first_present_any(raw_listing, LANDED_PRICE_ALIASES),
+            landed_price_source=_text(raw_listing.get("landed_price_source")),
+            raw_listing=raw_listing,
             raw_source=f"{evidence_source}[{row.get('id') or index}]",
             evidence_source=evidence_source,
         )
@@ -827,6 +851,7 @@ def _listing_from_normalized_observation(observation: dict[str, Any], *, fallbac
             price=price,
             url=url,
             source=source,
+            landed_price_source="missing",
             raw_source="db_observation",
             evidence_source="normalized",
         )
@@ -989,6 +1014,10 @@ def _extract_from_collections(
             price=_first_present_any(item, price_aliases),
             url=_first_present_any(item, url_aliases),
             source=source,
+            shipping_cost=_first_present_any(item, SHIPPING_ALIASES),
+            landed_price=_first_present_any(item, LANDED_PRICE_ALIASES),
+            landed_price_source=_text(item.get("landed_price_source")),
+            raw_listing=item,
             raw_source=raw_source,
             evidence_source=evidence_source,
         )
@@ -1033,19 +1062,62 @@ def _listing_from_values(
     source: str,
     raw_source: str,
     evidence_source: str,
+    shipping_cost: object = None,
+    landed_price: object = None,
+    landed_price_source: str = "",
+    raw_listing: dict[str, Any] | None = None,
 ) -> TopListing | None:
     parsed_price = _parse_decimal(price)
     if parsed_price is None or parsed_price <= 0:
         return None
+    parsed_shipping = _parse_decimal(shipping_cost)
+    parsed_landed, resolved_landed_source = _resolve_landed_price(
+        item_price=parsed_price,
+        shipping_cost=parsed_shipping,
+        explicit_landed_price=_parse_decimal(landed_price),
+        source=landed_price_source,
+        raw_listing=raw_listing,
+    )
     return TopListing(
         rank=0,
         store=_text(store),
         price=parsed_price,
         url=_text(url),
         source=_text(source),
+        shipping_cost=parsed_shipping,
+        landed_price=parsed_landed,
+        landed_price_source=resolved_landed_source,
         raw_source=raw_source,
         evidence_source=evidence_source,
     )
+
+
+def _resolve_landed_price(
+    *,
+    item_price: Decimal,
+    shipping_cost: Decimal | None,
+    explicit_landed_price: Decimal | None,
+    source: str,
+    raw_listing: dict[str, Any] | None,
+) -> tuple[Decimal | None, str]:
+    source_value = source if source in {"explicit", "computed", "missing"} else ""
+    if explicit_landed_price is not None and explicit_landed_price > 0:
+        return explicit_landed_price, source_value or "explicit"
+    raw_source = _text((raw_listing or {}).get("landed_price_source"))
+    if raw_source == "explicit":
+        raw_landed = _parse_decimal(_first_present_any(raw_listing or {}, LANDED_PRICE_ALIASES))
+        if raw_landed is not None and raw_landed > 0:
+            return raw_landed, "explicit"
+    if shipping_cost is not None:
+        return (item_price + shipping_cost).quantize(TWO_PLACES), "computed"
+    return None, "missing"
+
+
+def _first_not_none(*values: object) -> object:
+    for value in values:
+        if value is not None and value != "":
+            return value
+    return None
 
 
 def _dedupe_and_rank_listings(listings: list[TopListing]) -> list[TopListing]:
@@ -1077,6 +1149,9 @@ def _dedupe_and_rank_listings(listings: list[TopListing]) -> list[TopListing]:
                 price=listing.price,
                 url=listing.url,
                 source=listing.source,
+                shipping_cost=listing.shipping_cost,
+                landed_price=listing.landed_price,
+                landed_price_source=listing.landed_price_source,
                 raw_source=listing.raw_source,
                 evidence_source=listing.evidence_source,
             )

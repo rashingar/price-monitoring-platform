@@ -256,10 +256,45 @@ def test_db_review_uses_persisted_listing_rows_before_primary_observations(tmp_p
             "product_url": "https://skroutz.test/product",
             "raw_observation": {},
             "price_observation_listings": [
-                {"id": 1, "price_observation_id": 10, "seller_name": "Store B", "price": "181.00", "seller_url": "https://store.test/b", "source": "skroutz"},
-                {"id": 2, "price_observation_id": 10, "seller_name": "Store A", "price": "180.90", "seller_url": "https://store.test/a", "source": "skroutz"},
-                {"id": 3, "price_observation_id": 10, "seller_name": "Store C", "price": "181.50", "seller_url": "https://store.test/c", "source": "skroutz"},
-                {"id": 4, "price_observation_id": 10, "seller_name": "Store D", "price": "182.00", "seller_url": "https://store.test/d", "source": "skroutz"},
+                {
+                    "id": 1,
+                    "price_observation_id": 10,
+                    "seller_name": "Store B",
+                    "price": "181.00",
+                    "shipping_cost": "3.00",
+                    "seller_url": "https://store.test/b",
+                    "source": "skroutz",
+                    "raw_listing": {"landed_price": "184.00", "landed_price_source": "computed"},
+                },
+                {
+                    "id": 2,
+                    "price_observation_id": 10,
+                    "seller_name": "Store A",
+                    "price": "180.90",
+                    "shipping_cost": "2.90",
+                    "seller_url": "https://store.test/a",
+                    "source": "skroutz",
+                    "raw_listing": {"landed_price": "183.80", "landed_price_source": "computed"},
+                },
+                {
+                    "id": 3,
+                    "price_observation_id": 10,
+                    "seller_name": "Store C",
+                    "price": "181.50",
+                    "shipping_cost": "0.00",
+                    "seller_url": "https://store.test/c",
+                    "source": "skroutz",
+                    "raw_listing": {"landed_price": "181.50", "landed_price_source": "explicit"},
+                },
+                {
+                    "id": 4,
+                    "price_observation_id": 10,
+                    "seller_name": "Store D",
+                    "price": "182.00",
+                    "seller_url": "https://store.test/d",
+                    "source": "skroutz",
+                    "raw_listing": {"landed_price_source": "missing"},
+                },
             ],
         }
     ]
@@ -272,7 +307,17 @@ def test_db_review_uses_persisted_listing_rows_before_primary_observations(tmp_p
     assert rows[0].price_delta == Decimal("-0.10")
     assert rows[0].delta_basis == "next_store"
     assert rows[0].captured_listings_count == 4
+    assert rows[0].listings_incomplete is False
     assert len(rows[0].all_listings or []) == 4
+    assert rows[0].top_listings[0].shipping_cost == Decimal("2.90")
+    assert rows[0].top_listings[0].landed_price == Decimal("183.80")
+    assert rows[0].top_listings[0].landed_price_source == "computed"
+    assert rows[0].top_listings[2].landed_price_source == "explicit"
+    assert rows[0].all_listings[3].shipping_cost is None
+    assert rows[0].all_listings[3].landed_price is None
+    assert rows[0].all_listings[3].landed_price_source == "missing"
+    assert rows[0].top_listings[0].to_api_dict()["landed_price"] == 183.8
+    assert rows[0].top_listings[0].to_api_dict()["landed_price_source"] == "computed"
 
 
 def test_near_equal_top_listing_uses_next_store_delta_basis(tmp_path: Path) -> None:
