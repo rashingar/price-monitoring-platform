@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ecommerce.db.models import Product, ProductSource, Vendor
-from ecommerce.db.product_source_repository import persist_capture_result
+from ecommerce.db.capture_persistence import persist_capture_result
 from ecommerce.source_capture.runner import capture_source_url
 
 

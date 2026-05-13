@@ -169,6 +169,43 @@ def test_vendor_sources_capture_run_history_row_is_created(tmp_path: Path, monke
     assert artifacts.json()["items"][0]["name"] == "vendor_source_capture_result.json"
 
 
+def test_vendor_sources_capture_run_failure_marks_run_failed(tmp_path: Path, monkeypatch) -> None:
+    database_url = _database_url(tmp_path)
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+
+    with session_scope(database_url) as session:
+        product = _catalog_product(session, model="EL-FAIL")
+        create_or_update_imported_source_url(
+            session,
+            catalog_product_id=product.id,
+            url="https://www.electronet.gr/p/fail",
+            source_name="electronet",
+            trust_level="high_confidence",
+            status="active",
+        )
+
+        def broken_capture(_url: str, *, vendor_slug: str | None = None) -> CaptureResult:
+            raise RuntimeError("capture backend unavailable")
+
+        try:
+            run_vendor_source_capture(
+                session,
+                source_name="electronet",
+                include_not_due=True,
+                capture_fn=broken_capture,
+                runs_dir=tmp_path / "vendor-captures",
+            )
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("capture exception should propagate")
+
+        row = session.query(VendorSourceCaptureRun).one()
+        assert row.status == "failed"
+        assert row.completed_at is not None
+        assert any("capture backend unavailable" in warning for warning in row.warnings_json)
+
+
 def test_vendor_sources_capture_run_requires_admin_flag_for_all_active_sources(tmp_path: Path) -> None:
     database_url = _database_url(tmp_path)
     captured_urls: list[str] = []

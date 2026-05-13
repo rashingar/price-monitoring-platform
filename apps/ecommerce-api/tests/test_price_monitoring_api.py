@@ -238,6 +238,44 @@ def test_preview_by_explicit_selected_models(tmp_path: Path, monkeypatch) -> Non
     assert payload["skipped_by_reason"] == {"ignored": 1}
 
 
+def test_preview_route_delegates_and_preserves_response_shape(monkeypatch) -> None:
+    def fake_preview(selection_request, *, session_scope_fn):
+        assert selection_request.source == "skroutz"
+        return {
+            "source": "skroutz",
+            "source_filter": "skroutz",
+            "selected_count": 1,
+            "skipped_count": 0,
+            "items": [{"model": "005606"}],
+            "selected_items": [{"model": "005606"}],
+            "skipped": [],
+            "skipped_items": [],
+            "skipped_by_reason": {},
+            "source_url_required": True,
+        }
+
+    monkeypatch.setattr(routes_price_monitoring.monitoring_service, "preview_selection_response", fake_preview)
+
+    response = TestClient(create_app()).post(
+        "/api/price-monitoring/selection/preview",
+        json={"source": "skroutz", "selected_models": ["005606"]},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "source": "skroutz",
+        "source_filter": "skroutz",
+        "selected_count": 1,
+        "skipped_count": 0,
+        "items": [{"model": "005606"}],
+        "selected_items": [{"model": "005606"}],
+        "skipped": [],
+        "skipped_items": [],
+        "skipped_by_reason": {},
+        "source_url_required": True,
+    }
+
+
 def test_preview_selected_items_include_hierarchy_fields(tmp_path: Path, monkeypatch) -> None:
     client = _client(tmp_path, monkeypatch)
 

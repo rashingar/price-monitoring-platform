@@ -11,6 +11,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
+from ecommerce.db.capture_persistence import persist_capture_result  # noqa: E402
 from ecommerce.db.models import Base, CatalogProductRow, OfferObservation, PriceObservation, PriceObservationListing, ProductSource, SourceCaptureSnapshot, SourceUrl, Vendor  # noqa: E402
 from ecommerce.db.product_source_repository import create_product_from_source_urls  # noqa: E402
 from ecommerce.db.repositories import backfill_price_observation_listings_from_offer_observations  # noqa: E402
@@ -471,6 +472,38 @@ def test_capture_persists_all_offer_listings_ranked_by_price(tmp_path: Path) -> 
         (3, "Store C", Decimal("205.00")),
     ]
     assert listings[0].seller_url == "https://seller.test/a"
+
+
+def test_capture_persistence_directly_writes_price_and_listing_rows(tmp_path: Path) -> None:
+    database_url = _database_url(tmp_path)
+
+    with session_scope(database_url) as session:
+        created = create_product_from_source_urls(
+            session,
+            model="ABC-4-DIRECT",
+            source_urls=["https://www.skroutz.gr/s/44"],
+            capture=False,
+        )
+        source = session.query(ProductSource).one()
+        result = CaptureResult(
+            vendor_slug="skroutz",
+            status="success",
+            snapshot=CaptureSnapshotPayload(capture_strategy="direct-persistence-test", page_url=source.canonical_url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
+            price_observations=(ParsedPriceObservation(price=Decimal("199.99"), availability="available"),),
+            offer_observations=(
+                ParsedOfferObservation(seller_name="Store B", price=Decimal("201.00")),
+                ParsedOfferObservation(seller_name="Store A", price=Decimal("199.99")),
+            ),
+        )
+
+        snapshot = persist_capture_result(session, product=created.product, source=source, result=result, run_id="run-direct")
+        listings = session.query(PriceObservationListing).order_by(PriceObservationListing.rank.asc()).all()
+
+    assert snapshot.id is not None
+    assert [(item.rank, item.seller_name, item.price) for item in listings] == [
+        (1, "Store A", Decimal("199.99")),
+        (2, "Store B", Decimal("201.00")),
+    ]
 
 
 def test_bestprice_fixture_offers_persist_as_listing_rows_with_landed_price_evidence(tmp_path: Path) -> None:
