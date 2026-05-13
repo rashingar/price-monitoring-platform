@@ -28,6 +28,7 @@ Ecommerce provides a local backend for:
 - launching supervised local fetch executions for Skroutz or BestPrice
 - storing catalog snapshots, observations, alert rules, and alert events
 - storing shared product source capture snapshots and Product Factory backfills
+- storing durable Ecommerce job state for long workflow inspection/cancellation
 - reviewing fetched prices and exporting manual OpenCart price-update CSV files
 - safely reading/writing approved local CSV files for browser UI workflows
 - exposing generated artifacts through safe API download and preview endpoints

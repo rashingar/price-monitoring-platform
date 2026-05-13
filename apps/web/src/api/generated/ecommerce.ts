@@ -113,6 +113,18 @@ export interface paths {
     /** Delete Ignored Product */
     delete: operations["delete_ignored_product_api_ignore_products__model__delete"];
   };
+  "/api/jobs": {
+    /** List Durable Jobs */
+    get: operations["list_durable_jobs_api_jobs_get"];
+  };
+  "/api/jobs/{job_id}": {
+    /** Get Durable Job */
+    get: operations["get_durable_job_api_jobs__job_id__get"];
+  };
+  "/api/jobs/{job_id}/cancel": {
+    /** Cancel Durable Job */
+    post: operations["cancel_durable_job_api_jobs__job_id__cancel_post"];
+  };
   "/api/paths/roots": {
     /** Get Path Roots */
     get: operations["get_path_roots_api_paths_roots_get"];
@@ -414,6 +426,46 @@ export interface components {
       rows: {
           [key: string]: unknown;
         }[];
+    };
+    /** DurableJobListResponse */
+    DurableJobListResponse: {
+      /** Items */
+      items: components["schemas"]["DurableJobResponse"][];
+    };
+    /** DurableJobResponse */
+    DurableJobResponse: {
+      /** Attempt Count */
+      attempt_count: number;
+      /** Cancel Requested */
+      cancel_requested: boolean;
+      /** Completed At */
+      completed_at?: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Error Message */
+      error_message?: string | null;
+      /** Heartbeat At */
+      heartbeat_at?: string | null;
+      /** Job Id */
+      job_id: string;
+      /** Job Type */
+      job_type: string;
+      /** Payload */
+      payload?: unknown;
+      /** Result */
+      result?: unknown;
+      /** Started At */
+      started_at?: string | null;
+      /** Status */
+      status: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -1559,6 +1611,74 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Durable Jobs */
+  list_durable_jobs_api_jobs_get: {
+    parameters: {
+      query?: {
+        job_type?: string | null;
+        status?: ("queued" | "running" | "succeeded" | "failed" | "cancelled") | null;
+        limit?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DurableJobListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Durable Job */
+  get_durable_job_api_jobs__job_id__get: {
+    parameters: {
+      path: {
+        job_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DurableJobResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Cancel Durable Job */
+  cancel_durable_job_api_jobs__job_id__cancel_post: {
+    parameters: {
+      path: {
+        job_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DurableJobResponse"];
         };
       };
       /** @description Validation Error */

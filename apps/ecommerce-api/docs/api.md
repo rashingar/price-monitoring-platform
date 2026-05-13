@@ -65,6 +65,18 @@ Rules for API changes:
 Catalog, Price Monitoring, observations, history, and alerts require a
 configured, reachable, migrated PostgreSQL database.
 
+Durable Ecommerce job inspection also requires the migrated Ecommerce database:
+
+```text
+GET  /api/jobs
+GET  /api/jobs/{job_id}
+POST /api/jobs/{job_id}/cancel
+```
+
+Use these routes to inspect queued/running/completed long workflows and request
+cancellation. Workflow-specific execution should persist through
+`ecommerce.jobs.durable` before adding feature-specific run history.
+
 These routes are useful without PostgreSQL:
 
 - `GET /api/health`

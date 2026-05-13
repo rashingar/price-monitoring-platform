@@ -32,6 +32,7 @@ REQUIRED_PRICE_MONITORING_TABLES = (
     "price_observation_listings",
     "source_url_discovery_runs",
     "source_url_candidates",
+    "ecommerce_jobs",
 )
 
 def get_alembic_head_revision() -> str | None:

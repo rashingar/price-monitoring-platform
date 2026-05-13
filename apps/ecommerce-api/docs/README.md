@@ -101,6 +101,31 @@ To inspect the SQL without connecting to PostgreSQL:
 alembic upgrade head --sql
 ```
 
+## Durable Ecommerce Jobs
+
+`ecommerce_jobs` is the shared DB-backed job primitive for long Ecommerce
+workflows. It stores job type, status, JSON payload/result, error message,
+timestamps, heartbeat, attempts, and cancellation requests. It is intentionally
+small and does not introduce Celery, Redis, RQ, or a scheduler.
+
+Current statuses are `queued`, `running`, `succeeded`, `failed`, and
+`cancelled`. New Vendor Sources capture, Source URL Agent, URL validation,
+diagnostics, and Price Monitoring execution code should migrate onto this
+primitive when durable inspection/cancellation is needed. Product Factory stays
+separate and must not import these internals.
+
+Operators can inspect and request cancellation through:
+
+```text
+GET  /api/jobs
+GET  /api/jobs/{job_id}
+POST /api/jobs/{job_id}/cancel
+```
+
+The backend helper in `ecommerce.jobs.durable` includes synchronous execution
+for API routes and tests. A future worker command can reuse the same repository
+functions to lease and execute queued rows outside request handling.
+
 ## Testing Profiles
 
 Codex prompts that touch only Ecommerce API backend files should prefer:

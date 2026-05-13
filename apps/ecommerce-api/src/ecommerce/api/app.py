@@ -16,6 +16,7 @@ from ecommerce.api.routes_catalog import router as catalog_router
 from ecommerce.api.routes_files import router as files_router
 from ecommerce.api.routes_health import router as health_router
 from ecommerce.api.routes_ignore import router as ignore_router
+from ecommerce.api.routes_jobs import router as jobs_router
 from ecommerce.api.routes_paths import router as paths_router
 from ecommerce.api.routes_price_alerts import router as price_alerts_router
 from ecommerce.api.routes_price_monitoring import router as price_monitoring_router
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(ignore_router)
     app.include_router(files_router)
     app.include_router(paths_router)
+    app.include_router(jobs_router)
     app.include_router(price_monitoring_router)
     app.include_router(price_alerts_router)
     app.include_router(product_sources_router)
