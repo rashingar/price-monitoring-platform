@@ -1,12 +1,58 @@
 # Price Monitoring Platform
 
-Price Monitoring Platform is the local operator monorepo for Product Factory,
-Ecommerce API, and the web console. It contains the three app runtimes, mirrored
-API contracts, generated web API type artifacts, and root setup/dev/check
-scripts used for day-to-day local operation.
+Price Monitoring Platform is the local operator monorepo for:
 
-Monorepo migration is complete. New work should start from current
-architecture, current contracts, and current operator runbooks.
+- Product Factory product preparation and OpenCart export.
+- Ecommerce catalog, source URL, capture, price monitoring, alerts, review, and
+  export workflows.
+- The React web console used by operators.
+
+Most day-to-day work starts from the repository root in PowerShell. The main
+exception is Alembic: Ecommerce migrations must be run from
+`apps/ecommerce-api` because its `alembic.ini` uses app-relative paths.
+
+## Operator Quick Start
+
+For a new machine, run setup once from the repository root:
+
+```powershell
+.\scripts\setup\root-venv.ps1
+.\scripts\setup\python-deps.ps1
+.\scripts\setup\web.ps1
+.\scripts\setup\check-local.ps1
+```
+
+For daily local work, start the three services in separate PowerShell windows:
+
+```powershell
+.\scripts\dev\product-factory-api.ps1
+.\scripts\dev\ecommerce-api.ps1
+.\scripts\dev\web.ps1
+```
+
+Open the operator console:
+
+```text
+http://127.0.0.1:5173
+```
+
+Useful health checks:
+
+- Product Factory API: `http://127.0.0.1:8000/api/health`
+- Ecommerce API: `http://127.0.0.1:8001/api/health`
+- Ecommerce DB readiness:
+  `http://127.0.0.1:8001/api/price-monitoring/db/status`
+
+Before committing, run the check that matches your change:
+
+```powershell
+.\scripts\check\hygiene.ps1
+.\scripts\test\codex-ecommerce.ps1
+.\scripts\test\codex-product-factory.ps1
+.\scripts\contracts\check-web-types.ps1
+```
+
+Use `.\scripts\test\fast.ps1` for a broader local smoke pass.
 
 ## App Map
 
@@ -25,6 +71,29 @@ architecture, current contracts, and current operator runbooks.
 
 The two Python APIs are separate runtimes. Do not merge Product Factory and
 Ecommerce API code, packages, routes, or databases as part of local setup.
+
+## Working Directory Rules
+
+Use the repository root for setup, dev server scripts, contract scripts, web
+commands, and most tests:
+
+```powershell
+.\scripts\dev\ecommerce-api.ps1
+.\scripts\contracts\check-web-types.ps1
+```
+
+Use `apps/ecommerce-api` for Alembic:
+
+```powershell
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m alembic upgrade head
+Pop-Location
+```
+
+Running Alembic from the repository root with
+`-c apps\ecommerce-api\alembic.ini` is not equivalent. The ini file contains
+`script_location = migrations`, so from the root Alembic looks for a missing
+root-level `migrations` folder.
 
 ## First Run
 
@@ -95,8 +164,59 @@ Push-Location apps\ecommerce-api
 Pop-Location
 ```
 
+Verify database readiness:
+
+```powershell
+.\.venv\Scripts\python.exe -m ecommerce.jobs.check_db_setup
+```
+
+If that command cannot import `ecommerce`, rerun:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
+```
+
 See [Ecommerce PostgreSQL Local Setup](docs/runbooks/ecommerce-postgresql-local.md)
 for backup, rename, and fresh-create procedures.
+
+## Common Operator Tasks
+
+Regenerate Ecommerce OpenAPI after an intentional API change:
+
+```powershell
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.export_openapi_snapshot
+Pop-Location
+Copy-Item apps\ecommerce-api\docs\contracts\openapi.ecommerce.json packages\contracts\openapi.ecommerce.json
+.\scripts\contracts\generate-web-types.ps1
+.\scripts\contracts\check-web-types.ps1
+```
+
+Backfill normalized Price Monitoring listing rows from legacy offer
+observations:
+
+```powershell
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.backfill_price_observation_listings
+Pop-Location
+```
+
+Backfill a single Price Monitoring run:
+
+```powershell
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m ecommerce.jobs.backfill_price_observation_listings --run-id RUN_ID
+Pop-Location
+```
+
+Run focused Price Monitoring checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -vv apps/ecommerce-api/tests/test_price_monitoring_review_export.py
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m pytest -vv tests/test_price_monitoring_db.py tests/test_price_monitoring_db_policy.py
+Pop-Location
+```
 
 ## Start Commands
 
@@ -220,6 +340,33 @@ types:
 Generated web API type files under `apps/web/src/api/generated` are committed
 contract artifacts. Do not edit them by hand. Existing manual web clients remain
 the runtime fetch implementation for now.
+
+## Troubleshooting
+
+`alembic upgrade head` says `Path doesn't exist: migrations`
+
+- You are probably running Alembic from the repository root.
+- Run it from `apps/ecommerce-api` with
+  `..\..\.venv\Scripts\python.exe -m alembic upgrade head`.
+
+Price Monitoring pages say the database is not ready
+
+- Open `http://127.0.0.1:8001/api/price-monitoring/db/status`.
+- Check `missing_tables`, `alembic_up_to_date`, and `blocking_reasons`.
+- Apply migrations from `apps/ecommerce-api`, then recheck status.
+
+OpenAPI contract checks fail
+
+- Regenerate the owning app snapshot first.
+- Copy the app-local snapshot into `packages/contracts`.
+- Run `.\scripts\contracts\generate-web-types.ps1`.
+- Run `.\scripts\contracts\check-web-types.ps1`.
+
+Frontend type errors after backend response changes
+
+- Update manual types in `apps/web/src/api/*Types.ts` when needed.
+- Regenerate generated OpenAPI types; do not hand-edit
+  `apps/web/src/api/generated/*.ts`.
 
 ## Artifact Policy
 
