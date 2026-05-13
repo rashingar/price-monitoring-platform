@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from ecommerce.source_url_agent.browser import PageSnapshot, SourceUrlBrowserSession
 from ecommerce.source_url_agent.evidence import error_evidence, extract_page_evidence
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.sources import SourceDefinition
-from ecommerce.utils.text import collapse_internal_spaces
+from ecommerce.utils.text import collapse_internal_spaces, normalize_product_text
+
+
+TEMPLATE_FIELD_RE = re.compile(r"{([A-Za-z_][A-Za-z0-9_]*)}")
 
 
 @dataclass(frozen=True)
@@ -26,10 +30,29 @@ class SourceSearchResult:
 
 
 def generate_search_queries(product: AgentProduct, source: SourceDefinition) -> list[str]:
-    queries: list[str] = []
-    if product.mpn and product.manufacturer:
-        queries.append(f"{product.manufacturer} {product.mpn}")
-    return _dedupe_queries(queries)
+    strategy = SourceQueryStrategy(source)
+    return strategy.generate(product)
+
+
+@dataclass(frozen=True)
+class SourceQueryStrategy:
+    source: SourceDefinition
+
+    def generate(self, product: AgentProduct) -> list[str]:
+        candidates: list[str] = []
+        candidates.extend(self._template_queries(product))
+        candidates.extend(_generic_query_candidates(product))
+        return _dedupe_queries(candidates)[: self.source.max_searches_per_product]
+
+    def _template_queries(self, product: AgentProduct) -> list[str]:
+        fields = _template_fields(product)
+        queries: list[str] = []
+        for template in self.source.query_templates:
+            required_fields = TEMPLATE_FIELD_RE.findall(template)
+            if not required_fields or any(not fields.get(field) for field in required_fields):
+                continue
+            queries.append(template.format_map(fields))
+        return queries
 
 
 def discover_source_evidence(
@@ -143,3 +166,54 @@ def _dedupe_queries(values: list[str]) -> list[str]:
         seen.add(key)
         queries.append(query)
     return queries
+
+
+def _generic_query_candidates(product: AgentProduct) -> list[str]:
+    queries: list[str] = []
+    manufacturers = _manufacturer_names(product)
+    if product.mpn:
+        for manufacturer in manufacturers:
+            queries.append(_join_query(manufacturer, product.mpn))
+        queries.append(product.mpn)
+    if product.model:
+        for manufacturer in manufacturers:
+            queries.append(_join_query(manufacturer, product.model))
+        queries.append(product.model)
+    if product.name:
+        for manufacturer in manufacturers:
+            queries.append(_join_manufacturer_and_name(manufacturer, product.name))
+        queries.append(product.name)
+    return queries
+
+
+def _template_fields(product: AgentProduct) -> dict[str, str]:
+    return {
+        "manufacturer": collapse_internal_spaces(product.manufacturer),
+        "brand": collapse_internal_spaces(product.manufacturer),
+        "mpn": collapse_internal_spaces(product.mpn),
+        "model": collapse_internal_spaces(product.model),
+        "name": collapse_internal_spaces(product.name),
+        "product_name": collapse_internal_spaces(product.name),
+        "title": collapse_internal_spaces(product.name),
+    }
+
+
+def _manufacturer_names(product: AgentProduct) -> tuple[str, ...]:
+    manufacturer = collapse_internal_spaces(product.manufacturer)
+    return (manufacturer,) if manufacturer else ()
+
+
+def _join_query(*values: str) -> str:
+    return collapse_internal_spaces(" ".join(value for value in values if value))
+
+
+def _join_manufacturer_and_name(manufacturer: str, name: str) -> str:
+    manufacturer_text = collapse_internal_spaces(manufacturer)
+    name_text = collapse_internal_spaces(name)
+    if not manufacturer_text or not name_text:
+        return ""
+    manufacturer_norm = normalize_product_text(manufacturer_text)
+    name_norm = normalize_product_text(name_text)
+    if name_norm == manufacturer_norm or name_norm.startswith(f"{manufacturer_norm} "):
+        return name_text
+    return _join_query(manufacturer_text, name_text)

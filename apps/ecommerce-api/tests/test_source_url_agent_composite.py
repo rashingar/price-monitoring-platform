@@ -133,7 +133,7 @@ def test_single_oven_rejects_candidate_with_ceramic_hob_phrase_and_extra_identif
     assert score.confidence_score == 0.0
     assert score.match_status == "not_found"
     assert score.match_method == "composite_product_mismatch"
-    assert not keep_candidate(candidate)
+    assert keep_candidate(candidate)
     assert candidate.evidence_json["composite"] == {
         "is_mismatch": True,
         "reason": "candidate_contains_composite_phrase",
@@ -155,9 +155,15 @@ def test_single_oven_rejects_candidate_with_plus_joined_extra_identifier() -> No
 @pytest.mark.parametrize(
     "title,marker",
     [
+        ("Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2", "me esties"),
         ("Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c0\u03b1\u03b3\u03c9\u03b3\u03b9\u03ba\u03ad\u03c2 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2", "me epagogikes esties"),
+        ("Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c0\u03b1\u03b3\u03c9\u03b3\u03b9\u03ba\u03ad\u03c2", "me epagogikes"),
         ("Bosch HBA514BS3 \u03bc\u03b5 \u03ba\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03ad\u03c2 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2", "me keramikes esties"),
+        ("Bosch HBA514BS3 \u03bc\u03b5 \u03ba\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03ad\u03c2", "me keramikes"),
         ("Bosch HBA514BS3 \u03bc\u03b5 \u039a\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03b5\u03c2 \u0395\u03c3\u03c4\u03b9\u03b5\u03c2", "me keramikes esties"),
+        ("Bosch \u03c6\u03bf\u03cd\u03c1\u03bd\u03bf\u03c2 \u03bc\u03b5 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2 HBA514BS3", "foyrnos me esties"),
+        ("Bosch fournos me esties HBA514BS3", "fournos me esties"),
+        ("Bosch HBA514BS3 \u03bc\u03b1\u03b6\u03af \u03bc\u03b5 PKE61RBA2E", "mazi me"),
     ],
 )
 def test_single_oven_rejects_greek_composite_phrase_variants(title: str, marker: str) -> None:
@@ -192,7 +198,15 @@ def test_single_oven_rejects_expected_identifier_connected_to_extra_identifier(t
     assert score.match_method == "composite_product_mismatch"
 
 
-@pytest.mark.parametrize("title", ["Bosch HBA514BS3 set PKE61RBA2E", "Bosch HBA514BS3 bundle PKE61RBA2E"])
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Bosch HBA514BS3 set PKE61RBA2E",
+        "Bosch HBA514BS3 \u03c3\u03b5\u03c4 PKE61RBA2E",
+        "Bosch HBA514BS3 bundle PKE61RBA2E",
+        "Bosch HBA514BS3 \u03c0\u03b1\u03ba\u03ad\u03c4\u03bf PKE61RBA2E",
+    ],
+)
 def test_single_oven_rejects_bundle_words_when_extra_identifier_exists(title: str) -> None:
     product = _oven_product()
     score, evidence, _ = _score(product, title)
@@ -226,7 +240,21 @@ def test_valid_catalog_composite_product_is_not_rejected() -> None:
     assert score.confidence_score == 1.0
 
 
-def test_source_url_agent_run_does_not_persist_composite_mismatch_candidate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_valid_catalog_composite_phrase_product_is_not_rejected() -> None:
+    product = _oven_product(
+        name="Bosch HBA514BS3 \u03c6\u03bf\u03cd\u03c1\u03bd\u03bf\u03c2 \u03bc\u03b5 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2",
+    )
+    score, evidence, _ = _score(product, product.name)
+    result = detect_composite_mismatch(product, evidence)
+
+    assert not result.is_mismatch
+    assert score.match_method == "exact_mpn_and_brand"
+    assert score.confidence_score == 1.0
+
+
+def test_source_url_agent_run_persists_composite_mismatch_candidate_for_operator_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     _create_schema(database_url)
@@ -255,12 +283,17 @@ def test_source_url_agent_run_does_not_persist_composite_mismatch_candidate(tmp_
         )
 
         assert session.query(SourceUrlDiscoveryRun).count() == 1
-        assert session.query(SourceUrlCandidate).count() == 0
+        stored_candidate = session.query(SourceUrlCandidate).one()
         assert session.query(SourceUrl).count() == 0
+        assert stored_candidate.match_status == "not_found"
+        assert stored_candidate.match_method == "composite_product_mismatch"
+        assert stored_candidate.evidence_json["composite"]["extra_identifiers"] == ["PKE61RBA2E"]
 
     assert result.candidates[0].confidence_score == 0.0
     assert result.candidates[0].match_method == "composite_product_mismatch"
-    assert result.summary["persisted_candidate_count"] == 0
-    assert result.summary["discarded_low_confidence_candidate_count"] == 1
+    assert result.summary["persisted_candidate_count"] == 1
+    assert result.summary["discarded_low_confidence_candidate_count"] == 0
     with result.artifacts.source_url_results.open("r", encoding="utf-8", newline="") as handle:
-        assert list(csv.DictReader(handle)) == []
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["match_method"] == "composite_product_mismatch"
+    assert "PKE61RBA2E" in rows[0]["notes"]

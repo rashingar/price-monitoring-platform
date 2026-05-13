@@ -236,10 +236,26 @@ If the default port is already used by another service, start on a free port:
 
 Source URL Agent Mode is a local, supervised discovery pipeline for finding
 public product URLs across marketplaces and direct vendors. It reads products
-from a CSV or the DB-backed catalog, searches configured public pages with the
-manufacturer + MPN query only, extracts page evidence, scores candidates
+from a CSV or the DB-backed catalog, searches configured public pages with a
+bounded ranked query strategy, extracts page evidence, scores candidates
 conservatively, and writes repeatable artifacts under
 `output/ecommerce/source-url-agent/runs/{run_id}`.
+
+The default query order is manufacturer + MPN, MPN only, manufacturer + model,
+model only, manufacturer + product name, then product name only. Source
+definitions can prepend `query_templates`, and all variants are deduplicated
+case-insensitively before the source-specific `max_searches_per_product` limit
+is applied.
+
+Automatic writes remain conservative: only exact MPN and brand matches above
+`0.90` can be high-confidence. Title-only matches, marketplace body-only MPN
+evidence, and competing plausible candidates stay out of auto-apply and require
+review. Composite mismatch detection rejects single catalog products when a
+candidate looks like a bundle, including Greek/local markers such as
+`με εστίες`, `με επαγωγικές`, `με κεραμικές`, `φούρνος με εστίες`, `σετ`,
+`πακέτο`, `μαζί με`, or double-MPN forms such as `HBA514BS3 + PKE61RBA2E`.
+Catalog rows that are themselves composite/bundle products are not rejected for
+those markers.
 
 Dry-run from CSV:
 

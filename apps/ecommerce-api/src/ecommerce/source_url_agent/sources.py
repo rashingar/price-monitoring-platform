@@ -26,6 +26,7 @@ class SourceDefinition:
     public_search_url_templates: tuple[str, ...]
     product_url_patterns: tuple[str, ...]
     blocked_url_patterns: tuple[str, ...]
+    query_templates: tuple[str, ...]
     rate_limit_seconds: float
     max_candidates_per_product: int
     max_searches_per_product: int
@@ -42,6 +43,7 @@ class SourceDefinition:
             public_search_url_templates=tuple(_string_list(payload.get("public_search_url_templates"))),
             product_url_patterns=tuple(_string_list(payload.get("product_url_patterns"))),
             blocked_url_patterns=tuple(_string_list(payload.get("blocked_url_patterns"))),
+            query_templates=tuple(_string_list(payload.get("query_templates"))),
             rate_limit_seconds=float(payload.get("rate_limit_seconds", 2.0)),
             max_candidates_per_product=max(1, int(payload.get("max_candidates_per_product", 6))),
             max_searches_per_product=max(1, int(payload.get("max_searches_per_product", 3))),

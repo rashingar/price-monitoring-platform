@@ -120,6 +120,7 @@ source_type
 enabled
 expected_listing_field
 public_search_url_templates
+query_templates
 product_url_patterns
 blocked_url_patterns
 rate_limit_seconds
@@ -268,11 +269,21 @@ Rules:
 
 For each product/source pair, use a bounded strategy.
 
-Preferred query order:
+Preferred generic query order:
 
 
-1. "{manufacturer}" "{mpn}" site:{domain}
-2. source-specific public search page for the manufacturer + MPN query, when allowed and configured
+1. "{manufacturer} {mpn}"
+2. "{mpn}"
+3. "{manufacturer} {model}"
+4. "{model}"
+5. "{manufacturer} {product_name}"
+6. "{product_name}"
+
+Source definitions may provide optional `query_templates` to prepend
+source-specific query variants before the generic defaults. Template fields
+must be present on the product before a query is emitted. All queries are
+deduplicated case-insensitively and truncated to `max_searches_per_product`
+before public search URLs are built.
 
 
 Rules:
@@ -380,6 +391,24 @@ Hard rule:
 
 
 Title-only matches must never be auto-applied to source_urls.
+
+Additional conservative rules:
+
+* Marketplace MPN evidence found only in body text must never be auto-applied.
+* Multiple plausible candidates must stay `needs_review`.
+* Composite/bundle mismatch candidates should include notes and evidence JSON
+  explaining the marker and extra identifiers.
+
+Composite mismatch rules:
+
+* Reject single catalog products when the candidate title/body/URL joins the
+  expected identifier with a second product-code-like identifier, for example
+  `HBA514BS3 + PKE61RBA2E`.
+* Treat Greek and transliterated bundle phrases such as `με εστίες`,
+  `με επαγωγικές`, `με κεραμικές`, `φούρνος με εστίες`, `σετ`, `πακέτο`, and
+  `μαζί με` as mismatch evidence for single catalog products.
+* Do not reject catalog products that are themselves composite or bundle
+  products based on their MPN/name.
 
 
 ## Ambiguity Rules

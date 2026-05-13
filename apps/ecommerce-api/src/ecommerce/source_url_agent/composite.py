@@ -12,11 +12,17 @@ from ecommerce.utils.text import normalize_product_text
 
 
 COMPOSITE_PHRASE_MARKERS: tuple[str, ...] = (
+    "me esties",
+    "me epagogikes",
     "me epagogikes esties",
+    "me keramikes",
     "me keramikes esties",
+    "foyrnos me esties",
+    "fournos me esties",
+    "mazi me",
 )
-BUNDLE_WORD_MARKERS: tuple[str, ...] = ("set", "kit", "bundle", "combo", "syndyasmos")
-CONNECTOR_MARKERS: tuple[str, ...] = ("+", "&", "kai", "and", "with", "me")
+BUNDLE_WORD_MARKERS: tuple[str, ...] = ("set", "kit", "bundle", "combo", "syndyasmos", "paketo", "package")
+CONNECTOR_MARKERS: tuple[str, ...] = ("+", "&", "kai", "and", "with", "me", "mazi")
 IDENTIFIER_RE = re.compile(r"(?<![A-Za-z0-9])(?=[A-Za-z0-9]{5,})(?:[A-Za-z]*\d){2,}[A-Za-z0-9]*(?![A-Za-z0-9])")
 
 
@@ -77,11 +83,11 @@ def detect_composite_mismatch(product: AgentProduct, evidence: PageEvidence) -> 
 def catalog_product_appears_composite(product: AgentProduct) -> bool:
     product_text = " ".join((product.mpn, product.name))
     identifiers = catalog_product_identifiers(product)
+    if _composite_phrase_markers(product_text) or _bundle_word_markers(product_text):
+        return True
     if len(identifiers) < 2:
         return False
     if len(extract_product_code_identifiers(product.mpn)) >= 2:
-        return True
-    if _composite_phrase_markers(product_text) or _bundle_word_markers(product_text):
         return True
     if _expected_and_extra_are_connected((product_text,), identifiers, identifiers):
         return True
@@ -152,7 +158,14 @@ def _jsonld_values(value: object) -> str:
 
 def _composite_phrase_markers(value: str) -> tuple[str, ...]:
     normalized = f" {normalize_product_text(value)} "
-    return tuple(marker for marker in COMPOSITE_PHRASE_MARKERS if f" {marker} " in normalized)
+    markers: list[str] = []
+    for marker in sorted(COMPOSITE_PHRASE_MARKERS, key=len, reverse=True):
+        if f" {marker} " not in normalized:
+            continue
+        if any(f" {marker} " in f" {existing} " for existing in markers):
+            continue
+        markers.append(marker)
+    return tuple(marker for marker in COMPOSITE_PHRASE_MARKERS if marker in markers)
 
 
 def _bundle_word_markers(value: str) -> tuple[str, ...]:
