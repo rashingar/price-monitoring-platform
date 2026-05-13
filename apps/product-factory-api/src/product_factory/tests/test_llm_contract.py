@@ -151,6 +151,32 @@ def test_build_seo_meta_context_requires_model_name_when_available() -> None:
     assert "instead of the raw MPN" in context["writer_rules"]["meta_description_rule"]
 
 
+def test_build_intro_text_context_ignores_internal_skroutz_family_as_model_name() -> None:
+    context = build_intro_text_context(
+        cli=CLIInput(model="415376", url="https://www.skroutz.gr/s/example.html"),
+        parsed=ParsedProduct(
+            source=SourceProductData(
+                brand="Midea",
+                mpn="AIRGRN-21HRFN8-I",
+                name="Midea AIRGRN-21HRFN8-I - Κλιματιστικό 21000 BTU",
+                skroutz_family="air_conditioner",
+                hero_summary="Air Green με AI EcoMaster.",
+            )
+        ),
+        taxonomy=TaxonomyResolution(leaf_category="Κλιματιστικό", sub_category="Τοίχου"),
+        deterministic_product={
+            "name": "Midea AIRGRN-21HRFN8-I - Κλιματιστικό 21000 BTU",
+            "brand": "Midea",
+            "mpn": "AIRGRN-21HRFN8-I",
+            "category_phrase": "Κλιματιστικό",
+        },
+    )
+
+    assert context["product"]["model_name"] == ""
+    assert context["product"]["preferred_identifier"] == "AIRGRN-21HRFN8-I"
+    assert context["product"]["copy_name"] == "Midea AIRGRN-21HRFN8-I Κλιματιστικό"
+
+
 def test_validate_intro_text_output_accepts_plain_text_only() -> None:
     normalized, errors = validate_intro_text_output(" ".join(["λέξη"] * INTRO_MIN_WORDS))
 

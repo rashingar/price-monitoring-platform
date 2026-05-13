@@ -260,7 +260,6 @@ def _extract_model_name(source: SourceProductData, deterministic_product: dict[s
         deterministic_product.get("model_name", ""),
         deterministic_product.get("commercial_model_name", ""),
         deterministic_product.get("model_family", ""),
-        source.skroutz_family,
     ]
     for candidate in explicit_candidates:
         model_name = normalize_whitespace(str(candidate or ""))
@@ -303,6 +302,8 @@ def _looks_like_model_name(value: str, brand: str, mpn: str) -> bool:
         return False
     tokens = normalized.split()
     if len(tokens) > 6:
+        return False
+    if "_" in normalized:
         return False
     if len(tokens) == 1 and re.fullmatch(r"[A-Z0-9._/-]+", normalized):
         return False
