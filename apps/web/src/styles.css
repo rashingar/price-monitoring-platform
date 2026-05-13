@@ -196,6 +196,10 @@ textarea {
   min-height: 40px;
 }
 
+.review-debug-toolbar {
+  align-items: end;
+}
+
 .quick-links {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1054,6 +1058,11 @@ textarea {
 .debug-card summary {
   width: fit-content;
   cursor: pointer;
+}
+
+.debug-card summary .status-badge {
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 .debug-card-body {

@@ -1140,8 +1140,10 @@ function RunSummaryBlock({
   const latestFetch = isRecord(run.latest_fetch) ? (run.latest_fetch as FetchPriceMonitoringResult) : null;
 
   return (
-    <div className="state-block">
-      <strong>Current run</strong>
+    <details className="state-block debug-card">
+      <summary>
+        <strong>Current run</strong>
+      </summary>
       <dl className="summary-grid workflow-summary-grid">
         <SummaryItem label="Run ID" value={getRunId(run)} />
         <SummaryItem label="Status" value={run.status} />
@@ -1200,7 +1202,7 @@ function RunSummaryBlock({
           </div>
         ) : null}
       </DebugDetails>
-    </div>
+    </details>
   );
 }
 
@@ -1284,15 +1286,15 @@ function FetchResultBlock({
     result.unmatched_observation_count ?? observations?.unmatched_count;
 
   return (
-    <div className="state-block">
-      <strong>Fetch result</strong>
-      {result.status ? (
-        <p>
+    <details className="state-block debug-card">
+      <summary>
+        <strong>Fetch result</strong>
+        {result.status ? (
           <span className={`status-badge ${getFetchStatusTone(result.status)}`}>
             {formatFetchStatus(result.status)}
           </span>
-        </p>
-      ) : null}
+        ) : null}
+      </summary>
       <dl className="summary-grid workflow-summary-grid">
         <SummaryItem label="Run ID" value={displayRunId} />
         <SummaryItem label="Source/vendor" value={formatSelectedSource(result.source)} />
@@ -1401,7 +1403,7 @@ function FetchResultBlock({
           </div>
         ) : null}
       </DebugDetails>
-    </div>
+    </details>
   );
 }
 
@@ -2671,6 +2673,7 @@ export function PriceMonitoringPage() {
   const fetchPollIntervalRef = useRef<number | null>(null);
   const fetchPollControllerRef = useRef<AbortController | null>(null);
   const restoredRunLoadedRef = useRef(false);
+  const autoReviewLoadKeyRef = useRef<string | null>(null);
   const [persistedState, setPersistedState, resetPersistedState] =
     usePersistentPageState<PriceMonitoringWorkflowState>(
       PRICE_MONITORING_STATE_KEY,
@@ -3666,6 +3669,30 @@ export function PriceMonitoringPage() {
       ? "Monitoring running..."
       : "Monitor prices";
 
+  useEffect(() => {
+    const runId = currentRunId.trim();
+    const selectedRun = currentRun;
+    const selectedRunId = selectedRun ? getRunId(selectedRun) : "";
+    if (!selectedRun || !runId || selectedRunId !== runId || !dbAvailable || isReviewBlockedByFetch) {
+      return;
+    }
+
+    const latestFetch = isRecord(selectedRun.latest_fetch)
+      ? (selectedRun.latest_fetch as FetchPriceMonitoringResult)
+      : null;
+    const autoReviewKey = [
+      runId,
+      fetchResult?.execution_id ?? latestFetch?.execution_id ?? "",
+      fetchResult?.status ?? latestFetch?.status ?? "",
+    ].join(":");
+    if (autoReviewLoadKeyRef.current === autoReviewKey) {
+      return;
+    }
+
+    autoReviewLoadKeyRef.current = autoReviewKey;
+    void loadReview();
+  }, [currentRun, currentRunId, dbAvailable, fetchResult?.execution_id, fetchResult?.status, isReviewBlockedByFetch]);
+
   const applyActions = async () => {
     const runId = currentRunId.trim();
     if (!runId) {
@@ -4178,14 +4205,6 @@ export function PriceMonitoringPage() {
           ) : null}
         </div>
 
-        {fetchResult?.status ? (
-          <p className="state-block">
-            <span className={`status-badge ${getFetchStatusTone(fetchResult.status)}`}>
-              {formatFetchStatus(fetchResult.status)}
-            </span>
-          </p>
-        ) : null}
-
         {fetchError ? (
           <>
             <ErrorState message={fetchError} />
@@ -4201,26 +4220,6 @@ export function PriceMonitoringPage() {
           />
         ) : null}
       </section>
-
-      <StoredObservationsSection
-        runId={currentRunId.trim()}
-        dbStatus={dbStatus}
-        isLoading={isStoredObservationLoading}
-        observations={storedObservations}
-        catalogSnapshot={catalogSnapshot}
-        observationError={storedObservationError}
-        catalogSnapshotError={catalogSnapshotError}
-        fetchResult={fetchResult}
-        matchStatus={storedMatchStatus}
-        includeUnmatched={includeUnmatchedObservations}
-        modelFilter={storedModelFilter}
-        mpnFilter={storedMpnFilter}
-        onMatchStatusChange={setStoredMatchStatus}
-        onIncludeUnmatchedChange={setIncludeUnmatchedObservations}
-        onModelFilterChange={setStoredModelFilter}
-        onMpnFilterChange={setStoredMpnFilter}
-        onRefresh={() => void loadStoredObservations(currentRunId.trim())}
-      />
 
       <section className="panel">
         <div className="section-heading">
@@ -4244,25 +4243,41 @@ export function PriceMonitoringPage() {
           </div>
         </div>
 
-        <div className="toolbar">
-          <label className="inline-field wide">
-            Enriched CSV path
-            <input
-              value={enrichedCsvPath}
-              onChange={(event) => setEnrichedCsvPath(event.target.value)}
-              placeholder="Leave empty for backend discovery"
-            />
-          </label>
-          <button
-            className="button primary"
-            type="button"
-            disabled={isReviewLoading || isReviewBlockedByFetch || !dbAvailable}
-            title={isReviewBlockedByFetch ? "Fetch is queued or running." : dbActionTitle}
-            onClick={() => void loadReview()}
-          >
-            {isReviewLoading ? "Loading review..." : "Load review"}
-          </button>
-        </div>
+        <DebugDetails title="Review debugging">
+          <div className="toolbar review-debug-toolbar">
+            <label className="inline-field wide">
+              Enriched CSV path
+              <input
+                value={enrichedCsvPath}
+                onChange={(event) => setEnrichedCsvPath(event.target.value)}
+                placeholder="Leave empty for backend discovery"
+              />
+            </label>
+            <button
+              className="button primary"
+              type="button"
+              disabled={isReviewLoading || isReviewBlockedByFetch || !dbAvailable}
+              title={isReviewBlockedByFetch ? "Fetch is queued or running." : dbActionTitle}
+              onClick={() => void loadReview()}
+            >
+              {isReviewLoading ? "Loading review..." : "Load review"}
+            </button>
+          </div>
+
+          {review ? (
+            <>
+              <dl className="summary-grid workflow-summary-grid">
+                <SummaryItem label="Run ID" value={review.run_id} />
+                {Object.entries(review.summary ?? {}).map(([key, value]) => (
+                  <SummaryItem key={key} label={key} value={value} />
+                ))}
+              </dl>
+              <ReviewArtifactsBlock review={review} onPreview={previewArtifact} />
+            </>
+          ) : (
+            <p className="muted">Review loads automatically for the selected run. Use this panel to override the enriched CSV path or reload manually.</p>
+          )}
+        </DebugDetails>
 
         {reviewError ? (
           <>
@@ -4272,21 +4287,6 @@ export function PriceMonitoringPage() {
         ) : null}
         {review ? (
           <>
-            <dl className="summary-grid workflow-summary-grid">
-              <SummaryItem label="Run ID" value={review.run_id} />
-              <SummaryItem label="Total" value={review.summary?.total} />
-              <SummaryItem label="Review required" value={review.summary?.review_required} />
-              <SummaryItem label="Not exportable" value={review.summary?.not_exportable} />
-            </dl>
-            <DebugDetails title="Review debugging">
-              <dl className="summary-grid">
-                {Object.entries(review.summary ?? {}).map(([key, value]) => (
-                  <SummaryItem key={key} label={key} value={value} />
-                ))}
-              </dl>
-              <ReviewArtifactsBlock review={review} onPreview={previewArtifact} />
-            </DebugDetails>
-
             {review.items.length === 0 ? (
               <EmptyState title="No review rows" message="The backend returned an empty review." />
             ) : (
@@ -4331,6 +4331,26 @@ export function PriceMonitoringPage() {
           <ApplyActionsResultBlock result={applyResult} onPreview={previewArtifact} />
         ) : null}
       </section>
+
+      <StoredObservationsSection
+        runId={currentRunId.trim()}
+        dbStatus={dbStatus}
+        isLoading={isStoredObservationLoading}
+        observations={storedObservations}
+        catalogSnapshot={catalogSnapshot}
+        observationError={storedObservationError}
+        catalogSnapshotError={catalogSnapshotError}
+        fetchResult={fetchResult}
+        matchStatus={storedMatchStatus}
+        includeUnmatched={includeUnmatchedObservations}
+        modelFilter={storedModelFilter}
+        mpnFilter={storedMpnFilter}
+        onMatchStatusChange={setStoredMatchStatus}
+        onIncludeUnmatchedChange={setIncludeUnmatchedObservations}
+        onModelFilterChange={setStoredModelFilter}
+        onMpnFilterChange={setStoredMpnFilter}
+        onRefresh={() => void loadStoredObservations(currentRunId.trim())}
+      />
 
       <section className="panel">
         <div className="section-heading">

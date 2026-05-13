@@ -908,10 +908,41 @@ describe("platform mocked page smoke tests", () => {
     expect(runRow).not.toBeNull();
     fireEvent.click(within(runRow as HTMLTableRowElement).getByRole("button", { name: "Use" }));
 
+    const runDebuggingSummary = await screen.findByText("Run debugging");
+    expect(runDebuggingSummary).not.toBeVisible();
+    const currentRunSummary = screen.getAllByText("Current run").find((element) => element.closest("summary"));
+    expect(currentRunSummary).toBeDefined();
+    fireEvent.click((currentRunSummary as HTMLElement).closest("summary") as HTMLElement);
+    expect(runDebuggingSummary).toBeVisible();
+    fireEvent.click(runDebuggingSummary.closest("summary") as HTMLElement);
+
+    await expect(screen.findAllByText("Fetch result")).resolves.not.toHaveLength(0);
+    const fetchResultSummary = screen.getAllByText("Fetch result").find((element) => element.closest("summary"));
+    expect(fetchResultSummary).toBeDefined();
+    const fetchResultToggle = (fetchResultSummary as HTMLElement).closest("summary") as HTMLElement;
+    const fetchResultDetails = fetchResultToggle.closest("details") as HTMLDetailsElement;
+    expect(fetchResultToggle).not.toBeNull();
+    expect(within(fetchResultToggle).getByText("Succeeded")).toBeInTheDocument();
+    expect(fetchResultDetails.open).toBe(false);
+    fireEvent.click(fetchResultToggle);
+    expect(fetchResultDetails.open).toBe(true);
+    expect(screen.getByText("Stored observations")).toBeInTheDocument();
+
+    const reviewHeading = screen.getByRole("heading", { name: "Competitor results" });
+    const storedHeading = screen.getByRole("heading", { name: "Stored Observations" });
+    expect(
+      Boolean(reviewHeading.compareDocumentPosition(storedHeading) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBe(true);
+    await expect(screen.findByText("Mock Store")).resolves.toBeInTheDocument();
+    expect(screen.getByText("Enriched CSV path")).not.toBeVisible();
+    const reviewDebuggingSummary = screen.getByText("Review debugging").closest("summary") as HTMLElement;
+    fireEvent.click(reviewDebuggingSummary);
+    expect(screen.getByText("Enriched CSV path")).toBeVisible();
+    expect(screen.getByText("match_price")).toBeVisible();
+
     await expect(screen.findAllByText("Monitoring URL eligibility")).resolves.not.toHaveLength(0);
     expect(screen.getAllByText("Skipped missing active URL").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Source URL monitoring").length).toBeGreaterThan(0);
-    await expect(screen.findAllByText("Prior observations")).resolves.not.toHaveLength(0);
     expect(screen.queryByText("Replaced observations")).not.toBeInTheDocument();
   });
 
@@ -1028,6 +1059,7 @@ describe("platform mocked page smoke tests", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Preview" })).toBeDisabled());
     expect(screen.getByRole("button", { name: "Create run" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Monitor prices" })).toBeDisabled();
+    fireEvent.click(screen.getByText("Review debugging").closest("summary") as HTMLElement);
     expect(screen.getByRole("button", { name: "Load review" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Export OpenCart price update CSV" })).toBeDisabled();
   });
@@ -1045,6 +1077,7 @@ describe("platform mocked page smoke tests", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Preview" })).toBeEnabled());
     expect(screen.getByRole("button", { name: "Create run" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Monitor prices" })).toBeEnabled();
+    fireEvent.click(screen.getByText("Review debugging").closest("summary") as HTMLElement);
     expect(screen.getByRole("button", { name: "Load review" })).toBeEnabled();
   });
 
