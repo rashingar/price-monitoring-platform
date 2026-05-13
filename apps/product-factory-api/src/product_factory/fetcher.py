@@ -109,7 +109,12 @@ class ElectronetFetcher:
                 context = browser.new_context(user_agent=self.user_agent, locale="el-GR")
                 page = context.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=45000)
-                page.wait_for_load_state("networkidle", timeout=15000)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=15000)
+                except Exception:
+                    # Some vendor pages keep background requests open after the
+                    # product DOM is usable.
+                    pass
                 html = page.content()
                 final_url = page.url
                 browser.close()

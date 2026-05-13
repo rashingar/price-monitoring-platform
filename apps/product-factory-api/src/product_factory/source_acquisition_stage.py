@@ -6,6 +6,7 @@ from typing import Any, Callable, Mapping
 
 from .fetcher import ElectronetFetcher, FetchError
 from .models import CLIInput, FetchResult, GalleryImage, ParsedProduct, SourceProductData, SpecItem, SpecSection
+from .normalize import repair_mojibake_text
 from .prepare_provider_resolution import (
     PrepareProviderResolutionResult,
     resolve_prepare_provider_resolution,
@@ -75,6 +76,7 @@ def execute_source_acquisition_stage(
             provider_resolution.parsed.warnings.extend(source_capture_warnings)
     fetch = provider_resolution.fetch
     parsed = provider_resolution.parsed
+    _repair_source_product_text(parsed.source)
     extracted_gallery_count = len(parsed.source.gallery_images)
     gallery_images_for_download = _inject_energy_label_into_gallery(parsed.source)
     requested_gallery_photos = _resolve_requested_gallery_photos(photos, parsed.source)
@@ -402,3 +404,55 @@ def _resolve_requested_gallery_photos(requested_photos: int, source: SourceProdu
     if not str(source.energy_label_asset_url or "").strip():
         return requested
     return requested + 1
+
+
+def _repair_source_product_text(source: SourceProductData) -> None:
+    text_fields = (
+        "breadcrumbs",
+        "category_tag_text",
+        "taxonomy_source_category",
+        "taxonomy_match_type",
+        "taxonomy_rule_id",
+        "taxonomy_escalation_reason",
+        "product_code",
+        "brand",
+        "name",
+        "hero_summary",
+        "price_text",
+        "installments_text",
+        "delivery_text",
+        "pickup_text",
+        "manufacturer_source_text",
+        "presentation_source_html",
+        "presentation_source_text",
+        "mpn",
+    )
+    for field_name in text_fields:
+        value = getattr(source, field_name)
+        if isinstance(value, str):
+            setattr(source, field_name, repair_mojibake_text(value))
+        elif isinstance(value, list):
+            setattr(source, field_name, [repair_mojibake_text(item) if isinstance(item, str) else item for item in value])
+    _repair_gallery_images(source.gallery_images)
+    _repair_gallery_images(source.besco_images)
+    _repair_spec_items(source.key_specs)
+    _repair_spec_sections(source.spec_sections)
+    _repair_spec_sections(source.manufacturer_spec_sections)
+
+
+def _repair_gallery_images(images: list[GalleryImage]) -> None:
+    for image in images:
+        image.alt = repair_mojibake_text(image.alt)
+
+
+def _repair_spec_items(items: list[SpecItem]) -> None:
+    for item in items:
+        item.label = repair_mojibake_text(item.label)
+        if item.value is not None:
+            item.value = repair_mojibake_text(item.value)
+
+
+def _repair_spec_sections(sections: list[SpecSection]) -> None:
+    for section in sections:
+        section.section = repair_mojibake_text(section.section)
+        _repair_spec_items(section.items)
