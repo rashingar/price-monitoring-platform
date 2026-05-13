@@ -164,6 +164,35 @@ Push-Location apps\ecommerce-api
 Pop-Location
 ```
 
+Dashboard can also refresh the active catalog from OpenCart. Configure these
+private environment variables before using `Update DB`:
+
+```powershell
+$env:OPENCART_STORE_BASE = "https://your-store.example"
+$env:OPENCART_ADMIN_PATH = "admin"
+$env:OPENCART_ADMIN_USER = "your-admin-user"
+$env:OPENCART_ADMIN_PASS = "your-admin-password"
+$env:OPENCART_EXPORT_PROFILE = "sourceCata"
+```
+
+From the Dashboard, click `Update DB`. Ecommerce API creates a durable
+`catalog_update_from_opencart` job, logs into OpenCart with Playwright, exports
+the `sourceCata` CSV Product Export profile, runs `alembic upgrade head`, and
+imports the downloaded CSV into PostgreSQL. Downloads are stored under
+`output/catalog_updates/{job_id}/`; the preserved download filename remains in
+that folder and the imported copy is normalized to
+`output/catalog_updates/{job_id}/sourceCata.csv`.
+
+Inspect job state with:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8001/api/catalog/update-db/latest
+Invoke-RestMethod http://127.0.0.1:8001/api/jobs/{job_id}
+```
+
+Default tests mock OpenCart and Playwright. Live OpenCart export tests are
+manual/opt-in only.
+
 Verify database readiness:
 
 ```powershell

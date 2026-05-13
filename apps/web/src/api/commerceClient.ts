@@ -23,6 +23,7 @@ import type {
   CatalogSnapshotResponse,
   CatalogSubCategoryNode,
   CatalogSummary,
+  CatalogUpdateJob,
   CancelPriceMonitoringFetchBody,
   CreateAlertRuleBody,
   EvaluateAlertsResponse,
@@ -2115,6 +2116,36 @@ function normalizeCatalogCategoryHierarchy(payload: unknown): CatalogCategoryHie
   };
 }
 
+function normalizeCatalogUpdateJob(payload: unknown): CatalogUpdateJob | null {
+  if (payload === null || payload === undefined) {
+    return null;
+  }
+
+  const unwrapped = isRecord(payload) && !("job_id" in payload)
+    ? payload.job ?? payload.item ?? payload.data ?? payload.result ?? payload
+    : payload;
+  if (!isRecord(unwrapped)) {
+    return null;
+  }
+
+  const jobId = unwrapped.job_id ?? unwrapped.id;
+  const jobType = unwrapped.job_type ?? unwrapped.type;
+  if (typeof jobId !== "string" || typeof jobType !== "string") {
+    return null;
+  }
+
+  return {
+    ...unwrapped,
+    job_id: jobId,
+    job_type: jobType,
+    status: typeof unwrapped.status === "string" ? unwrapped.status : "unknown",
+    payload: isRecord(unwrapped.payload) ? unwrapped.payload : null,
+    result: isRecord(unwrapped.result) ? unwrapped.result : null,
+    error_message: typeof unwrapped.error_message === "string" ? unwrapped.error_message : null,
+    status_url: typeof unwrapped.status_url === "string" ? unwrapped.status_url : null,
+  };
+}
+
 function normalizeCatalogBrandOptions(payload: unknown): CatalogBrandOption[] {
   const list = getArrayPayload(payload, ["items", "brands", "manufacturers", "data", "results"]);
 
@@ -2186,6 +2217,30 @@ export const commerceClient = {
   async getCatalogSummary(signal?: AbortSignal): Promise<CatalogSummary> {
     const summary = await request<unknown>("/catalog/summary", { signal });
     return isRecord(summary) ? summary : {};
+  },
+
+  async startCatalogUpdate(signal?: AbortSignal): Promise<CatalogUpdateJob> {
+    const job = normalizeCatalogUpdateJob(
+      await request<unknown>("/catalog/update-db", { method: "POST", signal }),
+    );
+    if (!job) {
+      throw new CommerceApiError("Commerce API returned an invalid catalog update job.", 500, null, "/catalog/update-db");
+    }
+    return job;
+  },
+
+  async getLatestCatalogUpdate(signal?: AbortSignal): Promise<CatalogUpdateJob | null> {
+    return normalizeCatalogUpdateJob(await request<unknown>("/catalog/update-db/latest", { signal }));
+  },
+
+  async getCatalogUpdateJob(jobId: string, signal?: AbortSignal): Promise<CatalogUpdateJob> {
+    const job = normalizeCatalogUpdateJob(
+      await request<unknown>(`/jobs/${encodeURIComponent(jobId)}`, { signal }),
+    );
+    if (!job) {
+      throw new CommerceApiError("Commerce API returned an invalid durable job.", 500, null, `/jobs/${jobId}`);
+    }
+    return job;
   },
 
   async listCatalogProductSourceUrls(

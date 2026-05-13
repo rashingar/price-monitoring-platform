@@ -84,8 +84,140 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/");
 
     await expect(screen.findByRole("heading", { name: "ok" })).resolves.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update DB" })).toBeInTheDocument();
     await expect(screen.findByText(/Product Factory API health endpoint responded/)).resolves.toBeInTheDocument();
     await expect(screen.findByText(/Commerce API health endpoint responded/)).resolves.toBeInTheDocument();
+  });
+
+  it("starts Dashboard catalog update and shows Updating while active", async () => {
+    const mockFetch = installMockFetch([
+      {
+        method: "POST",
+        path: "/commerce-api/catalog/update-db",
+        response: {
+          job_id: "catalog-update-queued",
+          job_type: "catalog_update_from_opencart",
+          status: "queued",
+          created_at: "2026-05-13T09:00:00Z",
+          updated_at: "2026-05-13T09:00:00Z",
+          attempt_count: 0,
+          cancel_requested: false,
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/jobs/catalog-update-queued",
+        response: {
+          job_id: "catalog-update-queued",
+          job_type: "catalog_update_from_opencart",
+          status: "running",
+          created_at: "2026-05-13T09:00:00Z",
+          updated_at: "2026-05-13T09:00:01Z",
+          attempt_count: 1,
+          cancel_requested: false,
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/");
+
+    const button = await screen.findByRole("button", { name: "Update DB" });
+    fireEvent.click(button);
+
+    await expect(screen.findByText("Updating")).resolves.toBeInTheDocument();
+    expect(button).toBeDisabled();
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "POST" &&
+            request.pathname === "/commerce-api/catalog/update-db",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("shows Succeeded when Dashboard catalog update finishes", async () => {
+    installMockFetch([
+      {
+        method: "POST",
+        path: "/commerce-api/catalog/update-db",
+        response: {
+          job_id: "catalog-update-success",
+          job_type: "catalog_update_from_opencart",
+          status: "queued",
+          created_at: "2026-05-13T09:00:00Z",
+          updated_at: "2026-05-13T09:00:00Z",
+          attempt_count: 0,
+          cancel_requested: false,
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/jobs/catalog-update-success",
+        response: {
+          job_id: "catalog-update-success",
+          job_type: "catalog_update_from_opencart",
+          status: "succeeded",
+          result: { ingest: { imported: 42 } },
+          created_at: "2026-05-13T09:00:00Z",
+          updated_at: "2026-05-13T09:01:00Z",
+          completed_at: "2026-05-13T09:01:00Z",
+          attempt_count: 1,
+          cancel_requested: false,
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Update DB" }));
+
+    await expect(screen.findByText("Succeeded")).resolves.toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  it("shows Failed and concise error details when Dashboard catalog update fails", async () => {
+    installMockFetch([
+      {
+        method: "POST",
+        path: "/commerce-api/catalog/update-db",
+        response: {
+          job_id: "catalog-update-failed",
+          job_type: "catalog_update_from_opencart",
+          status: "running",
+          created_at: "2026-05-13T09:00:00Z",
+          updated_at: "2026-05-13T09:00:00Z",
+          attempt_count: 1,
+          cancel_requested: false,
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/jobs/catalog-update-failed",
+        response: {
+          job_id: "catalog-update-failed",
+          job_type: "catalog_update_from_opencart",
+          status: "failed",
+          error_message: "OpenCart export failed: export timeout.",
+          created_at: "2026-05-13T09:00:00Z",
+          updated_at: "2026-05-13T09:02:00Z",
+          completed_at: "2026-05-13T09:02:00Z",
+          attempt_count: 1,
+          cancel_requested: false,
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Update DB" }));
+
+    await expect(screen.findByText("Failed")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("OpenCart export failed: export timeout.")).resolves.toBeInTheDocument();
   });
 
   it("renders Catalog summary filters and product rows", async () => {

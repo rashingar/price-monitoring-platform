@@ -79,6 +79,14 @@ export interface paths {
     /** Get Summary */
     get: operations["get_summary_api_catalog_summary_get"];
   };
+  "/api/catalog/update-db": {
+    /** Start Catalog Update */
+    post: operations["start_catalog_update_api_catalog_update_db_post"];
+  };
+  "/api/catalog/update-db/latest": {
+    /** Get Latest Catalog Update */
+    get: operations["get_latest_catalog_update_api_catalog_update_db_latest_get"];
+  };
   "/api/files/list": {
     /** List Files */
     get: operations["list_files_api_files_list_get"];
@@ -387,6 +395,43 @@ export interface components {
       threshold_amount?: number | string | null;
       /** Threshold Percent */
       threshold_percent?: number | string | null;
+    };
+    /** CatalogUpdateJobResponse */
+    CatalogUpdateJobResponse: {
+      /** Attempt Count */
+      attempt_count: number;
+      /** Cancel Requested */
+      cancel_requested: boolean;
+      /** Completed At */
+      completed_at?: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Error Message */
+      error_message?: string | null;
+      /** Heartbeat At */
+      heartbeat_at?: string | null;
+      /** Job Id */
+      job_id: string;
+      /** Job Type */
+      job_type: string;
+      /** Payload */
+      payload?: unknown;
+      /** Result */
+      result?: unknown;
+      /** Started At */
+      started_at?: string | null;
+      /** Status */
+      status: string;
+      /** Status Url */
+      status_url?: string | null;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
     };
     /** CsvReadRequest */
     CsvReadRequest: {
@@ -1421,6 +1466,28 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
+        };
+      };
+    };
+  };
+  /** Start Catalog Update */
+  start_catalog_update_api_catalog_update_db_post: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CatalogUpdateJobResponse"];
+        };
+      };
+    };
+  };
+  /** Get Latest Catalog Update */
+  get_latest_catalog_update_api_catalog_update_db_latest_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CatalogUpdateJobResponse"] | null;
         };
       };
     };

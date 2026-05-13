@@ -100,6 +100,48 @@ $env:ECOMMERCE_FILE_ROOTS = "C:\Users\user\Downloads;C:\Exports;output"
 `ECOMMERCE_DATABASE_URL` is required before Catalog import, Catalog browsing,
 Price Monitoring runs, observations, history, or alerts are ready.
 
+Dashboard `Update DB` also requires OpenCart export settings. Keep these only
+in private `.env` or OS environment variables:
+
+```powershell
+$env:OPENCART_STORE_BASE = "https://your-store.example"
+$env:OPENCART_ADMIN_PATH = "admin"
+$env:OPENCART_ADMIN_USER = "your-admin-user"
+$env:OPENCART_ADMIN_PASS = "your-admin-password"
+$env:OPENCART_EXPORT_PROFILE = "sourceCata"
+```
+
+`OPENCART_EXPORT_PROFILE` defaults to `sourceCata` when unset. Do not use
+`OPENCART_IMPORT_PROFILE` for this workflow; this feature exports from
+OpenCart before importing into Ecommerce PostgreSQL.
+
+## Dashboard Update DB
+
+The Dashboard `Update DB` button calls `POST /api/catalog/update-db` through
+the web `/commerce-api` proxy. The backend creates a durable
+`catalog_update_from_opencart` job and runs the workflow in a background task:
+
+1. load OpenCart export config from env
+2. run `alembic upgrade head` from `apps/ecommerce-api`
+3. log into OpenCart with Playwright
+4. export the configured CSV Product Export profile
+5. save the download under `output/catalog_updates/{job_id}/`
+6. copy the imported CSV to `output/catalog_updates/{job_id}/sourceCata.csv`
+7. import that CSV with the existing catalog ingestion logic
+
+Use these endpoints to inspect durable state:
+
+```text
+GET /api/catalog/update-db/latest
+GET /api/jobs/{job_id}
+GET /api/jobs?job_type=catalog_update_from_opencart
+```
+
+Job results include artifact paths, export profile, downloaded file size,
+migration output, and ingest counts. Responses and job results must not contain
+OpenCart credentials. Default automated tests mock Playwright/OpenCart; live
+OpenCart export verification is manual/opt-in only.
+
 ## Native Windows PostgreSQL setup and first-run verification
 
 Install PostgreSQL natively on Windows with the official PostgreSQL Windows

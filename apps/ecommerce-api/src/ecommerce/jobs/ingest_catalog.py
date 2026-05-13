@@ -16,6 +16,23 @@ from ecommerce.db.policy import collect_catalog_database_readiness
 from ecommerce.db.session import session_scope
 
 
+def ingest_catalog_file(
+    *,
+    source_cata_path: Path | None = None,
+    catalog_source: str = DEFAULT_CATALOG_SOURCE,
+):
+    readiness = collect_catalog_database_readiness()
+    if not readiness.get("ready_for_catalog", False):
+        reasons = ", ".join(str(reason) for reason in readiness.get("blocking_reasons", []))
+        raise RuntimeError(f"PostgreSQL is required for Catalog and is not ready: {reasons or 'unknown'}")
+    with session_scope() as session:
+        return ingest_source_catalog(
+            session,
+            source_cata_path=source_cata_path,
+            catalog_source=catalog_source,
+        )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Import sourceCata.csv into the active database catalog.")
     parser.add_argument("--source-cata-path", type=Path, default=None, help="Optional sourceCata.csv path.")
@@ -32,12 +49,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     try:
-        with session_scope() as session:
-            result = ingest_source_catalog(
-                session,
-                source_cata_path=args.source_cata_path,
-                catalog_source=args.catalog_source,
-            )
+        result = ingest_catalog_file(
+            source_cata_path=args.source_cata_path,
+            catalog_source=args.catalog_source,
+        )
     except FileNotFoundError as exc:
         print(str(exc), file=sys.stderr)
         return 1

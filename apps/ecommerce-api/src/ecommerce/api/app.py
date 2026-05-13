@@ -13,6 +13,7 @@ load_local_env_if_present()
 
 from ecommerce.api.routes_artifacts import router as artifacts_router
 from ecommerce.api.routes_catalog import router as catalog_router
+from ecommerce.api.routes_catalog_update import router as catalog_update_router
 from ecommerce.api.routes_files import router as files_router
 from ecommerce.api.routes_health import router as health_router
 from ecommerce.api.routes_ignore import router as ignore_router
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Ecommerce API")
     app.include_router(health_router)
     app.include_router(catalog_router)
+    app.include_router(catalog_update_router)
     app.include_router(ignore_router)
     app.include_router(files_router)
     app.include_router(paths_router)

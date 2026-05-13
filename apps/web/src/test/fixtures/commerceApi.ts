@@ -1981,6 +1981,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   { method: "GET", path: "/commerce-api/catalog/brands", response: catalogBrands },
   { method: "GET", path: "/commerce-api/catalog/category-hierarchy", response: catalogCategoryHierarchy },
   { method: "GET", path: "/commerce-api/catalog/products", response: catalogProducts },
+  { method: "GET", path: "/commerce-api/catalog/update-db/latest", response: null },
   { method: "GET", path: "/commerce-api/catalog/products/1/source-urls", response: sourceUrlsForCatalogProduct },
   {
     method: "POST",

@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient, getApiErrorMessage } from "../api/client";
+import { commerceClient, getCommerceApiErrorMessage } from "../api/commerceClient";
 import { runApiDiagnostics } from "../api/diagnostics";
+import type { CatalogUpdateJob } from "../api/commerceTypes";
 import type { ApiDiagnostics } from "../api/diagnostics";
 import type { HealthResponse } from "../api/types";
 import { ErrorState, LoadingState } from "../components/layout/StateBlocks";
 import { JsonBlock } from "../components/jobs/JsonBlock";
+
+const CATALOG_UPDATE_POLL_MS = 500;
 
 function getHealthStatus(health: HealthResponse | null): string {
   if (!health) {
@@ -23,12 +27,46 @@ function getHealthStatus(health: HealthResponse | null): string {
   return "unknown";
 }
 
+function isCatalogUpdateActive(job: CatalogUpdateJob | null): boolean {
+  const status = job?.status?.toLowerCase();
+  return status === "queued" || status === "running";
+}
+
+function getCatalogUpdateBadge(job: CatalogUpdateJob | null) {
+  const status = job?.status?.toLowerCase();
+  if (status === "succeeded") {
+    return { label: "Succeeded", className: "success" };
+  }
+  if (status === "failed") {
+    return { label: "Failed", className: "danger" };
+  }
+  if (status === "cancelled" || status === "canceled") {
+    return { label: "Cancelled", className: "warning" };
+  }
+  if (status === "queued" || status === "running") {
+    return { label: "Updating", className: "neutral" };
+  }
+  return { label: "Idle", className: "neutral" };
+}
+
+function getCatalogUpdateImportedCount(job: CatalogUpdateJob | null): number | null {
+  const ingest = job?.result?.ingest;
+  if (typeof ingest === "object" && ingest !== null && "imported" in ingest) {
+    const imported = (ingest as Record<string, unknown>).imported;
+    return typeof imported === "number" ? imported : null;
+  }
+  return null;
+}
+
 export function DashboardPage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<ApiDiagnostics | null>(null);
   const [isDiagnosticsLoading, setIsDiagnosticsLoading] = useState(true);
+  const [catalogUpdateJob, setCatalogUpdateJob] = useState<CatalogUpdateJob | null>(null);
+  const [catalogUpdateError, setCatalogUpdateError] = useState<string | null>(null);
+  const [isCatalogUpdateStarting, setIsCatalogUpdateStarting] = useState(false);
 
   const loadHealth = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
@@ -61,6 +99,52 @@ export function DashboardPage() {
     }
   }, []);
 
+  const loadLatestCatalogUpdate = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const latest = await commerceClient.getLatestCatalogUpdate(signal);
+      if (signal?.aborted) {
+        return;
+      }
+      setCatalogUpdateJob(latest);
+      setCatalogUpdateError(null);
+    } catch (updateError) {
+      if (!signal?.aborted) {
+        setCatalogUpdateError(getCommerceApiErrorMessage(updateError));
+      }
+    }
+  }, []);
+
+  const pollCatalogUpdateJob = useCallback(async (jobId: string, signal?: AbortSignal) => {
+    try {
+      const nextJob = await commerceClient.getCatalogUpdateJob(jobId, signal);
+      if (signal?.aborted) {
+        return;
+      }
+      setCatalogUpdateJob(nextJob);
+      setCatalogUpdateError(null);
+    } catch (updateError) {
+      if (!signal?.aborted) {
+        setCatalogUpdateError(getCommerceApiErrorMessage(updateError));
+      }
+    }
+  }, []);
+
+  const startCatalogUpdate = useCallback(async () => {
+    setIsCatalogUpdateStarting(true);
+    setCatalogUpdateError(null);
+    try {
+      const job = await commerceClient.startCatalogUpdate();
+      setCatalogUpdateJob(job);
+      if (isCatalogUpdateActive(job)) {
+        void pollCatalogUpdateJob(job.job_id);
+      }
+    } catch (updateError) {
+      setCatalogUpdateError(getCommerceApiErrorMessage(updateError));
+    } finally {
+      setIsCatalogUpdateStarting(false);
+    }
+  }, [pollCatalogUpdateJob]);
+
   useEffect(() => {
     const controller = new AbortController();
     void loadHealth(controller.signal);
@@ -70,6 +154,36 @@ export function DashboardPage() {
   useEffect(() => {
     void loadDiagnostics();
   }, [loadDiagnostics]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadLatestCatalogUpdate(controller.signal);
+    return () => controller.abort();
+  }, [loadLatestCatalogUpdate]);
+
+  useEffect(() => {
+    if (!isCatalogUpdateActive(catalogUpdateJob)) {
+      return;
+    }
+
+    const jobId = catalogUpdateJob?.job_id;
+    if (!jobId) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const intervalId = window.setInterval(() => {
+      void pollCatalogUpdateJob(jobId, controller.signal);
+    }, CATALOG_UPDATE_POLL_MS);
+    return () => {
+      controller.abort();
+      window.clearInterval(intervalId);
+    };
+  }, [catalogUpdateJob, pollCatalogUpdateJob]);
+
+  const catalogUpdateBadge = getCatalogUpdateBadge(catalogUpdateJob);
+  const catalogUpdateActive = isCatalogUpdateActive(catalogUpdateJob);
+  const importedCount = getCatalogUpdateImportedCount(catalogUpdateJob);
 
   return (
     <div className="page-stack">
@@ -92,6 +206,56 @@ export function DashboardPage() {
         {isLoading ? <LoadingState label="Checking backend health..." /> : null}
         {error ? <ErrorState message={error} onRetry={() => void loadHealth()} /> : null}
         {!isLoading && !error ? <JsonBlock value={health} /> : null}
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Catalog</p>
+            <h3>OpenCart DB update</h3>
+          </div>
+          <div className="section-heading-actions">
+            <span className={`status-badge ${catalogUpdateBadge.className}`}>
+              {catalogUpdateBadge.label}
+            </span>
+            <button
+              className="button primary"
+              type="button"
+              disabled={isCatalogUpdateStarting || catalogUpdateActive}
+              onClick={() => void startCatalogUpdate()}
+            >
+              Update DB
+            </button>
+          </div>
+        </div>
+
+        {catalogUpdateJob ? (
+          <dl className="summary-grid diagnostics-summary-grid">
+            <div>
+              <dt>Job</dt>
+              <dd>{catalogUpdateJob.job_id}</dd>
+            </div>
+            <div>
+              <dt>Type</dt>
+              <dd>{catalogUpdateJob.job_type}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{catalogUpdateJob.status}</dd>
+            </div>
+            <div>
+              <dt>Imported</dt>
+              <dd>{importedCount ?? "-"}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="muted">No catalog update job has been recorded yet.</p>
+        )}
+
+        {catalogUpdateError ? <p className="form-error">{catalogUpdateError}</p> : null}
+        {catalogUpdateJob?.status?.toLowerCase() === "failed" && catalogUpdateJob.error_message ? (
+          <p className="form-error">{catalogUpdateJob.error_message}</p>
+        ) : null}
       </section>
 
       <section className="panel">

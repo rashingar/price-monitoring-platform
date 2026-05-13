@@ -1292,6 +1292,24 @@ export interface PathRootsResponse {
   platform?: string | null;
 }
 
+export interface CatalogUpdateJob {
+  job_id: string;
+  job_type: string;
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | string;
+  payload?: Record<string, unknown> | null;
+  result?: Record<string, unknown> | null;
+  error_message?: string | null;
+  created_at?: string | null;
+  started_at?: string | null;
+  heartbeat_at?: string | null;
+  completed_at?: string | null;
+  attempt_count?: number;
+  cancel_requested?: boolean;
+  updated_at?: string | null;
+  status_url?: string | null;
+  [key: string]: unknown;
+}
+
 type _EcommerceGeneratedContractChecks = [
   AssertAssignable<SourceUrlCreateBody, EcommerceContractSourceUrlCreateRequest>,
   AssertAssignable<SourceUrlUpdateBody, EcommerceContractSourceUrlUpdateRequest>,
