@@ -24,8 +24,6 @@ import type {
   PriceMonitoringFetchLogsResponse,
   PriceObservation,
   PriceObservationMatchStatus,
-  PriceMonitoringAction,
-  PriceMonitoringReviewAction,
   PriceMonitoringReviewItem,
   PriceMonitoringReviewResponse,
   PriceMonitoringRun,
@@ -33,8 +31,6 @@ import type {
   PriceMonitoringSelectionItem,
   PriceMonitoringSelectionResult,
   PriceMonitoringSourceUrlCoverage,
-  PriceMonitoringSource,
-  PriceMonitoringTopListing,
   RunPriceObservationsResponse,
   VendorSourceCapability,
 } from "../api/commerceTypes";
@@ -52,436 +48,54 @@ import { usePersistentPageState } from "../hooks/usePersistentPageState";
 import {
   CATEGORY_HIERARCHY_UNAVAILABLE_MESSAGE,
   formatHierarchyOptionLabel,
-  getCategoryOptions,
-  getFamilyOptions,
-  getSubCategoryOptions,
   makeHierarchyFilterParams,
 } from "../utils/categoryHierarchy";
 
-type SourceOverride = "" | PriceMonitoringSource;
-type PriceMonitoringSourceFilter = string;
+import {
+  ColumnControls,
+  getColumnWidth,
+  getManagedTableWidth,
+  useManagedColumns,
+  type ManagedColumn,
+} from "../features/price-monitoring/hooks/useManagedColumns";
+import {
+  normalizeSelectedSource,
+  usePriceMonitoringSelection,
+} from "../features/price-monitoring/hooks/usePriceMonitoringSelection";
+import {
+  formatFetchStatus,
+  getFetchStatusTone,
+  isActiveFetchStatus,
+  isCancelledFetchStatus,
+  isFailedFetchStatus,
+  isSuccessfulFetchStatus,
+  isTerminalFetchStatus,
+  usePriceMonitoringRun,
+} from "../features/price-monitoring/hooks/usePriceMonitoringRun";
+import { usePriceMonitoringReview } from "../features/price-monitoring/hooks/usePriceMonitoringReview";
+import { ReviewResultsTable } from "../features/price-monitoring/components/ReviewTable";
+import { formatMoney, formatNumber, formatValue, isRecord, parseNumberLike } from "../features/price-monitoring/format";
+import {
+  getActionState,
+  getRecommendedRowActions,
+} from "../features/price-monitoring/reviewActions";
+import type {
+  PriceMonitoringSourceFilter,
+  RowActionState,
+  SourceOverride,
+} from "../features/price-monitoring/types";
+
+export { ReviewResultsTable };
+
 type StoredObservationMatchFilter = "all" | PriceObservationMatchStatus;
 const SOURCE_REQUIRED_MESSAGE = "Choose one source/vendor to monitor.";
-const REVIEW_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.reviewColumns.v1";
 const OBSERVATION_COLUMNS_STORAGE_KEY = "productFactoryUi.priceMonitoring.observationColumns.v3";
-const MIN_COLUMN_WIDTH = 72;
-const MAX_COLUMN_WIDTH = 640;
-
-function normalizeFetchStatus(status: unknown): string {
-  if (typeof status !== "string" || status.trim().length === 0) {
-    return "";
-  }
-
-  if (status === "fetch_completed") {
-    return "succeeded";
-  }
-
-  if (status === "fetch_failed") {
-    return "failed";
-  }
-
-  return status.trim().toLowerCase();
-}
-
-function isActiveFetchStatus(status: unknown): boolean {
-  const normalized = normalizeFetchStatus(status);
-  return normalized === "queued" || normalized === "running";
-}
-
-function isSuccessfulFetchStatus(status: unknown): boolean {
-  return normalizeFetchStatus(status) === "succeeded";
-}
-
-function isFailedFetchStatus(status: unknown): boolean {
-  const normalized = normalizeFetchStatus(status);
-  return normalized === "failed" || normalized === "killed";
-}
-
-function isCancelledFetchStatus(status: unknown): boolean {
-  return normalizeFetchStatus(status) === "cancelled";
-}
-
-function isTerminalFetchStatus(status: unknown): boolean {
-  return (
-    isSuccessfulFetchStatus(status) ||
-    isFailedFetchStatus(status) ||
-    isCancelledFetchStatus(status)
-  );
-}
-
-function getFetchStatusTone(status: unknown): string {
-  const normalized = normalizeFetchStatus(status);
-  if (normalized === "queued" || normalized === "running") {
-    return "active";
-  }
-
-  if (normalized === "succeeded") {
-    return "ok";
-  }
-
-  if (normalized === "failed" || normalized === "killed") {
-    return "danger";
-  }
-
-  if (normalized === "cancelled") {
-    return "warning";
-  }
-
-  return "neutral";
-}
-
-function formatFetchStatus(status: unknown): string {
-  const normalized = normalizeFetchStatus(status);
-  if (!normalized) {
-    return "-";
-  }
-
-  return normalized.replace(/_/g, " ").replace(/^\w/, (first) => first.toUpperCase());
-}
-
-interface RowActionState {
-  selected_action: "" | PriceMonitoringAction;
-  undercut_amount: string;
-  reason: string;
-}
-
-interface ManagedColumn<Row, ColumnId extends string> {
-  id: ColumnId;
-  label: string;
-  defaultWidth: number;
-  minWidth?: number;
-  required?: boolean;
-  available?: boolean;
-  className?: string;
-  render: (row: Row) => ReactNode;
-}
-
-interface ColumnPreferences<ColumnId extends string> {
-  order: ColumnId[];
-  visible: ColumnId[];
-  widths: Partial<Record<ColumnId, number>>;
-}
-
-function clampColumnWidth(width: number, minWidth = MIN_COLUMN_WIDTH): number {
-  if (!Number.isFinite(width)) {
-    return minWidth;
-  }
-
-  return Math.min(MAX_COLUMN_WIDTH, Math.max(minWidth, Math.round(width)));
-}
-
-function defaultColumnPreferences<ColumnId extends string>(
-  columns: Array<ManagedColumn<unknown, ColumnId>>,
-): ColumnPreferences<ColumnId> {
-  return {
-    order: columns.map((column) => column.id),
-    visible: columns.map((column) => column.id),
-    widths: columns.reduce<Partial<Record<ColumnId, number>>>((widths, column) => {
-      widths[column.id] = clampColumnWidth(column.defaultWidth, column.minWidth);
-      return widths;
-    }, {}),
-  };
-}
-
-function normalizeColumnPreferences<ColumnId extends string>(
-  value: ColumnPreferences<ColumnId>,
-  columns: Array<ManagedColumn<unknown, ColumnId>>,
-): ColumnPreferences<ColumnId> {
-  const availableIds = new Set(columns.map((column) => column.id));
-  const requiredIds = columns.filter((column) => column.required).map((column) => column.id);
-  const ordered = value.order.filter((columnId) => availableIds.has(columnId));
-  const missing = columns.map((column) => column.id).filter((columnId) => !ordered.includes(columnId));
-  const visible = value.visible.filter((columnId) => availableIds.has(columnId));
-  const nextVisible = Array.from(new Set([...requiredIds, ...visible]));
-  const widths = columns.reduce<Partial<Record<ColumnId, number>>>((nextWidths, column) => {
-    nextWidths[column.id] = clampColumnWidth(
-      value.widths[column.id] ?? column.defaultWidth,
-      column.minWidth,
-    );
-    return nextWidths;
-  }, {});
-
-  return {
-    order: [...ordered, ...missing],
-    visible: nextVisible.length > 0 ? nextVisible : columns.slice(0, 1).map((column) => column.id),
-    widths,
-  };
-}
-
-function loadColumnPreferences<ColumnId extends string>(
-  storageKey: string,
-  columns: Array<ManagedColumn<unknown, ColumnId>>,
-): ColumnPreferences<ColumnId> {
-  const defaults = defaultColumnPreferences(columns);
-  if (typeof window === "undefined") {
-    return defaults;
-  }
-
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) {
-      return defaults;
-    }
-    const parsed = JSON.parse(raw) as Partial<ColumnPreferences<ColumnId>>;
-    return normalizeColumnPreferences(
-      {
-        order: Array.isArray(parsed.order) ? parsed.order : defaults.order,
-        visible: Array.isArray(parsed.visible) ? parsed.visible : defaults.visible,
-        widths: isRecord(parsed.widths) ? parsed.widths as Partial<Record<ColumnId, number>> : defaults.widths,
-      },
-      columns,
-    );
-  } catch {
-    return defaults;
-  }
-}
-
-function useManagedColumns<Row, ColumnId extends string>(
-  storageKey: string,
-  columns: Array<ManagedColumn<Row, ColumnId>>,
-) {
-  const unknownColumns = columns as Array<ManagedColumn<unknown, ColumnId>>;
-  const [preferences, setPreferences] = useState<ColumnPreferences<ColumnId>>(() =>
-    loadColumnPreferences(storageKey, unknownColumns),
-  );
-  const normalizedPreferences = useMemo(
-    () => normalizeColumnPreferences(preferences, unknownColumns),
-    [preferences, unknownColumns],
-  );
-  const availableColumns = useMemo(
-    () => columns.filter((column) => column.available !== false),
-    [columns],
-  );
-  const visibleColumnIds = useMemo(() => new Set(normalizedPreferences.visible), [normalizedPreferences.visible]);
-  const activeColumns = useMemo(() => {
-    const byId = new Map(availableColumns.map((column) => [column.id, column]));
-    return normalizedPreferences.order
-      .map((columnId) => byId.get(columnId))
-      .filter((column): column is ManagedColumn<Row, ColumnId> => Boolean(column))
-      .filter((column) => visibleColumnIds.has(column.id));
-  }, [availableColumns, normalizedPreferences.order, visibleColumnIds]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(storageKey, JSON.stringify(normalizedPreferences));
-  }, [normalizedPreferences, storageKey]);
-
-  const toggleColumn = useCallback(
-    (columnId: ColumnId) => {
-      const column = columns.find((candidate) => candidate.id === columnId);
-      if (column?.required) {
-        return;
-      }
-      setPreferences((current) => {
-        const currentVisible = new Set(current.visible);
-        if (currentVisible.has(columnId)) {
-          currentVisible.delete(columnId);
-        } else {
-          currentVisible.add(columnId);
-        }
-        return { ...current, visible: Array.from(currentVisible) };
-      });
-    },
-    [columns],
-  );
-  const moveColumn = useCallback((columnId: ColumnId, direction: -1 | 1) => {
-    setPreferences((current) => {
-      const order = [...current.order];
-      const index = order.indexOf(columnId);
-      const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= order.length) {
-        return current;
-      }
-      [order[index], order[nextIndex]] = [order[nextIndex], order[index]];
-      return { ...current, order };
-    });
-  }, []);
-  const resizeColumn = useCallback(
-    (columnId: ColumnId, width: number) => {
-      const column = columns.find((candidate) => candidate.id === columnId);
-      setPreferences((current) => ({
-        ...current,
-        widths: {
-          ...current.widths,
-          [columnId]: clampColumnWidth(width, column?.minWidth),
-        },
-      }));
-    },
-    [columns],
-  );
-  const resetColumns = useCallback(() => {
-    setPreferences(defaultColumnPreferences(unknownColumns));
-  }, [unknownColumns]);
-
-  return {
-    activeColumns,
-    availableColumns,
-    preferences: normalizedPreferences,
-    visibleColumnIds,
-    toggleColumn,
-    moveColumn,
-    resizeColumn,
-    resetColumns,
-  };
-}
-
-function getColumnWidth<Row, ColumnId extends string>(
-  column: ManagedColumn<Row, ColumnId>,
-  preferences: ColumnPreferences<ColumnId>,
-): number {
-  return clampColumnWidth(preferences.widths[column.id] ?? column.defaultWidth, column.minWidth);
-}
-
-function getManagedTableWidth<Row, ColumnId extends string>(
-  columns: Array<ManagedColumn<Row, ColumnId>>,
-  preferences: ColumnPreferences<ColumnId>,
-): number {
-  return columns.reduce((total, column) => total + getColumnWidth(column, preferences), 0);
-}
-
-function ColumnControls<Row, ColumnId extends string>({
-  columns,
-  preferences,
-  visibleColumnIds,
-  onToggleColumn,
-  onMoveColumn,
-  onResizeColumn,
-  onReset,
-}: {
-  columns: Array<ManagedColumn<Row, ColumnId>>;
-  preferences: ColumnPreferences<ColumnId>;
-  visibleColumnIds: Set<ColumnId>;
-  onToggleColumn: (columnId: ColumnId) => void;
-  onMoveColumn: (columnId: ColumnId, direction: -1 | 1) => void;
-  onResizeColumn: (columnId: ColumnId, width: number) => void;
-  onReset: () => void;
-}) {
-  const byId = new Map(columns.map((column) => [column.id, column]));
-  const orderedColumns = preferences.order
-    .map((columnId) => byId.get(columnId))
-    .filter((column): column is ManagedColumn<Row, ColumnId> => Boolean(column))
-    .filter((column) => column.available !== false);
-
-  return (
-    <details className="column-controls managed-column-controls">
-      <summary>Columns</summary>
-      <div className="column-controls-panel managed-column-controls-panel">
-        {orderedColumns.map((column, index) => (
-          <div className="column-control-row" key={column.id}>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={visibleColumnIds.has(column.id)}
-                disabled={column.required}
-                onChange={() => onToggleColumn(column.id)}
-              />
-              <span>{column.label}</span>
-            </label>
-            <div className="column-control-actions">
-              <button
-                className="button secondary icon-button"
-                type="button"
-                disabled={index === 0}
-                title="Move column left"
-                onClick={() => onMoveColumn(column.id, -1)}
-              >
-                {"<"}
-              </button>
-              <button
-                className="button secondary icon-button"
-                type="button"
-                disabled={index === orderedColumns.length - 1}
-                title="Move column right"
-                onClick={() => onMoveColumn(column.id, 1)}
-              >
-                {">"}
-              </button>
-              <label className="column-width-control">
-                Width
-                <input
-                  className="column-width-input"
-                  type="number"
-                  min={column.minWidth ?? MIN_COLUMN_WIDTH}
-                  max={MAX_COLUMN_WIDTH}
-                  step="10"
-                  value={getColumnWidth(column, preferences)}
-                  onChange={(event) => onResizeColumn(column.id, Number(event.target.value))}
-                />
-              </label>
-            </div>
-          </div>
-        ))}
-        <button className="button secondary inline-button" type="button" onClick={onReset}>
-          Reset columns
-        </button>
-      </div>
-    </details>
-  );
-}
-
-function formatValue(value: unknown): string {
-  if (isRecord(value) && typeof value.path === "string") {
-    return value.path;
-  }
-
-  if (value === null || value === undefined || value === "") {
-    return "-";
-  }
-
-  return String(value);
-}
-
-function parseNumberLike(value: unknown): number | null {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : null;
-  }
-
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function formatNumber(value: unknown): string {
-  const parsed = parseNumberLike(value);
-  if (parsed === null) {
-    return "-";
-  }
-
-  return parsed.toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-
-function formatMoney(value: unknown, currency = "EUR"): string {
-  const parsed = parseNumberLike(value);
-  if (parsed === null) {
-    return "-";
-  }
-
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(parsed);
-}
 
 function parseModelText(value: string): string[] {
   return value
     .split(/[\n,]+/)
     .map((model) => model.trim())
     .filter((model) => model.length > 0);
-}
-
-function isAction(value: unknown): value is PriceMonitoringAction {
-  return value === "match_price" || value === "undercut" || value === "ignore";
 }
 
 function makeSelectionBody({
@@ -548,34 +162,11 @@ function formatOptionCount(count: number | null | undefined): string {
   return typeof count === "number" && Number.isFinite(count) ? ` (${count})` : "";
 }
 
-function dedupeVendorSources(sources: VendorSourceCapability[]): VendorSourceCapability[] {
-  const seen = new Set<string>();
-  return sources.filter((source) => {
-    const sourceName = String(source.source_name).trim();
-    if (!sourceName) {
-      return false;
-    }
-
-    const key = sourceName.toLowerCase();
-    if (seen.has(key)) {
-      return false;
-    }
-
-    seen.add(key);
-    return true;
-  });
-}
-
 function formatSourceOptionLabel(source: VendorSourceCapability): string {
   const sourceName = String(source.source_name);
   const vendorSlug = typeof source.vendor_slug === "string" ? source.vendor_slug : null;
   const sourceType = typeof source.source_type === "string" ? source.source_type.replace(/_/g, " ") : null;
   return [sourceName, vendorSlug, sourceType].filter(Boolean).join(" - ");
-}
-
-function normalizeSelectedSource(value: string | null | undefined): string {
-  const sourceName = typeof value === "string" ? value.trim() : "";
-  return sourceName && sourceName.toLowerCase() !== "all" ? sourceName : "";
 }
 
 function formatSelectedSource(value: unknown): string {
@@ -588,10 +179,6 @@ interface SelectionHierarchyFilters {
   category_name?: string | null;
   sub_category?: string | null;
   category?: string | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function asStringFilter(value: unknown): string | null {
@@ -970,70 +557,6 @@ function SourceUrlEligibilityRows({
       ) : null}
     </div>
   );
-}
-
-function getActionState(
-  row: PriceMonitoringReviewItem,
-  actionState: Record<string, RowActionState>,
-): RowActionState {
-  return (
-    actionState[row.model] ?? {
-      selected_action: isAction(row.selected_action) ? row.selected_action : "",
-      undercut_amount:
-        typeof row.undercut_amount === "number" && Number.isFinite(row.undercut_amount)
-          ? String(row.undercut_amount)
-          : "",
-      reason: "",
-    }
-  );
-}
-
-function computeTargetPrice(row: PriceMonitoringReviewItem, state: RowActionState): number | null {
-  if (state.selected_action === "match_price") {
-    return typeof row.competitor_price === "number" ? row.competitor_price : null;
-  }
-
-  if (state.selected_action === "undercut") {
-    const undercutAmount = Number(state.undercut_amount);
-    return typeof row.competitor_price === "number" &&
-      Number.isFinite(row.competitor_price) &&
-      Number.isFinite(undercutAmount)
-      ? row.competitor_price - undercutAmount
-      : null;
-  }
-
-  return typeof row.target_price === "number" ? row.target_price : null;
-}
-
-function getActionError(row: PriceMonitoringReviewItem, state: RowActionState): string | null {
-  if (state.selected_action === "") {
-    return null;
-  }
-
-  if (state.selected_action === "ignore") {
-    return null;
-  }
-
-  if (typeof row.competitor_price !== "number" || !Number.isFinite(row.competitor_price)) {
-    return "Competitor price is required.";
-  }
-
-  if (state.selected_action === "undercut") {
-    const undercutAmount = Number(state.undercut_amount);
-    if (!Number.isFinite(undercutAmount) || undercutAmount <= 0) {
-      return "Undercut amount must be greater than 0.";
-    }
-  }
-
-  return null;
-}
-
-function getReviewCompetitorUrl(row: PriceMonitoringReviewItem): string {
-  return row.competitor_url || "";
-}
-
-function getReviewSourceUrl(row: PriceMonitoringReviewItem): string {
-  return row.source_url || "";
 }
 
 function DebugDetails({
@@ -1969,398 +1492,6 @@ function CatalogSnapshotTable({ snapshot }: { snapshot: CatalogSnapshotResponse 
   );
 }
 
-type ReviewColumnId =
-  | "model"
-  | "name"
-  | "mpn"
-  | "current_price"
-  | "competitor_price"
-  | "competitor_store"
-  | "competitor_url"
-  | "price_delta"
-  | "price_delta_percent"
-  | "recommended_action"
-  | "selected_action"
-  | "undercut_amount"
-  | "target_price"
-  | "reason"
-  | "status"
-  | "warnings";
-
-export function ReviewResultsTable({
-  items,
-  rowActions,
-  dbAvailable,
-  onUpdateRowAction,
-}: {
-  items: PriceMonitoringReviewItem[];
-  rowActions: Record<string, RowActionState>;
-  dbAvailable: boolean;
-  onUpdateRowAction: (model: string, patch: Partial<RowActionState>) => void;
-}) {
-  const [selectedModel, setSelectedModel] = useState<string | null>(items[0]?.model ?? null);
-  const [expandedTopListings, setExpandedTopListings] = useState<Record<string, boolean>>({});
-  const [expandedExtraDetailsModel, setExpandedExtraDetailsModel] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (items.length === 0) {
-      setSelectedModel(null);
-      return;
-    }
-    if (!selectedModel || !items.some((item) => item.model === selectedModel)) {
-      setSelectedModel(items[0].model);
-    }
-  }, [items, selectedModel]);
-
-  useEffect(() => {
-    setExpandedExtraDetailsModel(null);
-  }, [selectedModel]);
-
-  const clearRowAction = (model: string) => {
-    onUpdateRowAction(model, { selected_action: "", undercut_amount: "", reason: "" });
-  };
-
-  return (
-    <div className="price-review-list" role="list">
-      {items.map((item) => {
-        const isSelected = selectedModel === item.model;
-        const state = getActionState(item, rowActions);
-        const targetPrice = computeTargetPrice(item, state);
-        const actionError = getActionError(item, state);
-        const showTopListings = Boolean(expandedTopListings[item.model]);
-        const showExtraDetails = expandedExtraDetailsModel === item.model;
-        const topListings = item.top_listings ?? [];
-        const listingWarning = getListingsIncompleteText(item, topListings.length);
-        const competitorUrl = getReviewCompetitorUrl(item);
-        const sourceUrl = getReviewSourceUrl(item);
-
-        return (
-          <section
-            className={`price-review-row${isSelected ? " selected" : ""}`}
-            key={item.model}
-            role="listitem"
-            onClick={() => setSelectedModel(item.model)}
-          >
-            <div
-              className="price-review-row-button"
-              role="button"
-              tabIndex={0}
-              onClick={() => setSelectedModel(item.model)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  setSelectedModel(item.model);
-                }
-              }}
-            >
-              <div className="price-review-identity-row">
-                <span>
-                  <strong>Model</strong>
-                  {formatValue(item.model)}
-                </span>
-                <span>
-                  <strong>Name</strong>
-                  {formatValue(item.name)}
-                </span>
-                <span>
-                  <strong>MPN</strong>
-                  {formatValue(item.mpn)}
-                </span>
-              </div>
-              <div className="price-review-operational-row">
-                <span>
-                  <strong>Current price</strong>
-                  {formatMoney(item.current_price)}
-                </span>
-                <span>
-                  <strong>Competitor price</strong>
-                  {formatMoney(item.competitor_price)}
-                </span>
-                <span>
-                  <strong>Store</strong>
-                  {formatValue(item.competitor_store)}
-                  {listingWarning ? <small className="price-review-listings-inline-note">{listingWarning}</small> : null}
-                </span>
-                <span>
-                  <strong>URL</strong>
-                  {sourceUrl ? (
-                    <a href={sourceUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                      Open
-                    </a>
-                  ) : (
-                    "-"
-                  )}
-                </span>
-                <span>
-                  <strong>Delta vs current item price</strong>
-                  {formatNumber(item.price_delta)}
-                </span>
-                <span>
-                  <strong>Delta %</strong>
-                  {formatNumber(item.price_delta_percent)}
-                </span>
-              </div>
-            </div>
-
-            {isSelected ? (
-              <div className="price-review-inline-panel" onClick={(event) => event.stopPropagation()}>
-                <div className="button-row price-review-actions">
-                  <button
-                    className="button secondary"
-                    type="button"
-                    disabled={!dbAvailable}
-                    onClick={() => onUpdateRowAction(item.model, { selected_action: "match_price" })}
-                  >
-                    Match price
-                  </button>
-                  <button
-                    className="button secondary"
-                    type="button"
-                    disabled={!dbAvailable}
-                    onClick={() =>
-                      onUpdateRowAction(item.model, {
-                        selected_action: "undercut",
-                        undercut_amount: state.undercut_amount || "0.01",
-                      })
-                    }
-                  >
-                    Undercut
-                  </button>
-                  <label className="inline-field price-review-undercut-field">
-                    <input
-                      aria-label="Undercut amount"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={state.undercut_amount}
-                      placeholder="0.01"
-                      disabled={!dbAvailable}
-                      onChange={(event) => onUpdateRowAction(item.model, { undercut_amount: event.target.value })}
-                    />
-                  </label>
-                  <button
-                    className="button secondary"
-                    type="button"
-                    disabled={!dbAvailable}
-                    onClick={() => onUpdateRowAction(item.model, { selected_action: "ignore" })}
-                  >
-                    Ignore
-                  </button>
-                  <button className="button secondary" type="button" disabled={!dbAvailable} onClick={() => clearRowAction(item.model)}>
-                    Clear row action
-                  </button>
-                  {competitorUrl ? (
-                    <a className="button secondary" href={competitorUrl} target="_blank" rel="noreferrer">
-                      Open Store URL
-                    </a>
-                  ) : null}
-                  <button
-                    className="button secondary"
-                    type="button"
-                    aria-expanded={showTopListings}
-                    onClick={() =>
-                      setExpandedTopListings((current) => ({
-                        ...current,
-                        [item.model]: !current[item.model],
-                      }))
-                    }
-                  >
-                    Top 3 listings
-                  </button>
-                  <button
-                    className="button secondary"
-                    type="button"
-                    aria-expanded={showExtraDetails}
-                    onClick={() => setExpandedExtraDetailsModel((current) => (current === item.model ? null : item.model))}
-                  >
-                    Extra
-                  </button>
-                </div>
-
-                {actionError ? <small className="field-error">{actionError}</small> : null}
-
-                {showExtraDetails ? (
-                  <>
-                    <dl className="price-review-detail-grid">
-                      <div>
-                        <dt>Status</dt>
-                        <dd>{formatValue(item.status)}</dd>
-                      </div>
-                      <div>
-                        <dt>Warnings</dt>
-                        <dd>{item.warnings?.join(", ") || "-"}</dd>
-                      </div>
-                      <div>
-                        <dt>Recommended action</dt>
-                        <dd>{formatValue(item.recommended_action)}</dd>
-                      </div>
-                      <div>
-                        <dt>Selected action</dt>
-                        <dd>{formatValue(state.selected_action || item.selected_action)}</dd>
-                      </div>
-                      <div>
-                        <dt>Target price</dt>
-                        <dd>{formatMoney(targetPrice)}</dd>
-                      </div>
-                      <div>
-                        <dt>Delta basis</dt>
-                        <dd>{formatValue(item.delta_basis)}</dd>
-                      </div>
-                      <div>
-                        <dt>Next store</dt>
-                        <dd>{formatValue(item.next_competitor_store)}</dd>
-                      </div>
-                      <div>
-                        <dt>Next price</dt>
-                        <dd>{formatMoney(item.next_competitor_price)}</dd>
-                      </div>
-                      <div>
-                        <dt>Captured listings</dt>
-                        <dd>{formatValue(item.captured_listings_count ?? topListings.length)}</dd>
-                      </div>
-                    </dl>
-
-                    {listingWarning ? (
-                      <p className="muted price-review-listings-detail-note">
-                        Top listings are incomplete. Capture returned only {item.captured_listings_count ?? topListings.length} marketplace listing
-                        {(item.captured_listings_count ?? topListings.length) === 1 ? "" : "s"}.
-                      </p>
-                    ) : null}
-                  </>
-                ) : null}
-
-                {state.selected_action === "ignore" ? (
-                  <label className="inline-field wide price-review-reason-field">
-                    <span>Ignore reason</span>
-                    <input
-                      value={state.reason}
-                      disabled={!dbAvailable}
-                      onChange={(event) => onUpdateRowAction(item.model, { reason: event.target.value })}
-                      placeholder="Optional"
-                    />
-                  </label>
-                ) : null}
-
-                {showTopListings ? (
-                  <TopListingsPanel currentPrice={item.current_price} listings={topListings} />
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-        );
-      })}
-    </div>
-  );
-}
-
-function getListingsIncompleteText(item: PriceMonitoringReviewItem, topListingsLength: number): string {
-  const count = typeof item.captured_listings_count === "number" ? item.captured_listings_count : topListingsLength;
-  if (item.listings_incomplete !== true && topListingsLength >= 3) {
-    return "";
-  }
-  if (count <= 0) {
-    return "No listings captured";
-  }
-  if (count === 1) {
-    return "Only 1/3 listings captured";
-  }
-  if (count < 3) {
-    return `Only ${count}/3 listings captured`;
-  }
-  return "";
-}
-
-function TopListingsPanel({
-  currentPrice,
-  listings,
-}: {
-  currentPrice: unknown;
-  listings: NonNullable<PriceMonitoringReviewItem["top_listings"]>;
-}) {
-  const current = parseNumberLike(currentPrice);
-
-  if (listings.length === 0) {
-    return <p className="muted price-review-empty-top-listings">No listings captured.</p>;
-  }
-
-  return (
-    <div className="price-review-top-listings">
-      <div className="price-review-top-listings-header">
-        <span>Rank</span>
-        <span>Store</span>
-        <span>Item price</span>
-        <span>Shipping</span>
-        <span>Landed price</span>
-        <span>Difference</span>
-        <span>L Difference</span>
-        <span>URL</span>
-      </div>
-      {listings.map((listing, index) => {
-        const listingPrice = parseNumberLike(listing.price);
-        const difference = current !== null && listingPrice !== null ? current - listingPrice : null;
-        const listingLandedComparisonPrice = getListingLandedComparisonPrice(listing);
-        const landedDifference =
-          current !== null && listingLandedComparisonPrice !== null
-            ? current - listingLandedComparisonPrice
-            : null;
-        return (
-          <div className="price-review-top-listing-row" key={`${listing.rank ?? index}-${listing.store ?? ""}`}>
-            <span>{formatValue(listing.rank ?? index + 1)}</span>
-            <span>{formatValue(listing.store)}</span>
-            <span>{formatMoney(listing.price)}</span>
-            <span>{formatShippingCost(listing.shipping_cost)}</span>
-            <span>{formatLandedPrice(listing)}</span>
-            <span>{formatMoney(difference)}</span>
-            <span>{formatMoney(landedDifference)}</span>
-            <span>
-              {listing.url ? (
-                <a href={listing.url} target="_blank" rel="noreferrer">
-                  Open Store
-                </a>
-              ) : (
-                "-"
-              )}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function formatShippingCost(value: unknown): string {
-  const parsed = parseNumberLike(value);
-  return parsed === null ? "shipping unknown" : formatMoney(parsed);
-}
-
-function getListingLandedComparisonPrice(listing: PriceMonitoringTopListing): number | null {
-  const landedPrice = parseNumberLike(listing.landed_price);
-  if (landedPrice !== null) {
-    return landedPrice;
-  }
-
-  const itemPrice = parseNumberLike(listing.price);
-  const shippingCost = parseNumberLike(listing.shipping_cost);
-  if (itemPrice === null || shippingCost === null) {
-    return null;
-  }
-
-  return itemPrice + shippingCost;
-}
-
-function formatLandedPrice(listing: PriceMonitoringTopListing): string {
-  const itemPrice = parseNumberLike(listing.price);
-  const shippingCost = parseNumberLike(listing.shipping_cost);
-  const landedPrice = parseNumberLike(listing.landed_price);
-  if (landedPrice === null) {
-    return "-";
-  }
-  if (itemPrice !== null && shippingCost !== null) {
-    return `${formatMoney(itemPrice)} + ${formatMoney(shippingCost)} = ${formatMoney(landedPrice)}`;
-  }
-  return formatMoney(landedPrice);
-}
-
 export function StoredObservationsSection({
   runId,
   dbStatus,
@@ -2849,7 +1980,7 @@ export function PriceMonitoringPage() {
     }
 
     if (nextVendorSources.status === "fulfilled") {
-      setVendorSources(dedupeVendorSources(nextVendorSources.value));
+      setVendorSources(nextVendorSources.value);
       setVendorSourceError(null);
     } else {
       setVendorSources([]);
@@ -3251,30 +2382,20 @@ export function PriceMonitoringPage() {
     [selectedCategory, selectedFamily, selectedSubCategory],
   );
 
-  const familyOptions = useMemo(
-    () => getFamilyOptions(categoryHierarchy),
-    [categoryHierarchy],
-  );
-
-  const categoryOptions = useMemo(
-    () => getCategoryOptions(categoryHierarchy, selectedFamily),
-    [categoryHierarchy, selectedFamily],
-  );
-
-  const subCategoryOptions = useMemo(
-    () => getSubCategoryOptions(categoryHierarchy, selectedFamily, selectedCategory),
-    [categoryHierarchy, selectedCategory, selectedFamily],
-  );
-
-  const sourceUrlFilterOptions = useMemo(
-    () =>
-      dedupeVendorSources(
-        vendorSources.filter((option) => normalizeSelectedSource(String(option.source_name))),
-      ),
-    [vendorSources],
-  );
-  const selectedSourceName = normalizeSelectedSource(source);
-  const sourceRequired = selectedSourceName.length === 0;
+  const {
+    familyOptions,
+    categoryOptions,
+    subCategoryOptions,
+    sourceUrlFilterOptions,
+    selectedSourceName,
+    sourceRequired,
+  } = usePriceMonitoringSelection({
+    categoryHierarchy,
+    selectedFamily,
+    selectedCategory,
+    vendorSources,
+    source,
+  });
 
   const previewSelection = async () => {
     if (sourceRequired) {
@@ -3571,76 +2692,14 @@ export function PriceMonitoringPage() {
       return;
     }
 
-    setRowActions(
-      review.items.reduce<Record<string, RowActionState>>((nextActions, item) => {
-        const recommendedAction = isAction(item.recommended_action) ? item.recommended_action : "";
-        const isNotExportable = item.status === "not_exportable";
-        nextActions[item.model] =
-          recommendedAction && (!isNotExportable || recommendedAction === "ignore")
-            ? {
-                selected_action: recommendedAction,
-                undercut_amount:
-                  recommendedAction === "undercut" &&
-                  typeof item.undercut_amount === "number" &&
-                  Number.isFinite(item.undercut_amount)
-                    ? String(item.undercut_amount)
-                    : "",
-                reason: recommendedAction === "ignore" ? "manual ignore from price review" : "",
-              }
-            : {
-                selected_action: "",
-                undercut_amount: "",
-                reason: "",
-              };
-        return nextActions;
-      }, {}),
-    );
+    setRowActions(getRecommendedRowActions(review.items));
   };
 
   const clearActions = () => {
     setRowActions({});
   };
 
-  const actionRows = useMemo(() => review?.items ?? [], [review?.items]);
-  const actionErrors = useMemo(
-    () =>
-      actionRows
-        .map((row) => {
-          const state = getActionState(row, rowActions);
-          const error = getActionError(row, state);
-          return error ? `${row.model}: ${error}` : null;
-        })
-        .filter((error): error is string => error !== null),
-    [actionRows, rowActions],
-  );
-
-  const actionPayload = useMemo<PriceMonitoringReviewAction[]>(
-    () =>
-      actionRows
-        .map((row) => {
-          const state = getActionState(row, rowActions);
-          if (!state.selected_action) {
-            return null;
-          }
-
-          const action: PriceMonitoringReviewAction = {
-            model: row.model,
-            selected_action: state.selected_action,
-          };
-
-          if (state.selected_action === "undercut") {
-            action.undercut_amount = Number(state.undercut_amount);
-          }
-
-          if (state.selected_action === "ignore" && state.reason.trim().length > 0) {
-            action.reason = state.reason.trim();
-          }
-
-          return action;
-        })
-        .filter((action): action is PriceMonitoringReviewAction => action !== null),
-    [actionRows, rowActions],
-  );
+  const { actionErrors, actionPayload } = usePriceMonitoringReview({ review, rowActions });
 
   const configuredArtifactRoots = useMemo(
     () => (pathRoots?.artifact_roots ?? []).filter((root) => root.is_configured),
@@ -3677,17 +2736,21 @@ export function PriceMonitoringPage() {
     useCustomExportPath,
   ]);
 
-  const isFetchActive = isActiveFetchStatus(fetchResult?.status);
-  const isReviewBlockedByFetch = isFetchActive;
   const dbAvailable = isPriceMonitoringDbAvailable(dbStatus);
   const dbBlockingMessage = getPriceMonitoringDbBlockingMessage(dbStatus);
-  const dbActionTitle = dbAvailable ? undefined : dbBlockingMessage;
-  const sourceActionTitle = sourceRequired ? SOURCE_REQUIRED_MESSAGE : dbActionTitle;
-  const fetchButtonLabel = isFetchLoading
-    ? "Starting monitoring..."
-    : isFetchActive
-      ? "Monitoring running..."
-      : "Monitor prices";
+  const {
+    isFetchActive,
+    isReviewBlockedByFetch,
+    dbActionTitle,
+    sourceActionTitle,
+    fetchButtonLabel,
+  } = usePriceMonitoringRun({
+    fetchStatus: fetchResult?.status,
+    isFetchLoading,
+    dbAvailable,
+    dbBlockingMessage,
+    sourceRequired,
+  });
 
   useEffect(() => {
     const runId = currentRunId.trim();

@@ -87,6 +87,7 @@ import type {
   VendorSourceCaptureRunSummary,
   VendorSourceCapability,
 } from "./commerceTypes";
+import { normalizePriceMonitoringFetchStatus } from "./priceMonitoringNormalizers";
 
 const DEFAULT_COMMERCE_API_BASE_URL = "/commerce-api";
 
@@ -1403,22 +1404,6 @@ function normalizeStringArray(value: unknown): string[] {
     : [];
 }
 
-function normalizeFetchStatus(value: unknown): string | null {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    return null;
-  }
-
-  if (value === "fetch_completed") {
-    return "succeeded";
-  }
-
-  if (value === "fetch_failed") {
-    return "failed";
-  }
-
-  return value;
-}
-
 function normalizeRun(value: unknown): PriceMonitoringRun | null {
   if (!isRecord(value)) {
     return null;
@@ -1484,7 +1469,7 @@ function normalizeFetchResult(payload: unknown): FetchPriceMonitoringResult {
       typeof payload.execution_id === "string" || typeof payload.execution_id === "number"
         ? payload.execution_id
         : null,
-    status: normalizeFetchStatus(payload.status),
+    status: normalizePriceMonitoringFetchStatus(payload.status),
     source:
       typeof payload.source === "string" || payload.source === null
         ? payload.source
