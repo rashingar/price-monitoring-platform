@@ -38,8 +38,8 @@ const baseItems: PriceMonitoringReviewItem[] = [
         rank: 1,
         store: "Store A",
         price: 18,
-        shipping_cost: null,
-        landed_price: 18,
+        shipping_cost: 2,
+        landed_price: 20,
         url: "https://competitor.example/products/111111",
       },
     ],
@@ -126,12 +126,33 @@ describe("Price monitoring review results selected row", () => {
     );
   });
 
-  it("uses the source product URL for the compact row store link", () => {
+  it("uses the source product URL for the top-level row URL link", () => {
     render(<TestReviewResultsTable />);
 
-    expect(screen.getAllByRole("link", { name: "Open Store" })[0]).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Open" })[0]).toHaveAttribute(
       "href",
       "https://catalog.example/products/111111",
+    );
+  });
+
+  it("shows item and landed differences in top listings", () => {
+    render(<TestReviewResultsTable />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Top 3 listings" }));
+
+    expect(screen.getByText("Difference")).toBeInTheDocument();
+    expect(screen.getByText("L Difference")).toBeInTheDocument();
+    const listingRow = screen.getByRole("link", { name: "Open Store" }).closest(".price-review-top-listing-row");
+    expect(listingRow).not.toBeNull();
+    const listingCells = Array.from((listingRow as HTMLElement).querySelectorAll(":scope > span")).map((cell) =>
+      (cell.textContent ?? "").replace(/\s+/g, " ").trim(),
+    );
+    expect(listingCells[4]).toBe("18,00 € + 2,00 € = 20,00 €");
+    expect(listingCells[5]).toBe("2,00 €");
+    expect(listingCells[6]).toBe("0,00 €");
+    expect(screen.getByRole("link", { name: "Open Store" })).toHaveAttribute(
+      "href",
+      "https://competitor.example/products/111111",
     );
   });
 

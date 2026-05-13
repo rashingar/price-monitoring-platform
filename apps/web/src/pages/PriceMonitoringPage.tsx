@@ -2085,7 +2085,7 @@ export function ReviewResultsTable({
                   <strong>URL</strong>
                   {sourceUrl ? (
                     <a href={sourceUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
-                      Open Store
+                      Open
                     </a>
                   ) : (
                     "-"
@@ -2291,13 +2291,18 @@ function TopListingsPanel({
         <span>Item price</span>
         <span>Shipping</span>
         <span>Landed price</span>
-        <span>Difference vs current item price</span>
+        <span>Difference</span>
+        <span>L Difference</span>
         <span>URL</span>
-        <span>Evidence</span>
       </div>
       {listings.map((listing, index) => {
         const listingPrice = parseNumberLike(listing.price);
         const difference = current !== null && listingPrice !== null ? current - listingPrice : null;
+        const listingLandedComparisonPrice = getListingLandedComparisonPrice(listing);
+        const landedDifference =
+          current !== null && listingLandedComparisonPrice !== null
+            ? current - listingLandedComparisonPrice
+            : null;
         return (
           <div className="price-review-top-listing-row" key={`${listing.rank ?? index}-${listing.store ?? ""}`}>
             <span>{formatValue(listing.rank ?? index + 1)}</span>
@@ -2306,16 +2311,16 @@ function TopListingsPanel({
             <span>{formatShippingCost(listing.shipping_cost)}</span>
             <span>{formatLandedPrice(listing)}</span>
             <span>{formatMoney(difference)}</span>
+            <span>{formatMoney(landedDifference)}</span>
             <span>
               {listing.url ? (
                 <a href={listing.url} target="_blank" rel="noreferrer">
-                  Open
+                  Open Store
                 </a>
               ) : (
                 "-"
               )}
             </span>
-            <span>{formatValue(listing.evidence_source ?? listing.raw_source)}</span>
           </div>
         );
       })}
@@ -2326,6 +2331,21 @@ function TopListingsPanel({
 function formatShippingCost(value: unknown): string {
   const parsed = parseNumberLike(value);
   return parsed === null ? "shipping unknown" : formatMoney(parsed);
+}
+
+function getListingLandedComparisonPrice(listing: PriceMonitoringTopListing): number | null {
+  const landedPrice = parseNumberLike(listing.landed_price);
+  if (landedPrice !== null) {
+    return landedPrice;
+  }
+
+  const itemPrice = parseNumberLike(listing.price);
+  const shippingCost = parseNumberLike(listing.shipping_cost);
+  if (itemPrice === null || shippingCost === null) {
+    return null;
+  }
+
+  return itemPrice + shippingCost;
 }
 
 function formatLandedPrice(listing: PriceMonitoringTopListing): string {
