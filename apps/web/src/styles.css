@@ -185,6 +185,13 @@ textarea {
   gap: 16px;
 }
 
+.section-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .toolbar {
   min-height: 40px;
 }

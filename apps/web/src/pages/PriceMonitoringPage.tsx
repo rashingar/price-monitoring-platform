@@ -1032,6 +1032,10 @@ function getReviewCompetitorUrl(row: PriceMonitoringReviewItem): string {
   return row.competitor_url || "";
 }
 
+function getReviewSourceUrl(row: PriceMonitoringReviewItem): string {
+  return row.source_url || "";
+}
+
 function DebugDetails({
   title,
   count,
@@ -2026,6 +2030,7 @@ export function ReviewResultsTable({
         const topListings = item.top_listings ?? [];
         const listingWarning = getListingsIncompleteText(item, topListings.length);
         const competitorUrl = getReviewCompetitorUrl(item);
+        const sourceUrl = getReviewSourceUrl(item);
 
         return (
           <section
@@ -2076,8 +2081,8 @@ export function ReviewResultsTable({
                 </span>
                 <span>
                   <strong>URL</strong>
-                  {competitorUrl ? (
-                    <a href={competitorUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
+                  {sourceUrl ? (
+                    <a href={sourceUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>
                       Open
                     </a>
                   ) : (
@@ -2334,7 +2339,7 @@ function formatLandedPrice(listing: PriceMonitoringTopListing): string {
   return formatMoney(landedPrice);
 }
 
-function StoredObservationsSection({
+export function StoredObservationsSection({
   runId,
   dbStatus,
   isLoading,
@@ -2378,6 +2383,7 @@ function StoredObservationsSection({
     mpnFilter,
   );
   const dbAvailable = isPriceMonitoringDbAvailable(dbStatus);
+  const [showStoredObservationDetails, setShowStoredObservationDetails] = useState(false);
 
   return (
     <section className="panel">
@@ -2386,15 +2392,27 @@ function StoredObservationsSection({
           <p className="eyebrow">Stored Observations</p>
           <h3>Stored Observations</h3>
         </div>
-        <button
-          className="button secondary"
-          type="button"
-          disabled={isLoading || !dbAvailable}
-          title={dbAvailable ? undefined : getPriceMonitoringDbBlockingMessage(dbStatus)}
-          onClick={onRefresh}
-        >
-          {isLoading ? "Refreshing..." : "Refresh"}
-        </button>
+        <div className="section-heading-actions">
+          {runId ? (
+            <button
+              className="button secondary"
+              type="button"
+              aria-expanded={showStoredObservationDetails}
+              onClick={() => setShowStoredObservationDetails((current) => !current)}
+            >
+              {showStoredObservationDetails ? "Hide details" : "Details"}
+            </button>
+          ) : null}
+          <button
+            className="button secondary"
+            type="button"
+            disabled={isLoading || !dbAvailable}
+            title={dbAvailable ? undefined : getPriceMonitoringDbBlockingMessage(dbStatus)}
+            onClick={onRefresh}
+          >
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {!runId ? (
@@ -2414,72 +2432,76 @@ function StoredObservationsSection({
             />
           </dl>
 
-          <DebugDetails title="Stored observation debugging">
-            <dl className="summary-grid">
-              <SummaryItem label="Fetch attempt" value={fetchResult?.fetch_attempt} />
-              <SummaryItem label="Was refetch" value={formatBoolean(fetchResult?.was_refetch)} />
-              <SummaryItem label="Prior observations" value={getPriorObservationCount(fetchResult)} />
-              <SummaryItem label="Observation batch" value={fetchResult?.observation_batch_id} />
-              <SummaryItem label="Observation history" value={fetchResult?.observation_history_count} />
-              <SummaryItem label="Persistence status" value={fetchResult?.persistence_status} />
-            </dl>
-            {fetchResult?.persistence_warnings && fetchResult.persistence_warnings.length > 0 ? (
-              <div className="compact-list">
-                <strong>Persistence warnings</strong>
-                <ul>
-                  {fetchResult.persistence_warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
+          {showStoredObservationDetails ? (
+            <>
+              <DebugDetails title="Stored observation debugging">
+                <dl className="summary-grid">
+                  <SummaryItem label="Fetch attempt" value={fetchResult?.fetch_attempt} />
+                  <SummaryItem label="Was refetch" value={formatBoolean(fetchResult?.was_refetch)} />
+                  <SummaryItem label="Prior observations" value={getPriorObservationCount(fetchResult)} />
+                  <SummaryItem label="Observation batch" value={fetchResult?.observation_batch_id} />
+                  <SummaryItem label="Observation history" value={fetchResult?.observation_history_count} />
+                  <SummaryItem label="Persistence status" value={fetchResult?.persistence_status} />
+                </dl>
+                {fetchResult?.persistence_warnings && fetchResult.persistence_warnings.length > 0 ? (
+                  <div className="compact-list">
+                    <strong>Persistence warnings</strong>
+                    <ul>
+                      {fetchResult.persistence_warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </DebugDetails>
+
+              <div className="filter-grid">
+                <label>
+                  Match status
+                  <select
+                    value={matchStatus}
+                    onChange={(event) => onMatchStatusChange(event.target.value as StoredObservationMatchFilter)}
+                  >
+                    <option value="all">All</option>
+                    <option value="matched">Matched</option>
+                    <option value="unmatched">Unmatched</option>
+                  </select>
+                </label>
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={includeUnmatched}
+                    onChange={(event) => onIncludeUnmatchedChange(event.target.checked)}
+                  />
+                  Include unmatched
+                </label>
+                <label>
+                  Model
+                  <input
+                    value={modelFilter}
+                    onChange={(event) => onModelFilterChange(event.target.value)}
+                    placeholder="Filter current run"
+                  />
+                </label>
+                <label>
+                  MPN
+                  <input
+                    value={mpnFilter}
+                    onChange={(event) => onMpnFilterChange(event.target.value)}
+                    placeholder="Filter current run"
+                  />
+                </label>
               </div>
-            ) : null}
-          </DebugDetails>
 
-          <div className="filter-grid">
-            <label>
-              Match status
-              <select
-                value={matchStatus}
-                onChange={(event) => onMatchStatusChange(event.target.value as StoredObservationMatchFilter)}
-              >
-                <option value="all">All</option>
-                <option value="matched">Matched</option>
-                <option value="unmatched">Unmatched</option>
-              </select>
-            </label>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={includeUnmatched}
-                onChange={(event) => onIncludeUnmatchedChange(event.target.checked)}
-              />
-              Include unmatched
-            </label>
-            <label>
-              Model
-              <input
-                value={modelFilter}
-                onChange={(event) => onModelFilterChange(event.target.value)}
-                placeholder="Filter current run"
-              />
-            </label>
-            <label>
-              MPN
-              <input
-                value={mpnFilter}
-                onChange={(event) => onMpnFilterChange(event.target.value)}
-                placeholder="Filter current run"
-              />
-            </label>
-          </div>
-
-          {isLoading ? <LoadingState label="Loading stored observations..." /> : null}
-          {observationError ? <ErrorState message={observationError} onRetry={onRefresh} /> : null}
-          {!observationError && !isLoading ? (
-            <ObservationTable items={filteredItems} isDbAvailable={dbAvailable} />
+              {isLoading ? <LoadingState label="Loading stored observations..." /> : null}
+              {observationError ? <ErrorState message={observationError} onRetry={onRefresh} /> : null}
+              {!observationError && !isLoading ? (
+                <ObservationTable items={filteredItems} isDbAvailable={dbAvailable} />
+              ) : null}
+              {catalogSnapshotError ? <ErrorState message={catalogSnapshotError} onRetry={onRefresh} /> : null}
+              {!catalogSnapshotError && !isLoading ? <CatalogSnapshotTable snapshot={catalogSnapshot} /> : null}
+            </>
           ) : null}
-          {catalogSnapshotError ? <ErrorState message={catalogSnapshotError} onRetry={onRefresh} /> : null}
-          {!catalogSnapshotError && !isLoading ? <CatalogSnapshotTable snapshot={catalogSnapshot} /> : null}
         </>
       )}
     </section>

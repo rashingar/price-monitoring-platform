@@ -126,6 +126,15 @@ describe("Price monitoring review results selected row", () => {
     );
   });
 
+  it("uses the source product URL for the row URL link", () => {
+    render(<TestReviewResultsTable />);
+
+    expect(screen.getAllByRole("link", { name: "Open" })[0]).toHaveAttribute(
+      "href",
+      "https://catalog.example/products/111111",
+    );
+  });
+
   it("hides the selected-row competitor link when competitor_url is missing", () => {
     render(
       <TestReviewResultsTable
