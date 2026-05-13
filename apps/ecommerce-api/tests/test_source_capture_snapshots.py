@@ -6,7 +6,13 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.source_capture.parsing import parse_bestprice_html, parse_electronet_html, parse_skroutz_offers, parse_skroutz_price_summary  # noqa: E402
+from ecommerce.source_capture.parsing import (  # noqa: E402
+    parse_bestprice_html,
+    parse_bestprice_offers,
+    parse_electronet_html,
+    parse_skroutz_offers,
+    parse_skroutz_price_summary,
+)
 from ecommerce.source_capture.sanitize import sanitize_headers, sanitize_json  # noqa: E402
 from ecommerce.source_capture.scoring import score_response_candidate  # noqa: E402
 from ecommerce.source_capture.types import ParsedOfferObservation, ParsedPriceObservation, ResponseCandidate  # noqa: E402
@@ -163,6 +169,51 @@ def test_bestprice_parser_reads_aggregate_offer_low_price() -> None:
     assert observation.raw_observation["offer_count"] == "12"
     assert observation.raw_observation["bestprice_best_store"] == "eTranoulis"
     assert observation.raw_observation["bestprice_best_store_url"] == "https://www.bestprice.gr/to/160584639/product.html"
+
+
+def test_bestprice_parser_reads_price_group_offers() -> None:
+    offers, flags = parse_bestprice_offers(
+        """
+        <html><body>
+        <div class="prices" data-merchants="3">
+          <div class="prices__group" data-id='2' data-price='18100' data-mid='20' data-domain='b.example'>
+            <div class="prices__merchant">
+              <a aria-label="Store B" class="prices__merchant-logo" href="/to/200/product-b.html"></a>
+            </div>
+            <div class="prices__products">
+              <div class="prices__product" data-index='1' data-price='18100' data-shipping-cost='0' data-in-stock>
+                <div class="prices__title">
+                  <a data-price="18100" title="Product B" rel="nofollow" href="/to/200/product-b.html?from=1&amp;seq=2"><h3>Product B</h3></a>
+                </div>
+                <span data-status="IN_STOCK" class="av"><small>Άμεσα διαθέσιμο</small></span>
+              </div>
+            </div>
+          </div>
+          <div class="prices__group" data-id='1' data-price='18090' data-mid='10' data-domain='a.example'>
+            <div class="prices__merchant">
+              <a aria-label="Store A" class="prices__merchant-logo" href="/to/100/product-a.html"></a>
+            </div>
+            <div class="prices__products">
+              <div class="prices__product" data-index='1' data-price='18090' data-shipping-cost='290' data-in-stock>
+                <div class="prices__title">
+                  <a data-price="18090" title="Product A" rel="nofollow" href="/to/100/product-a.html?from=1&amp;seq=1"><h3>Product A</h3></a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </body></html>
+        """,
+        page_url="https://www.bestprice.gr/item/1/product.html",
+    )
+
+    assert flags == []
+    assert [(offer.seller_name, offer.price, offer.seller_url, offer.shipping_cost) for offer in offers] == [
+        ("Store B", Decimal("181.00"), "https://www.bestprice.gr/to/200/product-b.html?from=1&seq=2", Decimal("0.00")),
+        ("Store A", Decimal("180.90"), "https://www.bestprice.gr/to/100/product-a.html?from=1&seq=1", Decimal("2.90")),
+    ]
+    assert offers[0].availability == "in_stock"
+    assert offers[0].raw_observation["rank"] == 2
 
 
 def test_source_capture_scoring_snapshot(fixtures_root: Path) -> None:

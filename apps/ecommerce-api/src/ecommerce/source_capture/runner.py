@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import httpx
 
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
-from ecommerce.source_capture.parsing import parse_bestprice_html, parse_electronet_html
+from ecommerce.source_capture.parsing import parse_bestprice_html, parse_bestprice_offers, parse_electronet_html
 from ecommerce.source_capture.sanitize import content_hash
 from ecommerce.source_capture.skroutz_xhr import capture_skroutz_xhr
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload
@@ -116,6 +116,8 @@ def _capture_bestprice(url: str, *, timeout_seconds: float) -> CaptureResult:
         content_type = response.headers.get("content-type", "")
         html = response.text
         parsed, flags = parse_bestprice_html(html, page_url=str(response.url))
+        offers, offer_flags = parse_bestprice_offers(html, page_url=str(response.url))
+        flags.extend(flag for flag in offer_flags if flag not in flags)
         parsed_at = _now()
         latency_ms = int((fetched_at - started).total_seconds() * 1000)
         snapshot = CaptureSnapshotPayload(
@@ -149,6 +151,7 @@ def _capture_bestprice(url: str, *, timeout_seconds: float) -> CaptureResult:
             status="success",
             snapshot=snapshot,
             price_observations=(parsed,) if parsed.price is not None else (),
+            offer_observations=tuple(offers),
             error_code=None if parsed.price is not None else "PRICE_MISSING",
             error_message=None if parsed.price is not None else "BestPrice parser did not find a price.",
         )

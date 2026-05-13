@@ -159,6 +159,69 @@ def parse_bestprice_html(html: str, *, page_url: str) -> tuple[ParsedPriceObserv
     return observation, flags
 
 
+def parse_bestprice_offers(html: str, *, page_url: str) -> tuple[list[ParsedOfferObservation], list[str]]:
+    del page_url
+    offers: list[ParsedOfferObservation] = []
+    for group_index, (group_start, group_tag) in enumerate(_tag_spans_with_class(html, "prices__group")):
+        group_attrs = _html_attrs(group_tag)
+        group_end = _next_tag_with_class_start(html, "prices__group", group_start + len(group_tag))
+        group_html = html[group_start : group_end if group_end is not None else len(html)]
+        group_rank = _int_text(group_attrs.get("data-id")) or group_index + 1
+        group_price = _bestprice_cents_to_decimal(group_attrs.get("data-price"))
+        seller_name = _bestprice_group_seller_name(group_html)
+        seller_url = _absolute_bestprice_url(_first_match(group_html, (r"href=[\"']([^\"']*/to/[^\"']+)[\"']",)))
+
+        product_tag_spans = list(_tag_spans_with_class(group_html, "prices__product"))
+        if not product_tag_spans:
+            offer = _bestprice_offer_from_values(
+                seller_name=seller_name,
+                seller_url=seller_url,
+                price=group_price,
+                rank=group_rank,
+                raw={"parser": "bestprice_html_v1", "rank": group_rank, "group": _bestprice_raw_attrs(group_attrs)},
+            )
+            if offer is not None:
+                offers.append(offer)
+            continue
+
+        for product_index, (product_start, product_tag) in enumerate(product_tag_spans, start=1):
+            product_attrs = _html_attrs(product_tag)
+            product_end = _next_tag_with_class_start(group_html, "prices__product", product_start + len(product_tag))
+            product_html = group_html[product_start : product_end if product_end is not None else len(group_html)]
+            product_link_attrs = _bestprice_product_link_attrs(product_html)
+            product_url = _absolute_bestprice_url(product_link_attrs.get("href")) or seller_url
+            product_price = _bestprice_cents_to_decimal(product_attrs.get("data-price")) or _bestprice_cents_to_decimal(
+                product_link_attrs.get("data-price")
+            ) or group_price
+            product_title = _clean_html_text(product_link_attrs.get("title")) or _clean_html_text(
+                _first_match(product_html, (r"<h3[^>]*>(.*?)</h3>",))
+            )
+            availability = _bestprice_availability(product_html, product_attrs)
+            shipping_cost = _bestprice_cents_to_decimal_allow_zero(product_attrs.get("data-shipping-cost"))
+            raw = {
+                "parser": "bestprice_html_v1",
+                "rank": group_rank,
+                "product_index": product_index,
+                "product_title": product_title,
+                "group": _bestprice_raw_attrs(group_attrs),
+                "product": _bestprice_raw_attrs(product_attrs),
+            }
+            offer = _bestprice_offer_from_values(
+                seller_name=seller_name,
+                seller_url=product_url,
+                price=product_price,
+                rank=group_rank,
+                availability=availability,
+                shipping_cost=shipping_cost,
+                raw=raw,
+            )
+            if offer is not None:
+                offers.append(offer)
+
+    flags = [] if offers else ["NO_OFFER_OBSERVATIONS_PARSED"]
+    return offers, flags
+
+
 def parse_skroutz_offers(payload: Any, *, shops_payload: Any = None) -> tuple[list[ParsedOfferObservation], list[str]]:
     data = _json_payload(payload)
     shops = _skroutz_shop_details_by_id(_json_payload(shops_payload))
@@ -317,6 +380,74 @@ def _absolute_bestprice_url(value: str | None) -> str | None:
     return urljoin(BESTPRICE_BASE_URL, value)
 
 
+def _bestprice_offer_from_values(
+    *,
+    seller_name: str | None,
+    seller_url: str | None,
+    price: Decimal | None,
+    rank: int,
+    availability: str | None = None,
+    shipping_cost: Decimal | None = None,
+    raw: dict[str, Any] | None = None,
+) -> ParsedOfferObservation | None:
+    if price is None or price <= 0:
+        return None
+    return ParsedOfferObservation(
+        seller_name=seller_name,
+        seller_url=seller_url,
+        price=price,
+        currency="EUR",
+        availability=availability,
+        stock_status=availability,
+        shipping_cost=shipping_cost,
+        raw_observation=raw or {"parser": "bestprice_html_v1", "rank": rank},
+    )
+
+
+def _bestprice_group_seller_name(group_html: str) -> str | None:
+    for class_name in ("prices__merchant-logo", "prices__merchant-link"):
+        attrs = _first_attrs_with_class(group_html, class_name)
+        seller = _clean_html_text(attrs.get("aria-label") or attrs.get("title") or attrs.get("alt"))
+        if seller:
+            return seller
+    seller = _first_match(group_html, (r"<em[^>]*>(.*?)</em>", r"<img[^>]+(?:alt|title)=[\"']([^\"']+)[\"'][^>]*>"))
+    return _clean_html_text(seller)
+
+
+def _bestprice_product_link_attrs(product_html: str) -> dict[str, str]:
+    to_link_match = re.search(r"<a\b(?=[^>]+href=[\"'][^\"']*/to/[^\"']+[\"'])[^>]*>", product_html or "", flags=re.IGNORECASE | re.DOTALL)
+    if to_link_match:
+        return _html_attrs(to_link_match.group(0))
+    price_link_match = re.search(r"<a\b(?=[^>]+data-price=)[^>]*>", product_html or "", flags=re.IGNORECASE | re.DOTALL)
+    if price_link_match:
+        return _html_attrs(price_link_match.group(0))
+    return {}
+
+
+def _bestprice_availability(product_html: str, product_attrs: dict[str, str]) -> str | None:
+    if "data-in-stock" in product_attrs:
+        return "in_stock"
+    status = _first_match(product_html, (r"data-status=[\"']([^\"']+)[\"']",))
+    if status:
+        return _normalize_availability(status)
+    return _clean_html_text(_first_match(product_html, (r"class=[\"'][^\"']*\bav\b[^\"']*[\"'][^>]*>.*?<small[^>]*>(.*?)</small>",)))
+
+
+def _bestprice_raw_attrs(attrs: dict[str, str]) -> dict[str, str]:
+    allowed = {
+        "data-id",
+        "data-price",
+        "data-mid",
+        "data-domain",
+        "data-mrating",
+        "data-index",
+        "data-shipping-cost",
+        "data-product-id",
+        "data-av",
+    }
+    return {key: value for key, value in attrs.items() if key in allowed and value != ""}
+
+
 def _bestprice_cents_to_decimal(value: object) -> Decimal | None:
     text = _clean_html_text(value)
     if not text:
@@ -331,6 +462,16 @@ def _bestprice_cents_to_decimal(value: object) -> Decimal | None:
     if amount <= 0:
         return None
     return amount.quantize(Decimal("0.01"))
+
+
+def _bestprice_cents_to_decimal_allow_zero(value: object) -> Decimal | None:
+    parsed = _bestprice_cents_to_decimal(value)
+    if parsed is not None:
+        return parsed
+    text = _clean_html_text(value)
+    if text == "0":
+        return Decimal("0.00")
+    return None
 
 
 def _json_payload(payload: Any) -> Any:
@@ -447,6 +588,62 @@ def _first_match(text: str, patterns: tuple[str, ...]) -> str | None:
         if match:
             return match.group(1)
     return None
+
+
+def _tags_with_class(html: str, class_name: str) -> Iterable[str]:
+    for _, tag in _tag_spans_with_class(html, class_name):
+        yield tag
+
+
+def _tag_spans_with_class(html: str, class_name: str) -> Iterable[tuple[int, str]]:
+    for match in re.finditer(r"<[a-z0-9]+\b[^>]*>", html or "", flags=re.IGNORECASE | re.DOTALL):
+        tag = match.group(0)
+        attrs = _html_attrs(tag)
+        classes = set((attrs.get("class") or "").split())
+        if class_name in classes:
+            yield match.start(), tag
+
+
+def _next_tag_with_class_start(html: str, class_name: str, start: int) -> int | None:
+    for match in re.finditer(r"<[a-z0-9]+\b[^>]*>", html[start:] or "", flags=re.IGNORECASE | re.DOTALL):
+        tag = match.group(0)
+        attrs = _html_attrs(tag)
+        if class_name in set((attrs.get("class") or "").split()):
+            return start + match.start()
+    return None
+
+
+def _first_attrs_with_class(html: str, class_name: str) -> dict[str, str]:
+    for tag in _tags_with_class(html, class_name):
+        return _html_attrs(tag)
+    return {}
+
+
+def _html_attrs(tag: str) -> dict[str, str]:
+    match = re.match(r"<\s*[a-z0-9]+\b(?P<attrs>.*?)/?\s*>$", tag or "", flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return {}
+    attrs: dict[str, str] = {}
+    for attr_match in re.finditer(
+        r"([:\w-]+)(?:\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s>]+)))?",
+        match.group("attrs"),
+        flags=re.IGNORECASE | re.DOTALL,
+    ):
+        name = attr_match.group(1).casefold()
+        value = next((part for part in attr_match.groups()[1:] if part is not None), "")
+        attrs[name] = unescape(value)
+    return attrs
+
+
+def _int_text(value: object) -> int | None:
+    text = _clean_html_text(value)
+    if not text:
+        return None
+    try:
+        parsed = int(text)
+    except ValueError:
+        return None
+    return parsed if parsed > 0 else None
 
 
 def _first_decimal(value: object) -> Decimal | None:
