@@ -52,6 +52,7 @@ from ecommerce.price_monitoring.review import (
 from ecommerce.price_monitoring.runs import (
     PRICE_MONITORING_RUNS_DIR,
     InvalidPriceMonitoringRunIdError,
+    PriceMonitoringRunRecord,
     create_price_monitoring_run,
     resolve_price_monitoring_run_dir,
     run_record_to_response,
@@ -107,7 +108,7 @@ def create_run(request: PriceMonitoringSelectionApiRequest) -> dict:
             selection_request,
             session_scope_fn=session_scope,
             create_price_monitoring_run_fn=create_price_monitoring_run,
-            persist_run_creation_fn=persist_run_creation_if_configured,
+            persist_run_creation_fn=_persist_run_creation_for_route,
         )
     except NoEligibleProductsSelectedError as exc:
         raise HTTPException(status_code=400, detail=exc.detail()) from exc
@@ -117,6 +118,11 @@ def create_run(request: PriceMonitoringSelectionApiRequest) -> dict:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (MissingCatalogColumnsError, MissingIgnoreColumnsError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except _PriceMonitoringRunPersistenceError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB persistence failed: {_safe_db_error(exc.original)}",
+        ) from exc
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
     except Exception as exc:
@@ -517,6 +523,23 @@ def _to_action_input(action: PriceActionApiInput) -> PriceActionInput:
 
 def _require_price_monitoring_database_ready() -> None:
     require_database_ready_for_price_monitoring()
+
+
+class _PriceMonitoringRunPersistenceError(RuntimeError):
+    def __init__(self, original: Exception) -> None:
+        super().__init__(str(original) or original.__class__.__name__)
+        self.original = original
+
+
+def _persist_run_creation_for_route(
+    record: PriceMonitoringRunRecord,
+    *,
+    trigger_type: str = "manual",
+) -> bool:
+    try:
+        return persist_run_creation_if_configured(record, trigger_type=trigger_type)
+    except Exception as exc:
+        raise _PriceMonitoringRunPersistenceError(exc) from exc
 
 
 def validate_run_id_for_db_route(run_id: str) -> None:
