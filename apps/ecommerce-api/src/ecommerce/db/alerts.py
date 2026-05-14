@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import AlertEvent, AlertRule
+from ecommerce.db.models.alerts import AlertEvent, AlertRule
 from ecommerce.db.repositories import json_safe_value
 
 SUPPORTED_ALERT_RULE_TYPES = {"competitor_below_own_price"}

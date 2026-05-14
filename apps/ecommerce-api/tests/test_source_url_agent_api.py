@@ -10,7 +10,9 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 
 

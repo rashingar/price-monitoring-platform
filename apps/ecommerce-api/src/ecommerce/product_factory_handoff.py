@@ -14,7 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models import CatalogProductRow, Product, ProductSource, SourceCaptureSnapshot
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.capture_persistence import persist_capture_result
 from ecommerce.db.product_source_repository import product_source_to_dict
 from ecommerce.db.repositories import json_safe_value

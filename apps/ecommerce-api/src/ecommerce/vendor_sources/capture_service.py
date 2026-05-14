@@ -11,7 +11,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ecommerce.db.config import is_database_configured
-from ecommerce.db.models import CatalogProductRow, Product, ProductSource, SourceUrl, Vendor
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.source_urls import SourceUrl
+from ecommerce.db.models.vendor_sources import Vendor
+from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.price_monitoring.source_url_coverage import compute_source_url_coverage
 from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug

@@ -21,7 +21,11 @@ from ecommerce.db.alerts import (  # noqa: E402
     list_alert_events,
     resolve_alert_event,
 )
-from ecommerce.db.models import AlertEvent, AlertRule, Base, CatalogProductRow, MonitoringRun, PriceObservation, Product  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.products import Product  # noqa: E402
+from ecommerce.db.models.price_monitoring import MonitoringRun, PriceObservation  # noqa: E402
+from ecommerce.db.models.alerts import AlertEvent, AlertRule  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
 from test_price_monitoring_execution_utils import install_fake_execution_child  # noqa: E402

@@ -9,14 +9,8 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import (
-    OfferObservation,
-    PriceObservation,
-    PriceObservationListing,
-    Product,
-    ProductSource,
-    SourceCaptureSnapshot,
-)
+from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
+from ecommerce.db.models.price_monitoring import OfferObservation, PriceObservation, PriceObservationListing
 from ecommerce.source_capture.sanitize import sanitize_json
 from ecommerce.source_capture.types import ParsedOfferObservation, ParsedPriceObservation
 

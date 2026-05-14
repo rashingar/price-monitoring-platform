@@ -34,7 +34,8 @@ This package should reuse existing repository functionality:
 
 * `ecommerce.source_urls`
 * `ecommerce.db.source_url_repository`
-* `ecommerce.db.models`
+* `ecommerce.db.models.source_urls`
+* `ecommerce.db.models.catalog`
 * `ecommerce.source_url_import`
 * `ecommerce.source_url_agent.search`
 * `ecommerce.price_monitoring.source_url_coverage`

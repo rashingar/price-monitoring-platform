@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ecommerce.db.config import DatabaseNotConfiguredError
-from ecommerce.db.models import SourceUrl
+from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.source_url_agent.artifacts import (
     SourceUrlAgentArtifactPaths,
     build_summary_payload,

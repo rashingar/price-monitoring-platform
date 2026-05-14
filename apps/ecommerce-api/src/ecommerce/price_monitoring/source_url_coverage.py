@@ -9,7 +9,10 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import CatalogProductRow, Product, ProductSource, SourceUrl, Vendor
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.source_urls import SourceUrl
+from ecommerce.db.models.vendor_sources import Vendor
+from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_urls import extract_source_domain, infer_source_name
 from ecommerce.price_monitoring.selection import (

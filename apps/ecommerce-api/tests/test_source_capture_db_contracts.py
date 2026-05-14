@@ -12,7 +12,12 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.capture_persistence import persist_capture_result  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, OfferObservation, PriceObservation, PriceObservationListing, ProductSource, SourceCaptureSnapshot, SourceUrl, Vendor  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
+from ecommerce.db.models.vendor_sources import Vendor  # noqa: E402
+from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
+from ecommerce.db.models.price_monitoring import OfferObservation, PriceObservation, PriceObservationListing  # noqa: E402
 from ecommerce.db.product_source_repository import create_product_from_source_urls  # noqa: E402
 from ecommerce.db.repositories import backfill_price_observation_listings_from_offer_observations  # noqa: E402
 from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402

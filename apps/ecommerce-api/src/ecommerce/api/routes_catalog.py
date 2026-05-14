@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ecommerce.catalog import CatalogProduct
 from ecommerce.catalog_db import load_active_catalog_products
 from ecommerce.db.config import sanitize_database_error
-from ecommerce.db.models import SourceUrl
+from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.policy import require_database_ready_for_catalog
 from ecommerce.db.session import session_scope
 from ecommerce.ignore import MissingIgnoreColumnsError, load_ignored_products

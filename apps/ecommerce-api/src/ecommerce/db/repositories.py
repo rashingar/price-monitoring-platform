@@ -12,7 +12,8 @@ from sqlalchemy import Select, delete, exists, func, select
 from sqlalchemy.orm import Session, aliased
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models import CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing, Product
+from ecommerce.db.models.products import Product
+from ecommerce.db.models.price_monitoring import CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing
 from ecommerce.price_monitoring.fetch_run import PriceMonitoringFetchResult
 from ecommerce.price_monitoring.observations import ParsedPriceObservation
 from ecommerce.price_monitoring.runs import PriceMonitoringRunRecord

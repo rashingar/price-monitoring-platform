@@ -6,7 +6,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.db.models import Base, CatalogProductRow, SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.source_url_agent.candidate_transfer import (  # noqa: E402
     export_source_url_candidates,

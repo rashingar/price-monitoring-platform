@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models import CatalogProductRow
+from ecommerce.db.models.catalog import CatalogProductRow
 
 
 CSV_REQUIRED_COLUMNS = (

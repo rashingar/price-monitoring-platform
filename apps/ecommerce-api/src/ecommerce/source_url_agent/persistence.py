@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import SourceUrl, SourceUrlCandidate as SourceUrlCandidateRow, SourceUrlDiscoveryRun
+from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate as SourceUrlCandidateRow, SourceUrlDiscoveryRun
 from ecommerce.db.source_url_repository import create_or_update_imported_source_url
 from ecommerce.source_urls import SourceUrlValidationError, normalize_source_url
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate

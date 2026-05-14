@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.capture_persistence import persist_capture_result
-from ecommerce.db.models import OfferObservation, PriceObservation, Product, ProductSource, SourceCaptureSnapshot, Vendor
+from ecommerce.db.models.vendor_sources import Vendor
+from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
+from ecommerce.db.models.price_monitoring import OfferObservation, PriceObservation
 from ecommerce.db.repositories import find_product_by_identity, json_safe_value
 from ecommerce.db.source_convergence import sync_product_source_to_source_url
 from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url

@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 from ecommerce.artifacts import get_artifact_roots
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import sanitize_database_error
-from ecommerce.db.models import CatalogProductRow, SourceUrl
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.policy import require_database_ready_for_catalog
 from ecommerce.db.repositories import json_safe_value
 from ecommerce.db.session import session_scope

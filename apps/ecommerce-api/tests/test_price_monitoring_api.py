@@ -15,7 +15,10 @@ from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, MonitoringRun, SourceUrl  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
+from ecommerce.db.models.price_monitoring import MonitoringRun  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 

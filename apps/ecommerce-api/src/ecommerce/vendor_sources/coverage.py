@@ -8,7 +8,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import CatalogProductRow, Product, ProductSource, SourceCaptureSnapshot, SourceUrl, Vendor
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.source_urls import SourceUrl
+from ecommerce.db.models.vendor_sources import Vendor
+from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.repositories import json_safe_value
 from ecommerce.source_capture.skroutz_network_diagnostic import CAPTURE_STRATEGY as SKROUTZ_NETWORK_DIAGNOSTIC_STRATEGY
 

@@ -9,7 +9,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import CatalogProductRow, Product, ProductSource, SourceUrl, Vendor
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.source_urls import SourceUrl
+from ecommerce.db.models.vendor_sources import Vendor
+from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.db.repositories import upsert_product_from_catalog_row
 from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug

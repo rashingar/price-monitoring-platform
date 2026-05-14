@@ -23,7 +23,7 @@ from ecommerce.db.repositories import (
     update_monitoring_run_from_fetch,
 )
 from ecommerce.db.session import session_scope
-from ecommerce.db.models import CatalogSnapshot, PriceObservation
+from ecommerce.db.models.price_monitoring import CatalogSnapshot, PriceObservation
 from ecommerce.price_monitoring.fetch_run import PriceMonitoringFetchResult
 from ecommerce.price_monitoring.observations import parse_price_observations_csv
 from ecommerce.price_monitoring.runs import PriceMonitoringRunRecord

@@ -10,7 +10,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import VendorSourceCaptureRun
+from ecommerce.db.models.vendor_sources import VendorSourceCaptureRun
 from ecommerce.vendor_sources.payloads import SourceUrlCaptureRunResult, json_safe_value
 
 

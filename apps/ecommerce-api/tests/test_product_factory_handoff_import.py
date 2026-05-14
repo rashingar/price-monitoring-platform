@@ -8,7 +8,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, PriceObservation, ProductSource, SourceCaptureSnapshot, SourceUrl  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
+from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
+from ecommerce.db.models.price_monitoring import PriceObservation  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs.import_product_factory_handoff import main as handoff_job_main  # noqa: E402
 from ecommerce.product_factory_handoff import import_product_factory_handoff, parse_product_factory_handoff  # noqa: E402

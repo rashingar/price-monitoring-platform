@@ -26,7 +26,8 @@ from decimal import Decimal
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ecommerce.db.models import PriceObservation, Product
+from ecommerce.db.models.products import Product
+from ecommerce.db.models.price_monitoring import PriceObservation
 from ecommerce.db.session import session_scope
 from ecommerce.price_monitoring.fetch_execution import evaluate_alerts_after_persistence
 from ecommerce.price_monitoring.fetch_run import load_price_monitoring_fetch_result

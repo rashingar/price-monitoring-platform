@@ -10,7 +10,8 @@ from sqlalchemy import select
 from sqlalchemy import func
 from sqlalchemy.orm import Session, aliased
 
-from ecommerce.db.models import AlertEvent, AlertRule, PriceObservation
+from ecommerce.db.models.price_monitoring import PriceObservation
+from ecommerce.db.models.alerts import AlertEvent, AlertRule
 from ecommerce.db.repositories import json_safe_value
 
 

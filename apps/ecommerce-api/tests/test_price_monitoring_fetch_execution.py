@@ -14,7 +14,8 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.api import routes_price_monitoring  # noqa: E402
-from ecommerce.db.models import Base, MonitoringRun  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.price_monitoring import MonitoringRun  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.dev import start as dev_start  # noqa: E402
 from ecommerce.jobs import run_price_monitoring_execution  # noqa: E402

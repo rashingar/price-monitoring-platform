@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from ecommerce.db.models import ProductSource, SourceCaptureSnapshot
+from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot
 from ecommerce.source_capture.types import CaptureResult
 
 

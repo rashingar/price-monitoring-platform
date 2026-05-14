@@ -8,7 +8,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import Product, ProductSource, SourceCaptureSnapshot
+from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.observation_persistence import (
     add_price_observation_listings,
     offer_observation_row,

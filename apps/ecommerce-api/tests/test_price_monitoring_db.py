@@ -18,7 +18,11 @@ from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import sanitize_database_error  # noqa: E402
 from ecommerce.db.diagnostics import get_alembic_head_revision  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing, Product, SourceCaptureSnapshot, SourceUrl  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
+from ecommerce.db.models.products import Product, SourceCaptureSnapshot  # noqa: E402
+from ecommerce.db.models.price_monitoring import CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing  # noqa: E402
 from ecommerce.db.repositories import (  # noqa: E402
     catalog_snapshot_to_dict,
     list_price_observations,

@@ -10,7 +10,7 @@ from uuid import uuid4
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import EcommerceJob
+from ecommerce.db.models.jobs import EcommerceJob
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 JobHandler = Callable[[Any], Any]

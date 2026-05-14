@@ -18,6 +18,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Importing ecommerce.db.models loads every workflow-owned model module before
+# Alembic reads Base.metadata.
 target_metadata = Base.metadata
 
 

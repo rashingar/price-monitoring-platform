@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from ecommerce.catalog import CatalogProduct, DEFAULT_CATALOG_SOURCE, read_source_catalog_records
 from ecommerce.catalog.source_catalog import resolve_source_catalog_path
-from ecommerce.db.models import CatalogProductRow
+from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.session import session_scope
 
 

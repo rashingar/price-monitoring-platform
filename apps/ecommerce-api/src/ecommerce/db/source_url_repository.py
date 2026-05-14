@@ -9,7 +9,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models import CatalogProductRow, SourceUrl
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.repositories import json_safe_value
 from ecommerce.db.source_convergence import sync_source_url_to_product_source
 from ecommerce.source_urls import (

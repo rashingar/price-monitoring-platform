@@ -12,7 +12,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models import CatalogProductRow, MonitoringRun, PriceObservation, Product
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.products import Product
+from ecommerce.db.models.price_monitoring import MonitoringRun, PriceObservation
 from ecommerce.db.repositories import json_safe_value
 from ecommerce.db.source_url_repository import create_or_update_imported_source_url, source_url_to_dict
 from ecommerce.price_monitoring.observations import ParsedPriceObservation, parse_price_observations_csv

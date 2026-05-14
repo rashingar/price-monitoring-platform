@@ -12,7 +12,10 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from ecommerce.api import routes_vendor_sources  # noqa: E402
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, PriceObservation, ProductSource  # noqa: E402
+from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.products import ProductSource  # noqa: E402
+from ecommerce.db.models.price_monitoring import PriceObservation  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation  # noqa: E402
