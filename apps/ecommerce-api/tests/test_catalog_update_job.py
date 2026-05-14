@@ -27,6 +27,7 @@ def _client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
 
 
 def test_catalog_update_config_validation_reports_missing_env(monkeypatch) -> None:
+    monkeypatch.setattr(service, "load_local_env_if_present", lambda: None)
     for name in (
         "OPENCART_STORE_BASE",
         "OPENCART_ADMIN_PATH",
