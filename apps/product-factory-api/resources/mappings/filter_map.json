@@ -5717,7 +5717,7 @@
         {
           "group_id": "fg_0d5893235e18",
           "name": "Με Grill",
-          "required": true,
+          "required": false,
           "status": "active",
           "values": [
             {
@@ -5758,8 +5758,8 @@
         {
           "group_id": "fg_58a5c1bfc67d",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_bf33e051f990",
@@ -7237,8 +7237,8 @@
         {
           "group_id": "fg_e0687464347d",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_47733e70c051",
@@ -7250,7 +7250,7 @@
         {
           "group_id": "fg_c51e0faf5096",
           "name": "Με Grill",
-          "required": true,
+          "required": false,
           "status": "active",
           "values": [
             {
@@ -7458,8 +7458,8 @@
         {
           "group_id": "fg_5d339ef0cddc",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_fa058e32c3f9",
@@ -18322,7 +18322,7 @@
         {
           "group_id": "fg_0d5893235e18",
           "name": "Με Grill",
-          "required": true,
+          "required": false,
           "status": "active",
           "values": [
             {
@@ -18363,8 +18363,8 @@
         {
           "group_id": "fg_58a5c1bfc67d",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_bf33e051f990",
@@ -19070,8 +19070,8 @@
         {
           "group_id": "fg_e0687464347d",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_47733e70c051",
@@ -19083,7 +19083,7 @@
         {
           "group_id": "fg_c51e0faf5096",
           "name": "Με Grill",
-          "required": true,
+          "required": false,
           "status": "active",
           "values": [
             {
@@ -19291,8 +19291,8 @@
         {
           "group_id": "fg_5d339ef0cddc",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_fa058e32c3f9",
@@ -29959,7 +29959,7 @@
         {
           "group_id": "fg_0d5893235e18",
           "name": "Με Grill",
-          "required": true,
+          "required": false,
           "status": "active",
           "values": [
             {
@@ -30000,8 +30000,8 @@
         {
           "group_id": "fg_58a5c1bfc67d",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_bf33e051f990",
@@ -31479,8 +31479,8 @@
         {
           "group_id": "fg_e0687464347d",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_47733e70c051",
@@ -31492,7 +31492,7 @@
         {
           "group_id": "fg_c51e0faf5096",
           "name": "Με Grill",
-          "required": true,
+          "required": false,
           "status": "active",
           "values": [
             {
@@ -31700,8 +31700,8 @@
         {
           "group_id": "fg_5d339ef0cddc",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_fa058e32c3f9",
@@ -42821,7 +42821,7 @@
         {
           "group_id": "fg_0d5893235e18",
           "name": "Με Grill",
-          "required": true,
+          "required": false,
           "status": "active",
           "values": [
             {
@@ -42862,8 +42862,8 @@
         {
           "group_id": "fg_58a5c1bfc67d",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_bf33e051f990",
@@ -44341,8 +44341,8 @@
         {
           "group_id": "fg_e0687464347d",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_47733e70c051",
@@ -44354,7 +44354,7 @@
         {
           "group_id": "fg_c51e0faf5096",
           "name": "Με Grill",
-          "required": true,
+          "required": false,
           "status": "active",
           "values": [
             {
@@ -44562,8 +44562,8 @@
         {
           "group_id": "fg_5d339ef0cddc",
           "name": "Χωρητικότητα σε Λίτρα",
-          "required": true,
-          "status": "active",
+          "required": false,
+          "status": "inactive",
           "values": [
             {
               "value_id": "fv_fa058e32c3f9",

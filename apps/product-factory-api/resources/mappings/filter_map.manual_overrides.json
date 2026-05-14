@@ -175,6 +175,59 @@
         }
       }
     },
+    "cat_7f1f151c974c": {
+      "category_id": "cat_7f1f151c974c",
+      "path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Φούρνοι Μικροκυμάτων",
+      "groups": {
+        "fg_c51e0faf5096": {
+          "group_id": "fg_c51e0faf5096",
+          "name": "Με Grill",
+          "required": false,
+          "status": "active",
+          "values": {}
+        },
+        "fg_e0687464347d": {
+          "group_id": "fg_e0687464347d",
+          "name": "Χωρητικότητα σε Λίτρα",
+          "required": false,
+          "status": "inactive",
+          "values": {}
+        }
+      }
+    },
+    "cat_71bbce141acc": {
+      "category_id": "cat_71bbce141acc",
+      "path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Φούρνοι Μικροκυμάτων > Με Grill",
+      "groups": {
+        "fg_0d5893235e18": {
+          "group_id": "fg_0d5893235e18",
+          "name": "Με Grill",
+          "required": false,
+          "status": "active",
+          "values": {}
+        },
+        "fg_58a5c1bfc67d": {
+          "group_id": "fg_58a5c1bfc67d",
+          "name": "Χωρητικότητα σε Λίτρα",
+          "required": false,
+          "status": "inactive",
+          "values": {}
+        }
+      }
+    },
+    "cat_2860df0d9d56": {
+      "category_id": "cat_2860df0d9d56",
+      "path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Φούρνοι Μικροκυμάτων > Χωρίς Grill",
+      "groups": {
+        "fg_5d339ef0cddc": {
+          "group_id": "fg_5d339ef0cddc",
+          "name": "Χωρητικότητα σε Λίτρα",
+          "required": false,
+          "status": "inactive",
+          "values": {}
+        }
+      }
+    },
     "cat_336bef1e907e": {
       "category_id": "cat_336bef1e907e",
       "path": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ > Προσωπική Φροντίδα > Βούρτσες-Ψαλίδια-ισιωτικά",

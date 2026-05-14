@@ -26,6 +26,8 @@ ALIASES = {
 }
 TV_LEAF = normalize_for_match("Τηλεοράσεις")
 TV_CATEGORY_CTA_URL = "https://www.etranoulis.gr/eikona-hxos/thleoraseis"
+MICROWAVE_LEAF = normalize_for_match("Φούρνοι Μικροκυμάτων")
+MICROWAVE_CATEGORY_CTA_URL = "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
 TV_SIZE_BUCKETS = {
     "Έως 32''": (0, 32),
     "33''-50''": (33, 50),
@@ -97,7 +99,8 @@ class TaxonomyResolver:
     ) -> tuple[TaxonomyResolution, list[dict[str, Any]]]:
         mapped_crumbs = [self._alias(item) for item in breadcrumbs]
         crumb_norms = [normalize_for_match(item) for item in mapped_crumbs if item]
-        url_tokens = set(normalize_for_match(urlparse(url).path).split())
+        url_path_norm = normalize_for_match(urlparse(url).path)
+        url_tokens = set(url_path_norm.split())
         name_tokens = set(normalize_for_match(name).split())
         spec_labels = {
             normalize_for_match(item.label)
@@ -168,6 +171,22 @@ class TaxonomyResolver:
                 score += 4.0
                 reasons.append("electronet_tigania_wok_url")
 
+            if leaf_norm == MICROWAVE_LEAF:
+                without_grill_url = any(
+                    token in url_path_norm
+                    for token in ("horis grill", "xoris grill", "without grill")
+                )
+                with_grill_url = not without_grill_url and any(
+                    token in url_path_norm
+                    for token in ("me grill", "with grill", "grill")
+                )
+                if without_grill_url and sub_norm == normalize_for_match("Χωρίς Grill"):
+                    score += 4.0
+                    reasons.append("electronet_microwave_without_grill_url")
+                elif with_grill_url and sub_norm == normalize_for_match("Με Grill"):
+                    score += 4.0
+                    reasons.append("electronet_microwave_with_grill_url")
+
             filter_row = self.filter_by_path.get(candidate_path_norm)
             if filter_row:
                 matched_filters = 0
@@ -182,6 +201,8 @@ class TaxonomyResolver:
             cta_url = candidate.get("cta_url") or candidate.get("url") or ""
             if leaf_norm == TV_LEAF:
                 cta_url = TV_CATEGORY_CTA_URL
+            if leaf_norm == MICROWAVE_LEAF:
+                cta_url = MICROWAVE_CATEGORY_CTA_URL
 
             candidates.append(
                 {
@@ -215,6 +236,8 @@ class TaxonomyResolver:
 
         gender, plural_label = self._lookup_gender(best.get("sub_category"), best.get("leaf_category", ""))
         if normalize_for_match(best.get("leaf_category", "")) == TV_LEAF:
+            gender, plural_label = self._lookup_gender(None, best.get("leaf_category", ""))
+        if normalize_for_match(best.get("leaf_category", "")) == MICROWAVE_LEAF:
             gender, plural_label = self._lookup_gender(None, best.get("leaf_category", ""))
         filter_row = self.filter_by_path.get(normalize_for_match(best.get("taxonomy_path", ""))) or {}
         return (

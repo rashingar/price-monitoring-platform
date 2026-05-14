@@ -4,7 +4,9 @@ from urllib.parse import urlparse
 
 ELECTRONET_DOMAINS = {"electronet.gr", "www.electronet.gr"}
 SKROUTZ_DOMAINS = {"skroutz.gr", "www.skroutz.gr", "skroutz.cy", "www.skroutz.cy"}
+BESTPRICE_DOMAINS = {"bestprice.gr", "www.bestprice.gr"}
 SKROUTZ_PRODUCT_PATH_PREFIX = "/s/"
+BESTPRICE_PRODUCT_PATH_PREFIX = "/item/"
 
 
 def normalize_host(url: str) -> str:
@@ -17,12 +19,19 @@ def detect_source(url: str) -> str:
         return "electronet"
     if host in SKROUTZ_DOMAINS:
         return "skroutz"
-    raise ValueError("Input URL must be an Electronet or Skroutz product URL")
+    if host in BESTPRICE_DOMAINS:
+        return "bestprice"
+    raise ValueError("Input URL must be an Electronet, Skroutz, or BestPrice product URL")
 
 
 def is_skroutz_product_url(url: str) -> bool:
     parsed = urlparse(url)
     return parsed.netloc.strip().lower() in SKROUTZ_DOMAINS and parsed.path.startswith(SKROUTZ_PRODUCT_PATH_PREFIX)
+
+
+def is_bestprice_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.netloc.strip().lower() in BESTPRICE_DOMAINS and parsed.path.startswith(BESTPRICE_PRODUCT_PATH_PREFIX)
 
 
 def validate_url_scope(url: str) -> tuple[str, bool, str]:
@@ -33,4 +42,8 @@ def validate_url_scope(url: str) -> tuple[str, bool, str]:
         return source, True, "skroutz_product_path"
     if source == "skroutz":
         return source, False, "skroutz_non_product_path"
+    if is_bestprice_product_url(url):
+        return source, True, "bestprice_product_path"
+    if source == "bestprice":
+        return source, False, "bestprice_non_product_path"
     return source, False, "unsupported_source"

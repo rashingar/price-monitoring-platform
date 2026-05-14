@@ -423,11 +423,20 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
     assert result.presentation_source_html_override == "rebuilt::Alpha|Gamma"
 
 
-def test_resolve_skroutz_section_assets_fails_when_rendered_sections_are_insufficient(
+def test_resolve_skroutz_section_assets_clamps_when_rendered_sections_are_insufficient(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    downloaded = GalleryImage(
+        url="https://cdn.example/alpha.jpg",
+        alt="Alpha",
+        position=1,
+        local_filename="alpha.jpg",
+        local_path=str(tmp_path / "bescos" / "alpha.jpg"),
+        downloaded=True,
+    )
     fetcher = RecordingFetcher(
+        download_result=([downloaded], [], [str(tmp_path / "bescos" / "alpha.jpg")]),
         rendered_section_data={
             "window": {},
             "sections": [{"title": "Alpha", "resolved_image_url": "https://cdn.example/alpha.jpg"}],
@@ -447,22 +456,23 @@ def test_resolve_skroutz_section_assets_fails_when_rendered_sections_are_insuffi
         },
     )
 
-    with pytest.raises(RuntimeError) as excinfo:
-        resolve_skroutz_section_assets(
-            requested_sections=2,
-            fetch_html="<html></html>",
-            final_url="https://www.skroutz.gr/s/200001/example.html",
-            canonical_url="https://www.skroutz.gr/s/200001/example.html",
-            url="https://www.skroutz.gr/s/200001/example.html",
-            presentation_source_html="",
-            presentation_source_text="",
-            manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
-            fetcher=fetcher,
-            output_dir=tmp_path,
-        )
+    result = resolve_skroutz_section_assets(
+        requested_sections=2,
+        fetch_html="<html></html>",
+        final_url="https://www.skroutz.gr/s/200001/example.html",
+        canonical_url="https://www.skroutz.gr/s/200001/example.html",
+        url="https://www.skroutz.gr/s/200001/example.html",
+        presentation_source_html="",
+        presentation_source_text="",
+        manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
+        fetcher=fetcher,
+        output_dir=tmp_path,
+    )
 
-    assert str(excinfo.value) == "Skroutz rendered section extraction failed: expected 2 image records, found 1"
-    assert fetcher.download_calls == []
+    assert [block["title"] for block in result.selected_presentation_blocks] == ["Alpha"]
+    assert result.downloaded_besco == [downloaded]
+    assert result.section_warnings == ["skroutz_rendered_sections_clamped:1/2", "skroutz_image_backed_sections_clamped:1/2"]
+    assert len(fetcher.download_calls) == 1
 
 
 def test_resolve_skroutz_section_assets_fails_on_title_order_mismatch(

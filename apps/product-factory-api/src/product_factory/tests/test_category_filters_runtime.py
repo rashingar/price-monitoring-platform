@@ -448,8 +448,12 @@ def test_active_optional_missing_filter_does_not_produce_validation_error() -> N
 
 
 def test_inactive_group_does_not_block_render() -> None:
-    result = resolve_category_filter_values(_source(), _taxonomy(), _category())
+    result = resolve_category_filter_values(_source(("Ανενεργό", "Old")), _taxonomy(), _category())
+    inactive = next(group for group in result.groups if group.group_name == "Ανενεργό")
+    assert inactive.resolved_value == ""
+    assert inactive.emitted is False
     assert not any(error.endswith(":Ανενεργό") for error in result.errors)
+    assert "inactive_category_filter_used:Ανενεργό" not in result.warnings
 
 
 def test_deprecated_value_is_emitted_and_warned() -> None:
@@ -1095,6 +1099,50 @@ def test_build_row_emits_laptop_style_filters_for_laptops_taxonomy_fixture(monke
         "filter_group:Σκληρός Δίσκος",
         "filter_group:Τύπος επεξεργαστή",
     ]
+
+
+def test_microwave_filter_map_marks_grill_optional_and_removes_liter_capacity() -> None:
+    filter_map = load_filter_map()
+    expected = {
+        "cat_7f1f151c974c": ("fg_c51e0faf5096", "fg_e0687464347d"),
+        "cat_71bbce141acc": ("fg_0d5893235e18", "fg_58a5c1bfc67d"),
+        "cat_2860df0d9d56": ("", "fg_5d339ef0cddc"),
+    }
+
+    for category_id, (grill_group_id, liters_group_id) in expected.items():
+        category = find_filter_category(filter_map, category_id=category_id, taxonomy_path="")
+        groups = {group["group_id"]: group for group in category["filter_groups"]}
+        if grill_group_id:
+            assert groups[grill_group_id]["name"] == "Με Grill"
+            assert groups[grill_group_id]["required"] is False
+            assert groups[grill_group_id]["status"] == "active"
+        assert groups[liters_group_id]["name"] == "Χωρητικότητα σε Λίτρα"
+        assert groups[liters_group_id]["required"] is False
+        assert groups[liters_group_id]["status"] == "inactive"
+
+    without_grill = find_filter_category(filter_map, category_id="cat_2860df0d9d56", taxonomy_path="")
+    taxonomy = TaxonomyResolution(
+        category_id="cat_2860df0d9d56",
+        parent_category="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+        leaf_category="Φούρνοι Μικροκυμάτων",
+        sub_category="Χωρίς Grill",
+        taxonomy_path="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Φούρνοι Μικροκυμάτων > Χωρίς Grill",
+    )
+    result = resolve_category_filter_values(
+        _source(
+            ("Ισχύς Μικροκυμάτων (Watt)", "700"),
+            ("Χωρητικότητα Φούρνου σε Λίτρα", "20"),
+            ("Χρώμα", "Ασημί"),
+        ),
+        taxonomy,
+        without_grill,
+    )
+    by_group = {group.group_name: group for group in result.groups}
+    assert by_group["Ισχύς (Watt)"].resolved_value == "700"
+    assert by_group["Χωρητικότητα Φούρνου"].resolved_value == "20lt"
+    assert by_group["Χωρητικότητα σε Λίτρα"].emitted is False
+    assert "required_category_filter_missing:Ισχύς (Watt)" not in result.warnings
+    assert "filter_group:Χωρητικότητα σε Λίτρα" not in result.emitted_columns
 
 
 def test_render_style_missing_required_filters_warn_without_failing_validation(tmp_path: Path, monkeypatch) -> None:

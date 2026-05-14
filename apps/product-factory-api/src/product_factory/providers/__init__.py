@@ -1,4 +1,5 @@
 from .base import ProductProvider, ProviderError
+from .bestprice_provider import BestPriceProvider
 from .electronet_provider import ElectronetProvider
 from .manufacturer_tefal_provider import ManufacturerBoschProvider, ManufacturerTefalProvider
 from .models import (
@@ -18,6 +19,7 @@ from .registry import ProviderRegistry, bootstrap_runtime_provider_registry, sou
 
 __all__ = [
     "ElectronetProvider",
+    "BestPriceProvider",
     "ProductProvider",
     "ManufacturerTefalProvider",
     "ManufacturerBoschProvider",

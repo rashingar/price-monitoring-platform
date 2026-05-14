@@ -124,6 +124,22 @@ def test_air_conditioner_wall_taxonomy_uses_leaf_cta_text() -> None:
     assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερα Κλιματιστικά εδώ"
 
 
+def test_microwave_taxonomy_uses_leaf_cta_text() -> None:
+    for sub_category in ("Με Grill", "Χωρίς Grill"):
+        taxonomy = TaxonomyResolution(
+            parent_category="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
+            leaf_category="Φούρνοι Μικροκυμάτων",
+            sub_category=sub_category,
+            taxonomy_path=f"ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Φούρνοι Μικροκυμάτων > {sub_category}",
+            cta_url="https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn",
+            gender="neut",
+            plural_label=sub_category,
+        )
+
+        assert _cta_label_for_taxonomy(taxonomy) == "Φούρνοι Μικροκυμάτων"
+        assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερους Φούρνους Μικροκυμάτων εδώ"
+
+
 def test_stand_fan_taxonomy_uses_combined_fan_cta_text() -> None:
     taxonomy = TaxonomyResolution(
         parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",

@@ -130,6 +130,54 @@ def test_taxonomy_resolution_prefers_television_size_bucket_for_50_inches() -> N
     assert candidates[0]["cta_url"] == "https://www.etranoulis.gr/eikona-hxos/thleoraseis"
 
 
+def test_taxonomy_resolution_prefers_microwave_without_grill_url_and_base_cta() -> None:
+    resolver = TaxonomyResolver()
+    resolution, candidates = resolver.resolve(
+        breadcrumbs=["Αρχική", "Οικιακές Συσκευές", "Φούρνοι Μικροκυμάτων", "Φούρνοι Μικροκυμάτων Χωρίς Grill"],
+        url="https://www.electronet.gr/oikiakes-syskeyes/foyrnoi-mikrokymaton/foyrnoi-mikrokymaton-horis-grill/foyrnos-mikrokymaton-midea-mm20cf2esl",
+        name="Φούρνος Μικροκυμάτων Midea MM20CF2ESL",
+        key_specs=[SpecItem(label="Χωρητικότητα Φούρνου σε Λίτρα", value="20")],
+        spec_sections=[
+            SpecSection(
+                section="Επισκόπηση Προϊόντος",
+                items=[SpecItem(label="Χωρητικότητα Φούρνου σε Λίτρα", value="20")],
+            )
+        ],
+    )
+
+    assert resolution.leaf_category == "Φούρνοι Μικροκυμάτων"
+    assert resolution.sub_category == "Χωρίς Grill"
+    assert resolution.cta_url == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    assert resolution.plural_label == "Φούρνους Μικροκυμάτων"
+    assert "electronet_microwave_without_grill_url" in resolution.reason
+    assert candidates[0]["sub_category"] == "Χωρίς Grill"
+    assert candidates[0]["cta_url"] == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+
+
+def test_taxonomy_resolution_prefers_microwave_with_grill_url_and_base_cta() -> None:
+    resolver = TaxonomyResolver()
+    resolution, candidates = resolver.resolve(
+        breadcrumbs=["Αρχική", "Οικιακές Συσκευές", "Φούρνοι Μικροκυμάτων", "Φούρνοι Μικροκυμάτων Με Grill"],
+        url="https://www.electronet.gr/oikiakes-syskeyes/foyrnoi-mikrokymaton/foyrnoi-mikrokymaton-me-grill/foyrnos-mikrokymaton-midea-example",
+        name="Φούρνος Μικροκυμάτων Midea Example με Grill",
+        key_specs=[SpecItem(label="Χωρητικότητα Φούρνου σε Λίτρα", value="20")],
+        spec_sections=[
+            SpecSection(
+                section="Επισκόπηση Προϊόντος",
+                items=[SpecItem(label="Χωρητικότητα Φούρνου σε Λίτρα", value="20")],
+            )
+        ],
+    )
+
+    assert resolution.leaf_category == "Φούρνοι Μικροκυμάτων"
+    assert resolution.sub_category == "Με Grill"
+    assert resolution.cta_url == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    assert resolution.plural_label == "Φούρνους Μικροκυμάτων"
+    assert "electronet_microwave_with_grill_url" in resolution.reason
+    assert candidates[0]["sub_category"] == "Με Grill"
+    assert candidates[0]["cta_url"] == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+
+
 def test_taxonomy_resolution_prefers_hifi_for_electronet_mini_hifi_url() -> None:
     resolver = TaxonomyResolver()
     resolution, candidates = resolver.resolve(

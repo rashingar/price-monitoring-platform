@@ -197,6 +197,9 @@ def resolve_category_filter_values(
             exact_description=exact_description,
             normalized_lookup=normalized_lookup,
         )
+        if group_status == "inactive" and resolved_from != "approved_review":
+            resolved_value = ""
+            resolved_from = ""
         resolved_value = _canonical_filter_value(resolved_value, value_aliases_by_normalized)
         emitted = bool(resolved_value) and group_status == "active"
         inactive_group = group_status == "inactive"
@@ -440,6 +443,8 @@ def _candidate_source_labels(group_name: str, *, taxonomy_path: str = "") -> lis
         aliases.append("Χωρητικότητα")
     if "χωρητικοτητα" in normalized_group and "λιτρα" in normalized_group and "φριτεζες" in normalized_taxonomy:
         aliases.extend(["Χωρητικότητα Κάδου Μαγειρέματος σε Κιλά", "Χωρητικότητα Κάδου Μαγειρέματος"])
+    if normalized_group == normalize_label_key("Ισχύς (Watt)") and "φουρνοι μικροκυματων" in normalized_taxonomy:
+        aliases.extend(["Ισχύς Μικροκυμάτων (Watt)", "Ισχύς Μικροκυμάτων"])
     if normalized_group == "με grill":
         aliases.extend(["Grill", "Λειτουργία Grill"])
     if "τεχνολογια εστιων" in normalized_group:

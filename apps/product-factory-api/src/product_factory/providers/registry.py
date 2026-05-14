@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from ..fetcher import ElectronetFetcher
+from ..parser_product_bestprice import BestPriceProductParser
 from ..parser_product_electronet import ElectronetProductParser
 from ..parser_product_manufacturer import ManufacturerProductParser
 from ..parser_product_skroutz import SkroutzProductParser
 from .base import ProductProvider, ProviderError
+from .bestprice_provider import BestPriceProvider
 from .electronet_provider import ElectronetProvider
 from .models import ProviderDefinition, ProviderErrorCode, ProviderKind, ProviderStage
 from .skroutz_provider import SkroutzProvider
 
 RUNTIME_SOURCE_PROVIDER_IDS = {
+    "bestprice": "bestprice",
     "electronet": "electronet",
     "skroutz": "skroutz",
 }
@@ -71,8 +74,10 @@ def bootstrap_runtime_provider_registry(
     electronet_parser: ElectronetProductParser,
     skroutz_parser: SkroutzProductParser,
     manufacturer_parser: ManufacturerProductParser,
+    bestprice_parser: BestPriceProductParser | None = None,
 ) -> ProviderRegistry:
     registry = ProviderRegistry()
+    registry.register(BestPriceProvider(fetcher=fetcher, parser=bestprice_parser or BestPriceProductParser()))
     registry.register(ElectronetProvider(fetcher=fetcher, parser=electronet_parser))
     registry.register(SkroutzProvider(parser=skroutz_parser))
     return registry

@@ -7,6 +7,7 @@ from .models import CLIInput
 from .source_detection import validate_url_scope
 
 FAIL_MESSAGE = "Generation failed, provide 6-digit model"
+SUPPORTED_URL_MESSAGE = "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
 
 
 def validate_input(args: argparse.Namespace) -> CLIInput:
@@ -15,10 +16,10 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
         raise ValueError(FAIL_MESSAGE)
     parsed = urlparse(args.url)
     if parsed.scheme not in {"http", "https"}:
-        raise ValueError("Input URL must be an Electronet or Skroutz product URL")
+        raise ValueError(SUPPORTED_URL_MESSAGE)
     source, scope_ok, _scope_reason = validate_url_scope(args.url)
     if not scope_ok:
-        raise ValueError("Input URL must be an Electronet product URL or a Skroutz product URL")
+        raise ValueError(SUPPORTED_URL_MESSAGE)
     return CLIInput(
         model=model,
         url=args.url.strip(),

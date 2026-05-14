@@ -202,7 +202,7 @@ def resolve_skroutz_section_assets(
                     int(rendered_window.get("duplicate_signatures_skipped", 0) or 0),
                 ),
             }
-        if len(rendered_sections) < requested_sections:
+        if not rendered_sections and requested_sections > 0:
             raise RuntimeError(
                 "Skroutz rendered section extraction failed: "
                 f"expected {requested_sections} image records, found {len(rendered_sections)}"
