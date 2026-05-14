@@ -30,6 +30,7 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_ignore_api.py": ("smoke",),
     "test_local_env.py": ("contract",),
     "test_output_naming.py": ("contract",),
+    "test_operator_smoke_script.py": ("integration",),
     "test_paths_api.py": ("smoke",),
     "test_postgres_setup_docs.py": ("contract",),
     "test_price_monitoring_alerts.py": ("integration", "db_integration"),

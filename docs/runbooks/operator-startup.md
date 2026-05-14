@@ -132,7 +132,46 @@ The web dev proxy keeps these browser routes stable:
 - `/api` -> Product Factory API.
 - `/commerce-api` -> Ecommerce API, rewritten to backend `/api` routes.
 
-## 7. If Ecommerce DB Is Not Ready
+## 7. Run Operator Smoke Check
+
+After setup, migrations, catalog import, and service startup, run:
+
+```powershell
+.\scripts\check\operator-smoke.ps1
+```
+
+The script verifies Product Factory API health, Ecommerce API health, Ecommerce
+DB readiness, Alembic-at-head status when reported, Catalog summary, durable
+jobs, latest catalog update job status, Vendor Sources summary, Price
+Monitoring DB status, and the web dev server if it is running. It prints an
+operator table with `passed`, `warn`, `failed`, or `skipped` statuses and exits
+nonzero when required readiness checks fail.
+
+Useful variants:
+
+```powershell
+.\scripts\check\operator-smoke.ps1 -SkipWeb
+.\scripts\check\operator-smoke.ps1 -Json
+.\scripts\check\operator-smoke.ps1 -EcommerceBaseUrl http://127.0.0.1:9001
+```
+
+This check is read-only. It does not run live OpenCart export, catalog import,
+Price Monitoring fetches, Find Source runs, Vendor Source captures, browser
+automation, or scraping workflows.
+
+Common failures usually mean:
+
+- API health failed: the corresponding dev server is not running or is on a
+  different port.
+- DB readiness failed: `ECOMMERCE_DATABASE_URL` is missing in the Ecommerce API
+  terminal, PostgreSQL is stopped, migrations are missing, or the catalog has
+  not been imported.
+- Catalog or Vendor Sources summary failed: Ecommerce database readiness is
+  still incomplete.
+- Web warning: the Vite dev server is not running; rerun with `-SkipWeb` if
+  that is intentional.
+
+## 8. If Ecommerce DB Is Not Ready
 
 `/api/health` only proves the Ecommerce API process is running. Use the DB
 status endpoint when catalog or price monitoring screens report not ready.
@@ -162,7 +201,7 @@ Push-Location apps\ecommerce-api
 Pop-Location
 ```
 
-## 8. Before Committing Startup Changes
+## 9. Before Committing Startup Changes
 
 ```powershell
 .\scripts\check\hygiene.ps1

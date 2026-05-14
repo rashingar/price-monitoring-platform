@@ -43,6 +43,18 @@ Useful health checks:
 - Ecommerce DB readiness:
   `http://127.0.0.1:8001/api/price-monitoring/db/status`
 
+After setup, migrations, catalog import, and service startup, run the read-only
+operator smoke check:
+
+```powershell
+.\scripts\check\operator-smoke.ps1
+```
+
+Use `-SkipWeb` when the web dev server is intentionally stopped, or `-Json` for
+machine-readable logs. The smoke check calls only read/status endpoints; it does
+not run OpenCart export, catalog import, Price Monitoring fetches, Find Source
+runs, or Vendor Source captures.
+
 Before committing, run the check that matches your change:
 
 ```powershell
