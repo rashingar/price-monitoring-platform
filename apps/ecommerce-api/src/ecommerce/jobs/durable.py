@@ -2,18 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from datetime import datetime, timezone
+from collections.abc import Callable, Sequence
+from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 from uuid import uuid4
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 from ecommerce.db.models import EcommerceJob
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 JobHandler = Callable[[Any], Any]
+RegisteredJobHandler = Callable[[str, Any], Any]
 
 JOB_STATUSES: tuple[JobStatus, ...] = ("queued", "running", "succeeded", "failed", "cancelled")
 TERMINAL_JOB_STATUSES: tuple[JobStatus, ...] = ("succeeded", "failed", "cancelled")
@@ -24,23 +25,22 @@ class JobNotFoundError(KeyError):
 
 
 class DurableJobRegistry:
-    """In-process handler registry for synchronous execution.
-
-    TODO: Reuse this registry from a future worker command that leases queued
-    rows and executes them outside request handling.
-    """
+    """In-process handler registry for synchronous durable job execution."""
 
     def __init__(self) -> None:
-        self._handlers: dict[str, JobHandler] = {}
+        self._handlers: dict[str, RegisteredJobHandler] = {}
 
-    def register(self, job_type: str, handler: JobHandler) -> None:
+    def register(self, job_type: str, handler: RegisteredJobHandler) -> None:
         self._handlers[job_type] = handler
 
-    def get(self, job_type: str) -> JobHandler:
+    def get(self, job_type: str) -> RegisteredJobHandler:
         try:
             return self._handlers[job_type]
         except KeyError as exc:
             raise KeyError(f"No durable job handler registered for job_type={job_type!r}.") from exc
+
+    def job_types(self) -> tuple[str, ...]:
+        return tuple(self._handlers)
 
 
 def create_queued_job(
@@ -86,6 +86,106 @@ def list_jobs(
     bounded_limit = max(1, min(int(limit), 500))
     statement = statement.order_by(EcommerceJob.created_at.desc(), EcommerceJob.id.desc()).limit(bounded_limit)
     return list(session.execute(statement).scalars())
+
+
+def list_queued_jobs_for_worker(
+    session: Session,
+    *,
+    job_type: str | None = None,
+    job_types: Sequence[str] | None = None,
+    limit: int = 1,
+) -> list[EcommerceJob]:
+    statement: Select[tuple[EcommerceJob]] = select(EcommerceJob).where(EcommerceJob.status == "queued")
+    statement = _filter_job_type(statement, job_type=job_type, job_types=job_types)
+    statement = statement.order_by(EcommerceJob.created_at.asc(), EcommerceJob.id.asc()).limit(_bounded_worker_limit(limit))
+    return list(session.execute(statement).scalars())
+
+
+def lease_queued_jobs_for_worker(
+    session: Session,
+    *,
+    job_type: str | None = None,
+    job_types: Sequence[str] | None = None,
+    limit: int = 1,
+    leased_at: datetime | None = None,
+) -> list[EcommerceJob]:
+    """Claim oldest queued jobs for this worker process.
+
+    PostgreSQL uses row locks with SKIP LOCKED so concurrent local workers do
+    not select the same queued rows. SQLite test databases ignore this locking
+    behavior, but the status update still keeps the helper deterministic.
+    """
+
+    timestamp = leased_at or _now()
+    statement: Select[tuple[EcommerceJob]] = select(EcommerceJob).where(EcommerceJob.status == "queued")
+    statement = _filter_job_type(statement, job_type=job_type, job_types=job_types)
+    statement = statement.order_by(EcommerceJob.created_at.asc(), EcommerceJob.id.asc()).limit(_bounded_worker_limit(limit))
+    if session.get_bind().dialect.name == "postgresql":
+        statement = statement.with_for_update(skip_locked=True)
+
+    jobs = list(session.execute(statement).scalars())
+    for job in jobs:
+        if job.cancel_requested:
+            mark_cancelled(
+                session,
+                job.job_id,
+                error_message="Cancellation requested before worker start.",
+                completed_at=timestamp,
+            )
+        else:
+            mark_running(session, job.job_id, started_at=timestamp)
+    session.flush()
+    return jobs
+
+
+def list_stale_running_jobs(
+    session: Session,
+    *,
+    stale_after_minutes: int,
+    job_type: str | None = None,
+    job_types: Sequence[str] | None = None,
+    now: datetime | None = None,
+) -> list[EcommerceJob]:
+    cutoff = (now or _now()) - timedelta(minutes=max(1, int(stale_after_minutes)))
+    last_activity = func.coalesce(EcommerceJob.heartbeat_at, EcommerceJob.started_at, EcommerceJob.updated_at, EcommerceJob.created_at)
+    statement: Select[tuple[EcommerceJob]] = select(EcommerceJob).where(
+        EcommerceJob.status == "running",
+        last_activity <= cutoff,
+    )
+    statement = _filter_job_type(statement, job_type=job_type, job_types=job_types)
+    statement = statement.order_by(EcommerceJob.created_at.asc(), EcommerceJob.id.asc())
+    return list(session.execute(statement).scalars())
+
+
+def fail_stale_running_jobs(
+    session: Session,
+    *,
+    stale_after_minutes: int,
+    job_type: str | None = None,
+    job_types: Sequence[str] | None = None,
+    now: datetime | None = None,
+) -> list[EcommerceJob]:
+    timestamp = now or _now()
+    cutoff = timestamp - timedelta(minutes=max(1, int(stale_after_minutes)))
+    jobs = list_stale_running_jobs(
+        session,
+        stale_after_minutes=stale_after_minutes,
+        job_type=job_type,
+        job_types=job_types,
+        now=timestamp,
+    )
+    for job in jobs:
+        mark_failed(
+            session,
+            job.job_id,
+            error_message=(
+                "Marked failed by Ecommerce durable job worker because the job "
+                f"was still running with no heartbeat after {cutoff.isoformat()}."
+            ),
+            completed_at=timestamp,
+        )
+    session.flush()
+    return jobs
 
 
 def mark_running(session: Session, job_id: str, *, started_at: datetime | None = None) -> EcommerceJob:
@@ -174,15 +274,32 @@ def mark_cancelled(
     return job
 
 
-def execute_job(session: Session, job_id: str, handler: JobHandler, *, reraise: bool = True) -> EcommerceJob:
+def execute_job(
+    session: Session,
+    job_id: str,
+    handler: JobHandler,
+    *,
+    reraise: bool = True,
+    claimed: bool = False,
+) -> EcommerceJob:
     job = _require_job(session, job_id)
+    if job.status in TERMINAL_JOB_STATUSES:
+        return job
+
     if job.cancel_requested:
         mark_cancelled(session, job_id, error_message="Cancellation requested before start.")
         session.commit()
         return _require_job(session, job_id)
 
-    mark_running(session, job_id)
-    session.commit()
+    if job.status == "queued":
+        mark_running(session, job_id)
+        session.commit()
+    elif job.status == "running":
+        if not claimed:
+            return job
+        session.commit()
+    else:
+        raise ValueError(f"Cannot execute job {job_id!r} with status {job.status!r}.")
 
     try:
         result = handler(job.payload_json)
@@ -199,9 +316,17 @@ def execute_job(session: Session, job_id: str, handler: JobHandler, *, reraise: 
     return _require_job(session, job_id)
 
 
-def execute_registered_job(session: Session, job_id: str, registry: DurableJobRegistry, *, reraise: bool = True) -> EcommerceJob:
+def execute_registered_job(
+    session: Session,
+    job_id: str,
+    registry: DurableJobRegistry,
+    *,
+    reraise: bool = True,
+    claimed: bool = False,
+) -> EcommerceJob:
     job = _require_job(session, job_id)
-    return execute_job(session, job_id, registry.get(job.job_type), reraise=reraise)
+    registered_handler = registry.get(job.job_type)
+    return execute_job(session, job_id, lambda payload: registered_handler(job_id, payload), reraise=reraise, claimed=claimed)
 
 
 def job_to_dict(job: EcommerceJob) -> dict[str, Any]:
@@ -239,3 +364,23 @@ def _now() -> datetime:
 
 def _safe_error_message(message: str) -> str:
     return str(message or "").strip()[:1000]
+
+
+def _bounded_worker_limit(limit: int) -> int:
+    return max(1, min(int(limit), 50))
+
+
+def _filter_job_type(
+    statement: Select[tuple[EcommerceJob]],
+    *,
+    job_type: str | None,
+    job_types: Sequence[str] | None,
+) -> Select[tuple[EcommerceJob]]:
+    if job_type:
+        return statement.where(EcommerceJob.job_type == job_type)
+    if job_types is not None:
+        values = tuple(dict.fromkeys(job_types))
+        if not values:
+            return statement.where(False)
+        return statement.where(EcommerceJob.job_type.in_(values))
+    return statement

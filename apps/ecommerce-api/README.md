@@ -142,6 +142,48 @@ migration output, and ingest counts. Responses and job results must not contain
 OpenCart credentials. Default automated tests mock Playwright/OpenCart; live
 OpenCart export verification is manual/opt-in only.
 
+### Durable job worker
+
+The API still starts Dashboard `Update DB` jobs in a FastAPI background task by
+default so local Dashboard behavior is unchanged. For crash-resumable operator
+execution, run the DB-backed worker in a separate terminal from the repository
+root:
+
+```powershell
+.\scripts\dev\ecommerce-worker.ps1 --job-type catalog_update_from_opencart --poll-seconds 5 --limit 1
+```
+
+Useful one-shot inspection and execution commands:
+
+```powershell
+.\scripts\dev\ecommerce-worker.ps1 --job-type catalog_update_from_opencart --once --dry-run
+.\scripts\dev\ecommerce-worker.ps1 --job-type catalog_update_from_opencart --once
+```
+
+The worker loads `.env`, uses `ECOMMERCE_DATABASE_URL`, selects the oldest
+queued matching jobs, claims them in the database, and runs registered handlers
+through the same durable `execute_job` finalization path as API-triggered work.
+On PostgreSQL it uses row locking with `SKIP LOCKED` to reduce duplicate local
+worker execution.
+
+By default, each worker pass marks `running` jobs with no heartbeat for more
+than 60 minutes as `failed` before claiming new queued jobs:
+
+```powershell
+.\scripts\dev\ecommerce-worker.ps1 --job-type catalog_update_from_opencart --once --stale-running-after-minutes 60
+```
+
+Use the existing job endpoints to inspect and recover state:
+
+```text
+GET /api/jobs?job_type=catalog_update_from_opencart
+GET /api/jobs/{job_id}
+POST /api/jobs/{job_id}/cancel
+```
+
+`--dry-run` reports stale and queued matches without marking stale jobs failed,
+claiming queued jobs, or executing handlers.
+
 ## Native Windows PostgreSQL setup and first-run verification
 
 Install PostgreSQL natively on Windows with the official PostgreSQL Windows

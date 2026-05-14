@@ -123,8 +123,22 @@ POST /api/jobs/{job_id}/cancel
 ```
 
 The backend helper in `ecommerce.jobs.durable` includes synchronous execution
-for API routes and tests. A future worker command can reuse the same repository
-functions to lease and execute queued rows outside request handling.
+for API routes and tests. The durable worker command leases and executes queued
+rows outside request handling:
+
+```powershell
+python -m ecommerce.jobs.worker --job-type catalog_update_from_opencart --poll-seconds 5 --limit 1
+python -m ecommerce.jobs.worker --job-type catalog_update_from_opencart --once --dry-run
+```
+
+From the repository root, `.\scripts\dev\ecommerce-worker.ps1` runs the same
+module through the root virtual environment. The worker preserves existing API
+behavior: Dashboard `Update DB` can still run through a FastAPI background task,
+while operators can run the worker for crash-resumable queued job execution.
+Each worker pass marks stale `running` jobs older than
+`--stale-running-after-minutes` as `failed` with an explanatory message before
+claiming new queued jobs. `--dry-run` only reports matching stale and queued
+jobs; it does not mutate state or run handlers.
 
 ## Testing Profiles
 
