@@ -1,19 +1,22 @@
 import sys
 import types
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog_update import service  # noqa: E402
-from ecommerce.catalog_update.service import CatalogExportResult, CatalogUpdateConfigError  # noqa: E402
+from ecommerce.catalog_update.service import CatalogExportResult, CatalogUpdateConfigError, CatalogUpdateError  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base  # noqa: E402
-from ecommerce.db.session import get_engine  # noqa: E402
+from ecommerce.db.models import Base, CatalogProductRow, SourceUrl  # noqa: E402
+from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 
 
 def _client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
@@ -92,6 +95,7 @@ def test_run_catalog_update_calls_migration_and_ingests_downloaded_csv(tmp_path:
         return {"imported": 0, "source_path": str(path)}
 
     monkeypatch.setattr(service, "catalog_update_output_dir", lambda job_id: output_dir)
+    monkeypatch.setattr(service, "repo_root", lambda: tmp_path)
     monkeypatch.setattr(service, "run_alembic_upgrade", lambda: calls.append(("alembic", None)) or {"status": "succeeded"})
     monkeypatch.setattr(service, "export_catalog_csv", fake_export)
     monkeypatch.setattr(service, "run_catalog_ingest", fake_ingest)
@@ -107,15 +111,279 @@ def test_run_catalog_update_calls_migration_and_ingests_downloaded_csv(tmp_path:
     )
 
     normalized = output_dir / "sourceCata.csv"
+    filtered = output_dir / "sourceCata.filtered.csv"
     assert normalized.exists()
+    assert filtered.exists()
     assert calls == [
         ("alembic", None),
         ("export", output_dir),
-        ("ingest", normalized),
+        ("ingest", filtered),
     ]
-    assert result["imported_csv_path"].endswith("sourceCata.csv")
+    assert result["normalized_csv_path"].endswith("sourceCata.csv")
+    assert result["imported_csv_path"].endswith("sourceCata.filtered.csv")
     assert result["downloaded_filename"] == "opencart-products.csv"
+    assert result["exclusions"]["exclusion_file_found"] is False
     assert "supersecret" not in str(result)
+
+
+def test_run_catalog_update_filters_excluded_models_before_ingest(tmp_path: Path, monkeypatch) -> None:
+    calls: list[tuple[str, Path | None]] = []
+    output_dir = tmp_path / "catalog_updates" / "job-2"
+    exclusions_path = tmp_path / "excluded.csv"
+    exclusions_path.write_text("model\n005606\n", encoding="utf-8")
+    monkeypatch.setenv(service.EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
+
+    def fake_export(config, selected_output_dir, **_kwargs):
+        calls.append(("export", selected_output_dir))
+        downloaded = selected_output_dir / "opencart-products.csv"
+        downloaded.write_text(
+            "model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n"
+            "005606,M1,Excluded,Cat,Brand,10,1,1,1,1\n"
+            "123456,M2,Kept,Cat,Brand,20,2,1,1,1\n",
+            encoding="utf-8",
+        )
+        return CatalogExportResult(downloaded_path=downloaded, downloaded_size=downloaded.stat().st_size)
+
+    def fake_ingest(path: Path):
+        calls.append(("ingest", path))
+        return {"imported": 1, "catalog_source": "sourceCata", "source_path": str(path)}
+
+    monkeypatch.setattr(service, "catalog_update_output_dir", lambda job_id: output_dir)
+    monkeypatch.setattr(service, "run_alembic_upgrade", lambda: calls.append(("alembic", None)) or {"status": "succeeded"})
+    monkeypatch.setattr(service, "export_catalog_csv", fake_export)
+    monkeypatch.setattr(service, "run_catalog_ingest", fake_ingest)
+
+    result = service.run_catalog_update(
+        "job-2",
+        config=service.CatalogUpdateConfig(
+            store_base="https://shop.example",
+            admin_path="admin",
+            admin_user="admin",
+            admin_pass="supersecret",
+        ),
+    )
+
+    filtered = output_dir / "sourceCata.filtered.csv"
+    assert calls[-1] == ("ingest", filtered)
+    assert "005606" not in filtered.read_text(encoding="utf-8")
+    assert "123456" in filtered.read_text(encoding="utf-8")
+    assert result["exclusions"]["excluded_model_count"] == 1
+    assert result["exclusions"]["input_row_count"] == 2
+    assert result["exclusions"]["removed_row_count"] == 1
+    assert result["exclusions"]["output_row_count"] == 1
+
+
+def test_catalog_update_exclusion_matching_preserves_model_string_identity(tmp_path: Path) -> None:
+    source = tmp_path / "sourceCata.csv"
+    source.write_text(
+        "model,mpn,name\n"
+        "5606,M1,Short\n"
+        "005606,M2,Padded\n",
+        encoding="utf-8",
+    )
+
+    exclusions = service.ExcludedModels(
+        path=tmp_path / "excluded.csv",
+        found=True,
+        explicit_path=True,
+        models=frozenset({"005606"}),
+    )
+    result = service.filter_source_catalog_exclusions(source, tmp_path, exclusions)
+    filtered_text = result.filtered_csv_path.read_text(encoding="utf-8")
+    assert "5606" in filtered_text
+    assert "005606" not in filtered_text
+
+    exclusions = service.ExcludedModels(
+        path=tmp_path / "excluded.csv",
+        found=True,
+        explicit_path=True,
+        models=frozenset({"5606"}),
+    )
+    result = service.filter_source_catalog_exclusions(source, tmp_path, exclusions)
+    filtered_text = result.filtered_csv_path.read_text(encoding="utf-8")
+    assert "005606" in filtered_text
+    assert "5606,M1" not in filtered_text
+
+
+def test_catalog_update_missing_default_exclusion_file_continues_with_zero_exclusions(tmp_path: Path, monkeypatch) -> None:
+    output_dir = tmp_path / "catalog_updates" / "job-3"
+    monkeypatch.delenv(service.EXCLUDED_MODELS_ENV_VAR, raising=False)
+    monkeypatch.setattr(service, "repo_root", lambda: tmp_path)
+
+    def fake_export(config, selected_output_dir, **_kwargs):
+        downloaded = selected_output_dir / "opencart-products.csv"
+        downloaded.write_text(
+            "model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n"
+            "005606,M1,Kept,Cat,Brand,10,1,1,1,1\n",
+            encoding="utf-8",
+        )
+        return CatalogExportResult(downloaded_path=downloaded, downloaded_size=downloaded.stat().st_size)
+
+    monkeypatch.setattr(service, "catalog_update_output_dir", lambda job_id: output_dir)
+    monkeypatch.setattr(service, "run_alembic_upgrade", lambda: {"status": "succeeded"})
+    monkeypatch.setattr(service, "export_catalog_csv", fake_export)
+    monkeypatch.setattr(service, "run_catalog_ingest", lambda path: {"imported": 1, "catalog_source": "sourceCata", "source_path": str(path)})
+
+    result = service.run_catalog_update(
+        "job-3",
+        config=service.CatalogUpdateConfig(
+            store_base="https://shop.example",
+            admin_path="admin",
+            admin_user="admin",
+            admin_pass="supersecret",
+        ),
+    )
+
+    assert result["exclusions"]["exclusion_file_found"] is False
+    assert result["exclusions"]["excluded_model_count"] == 0
+    assert result["exclusions"]["removed_row_count"] == 0
+    assert (output_dir / "sourceCata.filtered.csv").exists()
+
+
+def test_catalog_update_explicit_missing_exclusion_file_fails(tmp_path: Path, monkeypatch) -> None:
+    missing_path = tmp_path / "missing.csv"
+    monkeypatch.setenv(service.EXCLUDED_MODELS_ENV_VAR, str(missing_path))
+
+    try:
+        service.load_excluded_models()
+    except CatalogUpdateError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Expected CatalogUpdateError")
+
+    assert "Catalog exclusion file not found" in message
+    assert str(missing_path) in message
+
+
+def test_catalog_update_purges_previously_imported_excluded_catalog_products(tmp_path: Path, monkeypatch) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    Base.metadata.create_all(get_engine(database_url))
+    output_dir = tmp_path / "catalog_updates" / "job-4"
+    exclusions_path = tmp_path / "excluded.csv"
+    exclusions_path.write_text("005606\n", encoding="utf-8")
+    monkeypatch.setenv(service.EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
+
+    with session_scope(database_url) as session:
+        session.add(_catalog_row("005606", name="Previously imported"))
+
+    def fake_export(config, selected_output_dir, **_kwargs):
+        downloaded = selected_output_dir / "opencart-products.csv"
+        downloaded.write_text(
+            "model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n"
+            "005606,M1,Excluded,Cat,Brand,10,1,1,1,1\n"
+            "123456,M2,Kept,Cat,Brand,20,2,1,1,1\n",
+            encoding="utf-8",
+        )
+        return CatalogExportResult(downloaded_path=downloaded, downloaded_size=downloaded.stat().st_size)
+
+    monkeypatch.setattr(service, "catalog_update_output_dir", lambda job_id: output_dir)
+    monkeypatch.setattr(service, "run_alembic_upgrade", lambda: {"status": "succeeded"})
+    monkeypatch.setattr(service, "export_catalog_csv", fake_export)
+    monkeypatch.setattr(service, "run_catalog_ingest", _db_ingest)
+
+    result = service.run_catalog_update("job-4", config=_catalog_update_config())
+
+    with session_scope(database_url) as session:
+        excluded = session.execute(select(CatalogProductRow).where(CatalogProductRow.model == "005606")).scalars().all()
+        kept = session.execute(select(CatalogProductRow).where(CatalogProductRow.model == "123456")).scalar_one_or_none()
+
+    assert excluded == []
+    assert kept is not None and kept.active is True
+    assert result["exclusions"]["removed_row_count"] == 1
+    assert result["exclusions"]["purged_catalog_products"] == 1
+
+
+def test_catalog_update_purges_source_urls_for_excluded_catalog_products(tmp_path: Path, monkeypatch) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    Base.metadata.create_all(get_engine(database_url))
+    output_dir = tmp_path / "catalog_updates" / "job-5"
+    exclusions_path = tmp_path / "excluded.csv"
+    exclusions_path.write_text("model\n005606\n", encoding="utf-8")
+    monkeypatch.setenv(service.EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
+
+    with session_scope(database_url) as session:
+        row = _catalog_row("005606", name="Excluded with source URL")
+        session.add(row)
+        session.flush()
+        session.add(
+            SourceUrl(
+                catalog_product_id=row.id,
+                catalog_source="sourceCata",
+                model="005606",
+                mpn="M1",
+                manufacturer="Brand",
+                source_name="bestprice",
+                source_domain="example.com",
+                url="https://example.com/product",
+                url_normalized="https://example.com/product",
+                status="active",
+                url_type="manual",
+                trust_level="manual",
+                created_at=_now(),
+                updated_at=_now(),
+            )
+        )
+
+    def fake_export(config, selected_output_dir, **_kwargs):
+        downloaded = selected_output_dir / "opencart-products.csv"
+        downloaded.write_text(
+            "model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n"
+            "005606,M1,Excluded,Cat,Brand,10,1,1,1,1\n",
+            encoding="utf-8",
+        )
+        return CatalogExportResult(downloaded_path=downloaded, downloaded_size=downloaded.stat().st_size)
+
+    monkeypatch.setattr(service, "catalog_update_output_dir", lambda job_id: output_dir)
+    monkeypatch.setattr(service, "run_alembic_upgrade", lambda: {"status": "succeeded"})
+    monkeypatch.setattr(service, "export_catalog_csv", fake_export)
+    monkeypatch.setattr(service, "run_catalog_ingest", _db_ingest)
+
+    result = service.run_catalog_update("job-5", config=_catalog_update_config())
+
+    with session_scope(database_url) as session:
+        source_urls = session.execute(select(SourceUrl).where(SourceUrl.model == "005606")).scalars().all()
+        catalog_rows = session.execute(select(CatalogProductRow).where(CatalogProductRow.model == "005606")).scalars().all()
+
+    assert source_urls == []
+    assert catalog_rows == []
+    assert result["exclusions"]["purged_source_urls"] == 1
+    assert result["exclusions"]["purged_catalog_products"] == 1
+
+
+def _catalog_update_config() -> service.CatalogUpdateConfig:
+    return service.CatalogUpdateConfig(
+        store_base="https://shop.example",
+        admin_path="admin",
+        admin_user="admin",
+        admin_pass="supersecret",
+    )
+
+
+def _db_ingest(path: Path) -> dict:
+    with session_scope() as session:
+        return ingest_source_catalog(session, source_cata_path=path).to_dict()
+
+
+def _catalog_row(model: str, *, name: str) -> CatalogProductRow:
+    return CatalogProductRow(
+        catalog_source="sourceCata",
+        model=model,
+        mpn="M1",
+        name=name,
+        category="Cat",
+        raw_category="Cat",
+        manufacturer="Brand",
+        active=True,
+        imported_at=_now(),
+        created_at=_now(),
+        updated_at=_now(),
+    )
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc).replace(microsecond=0)
 
 
 def test_export_catalog_csv_closes_browser_before_playwright_stops(tmp_path: Path, monkeypatch) -> None:

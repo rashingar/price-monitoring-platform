@@ -93,6 +93,7 @@ Important variables:
 $env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
 $env:ECOMMERCE_SOURCE_CATA_PATH = "C:\path\to\sourceCata.csv"
 $env:ECOMMERCE_PRICE_IGNORE_PATH = "C:\path\to\price_ignore.csv"
+$env:CATALOG_UPDATE_EXCLUDED_MODELS_PATH = "C:\path\to\codes_not_in_entersoft.csv"
 $env:ECOMMERCE_ARTIFACT_ROOTS = "D:\Ecommerce\output\ecommerce\monitoring\runs"
 $env:ECOMMERCE_FILE_ROOTS = "C:\Users\user\Downloads;C:\Exports;output"
 ```
@@ -127,7 +128,9 @@ the web `/commerce-api` proxy. The backend creates a durable
 4. export the configured CSV Product Export profile
 5. save the download under `output/catalog_updates/{job_id}/`
 6. copy the imported CSV to `output/catalog_updates/{job_id}/sourceCata.csv`
-7. import that CSV with the existing catalog ingestion logic
+7. remove hard-excluded models and write `sourceCata.filtered.csv`
+8. import the filtered CSV with the existing catalog ingestion logic
+9. purge excluded models from catalog-owned DB state
 
 Use these endpoints to inspect durable state:
 
@@ -138,9 +141,23 @@ GET /api/jobs?job_type=catalog_update_from_opencart
 ```
 
 Job results include artifact paths, export profile, downloaded file size,
-migration output, and ingest counts. Responses and job results must not contain
-OpenCart credentials. Default automated tests mock Playwright/OpenCart; live
-OpenCart export verification is manual/opt-in only.
+migration output, exclusion counts, purge counts, and ingest counts. Responses
+and job results must not contain OpenCart credentials. Default automated tests
+mock Playwright/OpenCart; live OpenCart export verification is manual/opt-in
+only.
+
+`config/catalog/codes_not_in_entersoft.csv` is the default hard pre-import
+denylist for Dashboard `Update DB`. The file may contain a `model` header or a
+single model column. Matching is exact after trimming whitespace, so leading
+zeros are significant. Set `CATALOG_UPDATE_EXCLUDED_MODELS_PATH` only when a
+different denylist file is required. If the default file is missing the job
+continues with zero exclusions; if an explicit override is missing the job
+fails before import.
+
+Excluded models are removed from the normalized OpenCart export before import
+and are purged from catalog-owned state such as `catalog_products`,
+`source_urls`, and Source URL Agent task/candidate rows. This is a backend
+business rule, not an operator review workflow.
 
 When the OpenCart export fails after Playwright has opened a page, the job
 writes safe diagnostics under:

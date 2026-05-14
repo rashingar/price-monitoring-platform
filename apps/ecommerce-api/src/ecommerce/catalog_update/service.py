@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import re
@@ -14,14 +15,22 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlparse, urlunparse
 
+from sqlalchemy import delete, select, update
+
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import get_database_url, sanitize_database_error
+from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.products import Product, ProductSource
+from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryTask
+from ecommerce.db.session import session_scope
 from ecommerce.env import load_local_env_if_present
 from ecommerce.jobs.ingest_catalog import ingest_catalog_file
 
 CATALOG_UPDATE_JOB_TYPE = "catalog_update_from_opencart"
 DEFAULT_EXPORT_PROFILE = DEFAULT_CATALOG_SOURCE
 DEFAULT_EXPORT_TIMEOUT_SECONDS = 900
+EXCLUDED_MODELS_ENV_VAR = "CATALOG_UPDATE_EXCLUDED_MODELS_PATH"
+DEFAULT_EXCLUDED_MODELS_RELATIVE_PATH = Path("config") / "catalog" / "codes_not_in_entersoft.csv"
 CSV_PRODUCT_EXPORT_ROUTE = "extension/ka_extensions/csv_product_export/ka_product_export"
 REDACTED_VALUE = "[redacted]"
 CATALOG_UPDATE_STEPS = (
@@ -34,7 +43,9 @@ CATALOG_UPDATE_STEPS = (
     "step_2_next",
     "wait_for_download",
     "save_download",
+    "filter_exclusions",
     "ingest_catalog",
+    "purge_exclusions",
 )
 SENSITIVE_QUERY_KEYS = {
     "access_token",
@@ -106,6 +117,60 @@ class CatalogUpdateConfig:
         }
 
 
+@dataclass(frozen=True)
+class ExcludedModels:
+    path: Path
+    found: bool
+    explicit_path: bool
+    models: frozenset[str]
+
+    @property
+    def count(self) -> int:
+        return len(self.models)
+
+
+@dataclass(frozen=True)
+class CatalogExclusionFilterResult:
+    exclusion_file_path: Path
+    exclusion_file_found: bool
+    excluded_model_count: int
+    input_row_count: int
+    removed_row_count: int
+    output_row_count: int
+    filtered_csv_path: Path
+
+    def to_payload(self) -> dict[str, Any]:
+        return {
+            "exclusion_file_path": _display_path(self.exclusion_file_path),
+            "exclusion_file_found": self.exclusion_file_found,
+            "excluded_model_count": self.excluded_model_count,
+            "input_row_count": self.input_row_count,
+            "removed_row_count": self.removed_row_count,
+            "output_row_count": self.output_row_count,
+            "filtered_csv_path": _display_path(self.filtered_csv_path),
+        }
+
+
+@dataclass(frozen=True)
+class CatalogExclusionCleanupResult:
+    purged_catalog_products: int = 0
+    purged_source_urls: int = 0
+    purged_source_url_discovery_tasks: int = 0
+    purged_source_url_candidates: int = 0
+    purged_product_sources: int = 0
+    deactivated_products: int = 0
+
+    def to_payload(self) -> dict[str, int]:
+        return {
+            "purged_catalog_products": self.purged_catalog_products,
+            "purged_source_urls": self.purged_source_urls,
+            "purged_source_url_discovery_tasks": self.purged_source_url_discovery_tasks,
+            "purged_source_url_candidates": self.purged_source_url_candidates,
+            "purged_product_sources": self.purged_product_sources,
+            "deactivated_products": self.deactivated_products,
+        }
+
+
 def load_catalog_update_config() -> CatalogUpdateConfig:
     load_local_env_if_present()
     missing = [
@@ -153,11 +218,25 @@ def run_catalog_update(job_id: str, *, config: CatalogUpdateConfig | None = None
         normalized_csv_path = normalize_downloaded_csv(export.downloaded_path, output_dir)
     except CatalogUpdateError as exc:
         raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
+    steps.mark("filter_exclusions")
+    try:
+        exclusions = load_excluded_models()
+        filter_result = filter_source_catalog_exclusions(normalized_csv_path, output_dir, exclusions)
+    except CatalogUpdateError as exc:
+        raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
     steps.mark("ingest_catalog")
     try:
-        ingest = run_catalog_ingest(normalized_csv_path)
+        ingest = run_catalog_ingest(filter_result.filtered_csv_path)
     except Exception as exc:
         raise CatalogUpdateError(_message_with_step(str(exc) or exc.__class__.__name__, steps.current_step)) from exc
+    steps.mark("purge_exclusions")
+    try:
+        cleanup = purge_excluded_catalog_state(
+            exclusions.models,
+            catalog_source=str(ingest.get("catalog_source") or DEFAULT_CATALOG_SOURCE),
+        )
+    except CatalogUpdateError as exc:
+        raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
 
     return {
         "job_id": job_id,
@@ -165,11 +244,16 @@ def run_catalog_update(job_id: str, *, config: CatalogUpdateConfig | None = None
         "download_dir": _display_path(output_dir),
         "export_profile": selected_config.export_profile,
         "downloaded_csv_path": _display_path(export.downloaded_path),
-        "imported_csv_path": _display_path(normalized_csv_path),
+        "normalized_csv_path": _display_path(normalized_csv_path),
+        "imported_csv_path": _display_path(filter_result.filtered_csv_path),
         "downloaded_filename": export.downloaded_path.name,
         "downloaded_file_size": export.downloaded_size,
         "migration": migration,
         "ingest": ingest,
+        "exclusions": {
+            **filter_result.to_payload(),
+            **cleanup.to_payload(),
+        },
     }
 
 
@@ -331,6 +415,157 @@ def normalize_downloaded_csv(downloaded_path: Path, output_dir: Path) -> Path:
     if downloaded_path.resolve(strict=False) != final_path.resolve(strict=False):
         shutil.copy2(downloaded_path, final_path)
     return final_path
+
+
+def load_excluded_models(path: Path | None = None) -> ExcludedModels:
+    load_local_env_if_present()
+    explicit_value = _env_text(EXCLUDED_MODELS_ENV_VAR)
+    explicit_path = explicit_value is not None
+    resolved_path = Path(explicit_value).expanduser() if explicit_value else (repo_root() / DEFAULT_EXCLUDED_MODELS_RELATIVE_PATH)
+    if path is not None:
+        resolved_path = path.expanduser()
+        explicit_path = True
+    resolved_path = resolved_path.resolve(strict=False)
+    if not resolved_path.exists():
+        if explicit_path:
+            raise CatalogUpdateError(f"Catalog exclusion file not found: {resolved_path}")
+        return ExcludedModels(path=resolved_path, found=False, explicit_path=False, models=frozenset())
+
+    try:
+        with resolved_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            rows = list(csv.reader(handle))
+    except OSError as exc:
+        raise CatalogUpdateError(f"Catalog exclusion file could not be read: {resolved_path}") from exc
+
+    return ExcludedModels(
+        path=resolved_path,
+        found=True,
+        explicit_path=explicit_path,
+        models=frozenset(_excluded_models_from_rows(rows, resolved_path)),
+    )
+
+
+def filter_source_catalog_exclusions(
+    source_cata_path: Path,
+    output_dir: Path,
+    exclusions: ExcludedModels,
+) -> CatalogExclusionFilterResult:
+    filtered_path = output_dir / "sourceCata.filtered.csv"
+    try:
+        with source_cata_path.open("r", encoding="utf-8-sig", newline="") as input_handle:
+            reader = csv.DictReader(input_handle)
+            fieldnames = list(reader.fieldnames or [])
+            if "model" not in fieldnames:
+                raise CatalogUpdateError("Catalog update exclusion filtering failed: sourceCata.csv is missing required model column.")
+            rows = list(reader)
+    except OSError as exc:
+        raise CatalogUpdateError(f"Catalog update exclusion filtering failed: could not read {source_cata_path}") from exc
+
+    kept_rows: list[dict[str, str]] = []
+    removed_row_count = 0
+    for row in rows:
+        model = str(row.get("model") or "").strip()
+        if model and model in exclusions.models:
+            removed_row_count += 1
+            continue
+        kept_rows.append(row)
+
+    try:
+        with filtered_path.open("w", encoding="utf-8", newline="") as output_handle:
+            writer = csv.DictWriter(output_handle, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(kept_rows)
+    except OSError as exc:
+        raise CatalogUpdateError(f"Catalog update exclusion filtering failed: could not write {filtered_path}") from exc
+
+    return CatalogExclusionFilterResult(
+        exclusion_file_path=exclusions.path,
+        exclusion_file_found=exclusions.found,
+        excluded_model_count=exclusions.count,
+        input_row_count=len(rows),
+        removed_row_count=removed_row_count,
+        output_row_count=len(kept_rows),
+        filtered_csv_path=filtered_path,
+    )
+
+
+def purge_excluded_catalog_state(
+    excluded_models: frozenset[str] | set[str],
+    *,
+    catalog_source: str = DEFAULT_CATALOG_SOURCE,
+) -> CatalogExclusionCleanupResult:
+    models = frozenset(str(item).strip() for item in excluded_models if str(item).strip())
+    if not models:
+        return CatalogExclusionCleanupResult()
+
+    purged_catalog_products = 0
+    purged_source_urls = 0
+    purged_source_url_discovery_tasks = 0
+    purged_source_url_candidates = 0
+    purged_product_sources = 0
+    deactivated_products = 0
+
+    try:
+        with session_scope() as session:
+            for batch in _model_batches(models):
+                product_ids = select(Product.id).where(Product.catalog_source == catalog_source, Product.model.in_(batch))
+                purged_product_sources += _rowcount(
+                    session.execute(
+                        delete(ProductSource)
+                        .where(ProductSource.product_id.in_(product_ids))
+                        .execution_options(synchronize_session=False)
+                    )
+                )
+
+                purged_source_urls += _rowcount(
+                    session.execute(
+                        delete(SourceUrl)
+                        .where(SourceUrl.catalog_source == catalog_source, SourceUrl.model.in_(batch))
+                        .execution_options(synchronize_session=False)
+                    )
+                )
+                purged_source_url_candidates += _rowcount(
+                    session.execute(
+                        delete(SourceUrlCandidate).where(
+                            SourceUrlCandidate.catalog_source == catalog_source,
+                            SourceUrlCandidate.model.in_(batch),
+                        ).execution_options(synchronize_session=False)
+                    )
+                )
+                purged_source_url_discovery_tasks += _rowcount(
+                    session.execute(
+                        delete(SourceUrlDiscoveryTask)
+                        .where(SourceUrlDiscoveryTask.model.in_(batch))
+                        .execution_options(synchronize_session=False)
+                    )
+                )
+                deactivated_products += _rowcount(
+                    session.execute(
+                        update(Product)
+                        .where(Product.catalog_source == catalog_source, Product.model.in_(batch), Product.active.is_(True))
+                        .values(active=False)
+                        .execution_options(synchronize_session=False)
+                    )
+                )
+                purged_catalog_products += _rowcount(
+                    session.execute(
+                        delete(CatalogProductRow).where(
+                            CatalogProductRow.catalog_source == catalog_source,
+                            CatalogProductRow.model.in_(batch),
+                        ).execution_options(synchronize_session=False)
+                    )
+                )
+    except Exception as exc:
+        raise CatalogUpdateError(f"Catalog exclusion cleanup failed: {sanitize_database_error(exc)}") from exc
+
+    return CatalogExclusionCleanupResult(
+        purged_catalog_products=purged_catalog_products,
+        purged_source_urls=purged_source_urls,
+        purged_source_url_discovery_tasks=purged_source_url_discovery_tasks,
+        purged_source_url_candidates=purged_source_url_candidates,
+        purged_product_sources=purged_product_sources,
+        deactivated_products=deactivated_products,
+    )
 
 
 def run_catalog_ingest(source_cata_path: Path) -> dict[str, Any]:
@@ -548,6 +783,37 @@ def _env_bool(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.casefold() in {"1", "true", "yes", "on", "headed"}
+
+
+def _excluded_models_from_rows(rows: list[list[str]], path: Path) -> set[str]:
+    non_empty_rows = [row for row in rows if any(str(cell).strip() for cell in row)]
+    if not non_empty_rows:
+        return set()
+
+    first_row = [str(cell).strip() for cell in non_empty_rows[0]]
+    normalized_header = [cell.casefold() for cell in first_row]
+    if "model" in normalized_header:
+        model_index = normalized_header.index("model")
+        return {
+            str(row[model_index]).strip()
+            for row in non_empty_rows[1:]
+            if model_index < len(row) and str(row[model_index]).strip()
+        }
+
+    max_columns = max(len(row) for row in non_empty_rows)
+    if max_columns == 1:
+        return {str(row[0]).strip() for row in non_empty_rows if row and str(row[0]).strip()}
+
+    raise CatalogUpdateError(f"Catalog exclusion file must contain a model header or a single model column: {path}")
+
+
+def _model_batches(models: frozenset[str] | set[str], size: int = 500) -> list[list[str]]:
+    ordered = sorted(models)
+    return [ordered[index : index + size] for index in range(0, len(ordered), size)]
+
+
+def _rowcount(result: Any) -> int:
+    return int(result.rowcount or 0)
 
 
 def redact_opencart_url(value: object, config: CatalogUpdateConfig | None = None) -> str:
