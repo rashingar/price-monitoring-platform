@@ -370,7 +370,6 @@
     {
       "template_id": "skroutz_tv_v1",
       "match": {
-        "source_name": "skroutz",
         "taxonomy_leaf": "Τηλεοράσεις"
       },
       "preferred_schema_source_files": [

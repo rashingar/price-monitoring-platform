@@ -496,6 +496,77 @@ def test_build_row_uses_schema_first_tv_characteristics_template(tmp_path: Path)
     assert f"characteristics_template_used:schema:{TV_TEMPLATE_SCHEMA_ID}" in warnings
 
 
+def test_bestprice_tv_characteristics_use_label_alias_families() -> None:
+    source = SourceProductData(
+        source_name="bestprice",
+        page_type="product",
+        url="https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html",
+        canonical_url="https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html",
+        name='TCL SQD-Mini LED 65C8L Smart Τηλεόραση 65" 4K UHD Mini LED HDR',
+        brand="TCL",
+        taxonomy_tv_inches=65,
+        spec_sections=[
+            SpecSection(
+                section="Χαρακτηριστικά",
+                items=[
+                    SpecItem(label="Panel", value="Mini LED"),
+                    SpecItem(label="Ανάλυση", value="4K Ultra HD"),
+                    SpecItem(label="Μέγιστη Ανάλυση", value="3840 x 2160 (4K UHD)"),
+                    SpecItem(label="Διαστάσεις με βάση (ΠxΒxΥ)", value="1434 x 368 x 860"),
+                    SpecItem(label="Βάρος", value="21,1kg"),
+                    SpecItem(label="HDMI 2.1 Θύρες", value="4"),
+                    SpecItem(label="USB Θύρες", value="1"),
+                    SpecItem(label="Ενσύρματες Συνδέσεις", value="USB • CI Slot • Είσοδος RF • Ethernet • HDMI 2.1 • Digital Audio Optical"),
+                    SpecItem(label="Πρότυπα Ήχου", value="Dolby Atmos • Dolby TrueHD • Dolby AC-4"),
+                    SpecItem(label="Νέα Ενεργειακή Κλάση", value="D"),
+                    SpecItem(label="VESA Mount", value="300x300"),
+                    SpecItem(label="Υποστηριζόμενα Πρότυπα", value="DVB-T • DVB-T2 • DVB-S • DVB-S2 • DVB-C"),
+                    SpecItem(label="Smart Assistant", value="Google Assistant"),
+                    SpecItem(label="Smart Οικοσύστημα", value="Google Home"),
+                    SpecItem(label="Ρυθμός Ανανέωσης", value="144Hz"),
+                    SpecItem(label="Λογισμικό", value="Google TV"),
+                    SpecItem(label="Εγκατεστημένες Εφαρμογές", value="Netflix • YouTube"),
+                    SpecItem(label="HDR Type", value="HDR10 • HDR10+ • HLG • Dolby Vision"),
+                    SpecItem(label="Ασύρματες Συνδέσεις", value="WiFi • Bluetooth • Miracast • AirPlay • Chromecast Built-In • Screen Mirroring"),
+                ],
+            )
+        ],
+    )
+
+    row, normalized, warnings = build_row(
+        cli=CLIInput(model="143667", url=source.url, photos=1, sections=0, skroutz_status=1, boxnow=0, price="0"),
+        parsed=ParsedProduct(source=source),
+        taxonomy=make_tv_taxonomy(),
+        schema_match=SchemaMatchResult(matched_schema_id=TV_TEMPLATE_SCHEMA_ID, score=0.9),
+    )
+
+    soup = BeautifulSoup(row["characteristics"], "lxml")
+    values_by_label = {
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        for cells in ([cell for cell in row_node.select("td")] for row_node in soup.select("tbody tr"))
+        if len(cells) >= 2
+    }
+
+    assert values_by_label[normalize_for_match("Τεχνολογία Οθόνης")] == "Mini LED"
+    assert values_by_label[normalize_for_match("Ανάλυση Οθόνης")] == "ULTRA HD ( 4K )"
+    assert values_by_label[normalize_for_match("Αριθμός Pixels")] == "3840 × 2160"
+    assert values_by_label[normalize_for_match("HDR")] == "HDR10,HDR10+,Dolby Vision ™HDR,HLG"
+    assert values_by_label[normalize_for_match("Ενεργειακή Κλάση")] == "D"
+    assert values_by_label[normalize_for_match("Δέκτης")] == "DVB-T2/C/S2"
+    assert values_by_label[normalize_for_match("Σύστημα Ήχου")] == "Dolby Atmos,Dolby TrueHD,Dolby AC-4"
+    assert values_by_label[normalize_for_match("Smart TV")] == "Υποστηρίζεται"
+    assert values_by_label[normalize_for_match("Λειτουργικό Σύστημα")] == "Google TV"
+    assert values_by_label[normalize_for_match("Λειτουργίες Smart")] == "Netflix • YouTube"
+    assert values_by_label[normalize_for_match("HDMI")] == "Ναι,4"
+    assert values_by_label[normalize_for_match("Bluetooth")] == "Bluetooth"
+    assert values_by_label[normalize_for_match("USB")] == "Ναι,1"
+    assert "CI" in values_by_label[normalize_for_match("Είσοδοι / 'Εξοδοι")]
+    assert values_by_label[normalize_for_match("Διάκενο Βάσης Τοίχου Vesa (mm)")] == "300 × 300"
+    assert values_by_label[normalize_for_match("Διαστάσεις Συσκευής σε Εκατοστά με Βάση (Υ x Π x Β)")] == "86.00 × 143.40 × 36.80"
+    assert normalized["characteristics_diagnostics"]["unresolved_count"] < 24
+    assert "characteristics_template_unresolved_fields:24" not in warnings
+
+
 def test_tv_characteristics_prefer_extracted_specs_over_skroutz_help_text(tmp_path: Path) -> None:
     raw_html = """
     <html><body>

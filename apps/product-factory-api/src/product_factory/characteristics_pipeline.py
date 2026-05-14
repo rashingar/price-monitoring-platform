@@ -754,14 +754,22 @@ def _focused_context(context: _ResolutionContext, *extra_parts: str) -> _Resolut
 
 
 def _exact_value_from_aliases(context: _ResolutionContext, aliases: list[str]) -> tuple[str, str]:
-    alias_keys = {normalize_for_match(alias) for alias in aliases if normalize_for_match(alias)}
+    alias_keys: set[str] = set()
+    alias_by_key: dict[str, str] = {}
+    for alias in aliases:
+        for key in candidate_label_keys(alias):
+            if not key:
+                continue
+            alias_keys.add(key)
+            alias_by_key.setdefault(key, alias)
     for item in [*context.source.key_specs, *(item for section in _effective_spec_sections(context.source) for item in section.items)]:
-        item_key = normalize_for_match(item.label)
-        if item_key in alias_keys and normalize_whitespace(item.value):
-            matched_alias = next((alias for alias in aliases if normalize_for_match(alias) == item_key), item.label)
+        matched_keys = candidate_label_keys(item.label) & alias_keys
+        if matched_keys and normalize_whitespace(item.value):
+            matched_key = next(iter(matched_keys))
+            matched_alias = item.label if matched_key.startswith("alias:") else alias_by_key.get(matched_key, item.label)
             return normalize_whitespace(item.value), f"spec_alias:{matched_alias}"
     for alias in aliases:
-        for key in [normalize_for_match(alias)]:
+        for key in candidate_label_keys(alias):
             if key in context.raw_lookup:
                 return context.raw_lookup[key], f"raw_alias:{alias}"
     return "", ""
@@ -813,6 +821,11 @@ def _resolve_tv_resolution(context: _ResolutionContext, field: dict[str, Any]) -
 
 
 def _resolve_tv_pixels(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(context, ["Αριθμός Pixels", "Μέγιστη Ανάλυση"])
+    if value:
+        pixels = _format_pixels(value)
+        if pixels:
+            return pixels, source
     for candidate in [context.combined_text, *context.offer_titles]:
         pixels = _format_pixels(candidate)
         if pixels:
@@ -901,24 +914,27 @@ def _resolve_tv_tuner(context: _ResolutionContext, field: dict[str, Any]) -> tup
 
 def _resolve_tv_sound_system(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
     parts: list[str] = []
+    sound_value, sound_source = _first_value_from_aliases(context, ["Σύστημα Ήχου", "Πρότυπα Ήχου"])
     channels_value, channels_source = _first_value_from_aliases(context, ["Κανάλια"])
     if channels_value:
         channels = normalize_whitespace(channels_value).replace(" ", "")
         if re.fullmatch(r"\d+(?:\.\d+)?", channels):
             parts.append(f"{channels}ch")
-        else:
+        elif re.fullmatch(r"\d+(?:\.\d+)?ch", normalize_for_match(channels_value)):
             parts.append(channels)
     tokens = _ordered_features(
-        context,
+        _focused_context(context, sound_value),
         [
             ("Dolby Atmos", ("dolby atmos",)),
             ("Dolby Audio", ("dolby audio",)),
+            ("Dolby TrueHD", ("dolby truehd", "dolby true hd")),
+            ("Dolby AC-4", ("dolby ac-4", "dolby ac4")),
             ("DTS:X", ("dts:x",)),
             ("DTS Virtual:X", ("dts virtual:x", "dts virtual x")),
         ],
     )
     parts.extend(token for token in tokens if token not in parts)
-    return (",".join(parts), channels_source or "combined_text:sound") if parts else ("", "unresolved")
+    return (",".join(parts), sound_source or channels_source or "combined_text:sound") if parts else ("", "unresolved")
 
 
 def _resolve_tv_processor(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
@@ -927,7 +943,13 @@ def _resolve_tv_processor(context: _ResolutionContext, _field: dict[str, Any]) -
 
 
 def _resolve_tv_smart_tv(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    if _contains_any(context.combined_text, "smart tv", "vidaa", "netflix", "youtube"):
+    value, source = _exact_value_from_aliases(
+        context,
+        ["Smart TV", "Λογισμικό", "Smart Οικοσύστημα", "Smart Assistant", "Εγκατεστημένες Εφαρμογές"],
+    )
+    if value and _contains_any(value, "google tv", "vidaa", "netflix", "youtube", "google assistant", "google home"):
+        return "Υποστηρίζεται", source
+    if _contains_any(context.combined_text, "smart tv", "google tv", "vidaa", "netflix", "youtube"):
         return "Υποστηρίζεται", "combined_text:smart_tv"
     return "", "unresolved"
 
@@ -948,20 +970,29 @@ def _resolve_tv_os(context: _ResolutionContext, _field: dict[str, Any]) -> tuple
 
 
 def _resolve_tv_smart_functions(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _exact_value_from_aliases(context, ["Υποστηριζόμενες Εφαρμογές", "Λειτουργίες Smart"])
+    value, source = _exact_value_from_aliases(context, ["Υποστηριζόμενες Εφαρμογές", "Λειτουργίες Smart", "Εγκατεστημένες Εφαρμογές"])
     if value:
         return normalize_whitespace(value), source
     return "", "unresolved"
 
 
 def _resolve_tv_extra_functions(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+    smart_assistant, _assistant_source = _exact_value_from_aliases(context, ["Smart Assistant"])
+    ecosystem, _ecosystem_source = _exact_value_from_aliases(context, ["Smart Οικοσύστημα"])
+    wireless, _wireless_source = _exact_value_from_aliases(context, ["Ασύρματες Συνδέσεις"])
     values = _ordered_features(
-        _focused_context(context),
+        _focused_context(context, smart_assistant, ecosystem, wireless),
         [
             ("AI Energy Mode", ("ai energy mode",)),
             ("AI Sports Mode", ("ai sports mode",)),
             ("AnyView Cast", ("anyview cast",)),
             ("Voice Remote", ("voice remote",)),
+            ("Google Assistant", ("google assistant",)),
+            ("Google Home", ("google home",)),
+            ("Chromecast Built-In", ("chromecast built-in", "chromecast built in")),
+            ("AirPlay", ("airplay",)),
+            ("Miracast", ("miracast",)),
+            ("Screen Mirroring", ("screen mirroring",)),
             ("Gaming Mode", ("gaming mode", "game mode plus")),
             ("Game Bar", ("game bar",)),
         ],
@@ -970,7 +1001,7 @@ def _resolve_tv_extra_functions(context: _ResolutionContext, _field: dict[str, A
 
 
 def _resolve_tv_hdmi(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Σύνολο Θυρών HDMI"])
+    value, source = _first_value_from_aliases(context, ["Σύνολο Θυρών HDMI", "HDMI", "HDMI 2.1 Θύρες", "Θύρες HDMI"])
     count = _extract_int_from_text(value)
     if count is None:
         for title in context.offer_titles:
@@ -988,14 +1019,14 @@ def _resolve_tv_hdmi(context: _ResolutionContext, _field: dict[str, Any]) -> tup
 
 
 def _resolve_tv_bluetooth(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Bluetooth"])
+    value, source = _first_value_from_aliases(context, ["Bluetooth", "Ασύρματες Συνδέσεις"])
     if _contains_any(value, "ναι", "yes", "bluetooth") or _contains_any(context.combined_text, "bluetooth", " bt "):
         return "Bluetooth", source or "combined_text:bluetooth"
     return "", "unresolved"
 
 
 def _resolve_tv_usb(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Πλήθος USB", "USB"])
+    value, source = _first_value_from_aliases(context, ["Πλήθος USB", "USB", "USB Θύρες", "Θύρες USB"])
     count = _extract_int_from_text(value)
     if count is None:
         for title in context.offer_titles:
@@ -1010,6 +1041,19 @@ def _resolve_tv_usb(context: _ResolutionContext, _field: dict[str, Any]) -> tupl
 def _resolve_tv_io(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
     values: list[str] = []
     matched_sources: list[str] = []
+    connections_value, connections_source = _exact_value_from_aliases(context, ["Ενσύρματες Συνδέσεις", "Είσοδοι / Έξοδοι", "Είσοδοι / 'Εξοδοι"])
+    if connections_value:
+        for raw_part in re.split(r"\s*[•,]\s*", connections_value):
+            part = normalize_whitespace(raw_part)
+            if not part:
+                continue
+            raw_part_key = part.lower()
+            normalized_part_key = normalize_for_match(part)
+            display = "CI+" if "ci+" in raw_part_key else "CI" if normalized_part_key in {"ci", "ci slot"} else part
+            if display not in values:
+                values.append(display)
+        if values:
+            return ",".join(values), connections_source
     for label, display in [("ALLM", "ALLM"), ("VRR", "VRR"), ("CI+", "CI+")]:
         value, source = _exact_value_from_aliases(context, [label])
         if value and _normalize_yes_no_value(value) != "no":
@@ -1084,9 +1128,11 @@ def _resolve_tv_dimensions_with_stand(context: _ResolutionContext, _field: dict[
             "Διαστάσεις Συσκευής σε Εκατοστά με Βάση (Υ × Π × Β)",
             "Διαστάσεις Συσκευής σε Εκατοστά με Βάση (Υ x Π x Β)",
             "Διαστάσεις (με Βάση)",
+            "Διαστάσεις με βάση (ΠxΒxΥ)",
+            "Διαστάσεις με βάση",
         ],
     )
-    combined = _format_dimension_triplet_cm(combined_value)
+    combined = _format_dimension_triplet_cm(combined_value, source_label=combined_source)
     if combined:
         return combined, combined_source
 
@@ -1117,10 +1163,13 @@ def _first_section_value(context: _ResolutionContext, section_names: list[str], 
     return "", ""
 
 
-def _format_dimension_triplet_cm(value: str) -> str:
+def _format_dimension_triplet_cm(value: str, *, source_label: str = "") -> str:
     numbers = re.findall(r"\d+(?:[.,]\d+)?", value or "")
     if len(numbers) < 3:
         return ""
+    label_key = normalize_for_match(source_label)
+    if all(token in label_key for token in ("π", "β", "υ")) and "πxβxυ" in label_key.replace(" ", ""):
+        numbers = [numbers[2], numbers[0], numbers[1]]
     formatted = _format_dimension_parts_cm(numbers[:3], unit_hint=value)
     if any(not item for item in formatted):
         return ""
