@@ -16,7 +16,7 @@ from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.vendor_sources import VendorSourceCaptureRun  # noqa: E402
 from ecommerce.db.models.price_monitoring import PriceObservation  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
+from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url  # noqa: E402
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation  # noqa: E402
 from ecommerce.vendor_sources.capture import capture_selected_source_urls_for_run, run_vendor_source_capture  # noqa: E402
 

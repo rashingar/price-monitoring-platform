@@ -17,14 +17,8 @@ from ecommerce.catalog_update import service as catalog_update_service
 from ecommerce.db.config import DatabaseNotConfiguredError, sanitize_database_error
 from ecommerce.db.session import create_session_factory
 from ecommerce.env import load_local_env_if_present
-from ecommerce.jobs.durable import (
-    DurableJobRegistry,
-    execute_registered_job,
-    fail_stale_running_jobs,
-    lease_queued_jobs_for_worker,
-    list_queued_jobs_for_worker,
-    list_stale_running_jobs,
-)
+from ecommerce.db.repositories.jobs import fail_stale_running_jobs, lease_queued_jobs_for_worker, list_queued_jobs_for_worker, list_stale_running_jobs
+from ecommerce.jobs.durable import DurableJobRegistry, execute_registered_job
 
 
 @dataclass(frozen=True)

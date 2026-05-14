@@ -17,13 +17,12 @@ Price Monitoring workflow code is split by responsibility:
 Vendor Sources capture keeps `ecommerce.vendor_sources.capture` as a
 compatibility import surface. Workflow code lives in `capture_service.py`,
 payload serialization in `payloads.py`, and durable run row persistence in
-`run_repository.py`. Durable capture runs are marked `failed` when exceptions
-occur after the run row is created.
+`ecommerce.db.repositories.vendor_sources`. Durable capture runs are marked
+`failed` when exceptions occur after the run row is created.
 
-Product source persistence keeps public imports from
-`db.product_source_repository` compatible, while capture persistence is split
-into:
+Product source and capture persistence live under `ecommerce.db.repositories`:
 
+- `products.py` for product and product source helpers.
 - `capture_persistence.py` for snapshots and top-level capture result writes.
 - `observation_persistence.py` for price, offer, and listing rows.
 - `source_health.py` for product source health updates.

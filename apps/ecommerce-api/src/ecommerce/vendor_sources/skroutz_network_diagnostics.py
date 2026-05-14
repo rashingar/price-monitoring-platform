@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session
 from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.models.vendor_sources import Vendor
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
-from ecommerce.db.source_convergence import sync_source_url_to_product_source
-from ecommerce.db.source_url_repository import get_source_url
+from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
+from ecommerce.db.repositories.source_urls import get_source_url
 from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_capture.sanitize import content_hash

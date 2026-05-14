@@ -16,7 +16,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from ecommerce.artifacts import artifact_link_payload
-from ecommerce.db.alerts import evaluate_alert_rules_for_run, has_active_alert_rules
+from ecommerce.db.repositories.alerts import evaluate_alert_rules_for_run, has_active_alert_rules
 from ecommerce.db.config import is_database_configured
 from ecommerce.db.session import session_scope
 from ecommerce.price_monitoring.fetch_run import (

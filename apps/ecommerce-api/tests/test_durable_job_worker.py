@@ -10,7 +10,8 @@ from ecommerce.catalog_update import service as catalog_update_service  # noqa: 
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.jobs.durable import DurableJobRegistry, create_queued_job, mark_running, request_cancel  # noqa: E402
+from ecommerce.db.repositories.jobs import create_queued_job, mark_running, request_cancel  # noqa: E402
+from ecommerce.jobs.durable import DurableJobRegistry  # noqa: E402
 from ecommerce.jobs.worker import build_default_registry, run_worker_iteration  # noqa: E402
 
 

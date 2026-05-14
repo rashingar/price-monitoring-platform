@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, aliased
 
 from ecommerce.db.models.price_monitoring import PriceObservation
 from ecommerce.db.models.alerts import AlertEvent, AlertRule
-from ecommerce.db.repositories import json_safe_value
+from ecommerce.db.repositories.common import json_safe_value
 
 
 @dataclass(frozen=True)

@@ -1,9 +1,9 @@
-"""Repository functions for optional price monitoring persistence."""
+"""Price Monitoring run, snapshot, observation, and listing repositories."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session, aliased
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.products import Product
 from ecommerce.db.models.price_monitoring import CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing
+from ecommerce.db.repositories.common import _decimal_or_none, _empty_to_none, _first_text, _json_safe, _now, _parse_datetime, json_safe_value
+from ecommerce.db.repositories.products import match_product_for_observation, upsert_product_from_catalog_row
 from ecommerce.price_monitoring.fetch_run import PriceMonitoringFetchResult
 from ecommerce.price_monitoring.observations import ParsedPriceObservation
 from ecommerce.price_monitoring.runs import PriceMonitoringRunRecord
@@ -112,87 +114,6 @@ def update_monitoring_run_from_fetch(
     monitoring_run.error_message = result.error or None
     monitoring_run.updated_at = now
     return monitoring_run
-
-
-def upsert_product_from_catalog_row(
-    session: Session,
-    row: dict[str, Any],
-    *,
-    catalog_source: str = DEFAULT_CATALOG_SOURCE,
-    updated_at: datetime | None = None,
-) -> Product | None:
-    model = _empty_to_none(_first_text(row, ("model", "product_model", "sku")))
-    mpn = _empty_to_none(_first_text(row, ("mpn", "manufacturer_part_number", "matched_mpn")))
-    if not model and not mpn:
-        return None
-
-    timestamp = updated_at or _now()
-    product = find_product_by_identity(session, catalog_source=catalog_source, model=model, mpn=mpn)
-    if product is None:
-        product = Product(
-            catalog_source=catalog_source,
-            model=model,
-            mpn=mpn,
-            created_at=timestamp,
-            updated_at=timestamp,
-        )
-        session.add(product)
-        session.flush()
-
-    product.catalog_source = catalog_source
-    product.model = model or product.model
-    product.mpn = mpn or product.mpn
-    product.name = _empty_to_none(_first_text(row, ("name", "product_name", "title")))
-    product.manufacturer = _empty_to_none(_first_text(row, ("manufacturer", "brand")))
-    product.family = _empty_to_none(_first_text(row, ("family",)))
-    product.category_name = _empty_to_none(_first_text(row, ("category_name", "category")))
-    product.sub_category = _empty_to_none(_first_text(row, ("sub_category", "subcategory")))
-    product.current_price = _decimal_or_none(_first_text(row, ("own_price", "price", "current_price", "internal_price", "catalog_price")))
-    product.currency = _first_text(row, ("currency",)) or "EUR"
-    product.active = True
-    product.raw_catalog_row = _json_safe(row)
-    product.updated_at = timestamp
-    return product
-
-
-def find_product_by_identity(
-    session: Session,
-    *,
-    catalog_source: str,
-    model: str | None,
-    mpn: str | None,
-) -> Product | None:
-    if model:
-        return session.execute(
-            select(Product).where(Product.catalog_source == catalog_source, Product.model == model).limit(1)
-        ).scalar_one_or_none()
-    if mpn:
-        return session.execute(
-            select(Product).where(Product.catalog_source == catalog_source, Product.mpn == mpn).limit(1)
-        ).scalar_one_or_none()
-    return None
-
-
-def match_product_for_observation(
-    session: Session,
-    *,
-    catalog_source: str,
-    model: str | None,
-    mpn: str | None,
-) -> tuple[Product | None, str | None]:
-    if model:
-        product = session.execute(
-            select(Product).where(Product.catalog_source == catalog_source, Product.model == model).limit(1)
-        ).scalar_one_or_none()
-        if product is not None:
-            return product, "model"
-    if mpn:
-        product = session.execute(
-            select(Product).where(Product.catalog_source == catalog_source, Product.mpn == mpn).limit(1)
-        ).scalar_one_or_none()
-        if product is not None:
-            return product, "mpn"
-    return None, None
 
 
 def replace_catalog_snapshots(
@@ -572,26 +493,6 @@ def monitoring_run_to_dict(run: MonitoringRun) -> dict[str, Any]:
     }
 
 
-def product_to_dict(product: Product) -> dict[str, Any]:
-    return {
-        "id": product.id,
-        "catalog_source": product.catalog_source,
-        "model": product.model,
-        "mpn": product.mpn,
-        "name": product.name,
-        "manufacturer": product.manufacturer,
-        "family": product.family,
-        "category_name": product.category_name,
-        "sub_category": product.sub_category,
-        "current_price": json_safe_value(product.current_price),
-        "currency": product.currency,
-        "active": product.active,
-        "raw_catalog_row": json_safe_value(product.raw_catalog_row),
-        "created_at": json_safe_value(product.created_at),
-        "updated_at": json_safe_value(product.updated_at),
-    }
-
-
 def catalog_snapshot_to_dict(snapshot: CatalogSnapshot) -> dict[str, Any]:
     return {
         "id": snapshot.id,
@@ -853,68 +754,3 @@ def _snapshot_identity_key(row: dict[str, Any], catalog_source: str) -> tuple[st
     if mpn:
         return catalog_source, "mpn", mpn
     return None
-
-
-def _decimal_or_none(value: object) -> Decimal | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    try:
-        return Decimal(text.replace("EUR", "").replace("€", "").replace(" ", "").replace(",", "."))
-    except Exception:
-        return None
-
-
-def _first_text(row: dict[str, Any], aliases: tuple[str, ...]) -> str:
-    normalized = {_normalize_key(key): key for key in row.keys()}
-    for alias in aliases:
-        key = normalized.get(_normalize_key(alias))
-        if key is not None:
-            return str(row.get(key) or "").strip()
-    return ""
-
-
-def _normalize_key(value: object) -> str:
-    return str(value or "").strip().casefold().replace("-", "_").replace(" ", "_")
-
-
-def _empty_to_none(value: object) -> str | None:
-    text = str(value or "").strip()
-    return text or None
-
-
-def _parse_datetime(value: object) -> datetime | None:
-    if isinstance(value, datetime):
-        return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
-    text = str(value or "").strip()
-    if not text:
-        return None
-    try:
-        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
-
-
-def json_safe_value(value: object) -> object:
-    if isinstance(value, Decimal):
-        return float(value)
-    if isinstance(value, datetime):
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        return value.isoformat()
-    if isinstance(value, list):
-        return [json_safe_value(item) for item in value]
-    if isinstance(value, dict):
-        return {str(key): json_safe_value(item) for key, item in value.items()}
-    return value
-
-
-def _json_safe(row: dict[str, Any]) -> dict[str, Any]:
-    return json_safe_value(dict(row))  # type: ignore[return-value]
-
-
-def _now() -> datetime:
-    return datetime.now(timezone.utc)

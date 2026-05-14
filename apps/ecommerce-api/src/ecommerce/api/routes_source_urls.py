@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.policy import require_database_ready_for_catalog
 from ecommerce.db.session import session_scope
-from ecommerce.db.source_url_repository import (
+from ecommerce.db.repositories.source_urls import (
     apply_source_url_validation_result,
     create_or_update_manual_source_url,
     get_active_catalog_product,

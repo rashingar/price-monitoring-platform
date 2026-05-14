@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 
-from ecommerce.db.alerts import (
+from ecommerce.db.repositories.alerts import (
     acknowledge_alert_event,
     alert_event_to_dict,
     alert_rule_to_dict,

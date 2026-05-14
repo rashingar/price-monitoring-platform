@@ -26,7 +26,7 @@ from ecommerce.vendor_sources.payloads import (
     VENDOR_SOURCE_CAPTURE_RUNS_DIR,
     SourceUrlCaptureRunResult,
 )
-from ecommerce.vendor_sources.run_repository import (
+from ecommerce.db.repositories.vendor_sources import (
     create_vendor_source_capture_run_row,
     get_vendor_source_capture_run,
     list_vendor_source_capture_runs,
@@ -138,8 +138,8 @@ def capture_selected_source_urls(
     result_path: Path | None = None,
     observation_batch_id: str | None = None,
 ) -> SourceUrlCaptureRunResult:
-    from ecommerce.db.source_convergence import sync_source_url_to_product_source
-    from ecommerce.db.source_url_repository import (
+    from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
+    from ecommerce.db.repositories.source_urls import (
         list_active_source_urls_for_catalog_products,
         source_url_to_dict,
     )
@@ -452,8 +452,8 @@ def _eligible_product_sources_from_active_source_urls(
     product_source_ids: list[int],
     limit: int,
 ) -> tuple[list[int], list[dict[str, Any]], int]:
-    from ecommerce.db.source_convergence import sync_product_source_to_source_url, sync_source_url_to_product_source
-    from ecommerce.db.source_url_repository import source_url_to_dict
+    from ecommerce.db.repositories.source_convergence import sync_product_source_to_source_url, sync_source_url_to_product_source
+    from ecommerce.db.repositories.source_urls import source_url_to_dict
 
     source_urls: list[SourceUrl] = []
     statement = (
@@ -533,8 +533,8 @@ def _existing_product_source_for_source_url(session: Session, source_url: Source
 def _selected_product_source_context(session: Session, product_source_ids: list[int]) -> tuple[int, list[dict[str, Any]]]:
     if not product_source_ids:
         return 0, []
-    from ecommerce.db.source_convergence import sync_product_source_to_source_url
-    from ecommerce.db.source_url_repository import source_url_to_dict
+    from ecommerce.db.repositories.source_convergence import sync_product_source_to_source_url
+    from ecommerce.db.repositories.source_urls import source_url_to_dict
 
     sources = list(
         session.execute(select(ProductSource).where(ProductSource.id.in_(product_source_ids))).scalars().all()

@@ -15,7 +15,7 @@ from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.products import SourceCaptureSnapshot  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
+from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url  # noqa: E402
 from ecommerce.source_capture.skroutz_network_diagnostic import (  # noqa: E402
     BLOCKED_OR_CHALLENGE,
     NON_JSON_XHR,

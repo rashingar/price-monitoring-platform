@@ -9,16 +9,8 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.session import create_session_factory, get_engine, session_scope  # noqa: E402
-from ecommerce.jobs.durable import (  # noqa: E402
-    create_queued_job,
-    execute_job,
-    get_job_by_id,
-    heartbeat,
-    list_jobs,
-    mark_running,
-    mark_succeeded,
-    request_cancel,
-)
+from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, heartbeat, list_jobs, mark_running, mark_succeeded, request_cancel  # noqa: E402
+from ecommerce.jobs.durable import execute_job  # noqa: E402
 
 
 def _database_url(tmp_path: Path) -> str:

@@ -14,7 +14,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api import routes_price_monitoring  # noqa: E402
 from ecommerce.api.app import create_app  # noqa: E402
-from ecommerce.db.alerts import (  # noqa: E402
+from ecommerce.db.repositories.alerts import (  # noqa: E402
     acknowledge_alert_event,
     create_alert_rule,
     evaluate_alert_rules_for_run,

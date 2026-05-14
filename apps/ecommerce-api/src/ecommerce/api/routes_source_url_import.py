@@ -18,9 +18,9 @@ from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.policy import require_database_ready_for_catalog
-from ecommerce.db.repositories import json_safe_value
+from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.db.session import session_scope
-from ecommerce.db.source_url_repository import SOURCE_URL_STATUSES, SOURCE_URL_TYPES
+from ecommerce.db.repositories.source_urls import SOURCE_URL_STATUSES, SOURCE_URL_TYPES
 from ecommerce.file_editor import get_allowed_roots, is_path_allowed
 from ecommerce.product_factory_handoff import ProductFactoryHandoffImportResult, import_product_factory_handoff
 from ecommerce.source_url_import import SUMMARY_COUNTERS, SourceUrlImportResult, import_source_urls

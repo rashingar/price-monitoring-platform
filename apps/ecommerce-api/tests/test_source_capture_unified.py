@@ -12,8 +12,8 @@ from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
 from ecommerce.db.models.price_monitoring import PriceObservation  # noqa: E402
-from ecommerce.db.product_source_repository import create_product_from_source_urls  # noqa: E402
-from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
+from ecommerce.db.repositories.products import create_product_from_source_urls  # noqa: E402
+from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.price_monitoring.fetch_run import run_price_monitoring_fetch  # noqa: E402
 from ecommerce.price_monitoring.persistence import persist_fetch_result_if_configured  # noqa: E402

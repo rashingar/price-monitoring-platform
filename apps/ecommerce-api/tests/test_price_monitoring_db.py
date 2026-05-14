@@ -23,14 +23,8 @@ from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.models.products import Product, SourceCaptureSnapshot  # noqa: E402
 from ecommerce.db.models.price_monitoring import CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing  # noqa: E402
-from ecommerce.db.repositories import (  # noqa: E402
-    catalog_snapshot_to_dict,
-    list_price_observations,
-    monitoring_run_to_dict,
-    persist_monitoring_run_creation,
-    replace_price_observations,
-    upsert_product_from_catalog_row,
-)
+from ecommerce.db.repositories.products import upsert_product_from_catalog_row  # noqa: E402
+from ecommerce.db.repositories.price_monitoring import catalog_snapshot_to_dict, list_price_observations, monitoring_run_to_dict, persist_monitoring_run_creation, replace_price_observations  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs.run_price_monitoring_now import main as run_job_main  # noqa: E402
 from ecommerce.jobs.check_db_setup import main as check_db_setup_main  # noqa: E402

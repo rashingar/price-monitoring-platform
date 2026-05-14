@@ -8,8 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.policy import require_database_ready_for_catalog
-from ecommerce.db.product_source_repository import create_product_from_source_urls
-from ecommerce.db.repositories import product_to_dict
+from ecommerce.db.repositories.products import create_product_from_source_urls
+from ecommerce.db.repositories.products import product_to_dict
 from ecommerce.db.session import session_scope
 
 router = APIRouter(prefix="/api/products", tags=["product-sources"])

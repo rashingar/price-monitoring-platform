@@ -16,11 +16,11 @@ from sqlalchemy.orm import Session
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
-from ecommerce.db.capture_persistence import persist_capture_result
-from ecommerce.db.product_source_repository import product_source_to_dict
-from ecommerce.db.repositories import json_safe_value
-from ecommerce.db.source_convergence import sync_source_url_to_product_source
-from ecommerce.db.source_url_repository import create_or_update_imported_source_url, source_url_to_dict
+from ecommerce.db.repositories.capture_persistence import persist_capture_result
+from ecommerce.db.repositories.products import product_source_to_dict
+from ecommerce.db.repositories.common import json_safe_value
+from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
+from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, source_url_to_dict
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_capture.sanitize import content_hash, sanitize_json
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation

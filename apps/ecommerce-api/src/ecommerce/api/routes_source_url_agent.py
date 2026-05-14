@@ -19,9 +19,9 @@ from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
 from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness, require_database_ready_for_catalog
-from ecommerce.db.repositories import json_safe_value
+from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.db.session import session_scope
-from ecommerce.db.source_url_repository import create_or_update_imported_source_url, source_url_to_dict
+from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, source_url_to_dict
 from ecommerce.source_urls import normalize_source_url
 from ecommerce.source_url_agent.agent import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult, run_source_url_agent
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate

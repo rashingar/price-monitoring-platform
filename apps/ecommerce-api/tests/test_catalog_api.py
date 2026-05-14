@@ -12,7 +12,7 @@ from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.source_url_repository import create_or_update_imported_source_url, create_or_update_manual_source_url  # noqa: E402
+from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, create_or_update_manual_source_url  # noqa: E402
 from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 RAW_COOKWARE = (

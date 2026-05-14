@@ -60,3 +60,5 @@ Choose the destination module by the workflow that owns the table's lifecycle:
 If a table is referenced by several workflows, place it with the workflow that
 creates and mutates the row as its durable state. Other workflows should import
 that model from the owning module rather than moving the declaration.
+
+Repository ownership follows the same workflow map; see `db-repository-map.md`.

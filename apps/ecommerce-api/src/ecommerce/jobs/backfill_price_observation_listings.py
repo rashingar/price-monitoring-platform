@@ -6,7 +6,7 @@ import argparse
 import sys
 from typing import Sequence
 
-from ecommerce.db.repositories import backfill_price_observation_listings_from_offer_observations
+from ecommerce.db.repositories.price_monitoring import backfill_price_observation_listings_from_offer_observations
 from ecommerce.db.session import session_scope
 from ecommerce.env import load_local_env_if_present
 

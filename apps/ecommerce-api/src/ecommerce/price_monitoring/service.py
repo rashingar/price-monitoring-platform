@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
-from ecommerce.db.repositories import monitoring_run_to_dict
+from ecommerce.db.repositories.price_monitoring import monitoring_run_to_dict
 from ecommerce.price_monitoring.artifact_refs import (
     db_run_to_route_response,
     fetch_result_persistence_payload,

@@ -11,17 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from ecommerce.db.config import is_database_configured
-from ecommerce.db.repositories import (
-    backfill_price_observation_listings_from_offer_observations,
-    count_price_observations,
-    ensure_catalog_snapshots_from_rows,
-    get_monitoring_run,
-    persist_monitoring_run_creation,
-    list_price_observation_listings,
-    match_product_for_observation,
-    replace_price_observations,
-    update_monitoring_run_from_fetch,
-)
+from ecommerce.db.repositories.products import match_product_for_observation
+from ecommerce.db.repositories.price_monitoring import backfill_price_observation_listings_from_offer_observations, count_price_observations, ensure_catalog_snapshots_from_rows, get_monitoring_run, persist_monitoring_run_creation, list_price_observation_listings, replace_price_observations, update_monitoring_run_from_fetch
 from ecommerce.db.session import session_scope
 from ecommerce.db.models.price_monitoring import CatalogSnapshot, PriceObservation
 from ecommerce.price_monitoring.fetch_run import PriceMonitoringFetchResult

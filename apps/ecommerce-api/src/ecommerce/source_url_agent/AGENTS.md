@@ -33,7 +33,7 @@ This package should support:
 This package should reuse existing repository functionality:
 
 * `ecommerce.source_urls`
-* `ecommerce.db.source_url_repository`
+* `ecommerce.db.repositories.source_urls`
 * `ecommerce.db.models.source_urls`
 * `ecommerce.db.models.catalog`
 * `ecommerce.source_url_import`

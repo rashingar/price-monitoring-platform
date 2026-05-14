@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from ecommerce.db.repositories import json_safe_value
+from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.utils.decimals import format_decimal_two_places
 from ecommerce.source_url_agent.evidence import PageEvidence
 from ecommerce.source_url_agent.products import AgentProduct

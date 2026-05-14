@@ -13,7 +13,8 @@ from ecommerce.catalog_update import CATALOG_UPDATE_JOB_TYPE, run_catalog_update
 from ecommerce.db.config import DatabaseNotConfiguredError, sanitize_database_error
 from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness
 from ecommerce.db.session import create_session_factory, session_scope
-from ecommerce.jobs.durable import create_queued_job, execute_job, job_to_dict, list_jobs
+from ecommerce.db.repositories.jobs import create_queued_job, job_to_dict, list_jobs
+from ecommerce.jobs.durable import execute_job
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 

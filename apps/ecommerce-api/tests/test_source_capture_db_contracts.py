@@ -11,16 +11,16 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.capture_persistence import persist_capture_result  # noqa: E402
+from ecommerce.db.repositories.capture_persistence import persist_capture_result  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.models.vendor_sources import Vendor  # noqa: E402
 from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
 from ecommerce.db.models.price_monitoring import OfferObservation, PriceObservation, PriceObservationListing  # noqa: E402
-from ecommerce.db.product_source_repository import create_product_from_source_urls  # noqa: E402
-from ecommerce.db.repositories import backfill_price_observation_listings_from_offer_observations  # noqa: E402
-from ecommerce.db.source_url_repository import create_or_update_imported_source_url  # noqa: E402
+from ecommerce.db.repositories.products import create_product_from_source_urls  # noqa: E402
+from ecommerce.db.repositories.price_monitoring import backfill_price_observation_listings_from_offer_observations  # noqa: E402
+from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.price_monitoring.selection import SelectedPriceMonitoringProduct  # noqa: E402
 from ecommerce.price_monitoring.source_url_coverage import compute_source_url_coverage  # noqa: E402

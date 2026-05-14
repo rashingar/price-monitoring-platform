@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun
-from ecommerce.db.source_convergence import sync_source_url_to_product_source
+from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
 from ecommerce.source_urls import SourceUrlValidationError, normalize_source_url
 
 EXPORT_FORMAT = "ecommerce.source_url_candidates.v1"
