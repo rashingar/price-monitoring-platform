@@ -7,9 +7,11 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, quote, urlparse
 
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import get_database_url, sanitize_database_error
@@ -19,6 +21,7 @@ from ecommerce.jobs.ingest_catalog import ingest_catalog_file
 CATALOG_UPDATE_JOB_TYPE = "catalog_update_from_opencart"
 DEFAULT_EXPORT_PROFILE = DEFAULT_CATALOG_SOURCE
 DEFAULT_EXPORT_TIMEOUT_SECONDS = 900
+CSV_PRODUCT_EXPORT_ROUTE = "extension/ka_extensions/csv_product_export/ka_product_export"
 
 
 class CatalogUpdateError(RuntimeError):
@@ -45,9 +48,14 @@ class CatalogUpdateConfig:
         path = self.admin_path.strip("/")
         return f"{base}/{path}" if path else base
 
+    @property
+    def admin_index_url(self) -> str:
+        return build_admin_index(self.store_base, self.admin_path)
+
     def safe_payload(self) -> dict[str, Any]:
         return {
             "admin_url": self.admin_url,
+            "admin_index_url": self.admin_index_url,
             "export_profile": self.export_profile,
             "timeout_seconds": self.timeout_seconds,
             "headed": self.headed,
@@ -165,30 +173,35 @@ def export_catalog_csv(config: CatalogUpdateConfig, output_dir: Path) -> Catalog
 
     timeout_ms = int(config.timeout_seconds * 1000)
     browser = None
+    context = None
     try:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=not config.headed)
-            context = browser.new_context(accept_downloads=True)
-            page = context.new_page()
-            page.set_default_timeout(timeout_ms)
-            _login_to_opencart(page, config)
-            _navigate_to_csv_product_export(page)
-            _load_export_profile(page, config.export_profile)
-            _advance_export_step_two(page)
-            downloaded_path = _download_export(page, output_dir)
-            return CatalogExportResult(
-                downloaded_path=downloaded_path,
-                downloaded_size=downloaded_path.stat().st_size,
-            )
+            try:
+                context = browser.new_context(accept_downloads=True)
+                page = context.new_page()
+                page.set_default_timeout(timeout_ms)
+                _login_to_opencart(page, config, timeout_ms)
+                _open_csv_product_export(page, config, timeout_ms)
+                _load_export_profile(page, config.export_profile)
+                _advance_export_step_two(page)
+                downloaded_path = _download_export(page, output_dir, timeout_ms)
+                return CatalogExportResult(
+                    downloaded_path=downloaded_path,
+                    downloaded_size=downloaded_path.stat().st_size,
+                )
+            finally:
+                try:
+                    if context is not None:
+                        context.close()
+                finally:
+                    browser.close()
     except PlaywrightTimeoutError as exc:
         raise CatalogUpdateError("OpenCart export failed: export timeout.") from exc
     except CatalogUpdateError:
         raise
     except Exception as exc:
         raise CatalogUpdateError(f"OpenCart export failed: {exc.__class__.__name__}") from exc
-    finally:
-        if browser is not None:
-            browser.close()
 
 
 def normalize_downloaded_csv(downloaded_path: Path, output_dir: Path) -> Path:
@@ -204,12 +217,58 @@ def run_catalog_ingest(source_cata_path: Path) -> dict[str, Any]:
     return ingest_catalog_file(source_cata_path=source_cata_path).to_dict()
 
 
-def _login_to_opencart(page: Any, config: CatalogUpdateConfig) -> None:
-    page.goto(config.admin_url, wait_until="domcontentloaded")
-    _fill_first(page, ("input[name='username']", "input[name='user']", "#input-username", "input[type='text']"), config.admin_user)
-    _fill_first(page, ("input[name='password']", "#input-password", "input[type='password']"), config.admin_pass)
-    _click_by_role_or_text(page, ("Login", "Σύνδεση", "Είσοδος"), roles=("button",))
-    page.wait_for_load_state("networkidle")
+def normalize_admin_path(admin_path: str) -> str:
+    value = (admin_path or "").strip().replace("\\", "/")
+    if not value:
+        return "/index.php"
+    if re.match(r"^[A-Za-z]:/", value):
+        parts = [part for part in value.split("/") if part]
+        if len(parts) >= 2 and parts[-1].lower() == "index.php":
+            return "/" + "/".join(parts[-2:])
+    if "://" in value:
+        return urlparse(value).path or "/index.php"
+    return value if value.startswith("/") else f"/{value}"
+
+
+def build_admin_index(store_base: str, admin_path: str) -> str:
+    normalized_admin_path = normalize_admin_path(admin_path)
+    return f"{store_base.rstrip('/')}/{normalized_admin_path.lstrip('/')}"
+
+
+def _login_to_opencart(page: Any, config: CatalogUpdateConfig, timeout_ms: int) -> None:
+    login_url = f"{config.admin_index_url}?route=common/login"
+    page.goto(login_url, wait_until="domcontentloaded", timeout=timeout_ms)
+
+    user = page.locator('input[name="username"]')
+    password = page.locator('input[name="password"]')
+    user.wait_for(state="visible", timeout=timeout_ms)
+    user.fill(config.admin_user)
+    password.fill(config.admin_pass)
+
+    page.locator('button[type="submit"], input[type="submit"]').first.click()
+    page.wait_for_load_state("networkidle", timeout=timeout_ms)
+
+    if "route=common/login" in page.url:
+        raise CatalogUpdateError("OpenCart login failed: still on login route.")
+
+
+def _append_session_token(target_url: str, current_url: str) -> str:
+    user_token = parse_qs(urlparse(current_url).query).get("user_token", [None])[0]
+    if not user_token:
+        return target_url
+
+    separator = "&" if urlparse(target_url).query else "?"
+    return f"{target_url}{separator}user_token={quote(user_token, safe='')}"
+
+
+def _open_csv_product_export(page: Any, config: CatalogUpdateConfig, timeout_ms: int) -> None:
+    export_url = _append_session_token(
+        f"{config.admin_index_url}?route={CSV_PRODUCT_EXPORT_ROUTE}",
+        page.url,
+    )
+    page.goto(export_url, wait_until="domcontentloaded", timeout=timeout_ms)
+    page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    page.locator('select[name="profile_id"]').wait_for(state="visible", timeout=timeout_ms)
 
 
 def _navigate_to_csv_product_export(page: Any) -> None:
@@ -222,26 +281,46 @@ def _navigate_to_csv_product_export(page: Any) -> None:
 
 
 def _load_export_profile(page: Any, export_profile: str) -> None:
-    select_locator = page.locator("select").filter(has_text=export_profile).first()
+    select_locator = page.locator('select[name="profile_id"]').first
     select_locator.wait_for(state="visible")
     try:
         select_locator.select_option(label=export_profile)
     except Exception:
         select_locator.select_option(export_profile)
-    _click_by_role_or_text(page, ("Load", "Φόρτωση"), roles=("button", "link"))
-    _wait_for_text(page, ("success", "loaded", "επιτυχ", "φορτώθηκε"))
-    _click_by_role_or_text(page, ("Next", "Επόμενο"), roles=("button", "link"))
+    page.locator('input[value="Load"], button:has-text("Load")').first.click()
+    _click_first_locator(
+        page,
+        (
+            'button[form="form-step1"]:has-text("Next")',
+            'button[type="submit"][form="form-step1"]',
+            'input[type="submit"][value="Next"]',
+            'button:has-text("Next")',
+            'a:has-text("Next")',
+        ),
+        "OpenCart export failed: Step 1 Next button not found.",
+    )
+    page.wait_for_load_state("networkidle")
     _wait_for_text(page, ("STEP 2", "Step 2", "ΒΗΜΑ 2"))
 
 
 def _advance_export_step_two(page: Any) -> None:
-    _click_by_role_or_text(page, ("Next", "Επόμενο"), roles=("button", "link"))
+    _click_first_locator(
+        page,
+        (
+            'button[form="form-step2"]:has-text("Next")',
+            'button[type="submit"][form="form-step2"]',
+            'input[type="submit"][value="Next"]',
+            'button:has-text("Next")',
+            'a:has-text("Next")',
+        ),
+        "OpenCart export failed: Step 2 Next button not found.",
+    )
+    page.wait_for_load_state("networkidle")
     _wait_for_text(page, ("STEP 3", "Step 3", "ΒΗΜΑ 3"))
 
 
-def _download_export(page: Any, output_dir: Path) -> Path:
-    download_control = _download_locator(page)
-    download_control.wait_for(state="visible")
+def _download_export(page: Any, output_dir: Path, timeout_ms: int) -> Path:
+    download_control = _download_locator(page, timeout_ms)
     with page.expect_download() as download_info:
         download_control.click()
     download = download_info.value
@@ -253,23 +332,30 @@ def _download_export(page: Any, output_dir: Path) -> Path:
     return downloaded_path
 
 
-def _download_locator(page: Any) -> Any:
-    pattern = re.compile(r"download|λήψη|κατέβασ", re.IGNORECASE)
-    candidates = (
-        page.get_by_role("link", name=pattern),
-        page.get_by_role("button", name=pattern),
-        page.locator("a").filter(has_text=pattern),
-        page.locator("button").filter(has_text=pattern),
-    )
-    for locator in candidates:
-        if locator.count() > 0:
-            return locator.first()
+def _download_locator(page: Any, timeout_ms: int) -> Any:
+    pattern = re.compile(r"download", re.IGNORECASE)
+    deadline = time.monotonic() + max(1, timeout_ms / 1000)
+    while time.monotonic() < deadline:
+        candidates = (
+            page.get_by_role("link", name=pattern),
+            page.get_by_role("button", name=pattern),
+            page.locator("a").filter(has_text=pattern),
+            page.locator("button").filter(has_text=pattern),
+        )
+        for locator in candidates:
+            first = locator.first
+            try:
+                first.wait_for(state="visible", timeout=500)
+                return first
+            except Exception:
+                pass
+        time.sleep(1)
     raise CatalogUpdateError("OpenCart export failed: download link not found.")
 
 
 def _fill_first(page: Any, selectors: tuple[str, ...], value: str) -> None:
     for selector in selectors:
-        locator = page.locator(selector).first()
+        locator = page.locator(selector).first
         if locator.count() > 0:
             locator.fill(value)
             return
@@ -281,7 +367,7 @@ def _click_by_role_or_text(page: Any, labels: tuple[str, ...], *, roles: tuple[s
         for label in labels:
             locator = page.get_by_role(role, name=re.compile(re.escape(label), re.IGNORECASE))
             if locator.count() > 0:
-                locator.first().click()
+                locator.first.click()
                 return
     for label in labels:
         if _try_click_text(page, label):
@@ -290,7 +376,7 @@ def _click_by_role_or_text(page: Any, labels: tuple[str, ...], *, roles: tuple[s
 
 
 def _try_click_text(page: Any, label: str) -> bool:
-    locator = page.get_by_text(re.compile(re.escape(label), re.IGNORECASE)).first()
+    locator = page.get_by_text(re.compile(re.escape(label), re.IGNORECASE)).first
     if locator.count() <= 0:
         return False
     locator.click()
@@ -299,7 +385,16 @@ def _try_click_text(page: Any, label: str) -> bool:
 
 def _wait_for_text(page: Any, labels: tuple[str, ...]) -> None:
     pattern = re.compile("|".join(re.escape(label) for label in labels), re.IGNORECASE)
-    page.get_by_text(pattern).first().wait_for(state="visible")
+    page.get_by_text(pattern).first.wait_for(state="visible")
+
+
+def _click_first_locator(page: Any, selectors: tuple[str, ...], error_message: str) -> None:
+    for selector in selectors:
+        locator = page.locator(selector)
+        if locator.count() > 0:
+            locator.first.click()
+            return
+    raise CatalogUpdateError(error_message)
 
 
 def _env_text(name: str) -> str | None:

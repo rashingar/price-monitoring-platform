@@ -1,4 +1,5 @@
 import sys
+import types
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -56,6 +57,25 @@ def test_catalog_update_config_defaults_export_profile(monkeypatch) -> None:
     assert "supersecret" not in str(config.safe_payload())
 
 
+def test_catalog_update_admin_index_matches_product_factory_normalization() -> None:
+    assert service.build_admin_index("https://shop.example/", "/ADMIN/index.php") == "https://shop.example/ADMIN/index.php"
+    assert service.build_admin_index("https://shop.example", "admin") == "https://shop.example/admin"
+    assert service.build_admin_index("https://shop.example", "") == "https://shop.example/index.php"
+    assert service.build_admin_index("https://shop.example", "C:/site/ADMIN/index.php") == "https://shop.example/ADMIN/index.php"
+
+
+def test_export_page_url_reuses_login_session_token() -> None:
+    target = service._append_session_token(
+        "https://shop.example/ADMIN/index.php?route=extension/ka_extensions/csv_product_export/ka_product_export",
+        "https://shop.example/ADMIN/index.php?route=common/dashboard&user_token=abc123",
+    )
+
+    assert target == (
+        "https://shop.example/ADMIN/index.php"
+        "?route=extension/ka_extensions/csv_product_export/ka_product_export&user_token=abc123"
+    )
+
+
 def test_run_catalog_update_calls_migration_and_ingests_downloaded_csv(tmp_path: Path, monkeypatch) -> None:
     calls: list[tuple[str, Path | None]] = []
     output_dir = tmp_path / "catalog_updates" / "job-1"
@@ -95,6 +115,93 @@ def test_run_catalog_update_calls_migration_and_ingests_downloaded_csv(tmp_path:
     assert result["imported_csv_path"].endswith("sourceCata.csv")
     assert result["downloaded_filename"] == "opencart-products.csv"
     assert "supersecret" not in str(result)
+
+
+def test_export_catalog_csv_closes_browser_before_playwright_stops(tmp_path: Path, monkeypatch) -> None:
+    browsers: list[FakeBrowser] = []
+
+    class FakePage:
+        def set_default_timeout(self, _timeout_ms: int) -> None:
+            return None
+
+    class FakeContext:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def new_page(self) -> FakePage:
+            return FakePage()
+
+        def close(self) -> None:
+            self.closed = True
+
+    class FakeBrowser:
+        def __init__(self, playwright) -> None:
+            self.playwright = playwright
+            self.closed = False
+
+        def new_context(self, *, accept_downloads: bool) -> FakeContext:
+            assert accept_downloads is True
+            return FakeContext()
+
+        def close(self) -> None:
+            if self.playwright.stopped:
+                raise RuntimeError("Event loop is closed! Is Playwright already stopped?")
+            self.closed = True
+
+    class FakeChromium:
+        def __init__(self, playwright) -> None:
+            self.playwright = playwright
+
+        def launch(self, *, headless: bool) -> FakeBrowser:
+            assert headless is True
+            browser = FakeBrowser(self.playwright)
+            browsers.append(browser)
+            return browser
+
+    class FakePlaywright:
+        def __init__(self) -> None:
+            self.stopped = False
+            self.chromium = FakeChromium(self)
+
+    class FakePlaywrightContextManager:
+        def __init__(self) -> None:
+            self.playwright = FakePlaywright()
+
+        def __enter__(self) -> FakePlaywright:
+            return self.playwright
+
+        def __exit__(self, _exc_type, _exc, _traceback) -> None:
+            self.playwright.stopped = True
+
+    fake_sync_api = types.SimpleNamespace(
+        TimeoutError=TimeoutError,
+        sync_playwright=lambda: FakePlaywrightContextManager(),
+    )
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", fake_sync_api)
+    monkeypatch.setattr(service, "_login_to_opencart", lambda _page, _config, _timeout_ms: None)
+    monkeypatch.setattr(service, "_open_csv_product_export", lambda _page, _config, _timeout_ms: None)
+    monkeypatch.setattr(service, "_load_export_profile", lambda _page, _profile: None)
+    monkeypatch.setattr(service, "_advance_export_step_two", lambda _page: None)
+
+    def fake_download(_page, selected_output_dir: Path, _timeout_ms: int) -> Path:
+        downloaded = selected_output_dir / "opencart-products.csv"
+        downloaded.write_text("model,name\n", encoding="utf-8")
+        return downloaded
+
+    monkeypatch.setattr(service, "_download_export", fake_download)
+
+    result = service.export_catalog_csv(
+        service.CatalogUpdateConfig(
+            store_base="https://shop.example",
+            admin_path="admin",
+            admin_user="admin",
+            admin_pass="supersecret",
+        ),
+        tmp_path,
+    )
+
+    assert result.downloaded_path == tmp_path / "opencart-products.csv"
+    assert browsers and browsers[0].closed is True
 
 
 def test_catalog_update_endpoint_creates_durable_job(tmp_path: Path, monkeypatch) -> None:
