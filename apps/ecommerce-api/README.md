@@ -142,6 +142,19 @@ migration output, and ingest counts. Responses and job results must not contain
 OpenCart credentials. Default automated tests mock Playwright/OpenCart; live
 OpenCart export verification is manual/opt-in only.
 
+When the OpenCart export fails after Playwright has opened a page, the job
+writes safe diagnostics under:
+
+```text
+output/catalog_updates/{job_id}/diagnostics/
+```
+
+Inspect `failure_context.json` first for the failed step, redacted current URL,
+export profile, timeout, headed mode, error class, and sanitized error message.
+If available, `failure.png` captures the browser state with credential fields
+redacted before screenshot capture. Do not commit files under `output/`; they
+are runtime artifacts and may describe local operator state.
+
 ### Durable job worker
 
 The API still starts Dashboard `Update DB` jobs in a FastAPI background task by

@@ -140,6 +140,13 @@ Each worker pass marks stale `running` jobs older than
 claiming new queued jobs. `--dry-run` only reports matching stale and queued
 jobs; it does not mutate state or run handlers.
 
+OpenCart catalog update failures can write safe Playwright diagnostics under
+`output/catalog_updates/{job_id}/diagnostics/`. Start with
+`failure_context.json` for the failed step, redacted current URL, export
+profile, timeout, browser mode, error class, and sanitized message. When a page
+exists, `failure.png` is saved after credential fields are redacted. Runtime
+`output/` folders are local artifacts and must not be committed.
+
 ## Testing Profiles
 
 Codex prompts that touch only Ecommerce API backend files should prefer:

@@ -1,5 +1,6 @@
 import sys
 import types
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -80,7 +81,7 @@ def test_run_catalog_update_calls_migration_and_ingests_downloaded_csv(tmp_path:
     calls: list[tuple[str, Path | None]] = []
     output_dir = tmp_path / "catalog_updates" / "job-1"
 
-    def fake_export(config, selected_output_dir):
+    def fake_export(config, selected_output_dir, **_kwargs):
         calls.append(("export", selected_output_dir))
         downloaded = selected_output_dir / "opencart-products.csv"
         downloaded.write_text("model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n", encoding="utf-8")
@@ -183,7 +184,7 @@ def test_export_catalog_csv_closes_browser_before_playwright_stops(tmp_path: Pat
     monkeypatch.setattr(service, "_load_export_profile", lambda _page, _profile: None)
     monkeypatch.setattr(service, "_advance_export_step_two", lambda _page: None)
 
-    def fake_download(_page, selected_output_dir: Path, _timeout_ms: int) -> Path:
+    def fake_download(_page, selected_output_dir: Path, _timeout_ms: int, **_kwargs) -> Path:
         downloaded = selected_output_dir / "opencart-products.csv"
         downloaded.write_text("model,name\n", encoding="utf-8")
         return downloaded
@@ -202,6 +203,172 @@ def test_export_catalog_csv_closes_browser_before_playwright_stops(tmp_path: Pat
 
     assert result.downloaded_path == tmp_path / "opencart-products.csv"
     assert browsers and browsers[0].closed is True
+    assert not (tmp_path / "diagnostics").exists()
+
+
+class FakeDiagnosticLocator:
+    @property
+    def first(self):
+        return self
+
+    def fill(self, _value: str) -> None:
+        return None
+
+
+class FakeDiagnosticPage:
+    def __init__(self, *, url: str, screenshot_fails: bool = False) -> None:
+        self.url = url
+        self.screenshot_fails = screenshot_fails
+        self.screenshot_paths: list[Path] = []
+
+    def set_default_timeout(self, _timeout_ms: int) -> None:
+        return None
+
+    def locator(self, _selector: str) -> FakeDiagnosticLocator:
+        return FakeDiagnosticLocator()
+
+    def screenshot(self, *, path: str, full_page: bool) -> None:
+        assert full_page is True
+        if self.screenshot_fails:
+            raise RuntimeError("screenshot failed for supersecret")
+        screenshot_path = Path(path)
+        screenshot_path.write_bytes(b"fake-png")
+        self.screenshot_paths.append(screenshot_path)
+
+
+def _install_fake_playwright(monkeypatch, page: FakeDiagnosticPage):
+    class FakeContext:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def new_page(self) -> FakeDiagnosticPage:
+            return page
+
+        def close(self) -> None:
+            self.closed = True
+
+    class FakeBrowser:
+        def __init__(self) -> None:
+            self.context = FakeContext()
+            self.closed = False
+
+        def new_context(self, *, accept_downloads: bool) -> FakeContext:
+            assert accept_downloads is True
+            return self.context
+
+        def close(self) -> None:
+            self.closed = True
+
+    class FakeChromium:
+        def __init__(self) -> None:
+            self.browser = FakeBrowser()
+
+        def launch(self, *, headless: bool) -> FakeBrowser:
+            assert headless is True
+            return self.browser
+
+    class FakePlaywright:
+        def __init__(self) -> None:
+            self.chromium = FakeChromium()
+
+    class FakePlaywrightContextManager:
+        def __init__(self) -> None:
+            self.playwright = FakePlaywright()
+
+        def __enter__(self) -> FakePlaywright:
+            return self.playwright
+
+        def __exit__(self, _exc_type, _exc, _traceback) -> None:
+            return None
+
+    fake_sync_api = types.SimpleNamespace(
+        TimeoutError=TimeoutError,
+        sync_playwright=lambda: FakePlaywrightContextManager(),
+    )
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", fake_sync_api)
+
+
+def test_export_catalog_csv_writes_redacted_failure_diagnostics_on_playwright_failure(tmp_path: Path, monkeypatch) -> None:
+    page = FakeDiagnosticPage(
+        url=(
+            "https://shop.example/ADMIN/index.php?route=common/dashboard"
+            "&user_token=abc123&username=admin@example&password=supersecret&ok=1"
+        ),
+    )
+    _install_fake_playwright(monkeypatch, page)
+    monkeypatch.setattr(service, "_login_to_opencart", lambda _page, _config, _timeout_ms: None)
+
+    def fail_open(_page, _config, _timeout_ms):
+        raise service.CatalogUpdateError("profile selector missing for admin@example user_token=abc123 supersecret")
+
+    monkeypatch.setattr(service, "_open_csv_product_export", fail_open)
+
+    config = service.CatalogUpdateConfig(
+        store_base="https://shop.example",
+        admin_path="admin",
+        admin_user="admin@example",
+        admin_pass="supersecret",
+    )
+
+    try:
+        service.export_catalog_csv(config, tmp_path, job_id="job-1")
+    except service.CatalogUpdateError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Expected CatalogUpdateError")
+
+    context_path = tmp_path / "diagnostics" / "failure_context.json"
+    screenshot_path = tmp_path / "diagnostics" / "failure.png"
+    payload = json.loads(context_path.read_text(encoding="utf-8"))
+    combined = f"{message}\n{context_path.read_text(encoding='utf-8')}"
+
+    assert screenshot_path in page.screenshot_paths
+    assert screenshot_path.exists()
+    assert payload["job_id"] == "job-1"
+    assert payload["step"] == "open_csv_product_export"
+    assert "user_token=[redacted]" in payload["current_url"]
+    assert "username=" in payload["current_url"]
+    assert "password=[redacted]" in payload["current_url"]
+    assert "ok=1" in payload["current_url"]
+    assert payload["sanitized_error_message"] == "profile selector missing for [redacted] user_token=[redacted] [redacted]"
+    assert "Diagnostics saved to" in message
+    assert "admin@example" not in combined
+    assert "supersecret" not in combined
+    assert "abc123" not in combined
+
+
+def test_export_catalog_csv_preserves_original_error_when_screenshot_capture_fails(tmp_path: Path, monkeypatch) -> None:
+    page = FakeDiagnosticPage(
+        url="https://shop.example/ADMIN/index.php?route=common/dashboard&user_token=abc123",
+        screenshot_fails=True,
+    )
+    _install_fake_playwright(monkeypatch, page)
+    monkeypatch.setattr(service, "_login_to_opencart", lambda _page, _config, _timeout_ms: None)
+
+    def fail_open(_page, _config, _timeout_ms):
+        raise service.CatalogUpdateError("CSV Product Export menu item not found.")
+
+    monkeypatch.setattr(service, "_open_csv_product_export", fail_open)
+
+    config = service.CatalogUpdateConfig(
+        store_base="https://shop.example",
+        admin_path="admin",
+        admin_user="admin@example",
+        admin_pass="supersecret",
+    )
+
+    try:
+        service.export_catalog_csv(config, tmp_path, job_id="job-1")
+    except service.CatalogUpdateError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Expected CatalogUpdateError")
+
+    payload = json.loads((tmp_path / "diagnostics" / "failure_context.json").read_text(encoding="utf-8"))
+
+    assert "CSV Product Export menu item not found." in message
+    assert "screenshot failed" not in message
+    assert payload["screenshot_error"] == "screenshot failed for [redacted]"
 
 
 def test_catalog_update_endpoint_creates_durable_job(tmp_path: Path, monkeypatch) -> None:
