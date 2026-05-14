@@ -63,6 +63,22 @@ def test_validate_input_accepts_skroutz_sections_for_v2() -> None:
     assert cli.skroutz_status == 1
 
 
+def test_validate_input_accepts_bestprice_product_url() -> None:
+    args = argparse.Namespace(
+        model="143667",
+        url="https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html",
+        photos=1,
+        sections=0,
+        skroutz_status=1,
+        boxnow=0,
+        price="0",
+        out="out",
+    )
+    cli = validate_input(args)
+    assert cli.model == "143667"
+    assert cli.url == args.url
+
+
 def test_validate_input_rejects_tefal_manufacturer_product_url() -> None:
     args = argparse.Namespace(
         model="344709",
@@ -77,7 +93,7 @@ def test_validate_input_rejects_tefal_manufacturer_product_url() -> None:
     try:
         validate_input(args)
     except ValueError as exc:
-        assert str(exc) == "Input URL must be an Electronet or Skroutz product URL"
+        assert str(exc) == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
     else:
         raise AssertionError("Expected ValueError")
 
@@ -87,7 +103,7 @@ def test_validate_input_rejects_non_product_skroutz_url() -> None:
     try:
         validate_input(args)
     except ValueError as exc:
-        assert str(exc) == "Input URL must be an Electronet product URL or a Skroutz product URL"
+        assert str(exc) == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
     else:
         raise AssertionError("Expected ValueError")
 
@@ -97,7 +113,7 @@ def test_validate_input_rejects_non_product_tefal_url() -> None:
     try:
         validate_input(args)
     except ValueError as exc:
-        assert str(exc) == "Input URL must be an Electronet or Skroutz product URL"
+        assert str(exc) == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
     else:
         raise AssertionError("Expected ValueError")
 

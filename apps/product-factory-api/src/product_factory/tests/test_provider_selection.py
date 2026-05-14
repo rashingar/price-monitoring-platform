@@ -12,7 +12,8 @@ from product_factory.prepare_stage import execute_prepare_stage
 from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult
 from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import execute_source_acquisition_stage
-from product_factory.providers import ProviderInputIdentity, ProviderRegistry, bootstrap_runtime_provider_registry, source_to_provider_id
+from product_factory.parser_product_bestprice import BestPriceProductParser
+from product_factory.providers import BestPriceProvider, ProviderInputIdentity, ProviderRegistry, bootstrap_runtime_provider_registry, source_to_provider_id
 from product_factory.providers.models import (
     ProviderCapability,
     ProviderDefinition,
@@ -27,6 +28,8 @@ from product_factory.providers.skroutz_fetcher import SkroutzFetchResult, Skrout
 
 SAMPLE_MODEL = "143109"
 SAMPLE_URL = "https://www.skroutz.gr/s/61054853/lg-icheio-dxl7t-mayro.html"
+BESTPRICE_MODEL = "143667"
+BESTPRICE_URL = "https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html"
 MANUFACTURER_MODEL = "344709"
 MANUFACTURER_URL = "https://shop.tefal.gr/products/dolci-%CF%80%CE%B1%CE%B3%CF%89%CF%84%CE%BF%CE%BC%CE%B7%CF%87%CE%B1%CE%BD%CE%AE-ig602a"
 
@@ -193,16 +196,99 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         manufacturer_parser=object(),
     )
 
-    assert registry.ids() == ("electronet", "skroutz")
-    assert [definition.provider_id for definition in registry.definitions()] == ["electronet", "skroutz"]
+    assert registry.ids() == ("bestprice", "electronet", "skroutz")
+    assert [definition.provider_id for definition in registry.definitions()] == ["bestprice", "electronet", "skroutz"]
 
 
 def test_source_to_provider_id_maps_supported_sources() -> None:
+    assert source_to_provider_id("bestprice") == "bestprice"
     assert source_to_provider_id("electronet") == "electronet"
     assert source_to_provider_id("skroutz") == "skroutz"
     assert source_to_provider_id("manufacturer_tefal") is None
     assert source_to_provider_id("manufacturer_bosch") is None
     assert source_to_provider_id("unsupported_source") is None
+
+
+def test_bestprice_parser_normalizes_jsonld_product() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html">
+        <meta name="description" content="Περιγραφή προϊόντος">
+        <meta property="og:image" content="https://cdn.example/product.jpg">
+        <script type="application/ld+json">
+          {"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[
+            {"@type":"ListItem","position":1,"item":{"@id":"/cat/6989/technology.html","name":"Τεχνολογία"}},
+            {"@type":"ListItem","position":2,"item":{"@id":"/cat/3048/thleoraseis.html","name":"Τηλεοράσεις"}}
+          ]}
+        </script>
+        <script type="application/ld+json">
+          {"@context":"https://schema.org","@type":"Product",
+           "name":"TCL SQD-Mini LED 65C8L Smart Τηλεόραση 65\\\" 4K UHD Mini LED HDR (2026)",
+           "image":["https://cdn.example/product.jpg"],
+           "offers":{"@type":"AggregateOffer","lowPrice":"1799.00","priceCurrency":"EUR"},
+           "sku":2163977668,
+           "url":"https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html",
+           "brand":{"@type":"Brand","name":"TCL"},
+           "additionalProperty":[
+             {"@type":"PropertyValue","name":"Μέγεθος Οθόνης","value":"65\\\""},
+             {"@type":"PropertyValue","name":"Panel","value":"Mini LED"},
+             {"@type":"PropertyValue","name":"Ανάλυση","value":"4K Ultra HD"}
+           ]}
+        </script>
+      </head>
+      <body><h1 class="item-title">fallback</h1><div class="item-description">Αυτή η TCL έχει Mini LED.</div></body>
+    </html>
+    """
+
+    parsed = BestPriceProductParser().parse(html, BESTPRICE_URL)
+
+    assert parsed.source.source_name == "bestprice"
+    assert parsed.source.product_code == "2163977668"
+    assert parsed.source.brand == "TCL"
+    assert parsed.source.name.startswith("TCL SQD-Mini LED 65C8L")
+    assert parsed.source.taxonomy_rule_id == "television:size_bucket"
+    assert parsed.source.taxonomy_tv_inches == 65
+    assert parsed.source.gallery_images[0].url == "https://cdn.example/product.jpg"
+    assert [item.label for item in parsed.source.spec_sections[0].items[:2]] == ["Κατασκευαστής", "Μέγεθος Οθόνης"]
+    assert parsed.critical_missing == []
+
+
+def test_bestprice_provider_normalize_returns_provider_result(tmp_path: Path) -> None:
+    fixture = tmp_path / "bestprice.html"
+    fixture.write_text(
+        """
+        <html>
+          <head>
+            <link rel="canonical" href="https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html">
+            <script type="application/ld+json">
+              {"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[
+                {"@type":"ListItem","position":1,"item":{"@id":"/cat/3048/thleoraseis.html","name":"Τηλεοράσεις"}}
+              ]}
+            </script>
+            <script type="application/ld+json">
+              {"@context":"https://schema.org","@type":"Product",
+               "name":"TCL 65C8L Smart Τηλεόραση 65\\\" 4K UHD",
+               "image":["https://cdn.example/product.jpg"],
+               "brand":{"@type":"Brand","name":"TCL"},
+               "additionalProperty":[{"@type":"PropertyValue","name":"Panel","value":"Mini LED"}]}
+            </script>
+          </head>
+          <body><div class="item-description">Περιγραφή</div></body>
+        </html>
+        """,
+        encoding="utf-8",
+    )
+    provider = BestPriceProvider(fixture_html_by_url={BESTPRICE_URL: fixture})
+    identity = ProviderInputIdentity(model=BESTPRICE_MODEL, url=BESTPRICE_URL)
+
+    snapshot = provider.fetch_snapshot(identity)
+    result = provider.normalize(snapshot, identity)
+
+    assert result.provider.provider_id == "bestprice"
+    assert result.product.source_name == "bestprice"
+    assert result.product.page_type == "product"
+    assert result.metadata["fetch_method"] == "fixture"
 
 
 def test_skroutz_provider_fetch_snapshot_reads_fixture_html(skroutz_fixtures_root: Path) -> None:
