@@ -136,7 +136,6 @@ export function AppShell() {
               key={item.to}
               to={item.to}
               end={
-                item.to === "/vendor-sources/runs" ||
                 item.to === "/vendor-sources/source-urls" ||
                 item.to === "/vendor-sources/captures" ||
                 item.to === "/vendor-sources/imports"

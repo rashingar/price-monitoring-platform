@@ -800,7 +800,7 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findAllByText(/Midea MD-20L/)).resolves.not.toHaveLength(0);
   });
 
-  it("filters Vendor Source candidates by status and source", async () => {
+  it("filters Find Source candidates by status and source", async () => {
     installMockFetch(allRoutes);
 
     renderWithRouter("/find-source/candidates");
@@ -835,7 +835,7 @@ describe("platform mocked page smoke tests", () => {
     ).toBe(true);
   });
 
-  it("expands Vendor Source candidate inline review panel with decision details", async () => {
+  it("expands Find Source candidate inline review panel with decision details", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
     renderWithRouter("/find-source/candidates");
@@ -885,7 +885,7 @@ describe("platform mocked page smoke tests", () => {
     expect(within(panel).queryByLabelText("Replacement URL")).not.toBeInTheDocument();
   });
 
-  it("selecting another Vendor Source candidate closes the previous expanded row", async () => {
+  it("selecting another Find Source candidate closes the previous expanded row", async () => {
     installMockFetch(allRoutes);
 
     renderWithRouter("/find-source/candidates");
@@ -904,7 +904,7 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.queryByRole("region", { name: "Find Source candidate 501 review" })).not.toBeInTheDocument();
   });
 
-  it("submits Vendor Source candidate accept and reject actions", async () => {
+  it("submits Find Source candidate accept and reject actions", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
     renderWithRouter("/find-source/candidates");
@@ -985,7 +985,7 @@ describe("platform mocked page smoke tests", () => {
     ).toBe(true);
   });
 
-  it("collapses a Vendor Source candidate without changing its needs-review status", async () => {
+  it("collapses a Find Source candidate without changing its needs-review status", async () => {
     const mockFetch = installMockFetch(allRoutes);
 
     renderWithRouter("/find-source/candidates");
@@ -1011,7 +1011,7 @@ describe("platform mocked page smoke tests", () => {
     ).toBe(false);
   });
 
-  it("handles empty Vendor Source candidate filters", async () => {
+  it("handles empty Find Source candidate filters", async () => {
     installMockFetch([
       {
         method: "GET",

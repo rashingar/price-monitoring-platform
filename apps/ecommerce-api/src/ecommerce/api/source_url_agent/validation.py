@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -13,13 +12,8 @@ from ecommerce.source_url_agent.sources import SOURCE_CHOICES, load_source_regis
 
 from .schemas import DEFAULT_API_MAX_PRODUCTS_PER_BATCH, MAX_API_SOURCE_URL_AGENT_LIMIT, SourceUrlAgentRunRequest
 
-_FACADE_MODULE = "ecommerce.api.routes_source_url_agent"
-
 
 def default_api_max_products_per_batch() -> int:
-    facade = sys.modules.get(_FACADE_MODULE)
-    if facade is not None and hasattr(facade, "DEFAULT_API_MAX_PRODUCTS_PER_BATCH"):
-        return int(getattr(facade, "DEFAULT_API_MAX_PRODUCTS_PER_BATCH"))
     return DEFAULT_API_MAX_PRODUCTS_PER_BATCH
 
 

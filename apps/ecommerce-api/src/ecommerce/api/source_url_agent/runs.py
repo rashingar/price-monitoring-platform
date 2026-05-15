@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -43,7 +42,6 @@ from .validation import (
 from .validation import require_source_url_agent_run_database_ready as _real_require_source_url_agent_run_database_ready
 
 router = APIRouter()
-_FACADE_MODULE = "ecommerce.api.routes_source_url_agent"
 
 
 @router.get("/sources")
@@ -294,9 +292,6 @@ def get_source_url_agent_run_artifacts(run_id: str) -> dict[str, Any]:
 
 
 def _require_source_url_agent_run_database_ready() -> None:
-    hook = _facade_attr("_require_source_url_agent_run_database_ready")
-    if hook is not None and hook is not _require_source_url_agent_run_database_ready:
-        return hook()
     return _real_require_source_url_agent_run_database_ready()
 
 
@@ -321,17 +316,7 @@ def _optional_text(value: object) -> str | None:
 
 
 def _execute_source_url_agent_job(*args: Any, **kwargs: Any) -> Any:
-    hook = _facade_attr("execute_source_url_agent_job")
-    if hook is not None and hook is not _execute_source_url_agent_job:
-        return hook(*args, **kwargs)
     return execute_source_url_agent_job(*args, **kwargs)
-
-
-def _facade_attr(name: str) -> Any:
-    facade = sys.modules.get(_FACADE_MODULE)
-    if facade is None:
-        return None
-    return getattr(facade, name, None)
 
 
 def _safe_db_error(exc: Exception) -> str:

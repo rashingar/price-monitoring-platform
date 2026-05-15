@@ -124,7 +124,7 @@ export function CatalogActionsPanel({
             <SummaryText label="Task progress" value={getSourceUrlAgentTaskProgress(discoveryRun)} />
           </dl>
           <p className="button-row">
-            <Link className="button secondary" to="/vendor-sources/runs">
+            <Link className="button secondary" to="/find-source/runs">
               View runs
             </Link>
             <Link className="button secondary" to={discoveryReviewLink}>

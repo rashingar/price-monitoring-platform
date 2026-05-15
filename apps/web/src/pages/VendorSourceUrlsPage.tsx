@@ -392,7 +392,7 @@ export function VendorSourceUrlsPage() {
             <p className="eyebrow">Capabilities</p>
             <h3>Source capability table</h3>
           </div>
-          <Link className="button secondary" to="/vendor-sources/runs">
+          <Link className="button secondary" to="/find-source/runs">
             Discovery runs
           </Link>
         </div>

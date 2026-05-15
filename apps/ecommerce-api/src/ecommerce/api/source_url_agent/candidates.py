@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -28,7 +27,6 @@ from .validation import like_value, optional_decimal, optional_text
 from .validation import require_catalog_database_ready as _real_require_catalog_database_ready
 
 router = APIRouter()
-_FACADE_MODULE = "ecommerce.api.routes_source_url_agent"
 
 
 @router.get("/candidates")
@@ -171,18 +169,8 @@ def _candidate_filters(
 
 
 def _require_catalog_database_ready() -> None:
-    hook = _facade_attr("_require_catalog_database_ready")
-    if hook is not None and hook is not _require_catalog_database_ready:
-        return hook()
     return _real_require_catalog_database_ready()
 
 
 def _safe_db_error(exc: Exception) -> str:
     return safe_db_error(exc)
-
-
-def _facade_attr(name: str) -> Any:
-    facade = sys.modules.get(_FACADE_MODULE)
-    if facade is None:
-        return None
-    return getattr(facade, name, None)

@@ -11,8 +11,10 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.api import routes_source_url_agent  # noqa: E402
 from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.api.source_url_agent import runs as source_url_agent_run_routes  # noqa: E402
+from ecommerce.api.source_url_agent import state as source_url_agent_api_state  # noqa: E402
+from ecommerce.api.source_url_agent import validation as source_url_agent_api_validation  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
@@ -142,7 +144,7 @@ def _candidate(product: AgentProduct, source_name: str = "skroutz"):
 
 
 def _allow_source_url_agent_run_database(monkeypatch) -> None:
-    monkeypatch.setattr(routes_source_url_agent, "_require_source_url_agent_run_database_ready", lambda: None)
+    monkeypatch.setattr(source_url_agent_run_routes, "_require_source_url_agent_run_database_ready", lambda: None)
 
 
 def _fake_resolver(product, source) -> SourceSearchResult:
@@ -185,7 +187,7 @@ class _Clock:
 def _run_api_client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
     monkeypatch.chdir(tmp_path)
     _allow_source_url_agent_run_database(monkeypatch)
-    monkeypatch.setattr(routes_source_url_agent, "SOURCE_URL_AGENT_API_RESOLVER", _fake_resolver)
+    monkeypatch.setattr(source_url_agent_api_state, "SOURCE_URL_AGENT_API_RESOLVER", _fake_resolver)
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     _create_schema(database_url)
@@ -722,7 +724,7 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
 
 def test_source_url_agent_worker_executes_queued_run_and_persists_progress(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
-    monkeypatch.setattr(routes_source_url_agent, "execute_source_url_agent_job", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(source_url_agent_run_routes, "execute_source_url_agent_job", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(source_url_agent_job_handler, "SOURCE_URL_AGENT_JOB_RESOLVER", _fake_resolver)
     with session_scope(database_url) as session:
         product = _catalog_product(session)
@@ -768,7 +770,7 @@ def test_source_url_agent_worker_executes_queued_run_and_persists_progress(tmp_p
 
 def test_source_url_agent_worker_marks_failed_run_and_job_on_execution_error(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
-    monkeypatch.setattr(routes_source_url_agent, "execute_source_url_agent_job", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(source_url_agent_run_routes, "execute_source_url_agent_job", lambda *_args, **_kwargs: None)
 
     def failing_resolver(_product, _source):
         raise RuntimeError("resolver exploded")
@@ -848,7 +850,7 @@ def test_source_url_agent_run_api_lists_persisted_error_candidates(tmp_path: Pat
             errors=[f"https://{source.source_domain}/search?q={product.mpn}: http_500"],
         )
 
-    monkeypatch.setattr(routes_source_url_agent, "SOURCE_URL_AGENT_API_RESOLVER", error_resolver)
+    monkeypatch.setattr(source_url_agent_api_state, "SOURCE_URL_AGENT_API_RESOLVER", error_resolver)
     with session_scope(database_url) as session:
         product = _catalog_product(session)
 
@@ -937,7 +939,7 @@ def test_source_url_agent_run_api_accepts_selected_models(tmp_path: Path, monkey
 
 def test_source_url_agent_run_api_enforces_bounded_default_limit(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
-    monkeypatch.setattr(routes_source_url_agent, "DEFAULT_API_MAX_PRODUCTS_PER_BATCH", 2)
+    monkeypatch.setattr(source_url_agent_api_validation, "DEFAULT_API_MAX_PRODUCTS_PER_BATCH", 2)
     with session_scope(database_url) as session:
         for index in range(4):
             _catalog_product(session, model=f"MODEL-{index}", mpn=f"MPN-{index}")
