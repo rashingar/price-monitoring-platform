@@ -438,6 +438,22 @@ export interface SourceUrlCandidateListResponse {
   offset: number;
 }
 
+export interface ProductSourceUrlCandidateRunGroup {
+  run_id: string | number | null;
+  run: SourceUrlAgentRun;
+  counts: Record<string, number>;
+  candidates: SourceUrlCandidate[];
+  [key: string]: unknown;
+}
+
+export interface ProductSourceUrlCandidateHistoryResponse {
+  catalog_product_id: string | number | null;
+  items: ProductSourceUrlCandidateRunGroup[];
+  total_candidates: number;
+  warnings: string[];
+  [key: string]: unknown;
+}
+
 export interface SourceUrlAgentRunRequest {
   mode: "catalog" | string;
   source: "all" | SourceName | string;

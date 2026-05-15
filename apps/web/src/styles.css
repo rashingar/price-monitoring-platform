@@ -1221,6 +1221,68 @@ textarea {
   min-width: 2240px;
 }
 
+.catalog-product-candidate-heading-actions,
+.catalog-product-candidate-run-meta,
+.catalog-product-candidate-run-details,
+.catalog-product-candidate-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-product-candidate-run-list {
+  display: grid;
+  gap: 12px;
+}
+
+.catalog-product-candidate-run {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfc;
+}
+
+.catalog-product-candidate-run summary {
+  cursor: pointer;
+  list-style-position: inside;
+  padding: 12px 14px;
+}
+
+.catalog-product-candidate-run-summary {
+  display: inline-flex;
+  width: calc(100% - 24px);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  vertical-align: top;
+}
+
+.catalog-product-candidate-run-summary strong {
+  overflow-wrap: anywhere;
+}
+
+.catalog-product-candidate-run-body {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding: 12px 14px 14px;
+  background: #ffffff;
+}
+
+.catalog-product-candidate-run-details {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.catalog-product-candidate-table-wrap table {
+  min-width: 1680px;
+}
+
+.candidate-title-cell {
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+
 .table-cell-subtext {
   display: block;
   margin-top: 4px;

@@ -41,6 +41,10 @@ export interface paths {
     /** Get Product Detail */
     get: operations["get_product_detail_api_catalog_products__catalog_product_id__get"];
   };
+  "/api/catalog/products/{catalog_product_id}/source-url-candidates": {
+    /** Get Product Source Url Candidate History */
+    get: operations["get_product_source_url_candidate_history_api_catalog_products__catalog_product_id__source_url_candidates_get"];
+  };
   "/api/catalog/products/{catalog_product_id}/source-urls": {
     /** Get Product Source Urls */
     get: operations["get_product_source_urls_api_catalog_products__catalog_product_id__source_urls_get"];
@@ -1282,6 +1286,30 @@ export interface operations {
   };
   /** Get Product Detail */
   get_product_detail_api_catalog_products__catalog_product_id__get: {
+    parameters: {
+      path: {
+        catalog_product_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Product Source Url Candidate History */
+  get_product_source_url_candidate_history_api_catalog_products__catalog_product_id__source_url_candidates_get: {
     parameters: {
       path: {
         catalog_product_id: number;

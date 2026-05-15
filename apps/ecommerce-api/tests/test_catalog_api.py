@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -12,7 +13,9 @@ from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
+from ecommerce.db.models.source_urls import SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, create_or_update_manual_source_url  # noqa: E402
 from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
@@ -24,6 +27,7 @@ RAW_COOKWARE = (
 )
 RAW_APPLIANCES = "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Απορροφητήρες"
 RAW_PLAIN = "Plain Value"
+NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
 
 
 def _write_api_catalog(path: Path) -> None:
@@ -59,6 +63,53 @@ def _client_with_db_catalog_file(tmp_path: Path, monkeypatch, catalog_path: Path
     with session_scope(database_url) as session:
         ingest_source_catalog(session, source_cata_path=catalog_path)
     return TestClient(create_app())
+
+
+def _source_candidate(
+    session,
+    *,
+    product_id: int,
+    run_id: str = "source-run-1",
+    status: str = "needs_review",
+    source_name: str = "bestprice",
+    created_at: datetime = NOW,
+    suffix: str = "candidate",
+) -> SourceUrlCandidate:
+    product = session.get(CatalogProductRow, product_id)
+    row = SourceUrlCandidate(
+        run_id=run_id,
+        catalog_product_id=product_id,
+        catalog_source=product.catalog_source if product is not None else "sourceCata",
+        model=product.model if product is not None else "005606",
+        mpn=product.mpn if product is not None else "MPN-1",
+        manufacturer=product.manufacturer if product is not None else "Bosch",
+        product_name=product.name if product is not None else "Vacuum One",
+        category=product.category if product is not None else RAW_COOKWARE,
+        own_price=Decimal("123.45"),
+        source_name=source_name,
+        source_domain=f"{source_name}.gr",
+        source_type="marketplace",
+        expected_listing="listed",
+        candidate_url=f"https://www.{source_name}.gr/item/{suffix}.html",
+        canonical_url=f"https://www.{source_name}.gr/item/{suffix}.html",
+        candidate_title=f"Vacuum One {suffix}",
+        candidate_price=Decimal("121.00"),
+        match_status=status,
+        confidence_score=Decimal("0.7500"),
+        match_method="mpn_model_title",
+        evidence_json={"title_similarity": 0.75},
+        competing_candidates_count=1,
+        searched_queries_json=["Vacuum One MPN-1"],
+        status=status,
+        reviewed_by="tester" if status in {"accepted", "rejected"} else None,
+        reviewed_at=created_at if status in {"accepted", "rejected"} else None,
+        notes=f"{status} note",
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(row)
+    session.flush()
+    return row
 
 
 def test_catalog_products_pagination(tmp_path: Path, monkeypatch) -> None:
@@ -465,6 +516,177 @@ def test_catalog_product_detail_excludes_price_monitoring_history(tmp_path: Path
     assert "monitoring_runs" not in payload
     assert "monitoring_history" not in payload
     assert "PriceObservation" not in serialized
+
+
+def test_catalog_product_source_url_candidates_missing_product_returns_404(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+
+    response = client.get("/api/catalog/products/999999/source-url-candidates")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Catalog product not found."
+
+
+def test_catalog_product_source_url_candidates_empty_for_existing_product(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    product_id = client.get(
+        "/api/catalog/products",
+        params={"q": "Vacuum One"},
+    ).json()["items"][0]["catalog_product_id"]
+
+    response = client.get(f"/api/catalog/products/{product_id}/source-url-candidates")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "catalog_product_id": product_id,
+        "items": [],
+        "total_candidates": 0,
+        "warnings": [],
+    }
+
+
+def test_catalog_product_source_url_candidates_group_sort_and_count_by_run(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    product_id = client.get(
+        "/api/catalog/products",
+        params={"q": "Vacuum One"},
+    ).json()["items"][0]["catalog_product_id"]
+
+    with session_scope(database_url) as session:
+        session.add(
+            SourceUrlDiscoveryRun(
+                run_id="older-run",
+                source_name="bestprice",
+                mode="catalog",
+                status="succeeded",
+                selected_count=1,
+                candidate_count=3,
+                matched_count=1,
+                needs_review_count=1,
+                not_found_count=0,
+                error_count=0,
+                created_at=datetime(2026, 5, 1, 10, tzinfo=timezone.utc),
+                updated_at=datetime(2026, 5, 1, 10, tzinfo=timezone.utc),
+            )
+        )
+        session.add(
+            SourceUrlDiscoveryRun(
+                run_id="newer-run",
+                source_name="skroutz",
+                mode="catalog",
+                status="succeeded",
+                selected_count=1,
+                candidate_count=2,
+                matched_count=1,
+                needs_review_count=1,
+                not_found_count=0,
+                error_count=0,
+                created_at=datetime(2026, 5, 2, 10, tzinfo=timezone.utc),
+                updated_at=datetime(2026, 5, 2, 10, tzinfo=timezone.utc),
+            )
+        )
+        _source_candidate(session, product_id=product_id, run_id="older-run", status="error", created_at=NOW, suffix="error")
+        accepted = _source_candidate(
+            session,
+            product_id=product_id,
+            run_id="older-run",
+            status="accepted",
+            created_at=datetime(2026, 5, 1, 12, tzinfo=timezone.utc),
+            suffix="accepted",
+        )
+        accepted_id = accepted.id
+        needs_review = _source_candidate(
+            session,
+            product_id=product_id,
+            run_id="older-run",
+            status="needs_review",
+            created_at=datetime(2026, 5, 1, 11, tzinfo=timezone.utc),
+            suffix="review",
+        )
+        needs_review_id = needs_review.id
+        _source_candidate(
+            session,
+            product_id=product_id,
+            run_id="newer-run",
+            status="pending",
+            source_name="skroutz",
+            created_at=datetime(2026, 5, 2, 11, tzinfo=timezone.utc),
+            suffix="pending",
+        )
+        _source_candidate(
+            session,
+            product_id=product_id,
+            run_id="newer-run",
+            status="rejected",
+            source_name="skroutz",
+            created_at=datetime(2026, 5, 2, 12, tzinfo=timezone.utc),
+            suffix="rejected",
+        )
+
+    response = client.get(f"/api/catalog/products/{product_id}/source-url-candidates")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["catalog_product_id"] == product_id
+    assert payload["total_candidates"] == 5
+    assert [item["run_id"] for item in payload["items"]] == ["newer-run", "older-run"]
+    older_group = payload["items"][1]
+    assert older_group["run"]["source_name"] == "bestprice"
+    assert older_group["counts"] == {
+        "accepted": 1,
+        "needs_review": 1,
+        "pending": 0,
+        "rejected": 0,
+        "not_found": 0,
+        "error": 1,
+    }
+    assert [candidate["id"] for candidate in older_group["candidates"]] == [
+        accepted_id,
+        needs_review_id,
+        older_group["candidates"][2]["id"],
+    ]
+    assert [candidate["status"] for candidate in older_group["candidates"]] == ["accepted", "needs_review", "error"]
+    assert "price_observations" not in response.text
+    assert "price_listings" not in response.text
+    assert "monitoring_history" not in response.text
+
+
+def test_catalog_product_source_url_candidates_orphan_run_id_gets_minimal_run(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    product_id = client.get(
+        "/api/catalog/products",
+        params={"q": "Vacuum One"},
+    ).json()["items"][0]["catalog_product_id"]
+
+    with session_scope(database_url) as session:
+        _source_candidate(session, product_id=product_id, run_id="deleted-run")
+
+    response = client.get(f"/api/catalog/products/{product_id}/source-url-candidates")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["run"] == {"run_id": "deleted-run", "status": "unknown"}
+
+
+def test_catalog_product_source_url_candidates_sanitizes_database_errors(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    product_id = client.get(
+        "/api/catalog/products",
+        params={"q": "Vacuum One"},
+    ).json()["items"][0]["catalog_product_id"]
+
+    monkeypatch.setattr(
+        "ecommerce.api.routes_catalog.query_product_source_url_candidate_history",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("token=live-secret password=hidden")),
+    )
+
+    response = client.get(f"/api/catalog/products/{product_id}/source-url-candidates")
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Catalog DB query failed."
+    assert "live-secret" not in response.text
+    assert "hidden" not in response.text
 
 
 def test_catalog_products_debug_metadata_is_opt_in(tmp_path: Path, monkeypatch) -> None:

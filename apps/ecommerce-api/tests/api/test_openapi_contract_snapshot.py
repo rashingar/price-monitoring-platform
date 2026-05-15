@@ -38,6 +38,7 @@ def test_openapi_snapshot_contains_ui_facing_routes() -> None:
         ("GET", "/api/catalog/brands"),
         ("GET", "/api/catalog/summary"),
         ("GET", "/api/catalog/products/{catalog_product_id}"),
+        ("GET", "/api/catalog/products/{catalog_product_id}/source-url-candidates"),
         ("GET", "/api/catalog/products/{catalog_product_id}/source-urls"),
         ("POST", "/api/catalog/products/{catalog_product_id}/source-urls"),
         ("PATCH", "/api/catalog/source-urls/{source_url_id}"),

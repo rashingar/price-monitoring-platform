@@ -14,6 +14,7 @@ import {
   priceMonitoringExecutions,
   productFactoryHandoffImportApply,
   productFactoryHandoffImportPreview,
+  productSourceUrlCandidateHistory,
   sourceUrlImportApply,
   sourceUrlImportPreview,
   sourceUrlAgentArtifacts,
@@ -64,6 +65,47 @@ describe("commerce API client contract fixtures", () => {
     });
     expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toContain(
       "GET /commerce-api/catalog/products/1",
+    );
+  });
+
+  it("loads and normalizes product Source URL Agent candidate history", async () => {
+    const mockFetch = installMockFetch(commerceFixtureRoutes);
+
+    await expect(commerceClient.getCatalogProductSourceUrlCandidateHistory(1)).resolves.toMatchObject({
+      catalog_product_id: 1,
+      total_candidates: productSourceUrlCandidateHistory.total_candidates,
+      warnings: [],
+      items: [
+        expect.objectContaining({
+          run_id: "source-run-002",
+          counts: expect.objectContaining({ accepted: 1, needs_review: 1 }),
+          run: expect.objectContaining({ run_id: "source-run-002", status: "succeeded" }),
+          candidates: [
+            expect.objectContaining({
+              id: 601,
+              run_id: "source-run-002",
+              status: "accepted",
+              candidate_url: productSourceUrlCandidateHistory.items[0].candidates[0].candidate_url,
+            }),
+            expect.objectContaining({ id: 602, status: "needs_review" }),
+          ],
+        }),
+        expect.objectContaining({ run_id: "source-run-001" }),
+      ],
+    });
+
+    await expect(commerceClient.getCatalogProductSourceUrlCandidateHistory(2)).resolves.toEqual({
+      catalog_product_id: 2,
+      items: [],
+      total_candidates: 0,
+      warnings: [],
+    });
+
+    expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toEqual(
+      expect.arrayContaining([
+        "GET /commerce-api/catalog/products/1/source-url-candidates",
+        "GET /commerce-api/catalog/products/2/source-url-candidates",
+      ]),
     );
   });
 

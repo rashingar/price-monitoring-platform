@@ -5,9 +5,11 @@ import type { SourceUrl } from "../api/commerceTypes";
 import { EmptyState, ErrorState, LoadingState } from "../components/layout/StateBlocks";
 import { CatalogProductDetailHeader } from "../features/catalog-product-detail/CatalogProductDetailHeader";
 import { CatalogProductIdentityPanel } from "../features/catalog-product-detail/CatalogProductIdentityPanel";
+import { ProductSourceUrlCandidateHistoryPanel } from "../features/catalog-product-detail/ProductSourceUrlCandidateHistoryPanel";
 import { ProductSourceUrlHistoryPanel } from "../features/catalog-product-detail/ProductSourceUrlHistoryPanel";
 import { sourceUrlId } from "../features/catalog-product-detail/ProductSourceUrlLifecycleTable";
 import { useCatalogProductDetail } from "../features/catalog-product-detail/useCatalogProductDetail";
+import { useProductSourceUrlCandidateHistory } from "../features/catalog-product-detail/useProductSourceUrlCandidateHistory";
 
 type ActionNotice = {
   tone: "success" | "error";
@@ -17,6 +19,7 @@ type ActionNotice = {
 export function CatalogProductDetailPage() {
   const { catalogProductId } = useParams();
   const { detail, isLoading, error, notFound, reload } = useCatalogProductDetail(catalogProductId);
+  const candidateHistory = useProductSourceUrlCandidateHistory(catalogProductId);
   const product = detail?.product ?? null;
   const [pendingSourceUrlId, setPendingSourceUrlId] = useState<string | number | null>(null);
   const [pendingActionLabel, setPendingActionLabel] = useState<string | null>(null);
@@ -98,6 +101,12 @@ export function CatalogProductDetailPage() {
             onValidate={validateSourceUrl}
             onUpdateStatus={updateSourceUrlStatus}
             onSaveNote={saveSourceUrlNote}
+          />
+          <ProductSourceUrlCandidateHistoryPanel
+            data={candidateHistory.data}
+            isLoading={candidateHistory.isLoading}
+            error={candidateHistory.error}
+            onRetry={candidateHistory.refresh}
           />
         </>
       ) : null}

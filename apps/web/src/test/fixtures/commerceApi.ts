@@ -1240,6 +1240,75 @@ export const skroutzNetworkDiagnosticReport = {
   ],
 };
 
+export const productSourceUrlCandidateHistory = {
+  catalog_product_id: 1,
+  total_candidates: 4,
+  warnings: [],
+  items: [
+    {
+      run_id: "source-run-002",
+      run: {
+        run_id: "source-run-002",
+        source: "bestprice",
+        source_name: "bestprice",
+        mode: "catalog",
+        status: "succeeded",
+        created_at: "2026-05-03T09:55:00Z",
+        started_at: "2026-05-03T10:00:00Z",
+        completed_at: "2026-05-03T10:08:00Z",
+      },
+      counts: {
+        accepted: 1,
+        needs_review: 1,
+        pending: 0,
+        rejected: 0,
+        not_found: 0,
+        error: 0,
+      },
+      candidates: [
+        {
+          ...sourceUrlCandidates.items[0],
+          id: 601,
+          run_id: "source-run-002",
+          status: "accepted",
+          reviewed_by: "operator",
+          reviewed_at: "2026-05-03T10:10:00Z",
+          notes: "Accepted from latest run.",
+          created_at: "2026-05-03T10:05:00Z",
+          updated_at: "2026-05-03T10:10:00Z",
+        },
+        {
+          ...sourceUrlCandidates.items[2],
+          id: 602,
+          run_id: "source-run-002",
+          status: "needs_review",
+          created_at: "2026-05-03T10:06:00Z",
+        },
+      ],
+    },
+    {
+      run_id: "source-run-001",
+      run: sourceUrlAgentRuns.items[0],
+      counts: {
+        accepted: 0,
+        needs_review: 2,
+        pending: 0,
+        rejected: 0,
+        not_found: 0,
+        error: 0,
+      },
+      candidates: [sourceUrlCandidates.items[0], sourceUrlCandidates.items[2]],
+    },
+  ],
+};
+
+export const emptyProductSourceUrlCandidateHistory = {
+  catalog_product_id: 2,
+  total_candidates: 0,
+  warnings: [],
+  items: [],
+};
+
 export const sourceUrlCandidateReviewLayout = {
   user_key: "default",
   columns: [
@@ -2069,6 +2138,16 @@ export const commerceFixtureRoutes: MockRoute[] = [
   { method: "GET", path: "/commerce-api/catalog/products", response: catalogProducts },
   { method: "GET", path: "/commerce-api/catalog/products/1", response: catalogProductDetail },
   { method: "GET", path: "/commerce-api/catalog/products/2", response: catalogProductDetailWithoutSourceUrls },
+  {
+    method: "GET",
+    path: "/commerce-api/catalog/products/1/source-url-candidates",
+    response: productSourceUrlCandidateHistory,
+  },
+  {
+    method: "GET",
+    path: "/commerce-api/catalog/products/2/source-url-candidates",
+    response: emptyProductSourceUrlCandidateHistory,
+  },
   { method: "GET", path: "/commerce-api/catalog/update-db/latest", response: null },
   { method: "GET", path: "/commerce-api/catalog/products/1/source-urls", response: sourceUrlsForCatalogProduct },
   {

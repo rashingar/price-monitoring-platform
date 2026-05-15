@@ -380,7 +380,7 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByRole("heading", { name: "Catalog fields" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Capture and fetch status" })).toBeInTheDocument();
     expect(screen.getByText("active 3")).toBeInTheDocument();
-    expect(screen.getByText("needs_review 1")).toBeInTheDocument();
+    expect(screen.getAllByText("needs_review 1").length).toBeGreaterThan(0);
     expect(screen.getByText("https://www.skroutz.gr/s/123/midea-md-20l.html")).toBeInTheDocument();
     expect(screen.getByText("scheduled-test")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "source-capture-9001.json" })).toHaveAttribute(
@@ -391,6 +391,24 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getAllByRole("button", { name: "Disable" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Edit note" }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /Delete|Remove/i })).not.toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: "Candidate history" })).toBeInTheDocument();
+    expect(screen.getByText("4 candidates")).toBeInTheDocument();
+    const latestRun = screen.getByText("source-run-002").closest("details");
+    expect(latestRun).toHaveAttribute("open");
+    expect(screen.getAllByRole("link", { name: "View run candidates" })[0]).toHaveAttribute(
+      "href",
+      "/find-source/candidates?run_id=source-run-002",
+    );
+    expect(screen.getAllByRole("link", { name: "Open candidate" })[0]).toHaveAttribute(
+      "href",
+      "https://www.skroutz.gr/s/999/midea-md-20l-candidate.html",
+    );
+    expect(screen.getAllByRole("link", { name: "Open candidate" })[0]).toHaveAttribute(
+      "target",
+      "_blank",
+    );
+    expect(screen.queryByRole("button", { name: /Accept|Reject|Replace/i })).not.toBeInTheDocument();
   });
 
   it("renders empty source URL state on Catalog product detail", async () => {
@@ -400,6 +418,7 @@ describe("platform mocked page smoke tests", () => {
 
     await expect(screen.findByRole("heading", { name: "Σετ πληκτρολόγιο και ποντίκι" })).resolves.toBeInTheDocument();
     expect(screen.getByText("No source URLs")).toBeInTheDocument();
+    expect(screen.getByText("No Source URL Agent candidates")).toBeInTheDocument();
   });
 
   it("runs product detail source URL actions and refreshes after success", async () => {

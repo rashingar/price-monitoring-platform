@@ -42,6 +42,8 @@ import type {
   EnvReadinessGroup,
   LocalEnvStatus,
   ProductFactoryHandoffImportRequest,
+  ProductSourceUrlCandidateHistoryResponse,
+  ProductSourceUrlCandidateRunGroup,
   PriceHistoryResponse,
   PriceMonitoringDbStatus,
   PriceMonitoringFetchLogsResponse,
@@ -930,6 +932,61 @@ function normalizeSourceUrlAgentRunList(payload: unknown): SourceUrlAgentRun[] {
   return getArrayPayload(payload, ["items", "runs", "data", "results"])
     .map(normalizeSourceUrlAgentRun)
     .filter((item): item is SourceUrlAgentRun => item !== null);
+}
+
+function normalizeProductSourceUrlCandidateRunGroup(
+  value: unknown,
+): ProductSourceUrlCandidateRunGroup | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const runId = normalizeNullableId(value.run_id ?? (isRecord(value.run) ? value.run.run_id : null));
+  const run =
+    normalizeSourceUrlAgentRun(value.run) ??
+    ({
+      run_id: runId,
+      id: runId,
+      status: "unknown",
+      task_counts: {},
+      task_total_count: 0,
+      task_finished_count: 0,
+      summary: { task_counts: {} },
+      tasks: [],
+      artifacts: [],
+      warnings: [],
+    } as SourceUrlAgentRun);
+  const candidates = getArrayPayload(value.candidates, ["items", "candidates", "data", "results"])
+    .map(normalizeSourceUrlCandidate)
+    .filter((item): item is SourceUrlCandidate => item !== null);
+
+  return {
+    ...value,
+    run_id: runId,
+    run,
+    counts: normalizeNumberRecord(value.counts),
+    candidates,
+  };
+}
+
+function normalizeProductSourceUrlCandidateHistory(
+  payload: unknown,
+): ProductSourceUrlCandidateHistoryResponse {
+  const source = isRecord(payload) ? payload : {};
+  const items = getArrayPayload(payload, ["items", "runs", "data", "results"])
+    .map(normalizeProductSourceUrlCandidateRunGroup)
+    .filter((item): item is ProductSourceUrlCandidateRunGroup => item !== null);
+
+  return {
+    ...source,
+    catalog_product_id: normalizeNullableId(source.catalog_product_id),
+    items,
+    total_candidates: normalizeOptionalNumber(source.total_candidates ?? source.total) ?? items.reduce(
+      (total, item) => total + item.candidates.length,
+      0,
+    ),
+    warnings: normalizeStringArray(source.warnings),
+  };
 }
 
 function normalizeSourceUrlAgentRunArtifacts(
@@ -2338,6 +2395,18 @@ export const commerceClient = {
     return normalizeCatalogProductDetail(
       await request<unknown>(
         `/catalog/products/${encodeURIComponent(String(catalogProductId))}`,
+        { signal },
+      ),
+    );
+  },
+
+  async getCatalogProductSourceUrlCandidateHistory(
+    catalogProductId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductSourceUrlCandidateHistoryResponse> {
+    return normalizeProductSourceUrlCandidateHistory(
+      await request<unknown>(
+        `/catalog/products/${encodeURIComponent(String(catalogProductId))}/source-url-candidates`,
         { signal },
       ),
     );
