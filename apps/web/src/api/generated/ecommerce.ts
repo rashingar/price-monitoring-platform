@@ -278,6 +278,10 @@ export interface paths {
     /** Review Source Url Agent Candidate */
     patch: operations["review_source_url_agent_candidate_api_source_url_agent_candidates__candidate_id__review_patch"];
   };
+  "/api/source-url-agent/readiness": {
+    /** Get Source Url Agent Readiness */
+    get: operations["get_source_url_agent_readiness_api_source_url_agent_readiness_get"];
+  };
   "/api/source-url-agent/runs": {
     /** List Source Url Agent Runs */
     get: operations["list_source_url_agent_runs_api_source_url_agent_runs_get"];
@@ -708,6 +712,48 @@ export interface components {
        * @default 60
        */
       timeout_seconds?: number;
+    };
+    /** SourceUrlAgentProviderReadiness */
+    SourceUrlAgentProviderReadiness: {
+      /** Allow High Confidence Auto Apply */
+      allow_high_confidence_auto_apply: boolean;
+      /** Configured */
+      configured: boolean;
+      /** Enabled */
+      enabled: boolean;
+      /** Missing Env Keys */
+      missing_env_keys?: string[];
+      /**
+       * Notes
+       * @default
+       */
+      notes?: string;
+      /** Provider Name */
+      provider_name: string;
+      /** Provider Type */
+      provider_type: string;
+      /** Required Env Keys */
+      required_env_keys?: string[];
+    };
+    /** SourceUrlAgentReadinessResponse */
+    SourceUrlAgentReadinessResponse: {
+      /** Blocking Reasons */
+      blocking_reasons?: string[];
+      /** Default Provider Order */
+      default_provider_order?: string[];
+      /** Providers */
+      providers?: components["schemas"]["SourceUrlAgentProviderReadiness"][];
+      /** Source Cascades */
+      source_cascades?: {
+        [key: string]: string[];
+      };
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "ready" | "warning" | "blocked";
+      /** Warnings */
+      warnings?: string[];
     };
     /** SourceUrlAgentRunRequest */
     SourceUrlAgentRunRequest: {
@@ -2684,6 +2730,17 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Source Url Agent Readiness */
+  get_source_url_agent_readiness_api_source_url_agent_readiness_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SourceUrlAgentReadinessResponse"];
         };
       };
     };

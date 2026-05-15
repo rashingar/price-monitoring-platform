@@ -9,11 +9,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.api.source_url_agent import readiness as readiness_module  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.source_url_agent.brave_search import BRAVE_SEARCH_API_KEY_ENV_VAR  # noqa: E402
+from ecommerce.source_url_agent.search_providers import SearchProviderDefinition, SearchProviderRegistry  # noqa: E402
 
 
 NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
@@ -177,6 +180,141 @@ def test_source_url_agent_canonical_namespace_returns_candidates_and_sources(tmp
     assert candidates_response.json()["items"][0]["id"] == candidate.id
     assert sources_response.status_code == 200
     assert {item["source_name"] for item in sources_response.json()["items"]} >= {"bestprice", "skroutz", "electronet"}
+
+
+def test_source_url_agent_readiness_blocks_when_brave_api_key_is_missing(monkeypatch) -> None:
+    monkeypatch.delenv(BRAVE_SEARCH_API_KEY_ENV_VAR, raising=False)
+    _patch_readiness_registry(monkeypatch, _search_provider_registry(default_cascade=("brave_search",)))
+
+    response = TestClient(create_app()).get("/api/source-url-agent/readiness")
+
+    assert response.status_code == 200
+    payload = response.json()
+    provider = payload["providers"][0]
+    assert payload["status"] == "blocked"
+    assert provider["provider_name"] == "brave_search"
+    assert provider["provider_type"] == "brave"
+    assert provider["enabled"] is True
+    assert provider["configured"] is False
+    assert provider["required_env_keys"] == [BRAVE_SEARCH_API_KEY_ENV_VAR]
+    assert provider["missing_env_keys"] == [BRAVE_SEARCH_API_KEY_ENV_VAR]
+    assert BRAVE_SEARCH_API_KEY_ENV_VAR in payload["blocking_reasons"][0]
+
+
+def test_source_url_agent_readiness_is_ready_when_brave_api_key_is_present(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "test-secret-value")
+    _patch_readiness_registry(
+        monkeypatch,
+        _search_provider_registry(
+            default_cascade=("brave_search",),
+            source_cascades={"skroutz": ("brave_search",)},
+        ),
+    )
+
+    response = TestClient(create_app()).get("/api/source-url-agent/readiness")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ready"
+    assert payload["default_provider_order"] == ["brave_search"]
+    assert payload["source_cascades"] == {"skroutz": ["brave_search"]}
+    assert payload["providers"][0]["configured"] is True
+    assert payload["providers"][0]["missing_env_keys"] == []
+
+
+def test_source_url_agent_readiness_does_not_expose_env_values_or_secrets(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "test-secret-value")
+    _patch_readiness_registry(
+        monkeypatch,
+        _search_provider_registry(
+            providers={
+                "brave_search": _brave_provider(
+                    notes="Brave provider token=test-secret-value password=hunter2"
+                )
+            },
+        ),
+    )
+
+    response = TestClient(create_app()).get("/api/source-url-agent/readiness")
+
+    payload_text = response.text
+    assert response.status_code == 200
+    assert BRAVE_SEARCH_API_KEY_ENV_VAR in payload_text
+    assert "test-secret-value" not in payload_text
+    assert "hunter2" not in payload_text
+
+
+def test_source_url_agent_readiness_disabled_missing_provider_does_not_block(monkeypatch) -> None:
+    monkeypatch.delenv(BRAVE_SEARCH_API_KEY_ENV_VAR, raising=False)
+    _patch_readiness_registry(
+        monkeypatch,
+        _search_provider_registry(
+            default_cascade=("browser_fallback", "brave_search"),
+            providers={
+                "browser_fallback": _browser_provider(enabled=True),
+                "brave_search": _brave_provider(enabled=False),
+            },
+        ),
+    )
+
+    response = TestClient(create_app()).get("/api/source-url-agent/readiness")
+
+    assert response.status_code == 200
+    payload = response.json()
+    providers = {item["provider_name"]: item for item in payload["providers"]}
+    assert payload["status"] == "ready"
+    assert providers["browser_fallback"]["configured"] is True
+    assert providers["brave_search"]["enabled"] is False
+    assert providers["brave_search"]["missing_env_keys"] == [BRAVE_SEARCH_API_KEY_ENV_VAR]
+    assert payload["blocking_reasons"] == []
+
+
+def test_source_url_agent_readiness_unknown_enabled_provider_warns_without_crashing(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "test-secret-value")
+    _patch_readiness_registry(
+        monkeypatch,
+        _search_provider_registry(
+            default_cascade=("unknown_provider", "brave_search"),
+            providers={
+                "unknown_provider": SearchProviderDefinition(
+                    provider_name="unknown_provider",
+                    provider_type="custom",
+                    enabled=True,
+                    allow_high_confidence_auto_apply=False,
+                    notes="Experimental provider",
+                ),
+                "brave_search": _brave_provider(),
+            },
+        ),
+    )
+
+    response = TestClient(create_app()).get("/api/source-url-agent/readiness")
+
+    assert response.status_code == 200
+    payload = response.json()
+    providers = {item["provider_name"]: item for item in payload["providers"]}
+    assert payload["status"] == "warning"
+    assert providers["unknown_provider"]["configured"] is False
+    assert payload["blocking_reasons"] == []
+    assert "Unsupported Source URL Agent search provider type" in payload["warnings"][0]
+
+
+def test_source_url_agent_readiness_registry_load_failure_returns_safe_blocked_response(monkeypatch) -> None:
+    def fail_load():
+        raise RuntimeError("boom token=test-secret-value")
+
+    monkeypatch.setattr(readiness_module, "load_search_provider_registry", fail_load)
+
+    response = TestClient(create_app()).get("/api/source-url-agent/readiness")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "blocked"
+    assert payload["providers"] == []
+    assert payload["default_provider_order"] == []
+    assert payload["source_cascades"] == {}
+    assert "could not be loaded" in payload["blocking_reasons"][0]
+    assert "test-secret-value" not in response.text
 
 
 def test_get_source_url_agent_candidates_filters(tmp_path: Path, monkeypatch) -> None:
@@ -389,6 +527,7 @@ def test_openapi_includes_source_url_agent_candidate_endpoints() -> None:
     assert "/api/source-url-agent/candidates/{candidate_id}/review" in paths
     assert "/api/vendor-sources/sources" in paths
     assert "/api/source-url-agent/sources" in paths
+    assert "/api/source-url-agent/readiness" in paths
     assert "/api/source-url-agent/runs" in paths
     assert "/api/source-url-agent/runs/sync" in paths
     assert "/api/source-url-agent/runs/{run_id}" in paths
@@ -406,3 +545,44 @@ def test_price_monitoring_exposes_no_marketplace_source_enum() -> None:
 
     assert not hasattr(selection, "PriceMonitoringSource")
     assert not hasattr(selection, "MarketplaceMonitoringSource")
+
+
+def _patch_readiness_registry(monkeypatch, registry: SearchProviderRegistry) -> None:
+    monkeypatch.setattr(readiness_module, "load_search_provider_registry", lambda: registry)
+
+
+def _search_provider_registry(
+    *,
+    default_cascade: tuple[str, ...] = ("brave_search",),
+    providers: dict[str, SearchProviderDefinition] | None = None,
+    source_cascades: dict[str, tuple[str, ...]] | None = None,
+) -> SearchProviderRegistry:
+    return SearchProviderRegistry(
+        default_cascade=default_cascade,
+        providers=providers or {"brave_search": _brave_provider()},
+        source_cascades=source_cascades or {},
+    )
+
+
+def _brave_provider(**overrides) -> SearchProviderDefinition:
+    values = {
+        "provider_name": "brave_search",
+        "provider_type": "brave",
+        "enabled": True,
+        "allow_high_confidence_auto_apply": False,
+        "notes": "Brave Web Search API provider.",
+    }
+    values.update(overrides)
+    return SearchProviderDefinition(**values)
+
+
+def _browser_provider(**overrides) -> SearchProviderDefinition:
+    values = {
+        "provider_name": "browser_fallback",
+        "provider_type": "browser",
+        "enabled": True,
+        "allow_high_confidence_auto_apply": True,
+        "notes": "Browser fallback provider.",
+    }
+    values.update(overrides)
+    return SearchProviderDefinition(**values)

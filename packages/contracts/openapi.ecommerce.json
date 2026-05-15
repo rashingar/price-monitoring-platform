@@ -1092,6 +1092,114 @@
         "title": "SkroutzNetworkDiagnosticApiRequest",
         "type": "object"
       },
+      "SourceUrlAgentProviderReadiness": {
+        "properties": {
+          "allow_high_confidence_auto_apply": {
+            "title": "Allow High Confidence Auto Apply",
+            "type": "boolean"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "missing_env_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Env Keys",
+            "type": "array"
+          },
+          "notes": {
+            "default": "",
+            "title": "Notes",
+            "type": "string"
+          },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
+          },
+          "provider_type": {
+            "title": "Provider Type",
+            "type": "string"
+          },
+          "required_env_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Env Keys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "provider_name",
+          "provider_type",
+          "enabled",
+          "configured",
+          "allow_high_confidence_auto_apply"
+        ],
+        "title": "SourceUrlAgentProviderReadiness",
+        "type": "object"
+      },
+      "SourceUrlAgentReadinessResponse": {
+        "properties": {
+          "blocking_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocking Reasons",
+            "type": "array"
+          },
+          "default_provider_order": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Default Provider Order",
+            "type": "array"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/SourceUrlAgentProviderReadiness"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "source_cascades": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Source Cascades",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "warning",
+              "blocked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "SourceUrlAgentReadinessResponse",
+        "type": "object"
+      },
       "SourceUrlAgentRunRequest": {
         "properties": {
           "active_only": {
@@ -5715,6 +5823,27 @@
           }
         },
         "summary": "Review Source Url Agent Candidate",
+        "tags": [
+          "source-url-agent"
+        ]
+      }
+    },
+    "/api/source-url-agent/readiness": {
+      "get": {
+        "operationId": "get_source_url_agent_readiness_api_source_url_agent_readiness_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceUrlAgentReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Source Url Agent Readiness",
         "tags": [
           "source-url-agent"
         ]
