@@ -1,1232 +1,122 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  CommerceApiError,
-  commerceClient,
-  getCommerceApiErrorMessage,
-} from "../api/commerceClient";
-import {
-  CATALOG_READINESS_REQUIRED_MESSAGE,
-  getCatalogReadinessBlock,
-  getCatalogReadinessWarning,
-} from "../api/catalogReadinessGate";
-import type { CatalogReadinessBlock } from "../api/catalogReadinessGate";
-import type {
-  CatalogBrandOption,
-  CatalogCategoryHierarchyResponse,
-  CatalogProduct,
-  CatalogProductsParams,
-  CatalogProductsResponse,
-  CatalogSummary,
-  MarketplaceFilter,
-  PriceMonitoringSelectionBody,
-  PriceMonitoringSelectionItem,
-  PriceMonitoringSelectionResult,
-  PriceMonitoringSource,
-  SourceUrlAgentRun,
-  SourceUrlAgentRunRequest,
-} from "../api/commerceTypes";
+import { useMemo, useState } from "react";
+import { commerceClient } from "../api/commerceClient";
+import type { CatalogProduct } from "../api/commerceTypes";
 import {
   CatalogSourceUrlManager,
   SourceUrlImportPanel,
 } from "../components/CatalogSourceUrls";
-import { EmptyState, ErrorState, LoadingState } from "../components/layout/StateBlocks";
-import { usePersistentPageState } from "../hooks/usePersistentPageState";
-import {
-  CATEGORY_HIERARCHY_UNAVAILABLE_MESSAGE,
-  formatHierarchyOptionLabel,
-  getCategoryOptions,
-  getFamilyOptions,
-  getSubCategoryOptions,
-  makeHierarchyFilterParams,
-} from "../utils/categoryHierarchy";
-
-const DEFAULT_PAGE_SIZE = 100;
-const CATALOG_COLUMNS_STORAGE_KEY = "productFactoryUi.catalog.columns.v1";
-const CATALOG_STATE_KEY = "product-factory-ui:catalog:v2";
-
-type CatalogColumnId =
-  | "select"
-  | "model"
-  | "name"
-  | "manufacturer"
-  | "family"
-  | "category_name"
-  | "sub_category"
-  | "mpn"
-  | "price"
-  | "quantity"
-  | "bestprice_status"
-  | "skroutz_status"
-  | "ignored"
-  | "warnings"
-  | "status"
-  | "automation_eligible"
-  | "is_atomic_model"
-  | "raw_category"
-  | "category_levels";
-
-interface CatalogColumnDefinition {
-  id: CatalogColumnId;
-  label: string;
-  required?: boolean;
-}
-
-interface CatalogLayoutPreferences {
-  visibleColumnIds: CatalogColumnId[];
-  pageSize: number;
-}
-
-interface CatalogPageState {
-  q: string;
-  selectedFamily: string;
-  selectedCategory: string;
-  selectedSubCategory: string;
-  manufacturer: string;
-  marketplace: MarketplaceFilter;
-  source: PriceMonitoringSource;
-  showComposite: boolean;
-  includeIgnored: boolean;
-  sourceUrlsOnly: boolean;
-  hasQuantity: boolean;
-  page: number;
-  pageSize: number;
-  visibleColumnIds: CatalogColumnId[];
-}
-
-const CATALOG_COLUMNS: CatalogColumnDefinition[] = [
-  { id: "select", label: "Select", required: true },
-  { id: "model", label: "Model", required: true },
-  { id: "name", label: "Name", required: true },
-  { id: "manufacturer", label: "Manufacturer" },
-  { id: "family", label: "Family" },
-  { id: "category_name", label: "Category" },
-  { id: "sub_category", label: "Sub-Category" },
-  { id: "mpn", label: "MPN" },
-  { id: "price", label: "Price" },
-  { id: "quantity", label: "Qty" },
-  { id: "bestprice_status", label: "BestPrice" },
-  { id: "skroutz_status", label: "Skroutz" },
-  { id: "ignored", label: "Ignored" },
-  { id: "warnings", label: "Warnings / eligibility" },
-  { id: "status", label: "Status" },
-  { id: "automation_eligible", label: "Automation eligible" },
-  { id: "is_atomic_model", label: "Atomic" },
-  { id: "raw_category", label: "Raw category" },
-  { id: "category_levels", label: "Category levels" },
-];
-
-const DEFAULT_VISIBLE_CATALOG_COLUMNS: CatalogColumnId[] = [
-  "select",
-  "model",
-  "name",
-  "manufacturer",
-  "family",
-  "category_name",
-  "sub_category",
-  "mpn",
-  "price",
-  "quantity",
-  "bestprice_status",
-  "skroutz_status",
-  "ignored",
-  "warnings",
-];
-
-const initialCatalogPageState: CatalogPageState = {
-  q: "",
-  selectedFamily: "",
-  selectedCategory: "",
-  selectedSubCategory: "",
-  manufacturer: "",
-  marketplace: "all",
-  source: "bestprice",
-  showComposite: false,
-  includeIgnored: false,
-  sourceUrlsOnly: false,
-  hasQuantity: false,
-  page: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
-  visibleColumnIds: DEFAULT_VISIBLE_CATALOG_COLUMNS,
-};
-
-const REQUIRED_CATALOG_COLUMNS = CATALOG_COLUMNS.filter((column) => column.required).map(
-  (column) => column.id,
-);
-const CATALOG_COLUMN_IDS = new Set(CATALOG_COLUMNS.map((column) => column.id));
-
-function normalizeVisibleColumnIds(value: unknown): CatalogColumnId[] | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-
-  const visibleColumnIds = value.filter(
-    (item): item is CatalogColumnId =>
-      typeof item === "string" && CATALOG_COLUMN_IDS.has(item as CatalogColumnId),
-  );
-
-  if (visibleColumnIds.length === 0) {
-    return null;
-  }
-
-  return Array.from(new Set([...REQUIRED_CATALOG_COLUMNS, ...visibleColumnIds]));
-}
-
-function readCatalogLayoutPreferences(): CatalogLayoutPreferences {
-  if (typeof window === "undefined") {
-    return {
-      visibleColumnIds: DEFAULT_VISIBLE_CATALOG_COLUMNS,
-      pageSize: DEFAULT_PAGE_SIZE,
-    };
-  }
-
-  try {
-    const rawPreferences = window.localStorage.getItem(CATALOG_COLUMNS_STORAGE_KEY);
-    if (!rawPreferences) {
-      throw new Error("No saved preferences");
-    }
-
-    const parsed = JSON.parse(rawPreferences) as unknown;
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      throw new Error("Invalid saved preferences");
-    }
-
-    const record = parsed as Record<string, unknown>;
-    const visibleColumnIds = normalizeVisibleColumnIds(record.visibleColumnIds);
-    const pageSize =
-      typeof record.pageSize === "number" && [50, 100, 200].includes(record.pageSize)
-        ? record.pageSize
-        : DEFAULT_PAGE_SIZE;
-
-    return {
-      visibleColumnIds: visibleColumnIds ?? DEFAULT_VISIBLE_CATALOG_COLUMNS,
-      pageSize,
-    };
-  } catch {
-    return {
-      visibleColumnIds: DEFAULT_VISIBLE_CATALOG_COLUMNS,
-      pageSize: DEFAULT_PAGE_SIZE,
-    };
-  }
-}
-
-function writeCatalogLayoutPreferences(preferences: CatalogLayoutPreferences): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(CATALOG_COLUMNS_STORAGE_KEY, JSON.stringify(preferences));
-}
-
-function normalizeModel(model: string): string {
-  return model.trim();
-}
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined || value === "") {
-    return "-";
-  }
-
-  return String(value);
-}
-
-function formatMoney(value: number | null | undefined): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return "-";
-  }
-
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function getSummaryNumber(summary: CatalogSummary | null, keys: string[]): number | null {
-  if (!summary) {
-    return null;
-  }
-
-  for (const key of keys) {
-    const value = summary[key];
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
-  }
-
-  return null;
-}
-
-function getSourceUrlStatusCount(product: CatalogProduct, status: string): number {
-  const coverage = product.source_url_coverage;
-  const directValue =
-    status === "active"
-      ? coverage?.active_source_url_count
-      : status === "needs_review"
-        ? coverage?.needs_review_source_url_count
-        : undefined;
-  if (typeof directValue === "number" && Number.isFinite(directValue)) {
-    return directValue;
-  }
-
-  const statusValue = coverage?.status_counts?.[status];
-  return typeof statusValue === "number" && Number.isFinite(statusValue) ? statusValue : 0;
-}
-
-function getSourceUrlEligibility(product: CatalogProduct): { label: string; className: string; blocker: string | null } {
-  const activeCount = getSourceUrlStatusCount(product, "active");
-  const reviewCount = getSourceUrlStatusCount(product, "needs_review");
-  if (activeCount > 0 || product.source_url_coverage?.has_active_source_url === true) {
-    return { label: "Eligible", className: "success", blocker: null };
-  }
-  if (reviewCount > 0) {
-    return { label: "Review", className: "warning", blocker: "Source URL review" };
-  }
-  return { label: "Missing", className: "danger", blocker: "Missing source URL" };
-}
-
-function getSelectionBlocker(product: CatalogProduct): string | null {
-  if (product.is_atomic_model === false) {
-    return "Composite model";
-  }
-
-  if (product.automation_eligible === false) {
-    return "Not eligible";
-  }
-
-  if (product.ignored === true) {
-    return "Ignored";
-  }
-
-  return getSourceUrlEligibility(product).blocker;
-}
-
-function getSourceUrlAgentRunId(run: SourceUrlAgentRun | null): string | null {
-  const value = run?.run_id ?? run?.id;
-  return value === null || value === undefined || value === "" ? null : String(value);
-}
-
-function isActiveSourceUrlAgentRun(run: SourceUrlAgentRun | null): boolean {
-  const status = typeof run?.status === "string" ? run.status.toLowerCase() : "";
-  return status === "queued" || status === "running";
-}
-
-function getSourceUrlAgentRunCount(run: SourceUrlAgentRun | null, key: keyof SourceUrlAgentRun): number {
-  const summary = typeof run?.summary === "object" && run.summary !== null ? run.summary : {};
-  const value = run?.[key] ?? summary[key];
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-}
-
-function getSourceUrlAgentTaskProgress(run: SourceUrlAgentRun | null): string {
-  const total = getSourceUrlAgentRunCount(run, "task_total_count");
-  const finished = getSourceUrlAgentRunCount(run, "task_finished_count");
-  return total > 0 ? `${finished.toLocaleString()} / ${total.toLocaleString()}` : "-";
-}
-
-function getSkippedMissingSourceUrlModels(result: PriceMonitoringSelectionResult | null): string[] {
-  if (!result) {
-    return [];
-  }
-
-  const seen = new Set<string>();
-  const addModel = (value: unknown) => {
-    if (typeof value !== "string") {
-      return;
-    }
-
-    const model = value.trim();
-    if (model.length > 0) {
-      seen.add(model);
-    }
-  };
-
-  const addSkippedItem = (item: PriceMonitoringSelectionItem) => {
-    const reason = String(item.skip_reason ?? item.reason ?? "").toLowerCase();
-    const reasons = Array.isArray(item.reasons)
-      ? item.reasons.map((value) => String(value).toLowerCase())
-      : [];
-    const coverage = item.source_url_coverage;
-    const isMissing =
-      reason.includes("missing_active_source_url") ||
-      reason.includes("no_active_source_url") ||
-      reasons.some(
-        (itemReason) =>
-          itemReason.includes("missing_active_source_url") ||
-          itemReason.includes("no_active_source_url"),
-      ) ||
-      coverage?.has_active_source_url === false ||
-      (coverage?.active_source_url_count !== undefined && coverage.active_source_url_count <= 0);
-
-    if (isMissing) {
-      addModel(item.model);
-    }
-  };
-
-  result.skipped_items?.forEach(addSkippedItem);
-  result.source_url_coverage?.missing_source_url_models?.forEach(addModel);
-
-  return Array.from(seen);
-}
-
-function getMarketplaceStatus(value: number | null | undefined): string {
-  if (value === 1) {
-    return "active";
-  }
-
-  if (value === 0) {
-    return "inactive";
-  }
-
-  return formatValue(value);
-}
-
-function formatOptionCount(count: number | null | undefined): string {
-  return typeof count === "number" && Number.isFinite(count) ? ` (${count})` : "";
-}
-
-function makeSelectionBody(
-  source: PriceMonitoringSource,
-  selectedModels: Set<string>,
-  filters: {
-    q: string;
-    family: string;
-    categoryName: string;
-    subCategory: string;
-    manufacturer: string;
-    marketplace: MarketplaceFilter;
-    includeIgnored: boolean;
-  },
-  dryRun: boolean,
-): PriceMonitoringSelectionBody {
-  const q = filters.q.trim();
-
-  return {
-    source,
-    filters: {
-      q: q.length > 0 ? q : null,
-      ...makeHierarchyFilterParams({
-        family: filters.family,
-        categoryName: filters.categoryName,
-        subCategory: filters.subCategory,
-      }),
-      manufacturer: filters.manufacturer || null,
-      marketplace: filters.marketplace === "all" ? null : filters.marketplace,
-      has_mpn: true,
-      atomic_only: true,
-      automation_eligible_only: true,
-    },
-    selected_models: Array.from(selectedModels),
-    excluded_models: [],
-    include_ignored: filters.includeIgnored,
-    dry_run: dryRun,
-  };
-}
-
-function SummaryCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | null;
-}) {
-  return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{value === null ? "-" : value.toLocaleString()}</dd>
-    </div>
-  );
-}
-
-function getCategoryHierarchyErrorMessage(error: unknown): string {
-  return error instanceof CommerceApiError && error.status === 404
-    ? CATEGORY_HIERARCHY_UNAVAILABLE_MESSAGE
-    : getCommerceApiErrorMessage(error);
-}
-
-function ResultSummary({ result }: { result: PriceMonitoringSelectionResult }) {
-  const selectedItems = result.selected_items ?? result.selected ?? [];
-
-  return (
-    <div className="result-block">
-      <dl className="summary-grid">
-        {"run_id" in result ? <SummaryText label="Run ID" value={result.run_id} /> : null}
-        {"status" in result ? <SummaryText label="Status" value={result.status} /> : null}
-        {"source" in result ? <SummaryText label="Source" value={result.source} /> : null}
-        {"selected_count" in result ? (
-          <SummaryText label="Selected" value={result.selected_count} />
-        ) : null}
-        {"skipped_count" in result ? <SummaryText label="Skipped" value={result.skipped_count} /> : null}
-        {"output_dir" in result ? <SummaryText label="Output dir" value={result.output_dir} /> : null}
-        {"input_csv_path" in result ? (
-          <SummaryText label="Input CSV" value={result.input_csv_path} />
-        ) : null}
-        {"selection_summary_path" in result ? (
-          <SummaryText label="Selection summary" value={result.selection_summary_path} />
-        ) : null}
-      </dl>
-
-      {result.skipped_by_reason ? (
-        <div className="compact-list">
-          <strong>Skipped by reason</strong>
-          <ul>
-            {Object.entries(result.skipped_by_reason).map(([reason, count]) => (
-              <li key={reason}>
-                {reason}: {count}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {selectedItems.length > 0 ? (
-        <div className="compact-list">
-          <strong>Selected items</strong>
-          <ul>
-            {selectedItems.slice(0, 25).map((item, index) => (
-              <li key={`${item.model ?? "item"}-${index}`}>
-                {formatValue(item.model)} {item.name ? `- ${item.name}` : ""}
-              </li>
-            ))}
-          </ul>
-          {selectedItems.length > 25 ? (
-            <p className="muted">Showing 25 of {selectedItems.length} returned items.</p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {result.skipped_reasons ? (
-        <div className="compact-list">
-          <strong>Skipped reasons</strong>
-          <pre className="json-block">{JSON.stringify(result.skipped_reasons, null, 2)}</pre>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SummaryText({ label, value }: { label: string; value: unknown }) {
-  return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{formatValue(value)}</dd>
-    </div>
-  );
-}
-
-function CatalogSetupHint() {
-  return (
-    <div className="setup-hint compact">
-      <strong>Catalog setup check</strong>
-      <ul>
-        <li>Commerce API must be running: <code>ecommerce-api</code></li>
-        <li>Database URL: <code>ECOMMERCE_DATABASE_URL</code></li>
-        <li>Run migrations: <code>alembic upgrade head</code></li>
-        <li>Import catalog input: <code>python -m ecommerce.jobs.ingest_catalog</code></li>
-        <li>UI endpoint: <code>/commerce-api/catalog/summary</code></li>
-        <li>Backend endpoint: <code>http://127.0.0.1:8001/api/catalog/summary</code></li>
-      </ul>
-    </div>
-  );
-}
-
-function CatalogReadinessBanner({
-  block,
-  onRetry,
-}: {
-  block: CatalogReadinessBlock;
-  onRetry?: () => void;
-}) {
-  return (
-    <div className="db-status-banner warning" role="alert">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Catalog</p>
-          <h3>Catalog database/import required</h3>
-        </div>
-        {onRetry ? (
-          <button className="button secondary" type="button" onClick={onRetry}>
-            Retry Catalog
-          </button>
-        ) : null}
-      </div>
-      <p>{block.message}</p>
-      <p className="muted">
-        Catalog browsing reads from PostgreSQL after sourceCata.csv has been imported. This does not
-        mean files, paths, artifacts, or general commerce health are unavailable when their endpoints
-        are running.
-      </p>
-      {block.details.length > 0 ? (
-        <ul className="db-status-hints">
-          {block.details.map((detail) => (
-            <li key={detail}>{detail}</li>
-          ))}
-        </ul>
-      ) : null}
-      <ul className="db-status-hints">
-        {block.setupHints.map((hint) => (
-          <li key={hint}>{hint}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+import { ErrorState } from "../components/layout/StateBlocks";
+import { CatalogActionsPanel } from "../features/catalog/CatalogActionsPanel";
+import { CatalogColumnControls } from "../features/catalog/CatalogColumnControls";
+import { CatalogFiltersPanel } from "../features/catalog/CatalogFiltersPanel";
+import { CatalogHeader } from "../features/catalog/CatalogHeader";
+import { CatalogProductsPanel } from "../features/catalog/CatalogProductsPanel";
+import { CatalogReadinessBanner } from "../features/catalog/CatalogReadinessBanner";
+import { CatalogSummaryPanel } from "../features/catalog/CatalogSummaryPanel";
+import { readCatalogLayoutPreferences, useCatalogLayoutPreferences } from "../features/catalog/useCatalogLayoutPreferences";
+import { useCatalogData } from "../features/catalog/useCatalogData";
+import { useCatalogPageState } from "../features/catalog/useCatalogPageState";
+import { useCatalogSelection } from "../features/catalog/useCatalogSelection";
+import { usePriceMonitoringSelectionActions } from "../features/catalog/usePriceMonitoringSelectionActions";
+import { useSourceUrlDiscoveryRun } from "../features/catalog/useSourceUrlDiscoveryRun";
 
 export function CatalogPage() {
   const initialLayoutPreferences = useMemo(() => readCatalogLayoutPreferences(), []);
-  const discoveryPollIntervalRef = useRef<number | null>(null);
-  const filterResetMountedRef = useRef(false);
-  const [persistedState, setPersistedState, resetPersistedState] =
-    usePersistentPageState<CatalogPageState>(CATALOG_STATE_KEY, {
-      ...initialCatalogPageState,
-      pageSize: initialLayoutPreferences.pageSize,
-      visibleColumnIds: initialLayoutPreferences.visibleColumnIds,
-    });
-  const [summary, setSummary] = useState<CatalogSummary | null>(null);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
-  const [summaryReadinessBlock, setSummaryReadinessBlock] = useState<CatalogReadinessBlock | null>(null);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
-
-  const [categoryHierarchy, setCategoryHierarchy] =
-    useState<CatalogCategoryHierarchyResponse | null>(null);
-  const [brandOptions, setBrandOptions] = useState<CatalogBrandOption[]>([]);
-  const [filtersError, setFiltersError] = useState<string | null>(null);
-  const [filtersReadinessBlock, setFiltersReadinessBlock] = useState<CatalogReadinessBlock | null>(null);
-  const [areFiltersLoading, setAreFiltersLoading] = useState(true);
-
-  const [productsResponse, setProductsResponse] = useState<CatalogProductsResponse>({
-    items: [],
-    page: 1,
-    page_size: DEFAULT_PAGE_SIZE,
-    total: 0,
-    filtered_total: 0,
-  });
-  const [productsError, setProductsError] = useState<string | null>(null);
-  const [productsReadinessBlock, setProductsReadinessBlock] = useState<CatalogReadinessBlock | null>(null);
-  const [productsWarningBlock, setProductsWarningBlock] = useState<CatalogReadinessBlock | null>(null);
-  const [areProductsLoading, setAreProductsLoading] = useState(true);
-
-  const [q, setQ] = useState(persistedState.q);
-  const [selectedFamily, setSelectedFamily] = useState(persistedState.selectedFamily);
-  const [selectedCategory, setSelectedCategory] = useState(persistedState.selectedCategory);
-  const [selectedSubCategory, setSelectedSubCategory] = useState(persistedState.selectedSubCategory);
-  const [manufacturer, setManufacturer] = useState(persistedState.manufacturer);
-  const [marketplace, setMarketplace] = useState<MarketplaceFilter>(persistedState.marketplace);
-  const [source, setSource] = useState<PriceMonitoringSource>(persistedState.source);
-  const [showComposite, setShowComposite] = useState(persistedState.showComposite);
-  const [includeIgnored, setIncludeIgnored] = useState(persistedState.includeIgnored);
-  const [sourceUrlsOnly, setSourceUrlsOnly] = useState(persistedState.sourceUrlsOnly === true);
-  const [hasQuantity, setHasQuantity] = useState(persistedState.hasQuantity === true);
-  const [page, setPage] = useState(persistedState.page);
-  const [pageSize, setPageSize] = useState(persistedState.pageSize);
-  const [visibleColumnIds, setVisibleColumnIds] = useState<Set<CatalogColumnId>>(
-    () => new Set(normalizeVisibleColumnIds(persistedState.visibleColumnIds) ?? initialLayoutPreferences.visibleColumnIds),
-  );
-  const [selectedModels, setSelectedModels] = useState<Set<string>>(() => new Set());
+  const catalogState = useCatalogPageState(initialLayoutPreferences);
   const [sourceUrlProduct, setSourceUrlProduct] = useState<CatalogProduct | null>(null);
   const [sourceUrlRefreshToken, setSourceUrlRefreshToken] = useState(0);
 
-  const [previewResult, setPreviewResult] = useState<PriceMonitoringSelectionResult | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const catalogData = useCatalogData({
+    q: catalogState.q,
+    selectedFamily: catalogState.selectedFamily,
+    selectedCategory: catalogState.selectedCategory,
+    selectedSubCategory: catalogState.selectedSubCategory,
+    manufacturer: catalogState.manufacturer,
+    marketplace: catalogState.marketplace,
+    source: catalogState.source,
+    showComposite: catalogState.showComposite,
+    includeIgnored: catalogState.includeIgnored,
+    sourceUrlsOnly: catalogState.sourceUrlsOnly,
+    hasQuantity: catalogState.hasQuantity,
+    page: catalogState.page,
+    pageSize: catalogState.pageSize,
+  });
 
-  const [runResult, setRunResult] = useState<PriceMonitoringSelectionResult | null>(null);
-  const [runError, setRunError] = useState<string | null>(null);
-  const [isRunLoading, setIsRunLoading] = useState(false);
+  const layoutPreferences = useCatalogLayoutPreferences({
+    visibleColumnIds: catalogState.visibleColumnIds,
+    visibleColumnIdsArray: catalogState.visibleColumnIdsArray,
+    setVisibleColumnIds: catalogState.setVisibleColumnIds,
+    pageSize: catalogState.pageSize,
+    setPageSize: catalogState.setPageSize,
+  });
 
-  const [discoveryRunError, setDiscoveryRunError] = useState<string | null>(null);
-  const [discoveryRun, setDiscoveryRun] = useState<SourceUrlAgentRun | null>(null);
-  const [isDiscoveryLaunching, setIsDiscoveryLaunching] = useState(false);
-
-  const isColumnVisible = useCallback(
-    (columnId: CatalogColumnId) => visibleColumnIds.has(columnId),
-    [visibleColumnIds],
-  );
-
-  const loadSummary = useCallback(async (signal?: AbortSignal) => {
-    setIsSummaryLoading(true);
-    try {
-      const nextSummary = await commerceClient.getCatalogSummary(signal);
-      if (signal?.aborted) {
-        return;
-      }
-
-      setSummary(nextSummary);
-      setSummaryError(null);
-      setSummaryReadinessBlock(null);
-    } catch (error) {
-      if (!signal?.aborted) {
-        const readinessBlock = getCatalogReadinessBlock(error);
-        setSummaryReadinessBlock(readinessBlock);
-        setSummaryError(readinessBlock ? null : getCommerceApiErrorMessage(error));
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setIsSummaryLoading(false);
-      }
-    }
-  }, []);
-
-  const loadFilterOptions = useCallback(async (signal?: AbortSignal) => {
-    setAreFiltersLoading(true);
-    const [nextHierarchy, nextBrands] = await Promise.allSettled([
-      commerceClient.getCatalogCategoryHierarchy(signal),
-      commerceClient.listCatalogBrandOptions(signal),
-    ]);
-
-    if (signal?.aborted) {
-      return;
-    }
-
-    const errors: string[] = [];
-    let readinessBlock: CatalogReadinessBlock | null = null;
-    if (nextHierarchy.status === "fulfilled") {
-      setCategoryHierarchy(nextHierarchy.value);
-    } else {
-      setCategoryHierarchy(null);
-      readinessBlock = readinessBlock ?? getCatalogReadinessBlock(nextHierarchy.reason);
-      if (!readinessBlock) {
-        errors.push(getCategoryHierarchyErrorMessage(nextHierarchy.reason));
-      }
-    }
-
-    if (nextBrands.status === "fulfilled") {
-      setBrandOptions(
-        nextBrands.value
-          .filter((option) => option.manufacturer.trim().length > 0)
-          .map((option) => ({
-            manufacturer: option.manufacturer.trim(),
-            count: option.count,
-          })),
-      );
-    } else {
-      setBrandOptions([]);
-      readinessBlock = readinessBlock ?? getCatalogReadinessBlock(nextBrands.reason);
-      if (!readinessBlock) {
-        errors.push(`Could not load manufacturers: ${getCommerceApiErrorMessage(nextBrands.reason)}`);
-      }
-    }
-
-    setFiltersReadinessBlock(readinessBlock);
-    setFiltersError(errors.length > 0 ? errors.join(" ") : null);
-    setAreFiltersLoading(false);
-  }, []);
-
-  const familyOptions = useMemo(
-    () => getFamilyOptions(categoryHierarchy),
-    [categoryHierarchy],
-  );
-
-  const categoryLevelOptions = useMemo(
-    () => getCategoryOptions(categoryHierarchy, selectedFamily),
-    [categoryHierarchy, selectedFamily],
-  );
-
-  const subCategoryOptions = useMemo(
-    () => getSubCategoryOptions(categoryHierarchy, selectedFamily, selectedCategory),
-    [categoryHierarchy, selectedCategory, selectedFamily],
-  );
-
-  const productParams = useMemo<CatalogProductsParams>(
-    () => {
-      const trimmedQ = q.trim();
-      const trimmedManufacturer = manufacturer.trim();
-      const params: CatalogProductsParams = {
-        page,
-        page_size: pageSize,
-        atomic_only: !showComposite,
-        ignored: includeIgnored ? "include" : "exclude",
-        source_name: source,
-      };
-
-      if (sourceUrlsOnly) {
-        params.has_source_url = true;
-      }
-
-      if (hasQuantity) {
-        params.has_quantity = true;
-      }
-
-      if (trimmedQ.length > 0) {
-        params.q = trimmedQ;
-      }
-
-      Object.assign(
-        params,
-        makeHierarchyFilterParams({
-          family: selectedFamily,
-          categoryName: selectedCategory,
-          subCategory: selectedSubCategory,
-        }),
-      );
-
-      if (trimmedManufacturer.length > 0) {
-        params.manufacturer = trimmedManufacturer;
-      }
-
-      if (marketplace !== "all") {
-        params.marketplace = marketplace;
-      }
-
-      return params;
+  const priceMonitoring = usePriceMonitoringSelectionActions();
+  const selection = useCatalogSelection({
+    products: catalogData.productsResponse.items,
+    filters: {
+      q: catalogState.q,
+      selectedFamily: catalogState.selectedFamily,
+      selectedCategory: catalogState.selectedCategory,
+      selectedSubCategory: catalogState.selectedSubCategory,
+      manufacturer: catalogState.manufacturer,
+      marketplace: catalogState.marketplace,
+      source: catalogState.source,
+      showComposite: catalogState.showComposite,
+      includeIgnored: catalogState.includeIgnored,
+      sourceUrlsOnly: catalogState.sourceUrlsOnly,
+      hasQuantity: catalogState.hasQuantity,
     },
-    [
-      hasQuantity,
-      includeIgnored,
-      manufacturer,
-      marketplace,
-      page,
-      pageSize,
-      q,
-      selectedCategory,
-      selectedFamily,
-      selectedSubCategory,
-      showComposite,
-      source,
-      sourceUrlsOnly,
-    ],
-  );
+    pageSize: catalogState.pageSize,
+    setPage: catalogState.setPage,
+    onSelectionScopeChange: priceMonitoring.clearResults,
+  });
 
-  const loadProducts = useCallback(
-    async (signal?: AbortSignal) => {
-      setAreProductsLoading(true);
-      try {
-        const nextProducts = await commerceClient.listCatalogProducts(productParams, signal);
-        if (signal?.aborted) {
-          return;
-        }
-
-        setProductsResponse(nextProducts);
-        setProductsError(null);
-        setProductsReadinessBlock(null);
-        setProductsWarningBlock(
-          nextProducts.items.length === 0 ? getCatalogReadinessWarning(nextProducts.warning) : null,
-        );
-      } catch (error) {
-        if (!signal?.aborted) {
-          const readinessBlock = getCatalogReadinessBlock(error);
-          setProductsReadinessBlock(readinessBlock);
-          setProductsWarningBlock(null);
-          setProductsError(readinessBlock ? null : getCommerceApiErrorMessage(error));
-        }
-      } finally {
-        if (!signal?.aborted) {
-          setAreProductsLoading(false);
-        }
-      }
-    },
-    [productParams],
-  );
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadSummary(controller.signal);
-    void loadFilterOptions(controller.signal);
-    return () => controller.abort();
-  }, [loadFilterOptions, loadSummary]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadProducts(controller.signal);
-    return () => controller.abort();
-  }, [loadProducts]);
-
-  useEffect(
-    () => () => {
-      if (discoveryPollIntervalRef.current !== null) {
-        window.clearInterval(discoveryPollIntervalRef.current);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    writeCatalogLayoutPreferences({
-      visibleColumnIds: CATALOG_COLUMNS.map((column) => column.id).filter((columnId) =>
-        visibleColumnIds.has(columnId),
-      ),
-      pageSize,
-    });
-  }, [pageSize, visibleColumnIds]);
-
-  useEffect(() => {
-    setPersistedState({
-      q,
-      selectedFamily,
-      selectedCategory,
-      selectedSubCategory,
-      manufacturer,
-      marketplace,
-      source,
-      showComposite,
-      includeIgnored,
-      sourceUrlsOnly,
-      hasQuantity,
-      page,
-      pageSize,
-      visibleColumnIds: CATALOG_COLUMNS.map((column) => column.id).filter((columnId) =>
-        visibleColumnIds.has(columnId),
-      ),
-    });
-  }, [
-    hasQuantity,
-    includeIgnored,
-    manufacturer,
-    marketplace,
-    page,
-    pageSize,
-    q,
-    selectedCategory,
-    selectedFamily,
-    selectedSubCategory,
-    setPersistedState,
-    showComposite,
-    sourceUrlsOnly,
-    source,
-    visibleColumnIds,
-  ]);
-
-  useEffect(() => {
-    if (!filterResetMountedRef.current) {
-      filterResetMountedRef.current = true;
-      return;
-    }
-
-    setPage(1);
-    setSelectedModels(new Set());
-    setPreviewResult(null);
-    setRunResult(null);
-  }, [
-    includeIgnored,
-    manufacturer,
-    marketplace,
-    pageSize,
-    q,
-    selectedCategory,
-    selectedFamily,
-    selectedSubCategory,
-    showComposite,
-    sourceUrlsOnly,
-    hasQuantity,
-  ]);
-
-  const eligibleVisibleModels = useMemo(
-    () =>
-      productsResponse.items
-        .filter((product) => getSelectionBlocker(product) === null)
-        .map((product) => normalizeModel(product.model))
-        .filter((model) => model.length > 0),
-    [productsResponse.items],
-  );
-
-  const selectedVisibleCount = eligibleVisibleModels.filter((model) =>
-    selectedModels.has(model),
-  ).length;
-  const allVisibleSelected =
-    eligibleVisibleModels.length > 0 && selectedVisibleCount === eligibleVisibleModels.length;
-
-  const toggleModel = (model: string) => {
-    const normalizedModel = normalizeModel(model);
-    if (normalizedModel.length === 0) {
-      return;
-    }
-
-    setSelectedModels((current) => {
-      const next = new Set(current);
-      if (next.has(normalizedModel)) {
-        next.delete(normalizedModel);
-      } else {
-        next.add(normalizedModel);
-      }
-
-      return next;
-    });
-  };
-
-  const toggleAllVisible = () => {
-    setSelectedModels((current) => {
-      const next = new Set(current);
-      if (allVisibleSelected) {
-        eligibleVisibleModels.forEach((model) => next.delete(model));
-      } else {
-        eligibleVisibleModels.forEach((model) => next.add(model));
-      }
-
-      return next;
-    });
-  };
-
-  const toggleColumn = (columnId: CatalogColumnId) => {
-    if (REQUIRED_CATALOG_COLUMNS.includes(columnId)) {
-      return;
-    }
-
-    setVisibleColumnIds((currentColumns) => {
-      const nextColumns = new Set(currentColumns);
-      if (nextColumns.has(columnId)) {
-        nextColumns.delete(columnId);
-      } else {
-        nextColumns.add(columnId);
-      }
-
-      REQUIRED_CATALOG_COLUMNS.forEach((requiredColumn) => nextColumns.add(requiredColumn));
-      return nextColumns;
-    });
-  };
-
-  const resetColumns = () => {
-    setVisibleColumnIds(new Set(DEFAULT_VISIBLE_CATALOG_COLUMNS));
-    setPageSize(DEFAULT_PAGE_SIZE);
-  };
+  const sourceUrlDiscovery = useSourceUrlDiscoveryRun({
+    source: catalogState.source,
+    previewResult: priceMonitoring.previewResult,
+    previewForDiscovery: () =>
+      priceMonitoring.previewForDiscovery(selection.buildSelectionBody(catalogState.source, true)),
+  });
 
   const resetSavedCatalogState = () => {
-    resetPersistedState();
-    setQ(initialCatalogPageState.q);
-    setSelectedFamily(initialCatalogPageState.selectedFamily);
-    setSelectedCategory(initialCatalogPageState.selectedCategory);
-    setSelectedSubCategory(initialCatalogPageState.selectedSubCategory);
-    setManufacturer(initialCatalogPageState.manufacturer);
-    setMarketplace(initialCatalogPageState.marketplace);
-    setSource(initialCatalogPageState.source);
-    setShowComposite(initialCatalogPageState.showComposite);
-    setIncludeIgnored(initialCatalogPageState.includeIgnored);
-    setSourceUrlsOnly(initialCatalogPageState.sourceUrlsOnly);
-    setHasQuantity(initialCatalogPageState.hasQuantity);
-    setPage(initialCatalogPageState.page);
-    setPageSize(initialCatalogPageState.pageSize);
-    setVisibleColumnIds(new Set(initialCatalogPageState.visibleColumnIds));
-    setSelectedModels(new Set());
+    catalogState.resetCatalogState();
+    selection.setSelectedModels(new Set());
     setSourceUrlProduct(null);
-    setPreviewResult(null);
-    setRunResult(null);
-    setDiscoveryRunError(null);
+    priceMonitoring.setPreviewResult(null);
+    priceMonitoring.setRunResult(null);
+    sourceUrlDiscovery.setDiscoveryRunError(null);
   };
 
-  const buildSelectionBody = (dryRun: boolean) =>
-    makeSelectionBody(
-      source,
-      selectedModels,
-      {
-        q,
-        family: selectedFamily,
-        categoryName: selectedCategory,
-        subCategory: selectedSubCategory,
-        manufacturer,
-        marketplace,
-        includeIgnored,
-      },
-      dryRun,
-    );
-
-  const previewSelection = async () => {
-    setIsPreviewLoading(true);
-    setPreviewError(null);
-    setPreviewResult(null);
-    try {
-      const result = await commerceClient.previewPriceMonitoringSelection(buildSelectionBody(true));
-      setPreviewResult(result);
-    } catch (error) {
-      setPreviewError(getCommerceApiErrorMessage(error));
-    } finally {
-      setIsPreviewLoading(false);
-    }
+  const refreshCatalog = () => {
+    void catalogData.loadSummary();
+    void catalogData.loadFilterOptions();
+    void catalogData.loadProducts();
   };
-
-  const createRun = async () => {
-    setIsRunLoading(true);
-    setRunError(null);
-    setRunResult(null);
-    try {
-      const result = await commerceClient.createPriceMonitoringRun(buildSelectionBody(false));
-      setRunResult(result);
-    } catch (error) {
-      setRunError(getCommerceApiErrorMessage(error));
-    } finally {
-      setIsRunLoading(false);
-    }
-  };
-
-  const stopDiscoveryPolling = () => {
-    if (discoveryPollIntervalRef.current !== null) {
-      window.clearInterval(discoveryPollIntervalRef.current);
-      discoveryPollIntervalRef.current = null;
-    }
-  };
-
-  const pollDiscoveryRun = (runId: string) => {
-    stopDiscoveryPolling();
-    const refresh = () => {
-      commerceClient
-        .getSourceUrlAgentRun(runId)
-        .then((nextRun) => {
-          setDiscoveryRun(nextRun);
-          if (!isActiveSourceUrlAgentRun(nextRun)) {
-            stopDiscoveryPolling();
-          }
-        })
-        .catch((error) => {
-          setDiscoveryRunError(getCommerceApiErrorMessage(error));
-          stopDiscoveryPolling();
-        });
-    };
-
-    refresh();
-    discoveryPollIntervalRef.current = window.setInterval(refresh, 2_500);
-  };
-
-  const createVendorSourceDiscoveryRun = async () => {
-    let result = previewResult;
-    if (!result) {
-      setIsPreviewLoading(true);
-      setPreviewError(null);
-      try {
-        result = await commerceClient.previewPriceMonitoringSelection(buildSelectionBody(true));
-        setPreviewResult(result);
-      } catch (error) {
-        setPreviewError(getCommerceApiErrorMessage(error));
-        return;
-      } finally {
-        setIsPreviewLoading(false);
-      }
-    }
-
-    const missingModels = getSkippedMissingSourceUrlModels(result);
-    if (missingModels.length === 0) {
-      setDiscoveryRunError("No skipped products with missing active source URLs were found in the selection preview.");
-      return;
-    }
-
-    setDiscoveryRunError(null);
-    setIsDiscoveryLaunching(true);
-    stopDiscoveryPolling();
-    try {
-      const request: SourceUrlAgentRunRequest = {
-        mode: "catalog",
-        source,
-        selected_models: missingModels,
-        missing_only: true,
-        active_only: true,
-        dry_run: true,
-        apply_high_confidence: false,
-        limit: missingModels.length,
-        max_products_per_batch: missingModels.length,
-        rate_limit_seconds: 2,
-      };
-      const createdRun = await commerceClient.createSourceUrlAgentRun(request);
-      setDiscoveryRun(createdRun);
-      const runId = getSourceUrlAgentRunId(createdRun);
-      if (runId && isActiveSourceUrlAgentRun(createdRun)) {
-        pollDiscoveryRun(runId);
-      }
-    } catch (error) {
-      setDiscoveryRunError(getCommerceApiErrorMessage(error));
-    } finally {
-      setIsDiscoveryLaunching(false);
-    }
-  };
-
-  const missingSourceUrlModelCount = getSkippedMissingSourceUrlModels(previewResult).length;
-  const isDiscoveryPolling = isActiveSourceUrlAgentRun(discoveryRun);
-  const discoveryRunId = getSourceUrlAgentRunId(discoveryRun);
-
-  const getDiscoveryReviewLink = () => {
-    if (!discoveryRunId) {
-      return "/find-source/candidates";
-    }
-
-    const params = new URLSearchParams({
-      run_id: discoveryRunId,
-    });
-    return `/find-source/candidates?${params.toString()}`;
-  };
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(productsResponse.filtered_total / productsResponse.page_size),
-  );
-  const catalogReadinessBlock =
-    productsReadinessBlock ?? productsWarningBlock ?? summaryReadinessBlock ?? filtersReadinessBlock;
-  const isCatalogLocked = catalogReadinessBlock !== null;
 
   return (
     <div className="page-stack catalog-page">
-      <section className="page-header">
-        <p className="eyebrow">Catalog</p>
-        <h2>Commerce catalog</h2>
-        <p>Commerce API base URL: {commerceClient.commerceApiBaseUrl}</p>
-        <button className="text-button" type="button" onClick={resetSavedCatalogState}>
-          Reset saved Catalog state
-        </button>
-      </section>
+      <CatalogHeader
+        commerceApiBaseUrl={commerceClient.commerceApiBaseUrl}
+        onReset={resetSavedCatalogState}
+      />
 
-      {catalogReadinessBlock ? (
+      {catalogData.catalogReadinessBlock ? (
         <CatalogReadinessBanner
-          block={catalogReadinessBlock}
-          onRetry={() => {
-            void loadSummary();
-            void loadFilterOptions();
-            void loadProducts();
-          }}
+          block={catalogData.catalogReadinessBlock}
+          onRetry={refreshCatalog}
         />
       ) : null}
 
-      <section className="panel">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Summary</p>
-            <h3>Catalog health</h3>
-          </div>
-          <button className="button secondary" type="button" onClick={() => void loadSummary()}>
-            Refresh
-          </button>
-        </div>
-        {isSummaryLoading ? <LoadingState label="Loading catalog summary..." /> : null}
-        {summaryError ? (
-          <>
-            <ErrorState message={summaryError} onRetry={() => void loadSummary()} />
-            <CatalogSetupHint />
-          </>
-        ) : null}
-        {!isSummaryLoading && !summaryError && !summaryReadinessBlock ? (
-          <dl className="summary-grid catalog-summary-grid">
-            <SummaryCard label="Total products" value={getSummaryNumber(summary, ["total_products", "total"])} />
-            <SummaryCard label="Active products" value={getSummaryNumber(summary, ["active_products", "active"])} />
-            <SummaryCard label="Atomic products" value={getSummaryNumber(summary, ["atomic_products", "atomic"])} />
-            <SummaryCard
-              label="Composite/invalid"
-              value={getSummaryNumber(summary, [
-                "composite_or_invalid_models",
-                "composite_invalid_models",
-                "composite_products",
-                "non_atomic_products",
-              ])}
-            />
-            <SummaryCard
-              label="BestPrice products"
-              value={getSummaryNumber(summary, ["bestprice_products", "bestprice"])}
-            />
-            <SummaryCard
-              label="Skroutz products"
-              value={getSummaryNumber(summary, ["skroutz_products", "skroutz"])}
-            />
-            <SummaryCard
-              label="Missing MPN"
-              value={getSummaryNumber(summary, ["missing_mpn", "missing_mpn_products"])}
-            />
-          </dl>
-        ) : null}
-      </section>
+      <CatalogSummaryPanel
+        summary={catalogData.summary}
+        isLoading={catalogData.isSummaryLoading}
+        error={catalogData.summaryError}
+        hasReadinessBlock={catalogData.summaryReadinessBlock !== null}
+        onRefresh={() => void catalogData.loadSummary()}
+      />
 
       <SourceUrlImportPanel
-        disabled={isCatalogLocked}
+        disabled={catalogData.isCatalogLocked}
         onApplied={() => {
           setSourceUrlRefreshToken((value) => value + 1);
         }}
@@ -1238,473 +128,99 @@ export function CatalogPage() {
             <p className="eyebrow">Filters</p>
             <h3>Catalog products</h3>
           </div>
-          <button className="button secondary" type="button" onClick={() => void loadProducts()}>
+          <button className="button secondary" type="button" onClick={() => void catalogData.loadProducts()}>
             Refresh
           </button>
         </div>
 
-        {areFiltersLoading ? <p className="muted">Loading categories and brands...</p> : null}
-        {filtersError ? (
-          <ErrorState message={filtersError} onRetry={() => void loadFilterOptions()} />
+        {catalogData.areFiltersLoading ? <p className="muted">Loading categories and brands...</p> : null}
+        {catalogData.filtersError ? (
+          <ErrorState message={catalogData.filtersError} onRetry={() => void catalogData.loadFilterOptions()} />
         ) : null}
 
-        <div className="filter-grid">
-          <label>
-            Search
-            <input
-              type="search"
-              value={q}
-              onChange={(event) => setQ(event.target.value)}
-              placeholder="Model, MPN, or name"
-            />
-          </label>
+        <CatalogFiltersPanel
+          q={catalogState.q}
+          setQ={catalogState.setQ}
+          selectedFamily={catalogState.selectedFamily}
+          setSelectedFamily={catalogState.setSelectedFamily}
+          selectedCategory={catalogState.selectedCategory}
+          setSelectedCategory={catalogState.setSelectedCategory}
+          selectedSubCategory={catalogState.selectedSubCategory}
+          setSelectedSubCategory={catalogState.setSelectedSubCategory}
+          manufacturer={catalogState.manufacturer}
+          setManufacturer={catalogState.setManufacturer}
+          marketplace={catalogState.marketplace}
+          setMarketplace={catalogState.setMarketplace}
+          source={catalogState.source}
+          setSource={catalogState.setSource}
+          pageSize={catalogState.pageSize}
+          setPageSize={catalogState.setPageSize}
+          sourceUrlsOnly={catalogState.sourceUrlsOnly}
+          setSourceUrlsOnly={catalogState.setSourceUrlsOnly}
+          hasQuantity={catalogState.hasQuantity}
+          setHasQuantity={catalogState.setHasQuantity}
+          includeIgnored={catalogState.includeIgnored}
+          setIncludeIgnored={catalogState.setIncludeIgnored}
+          showComposite={catalogState.showComposite}
+          setShowComposite={catalogState.setShowComposite}
+          familyOptions={catalogData.familyOptions}
+          categoryLevelOptions={catalogData.categoryLevelOptions}
+          subCategoryOptions={catalogData.subCategoryOptions}
+          brandOptions={catalogData.brandOptions}
+        />
 
-          <label>
-            Family
-            <select
-              value={selectedFamily}
-              onChange={(event) => {
-                setSelectedFamily(event.target.value);
-                setSelectedCategory("");
-                setSelectedSubCategory("");
-              }}
-            >
-              <option value="">All families</option>
-              {familyOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {formatHierarchyOptionLabel(item)}
-                </option>
-              ))}
-            </select>
-          </label>
+        <CatalogColumnControls
+          visibleColumnIds={catalogState.visibleColumnIds}
+          onToggleColumn={layoutPreferences.toggleColumn}
+          onResetColumns={layoutPreferences.resetColumns}
+        />
 
-          <label>
-            Category
-            <select
-              value={selectedCategory}
-              onChange={(event) => {
-                setSelectedCategory(event.target.value);
-                setSelectedSubCategory("");
-              }}
-              disabled={!selectedFamily}
-            >
-              <option value="">All categories</option>
-              {categoryLevelOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {formatHierarchyOptionLabel(item)}
-                </option>
-              ))}
-            </select>
-          </label>
+        <CatalogActionsPanel
+          filteredTotal={catalogData.productsResponse.filtered_total}
+          selectedCount={selection.selectedModels.size}
+          previewResult={priceMonitoring.previewResult}
+          previewError={priceMonitoring.previewError}
+          isPreviewLoading={priceMonitoring.isPreviewLoading}
+          runResult={priceMonitoring.runResult}
+          runError={priceMonitoring.runError}
+          isRunLoading={priceMonitoring.isRunLoading}
+          discoveryRun={sourceUrlDiscovery.discoveryRun}
+          discoveryRunError={sourceUrlDiscovery.discoveryRunError}
+          discoveryRunId={sourceUrlDiscovery.discoveryRunId}
+          discoveryReviewLink={sourceUrlDiscovery.discoveryReviewLink}
+          isDiscoveryLaunching={sourceUrlDiscovery.isDiscoveryLaunching}
+          isDiscoveryPolling={sourceUrlDiscovery.isDiscoveryPolling}
+          missingSourceUrlModelCount={sourceUrlDiscovery.missingSourceUrlModelCount}
+          isCatalogLocked={catalogData.isCatalogLocked}
+          onPreview={() => void priceMonitoring.previewSelection(selection.buildSelectionBody(catalogState.source, true))}
+          onCreateRun={() => void priceMonitoring.createRun(selection.buildSelectionBody(catalogState.source, false))}
+          onFindMore={() => void sourceUrlDiscovery.createVendorSourceDiscoveryRun()}
+        />
 
-          <label>
-            Sub-Category
-            <select
-              value={selectedSubCategory}
-              onChange={(event) => setSelectedSubCategory(event.target.value)}
-              disabled={!selectedFamily || !selectedCategory}
-            >
-              <option value="">All sub-categories</option>
-              {subCategoryOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {formatHierarchyOptionLabel(item)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Manufacturer
-            <select value={manufacturer} onChange={(event) => setManufacturer(event.target.value.trim())}>
-              <option value="">All manufacturers</option>
-              {brandOptions.map((item) => (
-                <option key={item.manufacturer} value={item.manufacturer}>
-                  {item.manufacturer}
-                  {formatOptionCount(item.count)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Marketplace
-            <select
-              value={marketplace}
-              onChange={(event) => setMarketplace(event.target.value as MarketplaceFilter)}
-            >
-              <option value="all">All</option>
-              <option value="bestprice">BestPrice</option>
-              <option value="skroutz">Skroutz</option>
-              <option value="both">Both</option>
-              <option value="none">None</option>
-            </select>
-          </label>
-
-          <label title="Marketplace monitoring source. Direct vendor source URL capture uses Vendor Sources.">
-            Marketplace source (BestPrice / Skroutz)
-            <select
-              value={source}
-              onChange={(event) => setSource(event.target.value as PriceMonitoringSource)}
-            >
-              <option value="bestprice">BestPrice</option>
-              <option value="skroutz">Skroutz</option>
-            </select>
-          </label>
-
-          <label>
-            Page size
-            <select
-              value={pageSize}
-              onChange={(event) => setPageSize(Number(event.target.value))}
-            >
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-              <option value={200}>200</option>
-            </select>
-          </label>
-
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={sourceUrlsOnly}
-              onChange={(event) => setSourceUrlsOnly(event.target.checked)}
-            />
-            Source URLs
-          </label>
-
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={hasQuantity}
-              onChange={(event) => setHasQuantity(event.target.checked)}
-            />
-            Has quantity
-          </label>
-
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={includeIgnored}
-              onChange={(event) => setIncludeIgnored(event.target.checked)}
-            />
-            Include ignored
-          </label>
-
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={showComposite}
-              onChange={(event) => setShowComposite(event.target.checked)}
-            />
-            Show composite models
-          </label>
-        </div>
-
-        <p className="muted">
-          Family, Category, and Sub-Category use backend-native hierarchy filters. Raw OpenCart
-          category data is available in each product row for debugging.
-        </p>
-
-        <details className="column-controls">
-          <summary>Columns</summary>
-          <div className="column-controls-panel">
-            {CATALOG_COLUMNS.map((column) => (
-              <label className="checkbox-row" key={column.id}>
-                <input
-                  type="checkbox"
-                  checked={visibleColumnIds.has(column.id)}
-                  disabled={column.required}
-                  onChange={() => toggleColumn(column.id)}
-                />
-                {column.label}
-                {column.required ? <span className="muted">required</span> : null}
-              </label>
-            ))}
-            <button className="button secondary inline-button" type="button" onClick={resetColumns}>
-              Reset columns
-            </button>
-          </div>
-        </details>
-
-        <div className="toolbar">
-          <p className="muted">
-            {productsResponse.filtered_total.toLocaleString()} matching products.
-            {selectedModels.size > 0 ? ` ${selectedModels.size} selected.` : " No products selected."}
-            {" "}Selection clears when filters change.
-          </p>
-          <div className="button-row">
-            <button
-              className="button secondary"
-              type="button"
-              onClick={() => void previewSelection()}
-              disabled={isPreviewLoading || isRunLoading || isCatalogLocked}
-            >
-              {isPreviewLoading ? "Previewing..." : "Preview"}
-            </button>
-            <button
-              className="button primary"
-              type="button"
-              onClick={() => void createRun()}
-              disabled={isRunLoading || isPreviewLoading || isCatalogLocked}
-            >
-              {isRunLoading ? "Creating..." : "Create run"}
-            </button>
-            <button
-              className="button secondary"
-              type="button"
-              onClick={() => void createVendorSourceDiscoveryRun()}
-              disabled={
-                isRunLoading ||
-                isPreviewLoading ||
-                isDiscoveryLaunching ||
-                isDiscoveryPolling ||
-                isCatalogLocked
-              }
-              title={
-                previewResult
-                  ? `Find source URLs for ${missingSourceUrlModelCount.toLocaleString()} skipped products missing active source URLs.`
-                  : "Preview the selection, then find source URLs for skipped products missing active source URLs."
-              }
-            >
-              {isDiscoveryLaunching || isDiscoveryPolling ? "Finding..." : "Find more"}
-            </button>
-          </div>
-        </div>
-
-        {previewError ? <ErrorState message={previewError} /> : null}
-        {previewResult ? (
-          <div className="state-block">
-            <strong>Selection preview</strong>
-            <ResultSummary result={previewResult} />
-          </div>
-        ) : null}
-
-        {runError ? <ErrorState message={runError} /> : null}
-        {runResult ? (
-          <div className="state-block">
-            <strong>Price monitoring run</strong>
-            <ResultSummary result={runResult} />
-          </div>
-        ) : null}
-
-        {discoveryRunError ? <ErrorState message={discoveryRunError} /> : null}
-        {discoveryRun ? (
-          <div className="state-block">
-            <strong>Find more</strong>
-            <dl className="summary-grid">
-              <SummaryText label="Run ID" value={discoveryRunId} />
-              <SummaryText label="Status" value={discoveryRun.status} />
-              <SummaryText label="Selected" value={getSourceUrlAgentRunCount(discoveryRun, "selected_count")} />
-              <SummaryText label="Candidates" value={getSourceUrlAgentRunCount(discoveryRun, "candidate_count")} />
-              <SummaryText label="Needs review" value={getSourceUrlAgentRunCount(discoveryRun, "needs_review_count")} />
-              <SummaryText label="Task progress" value={getSourceUrlAgentTaskProgress(discoveryRun)} />
-            </dl>
-            <p className="button-row">
-              <Link className="button secondary" to="/vendor-sources/runs">
-                View runs
-              </Link>
-              <Link className="button secondary" to={getDiscoveryReviewLink()}>
-                Review candidates
-              </Link>
-            </p>
-          </div>
-        ) : null}
-        {areProductsLoading ? <LoadingState label="Loading catalog products..." /> : null}
-        {productsError ? (
-          <>
-            <ErrorState message={productsError} onRetry={() => void loadProducts()} />
-            <CatalogSetupHint />
-          </>
-        ) : null}
-        {!areProductsLoading && !productsError && !productsReadinessBlock && productsResponse.items.length === 0 ? (
-          <EmptyState
-            title={productsWarningBlock ? "Catalog database/import required" : "No products found"}
-            message={
-              productsWarningBlock
-                ? CATALOG_READINESS_REQUIRED_MESSAGE
-                : "Try broadening the current filters."
-            }
-          />
-        ) : null}
-        {!areProductsLoading && !productsError && productsResponse.items.length > 0 ? (
-          <>
-            <div className="table-wrap catalog-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    {isColumnVisible("select") ? (
-                      <th>
-                        <input
-                          type="checkbox"
-                          aria-label="Select all visible eligible products"
-                          checked={allVisibleSelected}
-                          disabled={eligibleVisibleModels.length === 0}
-                          onChange={toggleAllVisible}
-                        />
-                      </th>
-                    ) : null}
-                    {isColumnVisible("model") ? <th>Model</th> : null}
-                    {isColumnVisible("name") ? <th>Name</th> : null}
-                    {isColumnVisible("manufacturer") ? <th>Manufacturer</th> : null}
-                    {isColumnVisible("family") ? <th>Family</th> : null}
-                    {isColumnVisible("category_name") ? <th>Category</th> : null}
-                    {isColumnVisible("sub_category") ? <th>Sub-Category</th> : null}
-                    {isColumnVisible("mpn") ? <th>MPN</th> : null}
-                    {isColumnVisible("price") ? <th>Price</th> : null}
-                    {isColumnVisible("quantity") ? <th>Qty</th> : null}
-                    {isColumnVisible("bestprice_status") ? <th>BestPrice</th> : null}
-                    {isColumnVisible("skroutz_status") ? <th>Skroutz</th> : null}
-                    {isColumnVisible("ignored") ? <th>Ignored</th> : null}
-                    {isColumnVisible("status") ? <th>Status</th> : null}
-                    {isColumnVisible("automation_eligible") ? <th>Automation</th> : null}
-                    {isColumnVisible("is_atomic_model") ? <th>Atomic</th> : null}
-                    {isColumnVisible("category_levels") ? <th>Category levels</th> : null}
-                    {isColumnVisible("raw_category") ? <th>Raw category</th> : null}
-                    {isColumnVisible("warnings") ? <th>Warnings / eligibility</th> : null}
-                    <th>Source URLs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productsResponse.items.map((product) => {
-                    const model = normalizeModel(product.model);
-                    const selectionBlocker = getSelectionBlocker(product);
-                    const sourceUrlEligibility = getSourceUrlEligibility(product);
-                    const isSelected = selectedModels.has(model);
-                    const warnings = Array.isArray(product.warnings) ? product.warnings : [];
-                    const rawCategory = product.raw_category ?? product.category ?? "";
-                    const categoryLevels = Array.isArray(product.category_levels)
-                      ? product.category_levels.join(" > ")
-                      : "";
-
-                    return (
-                      <tr key={model}>
-                        {isColumnVisible("select") ? (
-                          <td>
-                            <input
-                              type="checkbox"
-                              aria-label={`Select ${model}`}
-                              checked={isSelected}
-                              disabled={selectionBlocker !== null}
-                              onChange={() => toggleModel(model)}
-                            />
-                          </td>
-                        ) : null}
-                        {isColumnVisible("model") ? <td className="nowrap-cell">{model}</td> : null}
-                        {isColumnVisible("name") ? <td>{formatValue(product.name)}</td> : null}
-                        {isColumnVisible("manufacturer") ? <td>{formatValue(product.manufacturer)}</td> : null}
-                        {isColumnVisible("family") ? <td>{formatValue(product.family)}</td> : null}
-                        {isColumnVisible("category_name") ? <td>{formatValue(product.category_name)}</td> : null}
-                        {isColumnVisible("sub_category") ? <td>{formatValue(product.sub_category)}</td> : null}
-                        {isColumnVisible("mpn") ? <td>{formatValue(product.mpn)}</td> : null}
-                        {isColumnVisible("price") ? (
-                          <td className="nowrap-cell">{formatMoney(product.price)}</td>
-                        ) : null}
-                        {isColumnVisible("quantity") ? <td>{formatValue(product.quantity)}</td> : null}
-                        {isColumnVisible("bestprice_status") ? (
-                          <td>
-                            <span className="status-badge neutral">
-                              {getMarketplaceStatus(product.bestprice_status)}
-                            </span>
-                          </td>
-                        ) : null}
-                        {isColumnVisible("skroutz_status") ? (
-                          <td>
-                            <span className="status-badge neutral">
-                              {getMarketplaceStatus(product.skroutz_status)}
-                            </span>
-                          </td>
-                        ) : null}
-                        {isColumnVisible("ignored") ? <td>{product.ignored ? "yes" : "no"}</td> : null}
-                        {isColumnVisible("status") ? <td>{formatValue(product.status)}</td> : null}
-                        {isColumnVisible("automation_eligible") ? (
-                          <td>
-                            {typeof product.automation_eligible === "boolean"
-                              ? product.automation_eligible
-                                ? "yes"
-                                : "no"
-                              : "-"}
-                          </td>
-                        ) : null}
-                        {isColumnVisible("is_atomic_model") ? (
-                          <td>
-                            {typeof product.is_atomic_model === "boolean"
-                              ? product.is_atomic_model
-                                ? "yes"
-                                : "no"
-                              : "-"}
-                          </td>
-                        ) : null}
-                        {isColumnVisible("category_levels") ? (
-                          <td className="compact-debug-cell">{formatValue(categoryLevels)}</td>
-                        ) : null}
-                        {isColumnVisible("raw_category") ? (
-                          <td>
-                            <details className="raw-category-detail">
-                              <summary>Raw</summary>
-                              <span>{formatValue(rawCategory)}</span>
-                            </details>
-                          </td>
-                        ) : null}
-                        {isColumnVisible("warnings") ? (
-                          <td>
-                            <div className="eligibility-cell">
-                              <span className={`status-badge ${sourceUrlEligibility.className}`}>
-                                {sourceUrlEligibility.label}
-                              </span>
-                              {selectionBlocker && selectionBlocker !== sourceUrlEligibility.blocker ? (
-                                <span className="status-badge queued">{selectionBlocker}</span>
-                              ) : null}
-                              {warnings.length > 0 ? (
-                                <span className="muted">{warnings.join(", ")}</span>
-                              ) : null}
-                            </div>
-                          </td>
-                        ) : null}
-                        <td>
-                          <button
-                            className="button secondary compact-button"
-                            type="button"
-                            onClick={() => setSourceUrlProduct(product)}
-                            disabled={isCatalogLocked}
-                            aria-label={`Source URLs for ${model}`}
-                          >
-                            Source URLs
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="pagination-row">
-              <button
-                className="button secondary"
-                type="button"
-                disabled={page <= 1 || areProductsLoading}
-                onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
-              >
-                Previous
-              </button>
-              <span className="muted">
-                Page {productsResponse.page} of {totalPages}
-              </span>
-              <button
-                className="button secondary"
-                type="button"
-                disabled={page >= totalPages || areProductsLoading}
-                onClick={() => setPage((currentPage) => currentPage + 1)}
-              >
-                Next
-              </button>
-            </div>
-          </>
-        ) : null}
+        <CatalogProductsPanel
+          productsResponse={catalogData.productsResponse}
+          productsError={catalogData.productsError}
+          productsReadinessBlock={catalogData.productsReadinessBlock}
+          productsWarningBlock={catalogData.productsWarningBlock}
+          areProductsLoading={catalogData.areProductsLoading}
+          selectedModels={selection.selectedModels}
+          eligibleVisibleModels={selection.eligibleVisibleModels}
+          allVisibleSelected={selection.allVisibleSelected}
+          isColumnVisible={layoutPreferences.isColumnVisible}
+          isCatalogLocked={catalogData.isCatalogLocked}
+          totalPages={catalogData.totalPages}
+          onLoadProducts={() => void catalogData.loadProducts()}
+          onToggleAllVisible={selection.toggleAllVisible}
+          onToggleModel={selection.toggleModel}
+          onOpenSourceUrls={setSourceUrlProduct}
+          onPreviousPage={() => catalogState.setPage((currentPage) => Math.max(1, currentPage - 1))}
+          onNextPage={() => catalogState.setPage((currentPage) => currentPage + 1)}
+        />
       </section>
+
       <CatalogSourceUrlManager
         product={sourceUrlProduct}
-        disabled={isCatalogLocked}
+        disabled={catalogData.isCatalogLocked}
         refreshToken={sourceUrlRefreshToken}
         onClose={() => setSourceUrlProduct(null)}
       />
