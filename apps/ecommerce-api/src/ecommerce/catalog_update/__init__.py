@@ -6,6 +6,7 @@ from ecommerce.catalog_update.service import (
     CatalogUpdateConfigError,
     CatalogUpdateError,
     run_catalog_update,
+    run_catalog_update_durable_job,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "CatalogUpdateConfigError",
     "CatalogUpdateError",
     "run_catalog_update",
+    "run_catalog_update_durable_job",
 ]

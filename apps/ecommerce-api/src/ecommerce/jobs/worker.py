@@ -39,7 +39,7 @@ def build_default_registry() -> DurableJobRegistry:
     registry = DurableJobRegistry()
     registry.register(
         CATALOG_UPDATE_JOB_TYPE,
-        lambda job_id, _payload: catalog_update_service.run_catalog_update(job_id),
+        lambda job_id, _payload: catalog_update_service.run_catalog_update_durable_job(job_id),
     )
     return registry
 

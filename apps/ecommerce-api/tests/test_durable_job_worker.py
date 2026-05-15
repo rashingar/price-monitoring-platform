@@ -10,7 +10,7 @@ from ecommerce.catalog_update import service as catalog_update_service  # noqa: 
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.repositories.jobs import create_queued_job, mark_running, request_cancel  # noqa: E402
+from ecommerce.db.repositories.jobs import create_queued_job, mark_running, record_progress, request_cancel  # noqa: E402
 from ecommerce.jobs.durable import DurableJobRegistry  # noqa: E402
 from ecommerce.jobs.worker import build_default_registry, run_worker_iteration  # noqa: E402
 
@@ -37,7 +37,7 @@ def test_worker_picks_queued_job_and_runs_registered_catalog_handler(tmp_path: P
         seen_job_ids.append(job_id)
         return {"job_id": job_id, "ingest": {"imported": 3}}
 
-    monkeypatch.setattr(catalog_update_service, "run_catalog_update", fake_catalog_update)
+    monkeypatch.setattr(catalog_update_service, "run_catalog_update_durable_job", fake_catalog_update)
     with session_scope(database_url) as session:
         create_queued_job(session, job_type=CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-1")
 
@@ -114,6 +114,36 @@ def test_worker_marks_stale_running_jobs_failed(tmp_path: Path) -> None:
     assert result.stale_failed == 1
     assert job.status == "failed"
     assert "Marked failed by Ecommerce durable job worker" in str(job.error_message)
+
+
+def test_worker_does_not_fail_catalog_update_with_recent_progress(tmp_path: Path) -> None:
+    database_url = _database_url(tmp_path)
+    _create_schema(database_url)
+    registry = DurableJobRegistry()
+    registry.register(CATALOG_UPDATE_JOB_TYPE, lambda _job_id, _payload: {"ok": True})
+    now = datetime.now(timezone.utc)
+
+    with session_scope(database_url) as session:
+        create_queued_job(session, job_type=CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-active")
+        mark_running(session, "job-active", started_at=now - timedelta(minutes=90))
+        record_progress(session, "job-active", step="wait_for_download", progress_at=now - timedelta(minutes=1))
+
+    result = run_worker_iteration(
+        registry=registry,
+        database_url=database_url,
+        stale_running_after_minutes=60,
+        now=now,
+    )
+
+    job = _job(database_url, "job-active")
+    assert result.stale_failed == 0
+    assert job.status == "running"
+    assert job.result_json == {
+        "progress": {
+            "current_step": "wait_for_download",
+            "updated_at": (now - timedelta(minutes=1)).isoformat(),
+        }
+    }
 
 
 def test_worker_persists_failed_handler_as_failed(tmp_path: Path) -> None:

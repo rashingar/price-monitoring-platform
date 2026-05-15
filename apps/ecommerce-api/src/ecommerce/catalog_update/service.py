@@ -9,10 +9,11 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlparse, urlunparse
 
 from sqlalchemy import delete, select, update
@@ -22,6 +23,7 @@ from ecommerce.db.config import get_database_url, sanitize_database_error
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryTask
+from ecommerce.db.repositories.jobs import record_progress
 from ecommerce.db.session import session_scope
 from ecommerce.env import load_local_env_if_present
 from ecommerce.jobs.ingest_catalog import ingest_catalog_file
@@ -47,6 +49,7 @@ CATALOG_UPDATE_STEPS = (
     "ingest_catalog",
     "purge_exclusions",
 )
+CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS = 30
 SENSITIVE_QUERY_KEYS = {
     "access_token",
     "auth",
@@ -77,14 +80,59 @@ class CatalogUpdateConfigError(CatalogUpdateError):
     """Raised when required OpenCart export configuration is missing."""
 
 
+CatalogUpdateProgressCallback = Callable[[str], None]
+
+
 @dataclass
 class CatalogUpdateStepTracker:
     current_step: str = "config_loaded"
+    progress_callback: CatalogUpdateProgressCallback | None = None
 
     def mark(self, step: str) -> None:
         if step not in CATALOG_UPDATE_STEPS:
             raise ValueError(f"Unsupported catalog update step: {step}")
         self.current_step = step
+        if self.progress_callback is not None:
+            self.progress_callback(step)
+
+
+class CatalogUpdateJobProgressReporter:
+    def __init__(self, job_id: str, *, heartbeat_interval_seconds: float = CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS) -> None:
+        self._job_id = job_id
+        self._heartbeat_interval_seconds = max(1.0, float(heartbeat_interval_seconds))
+        self._current_step = "config_loaded"
+        self._stop_event = threading.Event()
+        self._lock = threading.Lock()
+        self._thread: threading.Thread | None = None
+
+    def __enter__(self) -> CatalogUpdateJobProgressReporter:
+        self.report(self._current_step)
+        self._thread = threading.Thread(target=self._heartbeat_loop, name=f"catalog-update-heartbeat-{self._job_id}", daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, _exc_type: object, _exc: object, _traceback: object) -> None:
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2)
+
+    def report(self, step: str) -> None:
+        with self._lock:
+            self._current_step = step
+        self._record(step)
+
+    def _heartbeat_loop(self) -> None:
+        while not self._stop_event.wait(self._heartbeat_interval_seconds):
+            with self._lock:
+                step = self._current_step
+            self._record(step)
+
+    def _record(self, step: str) -> None:
+        try:
+            with session_scope() as session:
+                record_progress(session, self._job_id, step=step)
+        except Exception:
+            return
 
 
 @dataclass(frozen=True)
@@ -197,8 +245,13 @@ def load_catalog_update_config() -> CatalogUpdateConfig:
     )
 
 
-def run_catalog_update(job_id: str, *, config: CatalogUpdateConfig | None = None) -> dict[str, Any]:
-    steps = CatalogUpdateStepTracker()
+def run_catalog_update(
+    job_id: str,
+    *,
+    config: CatalogUpdateConfig | None = None,
+    progress_callback: CatalogUpdateProgressCallback | None = None,
+) -> dict[str, Any]:
+    steps = CatalogUpdateStepTracker(progress_callback=progress_callback)
     steps.mark("config_loaded")
     try:
         selected_config = config or load_catalog_update_config()
@@ -255,6 +308,16 @@ def run_catalog_update(job_id: str, *, config: CatalogUpdateConfig | None = None
             **cleanup.to_payload(),
         },
     }
+
+
+def run_catalog_update_durable_job(
+    job_id: str,
+    *,
+    config: CatalogUpdateConfig | None = None,
+    heartbeat_interval_seconds: float = CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS,
+) -> dict[str, Any]:
+    with CatalogUpdateJobProgressReporter(job_id, heartbeat_interval_seconds=heartbeat_interval_seconds) as progress:
+        return run_catalog_update(job_id, config=config, progress_callback=progress.report)
 
 
 @dataclass(frozen=True)
@@ -681,7 +744,7 @@ def _download_export(
     *,
     step_tracker: CatalogUpdateStepTracker | None = None,
 ) -> Path:
-    download_control = _download_locator(page, timeout_ms)
+    download_control = _download_locator(page, timeout_ms, step_tracker=step_tracker)
     with page.expect_download() as download_info:
         download_control.click()
     download = download_info.value
@@ -695,10 +758,14 @@ def _download_export(
     return downloaded_path
 
 
-def _download_locator(page: Any, timeout_ms: int) -> Any:
+def _download_locator(page: Any, timeout_ms: int, *, step_tracker: CatalogUpdateStepTracker | None = None) -> Any:
     pattern = re.compile(r"download", re.IGNORECASE)
     deadline = time.monotonic() + max(1, timeout_ms / 1000)
+    next_heartbeat = time.monotonic()
     while time.monotonic() < deadline:
+        if step_tracker is not None and time.monotonic() >= next_heartbeat:
+            step_tracker.mark("wait_for_download")
+            next_heartbeat = time.monotonic() + CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS
         candidates = (
             page.get_by_role("link", name=pattern),
             page.get_by_role("button", name=pattern),

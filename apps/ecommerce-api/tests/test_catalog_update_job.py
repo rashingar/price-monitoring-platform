@@ -16,6 +16,7 @@ from ecommerce.catalog_update import service  # noqa: E402
 from ecommerce.catalog_update.service import CatalogExportResult, CatalogUpdateConfigError, CatalogUpdateError  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base, CatalogProductRow, SourceUrl  # noqa: E402
+from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 
 
@@ -100,6 +101,7 @@ def test_run_catalog_update_calls_migration_and_ingests_downloaded_csv(tmp_path:
     monkeypatch.setattr(service, "run_alembic_upgrade", lambda: calls.append(("alembic", None)) or {"status": "succeeded"})
     monkeypatch.setattr(service, "export_catalog_csv", fake_export)
     monkeypatch.setattr(service, "run_catalog_ingest", fake_ingest)
+    monkeypatch.setattr(service, "purge_excluded_catalog_state", lambda _models, **_kwargs: service.CatalogExclusionCleanupResult())
 
     result = service.run_catalog_update(
         "job-1",
@@ -125,6 +127,80 @@ def test_run_catalog_update_calls_migration_and_ingests_downloaded_csv(tmp_path:
     assert result["downloaded_filename"] == "opencart-products.csv"
     assert result["exclusions"]["exclusion_file_found"] is False
     assert "supersecret" not in str(result)
+
+
+def test_run_catalog_update_emits_step_progress(tmp_path: Path, monkeypatch) -> None:
+    progress_steps: list[str] = []
+    output_dir = tmp_path / "catalog_updates" / "job-progress"
+
+    def fake_export(config, selected_output_dir, **kwargs):
+        step_tracker = kwargs["step_tracker"]
+        step_tracker.mark("playwright_start")
+        step_tracker.mark("login")
+        step_tracker.mark("wait_for_download")
+        downloaded = selected_output_dir / "opencart-products.csv"
+        downloaded.write_text("model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n", encoding="utf-8")
+        return CatalogExportResult(downloaded_path=downloaded, downloaded_size=downloaded.stat().st_size)
+
+    monkeypatch.setattr(service, "catalog_update_output_dir", lambda job_id: output_dir)
+    monkeypatch.setattr(service, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(service, "run_alembic_upgrade", lambda: {"status": "succeeded"})
+    monkeypatch.setattr(service, "export_catalog_csv", fake_export)
+    monkeypatch.setattr(service, "run_catalog_ingest", lambda path: {"imported": 0, "source_path": str(path)})
+
+    service.run_catalog_update(
+        "job-progress",
+        config=_catalog_update_config(),
+        progress_callback=progress_steps.append,
+    )
+
+    assert progress_steps == [
+        "config_loaded",
+        "alembic_upgrade",
+        "playwright_start",
+        "login",
+        "wait_for_download",
+        "filter_exclusions",
+        "ingest_catalog",
+        "purge_exclusions",
+    ]
+
+
+def test_catalog_update_durable_job_writes_progress_and_heartbeat(tmp_path: Path, monkeypatch) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    Base.metadata.create_all(get_engine(database_url))
+    output_dir = tmp_path / "catalog_updates" / "job-progress"
+
+    with session_scope(database_url) as session:
+        create_queued_job(session, job_type=service.CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-progress")
+        mark_running(session, "job-progress")
+
+    def fake_export(config, selected_output_dir, **kwargs):
+        kwargs["step_tracker"].mark("wait_for_download")
+        downloaded = selected_output_dir / "opencart-products.csv"
+        downloaded.write_text("model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n", encoding="utf-8")
+        return CatalogExportResult(downloaded_path=downloaded, downloaded_size=downloaded.stat().st_size)
+
+    monkeypatch.setattr(service, "catalog_update_output_dir", lambda job_id: output_dir)
+    monkeypatch.setattr(service, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(service, "run_alembic_upgrade", lambda: {"status": "succeeded"})
+    monkeypatch.setattr(service, "export_catalog_csv", fake_export)
+    monkeypatch.setattr(service, "run_catalog_ingest", lambda path: {"imported": 0, "source_path": str(path)})
+
+    service.run_catalog_update_durable_job(
+        "job-progress",
+        config=_catalog_update_config(),
+        heartbeat_interval_seconds=60,
+    )
+
+    with session_scope(database_url) as session:
+        job = get_job_by_id(session, "job-progress")
+        assert job is not None
+        assert job.status == "running"
+        assert job.heartbeat_at is not None
+        assert job.result_json["progress"]["current_step"] == "purge_exclusions"
+        assert isinstance(job.result_json["progress"]["updated_at"], str)
 
 
 def test_run_catalog_update_filters_excluded_models_before_ingest(tmp_path: Path, monkeypatch) -> None:
@@ -153,6 +229,7 @@ def test_run_catalog_update_filters_excluded_models_before_ingest(tmp_path: Path
     monkeypatch.setattr(service, "run_alembic_upgrade", lambda: calls.append(("alembic", None)) or {"status": "succeeded"})
     monkeypatch.setattr(service, "export_catalog_csv", fake_export)
     monkeypatch.setattr(service, "run_catalog_ingest", fake_ingest)
+    monkeypatch.setattr(service, "purge_excluded_catalog_state", lambda _models, **_kwargs: service.CatalogExclusionCleanupResult())
 
     result = service.run_catalog_update(
         "job-2",
@@ -643,7 +720,7 @@ def test_export_catalog_csv_preserves_original_error_when_screenshot_capture_fai
 def test_catalog_update_endpoint_creates_durable_job(tmp_path: Path, monkeypatch) -> None:
     client, _database_url = _client(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        "ecommerce.api.routes_catalog_update.run_catalog_update",
+        "ecommerce.api.routes_catalog_update.run_catalog_update_durable_job",
         lambda job_id: {"job_id": job_id, "export_profile": "sourceCata", "ingest": {"imported": 1}},
     )
 
@@ -666,7 +743,7 @@ def test_catalog_update_job_failure_is_finalized(tmp_path: Path, monkeypatch) ->
     def fail_update(job_id: str):
         raise RuntimeError(f"login failed for job {job_id}")
 
-    monkeypatch.setattr("ecommerce.api.routes_catalog_update.run_catalog_update", fail_update)
+    monkeypatch.setattr("ecommerce.api.routes_catalog_update.run_catalog_update_durable_job", fail_update)
 
     response = client.post("/api/catalog/update-db")
 
@@ -681,7 +758,7 @@ def test_catalog_update_responses_do_not_include_opencart_password(tmp_path: Pat
     client, _database_url = _client(tmp_path, monkeypatch)
     monkeypatch.setenv("OPENCART_ADMIN_PASS", "supersecret")
     monkeypatch.setattr(
-        "ecommerce.api.routes_catalog_update.run_catalog_update",
+        "ecommerce.api.routes_catalog_update.run_catalog_update_durable_job",
         lambda job_id: {"job_id": job_id, "export_profile": "sourceCata"},
     )
 

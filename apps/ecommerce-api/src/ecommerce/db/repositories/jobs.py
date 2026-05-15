@@ -191,6 +191,31 @@ def heartbeat(session: Session, job_id: str, *, heartbeat_at: datetime | None = 
     return job
 
 
+def record_progress(
+    session: Session,
+    job_id: str,
+    *,
+    step: str,
+    progress_at: datetime | None = None,
+) -> EcommerceJob:
+    job = _require_job(session, job_id)
+    if job.status != "running":
+        return job
+    timestamp = progress_at or _now()
+    existing_result = job.result_json if isinstance(job.result_json, dict) else {}
+    job.result_json = {
+        **existing_result,
+        "progress": {
+            "current_step": str(step),
+            "updated_at": timestamp.isoformat(),
+        },
+    }
+    job.heartbeat_at = timestamp
+    job.updated_at = timestamp
+    session.flush()
+    return job
+
+
 def mark_succeeded(
     session: Session,
     job_id: str,

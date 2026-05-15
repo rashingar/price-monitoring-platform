@@ -9,7 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 
-from ecommerce.catalog_update import CATALOG_UPDATE_JOB_TYPE, run_catalog_update
+from ecommerce.catalog_update import CATALOG_UPDATE_JOB_TYPE, run_catalog_update_durable_job
 from ecommerce.db.config import DatabaseNotConfiguredError, sanitize_database_error
 from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness
 from ecommerce.db.session import create_session_factory, session_scope
@@ -76,7 +76,7 @@ def _execute_catalog_update_job(job_id: str) -> None:
         execute_job(
             session,
             job_id,
-            lambda _payload: run_catalog_update(job_id),
+            lambda _payload: run_catalog_update_durable_job(job_id),
             reraise=False,
         )
     finally:
