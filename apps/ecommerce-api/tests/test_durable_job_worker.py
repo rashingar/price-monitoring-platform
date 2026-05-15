@@ -13,6 +13,7 @@ from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, mark_running, record_progress, request_cancel  # noqa: E402
 from ecommerce.jobs.durable import DurableJobRegistry  # noqa: E402
 from ecommerce.jobs.worker import build_default_registry, run_worker_iteration  # noqa: E402
+from ecommerce.source_url_agent.progress import SOURCE_URL_AGENT_JOB_TYPE  # noqa: E402
 
 
 def _database_url(tmp_path: Path) -> str:
@@ -49,6 +50,13 @@ def test_worker_picks_queued_job_and_runs_registered_catalog_handler(tmp_path: P
     assert seen_job_ids == ["job-1"]
     assert job.status == "succeeded"
     assert job.result_json == {"job_id": "job-1", "ingest": {"imported": 3}}
+
+
+def test_default_worker_registry_includes_catalog_update_and_source_url_agent() -> None:
+    assert set(build_default_registry().job_types()) == {
+        CATALOG_UPDATE_JOB_TYPE,
+        SOURCE_URL_AGENT_JOB_TYPE,
+    }
 
 
 def test_worker_honors_job_type_filter(tmp_path: Path) -> None:

@@ -15,14 +15,21 @@ from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
-from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.models.source_urls import (  # noqa: E402
+    SourceUrl,
+    SourceUrlCandidate,
+    SourceUrlDiscoveryRun,
+    SourceUrlDiscoveryTask,
+)
 from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs import source_url_agent as source_url_agent_job  # noqa: E402
+from ecommerce.jobs.worker import build_default_registry, run_worker_iteration  # noqa: E402
 from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent  # noqa: E402
 from ecommerce.source_url_agent.artifacts import write_run_artifacts  # noqa: E402
 from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
 from ecommerce.source_url_agent.evidence import PageEvidence, extract_page_evidence  # noqa: E402
+from ecommerce.source_url_agent import job_handler as source_url_agent_job_handler  # noqa: E402
 from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
 from ecommerce.source_url_agent.progress import (  # noqa: E402
     SOURCE_URL_AGENT_JOB_TYPE,
@@ -615,6 +622,123 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
     assert detail.json()["summary"]["matched_count"] == 1
     assert detail.json()["summary"]["task_finished_count"] == 1
     assert detail.json()["artifacts"]
+
+
+def test_source_url_agent_worker_executes_queued_run_and_persists_progress(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+    monkeypatch.setattr(routes_source_url_agent, "execute_source_url_agent_job", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(source_url_agent_job_handler, "SOURCE_URL_AGENT_JOB_RESOLVER", _fake_resolver)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+
+    response = client.post(
+        "/api/source-url-agent/runs",
+        json={
+            "source": "bestprice",
+            "mode": "catalog",
+            "catalog_product_id": product.id,
+            "limit": 1,
+            "dry_run": True,
+            "max_products_per_batch": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    run_id = response.json()["run_id"]
+    with session_scope(database_url) as session:
+        assert get_job_by_id(session, run_id).status == "queued"
+
+    result = run_worker_iteration(
+        registry=build_default_registry(),
+        job_type=SOURCE_URL_AGENT_JOB_TYPE,
+        database_url=database_url,
+    )
+
+    assert result.claimed == 1
+    assert result.executed == 1
+    with session_scope(database_url) as session:
+        run = session.query(SourceUrlDiscoveryRun).one()
+        candidate = session.query(SourceUrlCandidate).one()
+        job = get_job_by_id(session, run_id)
+        assert run.status == "completed"
+        assert run.matched_count == 1
+        assert candidate.run_id == run_id
+        assert candidate.match_status == "matched"
+        assert job.status == "succeeded"
+        assert job.result_json["run_id"] == run_id
+        assert job.result_json["summary"]["matched_count"] == 1
+        assert job.result_json["progress"]["current_step"] == "run_completed"
+
+
+def test_source_url_agent_worker_marks_failed_run_and_job_on_execution_error(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+    monkeypatch.setattr(routes_source_url_agent, "execute_source_url_agent_job", lambda *_args, **_kwargs: None)
+
+    def failing_resolver(_product, _source):
+        raise RuntimeError("resolver exploded")
+
+    monkeypatch.setattr(source_url_agent_job_handler, "SOURCE_URL_AGENT_JOB_RESOLVER", failing_resolver)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+
+    response = client.post(
+        "/api/source-url-agent/runs",
+        json={
+            "source": "bestprice",
+            "mode": "catalog",
+            "catalog_product_id": product.id,
+            "limit": 1,
+            "dry_run": True,
+            "max_products_per_batch": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    run_id = response.json()["run_id"]
+
+    result = run_worker_iteration(
+        registry=build_default_registry(),
+        job_type=SOURCE_URL_AGENT_JOB_TYPE,
+        database_url=database_url,
+    )
+
+    assert result.claimed == 1
+    assert result.executed == 1
+    with session_scope(database_url) as session:
+        run = session.query(SourceUrlDiscoveryRun).one()
+        task = session.query(SourceUrlDiscoveryTask).filter_by(run_id=run_id).one()
+        job = get_job_by_id(session, run_id)
+        assert run.status == "failed"
+        assert task.status == "failed"
+        assert task.error_message == "resolver exploded"
+        assert job.status == "failed"
+        assert job.error_message == "resolver exploded"
+        assert job.result_json["progress"]["current_step"] == "product_source_started"
+
+
+def test_source_url_agent_background_execution_noops_when_worker_already_claimed_job(tmp_path: Path, monkeypatch) -> None:
+    database_url = _sqlite_url(tmp_path)
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    _create_schema(database_url)
+    with session_scope(database_url) as session:
+        create_queued_job(
+            session,
+            job_type=SOURCE_URL_AGENT_JOB_TYPE,
+            payload={"run_id": "job-source-agent", "request": {"source": "bestprice", "mode": "catalog"}},
+            job_id="job-source-agent",
+        )
+        mark_running(session, "job-source-agent")
+
+    def should_not_run(_product, _source):
+        raise AssertionError("running jobs should not be executed by an unclaimed background task")
+
+    job = source_url_agent_job_handler.execute_source_url_agent_job("job-source-agent", resolver=should_not_run)
+
+    assert job.status == "running"
+    with session_scope(database_url) as session:
+        persisted = get_job_by_id(session, "job-source-agent")
+        assert persisted.status == "running"
+        assert persisted.attempt_count == 1
 
 
 def test_source_url_agent_run_api_lists_persisted_error_candidates(tmp_path: Path, monkeypatch) -> None:

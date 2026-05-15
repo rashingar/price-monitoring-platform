@@ -20,14 +20,19 @@ from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
 from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness, require_database_ready_for_catalog
 from ecommerce.db.repositories.common import json_safe_value
-from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_failed, mark_running, mark_succeeded
+from ecommerce.db.repositories.jobs import create_queued_job
 from ecommerce.db.session import session_scope
 from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, source_url_to_dict
 from ecommerce.source_urls import normalize_source_url
 from ecommerce.source_url_agent.agent import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult, run_source_url_agent
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate
 from ecommerce.source_url_agent.products import AgentProduct, SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
-from ecommerce.source_url_agent.progress import SOURCE_URL_AGENT_JOB_TYPE, SourceUrlAgentProgressReporter
+from ecommerce.source_url_agent.job_handler import (
+    execute_source_url_agent_job,
+    products_for_source_url_agent_request,
+    source_url_agent_job_payload,
+)
+from ecommerce.source_url_agent.progress import SOURCE_URL_AGENT_JOB_TYPE
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES, SourceDefinition, load_source_registry
 
 ReviewDecision = Literal["accept", "reject", "replace_url"]
@@ -154,7 +159,7 @@ def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_t
     try:
         sources = load_source_registry().selected(source_name)
         with session_scope() as session:
-            products = _products_for_request(
+            products = products_for_source_url_agent_request(
                 session,
                 request=request,
                 limit=limit,
@@ -176,7 +181,14 @@ def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_t
                 session,
                 job_id=run_id,
                 job_type=SOURCE_URL_AGENT_JOB_TYPE,
-                payload=_source_url_agent_job_payload(request, run_id=run_id, source_name=source_name),
+                payload=source_url_agent_job_payload(
+                    request,
+                    run_id=run_id,
+                    source_name=source_name,
+                    limit=limit,
+                    input_path=input_path,
+                    selected_models=selected_models,
+                ),
             )
             payload = _discovery_run_to_dict(row, session=session, include_tasks=True)
     except (FileNotFoundError, SourceUrlAgentInputError, ValueError) as exc:
@@ -184,97 +196,8 @@ def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_t
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Source URL Agent run enqueue failed: {_safe_db_error(exc)}") from exc
 
-    background_tasks.add_task(_run_enqueued_source_url_agent, run_id, request)
+    background_tasks.add_task(execute_source_url_agent_job, run_id, resolver=SOURCE_URL_AGENT_API_RESOLVER)
     return payload
-
-
-def _run_enqueued_source_url_agent(run_id: str, request: SourceUrlAgentRunRequest) -> None:
-    _mark_discovery_run_running(run_id)
-    _mark_source_url_agent_job_running(run_id)
-    limit = _api_run_limit(request)
-    max_products_per_batch = request.max_products_per_batch or DEFAULT_API_MAX_PRODUCTS_PER_BATCH
-    input_path = _source_url_agent_input_path(request)
-    selected_models = _selected_models(request.selected_models)
-    try:
-        with SourceUrlAgentProgressReporter(run_id) as progress_reporter:
-            options = SourceUrlAgentOptions(
-                mode=request.mode,
-                run_id=run_id,
-                source=request.source.strip().lower(),
-                input_path=input_path,
-                limit=limit,
-                offset=request.offset,
-                catalog_product_id=request.catalog_product_id,
-                model=_optional_text(request.model),
-                selected_models=selected_models,
-                missing_only=bool(request.missing_only),
-                active_only=bool(request.active_only),
-                dry_run=bool(request.dry_run),
-                apply_high_confidence=bool(request.apply_high_confidence),
-                max_products_per_batch=max_products_per_batch,
-                max_searches_per_product_source=request.max_searches_per_product_source,
-                rate_limit_seconds=request.rate_limit_seconds,
-                headed=bool(request.headed),
-                no_browser_cache=bool(request.no_browser_cache),
-                progress_reporter=progress_reporter,
-                progress_callback=lambda event, product, source, candidates, error: _record_discovery_task_progress(
-                    run_id,
-                    event=event,
-                    product=product,
-                    source=source,
-                    candidates=candidates,
-                    error_message=error,
-                ),
-            )
-            with session_scope() as session:
-                products = _products_for_request(
-                    session,
-                    request=request,
-                    limit=limit,
-                    input_path=input_path,
-                    selected_models=selected_models,
-                )
-                result = run_source_url_agent(
-                    products=products,
-                    options=options,
-                    session=session,
-                    resolver=SOURCE_URL_AGENT_API_RESOLVER,
-                )
-            final_progress = progress_reporter.current_payload()
-        _mark_source_url_agent_job_succeeded(run_id, result, progress=final_progress)
-    except Exception as exc:
-        message = str(exc).strip() or exc.__class__.__name__
-        _mark_discovery_run_failed(run_id, message)
-        _mark_source_url_agent_job_failed(run_id, message)
-
-
-def _products_for_request(
-    session: Session,
-    *,
-    request: SourceUrlAgentRunRequest,
-    limit: int,
-    input_path: Path | None,
-    selected_models: list[str],
-) -> list[AgentProduct]:
-    if request.mode == "csv":
-        return read_products_from_csv(
-            input_path or Path(),
-            catalog_source=DEFAULT_CATALOG_SOURCE,
-            active_only=request.active_only,
-            limit=limit,
-            offset=request.offset,
-            model=request.model,
-        )
-    return read_products_from_catalog(
-        session,
-        catalog_source=DEFAULT_CATALOG_SOURCE,
-        active_only=request.active_only,
-        limit=limit,
-        offset=request.offset,
-        catalog_product_id=request.catalog_product_id,
-        model=request.model,
-        selected_models=selected_models,
-    )
 
 
 def _create_queued_discovery_run(
@@ -350,177 +273,6 @@ def _create_queued_discovery_tasks(
                 )
             )
     session.flush()
-
-
-def _mark_discovery_run_running(run_id: str) -> None:
-    with session_scope() as session:
-        row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
-        if row is None:
-            return
-        timestamp = _now()
-        row.status = "running"
-        row.started_at = row.started_at or timestamp
-        row.updated_at = timestamp
-
-
-def _mark_source_url_agent_job_running(run_id: str) -> None:
-    try:
-        with session_scope() as session:
-            job = get_job_by_id(session, run_id)
-            if job is None:
-                return
-            if job.status == "queued":
-                mark_running(session, run_id)
-    except Exception:
-        return
-
-
-def _mark_source_url_agent_job_succeeded(
-    run_id: str,
-    result: SourceUrlAgentResult,
-    *,
-    progress: dict[str, Any] | None = None,
-) -> None:
-    try:
-        with session_scope() as session:
-            job = get_job_by_id(session, run_id)
-            if job is None:
-                return
-            existing_result = job.result_json if isinstance(job.result_json, dict) else {}
-            payload: dict[str, Any] = {
-                "run_id": result.run_id,
-                "summary": json_safe_value(result.summary),
-                "warnings": list(result.warnings),
-                "artifacts": result.artifacts.to_dict(),
-            }
-            if progress is not None:
-                payload["progress"] = progress
-            elif "progress" in existing_result:
-                payload["progress"] = existing_result["progress"]
-            mark_succeeded(session, run_id, result=payload)
-    except Exception:
-        return
-
-
-def _mark_source_url_agent_job_failed(run_id: str, message: str) -> None:
-    try:
-        with session_scope() as session:
-            if get_job_by_id(session, run_id) is not None:
-                mark_failed(session, run_id, error_message=message)
-    except Exception:
-        return
-
-
-def _mark_discovery_run_failed(run_id: str, message: str) -> None:
-    with session_scope() as session:
-        timestamp = _now()
-        row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
-        if row is not None:
-            row.status = "failed"
-            row.completed_at = timestamp
-            row.updated_at = timestamp
-        tasks = session.execute(
-            select(SourceUrlDiscoveryTask).where(
-                SourceUrlDiscoveryTask.run_id == run_id,
-                SourceUrlDiscoveryTask.status.in_(("queued", "running")),
-            )
-        ).scalars().all()
-        for task in tasks:
-            task.status = "failed"
-            task.error_message = message
-            task.completed_at = timestamp
-            task.updated_at = timestamp
-
-
-def _record_discovery_task_progress(
-    run_id: str,
-    *,
-    event: str,
-    product: AgentProduct,
-    source: SourceDefinition,
-    candidates: list[SourceUrlAgentCandidate],
-    error_message: str | None,
-) -> None:
-    with session_scope() as session:
-        task = _find_discovery_task(session, run_id=run_id, product=product, source=source)
-        if task is None:
-            return
-        timestamp = _now()
-        if event == "started":
-            task.status = "running"
-            task.started_at = task.started_at or timestamp
-        else:
-            match_status = _task_match_status(candidates)
-            task.match_status = match_status
-            task.candidate_count = len(candidates)
-            task.error_message = error_message or _task_error_message(candidates)
-            task.status = "failed" if match_status == "error" else "completed"
-            if match_status == "skipped":
-                task.status = "skipped"
-            task.completed_at = timestamp
-        task.updated_at = timestamp
-        _refresh_discovery_run_progress(session, run_id)
-
-
-def _source_url_agent_job_payload(
-    request: SourceUrlAgentRunRequest,
-    *,
-    run_id: str,
-    source_name: str,
-) -> dict[str, Any]:
-    request_payload = request.model_dump() if hasattr(request, "model_dump") else request.dict()
-    return {
-        "run_id": run_id,
-        "source": source_name,
-        "mode": request.mode,
-        "request": json_safe_value(request_payload),
-    }
-
-
-def _find_discovery_task(
-    session: Session,
-    *,
-    run_id: str,
-    product: AgentProduct,
-    source: SourceDefinition,
-) -> SourceUrlDiscoveryTask | None:
-    statement = select(SourceUrlDiscoveryTask).where(
-        SourceUrlDiscoveryTask.run_id == run_id,
-        SourceUrlDiscoveryTask.source_name == source.source_name,
-    )
-    if product.catalog_product_id is not None:
-        statement = statement.where(SourceUrlDiscoveryTask.catalog_product_id == product.catalog_product_id)
-    else:
-        statement = statement.where(SourceUrlDiscoveryTask.model == product.model)
-    return session.execute(statement.limit(1)).scalar_one_or_none()
-
-
-def _task_match_status(candidates: list[SourceUrlAgentCandidate]) -> str | None:
-    statuses = [candidate.match_status for candidate in candidates]
-    for status in ("error", "needs_review", "matched", "not_found", "skipped"):
-        if status in statuses:
-            return status
-    return statuses[0] if statuses else None
-
-
-def _task_error_message(candidates: list[SourceUrlAgentCandidate]) -> str | None:
-    for candidate in candidates:
-        if candidate.match_status == "error" and candidate.notes:
-            return candidate.notes
-    return None
-
-
-def _refresh_discovery_run_progress(session: Session, run_id: str) -> None:
-    row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
-    if row is None or row.status == "completed":
-        return
-    tasks = session.execute(select(SourceUrlDiscoveryTask).where(SourceUrlDiscoveryTask.run_id == run_id)).scalars().all()
-    row.candidate_count = sum(int(task.candidate_count or 0) for task in tasks)
-    row.matched_count = sum(1 for task in tasks if task.match_status == "matched")
-    row.needs_review_count = sum(1 for task in tasks if task.match_status == "needs_review")
-    row.not_found_count = sum(1 for task in tasks if task.match_status == "not_found")
-    row.error_count = sum(1 for task in tasks if task.match_status == "error" or task.status == "failed")
-    row.updated_at = _now()
 
 
 @router.get("/runs")

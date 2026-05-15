@@ -20,9 +20,13 @@ from ecommerce.db.session import create_session_factory
 from ecommerce.env import load_local_env_if_present
 from ecommerce.db.repositories.jobs import fail_stale_running_jobs, lease_queued_jobs_for_worker, list_queued_jobs_for_worker, list_stale_running_jobs
 from ecommerce.jobs.durable import DurableJobRegistry, execute_registered_job
+from ecommerce.source_url_agent.job_handler import run_source_url_agent_job
+from ecommerce.source_url_agent.progress import SOURCE_URL_AGENT_JOB_TYPE
 
 CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES_ENV = "ECOMMERCE_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES"
 DEFAULT_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES = 240
+SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES_ENV = "ECOMMERCE_SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES"
+DEFAULT_SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES = 180
 
 
 @dataclass(frozen=True)
@@ -44,6 +48,10 @@ def build_default_registry() -> DurableJobRegistry:
     registry.register(
         CATALOG_UPDATE_JOB_TYPE,
         lambda job_id, _payload: catalog_update_service.run_catalog_update_durable_job(job_id),
+    )
+    registry.register(
+        SOURCE_URL_AGENT_JOB_TYPE,
+        lambda job_id, payload: run_source_url_agent_job(job_id, payload),
     )
     return registry
 
@@ -181,6 +189,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"once={bool(args.once)} poll_seconds={poll_seconds:g} limit={limit} "
         f"stale_running_after_minutes={stale_after_minutes} "
         f"catalog_update_stale_running_after_minutes={stale_thresholds[CATALOG_UPDATE_JOB_TYPE]} "
+        f"source_url_agent_stale_running_after_minutes={stale_thresholds[SOURCE_URL_AGENT_JOB_TYPE]} "
         f"dry_run={bool(args.dry_run)}",
     )
 
@@ -214,7 +223,11 @@ def default_stale_running_thresholds(default_minutes: int) -> dict[str, int]:
         CATALOG_UPDATE_JOB_TYPE: _env_int(
             CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES_ENV,
             DEFAULT_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES,
-        )
+        ),
+        SOURCE_URL_AGENT_JOB_TYPE: _env_int(
+            SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES_ENV,
+            DEFAULT_SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES,
+        ),
     }
 
 
