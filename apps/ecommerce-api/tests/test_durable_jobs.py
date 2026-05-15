@@ -9,7 +9,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.session import create_session_factory, get_engine, session_scope  # noqa: E402
-from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, heartbeat, list_jobs, mark_running, mark_succeeded, request_cancel  # noqa: E402
+from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, heartbeat, list_jobs, mark_running, mark_succeeded, record_progress, request_cancel  # noqa: E402
 from ecommerce.jobs.durable import execute_job  # noqa: E402
 
 
@@ -101,3 +101,34 @@ def test_execute_job_persists_failure_even_when_handler_raises(tmp_path: Path) -
         assert job.error_message == "diagnostic failed"
         assert job.attempt_count == 1
         assert job.completed_at is not None
+
+
+def test_execute_job_preserves_running_progress_on_success(tmp_path: Path) -> None:
+    database_url = _database_url(tmp_path)
+    _create_schema(database_url)
+    with session_scope(database_url) as session:
+        create_queued_job(session, job_type="diagnostic", payload={}, job_id="job-1")
+
+    def complete_with_progress(_payload):
+        with session_scope(database_url) as progress_session:
+            record_progress(
+                progress_session,
+                "job-1",
+                progress={
+                    "current_step": "download_waiting",
+                    "current_step_label": "Download waiting",
+                    "steps_completed": 3,
+                    "last_progress_at": "2026-05-15T12:00:00+00:00",
+                },
+            )
+        return {"ok": True}
+
+    session = create_session_factory(database_url)()
+    try:
+        job = execute_job(session, "job-1", complete_with_progress)
+    finally:
+        session.close()
+
+    assert job.status == "succeeded"
+    assert job.result_json["ok"] is True
+    assert job.result_json["progress"]["current_step"] == "download_waiting"

@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { apiClient, getApiErrorMessage } from "../api/client";
 import { commerceClient, getCommerceApiErrorMessage } from "../api/commerceClient";
 import { runApiDiagnostics } from "../api/diagnostics";
+import { getJobProgress } from "../api/jobProgress";
 import type { CatalogUpdateJob } from "../api/commerceTypes";
 import type { ApiDiagnostics } from "../api/diagnostics";
 import type { HealthResponse } from "../api/types";
 import { ErrorState, LoadingState } from "../components/layout/StateBlocks";
+import { JobProgressPanel } from "../components/jobs/JobProgressPanel";
 import { JsonBlock } from "../components/jobs/JsonBlock";
 
 const CATALOG_UPDATE_POLL_MS = 500;
@@ -184,6 +186,7 @@ export function DashboardPage() {
   const catalogUpdateBadge = getCatalogUpdateBadge(catalogUpdateJob);
   const catalogUpdateActive = isCatalogUpdateActive(catalogUpdateJob);
   const importedCount = getCatalogUpdateImportedCount(catalogUpdateJob);
+  const catalogUpdateProgress = getJobProgress(catalogUpdateJob);
 
   return (
     <div className="page-stack">
@@ -230,24 +233,27 @@ export function DashboardPage() {
         </div>
 
         {catalogUpdateJob ? (
-          <dl className="summary-grid diagnostics-summary-grid">
-            <div>
-              <dt>Job</dt>
-              <dd>{catalogUpdateJob.job_id}</dd>
-            </div>
-            <div>
-              <dt>Type</dt>
-              <dd>{catalogUpdateJob.job_type}</dd>
-            </div>
-            <div>
-              <dt>Status</dt>
-              <dd>{catalogUpdateJob.status}</dd>
-            </div>
-            <div>
-              <dt>Imported</dt>
-              <dd>{importedCount ?? "-"}</dd>
-            </div>
-          </dl>
+          <>
+            <dl className="summary-grid diagnostics-summary-grid">
+              <div>
+                <dt>Job</dt>
+                <dd>{catalogUpdateJob.job_id}</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>{catalogUpdateJob.job_type}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{catalogUpdateJob.status}</dd>
+              </div>
+              <div>
+                <dt>Imported</dt>
+                <dd>{importedCount ?? "-"}</dd>
+              </div>
+            </dl>
+            <JobProgressPanel progress={catalogUpdateProgress} compact />
+          </>
         ) : (
           <p className="muted">No catalog update job has been recorded yet.</p>
         )}

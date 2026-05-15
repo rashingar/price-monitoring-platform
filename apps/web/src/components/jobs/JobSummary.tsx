@@ -5,16 +5,21 @@ import {
   getJobStatus,
   isActiveJob,
 } from "../../api/jobUtils";
+import { getJobProgress } from "../../api/jobProgress";
 import type { Job } from "../../api/types";
+import { JobProgressPanel } from "./JobProgressPanel";
 import { StatusBadge } from "./StatusBadge";
 
 interface JobSummaryProps {
   job: Job;
   isRefreshing: boolean;
   isPolling: boolean;
+  showProgress?: boolean;
 }
 
-export function JobSummary({ job, isRefreshing, isPolling }: JobSummaryProps) {
+export function JobSummary({ job, isRefreshing, isPolling, showProgress = true }: JobSummaryProps) {
+  const progress = getJobProgress(job);
+
   return (
     <section className="panel">
       <div className="section-heading">
@@ -51,6 +56,8 @@ export function JobSummary({ job, isRefreshing, isPolling }: JobSummaryProps) {
           <dd>{isPolling && isActiveJob(job) ? "Active" : "Stopped"}</dd>
         </div>
       </dl>
+
+      {showProgress ? <JobProgressPanel progress={progress} compact /> : null}
 
       {isRefreshing ? <p className="muted">Refreshing job state...</p> : null}
     </section>

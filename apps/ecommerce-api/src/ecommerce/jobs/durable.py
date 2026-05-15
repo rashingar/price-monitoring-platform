@@ -90,6 +90,12 @@ def execute_job(
             raise
         return _require_job(session, job_id)
 
+    session.expire_all()
+    current_job = _require_job(session, job_id)
+    existing_result = current_job.result_json if isinstance(current_job.result_json, dict) else {}
+    if isinstance(result, dict) and "progress" in existing_result and "progress" not in result:
+        result = {**result, "progress": existing_result["progress"]}
+
     mark_succeeded(session, job_id, result=result)
     session.commit()
     return _require_job(session, job_id)

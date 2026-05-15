@@ -96,11 +96,11 @@ def test_worker_marks_stale_running_jobs_failed(tmp_path: Path) -> None:
     database_url = _database_url(tmp_path)
     _create_schema(database_url)
     registry = DurableJobRegistry()
-    registry.register(CATALOG_UPDATE_JOB_TYPE, lambda _job_id, _payload: {"ok": True})
+    registry.register("other_job", lambda _job_id, _payload: {"ok": True})
     now = datetime.now(timezone.utc)
 
     with session_scope(database_url) as session:
-        create_queued_job(session, job_type=CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-stale")
+        create_queued_job(session, job_type="other_job", payload={}, job_id="job-stale")
         mark_running(session, "job-stale", started_at=now - timedelta(minutes=90))
 
     result = run_worker_iteration(
@@ -114,6 +114,52 @@ def test_worker_marks_stale_running_jobs_failed(tmp_path: Path) -> None:
     assert result.stale_failed == 1
     assert job.status == "failed"
     assert "Marked failed by Ecommerce durable job worker" in str(job.error_message)
+
+
+def test_worker_uses_longer_catalog_update_stale_threshold(tmp_path: Path) -> None:
+    database_url = _database_url(tmp_path)
+    _create_schema(database_url)
+    registry = DurableJobRegistry()
+    registry.register(CATALOG_UPDATE_JOB_TYPE, lambda _job_id, _payload: {"ok": True})
+    now = datetime.now(timezone.utc)
+
+    with session_scope(database_url) as session:
+        create_queued_job(session, job_type=CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-catalog")
+        mark_running(session, "job-catalog", started_at=now - timedelta(minutes=90))
+
+    result = run_worker_iteration(
+        registry=registry,
+        database_url=database_url,
+        stale_running_after_minutes=60,
+        now=now,
+    )
+
+    job = _job(database_url, "job-catalog")
+    assert result.stale_failed == 0
+    assert job.status == "running"
+
+
+def test_worker_marks_catalog_update_stale_after_job_type_threshold(tmp_path: Path) -> None:
+    database_url = _database_url(tmp_path)
+    _create_schema(database_url)
+    registry = DurableJobRegistry()
+    registry.register(CATALOG_UPDATE_JOB_TYPE, lambda _job_id, _payload: {"ok": True})
+    now = datetime.now(timezone.utc)
+
+    with session_scope(database_url) as session:
+        create_queued_job(session, job_type=CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-catalog-stale")
+        mark_running(session, "job-catalog-stale", started_at=now - timedelta(minutes=300))
+
+    result = run_worker_iteration(
+        registry=registry,
+        database_url=database_url,
+        stale_running_after_minutes=60,
+        now=now,
+    )
+
+    job = _job(database_url, "job-catalog-stale")
+    assert result.stale_failed == 1
+    assert job.status == "failed"
 
 
 def test_worker_does_not_fail_catalog_update_with_recent_progress(tmp_path: Path) -> None:
@@ -141,7 +187,7 @@ def test_worker_does_not_fail_catalog_update_with_recent_progress(tmp_path: Path
     assert job.result_json == {
         "progress": {
             "current_step": "wait_for_download",
-            "updated_at": (now - timedelta(minutes=1)).isoformat(),
+            "last_progress_at": (now - timedelta(minutes=1)).isoformat(),
         }
     }
 

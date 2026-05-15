@@ -1793,6 +1793,45 @@ th {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.job-progress-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.job-progress-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.job-progress-inline strong {
+  color: var(--text);
+}
+
+.job-progress-steps {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.job-progress-steps ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.job-progress-steps li {
+  padding-left: 4px;
+}
+
+.job-progress-steps li span:last-child {
+  color: var(--muted);
+  margin-left: 8px;
+}
+
 .alert-summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -2271,6 +2310,7 @@ code {
   .candidate-evidence-grid,
   .csv-metadata-grid,
   .diagnostics-summary-grid,
+  .job-progress-grid,
   .alert-summary-grid,
   .workflow-summary-grid,
   .artifact-preview-meta,

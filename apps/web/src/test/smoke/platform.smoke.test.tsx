@@ -111,6 +111,18 @@ describe("platform mocked page smoke tests", () => {
           job_id: "catalog-update-queued",
           job_type: "catalog_update_from_opencart",
           status: "running",
+          result: {
+            progress: {
+              current_step: "download_waiting",
+              current_step_label: "Download waiting",
+              steps_completed: 8,
+              step_started_at: "2026-05-13T09:00:05Z",
+              last_progress_at: "2026-05-13T09:00:15Z",
+              elapsed_seconds: 15,
+              current_step_elapsed_seconds: 10,
+            },
+          },
+          heartbeat_at: "2026-05-13T09:00:15Z",
           created_at: "2026-05-13T09:00:00Z",
           updated_at: "2026-05-13T09:00:01Z",
           attempt_count: 1,
@@ -126,6 +138,9 @@ describe("platform mocked page smoke tests", () => {
     fireEvent.click(button);
 
     await expect(screen.findByText("Updating")).resolves.toBeInTheDocument();
+    await expect(screen.findByText("Download waiting")).resolves.toBeInTheDocument();
+    expect(screen.getByText("15s")).toBeInTheDocument();
+    expect(screen.getByText("10s")).toBeInTheDocument();
     expect(button).toBeDisabled();
     await waitFor(() =>
       expect(
@@ -218,6 +233,78 @@ describe("platform mocked page smoke tests", () => {
 
     await expect(screen.findByText("Failed")).resolves.toBeInTheDocument();
     await expect(screen.findByText("OpenCart export failed: export timeout.")).resolves.toBeInTheDocument();
+  });
+
+  it("shows job detail progress when a job exposes progress metadata", async () => {
+    installMockFetch([
+      {
+        method: "GET",
+        path: "/api/jobs/job-running-progress",
+        response: {
+          job_id: "job-running-progress",
+          job_type: "catalog_update_from_opencart",
+          status: "running",
+          created_at: "2026-05-13T09:00:00Z",
+          updated_at: "2026-05-13T09:00:20Z",
+          started_at: "2026-05-13T09:00:00Z",
+          result: {
+            progress: {
+              current_step: "download_waiting",
+              current_step_label: "Download waiting",
+              steps_completed: 2,
+              step_started_at: "2026-05-13T09:00:05Z",
+              last_progress_at: "2026-05-13T09:00:20Z",
+              elapsed_seconds: 20,
+              current_step_elapsed_seconds: 15,
+              completed_steps: [
+                {
+                  step: "config_loaded",
+                  label: "Config loaded",
+                  started_at: "2026-05-13T09:00:00Z",
+                  completed_at: "2026-05-13T09:00:01Z",
+                  elapsed_seconds: 1,
+                },
+              ],
+            },
+          },
+        },
+      },
+      { method: "GET", path: "/api/jobs/job-running-progress/logs", response: { lines: [] } },
+      { method: "GET", path: "/api/jobs/job-running-progress/artifacts", response: { artifacts: [] } },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/jobs/job-running-progress");
+
+    await expect(screen.findByRole("heading", { name: "Download waiting" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("Current step")).toBeInTheDocument();
+    expect(screen.getByText("Step elapsed")).toBeInTheDocument();
+    expect(screen.getByText("15s")).toBeInTheDocument();
+    expect(screen.getByText("Config loaded")).toBeInTheDocument();
+  });
+
+  it("keeps job detail stable when progress metadata is missing", async () => {
+    installMockFetch([
+      {
+        method: "GET",
+        path: "/api/jobs/job-no-progress",
+        response: {
+          job_id: "job-no-progress",
+          job_type: "render",
+          status: "succeeded",
+          created_at: "2026-05-13T09:00:00Z",
+          updated_at: "2026-05-13T09:01:00Z",
+        },
+      },
+      { method: "GET", path: "/api/jobs/job-no-progress/logs", response: { lines: [] } },
+      { method: "GET", path: "/api/jobs/job-no-progress/artifacts", response: { artifacts: [] } },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/jobs/job-no-progress");
+
+    await expect(screen.findByRole("heading", { name: "job-no-progress" })).resolves.toBeInTheDocument();
+    expect(screen.queryByText("Current step")).not.toBeInTheDocument();
   });
 
   it("renders Catalog summary filters and product rows", async () => {

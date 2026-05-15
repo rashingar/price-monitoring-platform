@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlparse, urlunparse
@@ -49,6 +50,25 @@ CATALOG_UPDATE_STEPS = (
     "ingest_catalog",
     "purge_exclusions",
 )
+CATALOG_UPDATE_PROGRESS_STEPS: dict[str, str] = {
+    "config_loaded": "Config loaded",
+    "alembic_upgrade_started": "Alembic upgrade started",
+    "alembic_upgrade_completed": "Alembic upgrade completed",
+    "playwright_started": "Playwright started",
+    "login_started": "Login started",
+    "login_completed": "Login completed",
+    "export_page_opened": "Export page opened",
+    "profile_loaded": "Profile loaded",
+    "export_step_advanced": "Export step advanced",
+    "download_waiting": "Download waiting",
+    "download_saved": "Download saved",
+    "exclusion_filtering_started": "Exclusion filtering started",
+    "exclusion_filtering_completed": "Exclusion filtering completed",
+    "ingest_started": "Ingest started",
+    "ingest_completed": "Ingest completed",
+    "exclusion_purge_started": "Exclusion purge started",
+    "exclusion_purge_completed": "Exclusion purge completed",
+}
 CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS = 30
 SENSITIVE_QUERY_KEYS = {
     "access_token",
@@ -80,7 +100,7 @@ class CatalogUpdateConfigError(CatalogUpdateError):
     """Raised when required OpenCart export configuration is missing."""
 
 
-CatalogUpdateProgressCallback = Callable[[str], None]
+CatalogUpdateProgressCallback = Callable[[str, dict[str, Any] | None], None]
 
 
 @dataclass
@@ -88,24 +108,54 @@ class CatalogUpdateStepTracker:
     current_step: str = "config_loaded"
     progress_callback: CatalogUpdateProgressCallback | None = None
 
-    def mark(self, step: str) -> None:
+    def mark(self, step: str, *, progress_step: str | None = None, details: dict[str, Any] | None = None) -> None:
         if step not in CATALOG_UPDATE_STEPS:
             raise ValueError(f"Unsupported catalog update step: {step}")
         self.current_step = step
+        selected_progress_step = progress_step or (step if step in CATALOG_UPDATE_PROGRESS_STEPS else None)
+        if selected_progress_step is not None:
+            self.emit_progress(selected_progress_step, details=details)
+
+    def emit_progress(self, progress_step: str, *, details: dict[str, Any] | None = None) -> None:
+        if progress_step not in CATALOG_UPDATE_PROGRESS_STEPS:
+            raise ValueError(f"Unsupported catalog update progress step: {progress_step}")
         if self.progress_callback is not None:
-            self.progress_callback(step)
+            self.progress_callback(progress_step, details)
+
+
+@dataclass(frozen=True)
+class CatalogUpdateCompletedStep:
+    step: str
+    label: str
+    started_at: str
+    completed_at: str
+    elapsed_seconds: float
 
 
 class CatalogUpdateJobProgressReporter:
-    def __init__(self, job_id: str, *, heartbeat_interval_seconds: float = CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS) -> None:
+    def __init__(
+        self,
+        job_id: str,
+        *,
+        heartbeat_interval_seconds: float = CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS,
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
         self._job_id = job_id
         self._heartbeat_interval_seconds = max(1.0, float(heartbeat_interval_seconds))
         self._current_step = "config_loaded"
+        self._current_step_started_at: datetime | None = None
+        self._started_at: datetime | None = None
+        self._completed_steps: list[CatalogUpdateCompletedStep] = []
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
+        self._now = now or _now
 
     def __enter__(self) -> CatalogUpdateJobProgressReporter:
+        timestamp = self._now()
+        with self._lock:
+            self._started_at = timestamp
+            self._current_step_started_at = timestamp
         self.report(self._current_step)
         self._thread = threading.Thread(target=self._heartbeat_loop, name=f"catalog-update-heartbeat-{self._job_id}", daemon=True)
         self._thread.start()
@@ -116,21 +166,58 @@ class CatalogUpdateJobProgressReporter:
         if self._thread is not None:
             self._thread.join(timeout=2)
 
-    def report(self, step: str) -> None:
+    def report(self, step: str, details: dict[str, Any] | None = None) -> None:
+        timestamp = self._now()
         with self._lock:
-            self._current_step = step
-        self._record(step)
+            self._advance_step(step, timestamp)
+            progress = self._progress_payload(timestamp, details=details)
+        self._record(progress, timestamp)
 
     def _heartbeat_loop(self) -> None:
         while not self._stop_event.wait(self._heartbeat_interval_seconds):
+            timestamp = self._now()
             with self._lock:
-                step = self._current_step
-            self._record(step)
+                progress = self._progress_payload(timestamp)
+            self._record(progress, timestamp)
 
-    def _record(self, step: str) -> None:
+    def _advance_step(self, step: str, timestamp: datetime) -> None:
+        if self._current_step == step:
+            return
+        if self._current_step_started_at is not None:
+            self._completed_steps.append(
+                CatalogUpdateCompletedStep(
+                    step=self._current_step,
+                    label=CATALOG_UPDATE_PROGRESS_STEPS.get(self._current_step, self._current_step),
+                    started_at=self._current_step_started_at.isoformat(),
+                    completed_at=timestamp.isoformat(),
+                    elapsed_seconds=_elapsed_seconds(self._current_step_started_at, timestamp),
+                )
+            )
+        self._current_step = step
+        self._current_step_started_at = timestamp
+
+    def _progress_payload(self, timestamp: datetime, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
+        started_at = self._started_at or timestamp
+        step_started_at = self._current_step_started_at or timestamp
+        payload: dict[str, Any] = {
+            "current_step": self._current_step,
+            "current_step_label": CATALOG_UPDATE_PROGRESS_STEPS.get(self._current_step, self._current_step),
+            "steps_completed": len(self._completed_steps),
+            "step_started_at": step_started_at.isoformat(),
+            "last_progress_at": timestamp.isoformat(),
+            "elapsed_seconds": _elapsed_seconds(started_at, timestamp),
+            "current_step_elapsed_seconds": _elapsed_seconds(step_started_at, timestamp),
+            "completed_steps": [step.__dict__ for step in self._completed_steps],
+        }
+        safe_details = _sanitize_progress_details(details)
+        if safe_details:
+            payload["details"] = safe_details
+        return payload
+
+    def _record(self, progress: dict[str, Any], timestamp: datetime) -> None:
         try:
             with session_scope() as session:
-                record_progress(session, self._job_id, step=step)
+                record_progress(session, self._job_id, progress=progress, progress_at=timestamp)
         except Exception:
             return
 
@@ -252,37 +339,55 @@ def run_catalog_update(
     progress_callback: CatalogUpdateProgressCallback | None = None,
 ) -> dict[str, Any]:
     steps = CatalogUpdateStepTracker(progress_callback=progress_callback)
-    steps.mark("config_loaded")
     try:
         selected_config = config or load_catalog_update_config()
     except CatalogUpdateError as exc:
         raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
+    steps.mark(
+        "config_loaded",
+        details={
+            "export_profile": selected_config.export_profile,
+            "timeout_seconds": selected_config.timeout_seconds,
+            "headed": selected_config.headed,
+        },
+    )
     output_dir = catalog_update_output_dir(job_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    steps.mark("alembic_upgrade")
+    steps.mark("alembic_upgrade", progress_step="alembic_upgrade_started")
     try:
         migration = run_alembic_upgrade()
     except CatalogUpdateError as exc:
         raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
+    steps.emit_progress("alembic_upgrade_completed", details={"status": migration.get("status")})
 
     export = export_catalog_csv(selected_config, output_dir, job_id=job_id, step_tracker=steps)
     try:
         normalized_csv_path = normalize_downloaded_csv(export.downloaded_path, output_dir)
     except CatalogUpdateError as exc:
         raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
-    steps.mark("filter_exclusions")
+    steps.mark("filter_exclusions", progress_step="exclusion_filtering_started")
     try:
         exclusions = load_excluded_models()
         filter_result = filter_source_catalog_exclusions(normalized_csv_path, output_dir, exclusions)
     except CatalogUpdateError as exc:
         raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
-    steps.mark("ingest_catalog")
+    steps.emit_progress(
+        "exclusion_filtering_completed",
+        details={
+            "excluded_model_count": filter_result.excluded_model_count,
+            "input_row_count": filter_result.input_row_count,
+            "removed_row_count": filter_result.removed_row_count,
+            "output_row_count": filter_result.output_row_count,
+        },
+    )
+    steps.mark("ingest_catalog", progress_step="ingest_started")
     try:
         ingest = run_catalog_ingest(filter_result.filtered_csv_path)
     except Exception as exc:
         raise CatalogUpdateError(_message_with_step(str(exc) or exc.__class__.__name__, steps.current_step)) from exc
-    steps.mark("purge_exclusions")
+    steps.emit_progress("ingest_completed", details={"imported": ingest.get("imported")})
+    steps.mark("purge_exclusions", progress_step="exclusion_purge_started")
     try:
         cleanup = purge_excluded_catalog_state(
             exclusions.models,
@@ -290,6 +395,7 @@ def run_catalog_update(
         )
     except CatalogUpdateError as exc:
         raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
+    steps.emit_progress("exclusion_purge_completed", details=cleanup.to_payload())
 
     return {
         "job_id": job_id,
@@ -315,8 +421,9 @@ def run_catalog_update_durable_job(
     *,
     config: CatalogUpdateConfig | None = None,
     heartbeat_interval_seconds: float = CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS,
+    now: Callable[[], datetime] | None = None,
 ) -> dict[str, Any]:
-    with CatalogUpdateJobProgressReporter(job_id, heartbeat_interval_seconds=heartbeat_interval_seconds) as progress:
+    with CatalogUpdateJobProgressReporter(job_id, heartbeat_interval_seconds=heartbeat_interval_seconds, now=now) as progress:
         return run_catalog_update(job_id, config=config, progress_callback=progress.report)
 
 
@@ -392,22 +499,26 @@ def export_catalog_csv(
     context = None
     page = None
     try:
-        steps.mark("playwright_start")
+        steps.mark("playwright_start", progress_step="playwright_started")
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=not config.headed)
             try:
                 context = browser.new_context(accept_downloads=True)
                 page = context.new_page()
                 page.set_default_timeout(timeout_ms)
-                steps.mark("login")
+                steps.mark("login", progress_step="login_started")
                 _login_to_opencart(page, config, timeout_ms)
+                steps.emit_progress("login_completed")
                 steps.mark("open_csv_product_export")
                 _open_csv_product_export(page, config, timeout_ms)
+                steps.emit_progress("export_page_opened")
                 steps.mark("load_profile")
                 _load_export_profile(page, config.export_profile)
+                steps.emit_progress("profile_loaded", details={"export_profile": config.export_profile})
                 steps.mark("step_2_next")
                 _advance_export_step_two(page)
-                steps.mark("wait_for_download")
+                steps.emit_progress("export_step_advanced")
+                steps.mark("wait_for_download", progress_step="download_waiting")
                 downloaded_path = _download_export(page, output_dir, timeout_ms, step_tracker=steps)
                 return CatalogExportResult(
                     downloaded_path=downloaded_path,
@@ -755,6 +866,14 @@ def _download_export(
     download.save_as(downloaded_path)
     if not downloaded_path.exists():
         raise CatalogUpdateError("OpenCart export failed: download missing after save.")
+    if step_tracker is not None:
+        step_tracker.emit_progress(
+            "download_saved",
+            details={
+                "downloaded_filename": downloaded_path.name,
+                "downloaded_file_size": downloaded_path.stat().st_size,
+            },
+        )
     return downloaded_path
 
 
@@ -1004,10 +1123,46 @@ def _is_sensitive_query_key(key: str) -> bool:
     return normalized in SENSITIVE_QUERY_KEYS or any(part in normalized for part in ("token", "password", "cookie", "secret"))
 
 
-def _now_iso() -> str:
-    from datetime import datetime, timezone
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
-    return datetime.now(timezone.utc).isoformat()
+
+def _now_iso() -> str:
+    return _now().isoformat()
+
+
+def _elapsed_seconds(started_at: datetime, ended_at: datetime) -> float:
+    return max(0.0, round((ended_at - started_at).total_seconds(), 3))
+
+
+def _sanitize_progress_details(details: dict[str, Any] | None) -> dict[str, Any]:
+    if not details:
+        return {}
+    sanitized: dict[str, Any] = {}
+    for key, value in details.items():
+        normalized_key = str(key)
+        if _is_sensitive_query_key(normalized_key):
+            continue
+        sanitized_value = _sanitize_progress_value(value)
+        if sanitized_value is not None:
+            sanitized[normalized_key] = sanitized_value
+    return sanitized
+
+
+def _sanitize_progress_value(value: Any) -> Any:
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        return redact_opencart_url(value) if "://" in value else redact_opencart_sensitive_data(value)
+    if isinstance(value, Path):
+        return _display_path(value)
+    if isinstance(value, dict):
+        nested = _sanitize_progress_details(value)
+        return nested if nested else None
+    if isinstance(value, (list, tuple)):
+        items = [_sanitize_progress_value(item) for item in value[:20]]
+        return [item for item in items if item is not None]
+    return redact_opencart_sensitive_data(str(value))
 
 
 def _sanitize_output(value: object, database_url: str | None) -> str:

@@ -1,6 +1,8 @@
 import { Link, useParams } from "react-router-dom";
+import { getJobProgress } from "../api/jobProgress";
 import { canStopJob, getJobIdentifier, getRequestPayload } from "../api/jobUtils";
 import { ArtifactList } from "../components/jobs/ArtifactList";
+import { JobProgressPanel } from "../components/jobs/JobProgressPanel";
 import { JobSummary } from "../components/jobs/JobSummary";
 import { JsonBlock } from "../components/jobs/JsonBlock";
 import { LogsPanel } from "../components/jobs/LogsPanel";
@@ -43,6 +45,7 @@ export function JobDetailPage() {
 
     await stopJob("cancelled from job detail page");
   };
+  const progress = getJobProgress(job);
 
   return (
     <div className="page-stack">
@@ -84,7 +87,8 @@ export function JobDetailPage() {
 
       {!isLoading && job ? (
         <>
-          <JobSummary job={job} isPolling={isPolling} isRefreshing={isRefreshing} />
+          <JobSummary job={job} isPolling={isPolling} isRefreshing={isRefreshing} showProgress={false} />
+          <JobProgressPanel progress={progress} />
 
           <section className="panel">
             <div className="section-heading">

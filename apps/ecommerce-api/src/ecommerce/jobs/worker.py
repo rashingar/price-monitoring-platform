@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from collections.abc import Sequence
@@ -19,6 +20,9 @@ from ecommerce.db.session import create_session_factory
 from ecommerce.env import load_local_env_if_present
 from ecommerce.db.repositories.jobs import fail_stale_running_jobs, lease_queued_jobs_for_worker, list_queued_jobs_for_worker, list_stale_running_jobs
 from ecommerce.jobs.durable import DurableJobRegistry, execute_registered_job
+
+CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES_ENV = "ECOMMERCE_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES"
+DEFAULT_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES = 240
 
 
 @dataclass(frozen=True)
@@ -62,6 +66,7 @@ def run_worker_iteration(
     job_type: str | None = None,
     limit: int = 1,
     stale_running_after_minutes: int = 60,
+    stale_running_after_minutes_by_job_type: dict[str, int] | None = None,
     dry_run: bool = False,
     database_url: str | None = None,
     now: datetime | None = None,
@@ -69,16 +74,26 @@ def run_worker_iteration(
 ) -> WorkerIterationResult:
     output = stdout or sys.stdout
     job_types = None if job_type else registry.job_types()
+    stale_groups = _stale_threshold_groups(
+        job_type=job_type,
+        job_types=job_types,
+        default_minutes=stale_running_after_minutes,
+        overrides=stale_running_after_minutes_by_job_type or default_stale_running_thresholds(stale_running_after_minutes),
+    )
     session = create_session_factory(database_url)()
     try:
         if dry_run:
-            stale_jobs = list_stale_running_jobs(
-                session,
-                stale_after_minutes=stale_running_after_minutes,
-                job_type=job_type,
-                job_types=job_types,
-                now=now,
-            )
+            stale_jobs = []
+            for threshold, selected_job_type, selected_job_types in stale_groups:
+                stale_jobs.extend(
+                    list_stale_running_jobs(
+                        session,
+                        stale_after_minutes=threshold,
+                        job_type=selected_job_type,
+                        job_types=selected_job_types,
+                        now=now,
+                    )
+                )
             queued_jobs = list_queued_jobs_for_worker(
                 session,
                 job_type=job_type,
@@ -98,13 +113,17 @@ def run_worker_iteration(
             session.rollback()
             return WorkerIterationResult(stale_seen=len(stale_jobs), claimed=len(queued_jobs), dry_run=True)
 
-        stale_jobs = fail_stale_running_jobs(
-            session,
-            stale_after_minutes=stale_running_after_minutes,
-            job_type=job_type,
-            job_types=job_types,
-            now=now,
-        )
+        stale_jobs = []
+        for threshold, selected_job_type, selected_job_types in stale_groups:
+            stale_jobs.extend(
+                fail_stale_running_jobs(
+                    session,
+                    stale_after_minutes=threshold,
+                    job_type=selected_job_type,
+                    job_types=selected_job_types,
+                    now=now,
+                )
+            )
         session.commit()
         for job in stale_jobs:
             _print(output, f"marked stale running job failed: job_id={job.job_id} job_type={job.job_type}")
@@ -152,6 +171,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     poll_seconds = max(0.1, float(args.poll_seconds))
     limit = max(1, int(args.limit))
     stale_after_minutes = max(1, int(args.stale_running_after_minutes))
+    stale_thresholds = default_stale_running_thresholds(stale_after_minutes)
 
     _print(sys.stdout, "starting Ecommerce durable job worker")
     _print(
@@ -159,7 +179,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "worker config: "
         f"job_type={args.job_type or ','.join(registry.job_types())} "
         f"once={bool(args.once)} poll_seconds={poll_seconds:g} limit={limit} "
-        f"stale_running_after_minutes={stale_after_minutes} dry_run={bool(args.dry_run)}",
+        f"stale_running_after_minutes={stale_after_minutes} "
+        f"catalog_update_stale_running_after_minutes={stale_thresholds[CATALOG_UPDATE_JOB_TYPE]} "
+        f"dry_run={bool(args.dry_run)}",
     )
 
     try:
@@ -169,6 +191,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 job_type=args.job_type,
                 limit=limit,
                 stale_running_after_minutes=stale_after_minutes,
+                stale_running_after_minutes_by_job_type=stale_thresholds,
                 dry_run=bool(args.dry_run),
             )
             if args.once:
@@ -184,6 +207,51 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def _print(output: TextIO, message: str) -> None:
     print(message, file=output, flush=True)
+
+
+def default_stale_running_thresholds(default_minutes: int) -> dict[str, int]:
+    return {
+        CATALOG_UPDATE_JOB_TYPE: _env_int(
+            CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES_ENV,
+            DEFAULT_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES,
+        )
+    }
+
+
+def _stale_threshold_groups(
+    *,
+    job_type: str | None,
+    job_types: Sequence[str] | None,
+    default_minutes: int,
+    overrides: dict[str, int],
+) -> list[tuple[int, str | None, tuple[str, ...] | None]]:
+    default_threshold = max(1, int(default_minutes))
+    bounded_overrides = {key: max(1, int(value)) for key, value in overrides.items()}
+    if job_type:
+        return [(bounded_overrides.get(job_type, default_threshold), job_type, None)]
+
+    selected_job_types = tuple(job_types or ())
+    groups: list[tuple[int, str | None, tuple[str, ...] | None]] = []
+    regular_job_types = tuple(job_type for job_type in selected_job_types if job_type not in bounded_overrides)
+    if regular_job_types:
+        groups.append((default_threshold, None, regular_job_types))
+    for selected_job_type in selected_job_types:
+        threshold = bounded_overrides.get(selected_job_type)
+        if threshold is not None:
+            groups.append((threshold, selected_job_type, None))
+    if not selected_job_types:
+        groups.append((default_threshold, None, None))
+    return groups
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return default
+    try:
+        return max(1, int(value.strip()))
+    except ValueError:
+        return default
 
 
 if __name__ == "__main__":

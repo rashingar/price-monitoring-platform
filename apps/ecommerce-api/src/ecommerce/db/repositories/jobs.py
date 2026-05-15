@@ -195,7 +195,8 @@ def record_progress(
     session: Session,
     job_id: str,
     *,
-    step: str,
+    step: str | None = None,
+    progress: dict[str, Any] | None = None,
     progress_at: datetime | None = None,
 ) -> EcommerceJob:
     job = _require_job(session, job_id)
@@ -203,12 +204,13 @@ def record_progress(
         return job
     timestamp = progress_at or _now()
     existing_result = job.result_json if isinstance(job.result_json, dict) else {}
+    progress_payload = dict(progress or {})
+    if step is not None:
+        progress_payload.setdefault("current_step", str(step))
+    progress_payload.setdefault("last_progress_at", timestamp.isoformat())
     job.result_json = {
         **existing_result,
-        "progress": {
-            "current_step": str(step),
-            "updated_at": timestamp.isoformat(),
-        },
+        "progress": progress_payload,
     }
     job.heartbeat_at = timestamp
     job.updated_at = timestamp

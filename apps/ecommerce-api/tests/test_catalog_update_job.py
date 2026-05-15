@@ -1,7 +1,7 @@
 import sys
 import types
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -135,9 +135,10 @@ def test_run_catalog_update_emits_step_progress(tmp_path: Path, monkeypatch) -> 
 
     def fake_export(config, selected_output_dir, **kwargs):
         step_tracker = kwargs["step_tracker"]
-        step_tracker.mark("playwright_start")
-        step_tracker.mark("login")
-        step_tracker.mark("wait_for_download")
+        step_tracker.mark("playwright_start", progress_step="playwright_started")
+        step_tracker.mark("login", progress_step="login_started")
+        step_tracker.emit_progress("login_completed")
+        step_tracker.mark("wait_for_download", progress_step="download_waiting")
         downloaded = selected_output_dir / "opencart-products.csv"
         downloaded.write_text("model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n", encoding="utf-8")
         return CatalogExportResult(downloaded_path=downloaded, downloaded_size=downloaded.stat().st_size)
@@ -148,21 +149,29 @@ def test_run_catalog_update_emits_step_progress(tmp_path: Path, monkeypatch) -> 
     monkeypatch.setattr(service, "export_catalog_csv", fake_export)
     monkeypatch.setattr(service, "run_catalog_ingest", lambda path: {"imported": 0, "source_path": str(path)})
 
+    def record_step(step: str, _details=None):
+        progress_steps.append(step)
+
     service.run_catalog_update(
         "job-progress",
         config=_catalog_update_config(),
-        progress_callback=progress_steps.append,
+        progress_callback=record_step,
     )
 
     assert progress_steps == [
         "config_loaded",
-        "alembic_upgrade",
-        "playwright_start",
-        "login",
-        "wait_for_download",
-        "filter_exclusions",
-        "ingest_catalog",
-        "purge_exclusions",
+        "alembic_upgrade_started",
+        "alembic_upgrade_completed",
+        "playwright_started",
+        "login_started",
+        "login_completed",
+        "download_waiting",
+        "exclusion_filtering_started",
+        "exclusion_filtering_completed",
+        "ingest_started",
+        "ingest_completed",
+        "exclusion_purge_started",
+        "exclusion_purge_completed",
     ]
 
 
@@ -171,13 +180,14 @@ def test_catalog_update_durable_job_writes_progress_and_heartbeat(tmp_path: Path
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     Base.metadata.create_all(get_engine(database_url))
     output_dir = tmp_path / "catalog_updates" / "job-progress"
+    clock = _Clock(datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc))
 
     with session_scope(database_url) as session:
         create_queued_job(session, job_type=service.CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-progress")
         mark_running(session, "job-progress")
 
     def fake_export(config, selected_output_dir, **kwargs):
-        kwargs["step_tracker"].mark("wait_for_download")
+        kwargs["step_tracker"].mark("wait_for_download", progress_step="download_waiting")
         downloaded = selected_output_dir / "opencart-products.csv"
         downloaded.write_text("model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n", encoding="utf-8")
         return CatalogExportResult(downloaded_path=downloaded, downloaded_size=downloaded.stat().st_size)
@@ -192,6 +202,7 @@ def test_catalog_update_durable_job_writes_progress_and_heartbeat(tmp_path: Path
         "job-progress",
         config=_catalog_update_config(),
         heartbeat_interval_seconds=60,
+        now=clock,
     )
 
     with session_scope(database_url) as session:
@@ -199,8 +210,50 @@ def test_catalog_update_durable_job_writes_progress_and_heartbeat(tmp_path: Path
         assert job is not None
         assert job.status == "running"
         assert job.heartbeat_at is not None
-        assert job.result_json["progress"]["current_step"] == "purge_exclusions"
-        assert isinstance(job.result_json["progress"]["updated_at"], str)
+        progress = job.result_json["progress"]
+        assert progress["current_step"] == "exclusion_purge_completed"
+        assert progress["current_step_label"] == "Exclusion purge completed"
+        assert progress["steps_completed"] >= 8
+        assert progress["elapsed_seconds"] >= 1
+        assert progress["current_step_elapsed_seconds"] >= 0
+        assert isinstance(progress["step_started_at"], str)
+        assert isinstance(progress["last_progress_at"], str)
+        assert progress["completed_steps"]
+
+
+def test_catalog_update_progress_details_are_sanitized(tmp_path: Path, monkeypatch) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    monkeypatch.setenv("OPENCART_ADMIN_USER", "admin@example.test")
+    monkeypatch.setenv("OPENCART_ADMIN_PASS", "supersecret")
+    Base.metadata.create_all(get_engine(database_url))
+    clock = _Clock(datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc))
+
+    with session_scope(database_url) as session:
+        create_queued_job(session, job_type=service.CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-sanitized")
+        mark_running(session, "job-sanitized")
+
+    with service.CatalogUpdateJobProgressReporter("job-sanitized", heartbeat_interval_seconds=60, now=clock) as reporter:
+        reporter.report(
+            "profile_loaded",
+            {
+                "admin_user": "admin@example.test",
+                "password": "supersecret",
+                "current_url": "https://shop.example/admin?route=export&user_token=abc123&ok=1",
+                "note": "loaded by admin@example.test with supersecret",
+            },
+        )
+
+    with session_scope(database_url) as session:
+        job = get_job_by_id(session, "job-sanitized")
+        assert job is not None
+        text = json.dumps(job.result_json["progress"], sort_keys=True)
+
+    assert "admin@example.test" not in text
+    assert "supersecret" not in text
+    assert "abc123" not in text
+    assert "user_token=[redacted]" in text
+    assert "ok=1" in text
 
 
 def test_run_catalog_update_filters_excluded_models_before_ingest(tmp_path: Path, monkeypatch) -> None:
@@ -462,6 +515,16 @@ def _catalog_row(model: str, *, name: str) -> CatalogProductRow:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
+
+
+class _Clock:
+    def __init__(self, start: datetime) -> None:
+        self.current = start
+
+    def __call__(self) -> datetime:
+        value = self.current
+        self.current = self.current + timedelta(seconds=1)
+        return value
 
 
 def test_export_catalog_csv_closes_browser_before_playwright_stops(tmp_path: Path, monkeypatch) -> None:
