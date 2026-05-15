@@ -27,6 +27,8 @@ import { SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY } from "../../features/s
 import { renderWithRouter } from "../renderWithRouter";
 
 const allRoutes = [...productFactoryFixtureRoutes, ...commerceFixtureRoutes];
+const DASHBOARD_ADVANCED_DIAGNOSTICS_STORAGE_KEY =
+  "price-monitoring-platform:dashboard:advanced-diagnostics-open:v1";
 
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -94,14 +96,54 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/");
 
-    await expect(screen.findByRole("heading", { name: "ok" })).resolves.toBeInTheDocument();
     await expect(screen.findByRole("heading", { name: "Operator readiness" })).resolves.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Refresh platform health" })).toBeInTheDocument();
     expect(screen.getByText("Ecommerce API is responding.")).toBeInTheDocument();
     expect(screen.getByText("Product Factory API health could not be checked because no base URL key is configured.")).toBeInTheDocument();
+    expect(screen.queryByText("Backend health")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "OpenCart DB update" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Update DB" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Advanced diagnostics" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show diagnostics" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.queryByText("Product Factory base")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Refresh diagnostics" })).not.toBeInTheDocument();
+  });
+
+  it("opens Dashboard advanced diagnostics and persists the selected state", async () => {
+    installMockFetch(allRoutes);
+
+    const firstRender = renderWithRouter("/");
+
+    const showButton = await screen.findByRole("button", { name: "Show diagnostics" });
+    fireEvent.click(showButton);
+
+    expect(window.localStorage.getItem(DASHBOARD_ADVANCED_DIAGNOSTICS_STORAGE_KEY)).toBe("true");
+    expect(screen.getByRole("button", { name: "Hide diagnostics" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Refresh diagnostics" })).toBeInTheDocument();
+    await expect(screen.findByText("Product Factory base")).resolves.toBeInTheDocument();
     await expect(screen.findByText(/Product Factory API health endpoint responded/)).resolves.toBeInTheDocument();
     await expect(screen.findByText(/Commerce API health endpoint responded/)).resolves.toBeInTheDocument();
+
+    firstRender.unmount();
+    renderWithRouter("/");
+
+    await expect(screen.findByRole("button", { name: "Hide diagnostics" })).resolves.toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide diagnostics" }));
+    expect(window.localStorage.getItem(DASHBOARD_ADVANCED_DIAGNOSTICS_STORAGE_KEY)).toBe("false");
+    expect(screen.getByRole("button", { name: "Show diagnostics" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
   });
 
   it("refreshes Dashboard platform health manually", async () => {
