@@ -402,7 +402,7 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("Composite/invalid").closest("div")).toHaveTextContent("1");
     await expect(screen.findByText("005606")).resolves.toBeInTheDocument();
     await expect(screen.findByText("Midea Αφυγραντήρας 20L")).resolves.toBeInTheDocument();
-    expect(screen.getByText("Αφυγραντήρες")).toBeInTheDocument();
+    expect(screen.queryByText("Αφυγραντήρες")).not.toBeInTheDocument();
     expect(screen.getByText("Eligible")).toBeInTheDocument();
     expect(screen.getByText("Review")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Details for 005606" })).toHaveAttribute(
@@ -934,6 +934,10 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getAllByText("direct vendor").length).toBeGreaterThan(0);
     expect(screen.getAllByText("capture ready").length).toBeGreaterThan(0);
     await expect(screen.findByRole("heading", { name: "Search provider status" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.queryByText("Default provider order")).not.toBeInTheDocument();
+    expect(screen.queryByText("Provider configured")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show details" }));
     expect(screen.getByText("Default provider order")).toBeInTheDocument();
     expect(screen.getAllByText("brave_search").length).toBeGreaterThan(0);
     expect(screen.getByText("Provider configured")).toBeInTheDocument();

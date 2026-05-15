@@ -122,7 +122,7 @@ export function CatalogPage() {
         }}
       />
 
-      <section className="panel">
+      <section className="panel catalog-products-filter-panel">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Filters</p>

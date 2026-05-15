@@ -5,6 +5,7 @@ import {
   initialCatalogPageState,
   normalizeVisibleColumnIds,
   serializeVisibleColumnIds,
+  shouldUseCurrentCatalogColumnDefaults,
 } from "./catalogConstants";
 import { usePersistentPageState } from "../../hooks/usePersistentPageState";
 
@@ -30,7 +31,14 @@ export function useCatalogPageState(initialLayoutPreferences: CatalogLayoutPrefe
   const [page, setPage] = useState(persistedState.page);
   const [pageSize, setPageSize] = useState(persistedState.pageSize);
   const [visibleColumnIds, setVisibleColumnIds] = useState<Set<CatalogColumnId>>(
-    () => new Set(normalizeVisibleColumnIds(persistedState.visibleColumnIds) ?? initialLayoutPreferences.visibleColumnIds),
+    () => {
+      const persistedVisibleColumnIds = normalizeVisibleColumnIds(persistedState.visibleColumnIds);
+      return new Set(
+        shouldUseCurrentCatalogColumnDefaults(persistedVisibleColumnIds)
+          ? initialLayoutPreferences.visibleColumnIds
+          : persistedVisibleColumnIds ?? initialLayoutPreferences.visibleColumnIds,
+      );
+    },
   );
 
   const visibleColumnIdsArray = useMemo(

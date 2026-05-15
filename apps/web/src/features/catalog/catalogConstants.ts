@@ -19,7 +19,7 @@ export const CATALOG_COLUMNS: CatalogColumnDefinition[] = [
   { id: "bestprice_status", label: "BestPrice" },
   { id: "skroutz_status", label: "Skroutz" },
   { id: "ignored", label: "Ignored" },
-  { id: "warnings", label: "Warnings / eligibility" },
+  { id: "warnings", label: "Warnings" },
   { id: "status", label: "Status" },
   { id: "automation_eligible", label: "Automation eligible" },
   { id: "is_atomic_model", label: "Atomic" },
@@ -28,6 +28,17 @@ export const CATALOG_COLUMNS: CatalogColumnDefinition[] = [
 ];
 
 export const DEFAULT_VISIBLE_CATALOG_COLUMNS: CatalogColumnId[] = [
+  "select",
+  "model",
+  "name",
+  "price",
+  "quantity",
+  "bestprice_status",
+  "ignored",
+  "warnings",
+];
+
+export const LEGACY_DEFAULT_VISIBLE_CATALOG_COLUMNS: CatalogColumnId[] = [
   "select",
   "model",
   "name",
@@ -82,6 +93,15 @@ export function normalizeVisibleColumnIds(value: unknown): CatalogColumnId[] | n
   }
 
   return Array.from(new Set([...REQUIRED_CATALOG_COLUMNS, ...visibleColumnIds]));
+}
+
+export function shouldUseCurrentCatalogColumnDefaults(value: CatalogColumnId[] | null): boolean {
+  if (!value || value.length !== LEGACY_DEFAULT_VISIBLE_CATALOG_COLUMNS.length) {
+    return false;
+  }
+
+  const legacyColumns = new Set(LEGACY_DEFAULT_VISIBLE_CATALOG_COLUMNS);
+  return value.every((columnId) => legacyColumns.has(columnId));
 }
 
 export function serializeVisibleColumnIds(visibleColumnIds: Set<CatalogColumnId>): CatalogColumnId[] {

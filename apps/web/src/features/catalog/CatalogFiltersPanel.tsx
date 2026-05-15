@@ -69,7 +69,7 @@ export function CatalogFiltersPanel({
 }) {
   return (
     <>
-      <div className="filter-grid">
+      <div className="filter-grid catalog-filter-grid">
         <label>
           Search
           <input

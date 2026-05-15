@@ -33,17 +33,19 @@ export function SourceUrlAgentRunsPage() {
   return (
     <div className="page-stack source-url-agent-page">
       <SourceUrlAgentRunsHeader />
-      <SourceUrlAgentWarningPanel />
+      <div className="source-url-agent-top-row">
+        <SourceUrlAgentWarningPanel />
+        <SourceUrlAgentReadinessCard
+          blockLaunch
+          collapsed
+          className="source-url-readiness-launch-card"
+          onReadinessStateChange={launch.handleReadinessStateChange}
+        />
+      </div>
       <SourceUrlAgentHandoffPanel
         handoffModels={handoffModels}
         isLaunching={launch.isLaunching}
         onClear={() => setSearchParams(new URLSearchParams(), { replace: true })}
-      />
-
-      <SourceUrlAgentReadinessCard
-        blockLaunch
-        className="source-url-readiness-launch-card"
-        onReadinessStateChange={launch.handleReadinessStateChange}
       />
 
       <SourceUrlAgentLaunchPanel

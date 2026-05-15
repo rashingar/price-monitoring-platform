@@ -39,7 +39,7 @@ export function CatalogProductsTable({
         <thead>
           <tr>
             {isColumnVisible("select") ? (
-              <th>
+              <th className="catalog-select-cell">
                 <input
                   type="checkbox"
                   aria-label="Select all visible eligible products"
@@ -49,25 +49,25 @@ export function CatalogProductsTable({
                 />
               </th>
             ) : null}
-            {isColumnVisible("model") ? <th>Model</th> : null}
-            {isColumnVisible("name") ? <th>Name</th> : null}
+            {isColumnVisible("model") ? <th className="catalog-model-cell">Model</th> : null}
+            {isColumnVisible("name") ? <th className="catalog-name-cell">Name</th> : null}
             {isColumnVisible("manufacturer") ? <th>Manufacturer</th> : null}
             {isColumnVisible("family") ? <th>Family</th> : null}
             {isColumnVisible("category_name") ? <th>Category</th> : null}
             {isColumnVisible("sub_category") ? <th>Sub-Category</th> : null}
             {isColumnVisible("mpn") ? <th>MPN</th> : null}
-            {isColumnVisible("price") ? <th>Price</th> : null}
-            {isColumnVisible("quantity") ? <th>Qty</th> : null}
-            {isColumnVisible("bestprice_status") ? <th>BestPrice</th> : null}
-            {isColumnVisible("skroutz_status") ? <th>Skroutz</th> : null}
-            {isColumnVisible("ignored") ? <th>Ignored</th> : null}
+            {isColumnVisible("price") ? <th className="catalog-price-cell">Price</th> : null}
+            {isColumnVisible("quantity") ? <th className="catalog-qty-cell">Qty</th> : null}
+            {isColumnVisible("bestprice_status") ? <th className="catalog-marketplace-cell">BestPrice</th> : null}
+            {isColumnVisible("skroutz_status") ? <th className="catalog-marketplace-cell">Skroutz</th> : null}
+            {isColumnVisible("ignored") ? <th className="catalog-ignored-cell">Ignored</th> : null}
             {isColumnVisible("status") ? <th>Status</th> : null}
             {isColumnVisible("automation_eligible") ? <th>Automation</th> : null}
             {isColumnVisible("is_atomic_model") ? <th>Atomic</th> : null}
             {isColumnVisible("category_levels") ? <th>Category levels</th> : null}
             {isColumnVisible("raw_category") ? <th>Raw category</th> : null}
-            {isColumnVisible("warnings") ? <th>Warnings / eligibility</th> : null}
-            <th>Actions</th>
+            {isColumnVisible("warnings") ? <th className="catalog-warning-cell">Warnings</th> : null}
+            <th className="catalog-actions-cell">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -85,7 +85,7 @@ export function CatalogProductsTable({
             return (
               <tr key={model}>
                 {isColumnVisible("select") ? (
-                  <td>
+                  <td className="catalog-select-cell">
                     <input
                       type="checkbox"
                       aria-label={`Select ${model}`}
@@ -95,35 +95,35 @@ export function CatalogProductsTable({
                     />
                   </td>
                 ) : null}
-                {isColumnVisible("model") ? <td className="nowrap-cell">{model}</td> : null}
-                {isColumnVisible("name") ? <td>{formatValue(product.name)}</td> : null}
+                {isColumnVisible("model") ? <td className="nowrap-cell catalog-model-cell">{model}</td> : null}
+                {isColumnVisible("name") ? <td className="catalog-name-cell">{formatValue(product.name)}</td> : null}
                 {isColumnVisible("manufacturer") ? <td>{formatValue(product.manufacturer)}</td> : null}
                 {isColumnVisible("family") ? <td>{formatValue(product.family)}</td> : null}
                 {isColumnVisible("category_name") ? <td>{formatValue(product.category_name)}</td> : null}
                 {isColumnVisible("sub_category") ? <td>{formatValue(product.sub_category)}</td> : null}
                 {isColumnVisible("mpn") ? <td>{formatValue(product.mpn)}</td> : null}
                 {isColumnVisible("price") ? (
-                  <td className="nowrap-cell">{formatMoney(product.price)}</td>
+                  <td className="nowrap-cell catalog-price-cell">{formatMoney(product.price)}</td>
                 ) : null}
-                {isColumnVisible("quantity") ? <td>{formatValue(product.quantity)}</td> : null}
+                {isColumnVisible("quantity") ? <td className="catalog-qty-cell">{formatValue(product.quantity)}</td> : null}
                 {isColumnVisible("bestprice_status") ? (
-                  <td>
+                  <td className="catalog-marketplace-cell">
                     <span className="status-badge neutral">
                       {getMarketplaceStatus(product.bestprice_status)}
                     </span>
                   </td>
                 ) : null}
                 {isColumnVisible("skroutz_status") ? (
-                  <td>
+                  <td className="catalog-marketplace-cell">
                     <span className="status-badge neutral">
                       {getMarketplaceStatus(product.skroutz_status)}
                     </span>
                   </td>
                 ) : null}
-                {isColumnVisible("ignored") ? <td>{product.ignored ? "yes" : "no"}</td> : null}
+                {isColumnVisible("ignored") ? <td className="catalog-ignored-cell">{product.ignored ? "yes" : "no"}</td> : null}
                 {isColumnVisible("status") ? <td>{formatValue(product.status)}</td> : null}
                 {isColumnVisible("automation_eligible") ? (
-                  <td>
+                  <td className="catalog-warning-cell">
                     {typeof product.automation_eligible === "boolean"
                       ? product.automation_eligible
                         ? "yes"
@@ -166,7 +166,7 @@ export function CatalogProductsTable({
                     </div>
                   </td>
                 ) : null}
-                <td>
+                <td className="catalog-actions-cell">
                   <div className="catalog-row-actions">
                     {product.catalog_product_id !== null && product.catalog_product_id !== undefined ? (
                       <Link
@@ -184,7 +184,7 @@ export function CatalogProductsTable({
                       disabled={isCatalogLocked}
                       aria-label={`Source URLs for ${model}`}
                     >
-                      Source URLs
+                      URLs
                     </button>
                   </div>
                 </td>

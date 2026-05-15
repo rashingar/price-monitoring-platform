@@ -2005,28 +2005,30 @@ export function ProductFactoryWorkflowPage() {
 
   return (
     <div className="page-stack">
-      <section className="page-header">
-        <p className="eyebrow">Product Factory</p>
-        <h2>Pipeline</h2>
-        <p>{"Prepare -> Authoring -> Filter Review -> Render -> Publish"}</p>
-        <button className="text-button" type="button" onClick={handleResetForm}>
-          Reset saved Workflow state
-        </button>
-      </section>
-
-      <section className={`db-status-banner ${isBackendAvailable ? "ok" : "danger"}`}>
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">API health</p>
-            <h3>{isHealthLoading ? "Checking Product Factory API" : isBackendAvailable ? "Product Factory API available" : "Product Factory API unavailable"}</h3>
-          </div>
-          <button className="button secondary compact-button" type="button" onClick={() => void loadHealth()}>
-            Retry health
+      <div className="product-factory-top-row">
+        <section className="page-header product-factory-intro-card">
+          <p className="eyebrow">Product Factory</p>
+          <h2>Pipeline</h2>
+          <p>{"Prepare -> Authoring -> Filter Review -> Render -> Publish"}</p>
+          <button className="text-button" type="button" onClick={handleResetForm}>
+            Reset saved Workflow state
           </button>
-        </div>
-        {healthError ? <p className="form-error">{healthError}</p> : null}
-        {!isBackendAvailable ? <p className="muted">Write actions are disabled until the backend health check succeeds.</p> : null}
-      </section>
+        </section>
+
+        <section className={`db-status-banner product-factory-health-card ${isBackendAvailable ? "ok" : "danger"}`}>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">API health</p>
+              <h3>{isHealthLoading ? "Checking Product Factory API" : isBackendAvailable ? "Product Factory API available" : "Product Factory API unavailable"}</h3>
+            </div>
+            <button className="button secondary compact-button" type="button" onClick={() => void loadHealth()}>
+              Retry health
+            </button>
+          </div>
+          {healthError ? <p className="form-error">{healthError}</p> : null}
+          {!isBackendAvailable ? <p className="muted">Write actions are disabled until the backend health check succeeds.</p> : null}
+        </section>
+      </div>
 
       <section className="panel">
         <div className="section-heading">

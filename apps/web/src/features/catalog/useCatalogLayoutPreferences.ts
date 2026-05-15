@@ -6,6 +6,7 @@ import {
   DEFAULT_VISIBLE_CATALOG_COLUMNS,
   REQUIRED_CATALOG_COLUMNS,
   normalizeVisibleColumnIds,
+  shouldUseCurrentCatalogColumnDefaults,
 } from "./catalogConstants";
 import type { CatalogColumnId, CatalogLayoutPreferences } from "./catalogTypes";
 
@@ -30,13 +31,16 @@ export function readCatalogLayoutPreferences(): CatalogLayoutPreferences {
 
     const record = parsed as Record<string, unknown>;
     const visibleColumnIds = normalizeVisibleColumnIds(record.visibleColumnIds);
+    const resolvedVisibleColumnIds = shouldUseCurrentCatalogColumnDefaults(visibleColumnIds)
+      ? DEFAULT_VISIBLE_CATALOG_COLUMNS
+      : visibleColumnIds;
     const pageSize =
       typeof record.pageSize === "number" && CATALOG_PAGE_SIZE_OPTIONS.includes(record.pageSize as 50 | 100 | 200)
         ? record.pageSize
         : DEFAULT_PAGE_SIZE;
 
     return {
-      visibleColumnIds: visibleColumnIds ?? DEFAULT_VISIBLE_CATALOG_COLUMNS,
+      visibleColumnIds: resolvedVisibleColumnIds ?? DEFAULT_VISIBLE_CATALOG_COLUMNS,
       pageSize,
     };
   } catch {

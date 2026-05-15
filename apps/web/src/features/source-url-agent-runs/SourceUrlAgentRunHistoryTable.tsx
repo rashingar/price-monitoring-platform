@@ -31,23 +31,20 @@ export function SourceUrlAgentRunHistoryTable({
   return (
     <div className="table-wrap source-url-agent-runs-table-wrap">
       <table>
+        <colgroup>
+          <col className="source-url-run-column" />
+          <col className="source-url-state-column" />
+          <col className="source-url-counts-column" />
+          <col className="source-url-activity-column" />
+          <col className="source-url-actions-column" />
+        </colgroup>
         <thead>
           <tr>
-            <th>run_id</th>
-            <th>source</th>
-            <th>mode</th>
-            <th>status</th>
-            <th>selected_count</th>
-            <th>candidate_count</th>
-            <th>task progress</th>
-            <th>matched_count</th>
-            <th>needs_review_count</th>
-            <th>not_found_count</th>
-            <th>error_count</th>
-            <th>created</th>
-            <th>started</th>
-            <th>completed</th>
-            <th>actions</th>
+            <th>Run</th>
+            <th>State</th>
+            <th>Counts</th>
+            <th>Activity</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -56,26 +53,70 @@ export function SourceUrlAgentRunHistoryTable({
             const isRefreshing = refreshingRunId === runId;
             return (
               <tr key={`${runId}-${index}`}>
-                <td className="source-url-agent-run-id">{runId}</td>
-                <td>{formatValue(run.source)}</td>
-                <td>{formatValue(run.mode)}</td>
                 <td>
-                  <span className={`status-badge ${statusClass(run.status)}`}>
-                    {normalizeLabel(run.status)}
-                  </span>
+                  <div className="source-url-run-cell">
+                    <span className="source-url-agent-run-id" title={runId}>
+                      {runId}
+                    </span>
+                    <span className="muted">
+                      {formatValue(run.source)} / {formatValue(run.mode)}
+                    </span>
+                  </div>
                 </td>
-                <td>{formatNumber(getCounter(run, "selected_count"))}</td>
-                <td>{formatNumber(getCounter(run, "candidate_count"))}</td>
-                <td>{formatTaskProgress(run)}</td>
-                <td>{formatNumber(getCounter(run, "matched_count"))}</td>
-                <td>{formatNumber(getCounter(run, "needs_review_count"))}</td>
-                <td>{formatNumber(getCounter(run, "not_found_count"))}</td>
-                <td>{formatNumber(getCounter(run, "error_count"))}</td>
-                <td>{formatDate(run.created_at)}</td>
-                <td>{formatDate(run.started_at)}</td>
-                <td>{formatDate(run.completed_at)}</td>
                 <td>
-                  <div className="source-url-agent-actions">
+                  <div className="source-url-state-cell">
+                    <span className={`status-badge ${statusClass(run.status)}`}>
+                      {normalizeLabel(run.status)}
+                    </span>
+                    <span className="muted">Tasks {formatTaskProgress(run)}</span>
+                  </div>
+                </td>
+                <td>
+                  <dl className="source-url-run-counts">
+                    <div>
+                      <dt>Selected</dt>
+                      <dd>{formatNumber(getCounter(run, "selected_count"))}</dd>
+                    </div>
+                    <div>
+                      <dt>Candidates</dt>
+                      <dd>{formatNumber(getCounter(run, "candidate_count"))}</dd>
+                    </div>
+                    <div>
+                      <dt>Matched</dt>
+                      <dd>{formatNumber(getCounter(run, "matched_count"))}</dd>
+                    </div>
+                    <div>
+                      <dt>Review</dt>
+                      <dd>{formatNumber(getCounter(run, "needs_review_count"))}</dd>
+                    </div>
+                    <div>
+                      <dt>Missing</dt>
+                      <dd>{formatNumber(getCounter(run, "not_found_count"))}</dd>
+                    </div>
+                    <div>
+                      <dt>Errors</dt>
+                      <dd>{formatNumber(getCounter(run, "error_count"))}</dd>
+                    </div>
+                  </dl>
+                </td>
+                <td>
+                  <dl className="source-url-run-activity">
+                    <div>
+                      <dt>Created</dt>
+                      <dd>{formatDate(run.created_at)}</dd>
+                    </div>
+                    <div>
+                      <dt>Started</dt>
+                      <dd>{formatDate(run.started_at)}</dd>
+                    </div>
+                    <div>
+                      <dt>Completed</dt>
+                      <dd>{formatDate(run.completed_at)}</dd>
+                    </div>
+                  </dl>
+                </td>
+                <td>
+                  <div className="source-url-agent-actions source-url-agent-run-actions">
                     <button
                       className="button secondary compact-button"
                       type="button"
