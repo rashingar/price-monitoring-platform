@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
   initialPrepareFormState,
@@ -74,6 +75,44 @@ describe("PrepareJobForm contract", () => {
       boxnow: 0,
       price: 0,
     });
+  });
+
+  it("keeps controlled input edits visible across parent rerenders", () => {
+    function ControlledPrepareForm() {
+      const [form, setForm] = useState<PrepareFormState>({
+        ...initialPrepareFormState,
+        model: "005606",
+        url: "https://example.invalid/old-product",
+      });
+      const [rerenders, setRerenders] = useState(0);
+
+      return (
+        <>
+          <button type="button" onClick={() => setRerenders((value) => value + 1)}>
+            Rerender parent
+          </button>
+          <span data-testid="rerenders">{rerenders}</span>
+          <PrepareJobForm
+            error={null}
+            initialForm={form}
+            isSubmitting={false}
+            onFormChange={setForm}
+            onSubmit={vi.fn()}
+          />
+        </>
+      );
+    }
+
+    render(<ControlledPrepareForm />);
+
+    fireEvent.change(screen.getByLabelText("Model"), { target: { value: "123456" } });
+    fireEvent.change(screen.getByLabelText("URL"), {
+      target: { value: "https://example.invalid/new-product" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Rerender parent" }));
+
+    expect(screen.getByLabelText("Model")).toHaveValue("123456");
+    expect(screen.getByLabelText("URL")).toHaveValue("https://example.invalid/new-product");
   });
 
   it("shows and submits optional extra settings only when expanded", () => {

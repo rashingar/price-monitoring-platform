@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useState } from "react";
 import type { PrepareJobRequest } from "../../api/types";
 
 interface PrepareJobFormProps {
@@ -60,23 +60,24 @@ export function PrepareJobForm({
   initialForm,
   onFormChange,
 }: PrepareJobFormProps) {
-  const [form, setForm] = useState<PrepareFormState>(() => normalizePrepareFormState(initialForm));
+  const isControlled = initialForm !== undefined && onFormChange !== undefined;
+  const [localForm, setLocalForm] = useState<PrepareFormState>(() =>
+    normalizePrepareFormState(initialForm),
+  );
+  const form = isControlled ? normalizePrepareFormState(initialForm) : localForm;
   const [localError, setLocalError] = useState<string | null>(null);
   const [extraSettingsOpen, setExtraSettingsOpen] = useState(false);
-
-  useEffect(() => {
-    setForm(normalizePrepareFormState(initialForm));
-  }, [initialForm]);
-
-  useEffect(() => {
-    onFormChange?.(form);
-  }, [form, onFormChange]);
 
   function updateField<Key extends keyof PrepareFormState>(
     key: Key,
     value: PrepareFormState[Key],
   ) {
-    setForm((current) => ({ ...current, [key]: value }));
+    if (isControlled) {
+      onFormChange({ ...form, [key]: value });
+      return;
+    }
+
+    setLocalForm((current) => ({ ...current, [key]: value }));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
