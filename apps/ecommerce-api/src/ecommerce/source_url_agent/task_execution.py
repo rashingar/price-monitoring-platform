@@ -13,11 +13,11 @@ from ecommerce.source_url_agent.options import Resolver, SourceUrlAgentOptions
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.search import (
     SourceSearchResult,
-    discover_google_top_results_product_evidence,
+    discover_product_level_search_evidence,
     discover_source_evidence,
     generate_search_queries,
 )
-from ecommerce.source_url_agent.search_providers import load_search_provider_registry, uses_product_level_google_top_results
+from ecommerce.source_url_agent.search_providers import load_search_provider_registry, uses_product_level_search_provider
 from ecommerce.source_url_agent.sources import SourceDefinition
 
 
@@ -35,13 +35,13 @@ def run_with_browser(
         no_browser_cache=options.no_browser_cache,
         default_rate_limit_seconds=options.rate_limit_seconds or 2.0,
     ) as browser:
-        if uses_product_level_google_top_results(provider_registry, sources):
-            google_cache: dict[tuple[int | None, str, str, str], dict[str, SourceSearchResult]] = {}
+        if uses_product_level_search_provider(provider_registry, sources):
+            product_level_cache: dict[tuple[int | None, str, str, str], dict[str, SourceSearchResult]] = {}
 
-            def google_resolver(product: AgentProduct, source: SourceDefinition) -> SourceSearchResult:
+            def product_level_resolver(product: AgentProduct, source: SourceDefinition) -> SourceSearchResult:
                 key = (product.catalog_product_id, product.model, product.mpn, product.manufacturer)
-                if key not in google_cache:
-                    google_cache[key] = discover_google_top_results_product_evidence(
+                if key not in product_level_cache:
+                    product_level_cache[key] = discover_product_level_search_evidence(
                         product=product,
                         sources=sources,
                         browser=browser,
@@ -49,7 +49,7 @@ def run_with_browser(
                         max_candidates=None,
                         rate_limit_seconds=options.rate_limit_seconds,
                     )
-                return google_cache[key].get(
+                return product_level_cache[key].get(
                     source.source_name,
                     SourceSearchResult(evidence=[], searched_queries=[], searched_urls=[], errors=[]),
                 )
@@ -60,7 +60,7 @@ def run_with_browser(
                 sources=sources,
                 options=options,
                 session=session,
-                resolver=google_resolver,
+                resolver=product_level_resolver,
             )
         return run_with_resolver(
             run_id=run_id,

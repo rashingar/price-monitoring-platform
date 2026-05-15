@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from ecommerce.source_url_agent.browser import SourceUrlBrowserSession
+from ecommerce.source_url_agent.brave_search import BraveSearchProvider
 from ecommerce.source_url_agent.evidence import error_evidence, extract_page_evidence
-from ecommerce.source_url_agent.google_top_results import GoogleTopResultsProvider
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.search_providers import (
     SearchProviderRegistry,
@@ -147,7 +147,7 @@ def discover_source_evidence(
     )
 
 
-def discover_google_top_results_product_evidence(
+def discover_product_level_search_evidence(
     *,
     product: AgentProduct,
     sources: list[SourceDefinition],
@@ -156,14 +156,12 @@ def discover_google_top_results_product_evidence(
     max_candidates: int | None = None,
     rate_limit_seconds: float | None = None,
 ) -> dict[str, SourceSearchResult]:
-    google_definition = provider_registry.get("google_top_results")
-    provider = GoogleTopResultsProvider(google_definition)
+    definition = _product_level_provider_definition(provider_registry, sources)
+    provider = BraveSearchProvider(definition)
     product_result = provider.discover_product(
         product=product,
         sources=sources,
-        browser=browser,
         max_candidates_per_source=max_candidates,
-        rate_limit_seconds=rate_limit_seconds,
     )
     results = {
         source.source_name: SourceSearchResult(
@@ -235,6 +233,17 @@ def discover_google_top_results_product_evidence(
             provider_summary=current.provider_summary,
         )
     return results
+
+
+def _product_level_provider_definition(
+    provider_registry: SearchProviderRegistry,
+    sources: list[SourceDefinition],
+):
+    for source in sources:
+        for definition in provider_registry.cascade_for_source(source.source_name):
+            if definition.enabled:
+                return definition
+    raise ValueError("No enabled product-level search provider is configured.")
 
 
 def _dedupe_queries(values: list[str]) -> list[str]:

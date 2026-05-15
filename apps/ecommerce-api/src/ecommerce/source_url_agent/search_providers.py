@@ -14,7 +14,6 @@ from ecommerce.source_url_agent.sources import SourceDefinition
 
 DEFAULT_SEARCH_PROVIDER_REGISTRY_PATH = Path(__file__).resolve().parents[3] / "config" / "source_url_agent" / "search_providers.json"
 BROWSER_FALLBACK_PROVIDER_NAME = "browser_fallback"
-GOOGLE_TOP_RESULTS_PROVIDER_NAME = "google_top_results"
 
 
 @dataclass(frozen=True)
@@ -26,6 +25,16 @@ class SearchProviderDefinition:
     search_url_template: str = ""
     max_results_per_query: int = 10
     stop_after_first_query_with_candidates: bool = True
+    endpoint_url: str = ""
+    country: str = "GR"
+    search_lang: str = "el"
+    ui_lang: str = "el-GR"
+    count: int = 10
+    offset: int = 0
+    safesearch: str = "moderate"
+    result_filter: str = "web"
+    spellcheck: bool = False
+    timeout_seconds: float = 10.0
     notes: str = ""
 
     @classmethod
@@ -40,6 +49,16 @@ class SearchProviderDefinition:
             search_url_template=str(payload.get("search_url_template") or "").strip(),
             max_results_per_query=max(1, int(payload.get("max_results_per_query", 10))),
             stop_after_first_query_with_candidates=bool(payload.get("stop_after_first_query_with_candidates", True)),
+            endpoint_url=str(payload.get("endpoint_url") or "").strip(),
+            country=str(payload.get("country") or "GR").strip(),
+            search_lang=str(payload.get("search_lang") or "el").strip(),
+            ui_lang=str(payload.get("ui_lang") or "el-GR").strip(),
+            count=min(20, max(1, int(payload.get("count", payload.get("max_results_per_query", 10))))),
+            offset=max(0, int(payload.get("offset", 0))),
+            safesearch=str(payload.get("safesearch") or "moderate").strip(),
+            result_filter=str(payload.get("result_filter") or "web").strip(),
+            spellcheck=bool(payload.get("spellcheck", False)),
+            timeout_seconds=max(0.1, float(payload.get("timeout_seconds", 10))),
             notes=str(payload.get("notes") or "").strip(),
         )
 
@@ -319,17 +338,26 @@ class _SearchUrlQueryItem:
 def _provider_for_definition(definition: SearchProviderDefinition) -> SourceUrlSearchProvider:
     if definition.provider_name == BROWSER_FALLBACK_PROVIDER_NAME and definition.provider_type == "browser":
         return BrowserFallbackSearchProvider(definition)
-    if definition.provider_name == GOOGLE_TOP_RESULTS_PROVIDER_NAME:
-        from ecommerce.source_url_agent.google_top_results import GoogleTopResultsProvider
+    if definition.provider_name == "brave_search" and definition.provider_type == "brave":
+        from ecommerce.source_url_agent.brave_search import BraveSearchProvider
 
-        return GoogleTopResultsProvider(definition)
+        return BraveSearchProvider(definition)
     raise ValueError(f"Unsupported source URL search provider: {definition.provider_name} ({definition.provider_type})")
 
 
-def uses_product_level_google_top_results(registry: SearchProviderRegistry, sources: list[SourceDefinition]) -> bool:
+def supports_product_level_discovery(definition: SearchProviderDefinition) -> bool:
+    return definition.provider_name == "brave_search" and definition.provider_type == "brave"
+
+
+def uses_product_level_search_provider(registry: SearchProviderRegistry, sources: list[SourceDefinition]) -> bool:
+    first_provider_name = ""
     for source in sources:
         enabled = [definition for definition in registry.cascade_for_source(source.source_name) if definition.enabled]
-        if not enabled or enabled[0].provider_name != GOOGLE_TOP_RESULTS_PROVIDER_NAME:
+        if not enabled or not supports_product_level_discovery(enabled[0]):
+            return False
+        if not first_provider_name:
+            first_provider_name = enabled[0].provider_name
+        elif enabled[0].provider_name != first_provider_name:
             return False
     return True
 

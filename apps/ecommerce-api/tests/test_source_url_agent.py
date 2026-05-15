@@ -1,5 +1,6 @@
 import sys
 import json
+import httpx
 from dataclasses import replace
 from pathlib import Path
 
@@ -7,18 +8,25 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.source_url_agent.browser import PageSnapshot  # noqa: E402
-from ecommerce.source_url_agent.google_top_results import (  # noqa: E402
-    CandidateUrlNormalizer,
-    GoogleTopResultsProvider,
+from ecommerce.source_url_agent.brave_search import (  # noqa: E402
+    BRAVE_DISCOVERY_METHOD,
+    BRAVE_SEARCH_API_KEY_ENV_VAR,
+    BRAVE_SEARCH_PROVIDER_NAME,
+    BraveSearchProvider,
+    HttpxBraveSearchClient,
+    build_brave_product_queries,
+    brave_web_results,
+)
+from ecommerce.source_url_agent.result_url_candidates import (  # noqa: E402
     KnownSourceUrlClassifier,
     SourceProductUrlFilter,
-    build_google_product_queries,
-    google_result_urls,
 )
 from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
 from ecommerce.source_url_agent.products import read_products_from_csv  # noqa: E402
+from ecommerce.source_url_agent.options import SourceUrlAgentOptions  # noqa: E402
 from ecommerce.source_url_agent.search import (  # noqa: E402
-    discover_google_top_results_product_evidence,
+    SourceSearchResult,
+    discover_product_level_search_evidence,
     discover_source_evidence,
     generate_search_queries,
 )
@@ -30,6 +38,7 @@ from ecommerce.source_url_agent.search_providers import (  # noqa: E402
     load_search_provider_registry,
 )
 from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
+from ecommerce.source_url_agent import task_execution  # noqa: E402
 
 
 def _product(**overrides) -> AgentProduct:
@@ -79,13 +88,19 @@ def test_source_registry_loading() -> None:
 def test_search_provider_registry_loading_and_source_specific_cascade() -> None:
     registry = load_search_provider_registry()
 
-    assert registry.default_cascade == ("google_top_results",)
-    provider = registry.get("google_top_results")
-    assert provider.provider_type == "google"
+    assert registry.default_cascade == ("brave_search",)
+    provider = registry.get("brave_search")
+    assert provider.provider_type == "brave"
     assert provider.enabled is True
     assert provider.allow_high_confidence_auto_apply is False
-    assert provider.search_url_template == "https://www.google.gr/search?q={query}&hl=el&gl=GR&num=10&pws=0"
-    assert [item.provider_name for item in registry.cascade_for_source("bestprice")] == ["google_top_results"]
+    assert provider.endpoint_url == "https://api.search.brave.com/res/v1/web/search"
+    assert provider.country == "GR"
+    assert provider.search_lang == "el"
+    assert provider.ui_lang == "el-GR"
+    assert provider.count == 10
+    assert provider.result_filter == "web"
+    assert provider.spellcheck is False
+    assert [item.provider_name for item in registry.cascade_for_source("bestprice")] == ["brave_search"]
 
 
 def test_search_provider_registry_uses_default_cascade_when_source_is_not_configured(tmp_path: Path) -> None:
@@ -330,31 +345,109 @@ def test_discover_source_evidence_uses_provider_cascade_and_preserves_provenance
     assert provenance["candidate_url"] == product_url
 
 
-def test_google_top_results_query_generation_uses_model_or_mpn_then_brand() -> None:
-    assert build_google_product_queries(_product(mpn="55C8L", manufacturer="TCL")) == ["55C8L TCL"]
-    assert build_google_product_queries(_product(mpn="UTG-12CH", manufacturer="Toyotomi")) == ["UTG-12CH Toyotomi"]
-    assert build_google_product_queries(_product(mpn="", model="HBA514BS3", manufacturer="Bosch")) == ["HBA514BS3 Bosch"]
+def test_brave_search_missing_api_key_returns_status_without_candidates(monkeypatch) -> None:
+    monkeypatch.delenv(BRAVE_SEARCH_API_KEY_ENV_VAR, raising=False)
+    definition = _brave_definition()
 
-
-def test_google_result_html_extraction_and_redirect_unwrapping(fixtures_root: Path) -> None:
-    html = (fixtures_root / "source_url_agent" / "google" / "utg_12ch_toyotomi.txt").read_text(encoding="utf-8")
-    search_url = "https://www.google.gr/search?q=UTG-12CH+Toyotomi&hl=el&gl=GR&num=10&pws=0"
-    snapshot = PageSnapshot(
-        requested_url=search_url,
-        final_url=search_url,
-        title="UTG-12CH Toyotomi - Google Search",
-        html=html,
-        body_text="",
+    result = BraveSearchProvider(definition, client=_FakeBraveClient(_brave_response())).discover_product(
+        product=_product(mpn="UTG-12CH", manufacturer="Toyotomi"),
+        sources=load_source_registry().selected("all"),
     )
-    urls = google_result_urls(snapshot, base_url=search_url, max_results=10)
-    normalizer = CandidateUrlNormalizer()
 
-    assert len(urls) == 7
-    assert normalizer.normalize(urls[0], base_url=search_url) == "https://www.skroutz.gr/s/123456/Toyotomi-UTG-12CH.html"
-    assert normalizer.normalize(urls[1], base_url=search_url) == "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html"
+    assert result.status == "missing_api_key"
+    assert result.candidates == []
+    assert result.errors == ["brave_search:missing_api_key"]
 
 
-def test_google_known_source_classification_and_product_url_filtering() -> None:
+def test_brave_search_query_generation_uses_model_or_mpn_then_brand() -> None:
+    assert build_brave_product_queries(_product(mpn="55C8L", manufacturer="TCL")) == ["55C8L TCL"]
+    assert build_brave_product_queries(_product(mpn="UTG-12CH", manufacturer="Toyotomi")) == ["UTG-12CH Toyotomi"]
+    assert build_brave_product_queries(_product(mpn="", model="HBA514BS3", manufacturer="Bosch")) == ["HBA514BS3 Bosch"]
+
+
+def test_brave_search_request_uses_configured_api_contract(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
+    client = _FakeBraveClient(_brave_response())
+    definition = _brave_definition()
+
+    BraveSearchProvider(definition, client=client).discover_product(
+        product=_product(mpn="UTG-12CH", manufacturer="Toyotomi"),
+        sources=[load_source_registry().get("skroutz")],
+    )
+
+    request = client.requests[0]
+    assert request["endpoint_url"] == "https://api.search.brave.com/res/v1/web/search"
+    assert request["api_key"] == "fake-token"
+    assert request["query"] == "UTG-12CH Toyotomi"
+    assert request["definition"].country == "GR"
+    assert request["definition"].search_lang == "el"
+    assert request["definition"].ui_lang == "el-GR"
+    assert request["definition"].count == 10
+    assert request["definition"].result_filter == "web"
+    assert request["definition"].spellcheck is False
+
+
+def test_brave_http_client_sends_subscription_token_header(monkeypatch) -> None:
+    captured: dict = {}
+
+    class FakeHttpxClient:
+        def __init__(self, *, timeout) -> None:
+            captured["timeout"] = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback) -> None:
+            return None
+
+        def get(self, url, *, params, headers):
+            captured["url"] = url
+            captured["params"] = params
+            captured["headers"] = headers
+            return _FakeBraveResponse(_brave_response())
+
+    monkeypatch.setattr("ecommerce.source_url_agent.brave_search.httpx.Client", FakeHttpxClient)
+
+    response = HttpxBraveSearchClient().search(
+        definition=_brave_definition(),
+        query="UTG-12CH Toyotomi",
+        api_key="fake-token",
+    )
+
+    assert response.status_code == 200
+    assert captured["url"] == "https://api.search.brave.com/res/v1/web/search"
+    assert captured["headers"]["X-Subscription-Token"] == "fake-token"
+    assert captured["headers"]["Accept"] == "application/json"
+    assert captured["headers"]["Accept-Encoding"] == "gzip"
+    assert captured["params"]["q"] == "UTG-12CH Toyotomi"
+    assert captured["params"]["country"] == "GR"
+    assert captured["params"]["search_lang"] == "el"
+    assert captured["params"]["ui_lang"] == "el-GR"
+    assert captured["params"]["count"] == 10
+    assert captured["params"]["result_filter"] == "web"
+    assert captured["params"]["spellcheck"] == "false"
+
+
+def test_brave_json_response_parsing_from_web_results() -> None:
+    items = brave_web_results(_brave_response(), max_results=10)
+
+    assert [(item.rank, item.url, item.title, item.description) for item in items[:2]] == [
+        (
+            1,
+            "https://www.skroutz.gr/s/123456/Toyotomi-UTG-12CH.html?utm_source=brave",
+            "Toyotomi UTG-12CH | Skroutz",
+            "Skroutz product page",
+        ),
+        (
+            2,
+            "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html",
+            "Toyotomi UTG-12CH | BestPrice",
+            "BestPrice product page",
+        ),
+    ]
+
+
+def test_known_source_classification_and_product_url_filtering() -> None:
     registry = load_source_registry()
     sources = registry.selected("all")
     classifier = KnownSourceUrlClassifier(sources)
@@ -370,41 +463,19 @@ def test_google_known_source_classification_and_product_url_filtering() -> None:
     assert product_filter.keep(skroutz, "https://www.skroutz.gr/search?keyphrase=UTG-12CH") == ""
 
 
-def test_google_top_results_provider_keeps_known_product_urls_grouped_by_source(fixtures_root: Path) -> None:
+def test_brave_search_provider_keeps_known_product_urls_grouped_by_source(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
     registry = load_source_registry()
     sources = registry.selected("all")
     product = _product(mpn="UTG-12CH", manufacturer="Toyotomi")
-    definition = SearchProviderDefinition(
-        provider_name="google_top_results",
-        provider_type="google",
-        enabled=True,
-        allow_high_confidence_auto_apply=False,
-        search_url_template="https://www.google.gr/search?q={query}&hl=el&gl=GR&num=10&pws=0",
-        max_results_per_query=10,
-        stop_after_first_query_with_candidates=True,
-    )
-    search_url = "https://www.google.gr/search?q=UTG-12CH+Toyotomi&hl=el&gl=GR&num=10&pws=0"
-    html = (fixtures_root / "source_url_agent" / "google" / "utg_12ch_toyotomi.txt").read_text(encoding="utf-8")
-    browser = _FakeBrowser(
-        {
-            search_url: PageSnapshot(
-                requested_url=search_url,
-                final_url=search_url,
-                title="UTG-12CH Toyotomi - Google Search",
-                html=html,
-                body_text="",
-            )
-        }
-    )
+    client = _FakeBraveClient(_brave_response())
 
-    result = GoogleTopResultsProvider(definition).discover_product(
+    result = BraveSearchProvider(_brave_definition(), client=client).discover_product(
         product=product,
         sources=sources,
-        browser=browser,
-        rate_limit_seconds=0,
     )
 
-    assert browser.fetched_urls == [search_url]
+    assert len(client.requests) == 1
     assert result.status == "found_candidates"
     assert [candidate.candidate_url for candidate in result.candidates] == [
         "https://www.skroutz.gr/s/123456/Toyotomi-UTG-12CH.html",
@@ -412,49 +483,48 @@ def test_google_top_results_provider_keeps_known_product_urls_grouped_by_source(
         "https://www.plaisio.gr/product/oikiakes-syskeues/klimatistika/toyotomi/klimatistiko-toyotomi-utg-12ch",
     ]
     assert result.kept_candidates_by_source == {"skroutz": 1, "bestprice": 1, "plaisio": 1}
-    assert result.discarded_count == 4
+    assert result.discarded_count == 2
     assert result.to_summary()["kept_candidates_by_source"] == {"skroutz": 1, "bestprice": 1, "plaisio": 1}
+    provenance = result.candidates[0].provenance.to_json()
+    assert provenance["provider_name"] == BRAVE_SEARCH_PROVIDER_NAME
+    assert provenance["discovery_method"] == BRAVE_DISCOVERY_METHOD
+    assert provenance["search_url"].startswith("https://api.search.brave.com/res/v1/web/search?")
+    assert "fake-token" not in provenance["search_url"]
 
 
-def test_google_top_results_product_evidence_fetches_only_kept_candidates(fixtures_root: Path) -> None:
+def test_brave_search_product_evidence_fetches_only_kept_candidates(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
     registry = load_source_registry()
     sources = registry.selected("all")
     product = _product(mpn="UTG-12CH", manufacturer="Toyotomi", name="Toyotomi UTG-12CH air conditioner")
     provider_registry = SearchProviderRegistry(
-        default_cascade=("google_top_results",),
+        default_cascade=("brave_search",),
         providers={
-            "google_top_results": SearchProviderDefinition(
-                provider_name="google_top_results",
-                provider_type="google",
+            "brave_search": SearchProviderDefinition(
+                provider_name="brave_search",
+                provider_type="brave",
                 enabled=True,
                 allow_high_confidence_auto_apply=False,
-                search_url_template="https://www.google.gr/search?q={query}&hl=el&gl=GR&num=10&pws=0",
+                endpoint_url="https://api.search.brave.com/res/v1/web/search",
             )
         },
         source_cascades={},
     )
-    search_url = "https://www.google.gr/search?q=UTG-12CH+Toyotomi&hl=el&gl=GR&num=10&pws=0"
     skroutz_url = "https://www.skroutz.gr/s/123456/Toyotomi-UTG-12CH.html"
     bestprice_url = "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html"
     plaisio_url = "https://www.plaisio.gr/product/oikiakes-syskeues/klimatistika/toyotomi/klimatistiko-toyotomi-utg-12ch"
-    google_html = (fixtures_root / "source_url_agent" / "google" / "utg_12ch_toyotomi.txt").read_text(encoding="utf-8")
     product_html = "<html><head><title>Toyotomi UTG-12CH</title></head><body>Toyotomi UTG-12CH</body></html>"
     browser = _FakeBrowser(
         {
-            search_url: PageSnapshot(
-                requested_url=search_url,
-                final_url=search_url,
-                title="UTG-12CH Toyotomi - Google Search",
-                html=google_html,
-                body_text="",
-            ),
             skroutz_url: PageSnapshot(skroutz_url, skroutz_url, "Toyotomi UTG-12CH", product_html, "Toyotomi UTG-12CH"),
             bestprice_url: PageSnapshot(bestprice_url, bestprice_url, "Toyotomi UTG-12CH", product_html, "Toyotomi UTG-12CH"),
             plaisio_url: PageSnapshot(plaisio_url, plaisio_url, "Toyotomi UTG-12CH", product_html, "Toyotomi UTG-12CH"),
         }
     )
+    client = _FakeBraveClient(_brave_response())
+    monkeypatch.setattr("ecommerce.source_url_agent.search.BraveSearchProvider", lambda definition: BraveSearchProvider(definition, client=client))
 
-    results = discover_google_top_results_product_evidence(
+    results = discover_product_level_search_evidence(
         product=product,
         sources=sources,
         browser=browser,
@@ -462,92 +532,219 @@ def test_google_top_results_product_evidence_fetches_only_kept_candidates(fixtur
         rate_limit_seconds=0,
     )
 
-    assert browser.fetched_urls == [search_url, skroutz_url, bestprice_url, plaisio_url]
+    assert len(client.requests) == 1
+    assert browser.fetched_urls == [skroutz_url, bestprice_url, plaisio_url]
     assert len(results["skroutz"].evidence) == 1
     assert len(results["bestprice"].evidence) == 1
     assert len(results["plaisio"].evidence) == 1
     assert results["electronet"].evidence == []
     assert results["skroutz"].provider_summary == {
+        "provider_name": "brave_search",
         "query": "UTG-12CH Toyotomi",
         "status": "found_candidates",
         "kept_candidates_by_source": {"skroutz": 1, "bestprice": 1, "plaisio": 1},
-        "discarded_count": 4,
+        "discarded_count": 2,
     }
 
 
-def test_google_top_results_provider_dedupes_and_stops_after_one_query() -> None:
+def test_product_level_execution_calls_brave_once_per_product_not_per_source(monkeypatch, tmp_path: Path) -> None:
+    registry = load_source_registry()
+    sources = [registry.get("skroutz"), registry.get("bestprice"), registry.get("plaisio")]
+    calls: list[tuple[str, tuple[str, ...]]] = []
+
+    class FakeBrowserSession:
+        def __init__(self, **kwargs) -> None:
+            self.kwargs = kwargs
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback) -> None:
+            return None
+
+    def fake_product_level_evidence(*, product, sources, browser, provider_registry, max_candidates, rate_limit_seconds):
+        del browser, provider_registry, max_candidates, rate_limit_seconds
+        calls.append((product.model, tuple(source.source_name for source in sources)))
+        return {
+            source.source_name: SourceSearchResult(
+                evidence=[],
+                searched_queries=[f"{product.mpn} {product.manufacturer}"],
+                searched_urls=["https://api.search.brave.com/res/v1/web/search?q=fake"],
+                errors=[],
+            )
+            for source in sources
+        }
+
+    monkeypatch.setattr(task_execution, "SourceUrlBrowserSession", FakeBrowserSession)
+    monkeypatch.setattr(task_execution, "discover_product_level_search_evidence", fake_product_level_evidence)
+
+    task_execution.run_with_browser(
+        run_id="run-1",
+        products=[_product(model="111111", mpn="UTG-12CH", manufacturer="Toyotomi")],
+        sources=sources,
+        options=SourceUrlAgentOptions(mode="catalog", source="all", output_dir=tmp_path, dry_run=True),
+        session=None,
+    )
+
+    assert calls == [("111111", ("skroutz", "bestprice", "plaisio"))]
+
+
+def test_brave_search_provider_dedupes_and_stops_after_one_query(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
     product = _product(mpn="UTG-12CH", manufacturer="Toyotomi")
     source = load_source_registry().get("skroutz")
-    definition = SearchProviderDefinition(
-        provider_name="google_top_results",
-        provider_type="google",
-        enabled=True,
-        allow_high_confidence_auto_apply=False,
-        search_url_template="https://www.google.gr/search?q={query}",
-    )
-    search_url = "https://www.google.gr/search?q=UTG-12CH+Toyotomi"
-    html = """
-    <html><body>
-      <a href="/url?q=https%3A%2F%2Fwww.skroutz.gr%2Fs%2F1%2Ftoyotomi.html&amp;sa=U">one</a>
-      <a href="https://www.skroutz.gr/s/1/toyotomi.html?utm_campaign=x">duplicate</a>
-    </body></html>
-    """
-    browser = _FakeBrowser(
+    client = _FakeBraveClient(
         {
-            search_url: PageSnapshot(
-                requested_url=search_url,
-                final_url=search_url,
-                title="Search",
-                html=html,
-                body_text="",
-            )
+            "web": {
+                "results": [
+                    {"url": "https://www.skroutz.gr/s/1/toyotomi.html?utm_campaign=x"},
+                    {"url": "https://www.skroutz.gr/s/1/toyotomi.html"},
+                ]
+            }
         }
     )
 
-    result = GoogleTopResultsProvider(definition).discover_product(
+    result = BraveSearchProvider(_brave_definition(), client=client).discover_product(
         product=product,
         sources=[source],
-        browser=browser,
-        rate_limit_seconds=0,
     )
 
-    assert browser.fetched_urls == [search_url]
+    assert len(client.requests) == 1
     assert [candidate.candidate_url for candidate in result.candidates] == ["https://www.skroutz.gr/s/1/toyotomi.html"]
 
 
-def test_google_top_results_blocked_or_consent_page_returns_status_without_candidates() -> None:
+def test_brave_search_http_error_statuses(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
     product = _product(mpn="UTG-12CH", manufacturer="Toyotomi")
     source = load_source_registry().get("skroutz")
-    definition = SearchProviderDefinition(
-        provider_name="google_top_results",
-        provider_type="google",
-        enabled=True,
-        allow_high_confidence_auto_apply=False,
-        search_url_template="https://www.google.gr/search?q={query}",
+
+    unauthorized = BraveSearchProvider(_brave_definition(), client=_FakeBraveClient({}, status_code=401)).discover_product(
+        product=product, sources=[source]
     )
-    search_url = "https://www.google.gr/search?q=UTG-12CH+Toyotomi"
-    browser = _FakeBrowser(
-        {
-            search_url: PageSnapshot(
-                requested_url=search_url,
-                final_url="https://consent.google.com/m",
-                title="Before you continue to Google Search",
-                html="<html>Before you continue to Google Search</html>",
-                body_text="Before you continue to Google Search",
-            )
+    rate_limited = BraveSearchProvider(_brave_definition(), client=_FakeBraveClient({}, status_code=429)).discover_product(
+        product=product, sources=[source]
+    )
+
+    assert unauthorized.status == "unauthorized"
+    assert unauthorized.candidates == []
+    assert rate_limited.status == "rate_limited"
+    assert rate_limited.candidates == []
+
+
+def test_brave_search_timeout_and_invalid_json_statuses(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
+    product = _product(mpn="UTG-12CH", manufacturer="Toyotomi")
+    source = load_source_registry().get("skroutz")
+
+    timeout = BraveSearchProvider(_brave_definition(), client=_TimeoutBraveClient()).discover_product(product=product, sources=[source])
+    invalid_json = BraveSearchProvider(_brave_definition(), client=_InvalidJsonBraveClient()).discover_product(
+        product=product, sources=[source]
+    )
+
+    assert timeout.status == "timeout"
+    assert timeout.candidates == []
+    assert invalid_json.status == "error"
+    assert invalid_json.candidates == []
+
+
+def _brave_definition(**overrides) -> SearchProviderDefinition:
+    values = {
+        "provider_name": "brave_search",
+        "provider_type": "brave",
+        "enabled": True,
+        "allow_high_confidence_auto_apply": False,
+        "endpoint_url": "https://api.search.brave.com/res/v1/web/search",
+        "country": "GR",
+        "search_lang": "el",
+        "ui_lang": "el-GR",
+        "count": 10,
+        "safesearch": "moderate",
+        "result_filter": "web",
+        "spellcheck": False,
+        "timeout_seconds": 10,
+    }
+    values.update(overrides)
+    return SearchProviderDefinition(**values)
+
+
+def _brave_response() -> dict:
+    return {
+        "web": {
+            "results": [
+                {
+                    "url": "https://www.skroutz.gr/s/123456/Toyotomi-UTG-12CH.html?utm_source=brave",
+                    "title": "Toyotomi UTG-12CH | Skroutz",
+                    "description": "Skroutz product page",
+                },
+                {
+                    "url": "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html",
+                    "title": "Toyotomi UTG-12CH | BestPrice",
+                    "description": "BestPrice product page",
+                },
+                {
+                    "url": "https://www.plaisio.gr/product/oikiakes-syskeues/klimatistika/toyotomi/klimatistiko-toyotomi-utg-12ch",
+                    "title": "Toyotomi UTG-12CH | Plaisio",
+                    "description": "Plaisio product page",
+                },
+                {
+                    "url": "https://unknown.example/toyotomi-utg-12ch",
+                    "title": "Unknown",
+                    "description": "Unknown domain",
+                },
+                {
+                    "url": "https://www.skroutz.gr/c/1492/klimatistika.html",
+                    "title": "Skroutz category",
+                    "description": "Category page",
+                },
+            ]
         }
-    )
+    }
 
-    result = GoogleTopResultsProvider(definition).discover_product(
-        product=product,
-        sources=[source],
-        browser=browser,
-        rate_limit_seconds=0,
-    )
 
-    assert result.status == "consent_required"
-    assert result.candidates == []
-    assert result.errors == ["google_top_results:consent_required"]
+class _FakeBraveResponse:
+    def __init__(self, payload: dict, status_code: int = 200) -> None:
+        self.payload = payload
+        self.status_code = status_code
+
+    def json(self):
+        return self.payload
+
+
+class _FakeBraveClient:
+    def __init__(self, payload: dict, status_code: int = 200) -> None:
+        self.payload = payload
+        self.status_code = status_code
+        self.requests: list[dict] = []
+
+    def search(self, *, definition: SearchProviderDefinition, query: str, api_key: str):
+        self.requests.append(
+            {
+                "endpoint_url": definition.endpoint_url,
+                "definition": definition,
+                "query": query,
+                "api_key": api_key,
+            }
+        )
+        return _FakeBraveResponse(self.payload, self.status_code)
+
+
+class _TimeoutBraveClient:
+    def search(self, *, definition: SearchProviderDefinition, query: str, api_key: str):
+        del definition, query, api_key
+        raise httpx.TimeoutException("timeout")
+
+
+class _InvalidJsonResponse:
+    status_code = 200
+
+    def json(self):
+        raise ValueError("bad json")
+
+
+class _InvalidJsonBraveClient:
+    def search(self, *, definition: SearchProviderDefinition, query: str, api_key: str):
+        del definition, query, api_key
+        return _InvalidJsonResponse()
 
 
 class _FakeBrowser:

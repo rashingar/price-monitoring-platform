@@ -1,14 +1,20 @@
 {
-  "default_provider_order": ["google_top_results"],
+  "default_provider_order": ["brave_search"],
   "providers": {
-    "google_top_results": {
-      "provider_type": "google",
+    "brave_search": {
+      "provider_type": "brave",
       "enabled": true,
       "allow_high_confidence_auto_apply": false,
-      "search_url_template": "https://www.google.gr/search?q={query}&hl=el&gl=GR&num=10&pws=0",
-      "max_results_per_query": 10,
-      "stop_after_first_query_with_candidates": true,
-      "notes": "Broad product query provider that keeps only configured-source product-shaped top Google results."
+      "endpoint_url": "https://api.search.brave.com/res/v1/web/search",
+      "country": "GR",
+      "search_lang": "el",
+      "ui_lang": "el-GR",
+      "count": 10,
+      "safesearch": "moderate",
+      "result_filter": "web",
+      "spellcheck": false,
+      "timeout_seconds": 10,
+      "notes": "Brave Web Search API provider that keeps only configured-source product-shaped top web results."
     }
   },
   "source_cascades": {}

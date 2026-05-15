@@ -269,30 +269,37 @@ def _counts_by_source(candidates: list[SourceUrlAgentCandidate]) -> dict[str, di
 
 
 def _provider_summary(candidates: list[SourceUrlAgentCandidate]) -> dict[str, Any]:
-    google_counts: Counter[str] = Counter()
-    query = ""
-    status = ""
+    provider_counts: dict[str, Counter[str]] = {}
+    provider_queries: dict[str, str] = {}
+    provider_statuses: dict[str, str] = {}
     for candidate in candidates:
         provider_summary = candidate.evidence_json.get("provider_summary")
-        if isinstance(provider_summary, dict) and provider_summary.get("status") and not status:
-            status = str(provider_summary.get("status") or "")
-            query = query or str(provider_summary.get("query") or "")
         provenance = candidate.evidence_json.get("provider_provenance")
-        if not isinstance(provenance, dict) or provenance.get("provider_name") != "google_top_results":
+        provider_name = ""
+        if isinstance(provenance, dict):
+            provider_name = str(provenance.get("provider_name") or "")
+        if not provider_name and isinstance(provider_summary, dict):
+            provider_name = str(provider_summary.get("provider_name") or "")
+        if not provider_name:
+            continue
+        if isinstance(provider_summary, dict):
+            provider_statuses.setdefault(provider_name, str(provider_summary.get("status") or ""))
+            provider_queries.setdefault(provider_name, str(provider_summary.get("query") or ""))
+        if not isinstance(provenance, dict):
+            continue
+        if not str(provenance.get("candidate_url") or ""):
             continue
         source_name = str(provenance.get("source_name") or candidate.source_name)
-        google_counts[source_name] += 1
-        query = query or str(provenance.get("original_query") or "")
-    if google_counts:
-        status = "found_candidates"
-    if not query and not google_counts:
-        return {}
+        provider_counts.setdefault(provider_name, Counter())[source_name] += 1
+        provider_queries.setdefault(provider_name, str(provenance.get("original_query") or ""))
+    provider_names = set(provider_counts) | set(provider_statuses) | set(provider_queries)
     return {
-        "google_top_results": {
-            "query": query,
-            "status": status or "no_results",
-            "kept_candidates_by_source": dict(sorted(google_counts.items())),
+        provider_name: {
+            "query": provider_queries.get(provider_name, ""),
+            "status": "found_candidates" if provider_counts.get(provider_name) else (provider_statuses.get(provider_name) or "no_results"),
+            "kept_candidates_by_source": dict(sorted(provider_counts.get(provider_name, Counter()).items())),
         }
+        for provider_name in sorted(provider_names)
     }
 
 
