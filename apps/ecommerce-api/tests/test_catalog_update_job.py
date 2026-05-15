@@ -279,7 +279,10 @@ def test_catalog_update_durable_job_writes_progress_and_heartbeat(tmp_path: Path
         assert progress["current_step_elapsed_seconds"] >= 0
         assert isinstance(progress["step_started_at"], str)
         assert isinstance(progress["last_progress_at"], str)
+        assert progress["warnings"] == []
+        assert progress["errors"] == []
         assert progress["completed_steps"]
+        assert all("warnings" in step and "errors" in step for step in progress["completed_steps"])
 
 
 def test_catalog_update_progress_details_are_sanitized(tmp_path: Path, monkeypatch) -> None:

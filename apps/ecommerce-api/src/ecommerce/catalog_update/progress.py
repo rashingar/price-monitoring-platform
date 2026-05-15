@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-import threading
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Callable
 
 from ecommerce.catalog_update.redaction import sanitize_progress_details
-from ecommerce.db.repositories.jobs import record_progress
-from ecommerce.db.session import session_scope
+from ecommerce.jobs.progress import (
+    JobProgressCompletedStep,
+    JobProgressReporter,
+    JobProgressStepDefinition,
+    elapsed_seconds,
+    now_utc,
+)
 
 CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS = 30
 CatalogUpdateProgressCallback = Callable[[str, dict[str, Any] | None], None]
@@ -101,16 +105,14 @@ class CatalogUpdateStepTracker:
         self.emit_progress_event(progress_step, details=details)
 
 
-@dataclass(frozen=True)
-class CatalogUpdateCompletedStep:
-    step: str
-    label: str
-    started_at: str
-    completed_at: str
-    elapsed_seconds: float
+CatalogUpdateCompletedStep = JobProgressCompletedStep
+CATALOG_UPDATE_PROGRESS_STEP_DEFINITIONS = tuple(
+    JobProgressStepDefinition(event.id, event.label)
+    for event in PROGRESS_EVENTS
+)
 
 
-class CatalogUpdateJobProgressReporter:
+class CatalogUpdateJobProgressReporter(JobProgressReporter):
     def __init__(
         self,
         job_id: str,
@@ -118,91 +120,12 @@ class CatalogUpdateJobProgressReporter:
         heartbeat_interval_seconds: float = CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS,
         now: Callable[[], datetime] | None = None,
     ) -> None:
-        self._job_id = job_id
-        self._heartbeat_interval_seconds = max(1.0, float(heartbeat_interval_seconds))
-        self._current_step = "config_loaded"
-        self._current_step_started_at: datetime | None = None
-        self._started_at: datetime | None = None
-        self._completed_steps: list[CatalogUpdateCompletedStep] = []
-        self._stop_event = threading.Event()
-        self._lock = threading.Lock()
-        self._thread: threading.Thread | None = None
-        self._now = now or now_utc
-
-    def __enter__(self) -> "CatalogUpdateJobProgressReporter":
-        timestamp = self._now()
-        with self._lock:
-            self._started_at = timestamp
-            self._current_step_started_at = timestamp
-        self.report(self._current_step)
-        self._thread = threading.Thread(target=self._heartbeat_loop, name=f"catalog-update-heartbeat-{self._job_id}", daemon=True)
-        self._thread.start()
-        return self
-
-    def __exit__(self, _exc_type: object, _exc: object, _traceback: object) -> None:
-        self._stop_event.set()
-        if self._thread is not None:
-            self._thread.join(timeout=2)
-
-    def report(self, step: str, details: dict[str, Any] | None = None) -> None:
-        timestamp = self._now()
-        with self._lock:
-            self._advance_step(step, timestamp)
-            progress = self._progress_payload(timestamp, details=details)
-        self._record(progress, timestamp)
-
-    def _heartbeat_loop(self) -> None:
-        while not self._stop_event.wait(self._heartbeat_interval_seconds):
-            timestamp = self._now()
-            with self._lock:
-                progress = self._progress_payload(timestamp)
-            self._record(progress, timestamp)
-
-    def _advance_step(self, step: str, timestamp: datetime) -> None:
-        if self._current_step == step:
-            return
-        if self._current_step_started_at is not None:
-            self._completed_steps.append(
-                CatalogUpdateCompletedStep(
-                    step=self._current_step,
-                    label=PROGRESS_EVENT_LABELS.get(self._current_step, self._current_step),
-                    started_at=self._current_step_started_at.isoformat(),
-                    completed_at=timestamp.isoformat(),
-                    elapsed_seconds=elapsed_seconds(self._current_step_started_at, timestamp),
-                )
-            )
-        self._current_step = step
-        self._current_step_started_at = timestamp
-
-    def _progress_payload(self, timestamp: datetime, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
-        started_at = self._started_at or timestamp
-        step_started_at = self._current_step_started_at or timestamp
-        payload: dict[str, Any] = {
-            "current_step": self._current_step,
-            "current_step_label": PROGRESS_EVENT_LABELS.get(self._current_step, self._current_step),
-            "steps_completed": len(self._completed_steps),
-            "step_started_at": step_started_at.isoformat(),
-            "last_progress_at": timestamp.isoformat(),
-            "elapsed_seconds": elapsed_seconds(started_at, timestamp),
-            "current_step_elapsed_seconds": elapsed_seconds(step_started_at, timestamp),
-            "completed_steps": [step.__dict__ for step in self._completed_steps],
-        }
-        safe_details = sanitize_progress_details(details)
-        if safe_details:
-            payload["details"] = safe_details
-        return payload
-
-    def _record(self, progress: dict[str, Any], timestamp: datetime) -> None:
-        try:
-            with session_scope() as session:
-                record_progress(session, self._job_id, progress=progress, progress_at=timestamp)
-        except Exception:
-            return
-
-
-def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-def elapsed_seconds(started_at: datetime, ended_at: datetime) -> float:
-    return max(0.0, round((ended_at - started_at).total_seconds(), 3))
+        super().__init__(
+            job_id,
+            step_definitions=CATALOG_UPDATE_PROGRESS_STEP_DEFINITIONS,
+            initial_step="config_loaded",
+            heartbeat_interval_seconds=heartbeat_interval_seconds,
+            details_sanitizer=sanitize_progress_details,
+            now=now,
+            heartbeat_thread_name=f"catalog-update-heartbeat-{job_id}",
+        )
