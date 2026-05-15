@@ -33,6 +33,7 @@ def candidates_from_search_result(
                     match_method="search_error",
                     searched_queries=queries,
                     notes="; ".join(result.errors),
+                    extra_evidence_json={"provider_summary": result.provider_summary} if result.provider_summary else None,
                 )
             ]
         return [
@@ -46,6 +47,7 @@ def candidates_from_search_result(
                 match_method="no_candidate_urls",
                 searched_queries=queries,
                 notes="No credible product page found.",
+                extra_evidence_json={"provider_summary": result.provider_summary} if result.provider_summary else None,
             )
         ]
 

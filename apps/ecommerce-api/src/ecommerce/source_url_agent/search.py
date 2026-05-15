@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from ecommerce.source_url_agent.browser import SourceUrlBrowserSession
 from ecommerce.source_url_agent.evidence import error_evidence, extract_page_evidence
+from ecommerce.source_url_agent.google_top_results import GoogleTopResultsProvider
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.search_providers import (
     SearchProviderRegistry,
@@ -32,6 +34,7 @@ class SourceSearchResult:
     searched_queries: list[str]
     searched_urls: list[str]
     errors: list[str]
+    provider_summary: dict[str, Any] | None = None
 
 
 def generate_search_queries(product: AgentProduct, source: SourceDefinition) -> list[str]:
@@ -140,7 +143,98 @@ def discover_source_evidence(
         searched_queries=provider_result.searched_queries,
         searched_urls=provider_result.searched_urls,
         errors=provider_result.errors,
+        provider_summary=provider_result.provider_summary,
     )
+
+
+def discover_google_top_results_product_evidence(
+    *,
+    product: AgentProduct,
+    sources: list[SourceDefinition],
+    browser: SourceUrlBrowserSession,
+    provider_registry: SearchProviderRegistry,
+    max_candidates: int | None = None,
+    rate_limit_seconds: float | None = None,
+) -> dict[str, SourceSearchResult]:
+    google_definition = provider_registry.get("google_top_results")
+    provider = GoogleTopResultsProvider(google_definition)
+    product_result = provider.discover_product(
+        product=product,
+        sources=sources,
+        browser=browser,
+        max_candidates_per_source=max_candidates,
+        rate_limit_seconds=rate_limit_seconds,
+    )
+    results = {
+        source.source_name: SourceSearchResult(
+            evidence=[],
+            searched_queries=[product_result.query] if product_result.query else [],
+            searched_urls=product_result.searched_urls,
+            errors=product_result.errors,
+            provider_summary=product_result.to_summary(),
+        )
+        for source in sources
+    }
+    if product_result.provider_errors:
+        for source in sources:
+            results[source.source_name] = SourceSearchResult(
+                evidence=[
+                    error_evidence(
+                        product=product,
+                        requested_url=item.requested_url,
+                        final_url=item.final_url,
+                        title=item.title,
+                        body_text=item.body_text,
+                        error_code=item.error_code,
+                        error_message=item.error_message,
+                        provider_provenance={**item.provenance.to_json(), "source_name": source.source_name},
+                    )
+                    for item in product_result.provider_errors
+                ],
+                searched_queries=[product_result.query] if product_result.query else [],
+                searched_urls=product_result.searched_urls,
+                errors=product_result.errors,
+                provider_summary=product_result.to_summary(),
+            )
+        return results
+
+    source_by_name = {source.source_name: source for source in sources}
+    for candidate in product_result.candidates:
+        source = source_by_name.get(candidate.provenance.source_name)
+        if source is None:
+            continue
+        snapshot = browser.fetch_snapshot(candidate.candidate_url, rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds)
+        if snapshot.status == "error":
+            evidence = error_evidence(
+                product=product,
+                requested_url=candidate.candidate_url,
+                final_url=snapshot.final_url,
+                title=snapshot.title,
+                body_text=snapshot.body_text,
+                error_code=snapshot.error_code,
+                error_message=snapshot.error_message,
+                provider_provenance=candidate.provenance.to_json(),
+            )
+        else:
+            evidence = extract_page_evidence(
+                product=product,
+                source=source,
+                requested_url=candidate.candidate_url,
+                final_url=snapshot.final_url,
+                html_text=snapshot.html,
+                title=snapshot.title,
+                body_text=snapshot.body_text,
+                provider_provenance=candidate.provenance.to_json(),
+            )
+        current = results[source.source_name]
+        results[source.source_name] = SourceSearchResult(
+            evidence=[*current.evidence, evidence],
+            searched_queries=current.searched_queries,
+            searched_urls=current.searched_urls,
+            errors=current.errors,
+            provider_summary=current.provider_summary,
+        )
+    return results
 
 
 def _dedupe_queries(values: list[str]) -> list[str]:

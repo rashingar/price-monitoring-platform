@@ -14,6 +14,7 @@ from ecommerce.source_url_agent.sources import SourceDefinition
 
 DEFAULT_SEARCH_PROVIDER_REGISTRY_PATH = Path(__file__).resolve().parents[3] / "config" / "source_url_agent" / "search_providers.json"
 BROWSER_FALLBACK_PROVIDER_NAME = "browser_fallback"
+GOOGLE_TOP_RESULTS_PROVIDER_NAME = "google_top_results"
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,9 @@ class SearchProviderDefinition:
     provider_type: str
     enabled: bool
     allow_high_confidence_auto_apply: bool
+    search_url_template: str = ""
+    max_results_per_query: int = 10
+    stop_after_first_query_with_candidates: bool = True
     notes: str = ""
 
     @classmethod
@@ -33,6 +37,9 @@ class SearchProviderDefinition:
             provider_type=provider_type,
             enabled=bool(payload.get("enabled", True)),
             allow_high_confidence_auto_apply=bool(payload.get("allow_high_confidence_auto_apply", False)),
+            search_url_template=str(payload.get("search_url_template") or "").strip(),
+            max_results_per_query=max(1, int(payload.get("max_results_per_query", 10))),
+            stop_after_first_query_with_candidates=bool(payload.get("stop_after_first_query_with_candidates", True)),
             notes=str(payload.get("notes") or "").strip(),
         )
 
@@ -86,6 +93,7 @@ class SearchProviderResult:
     searched_urls: list[str]
     errors: list[str]
     provider_errors: list[SearchProviderError]
+    provider_summary: dict[str, Any] | None = None
 
 
 class SourceUrlSearchProvider(Protocol):
@@ -215,13 +223,20 @@ class BrowserFallbackSearchProvider:
 def load_search_provider_registry(path: Path | None = None) -> SearchProviderRegistry:
     registry_path = path or DEFAULT_SEARCH_PROVIDER_REGISTRY_PATH
     payload = json.loads(registry_path.read_text(encoding="utf-8"))
-    raw_default_cascade = _string_list(payload.get("default_cascade"))
+    raw_default_cascade = _string_list(payload.get("default_provider_order")) or _string_list(payload.get("default_cascade"))
     if not raw_default_cascade:
-        raise ValueError("Search provider registry must contain default_cascade.")
+        raise ValueError("Search provider registry must contain default_provider_order.")
     raw_providers = payload.get("providers")
-    if not isinstance(raw_providers, list):
-        raise ValueError("Search provider registry must contain a providers list.")
-    provider_items = [SearchProviderDefinition.from_dict(item) for item in raw_providers if isinstance(item, dict)]
+    if isinstance(raw_providers, dict):
+        provider_items = [
+            SearchProviderDefinition.from_dict({"provider_name": name, **item})
+            for name, item in raw_providers.items()
+            if isinstance(item, dict)
+        ]
+    elif isinstance(raw_providers, list):
+        provider_items = [SearchProviderDefinition.from_dict(item) for item in raw_providers if isinstance(item, dict)]
+    else:
+        raise ValueError("Search provider registry must contain providers.")
     providers = {item.provider_name: item for item in provider_items}
     if len(providers) != len(provider_items):
         raise ValueError("Search provider registry contains duplicate provider_name values.")
@@ -304,7 +319,19 @@ class _SearchUrlQueryItem:
 def _provider_for_definition(definition: SearchProviderDefinition) -> SourceUrlSearchProvider:
     if definition.provider_name == BROWSER_FALLBACK_PROVIDER_NAME and definition.provider_type == "browser":
         return BrowserFallbackSearchProvider(definition)
+    if definition.provider_name == GOOGLE_TOP_RESULTS_PROVIDER_NAME:
+        from ecommerce.source_url_agent.google_top_results import GoogleTopResultsProvider
+
+        return GoogleTopResultsProvider(definition)
     raise ValueError(f"Unsupported source URL search provider: {definition.provider_name} ({definition.provider_type})")
+
+
+def uses_product_level_google_top_results(registry: SearchProviderRegistry, sources: list[SourceDefinition]) -> bool:
+    for source in sources:
+        enabled = [definition for definition in registry.cascade_for_source(source.source_name) if definition.enabled]
+        if not enabled or enabled[0].provider_name != GOOGLE_TOP_RESULTS_PROVIDER_NAME:
+            return False
+    return True
 
 
 def _search_url_query_items(source: SourceDefinition, queries: list[str]) -> list[_SearchUrlQueryItem]:
