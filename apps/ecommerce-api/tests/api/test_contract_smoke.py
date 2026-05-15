@@ -56,11 +56,22 @@ def test_paths_roots_returns_safe_metadata_without_secret_env(tmp_path: Path, mo
 
     assert response.status_code == 200
     payload = response.json()
-    assert set(payload) == {"artifact_roots", "file_roots", "output_roots", "env", "path_separator", "platform"}
+    assert set(payload) == {
+        "artifact_roots",
+        "file_roots",
+        "output_roots",
+        "env",
+        "env_readiness",
+        "local_env",
+        "path_separator",
+        "platform",
+    }
     assert payload["path_separator"] == ";"
     assert payload["platform"] == "Windows-compatible"
     assert payload["env"][DATABASE_URL_ENV_VAR] == "not_configured"
     assert "ECOMMERCE_SECRET_TOKEN" not in payload["env"]
+    assert "ECOMMERCE_SECRET_TOKEN" not in str(payload["env_readiness"])
+    assert "ECOMMERCE_SECRET_TOKEN" not in str(payload["local_env"])
     for group in ("artifact_roots", "file_roots", "output_roots"):
         assert payload[group]
         assert all(set(item) == {"path", "source", "exists", "is_default", "is_configured"} for item in payload[group])
