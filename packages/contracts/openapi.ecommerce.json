@@ -2367,6 +2367,22 @@
           },
           {
             "in": "query",
+            "name": "has_quantity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Quantity"
+            }
+          },
+          {
+            "in": "query",
             "name": "ignored",
             "required": false,
             "schema": {

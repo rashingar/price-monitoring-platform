@@ -88,6 +88,7 @@ interface CatalogPageState {
   showComposite: boolean;
   includeIgnored: boolean;
   sourceUrlsOnly: boolean;
+  hasQuantity: boolean;
   page: number;
   pageSize: number;
   visibleColumnIds: CatalogColumnId[];
@@ -143,6 +144,7 @@ const initialCatalogPageState: CatalogPageState = {
   showComposite: false,
   includeIgnored: false,
   sourceUrlsOnly: false,
+  hasQuantity: false,
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,
   visibleColumnIds: DEFAULT_VISIBLE_CATALOG_COLUMNS,
@@ -622,6 +624,7 @@ export function CatalogPage() {
   const [showComposite, setShowComposite] = useState(persistedState.showComposite);
   const [includeIgnored, setIncludeIgnored] = useState(persistedState.includeIgnored);
   const [sourceUrlsOnly, setSourceUrlsOnly] = useState(persistedState.sourceUrlsOnly === true);
+  const [hasQuantity, setHasQuantity] = useState(persistedState.hasQuantity === true);
   const [page, setPage] = useState(persistedState.page);
   const [pageSize, setPageSize] = useState(persistedState.pageSize);
   const [visibleColumnIds, setVisibleColumnIds] = useState<Set<CatalogColumnId>>(
@@ -748,6 +751,10 @@ export function CatalogPage() {
         params.has_source_url = true;
       }
 
+      if (hasQuantity) {
+        params.has_quantity = true;
+      }
+
       if (trimmedQ.length > 0) {
         params.q = trimmedQ;
       }
@@ -772,6 +779,7 @@ export function CatalogPage() {
       return params;
     },
     [
+      hasQuantity,
       includeIgnored,
       manufacturer,
       marketplace,
@@ -861,6 +869,7 @@ export function CatalogPage() {
       showComposite,
       includeIgnored,
       sourceUrlsOnly,
+      hasQuantity,
       page,
       pageSize,
       visibleColumnIds: CATALOG_COLUMNS.map((column) => column.id).filter((columnId) =>
@@ -868,6 +877,7 @@ export function CatalogPage() {
       ),
     });
   }, [
+    hasQuantity,
     includeIgnored,
     manufacturer,
     marketplace,
@@ -905,6 +915,7 @@ export function CatalogPage() {
     selectedSubCategory,
     showComposite,
     sourceUrlsOnly,
+    hasQuantity,
   ]);
 
   const eligibleVisibleModels = useMemo(
@@ -988,6 +999,7 @@ export function CatalogPage() {
     setShowComposite(initialCatalogPageState.showComposite);
     setIncludeIgnored(initialCatalogPageState.includeIgnored);
     setSourceUrlsOnly(initialCatalogPageState.sourceUrlsOnly);
+    setHasQuantity(initialCatalogPageState.hasQuantity);
     setPage(initialCatalogPageState.page);
     setPageSize(initialCatalogPageState.pageSize);
     setVisibleColumnIds(new Set(initialCatalogPageState.visibleColumnIds));
@@ -1358,6 +1370,15 @@ export function CatalogPage() {
               onChange={(event) => setSourceUrlsOnly(event.target.checked)}
             />
             Source URLs
+          </label>
+
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={hasQuantity}
+              onChange={(event) => setHasQuantity(event.target.checked)}
+            />
+            Has quantity
           </label>
 
           <label className="checkbox-row">

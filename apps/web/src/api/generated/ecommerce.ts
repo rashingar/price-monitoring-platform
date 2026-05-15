@@ -1202,6 +1202,7 @@ export interface operations {
         source_name?: string | null;
         has_mpn?: boolean | null;
         has_source_url?: boolean | null;
+        has_quantity?: boolean | null;
         ignored?: "include" | "exclude" | "only";
         atomic_only?: boolean;
         automation_eligible_only?: boolean;

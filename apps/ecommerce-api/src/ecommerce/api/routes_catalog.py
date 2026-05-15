@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from numbers import Number
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
@@ -37,6 +38,7 @@ def get_products(
     source_name: str | None = None,
     has_mpn: bool | None = None,
     has_source_url: bool | None = None,
+    has_quantity: bool | None = None,
     ignored: IgnoredFilter = "exclude",
     atomic_only: bool = False,
     automation_eligible_only: bool = False,
@@ -62,6 +64,7 @@ def get_products(
         marketplace=marketplace,
         has_mpn=has_mpn,
         has_source_url=has_source_url,
+        has_quantity=has_quantity,
         ignored=ignored,
         atomic_only=atomic_only,
         automation_eligible_only=automation_eligible_only,
@@ -275,6 +278,7 @@ def _filter_products(
     marketplace: MarketplaceFilter | None,
     has_mpn: bool | None,
     has_source_url: bool | None,
+    has_quantity: bool | None,
     ignored: IgnoredFilter,
     atomic_only: bool,
     automation_eligible_only: bool,
@@ -318,6 +322,8 @@ def _filter_products(
             )
             if product_has_source_url is not has_source_url:
                 continue
+        if has_quantity is True and not _has_positive_active_quantity(product):
+            continue
         if atomic_only and not product.is_atomic_model:
             continue
         if automation_eligible_only and not _is_automation_eligible(product, is_ignored):
@@ -373,6 +379,11 @@ def _product_to_response(
 
 def _is_automation_eligible(product: CatalogProduct, is_ignored: bool) -> bool:
     return product.automation_eligible and not is_ignored
+
+
+def _has_positive_active_quantity(product: CatalogProduct) -> bool:
+    quantity = product.quantity
+    return product.status == 1 and isinstance(quantity, Number) and not isinstance(quantity, bool) and quantity > 0
 
 
 def _matches_query(product: CatalogProduct, q_norm: str) -> bool:

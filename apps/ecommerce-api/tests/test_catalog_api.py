@@ -183,6 +183,18 @@ def test_catalog_products_search_mpn_atomic_and_automation_filters(tmp_path: Pat
     assert [item["model"] for item in eligible["items"]] == ["005606"]
 
 
+def test_catalog_products_has_quantity_filter_requires_active_positive_quantity(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+
+    payload = client.get("/api/catalog/products", params={"has_quantity": "true"}).json()
+
+    assert payload["filtered_total"] == 2
+    assert {item["model"] for item in payload["items"]} == {"005606", "233374-233203"}
+    assert "ABC123" not in {item["model"] for item in payload["items"]}
+    assert "123456" not in {item["model"] for item in payload["items"]}
+    assert all(item["status"] == 1 and item["quantity"] > 0 for item in payload["items"])
+
+
 def test_catalog_products_source_url_filter(tmp_path: Path, monkeypatch) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
