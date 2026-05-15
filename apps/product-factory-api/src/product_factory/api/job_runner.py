@@ -85,9 +85,21 @@ def run_prepare_job(
         skroutz_status=record.payload.get("skroutz_status", 0),
         boxnow=record.payload.get("boxnow", 0),
         price=record.payload.get("price", 0),
+        gallery_url=record.payload.get("gallery_url") or None,
+        second_opencart_image_index=record.payload.get("second_opencart_image_index"),
     )
+    gallery_extraction_url = request.gallery_url or request.url
+    log(f"Prepare product data extraction URL: {request.url}")
+    log(f"Prepare gallery_url provided: {bool(request.gallery_url)}")
+    log(f"Prepare gallery image extraction URL: {gallery_extraction_url}")
+    if request.gallery_url:
+        log("Prepare product data extraction remains on the main URL.")
+    if request.second_opencart_image_index is not None:
+        log(f"Requested second OpenCart image index: {request.second_opencart_image_index}")
     log("Calling prepare service.")
     result = prepare_product_fn(request)
+    if "second_opencart_image_override_applied" in result.details:
+        log(f"Second OpenCart image override applied: {bool(result.details['second_opencart_image_override_applied'])}")
     return _job_result_from_service_result(
         "prepare",
         result,

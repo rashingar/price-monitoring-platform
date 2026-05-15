@@ -1377,6 +1377,17 @@
             "title": "Boxnow",
             "type": "integer"
           },
+          "gallery_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gallery Url"
+          },
           "model": {
             "title": "Model",
             "type": "string"
@@ -1400,6 +1411,18 @@
             ],
             "default": 0,
             "title": "Price"
+          },
+          "second_opencart_image_index": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Second Opencart Image Index"
           },
           "sections": {
             "default": 0,

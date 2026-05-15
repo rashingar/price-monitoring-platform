@@ -665,6 +665,8 @@ export interface components {
        * @default 0
        */
       boxnow?: number;
+      /** Gallery Url */
+      gallery_url?: string | null;
       /** Model */
       model: string;
       /**
@@ -677,6 +679,8 @@ export interface components {
        * @default 0
        */
       price?: string | number;
+      /** Second Opencart Image Index */
+      second_opencart_image_index?: number | null;
       /**
        * Sections
        * @default 0

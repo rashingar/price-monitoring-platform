@@ -50,9 +50,20 @@ def assemble_prepare_result(
     final_scope_ok: bool,
     final_scope_reason: str,
     scrape_persistence_input: PrepareScrapePersistenceInput,
+    gallery_settings: dict[str, Any] | None = None,
     sections_artifact_payload: dict[str, Any] | None = None,
     schema_matcher_factory: Callable[..., Any] = SchemaMatcher,
 ) -> PrepareResultAssemblyResult:
+    resolved_gallery_settings = gallery_settings or {
+        "gallery_url_used": False,
+        "gallery_extraction_url": cli.url,
+        "product_data_extraction_url": cli.url,
+        "product_data_extraction_uses_main_url": True,
+        "second_opencart_image_index": None,
+        "second_opencart_image_override_applied": False,
+        "second_opencart_image_warning": None,
+        "deduplicated_gallery_count": None,
+    }
     schema_matcher = schema_matcher_factory(str(SCHEMA_LIBRARY_PATH))
     effective_spec_sections = build_effective_spec_sections(
         parsed.source,
@@ -155,6 +166,7 @@ def assemble_prepare_result(
             "downloaded_count": len(downloaded_gallery),
             "requested_photos": cli.photos,
         },
+        "gallery_settings": resolved_gallery_settings,
         "sections_requested": cli.sections,
         "sections_extracted": len(selected_presentation_blocks),
         "section_titles": [block["title"] for block in selected_presentation_blocks],

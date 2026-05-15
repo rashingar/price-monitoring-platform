@@ -6,7 +6,7 @@ from product_factory.fetcher import FetchError
 from product_factory.models import FetchResult, GalleryImage, ParsedProduct, SourceProductData
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.source_capture_client import SourceCaptureSyncResult
-from product_factory.source_acquisition_stage import execute_source_acquisition_stage
+from product_factory.source_acquisition_stage import apply_second_opencart_image_index, execute_source_acquisition_stage
 
 
 def _build_provider_resolution_result(
@@ -155,6 +155,14 @@ def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
         "response_headers": {"content-type": "text/html", "x-test": "1"},
         "gallery_requested_photos": 3,
         "gallery_downloaded_count": 3,
+        "gallery_url_used": False,
+        "gallery_extraction_url": url,
+        "product_data_extraction_url": url,
+        "product_data_extraction_uses_main_url": True,
+        "second_opencart_image_index": None,
+        "second_opencart_image_override_applied": False,
+        "second_opencart_image_warning": None,
+        "deduplicated_gallery_count": None,
     }
 
 
@@ -200,6 +208,138 @@ def test_execute_source_acquisition_stage_keeps_gallery_failure_as_warning_only(
     assert result.requested_gallery_photos == 1
     assert result.parsed.source.gallery_images == original_gallery
     assert result.snapshot_provenance["gallery_downloaded_count"] == 0
+
+
+def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_images(tmp_path: Path) -> None:
+    model = "233541"
+    main_url = "https://www.electronet.gr/main-product"
+    gallery_url = "https://www.electronet.gr/gallery-product"
+    main_parsed = ParsedProduct(
+        source=SourceProductData(
+            source_name="electronet",
+            page_type="product",
+            url=main_url,
+            canonical_url=main_url,
+            product_code=model,
+            brand="LG",
+            mpn="MAIN-MPN",
+            name="Main Product",
+            gallery_images=[GalleryImage(url="https://cdn.example/main-a.jpg", alt="main", position=1)],
+        )
+    )
+    gallery_parsed = ParsedProduct(
+        source=SourceProductData(
+            source_name="electronet",
+            page_type="product",
+            url=gallery_url,
+            canonical_url=gallery_url,
+            product_code="999999",
+            brand="Other",
+            mpn="GALLERY-MPN",
+            name="Gallery Product",
+            gallery_images=[
+                GalleryImage(url="https://cdn.example/gallery-a.jpg", alt="gallery a", position=1),
+                GalleryImage(url="https://cdn.example/gallery-b.jpg", alt="gallery b", position=2),
+            ],
+        )
+    )
+    fetcher = RecordingFetcher()
+    provider_urls: list[str] = []
+
+    def fake_resolve_prepare_provider_input(cli, **_kwargs):
+        provider_urls.append(cli.url)
+        parsed = gallery_parsed if cli.url == gallery_url else main_parsed
+        return _build_provider_resolution_result(
+            source="electronet",
+            provider_id="electronet",
+            url=cli.url,
+            parsed=parsed,
+        )
+
+    result = execute_source_acquisition_stage(
+        model=model,
+        url=main_url,
+        photos=2,
+        model_dir=tmp_path / model,
+        gallery_url=gallery_url,
+        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
+        fetcher_factory=lambda: fetcher,
+        resolve_prepare_provider_input_fn=fake_resolve_prepare_provider_input,
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+    )
+
+    assert provider_urls == [main_url, gallery_url]
+    assert result.parsed is main_parsed
+    assert result.parsed.source.name == "Main Product"
+    assert result.parsed.source.mpn == "MAIN-MPN"
+    assert result.extracted_gallery_count == 2
+    assert [image.url for image in fetcher.gallery_download_calls[0]["images"]] == [
+        "https://cdn.example/gallery-a.jpg",
+        "https://cdn.example/gallery-b.jpg",
+    ]
+    assert result.snapshot_provenance["gallery_url_used"] is True
+    assert result.snapshot_provenance["gallery_extraction_url"] == gallery_url
+    assert result.snapshot_provenance["product_data_extraction_url"] == main_url
+    assert result.snapshot_provenance["product_data_extraction_uses_main_url"] is True
+
+
+def test_apply_second_opencart_image_index_moves_selected_after_deduplication() -> None:
+    images = [
+        GalleryImage(url="https://cdn.example/a.jpg", alt="A", position=1),
+        GalleryImage(url="https://cdn.example/b.jpg", alt="B", position=2),
+        GalleryImage(url="https://cdn.example/b.jpg", alt="B duplicate", position=3),
+        GalleryImage(url="https://cdn.example/c.jpg", alt="C", position=4),
+        GalleryImage(url="https://cdn.example/d.jpg", alt="D", position=5),
+    ]
+
+    reordered, metadata, warnings = apply_second_opencart_image_index(images, 4)
+
+    assert [image.url for image in reordered] == [
+        "https://cdn.example/a.jpg",
+        "https://cdn.example/d.jpg",
+        "https://cdn.example/b.jpg",
+        "https://cdn.example/c.jpg",
+    ]
+    assert [image.position for image in reordered] == [1, 2, 3, 4]
+    assert metadata["deduplicated_gallery_count"] == 4
+    assert metadata["second_opencart_image_override_applied"] is True
+    assert warnings == []
+
+
+def test_apply_second_opencart_image_index_one_keeps_order_without_duplicates() -> None:
+    images = [
+        GalleryImage(url="https://cdn.example/a.jpg", position=1),
+        GalleryImage(url="https://cdn.example/a.jpg", position=2),
+        GalleryImage(url="https://cdn.example/b.jpg", position=3),
+    ]
+
+    reordered, metadata, warnings = apply_second_opencart_image_index(images, 1)
+
+    assert [image.url for image in reordered] == [
+        "https://cdn.example/a.jpg",
+        "https://cdn.example/b.jpg",
+    ]
+    assert metadata["second_opencart_image_override_applied"] is False
+    assert warnings == []
+
+
+def test_apply_second_opencart_image_index_out_of_range_warns_and_keeps_default_order() -> None:
+    images = [
+        GalleryImage(url="https://cdn.example/a.jpg", position=1),
+        GalleryImage(url="https://cdn.example/b.jpg", position=2),
+    ]
+
+    reordered, metadata, warnings = apply_second_opencart_image_index(images, 4)
+
+    assert [image.url for image in reordered] == [
+        "https://cdn.example/a.jpg",
+        "https://cdn.example/b.jpg",
+    ]
+    assert metadata["second_opencart_image_override_applied"] is False
+    assert metadata["deduplicated_gallery_count"] == 2
+    assert warnings == [
+        "second_opencart_image_index_out_of_range:requested=4:available=2:default_image_order_used"
+    ]
 
 
 def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload_without_provider_fetch(tmp_path: Path) -> None:

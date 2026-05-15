@@ -52,6 +52,8 @@ def execute_prepare_stage(
         "url": cli.url,
         "photos": cli.photos,
         "model_dir": resolved_model_dir,
+        "gallery_url": cli.gallery_url,
+        "second_opencart_image_index": cli.second_opencart_image_index,
         "validate_url_scope_fn": validate_url_scope_fn,
         "fetcher_factory": fetcher_factory,
         "resolve_prepare_provider_input_fn": resolve_prepare_provider_input_fn,
@@ -131,6 +133,18 @@ def execute_prepare_from_acquisition(
     gallery_warnings = list(acquisition.gallery_warnings)
     gallery_files = list(acquisition.gallery_files)
     downloaded_gallery = list(acquisition.downloaded_gallery)
+    gallery_settings = {
+        "gallery_url_used": bool(acquisition.snapshot_provenance.get("gallery_url_used", False)),
+        "gallery_extraction_url": str(acquisition.snapshot_provenance.get("gallery_extraction_url") or cli.url),
+        "product_data_extraction_url": str(acquisition.snapshot_provenance.get("product_data_extraction_url") or cli.url),
+        "product_data_extraction_uses_main_url": True,
+        "second_opencart_image_index": acquisition.snapshot_provenance.get("second_opencart_image_index"),
+        "second_opencart_image_override_applied": bool(
+            acquisition.snapshot_provenance.get("second_opencart_image_override_applied", False)
+        ),
+        "second_opencart_image_warning": acquisition.snapshot_provenance.get("second_opencart_image_warning"),
+        "deduplicated_gallery_count": acquisition.snapshot_provenance.get("deduplicated_gallery_count"),
+    }
 
     selected_presentation_blocks = []
     selected_besco_images: list[GalleryImage] = []
@@ -234,6 +248,7 @@ def execute_prepare_from_acquisition(
         downloaded_gallery=downloaded_gallery,
         gallery_warnings=gallery_warnings,
         gallery_files=gallery_files,
+        gallery_settings=gallery_settings,
         selected_presentation_blocks=selected_presentation_blocks,
         section_warnings=section_warnings,
         section_image_candidates=section_image_candidates,
@@ -361,6 +376,16 @@ def _persist_blocked_prepare_result(
             "final_url_source": final_source,
         },
         "blocked_snapshot": blocked_snapshot,
+        "gallery_settings": {
+            "gallery_url_used": bool(cli.gallery_url),
+            "gallery_extraction_url": cli.gallery_url or cli.url,
+            "product_data_extraction_url": cli.url,
+            "product_data_extraction_uses_main_url": True,
+            "second_opencart_image_index": cli.second_opencart_image_index,
+            "second_opencart_image_override_applied": False,
+            "second_opencart_image_warning": None,
+            "deduplicated_gallery_count": 0,
+        },
         "critical_extractors": {
             "product_code": "blocked",
             "brand": "blocked",

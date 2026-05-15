@@ -61,6 +61,8 @@ def add_input_fields(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--skroutz-status", type=int, default=None, dest="skroutz_status")
     parser.add_argument("--boxnow", type=int, default=None)
     parser.add_argument("--price", default=None)
+    parser.add_argument("--gallery-url", default=None, dest="gallery_url")
+    parser.add_argument("--second-opencart-image-index", type=int, default=None, dest="second_opencart_image_index")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -78,6 +80,8 @@ def main(argv: list[str] | None = None) -> int:
                     skroutz_status=cli.skroutz_status,
                     boxnow=cli.boxnow,
                     price=cli.price,
+                    gallery_url=cli.gallery_url,
+                    second_opencart_image_index=cli.second_opencart_image_index,
                 )
             )
             print(f"Scrape artifacts: {result.artifacts.scrape_dir}")
@@ -124,8 +128,20 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "skroutz_status": template_values.get("skroutz_status", "0"),
         "boxnow": template_values.get("boxnow", "0"),
         "price": template_values.get("price", "0"),
+        "gallery_url": template_values.get("gallery_url", ""),
+        "second_opencart_image_index": template_values.get("second_opencart_image_index", ""),
     }
-    for key in ["model", "url", "photos", "sections", "skroutz_status", "boxnow", "price"]:
+    for key in [
+        "model",
+        "url",
+        "photos",
+        "sections",
+        "skroutz_status",
+        "boxnow",
+        "price",
+        "gallery_url",
+        "second_opencart_image_index",
+    ]:
         value = getattr(args, key, None)
         if value is not None:
             merged[key] = value
@@ -137,6 +153,8 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         skroutz_status=merged["skroutz_status"],
         boxnow=merged["boxnow"],
         price=merged["price"],
+        gallery_url=merged["gallery_url"],
+        second_opencart_image_index=merged["second_opencart_image_index"],
         out=str(WORK_ROOT),
     )
     cli = validate_input(namespace)
@@ -148,6 +166,8 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         skroutz_status=cli.skroutz_status,
         boxnow=cli.boxnow,
         price=cli.price,
+        gallery_url=cli.gallery_url,
+        second_opencart_image_index=cli.second_opencart_image_index,
         out=str(WORK_ROOT / cli.model / "scrape"),
     )
 
@@ -170,7 +190,17 @@ def parse_template_text(text: str) -> dict[str, str]:
             continue
         key, value = line.split(":", 1)
         normalized_key = key.strip().lower().replace("-", "_").replace(" ", "_")
-        if normalized_key in {"model", "url", "photos", "sections", "skroutz_status", "boxnow", "price"}:
+        if normalized_key in {
+            "model",
+            "url",
+            "photos",
+            "sections",
+            "skroutz_status",
+            "boxnow",
+            "price",
+            "gallery_url",
+            "second_opencart_image_index",
+        }:
             values[normalized_key] = value.strip()
     return values
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
@@ -20,6 +21,28 @@ class PrepareJobRequest(BaseModel):
     skroutz_status: int = 0
     boxnow: int = 0
     price: str | float | int = 0
+    gallery_url: str | None = None
+    second_opencart_image_index: int | None = Field(default=None, ge=1)
+
+    @field_validator("gallery_url", mode="before")
+    @classmethod
+    def _normalize_gallery_url(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            trimmed = value.strip()
+            return trimmed or None
+        return value
+
+    @field_validator("gallery_url")
+    @classmethod
+    def _gallery_url_must_be_absolute(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        parts = urlsplit(value)
+        if not parts.scheme or not parts.netloc:
+            raise ValueError("gallery_url must be an absolute URL")
+        return value
 
 
 class RenderJobRequest(BaseModel):

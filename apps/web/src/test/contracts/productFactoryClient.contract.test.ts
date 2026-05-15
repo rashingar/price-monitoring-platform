@@ -288,6 +288,8 @@ describe("Product Factory API client contract fixtures", () => {
       skroutz_status: 0,
       boxnow: 0,
       price: 0,
+      gallery_url: "https://example.invalid/gallery",
+      second_opencart_image_index: 4,
     } satisfies PrepareJobRequest;
     const generatedPayload: ProductFactoryContractPrepareJobRequest = payload;
 
