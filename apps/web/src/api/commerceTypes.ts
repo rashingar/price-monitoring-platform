@@ -172,6 +172,22 @@ export interface SourceUrlListResponse {
   [key: string]: unknown;
 }
 
+export interface CatalogProductSourceUrlSummary {
+  total_count?: number;
+  by_status?: Record<string, number>;
+  by_source?: Record<string, number>;
+  by_type?: Record<string, number>;
+  [key: string]: unknown;
+}
+
+export interface CatalogProductDetailResponse {
+  product: CatalogProduct | null;
+  source_urls: SourceUrl[];
+  source_url_summary: CatalogProductSourceUrlSummary;
+  warnings: string[];
+  [key: string]: unknown;
+}
+
 export interface MissingSourceUrlProduct {
   catalog_product_id?: number | string | null;
   model?: string | null;

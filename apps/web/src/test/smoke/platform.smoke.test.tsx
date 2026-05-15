@@ -321,6 +321,10 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("Αφυγραντήρες")).toBeInTheDocument();
     expect(screen.getByText("Eligible")).toBeInTheDocument();
     expect(screen.getByText("Review")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Details for 005606" })).toHaveAttribute(
+      "href",
+      "/catalog/products/1",
+    );
     expect(screen.getByRole("button", { name: "Source URLs for 005606" })).toBeInTheDocument();
     await expect(screen.findByText("Source URL Import")).resolves.toBeInTheDocument();
     await expect(screen.findByText(/Coverage:/)).resolves.toBeInTheDocument();
@@ -338,6 +342,53 @@ describe("platform mocked page smoke tests", () => {
         ),
       ).toBe(true),
     );
+  });
+
+  it("keeps Catalog details link separate from selection checkbox behavior", async () => {
+    installMockFetch(allRoutes);
+
+    renderWithRouter("/catalog");
+
+    const checkbox = await screen.findByLabelText("Select 005606");
+    fireEvent.click(checkbox);
+
+    await waitFor(() => expect(checkbox).toBeChecked());
+    expect(screen.getByRole("link", { name: "Details for 005606" })).toHaveAttribute(
+      "href",
+      "/catalog/products/1",
+    );
+  });
+
+  it("renders Catalog product detail with source URL lifecycle rows", async () => {
+    installMockFetch(allRoutes);
+
+    renderWithRouter("/catalog/products/1");
+
+    await expect(screen.findByRole("heading", { name: "Midea Αφυγραντήρας 20L" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("ID 1")).toBeInTheDocument();
+    expect(screen.getByText("Model 005606")).toBeInTheDocument();
+    expect(screen.getByText("MPN MD-20L")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Catalog fields" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Capture and fetch status" })).toBeInTheDocument();
+    expect(screen.getByText("active 3")).toBeInTheDocument();
+    expect(screen.getByText("needs_review 1")).toBeInTheDocument();
+    expect(screen.getByText("https://www.skroutz.gr/s/123/midea-md-20l.html")).toBeInTheDocument();
+    expect(screen.getByText("scheduled-test")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "source-capture-9001.json" })).toHaveAttribute(
+      "href",
+      "/commerce-api/artifacts/download?path=source-captures%2F9001%2Ffull-snapshot.json",
+    );
+    expect(screen.queryByRole("button", { name: /Validate/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Disable/i })).not.toBeInTheDocument();
+  });
+
+  it("renders empty source URL state on Catalog product detail", async () => {
+    installMockFetch(allRoutes);
+
+    renderWithRouter("/catalog/products/2");
+
+    await expect(screen.findByRole("heading", { name: "Σετ πληκτρολόγιο και ποντίκι" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("No source URLs")).toBeInTheDocument();
   });
 
   it("expands source URL import and keeps apply guarded by preview and confirmation", async () => {

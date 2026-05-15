@@ -13,7 +13,11 @@ from ecommerce.catalog import CatalogProduct
 from ecommerce.catalog_db import load_active_catalog_products
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.policy import require_database_ready_for_catalog
-from ecommerce.db.repositories.catalog import CatalogProductListFilters, list_catalog_products_page
+from ecommerce.db.repositories.catalog import (
+    CatalogProductListFilters,
+    get_catalog_product_detail,
+    list_catalog_products_page,
+)
 from ecommerce.db.session import session_scope
 from ecommerce.ignore import MissingIgnoreColumnsError, load_ignored_products
 
@@ -97,6 +101,32 @@ def get_products(
             "page_size": page_size,
         }
     return payload
+
+
+@router.get("/products/{catalog_product_id}")
+def get_product_detail(catalog_product_id: int) -> dict:
+    require_database_ready_for_catalog()
+    ignored_models = _load_ignored_models_or_raise()
+    try:
+        with session_scope() as session:
+            result = get_catalog_product_detail(
+                session,
+                catalog_product_id,
+                ignored_models=ignored_models,
+            )
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Catalog DB query failed.") from exc
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Catalog product not found.")
+    return {
+        "product": result.product,
+        "source_urls": result.source_urls,
+        "source_url_summary": result.source_url_summary,
+        "warnings": result.warnings,
+    }
 
 
 @router.get("/categories")

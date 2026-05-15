@@ -17,6 +17,8 @@ import type {
   CatalogCategoryOption,
   CatalogFamilyNode,
   CatalogProduct,
+  CatalogProductDetailResponse,
+  CatalogProductSourceUrlSummary,
   CatalogProductsParams,
   CatalogProductsResponse,
   CatalogSnapshot,
@@ -409,6 +411,38 @@ function normalizeSourceUrlList(payload: unknown): SourceUrlListResponse {
     ...source,
     items,
     count: normalizeOptionalNumber(source.count) ?? items.length,
+  };
+}
+
+function normalizeCatalogProductSourceUrlSummary(
+  value: unknown,
+  sourceUrls: SourceUrl[],
+): CatalogProductSourceUrlSummary {
+  const source = isRecord(value) ? value : {};
+  return {
+    ...source,
+    total_count: normalizeOptionalNumber(source.total_count) ?? sourceUrls.length,
+    by_status: normalizeNumberRecord(source.by_status),
+    by_source: normalizeNumberRecord(source.by_source),
+    by_type: normalizeNumberRecord(source.by_type),
+  };
+}
+
+function normalizeCatalogProductDetail(payload: unknown): CatalogProductDetailResponse {
+  const source = isRecord(payload) ? payload : {};
+  const product = normalizeProduct(source.product);
+  const sourceUrls = getArrayPayload(source.source_urls ?? source.items, ["source_urls", "items", "data", "results"])
+    .map(normalizeSourceUrl)
+    .filter((item): item is SourceUrl => item !== null);
+  return {
+    ...source,
+    product,
+    source_urls: sourceUrls,
+    source_url_summary: normalizeCatalogProductSourceUrlSummary(
+      source.source_url_summary,
+      sourceUrls,
+    ),
+    warnings: normalizeStringArray(source.warnings),
   };
 }
 
@@ -2294,6 +2328,18 @@ export const commerceClient = {
   ): Promise<CatalogProductsResponse> {
     return normalizeProductsResponse(
       await request<unknown>(appendQuery("/catalog/products", params as QueryParams), { signal }),
+    );
+  },
+
+  async getCatalogProductDetail(
+    catalogProductId: string | number,
+    signal?: AbortSignal,
+  ): Promise<CatalogProductDetailResponse> {
+    return normalizeCatalogProductDetail(
+      await request<unknown>(
+        `/catalog/products/${encodeURIComponent(String(catalogProductId))}`,
+        { signal },
+      ),
     );
   },
 

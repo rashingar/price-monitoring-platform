@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CommerceApiError, commerceClient } from "../../api/commerceClient";
 import {
   catalogDbImportRequiredFixtureRoutes,
+  catalogProductDetail,
   catalogProductsEmptyImportWarning,
   alertEvents,
   commerceDbUnavailableError,
@@ -31,7 +32,7 @@ import { installMockFetch } from "../mockFetch";
 
 describe("commerce API client contract fixtures", () => {
   it("preserves catalog product model strings with leading zeroes", async () => {
-    installMockFetch(commerceFixtureRoutes);
+    const mockFetch = installMockFetch(commerceFixtureRoutes);
 
     const products = await commerceClient.listCatalogProducts({ page: 1, page_size: 100 });
     expect(products.items[0]).toMatchObject({
@@ -41,6 +42,29 @@ describe("commerce API client contract fixtures", () => {
     });
     expect(typeof products.items[0].model).toBe("string");
     expect(products.items[0].catalog_product_id).toBe(1);
+
+    await expect(commerceClient.getCatalogProductDetail(1)).resolves.toMatchObject({
+      product: expect.objectContaining({
+        catalog_product_id: 1,
+        model: "005606",
+        source_url_coverage: expect.objectContaining({ has_active_source_url: true }),
+      }),
+      source_urls: expect.arrayContaining([
+        expect.objectContaining({
+          id: 101,
+          product_source_id: 1001,
+          capture_status: "success",
+          source_capture_snapshot_id: 9001,
+        }),
+      ]),
+      source_url_summary: expect.objectContaining({
+        total_count: catalogProductDetail.source_url_summary.total_count,
+        by_status: expect.objectContaining({ active: 3 }),
+      }),
+    });
+    expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toContain(
+      "GET /commerce-api/catalog/products/1",
+    );
   });
 
   it("lists creates updates and validates Catalog source URLs", async () => {
@@ -415,6 +439,7 @@ describe("commerce API client contract fixtures", () => {
   it("normalizes malformed source URL payloads to stable empty shapes", async () => {
     installMockFetch([
       { method: "GET", path: "/commerce-api/catalog/products/1/source-urls", response: { items: [null, { nope: true }] } },
+      { method: "GET", path: "/commerce-api/catalog/products/1", response: { product: { model: "005606" }, source_urls: [{ url: "https://example.test/p" }] } },
       { method: "GET", path: "/commerce-api/catalog/source-urls/summary", response: null },
       { method: "GET", path: "/commerce-api/vendor-sources/source-urls/summary", response: null },
       { method: "POST", path: "/commerce-api/catalog/source-urls/import/preview", response: { report_items: [null, "bad"] } },
@@ -423,6 +448,18 @@ describe("commerce API client contract fixtures", () => {
     await expect(commerceClient.listCatalogProductSourceUrls(1)).resolves.toMatchObject({
       items: [],
       count: 0,
+    });
+    await expect(commerceClient.getCatalogProductDetail(1)).resolves.toMatchObject({
+      product: expect.objectContaining({ model: "005606" }),
+      source_urls: [
+        expect.objectContaining({
+          url: "https://example.test/p",
+          status: "active",
+          url_type: "manual",
+        }),
+      ],
+      source_url_summary: expect.objectContaining({ total_count: 1 }),
+      warnings: [],
     });
     await expect(commerceClient.getSourceUrlSummary()).resolves.toMatchObject({
       total_count: 0,

@@ -1124,6 +1124,104 @@ textarea {
   min-width: 1420px;
 }
 
+.catalog-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-product-detail-header {
+  gap: 14px;
+}
+
+.catalog-product-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.catalog-product-detail-badges,
+.catalog-product-detail-meta,
+.catalog-product-marketplace-row,
+.catalog-product-source-summary-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-product-detail-meta {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.catalog-product-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.catalog-product-detail-grid div {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfc;
+}
+
+.catalog-product-detail-grid .wide {
+  grid-column: span 2;
+}
+
+.catalog-product-detail-grid dt {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.catalog-product-detail-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.catalog-product-source-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.catalog-product-source-summary > div {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcfc;
+}
+
+.catalog-product-source-url-table-wrap table {
+  min-width: 1900px;
+}
+
+.table-cell-subtext {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.url-cell {
+  max-width: 420px;
+  overflow-wrap: anywhere;
+}
+
+.error-cell {
+  max-width: 300px;
+  overflow-wrap: anywhere;
+}
+
 .source-url-import-report,
 .source-url-result-block {
   display: grid;
@@ -2407,6 +2505,7 @@ code {
   .toolbar,
   .source-url-import-header,
   .source-url-layout-row,
+  .catalog-product-detail-title-row,
   .pipeline-stage-item {
     align-items: flex-start;
     flex-direction: column;
@@ -2430,6 +2529,8 @@ code {
   .vendor-source-coverage-grid,
   .vendor-source-count-grid,
   .source-url-product-summary,
+  .catalog-product-detail-grid,
+  .catalog-product-source-summary,
   .source-url-candidate-filters,
   .candidate-product-summary,
   .candidate-detail-list,
@@ -2469,5 +2570,9 @@ code {
   .source-url-drawer-body {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .catalog-product-detail-grid .wide {
+    grid-column: span 1;
   }
 }

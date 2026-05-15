@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { CatalogProduct } from "../../api/commerceTypes";
 import {
   formatMoney,
@@ -66,7 +67,7 @@ export function CatalogProductsTable({
             {isColumnVisible("category_levels") ? <th>Category levels</th> : null}
             {isColumnVisible("raw_category") ? <th>Raw category</th> : null}
             {isColumnVisible("warnings") ? <th>Warnings / eligibility</th> : null}
-            <th>Source URLs</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -166,15 +167,26 @@ export function CatalogProductsTable({
                   </td>
                 ) : null}
                 <td>
-                  <button
-                    className="button secondary compact-button"
-                    type="button"
-                    onClick={() => onOpenSourceUrls(product)}
-                    disabled={isCatalogLocked}
-                    aria-label={`Source URLs for ${model}`}
-                  >
-                    Source URLs
-                  </button>
+                  <div className="catalog-row-actions">
+                    {product.catalog_product_id !== null && product.catalog_product_id !== undefined ? (
+                      <Link
+                        className="button secondary compact-button"
+                        to={`/catalog/products/${encodeURIComponent(String(product.catalog_product_id))}`}
+                        aria-label={`Details for ${model}`}
+                      >
+                        Details
+                      </Link>
+                    ) : null}
+                    <button
+                      className="button secondary compact-button"
+                      type="button"
+                      onClick={() => onOpenSourceUrls(product)}
+                      disabled={isCatalogLocked}
+                      aria-label={`Source URLs for ${model}`}
+                    >
+                      Source URLs
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

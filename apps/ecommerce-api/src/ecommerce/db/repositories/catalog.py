@@ -11,7 +11,10 @@ from sqlalchemy.orm import Session
 
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.models.source_urls import SourceUrl
+from ecommerce.db.repositories.common import json_safe_value
+from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
 
 MarketplaceFilter = Literal["bestprice", "skroutz", "both", "none"]
 SortBy = Literal["model", "name", "manufacturer", "category", "price", "quantity"]
@@ -52,6 +55,14 @@ class CatalogProductListResult:
     total: int
     filtered_total: int
     filters_applied: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class CatalogProductDetailResult:
+    product: dict[str, Any]
+    source_urls: list[dict[str, Any]]
+    source_url_summary: dict[str, Any]
+    warnings: list[str]
 
 
 def list_catalog_products_page(
@@ -97,6 +108,62 @@ def list_catalog_products_page(
         total=total,
         filtered_total=filtered_total,
         filters_applied=filters_applied,
+    )
+
+
+def get_catalog_product_detail(
+    session: Session,
+    catalog_product_id: int,
+    *,
+    ignored_models: set[str],
+    catalog_source: str = DEFAULT_CATALOG_SOURCE,
+) -> CatalogProductDetailResult | None:
+    row = session.execute(
+        select(CatalogProductRow).where(
+            CatalogProductRow.id == catalog_product_id,
+            CatalogProductRow.catalog_source == catalog_source,
+            CatalogProductRow.active.is_(True),
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        return None
+
+    source_urls = list(
+        session.execute(
+            select(SourceUrl)
+            .where(SourceUrl.catalog_product_id == row.id)
+            .order_by(SourceUrl.updated_at.desc(), SourceUrl.id.desc())
+        )
+        .scalars()
+        .all()
+    )
+    source_filter = None
+    status_counts = _source_url_status_counts(session, [int(row.id)], source_filter).get(
+        int(row.id),
+        _empty_status_counts(),
+    )
+    product_payload = _catalog_product_payload(
+        row,
+        is_ignored=row.model in ignored_models,
+        status_counts=status_counts,
+        source_filter=source_filter,
+    )
+    product_sources = _product_sources_for_catalog_product(session, row)
+    latest_snapshots = _latest_snapshots_by_product_source(session, product_sources)
+    product_source_by_hash = {source.canonical_url_hash: source for source in product_sources}
+    source_url_payloads = [
+        _source_url_lifecycle_payload(
+            source_url,
+            product_source_by_hash=product_source_by_hash,
+            latest_snapshots=latest_snapshots,
+        )
+        for source_url in source_urls
+    ]
+    return CatalogProductDetailResult(
+        product=product_payload,
+        source_urls=source_url_payloads,
+        source_url_summary=_source_url_summary(source_url_payloads),
+        warnings=_string_list(row.warnings),
     )
 
 
@@ -304,6 +371,168 @@ def _catalog_product_payload(
     }
 
 
+def _product_sources_for_catalog_product(session: Session, row: CatalogProductRow) -> list[ProductSource]:
+    product = None
+    if row.model:
+        product = session.execute(
+            select(Product).where(
+                Product.catalog_source == row.catalog_source,
+                Product.model == row.model,
+            )
+        ).scalar_one_or_none()
+    if product is None and row.mpn:
+        product = session.execute(
+            select(Product)
+            .where(
+                Product.catalog_source == row.catalog_source,
+                Product.mpn == row.mpn,
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+    if product is None:
+        return []
+
+    return list(
+        session.execute(
+            select(ProductSource)
+            .where(ProductSource.product_id == product.id)
+            .order_by(ProductSource.updated_at.desc(), ProductSource.id.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+
+def _latest_snapshots_by_product_source(
+    session: Session,
+    product_sources: list[ProductSource],
+) -> dict[int, SourceCaptureSnapshot]:
+    source_ids = [int(source.id) for source in product_sources if source.id is not None]
+    if not source_ids:
+        return {}
+    rows = list(
+        session.execute(
+            select(SourceCaptureSnapshot)
+            .where(SourceCaptureSnapshot.product_source_id.in_(source_ids))
+            .order_by(
+                SourceCaptureSnapshot.product_source_id.asc(),
+                SourceCaptureSnapshot.captured_at.desc().nullslast(),
+                SourceCaptureSnapshot.fetched_at.desc().nullslast(),
+                SourceCaptureSnapshot.created_at.desc(),
+                SourceCaptureSnapshot.id.desc(),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    latest: dict[int, SourceCaptureSnapshot] = {}
+    for snapshot in rows:
+        source_id = snapshot.product_source_id
+        if source_id is not None and int(source_id) not in latest:
+            latest[int(source_id)] = snapshot
+    return latest
+
+
+def _source_url_lifecycle_payload(
+    row: SourceUrl,
+    *,
+    product_source_by_hash: dict[str, ProductSource],
+    latest_snapshots: dict[int, SourceCaptureSnapshot],
+) -> dict[str, Any]:
+    product_source = _matching_product_source(row, product_source_by_hash)
+    snapshot = latest_snapshots.get(int(product_source.id)) if product_source is not None else None
+    source_capture_snapshot_id = snapshot.id if snapshot is not None else None
+    artifact_ref = _artifact_ref(snapshot)
+    last_fetch_status = product_source.last_fetch_status if product_source is not None else None
+    payload: dict[str, Any] = {
+        "id": row.id,
+        "source_url_id": row.id,
+        "catalog_product_id": row.catalog_product_id,
+        "product_source_id": product_source.id if product_source is not None else None,
+        "catalog_source": row.catalog_source,
+        "model": row.model,
+        "mpn": row.mpn,
+        "manufacturer": row.manufacturer,
+        "source_name": row.source_name,
+        "source_domain": row.source_domain,
+        "url": row.url,
+        "url_normalized": row.url_normalized,
+        "status": row.status,
+        "url_type": row.url_type,
+        "trust_level": row.trust_level,
+        "added_by": row.added_by,
+        "notes": row.notes,
+        "last_seen_at": json_safe_value(row.last_seen_at),
+        "last_success_at": json_safe_value(row.last_success_at),
+        "last_failed_at": json_safe_value(row.last_failed_at),
+        "failure_count": row.failure_count,
+        "last_error": _safe_operator_error(row.last_error),
+        "capture_status": last_fetch_status,
+        "last_fetch_status": last_fetch_status,
+        "last_capture_status": last_fetch_status,
+        "last_capture_strategy": product_source.last_capture_strategy if product_source is not None else None,
+        "last_capture_at": json_safe_value(snapshot.captured_at if snapshot is not None else None),
+        "last_fetched_at": json_safe_value(snapshot.fetched_at if snapshot is not None else None),
+        "source_capture_snapshot_id": source_capture_snapshot_id,
+        "last_capture_snapshot_id": source_capture_snapshot_id,
+        "artifact_ref": artifact_ref,
+        "snapshot_ref": artifact_ref,
+        "full_snapshot_ref": artifact_ref,
+        "artifact_refs": [artifact_ref] if artifact_ref is not None else [],
+        "created_at": json_safe_value(row.created_at),
+        "updated_at": json_safe_value(row.updated_at),
+    }
+    return payload
+
+
+def _matching_product_source(
+    row: SourceUrl,
+    product_source_by_hash: dict[str, ProductSource],
+) -> ProductSource | None:
+    try:
+        canonical = canonicalize_url(row.url_normalized or row.url)
+        digest = canonical_url_hash(canonical)
+    except Exception:
+        return None
+    return product_source_by_hash.get(digest)
+
+
+def _artifact_ref(snapshot: SourceCaptureSnapshot | None) -> dict[str, Any] | None:
+    if snapshot is None or not snapshot.artifact_ref:
+        return None
+    path = snapshot.artifact_ref
+    return {
+        "name": str(path).rsplit("/", 1)[-1].rsplit("\\", 1)[-1],
+        "path": path,
+        "is_allowed": True,
+        "can_read": True,
+        "can_download": True,
+    }
+
+
+def _source_url_summary(source_urls: list[dict[str, Any]]) -> dict[str, Any]:
+    by_status: dict[str, int] = {}
+    by_source: dict[str, int] = {}
+    by_type: dict[str, int] = {}
+    for row in source_urls:
+        _increment(by_status, row.get("status"))
+        _increment(by_source, row.get("source_name"))
+        _increment(by_type, row.get("url_type"))
+    return {
+        "total_count": len(source_urls),
+        "by_status": by_status,
+        "by_source": by_source,
+        "by_type": by_type,
+    }
+
+
+def _increment(counter: dict[str, int], key: object) -> None:
+    text = str(key or "").strip()
+    if not text:
+        return
+    counter[text] = counter.get(text, 0) + 1
+
+
 def _empty_status_counts() -> dict[str, int]:
     return {status: 0 for status in SOURCE_URL_STATUSES}
 
@@ -318,6 +547,28 @@ def _json_safe_value(value: object) -> object:
     if isinstance(value, Decimal):
         return float(value)
     return value
+
+
+def _safe_operator_error(value: object) -> str | None:
+    if value is None:
+        return None
+    text = " ".join(str(value).split())
+    if not text:
+        return None
+    redacted = text
+    for marker in ("token=", "api_key=", "apikey=", "password=", "secret="):
+        lowered = redacted.casefold()
+        index = lowered.find(marker)
+        while index >= 0:
+            end = redacted.find(" ", index)
+            if end < 0:
+                end = len(redacted)
+            redacted = f"{redacted[:index]}{marker}<redacted>{redacted[end:]}"
+            lowered = redacted.casefold()
+            index = lowered.find(marker, index + len(marker) + len("<redacted>"))
+    if len(redacted) <= 500:
+        return redacted
+    return f"{redacted[:497]}..."
 
 
 def _trimmed_or_none(value: str | None) -> str | None:

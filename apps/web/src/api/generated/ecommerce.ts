@@ -37,6 +37,10 @@ export interface paths {
     /** Get Products */
     get: operations["get_products_api_catalog_products_get"];
   };
+  "/api/catalog/products/{catalog_product_id}": {
+    /** Get Product Detail */
+    get: operations["get_product_detail_api_catalog_products__catalog_product_id__get"];
+  };
   "/api/catalog/products/{catalog_product_id}/source-urls": {
     /** Get Product Source Urls */
     get: operations["get_product_source_urls_api_catalog_products__catalog_product_id__source_urls_get"];
@@ -1257,6 +1261,30 @@ export interface operations {
         sort_by?: ("model" | "name" | "manufacturer" | "category" | "price" | "quantity") | null;
         sort_dir?: "asc" | "desc";
         debug?: boolean;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Product Detail */
+  get_product_detail_api_catalog_products__catalog_product_id__get: {
+    parameters: {
+      path: {
+        catalog_product_id: number;
       };
     };
     responses: {

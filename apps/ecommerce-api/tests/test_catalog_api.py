@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -11,6 +12,7 @@ from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, create_or_update_manual_source_url  # noqa: E402
 from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
@@ -320,6 +322,149 @@ def test_catalog_products_include_source_url_eligibility_coverage(tmp_path: Path
         params={"has_source_url": "true", "source_name": "BestPrice"},
     ).json()
     assert [item["model"] for item in with_active_source_url["items"]] == ["123456"]
+
+
+def test_catalog_product_detail_returns_product_and_empty_source_urls(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    product_id = client.get(
+        "/api/catalog/products",
+        params={"q": "Vacuum One"},
+    ).json()["items"][0]["catalog_product_id"]
+
+    response = client.get(f"/api/catalog/products/{product_id}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["product"]["catalog_product_id"] == product_id
+    assert payload["product"]["model"] == "005606"
+    assert payload["product"]["mpn"] == "MPN-1"
+    assert payload["product"]["manufacturer"] == "Bosch"
+    assert payload["product"]["category_levels"] == [
+        "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        "Σκεύη Μαγειρικής",
+        "Γάστρες",
+    ]
+    assert payload["source_urls"] == []
+    assert payload["source_url_summary"] == {
+        "total_count": 0,
+        "by_status": {},
+        "by_source": {},
+        "by_type": {},
+    }
+
+
+def test_catalog_product_detail_missing_product_returns_404(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+
+    response = client.get("/api/catalog/products/999999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Catalog product not found."
+
+
+def test_catalog_product_detail_returns_source_url_lifecycle_rows(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    product_id = client.get(
+        "/api/catalog/products",
+        params={"q": "Vacuum One"},
+    ).json()["items"][0]["catalog_product_id"]
+    statuses = ["active", "needs_review", "broken", "disabled", "redirected"]
+
+    with session_scope(database_url) as session:
+        create_or_update_manual_source_url(
+            session,
+            product_id,
+            {"url": "https://www.skroutz.gr/s/123/vacuum-one.html", "source_name": "skroutz"},
+        )
+        for status in statuses[1:]:
+            create_or_update_imported_source_url(
+                session,
+                catalog_product_id=product_id,
+                url=f"https://www.bestprice.gr/item/456/vacuum-one-{status}.html",
+                source_name="bestprice",
+                status=status,
+                last_error="provider returned token=live-secret and password=hidden" if status == "broken" else None,
+            )
+
+    payload = client.get(f"/api/catalog/products/{product_id}").json()
+
+    rows_by_status = {item["status"]: item for item in payload["source_urls"]}
+    assert set(rows_by_status) == set(statuses)
+    assert payload["source_url_summary"]["total_count"] == 5
+    assert payload["source_url_summary"]["by_status"] == {status: 1 for status in statuses}
+    assert payload["source_url_summary"]["by_source"] == {"bestprice": 4, "skroutz": 1}
+    assert rows_by_status["active"]["source_url_id"] == rows_by_status["active"]["id"]
+    assert rows_by_status["active"]["url_type"] == "manual"
+    assert rows_by_status["needs_review"]["trust_level"] == "imported"
+    assert "live-secret" not in rows_by_status["broken"]["last_error"]
+    assert "hidden" not in rows_by_status["broken"]["last_error"]
+    assert "<redacted>" in rows_by_status["broken"]["last_error"]
+
+
+def test_catalog_product_detail_includes_capture_fetch_fields_when_stored(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    product_id = client.get(
+        "/api/catalog/products",
+        params={"q": "Vacuum Two"},
+    ).json()["items"][0]["catalog_product_id"]
+    captured_at = datetime(2026, 5, 2, 8, 5, tzinfo=timezone.utc)
+    fetched_at = datetime(2026, 5, 2, 8, 4, tzinfo=timezone.utc)
+
+    with session_scope(database_url) as session:
+        create_or_update_manual_source_url(
+            session,
+            product_id,
+            {"url": "https://www.skroutz.gr/s/123/vacuum-two.html", "source_name": "skroutz"},
+        )
+        product_source = session.query(ProductSource).one()
+        product_source.last_fetch_status = "success"
+        product_source.last_capture_strategy = "scheduled-test"
+        product_source.last_success_at = captured_at
+        snapshot = SourceCaptureSnapshot(
+            product_id=product_source.product_id,
+            product_source_id=product_source.id,
+            vendor_id=product_source.vendor_id,
+            capture_strategy="scheduled-test",
+            page_url=product_source.canonical_url,
+            artifact_ref="source-captures/9001/full-snapshot.json",
+            captured_at=captured_at,
+            fetched_at=fetched_at,
+            created_at=captured_at,
+        )
+        session.add(snapshot)
+
+    payload = client.get(f"/api/catalog/products/{product_id}").json()
+    row = payload["source_urls"][0]
+    assert row["product_source_id"] == product_source.id
+    assert row["capture_status"] == "success"
+    assert row["last_fetch_status"] == "success"
+    assert row["last_capture_status"] == "success"
+    assert row["last_capture_strategy"] == "scheduled-test"
+    assert row["last_capture_at"] == "2026-05-02T08:05:00+00:00"
+    assert row["last_fetched_at"] == "2026-05-02T08:04:00+00:00"
+    assert row["source_capture_snapshot_id"] is not None
+    assert row["last_capture_snapshot_id"] == row["source_capture_snapshot_id"]
+    assert row["artifact_ref"]["path"] == "source-captures/9001/full-snapshot.json"
+    assert row["full_snapshot_ref"]["path"] == "source-captures/9001/full-snapshot.json"
+
+
+def test_catalog_product_detail_excludes_price_monitoring_history(tmp_path: Path, monkeypatch) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    product_id = client.get(
+        "/api/catalog/products",
+        params={"q": "Vacuum One"},
+    ).json()["items"][0]["catalog_product_id"]
+
+    payload = client.get(f"/api/catalog/products/{product_id}").json()
+
+    serialized = str(payload)
+    assert "price_observations" not in payload
+    assert "price_listings" not in payload
+    assert "monitoring_runs" not in payload
+    assert "monitoring_history" not in payload
+    assert "PriceObservation" not in serialized
 
 
 def test_catalog_products_debug_metadata_is_opt_in(tmp_path: Path, monkeypatch) -> None:

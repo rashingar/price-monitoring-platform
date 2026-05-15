@@ -396,6 +396,45 @@ export const sourceUrlsForCatalogProduct = {
   count: 6,
 };
 
+export const catalogProductDetail = {
+  product: catalogProducts.items[0],
+  source_urls: sourceUrlsForCatalogProduct.items,
+  source_url_summary: {
+    total_count: sourceUrlsForCatalogProduct.items.length,
+    by_status: {
+      active: 3,
+      needs_review: 1,
+      disabled: 2,
+    },
+    by_source: {
+      skroutz: 1,
+      bestprice: 1,
+      electronet: 1,
+      public: 1,
+      plaisio: 1,
+      kotsovolos: 1,
+    },
+    by_type: {
+      manual: 3,
+      imported: 2,
+      discovered: 1,
+    },
+  },
+  warnings: [],
+};
+
+export const catalogProductDetailWithoutSourceUrls = {
+  product: catalogProducts.items[1],
+  source_urls: [],
+  source_url_summary: {
+    total_count: 0,
+    by_status: {},
+    by_source: {},
+    by_type: {},
+  },
+  warnings: ["Composite model"],
+};
+
 export const sourceUrlCoverage = {
   source: "skroutz",
   selected_count: 2,
@@ -2011,6 +2050,7 @@ export const catalogDbImportRequiredFixtureRoutes: MockRoute[] = [
   { method: "GET", path: "/commerce-api/catalog/summary", response: catalogDbImportRequiredError },
   { method: "GET", path: "/commerce-api/catalog/brands", response: catalogDbImportRequiredError },
   { method: "GET", path: "/commerce-api/catalog/category-hierarchy", response: catalogDbImportRequiredError },
+  { method: "GET", path: "/commerce-api/catalog/products/1", response: catalogDbImportRequiredError },
   { method: "GET", path: "/commerce-api/catalog/products/1/source-urls", response: catalogDbImportRequiredError },
   { method: "POST", path: "/commerce-api/catalog/products/1/source-urls", response: catalogDbImportRequiredError },
   { method: "PATCH", path: "/commerce-api/catalog/source-urls/101", response: catalogDbImportRequiredError },
@@ -2027,6 +2067,8 @@ export const commerceFixtureRoutes: MockRoute[] = [
   { method: "GET", path: "/commerce-api/catalog/brands", response: catalogBrands },
   { method: "GET", path: "/commerce-api/catalog/category-hierarchy", response: catalogCategoryHierarchy },
   { method: "GET", path: "/commerce-api/catalog/products", response: catalogProducts },
+  { method: "GET", path: "/commerce-api/catalog/products/1", response: catalogProductDetail },
+  { method: "GET", path: "/commerce-api/catalog/products/2", response: catalogProductDetailWithoutSourceUrls },
   { method: "GET", path: "/commerce-api/catalog/update-db/latest", response: null },
   { method: "GET", path: "/commerce-api/catalog/products/1/source-urls", response: sourceUrlsForCatalogProduct },
   {
