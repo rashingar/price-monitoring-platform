@@ -20,7 +20,7 @@ import {
   productFactorySettings,
 } from "../fixtures/productFactoryApi";
 import { installMockFetch, type MockRoute } from "../mockFetch";
-import { SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY } from "../../pages/SourceUrlCandidatesPage";
+import { SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY } from "../../features/source-url-candidates/sourceUrlCandidateConstants";
 import { renderWithRouter } from "../renderWithRouter";
 
 const allRoutes = [...productFactoryFixtureRoutes, ...commerceFixtureRoutes];
