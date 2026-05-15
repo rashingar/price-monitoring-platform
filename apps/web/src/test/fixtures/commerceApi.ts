@@ -6,6 +6,92 @@ export const commerceHealth = {
   version: "test-fixture",
 };
 
+export const platformHealth = {
+  status: "warning",
+  updated_at: "2026-05-15T10:30:00+00:00",
+  groups: [
+    {
+      id: "ecommerce_api",
+      label: "Ecommerce API",
+      status: "ready",
+      summary: "Ecommerce API is responding.",
+      details: [],
+      blocking_reasons: [],
+      warnings: [],
+      links: [],
+    },
+    {
+      id: "ecommerce_database",
+      label: "Ecommerce DB",
+      status: "ready",
+      summary: "Ecommerce database is ready for catalog and price monitoring workflows.",
+      details: ["Configured: yes.", "Reachable: yes.", "Required tables present: yes."],
+      blocking_reasons: [],
+      warnings: [],
+      links: [
+        { label: "Catalog", url: "/catalog" },
+        { label: "Price Monitoring", url: "/price-monitoring" },
+      ],
+    },
+    {
+      id: "catalog",
+      label: "Catalog",
+      status: "ready",
+      summary: "Active catalog is available.",
+      details: ["Active catalog rows: 2."],
+      blocking_reasons: [],
+      warnings: [],
+      links: [{ label: "Catalog", url: "/catalog" }],
+    },
+    {
+      id: "catalog_update_opencart",
+      label: "Catalog Update / OpenCart",
+      status: "ready",
+      summary: "OpenCart catalog update configuration is present.",
+      details: ["Required config keys: OPENCART_STORE_BASE, OPENCART_ADMIN_PATH, OPENCART_ADMIN_USER, OPENCART_ADMIN_PASS."],
+      blocking_reasons: [],
+      warnings: [],
+      links: [
+        { label: "Jobs", url: "/jobs" },
+        { label: "Catalog", url: "/catalog" },
+      ],
+    },
+    {
+      id: "source_url_agent",
+      label: "Source URL Agent",
+      status: "ready",
+      summary: "Source URL Agent providers are ready.",
+      details: ["Provider brave_search: enabled, configured."],
+      blocking_reasons: [],
+      warnings: [],
+      links: [
+        { label: "Find Source", url: "/find-source/runs" },
+        { label: "Candidates", url: "/find-source/candidates" },
+      ],
+    },
+    {
+      id: "price_monitoring",
+      label: "Price Monitoring",
+      status: "ready",
+      summary: "Price Monitoring database readiness is available.",
+      details: ["Price monitoring DB ready: yes."],
+      blocking_reasons: [],
+      warnings: [],
+      links: [{ label: "Price Monitoring", url: "/price-monitoring" }],
+    },
+    {
+      id: "product_factory_api",
+      label: "Product Factory API",
+      status: "warning",
+      summary: "Product Factory API base URL is not configured for backend health checks.",
+      details: ["Checked configuration keys: PRODUCT_FACTORY_API_BASE_URL, VITE_API_PROXY_TARGET."],
+      blocking_reasons: [],
+      warnings: ["Product Factory API health could not be checked because no base URL key is configured."],
+      links: [{ label: "Product Factory", url: "/product-factory" }],
+    },
+  ],
+};
+
 export const catalogSummary = {
   total_products: 3,
   active_products: 3,
@@ -2132,6 +2218,7 @@ export const catalogDbImportRequiredFixtureRoutes: MockRoute[] = [
 
 export const commerceFixtureRoutes: MockRoute[] = [
   { method: "GET", path: "/commerce-api/health", response: commerceHealth },
+  { method: "GET", path: "/commerce-api/platform/health", response: platformHealth },
   { method: "GET", path: "/commerce-api/catalog/summary", response: catalogSummary },
   { method: "GET", path: "/commerce-api/catalog/brands", response: catalogBrands },
   { method: "GET", path: "/commerce-api/catalog/category-hierarchy", response: catalogCategoryHierarchy },

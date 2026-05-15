@@ -41,6 +41,9 @@ import type {
   PathRootsResponse,
   EnvReadinessGroup,
   LocalEnvStatus,
+  PlatformHealthGroup,
+  PlatformHealthLink,
+  PlatformHealthResponse,
   ProductFactoryHandoffImportRequest,
   ProductSourceUrlCandidateHistoryResponse,
   ProductSourceUrlCandidateRunGroup,
@@ -1060,6 +1063,64 @@ function normalizeSourceUrlAgentReadiness(payload: unknown): SourceUrlAgentReadi
     source_cascades: normalizeSourceCascadeMap(source.source_cascades),
     warnings: normalizeStringArray(source.warnings).map(sanitizeReadinessText).filter(Boolean),
     blocking_reasons: normalizeStringArray(source.blocking_reasons).map(sanitizeReadinessText).filter(Boolean),
+  };
+}
+
+function normalizePlatformHealthStatus(value: unknown): PlatformHealthResponse["status"] {
+  return value === "ready" || value === "warning" || value === "blocked" || value === "unknown"
+    ? value
+    : "unknown";
+}
+
+function normalizePlatformHealthLink(value: unknown): PlatformHealthLink | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const label = normalizeNullableString(value.label)?.trim();
+  const url = normalizeNullableString(value.url)?.trim();
+  if (!label || !url || !url.startsWith("/")) {
+    return null;
+  }
+
+  return { label: sanitizeReadinessText(label), url };
+}
+
+function normalizePlatformHealthGroup(value: unknown): PlatformHealthGroup | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = normalizeNullableString(value.id)?.trim();
+  const label = normalizeNullableString(value.label)?.trim();
+  if (!id || !label) {
+    return null;
+  }
+
+  return {
+    id,
+    label: sanitizeReadinessText(label),
+    status: normalizePlatformHealthStatus(value.status),
+    summary: sanitizeReadinessText(value.summary) || "No summary available.",
+    details: normalizeStringArray(value.details).map(sanitizeReadinessText).filter(Boolean),
+    blocking_reasons: normalizeStringArray(value.blocking_reasons).map(sanitizeReadinessText).filter(Boolean),
+    warnings: normalizeStringArray(value.warnings).map(sanitizeReadinessText).filter(Boolean),
+    links: getArrayPayload(value.links, ["links", "items"])
+      .map(normalizePlatformHealthLink)
+      .filter((item): item is PlatformHealthLink => item !== null),
+  };
+}
+
+function normalizePlatformHealth(payload: unknown): PlatformHealthResponse {
+  const source = isRecord(payload) ? payload : {};
+  const groups = getArrayPayload(source.groups, ["groups", "items", "data", "results"])
+    .map(normalizePlatformHealthGroup)
+    .filter((item): item is PlatformHealthGroup => item !== null);
+
+  return {
+    status: normalizePlatformHealthStatus(source.status),
+    groups,
+    updated_at: normalizeNullableString(source.updated_at) ?? "",
   };
 }
 
@@ -2377,6 +2438,10 @@ export const commerceClient = {
 
   getCommerceHealth(signal?: AbortSignal): Promise<unknown> {
     return request<unknown>("/health", { signal });
+  },
+
+  async getPlatformHealth(signal?: AbortSignal): Promise<PlatformHealthResponse> {
+    return normalizePlatformHealth(await request<unknown>("/platform/health", { signal }));
   },
 
   async listCatalogProducts(

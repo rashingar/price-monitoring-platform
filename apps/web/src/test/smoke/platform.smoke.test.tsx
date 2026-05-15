@@ -95,9 +95,32 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/");
 
     await expect(screen.findByRole("heading", { name: "ok" })).resolves.toBeInTheDocument();
+    await expect(screen.findByRole("heading", { name: "Operator readiness" })).resolves.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh platform health" })).toBeInTheDocument();
+    expect(screen.getByText("Ecommerce API is responding.")).toBeInTheDocument();
+    expect(screen.getByText("Product Factory API health could not be checked because no base URL key is configured.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Update DB" })).toBeInTheDocument();
     await expect(screen.findByText(/Product Factory API health endpoint responded/)).resolves.toBeInTheDocument();
     await expect(screen.findByText(/Commerce API health endpoint responded/)).resolves.toBeInTheDocument();
+  });
+
+  it("refreshes Dashboard platform health manually", async () => {
+    const mockFetch = installMockFetch(allRoutes);
+
+    renderWithRouter("/");
+
+    const button = await screen.findByRole("button", { name: "Refresh platform health" });
+    fireEvent.click(button);
+
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.filter(
+          (request) =>
+            request.method === "GET" &&
+            request.pathname === "/commerce-api/platform/health",
+        ).length,
+      ).toBeGreaterThanOrEqual(2),
+    );
   });
 
   it("starts Dashboard catalog update and shows Updating while active", async () => {

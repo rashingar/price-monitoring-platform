@@ -11,6 +11,7 @@ import {
   dbStatusMigrationMissing,
   dbStatusNotConfigured,
   dbStatusUnavailable,
+  platformHealth,
   priceMonitoringExecutions,
   productFactoryHandoffImportApply,
   productFactoryHandoffImportPreview,
@@ -32,6 +33,33 @@ import {
 import { installMockFetch } from "../mockFetch";
 
 describe("commerce API client contract fixtures", () => {
+  it("loads and normalizes combined platform health", async () => {
+    const mockFetch = installMockFetch(commerceFixtureRoutes);
+
+    await expect(commerceClient.getPlatformHealth()).resolves.toMatchObject({
+      status: "warning",
+      updated_at: platformHealth.updated_at,
+      groups: expect.arrayContaining([
+        expect.objectContaining({
+          id: "ecommerce_api",
+          status: "ready",
+          summary: "Ecommerce API is responding.",
+        }),
+        expect.objectContaining({
+          id: "product_factory_api",
+          status: "warning",
+          warnings: expect.arrayContaining([
+            "Product Factory API health could not be checked because no base URL key is configured.",
+          ]),
+        }),
+      ]),
+    });
+
+    expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toContain(
+      "GET /commerce-api/platform/health",
+    );
+  });
+
   it("preserves catalog product model strings with leading zeroes", async () => {
     const mockFetch = installMockFetch(commerceFixtureRoutes);
 

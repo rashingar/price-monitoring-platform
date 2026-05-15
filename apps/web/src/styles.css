@@ -13,10 +13,12 @@
   --accent: #0f766e;
   --accent-strong: #0a5f58;
   --danger-bg: #fce8e6;
+  --danger-border: #f2b8b5;
   --danger-text: #9f1d16;
   --success-bg: #dff5eb;
   --success-text: #0b6848;
   --warning-bg: #fff0c2;
+  --warning-border: #f4d06f;
   --warning-text: #7a5600;
   --active-bg: #dff3f0;
   --active-text: #075e56;
@@ -2122,6 +2124,98 @@ th {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.platform-health-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.platform-health-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcfc;
+}
+
+.platform-health-card-blocked {
+  border-color: var(--danger-border);
+}
+
+.platform-health-card-warning,
+.platform-health-card-unknown {
+  border-color: var(--warning-border);
+}
+
+.platform-health-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.platform-health-card-heading h4,
+.platform-health-card-heading p {
+  margin: 0;
+}
+
+.platform-health-card-heading h4 {
+  font-size: 16px;
+}
+
+.platform-health-card-heading p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.platform-health-message {
+  display: grid;
+  gap: 6px;
+}
+
+.platform-health-message strong {
+  font-size: 13px;
+}
+
+.platform-health-message ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.platform-health-message.danger strong {
+  color: var(--danger-text);
+}
+
+.platform-health-message.warning strong {
+  color: var(--warning-text);
+}
+
+.platform-health-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.platform-health-links a {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.platform-health-links a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .job-progress-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -2626,6 +2720,7 @@ code {
   .catalog-summary-grid,
   .source-url-summary-grid,
   .source-url-import-summary-grid,
+  .platform-health-grid,
   .source-url-agent-form-grid,
   .source-url-agent-summary-grid,
   .source-url-inline-review-grid,

@@ -10,6 +10,7 @@ import type { HealthResponse } from "../api/types";
 import { ErrorState, LoadingState } from "../components/layout/StateBlocks";
 import { JobProgressPanel } from "../components/jobs/JobProgressPanel";
 import { JsonBlock } from "../components/jobs/JsonBlock";
+import { PlatformHealthPanel } from "../features/platform-health/PlatformHealthPanel";
 
 const CATALOG_UPDATE_POLL_MS = 500;
 
@@ -223,6 +224,8 @@ export function DashboardPage() {
         <h2>Local backend control surface</h2>
         <p>API base URL: {apiClient.apiBaseUrl}</p>
       </section>
+
+      <PlatformHealthPanel />
 
       <section className="panel">
         <div className="section-heading">

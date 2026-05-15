@@ -32,6 +32,7 @@ def test_openapi_snapshot_contains_ui_facing_routes() -> None:
     paths = snapshot["paths"]
     required_routes = {
         ("GET", "/api/health"),
+        ("GET", "/api/platform/health"),
         ("GET", "/api/catalog/products"),
         ("GET", "/api/catalog/categories"),
         ("GET", "/api/catalog/category-hierarchy"),

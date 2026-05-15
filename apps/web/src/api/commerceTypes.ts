@@ -29,6 +29,8 @@ export type EcommerceContractSourceUrlCandidateReviewRequest =
   EcommerceSchema<"SourceUrlCandidateReviewRequest">;
 export type EcommerceContractSourceUrlAgentReadinessResponse =
   EcommerceSchema<"SourceUrlAgentReadinessResponse">;
+export type EcommerceContractPlatformHealthResponse =
+  EcommerceSchema<"PlatformHealthResponse">;
 export type EcommerceContractSourceUrlImportRequest =
   EcommerceSchema<"SourceUrlImportRequest">;
 export type EcommerceContractProductFactoryHandoffImportRequest =
@@ -552,6 +554,30 @@ export interface SourceUrlAgentReadiness {
   source_cascades: Record<string, string[]>;
   warnings: string[];
   blocking_reasons: string[];
+}
+
+export type PlatformHealthStatus = "ready" | "warning" | "blocked" | "unknown";
+
+export interface PlatformHealthLink {
+  label: string;
+  url: string;
+}
+
+export interface PlatformHealthGroup {
+  id: string;
+  label: string;
+  status: PlatformHealthStatus;
+  summary: string;
+  details: string[];
+  blocking_reasons: string[];
+  warnings: string[];
+  links: PlatformHealthLink[];
+}
+
+export interface PlatformHealthResponse {
+  status: PlatformHealthStatus;
+  groups: PlatformHealthGroup[];
+  updated_at: string;
 }
 
 export interface VendorSourceCaptureRunRequest {
@@ -1390,6 +1416,7 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<SourceUrlUpdateBody, EcommerceContractSourceUrlUpdateRequest>,
   AssertAssignable<SourceUrlCandidateReviewBody, EcommerceContractSourceUrlCandidateReviewRequest>,
   AssertAssignable<SourceUrlAgentReadiness, EcommerceContractSourceUrlAgentReadinessResponse>,
+  AssertAssignable<PlatformHealthResponse, EcommerceContractPlatformHealthResponse>,
   AssertAssignable<PriceMonitoringSelectionBody, EcommerceContractPriceMonitoringSelectionRequest>,
   AssertAssignable<FetchPriceMonitoringBody, EcommerceContractPriceMonitoringFetchRequest>,
   AssertAssignable<CancelPriceMonitoringFetchBody, EcommerceContractPriceMonitoringFetchCancelRequest>,

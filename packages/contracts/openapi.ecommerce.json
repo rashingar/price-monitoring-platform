@@ -679,6 +679,118 @@
         "title": "IgnoredProductRequest",
         "type": "object"
       },
+      "PlatformHealthGroup": {
+        "properties": {
+          "blocking_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocking Reasons",
+            "type": "array"
+          },
+          "details": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Details",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformHealthLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "warning",
+              "blocked",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "status",
+          "summary"
+        ],
+        "title": "PlatformHealthGroup",
+        "type": "object"
+      },
+      "PlatformHealthLink": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "PlatformHealthLink",
+        "type": "object"
+      },
+      "PlatformHealthResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformHealthGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "warning",
+              "blocked",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "groups",
+          "updated_at"
+        ],
+        "title": "PlatformHealthResponse",
+        "type": "object"
+      },
       "PriceActionApiInput": {
         "properties": {
           "model": {
@@ -3834,6 +3946,27 @@
         "summary": "Get Path Roots",
         "tags": [
           "paths"
+        ]
+      }
+    },
+    "/api/platform/health": {
+      "get": {
+        "operationId": "get_platform_health_api_platform_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Platform Health",
+        "tags": [
+          "platform-health"
         ]
       }
     },

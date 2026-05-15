@@ -145,6 +145,10 @@ export interface paths {
     /** Get Path Roots */
     get: operations["get_path_roots_api_paths_roots_get"];
   };
+  "/api/platform/health": {
+    /** Get Platform Health */
+    get: operations["get_platform_health_api_platform_health_get"];
+  };
   "/api/price-monitoring/alerts/evaluate/{run_id}": {
     /** Evaluate Run Alerts */
     post: operations["evaluate_run_alerts_api_price_monitoring_alerts_evaluate__run_id__post"];
@@ -567,6 +571,47 @@ export interface components {
        * @default
        */
       reason?: string;
+    };
+    /** PlatformHealthGroup */
+    PlatformHealthGroup: {
+      /** Blocking Reasons */
+      blocking_reasons?: string[];
+      /** Details */
+      details?: string[];
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+      /** Links */
+      links?: components["schemas"]["PlatformHealthLink"][];
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "ready" | "warning" | "blocked" | "unknown";
+      /** Summary */
+      summary: string;
+      /** Warnings */
+      warnings?: string[];
+    };
+    /** PlatformHealthLink */
+    PlatformHealthLink: {
+      /** Label */
+      label: string;
+      /** Url */
+      url: string;
+    };
+    /** PlatformHealthResponse */
+    PlatformHealthResponse: {
+      /** Groups */
+      groups: components["schemas"]["PlatformHealthGroup"][];
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "ready" | "warning" | "blocked" | "unknown";
+      /** Updated At */
+      updated_at: string;
     };
     /** PriceActionApiInput */
     PriceActionApiInput: {
@@ -1873,6 +1918,17 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
+        };
+      };
+    };
+  };
+  /** Get Platform Health */
+  get_platform_health_api_platform_health_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PlatformHealthResponse"];
         };
       };
     };
