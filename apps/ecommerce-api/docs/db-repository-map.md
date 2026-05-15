@@ -8,6 +8,7 @@ ownership rules as the DB model package.
 
 - `repositories/catalog.py`: catalog repository namespace. Catalog import and browsing helpers currently remain in `ecommerce.catalog_db` until that workflow is moved.
 - `repositories/source_urls.py`: source URL lifecycle, import, validation, discovery, and review persistence.
+- `repositories/source_url_candidates.py`: Source URL Agent candidate history/read queries, including product-scoped candidate history.
 - `repositories/vendor_sources.py`: Vendor Sources capture run history persistence.
 - `repositories/jobs.py`: durable background job row creation, lookup, leasing, status transitions, and serialization.
 - `repositories/products.py`: products, product sources, product source serialization, and source-created product helpers.
@@ -62,6 +63,7 @@ workflow's state, place it in that workflow's repository module instead.
 
 - Catalog import/catalog browsing persistence -> `repositories/catalog.py` or `ecommerce.catalog_db` until moved.
 - Source URL lifecycle/import/discovery/review -> `repositories/source_urls.py`.
+- Source URL Agent candidate history/read queries -> `repositories/source_url_candidates.py`; product-scoped candidate history belongs with Source URL discovery, not Catalog browsing.
 - Vendor source capture/run history -> `repositories/vendor_sources.py`.
 - Durable background jobs -> `repositories/jobs.py`.
 - Product/product source/source snapshots -> `repositories/products.py`.

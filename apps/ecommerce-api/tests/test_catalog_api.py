@@ -18,6 +18,7 @@ from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  #
 from ecommerce.db.models.source_urls import SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, create_or_update_manual_source_url  # noqa: E402
+from ecommerce.db.repositories.source_url_candidates import _candidate_sort_key  # noqa: E402
 from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 RAW_COOKWARE = (
@@ -669,6 +670,20 @@ def test_catalog_product_source_url_candidates_orphan_run_id_gets_minimal_run(tm
     assert response.json()["items"][0]["run"] == {"run_id": "deleted-run", "status": "unknown"}
 
 
+def test_source_url_candidate_sort_key_handles_nullable_created_at() -> None:
+    with_timestamp = SourceUrlCandidate(
+        id=2,
+        status="needs_review",
+        created_at=datetime(2026, 5, 2, 12, tzinfo=timezone.utc),
+    )
+    without_timestamp = SourceUrlCandidate(id=1, status="needs_review", created_at=None)
+
+    assert sorted([with_timestamp, without_timestamp], key=_candidate_sort_key) == [
+        without_timestamp,
+        with_timestamp,
+    ]
+
+
 def test_catalog_product_source_url_candidates_sanitizes_database_errors(tmp_path: Path, monkeypatch) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     product_id = client.get(
@@ -677,7 +692,7 @@ def test_catalog_product_source_url_candidates_sanitizes_database_errors(tmp_pat
     ).json()["items"][0]["catalog_product_id"]
 
     monkeypatch.setattr(
-        "ecommerce.api.routes_catalog.query_product_source_url_candidate_history",
+        "ecommerce.api.routes_catalog.product_source_url_candidate_history_payload",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("token=live-secret password=hidden")),
     )
 

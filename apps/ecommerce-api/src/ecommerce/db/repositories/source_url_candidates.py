@@ -140,9 +140,9 @@ def _candidate_status_counts(candidates: list[SourceUrlCandidate]) -> dict[str, 
     return counts
 
 
-def _candidate_sort_key(candidate: SourceUrlCandidate) -> tuple[int, datetime, int]:
+def _candidate_sort_key(candidate: SourceUrlCandidate) -> tuple[int, float, int]:
     status_rank = SOURCE_URL_CANDIDATE_STATUS_ORDER.get(candidate.status or "", len(SOURCE_URL_CANDIDATE_STATUS_ORDER))
-    return (status_rank, candidate.created_at, int(candidate.id or 0))
+    return (status_rank, _datetime_sort_value(candidate.created_at), int(candidate.id or 0))
 
 
 def _latest_candidate_created_at(candidates: list[SourceUrlCandidate]) -> datetime | None:

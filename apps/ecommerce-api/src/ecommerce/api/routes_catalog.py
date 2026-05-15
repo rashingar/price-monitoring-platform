@@ -9,7 +9,6 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 
-from ecommerce.api.source_url_agent.serializers import candidate_to_dict, discovery_run_to_dict
 from ecommerce.catalog import CatalogProduct
 from ecommerce.catalog_db import load_active_catalog_products
 from ecommerce.db.config import sanitize_database_error
@@ -19,12 +18,9 @@ from ecommerce.db.repositories.catalog import (
     get_catalog_product_detail,
     list_catalog_products_page,
 )
-from ecommerce.db.repositories.source_url_candidates import (
-    get_product_source_url_candidate_history as query_product_source_url_candidate_history,
-    minimal_discovery_run_payload,
-)
 from ecommerce.db.session import session_scope
 from ecommerce.ignore import MissingIgnoreColumnsError, load_ignored_products
+from ecommerce.source_url_agent.candidate_history_service import product_source_url_candidate_history_payload
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
@@ -139,20 +135,9 @@ def get_product_source_url_candidate_history(catalog_product_id: int) -> dict:
     require_database_ready_for_catalog()
     try:
         with session_scope() as session:
-            result = query_product_source_url_candidate_history(session, catalog_product_id)
-            if not result.product_exists:
+            payload = product_source_url_candidate_history_payload(session, catalog_product_id)
+            if not payload.product_exists:
                 raise HTTPException(status_code=404, detail="Catalog product not found.")
-            items = [
-                {
-                    "run_id": group.run_id,
-                    "run": discovery_run_to_dict(group.run, session=session)
-                    if group.run is not None
-                    else minimal_discovery_run_payload(group.run_id),
-                    "counts": group.counts,
-                    "candidates": [candidate_to_dict(candidate) for candidate in group.candidates],
-                }
-                for group in result.items
-            ]
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
@@ -160,12 +145,7 @@ def get_product_source_url_candidate_history(catalog_product_id: int) -> dict:
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Catalog DB query failed.") from exc
 
-    return {
-        "catalog_product_id": result.catalog_product_id,
-        "items": items,
-        "total_candidates": result.total_candidates,
-        "warnings": result.warnings,
-    }
+    return payload.to_dict()
 
 
 @router.get("/categories")
