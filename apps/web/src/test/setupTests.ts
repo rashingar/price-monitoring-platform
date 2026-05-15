@@ -13,6 +13,8 @@ beforeEach(() => {
   installNetworkGuard();
   window.localStorage.clear();
   window.sessionStorage.clear();
+  delete document.documentElement.dataset.theme;
+  delete document.documentElement.dataset.themePreference;
 });
 
 afterEach(() => {

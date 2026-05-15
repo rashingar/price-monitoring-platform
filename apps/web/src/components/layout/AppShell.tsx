@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { ThemeToggle } from "../../features/theme/ThemeToggle";
 import { GlobalJobsProvider } from "../../hooks/useGlobalJobs";
 import { PipelineRunProvider } from "../../hooks/usePipelineRun";
 
@@ -70,36 +71,39 @@ export function AppShell() {
           <p className="eyebrow">Local commerce operations</p>
           <h1>Product Factory Platform</h1>
         </div>
-        <nav className="nav-links" aria-label="Primary navigation">
-          {platformNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => {
-                const isProductFactoryActive =
-                  item.to === "/product-factory" && isProductFactorySection;
-                const isPriceMonitoringActive =
-                  item.to === "/price-monitoring" && isPriceMonitoringSection;
-                const isCatalogActive = item.to === "/catalog" && isCatalogSection;
-                const isFindSourceActive =
-                  item.to === "/find-source" && isFindSourceSection;
-                const isVendorSourcesActive =
-                  item.to === "/vendor-sources" && isVendorSourcesSection;
-                return isActive ||
-                  isProductFactoryActive ||
-                  isPriceMonitoringActive ||
-                  isCatalogActive ||
-                  isFindSourceActive ||
-                  isVendorSourcesActive
-                  ? "nav-link active"
-                  : "nav-link";
-              }}
-              end={item.to === "/"}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="topbar-actions">
+          <nav className="nav-links" aria-label="Primary navigation">
+            {platformNavItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => {
+                  const isProductFactoryActive =
+                    item.to === "/product-factory" && isProductFactorySection;
+                  const isPriceMonitoringActive =
+                    item.to === "/price-monitoring" && isPriceMonitoringSection;
+                  const isCatalogActive = item.to === "/catalog" && isCatalogSection;
+                  const isFindSourceActive =
+                    item.to === "/find-source" && isFindSourceSection;
+                  const isVendorSourcesActive =
+                    item.to === "/vendor-sources" && isVendorSourcesSection;
+                  return isActive ||
+                    isProductFactoryActive ||
+                    isPriceMonitoringActive ||
+                    isCatalogActive ||
+                    isFindSourceActive ||
+                    isVendorSourcesActive
+                    ? "nav-link active"
+                    : "nav-link";
+                }}
+                end={item.to === "/"}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+          <ThemeToggle />
+        </div>
       </header>
       {isCatalogSection ? (
         <nav className="subnav catalog-subnav" aria-label="Catalog navigation">
