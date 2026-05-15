@@ -6,9 +6,19 @@ import { ProductSourceUrlStatusSummary } from "./ProductSourceUrlStatusSummary";
 export function ProductSourceUrlHistoryPanel({
   sourceUrls,
   summary,
+  pendingSourceUrlId,
+  pendingActionLabel,
+  onValidate,
+  onUpdateStatus,
+  onSaveNote,
 }: {
   sourceUrls: SourceUrl[];
   summary: CatalogProductSourceUrlSummary;
+  pendingSourceUrlId: string | number | null;
+  pendingActionLabel: string | null;
+  onValidate: (sourceUrl: SourceUrl) => Promise<void>;
+  onUpdateStatus: (sourceUrl: SourceUrl, status: string, label: string) => Promise<void>;
+  onSaveNote: (sourceUrl: SourceUrl, notes: string | null) => Promise<void>;
 }) {
   return (
     <section className="panel">
@@ -26,9 +36,15 @@ export function ProductSourceUrlHistoryPanel({
           message="This catalog product exists, but no source URL lifecycle rows have been recorded."
         />
       ) : (
-        <ProductSourceUrlLifecycleTable sourceUrls={sourceUrls} />
+        <ProductSourceUrlLifecycleTable
+          sourceUrls={sourceUrls}
+          pendingSourceUrlId={pendingSourceUrlId}
+          pendingActionLabel={pendingActionLabel}
+          onValidate={onValidate}
+          onUpdateStatus={onUpdateStatus}
+          onSaveNote={onSaveNote}
+        />
       )}
     </section>
   );
 }
-

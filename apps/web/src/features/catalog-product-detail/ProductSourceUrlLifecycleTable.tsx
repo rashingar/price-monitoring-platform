@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { commerceClient, getArtifactPath } from "../../api/commerceClient";
 import type { ArtifactPayload } from "../../api/commerceTypes";
 import type { SourceUrl } from "./catalogProductDetailTypes";
@@ -8,7 +9,43 @@ import {
   statusTone,
 } from "./catalogProductDetailFormatters";
 
-export function ProductSourceUrlLifecycleTable({ sourceUrls }: { sourceUrls: SourceUrl[] }) {
+export function ProductSourceUrlLifecycleTable({
+  sourceUrls,
+  pendingSourceUrlId,
+  pendingActionLabel,
+  onValidate,
+  onUpdateStatus,
+  onSaveNote,
+}: {
+  sourceUrls: SourceUrl[];
+  pendingSourceUrlId: string | number | null;
+  pendingActionLabel: string | null;
+  onValidate: (sourceUrl: SourceUrl) => Promise<void>;
+  onUpdateStatus: (sourceUrl: SourceUrl, status: string, label: string) => Promise<void>;
+  onSaveNote: (sourceUrl: SourceUrl, notes: string | null) => Promise<void>;
+}) {
+  const [editingNoteId, setEditingNoteId] = useState<string | number | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+
+  const startEditingNote = (sourceUrl: SourceUrl) => {
+    const id = sourceUrlId(sourceUrl);
+    if (id === null) {
+      return;
+    }
+    setEditingNoteId(id);
+    setNoteDraft(sourceUrl.notes ?? "");
+  };
+
+  const cancelEditingNote = () => {
+    setEditingNoteId(null);
+    setNoteDraft("");
+  };
+
+  const saveNote = async (sourceUrl: SourceUrl) => {
+    await onSaveNote(sourceUrl, noteDraft.trim().length > 0 ? noteDraft.trim() : null);
+    cancelEditingNote();
+  };
+
   return (
     <div className="table-wrap catalog-product-source-url-table-wrap">
       <table>
@@ -27,10 +64,15 @@ export function ProductSourceUrlLifecycleTable({ sourceUrls }: { sourceUrls: Sou
             <th>Strategy</th>
             <th>Snapshot</th>
             <th>Created / updated</th>
+            <th>Notes</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {sourceUrls.map((sourceUrl) => {
+            const id = sourceUrlId(sourceUrl);
+            const isPending = id !== null && String(pendingSourceUrlId) === String(id);
+            const isEditingNote = id !== null && String(editingNoteId) === String(id);
             const captureStatus = sourceUrlCaptureStatus(sourceUrl);
             const snapshotPath = getArtifactPath(
               sourceUrl.full_snapshot_ref ?? sourceUrl.snapshot_ref ?? sourceUrl.artifact_ref,
@@ -103,6 +145,109 @@ export function ProductSourceUrlLifecycleTable({ sourceUrls }: { sourceUrls: Sou
                     updated {formatDateTime(sourceUrl.updated_at)}
                   </span>
                 </td>
+                <td className="notes-cell">
+                  {isEditingNote ? (
+                    <div className="source-url-note-editor">
+                      <textarea
+                        aria-label={`Edit note for ${sourceUrl.url}`}
+                        value={noteDraft}
+                        onChange={(event) => setNoteDraft(event.target.value)}
+                        disabled={isPending}
+                      />
+                      <div className="source-url-action-row">
+                        <button
+                          className="button primary compact-button"
+                          type="button"
+                          onClick={() => void saveNote(sourceUrl)}
+                          disabled={isPending}
+                        >
+                          Save note
+                        </button>
+                        <button
+                          className="button secondary compact-button"
+                          type="button"
+                          onClick={cancelEditingNote}
+                          disabled={isPending}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    formatDetailValue(sourceUrl.notes)
+                  )}
+                </td>
+                <td>
+                  <div className="source-url-detail-actions">
+                    <a
+                      className="button secondary compact-button"
+                      href={sourceUrl.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open URL
+                    </a>
+                    <button
+                      className="button secondary compact-button"
+                      type="button"
+                      onClick={() => void onValidate(sourceUrl)}
+                      disabled={isPending || id === null}
+                    >
+                      Validate
+                    </button>
+                    {sourceUrl.status === "disabled" ? (
+                      <button
+                        className="button secondary compact-button"
+                        type="button"
+                        onClick={() => void onUpdateStatus(sourceUrl, "active", "Re-enable")}
+                        disabled={isPending || id === null}
+                      >
+                        Re-enable
+                      </button>
+                    ) : (
+                      <button
+                        className="button secondary compact-button"
+                        type="button"
+                        onClick={() => void onUpdateStatus(sourceUrl, "disabled", "Disable")}
+                        disabled={isPending || id === null}
+                      >
+                        Disable
+                      </button>
+                    )}
+                    {sourceUrl.status === "broken" ? (
+                      <button
+                        className="button secondary compact-button"
+                        type="button"
+                        onClick={() => void onUpdateStatus(sourceUrl, "active", "Mark active")}
+                        disabled={isPending || id === null}
+                      >
+                        Mark active
+                      </button>
+                    ) : (
+                      <button
+                        className="button secondary compact-button"
+                        type="button"
+                        onClick={() => void onUpdateStatus(sourceUrl, "broken", "Mark broken")}
+                        disabled={isPending || id === null}
+                      >
+                        Mark broken
+                      </button>
+                    )}
+                    <button
+                      className="button secondary compact-button"
+                      type="button"
+                      onClick={() => startEditingNote(sourceUrl)}
+                      disabled={isPending || id === null}
+                    >
+                      Edit note
+                    </button>
+                    {isPending ? (
+                      <span className="status-badge queued">
+                        {pendingActionLabel ?? "Updating"}...
+                      </span>
+                    ) : null}
+                  </div>
+                </td>
               </tr>
             );
           })}
@@ -119,3 +264,6 @@ function formatSnapshotLabel(value: ArtifactPayload | string | null | undefined)
   return getArtifactPath(value) || "Snapshot";
 }
 
+export function sourceUrlId(sourceUrl: SourceUrl): string | number | null {
+  return sourceUrl.source_url_id ?? sourceUrl.id ?? null;
+}

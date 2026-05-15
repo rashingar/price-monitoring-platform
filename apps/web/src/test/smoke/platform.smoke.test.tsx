@@ -6,6 +6,7 @@ import {
 } from "../../api/priceMonitoringUtils";
 import {
   catalogDbImportRequiredFixtureRoutes,
+  catalogProductDetail,
   catalogProductsEmptyImportWarning,
   commerceDbRequiredFixtureRoutes,
   commerceFixtureRoutes,
@@ -26,6 +27,14 @@ import { SOURCE_URL_CANDIDATE_REVIEW_LAYOUT_STORAGE_KEY } from "../../features/s
 import { renderWithRouter } from "../renderWithRouter";
 
 const allRoutes = [...productFactoryFixtureRoutes, ...commerceFixtureRoutes];
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function makeGenericWorkflowRoutes(model: string, authoring: unknown): MockRoute[] {
   return [
@@ -378,8 +387,10 @@ describe("platform mocked page smoke tests", () => {
       "href",
       "/commerce-api/artifacts/download?path=source-captures%2F9001%2Ffull-snapshot.json",
     );
-    expect(screen.queryByRole("button", { name: /Validate/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Disable/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Validate" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Disable" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Edit note" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: /Delete|Remove/i })).not.toBeInTheDocument();
   });
 
   it("renders empty source URL state on Catalog product detail", async () => {
@@ -389,6 +400,198 @@ describe("platform mocked page smoke tests", () => {
 
     await expect(screen.findByRole("heading", { name: "Σετ πληκτρολόγιο και ποντίκι" })).resolves.toBeInTheDocument();
     expect(screen.getByText("No source URLs")).toBeInTheDocument();
+  });
+
+  it("runs product detail source URL actions and refreshes after success", async () => {
+    const detail = cloneJson(catalogProductDetail);
+    const activeUrl = "https://www.skroutz.gr/s/123/midea-md-20l.html";
+    const disabledUrl = "https://www.plaisio.gr/midea-md-20l";
+    const brokenUrl = "https://www.example.gr/midea-md-20l-broken";
+    detail.source_urls = [
+      detail.source_urls.find((item) => item.id === 101),
+      detail.source_urls.find((item) => item.id === 105),
+      {
+        ...detail.source_urls.find((item) => item.id === 102),
+        id: 107,
+        source_url_id: 107,
+        source_name: "example",
+        source_domain: "example.gr",
+        url: brokenUrl,
+        url_normalized: brokenUrl,
+        status: "broken",
+        last_error: "Last fetch failed",
+      },
+    ].filter(Boolean);
+    detail.source_url_summary = {
+      total_count: 3,
+      by_status: { active: 1, disabled: 1, broken: 1 },
+      by_source: { skroutz: 1, plaisio: 1, example: 1 },
+      by_type: { manual: 1, discovered: 1, imported: 1 },
+    };
+
+    const actionRoutes: MockRoute[] = [
+      { method: "GET", path: "/commerce-api/catalog/products/1", response: () => detail },
+      {
+        method: "PATCH",
+        path: (request) => request.pathname.startsWith("/commerce-api/catalog/source-urls/"),
+        response: async (request) => {
+          await delay(40);
+          const id = Number(request.pathname.split("/").pop());
+          const body =
+            typeof request.body === "object" && request.body !== null && !Array.isArray(request.body)
+              ? (request.body as Record<string, unknown>)
+              : {};
+          const sourceUrl = detail.source_urls.find((item) => item.id === id);
+          if (!sourceUrl) {
+            return { status: 404, body: { detail: "Source URL not found." } };
+          }
+          if (typeof body.status === "string") {
+            sourceUrl.status = body.status;
+          }
+          if ("notes" in body) {
+            sourceUrl.notes = typeof body.notes === "string" ? body.notes : null;
+          }
+          return sourceUrl;
+        },
+      },
+      {
+        method: "POST",
+        path: "/commerce-api/catalog/source-urls/101/validate",
+        response: async () => {
+          await delay(40);
+          return {
+            item: detail.source_urls.find((item) => item.id === 101),
+            validation: { status: "success", message: "URL is reachable." },
+          };
+        },
+      },
+    ];
+    const mockFetch = installMockFetch([...actionRoutes, ...allRoutes]);
+
+    renderWithRouter("/catalog/products/1");
+
+    await screen.findByRole("heading", { name: "Midea Αφυγραντήρας 20L" });
+    const rowFor = (url: string) => {
+      const row = screen.getByText(url).closest("tr");
+      expect(row).not.toBeNull();
+      return row as HTMLElement;
+    };
+
+    expect(within(rowFor(activeUrl)).getByRole("link", { name: "Open URL" })).toHaveAttribute("href", activeUrl);
+    expect(within(rowFor(activeUrl)).getByRole("button", { name: "Disable" })).toBeInTheDocument();
+    expect(within(rowFor(activeUrl)).getByRole("button", { name: "Mark broken" })).toBeInTheDocument();
+    expect(within(rowFor(activeUrl)).queryByRole("button", { name: "Re-enable" })).not.toBeInTheDocument();
+    expect(within(rowFor(disabledUrl)).getByRole("button", { name: "Re-enable" })).toBeInTheDocument();
+    expect(within(rowFor(disabledUrl)).queryByRole("button", { name: "Disable" })).not.toBeInTheDocument();
+    expect(within(rowFor(brokenUrl)).getByRole("button", { name: "Mark active" })).toBeInTheDocument();
+    expect(within(rowFor(brokenUrl)).queryByRole("button", { name: "Mark broken" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(rowFor(activeUrl)).getByRole("button", { name: "Disable" }));
+    await expect(within(rowFor(activeUrl)).findByText("Disable...")).resolves.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Source URL updated: Disable."));
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "PATCH" &&
+            request.pathname === "/commerce-api/catalog/source-urls/101" &&
+            (request.body as Record<string, unknown>).status === "disabled",
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1").length).toBeGreaterThan(1),
+    );
+
+    fireEvent.click(within(rowFor(disabledUrl)).getByRole("button", { name: "Re-enable" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Source URL updated: Re-enable."));
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "PATCH" &&
+            request.pathname === "/commerce-api/catalog/source-urls/105" &&
+            (request.body as Record<string, unknown>).status === "active",
+        ),
+      ).toBe(true),
+    );
+
+    fireEvent.click(within(rowFor(activeUrl)).getByRole("button", { name: "Mark broken" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Source URL updated: Mark broken."));
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "PATCH" &&
+            request.pathname === "/commerce-api/catalog/source-urls/101" &&
+            (request.body as Record<string, unknown>).status === "broken",
+        ),
+      ).toBe(true),
+    );
+
+    fireEvent.click(within(rowFor(activeUrl)).getByRole("button", { name: "Mark active" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Source URL updated: Mark active."));
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "PATCH" &&
+            request.pathname === "/commerce-api/catalog/source-urls/101" &&
+            (request.body as Record<string, unknown>).status === "active",
+        ),
+      ).toBe(true),
+    );
+
+    fireEvent.click(within(rowFor(activeUrl)).getByRole("button", { name: "Edit note" }));
+    const noteInput = within(rowFor(activeUrl)).getByLabelText(`Edit note for ${activeUrl}`);
+    fireEvent.change(noteInput, { target: { value: "Checked by operator" } });
+    fireEvent.click(within(rowFor(activeUrl)).getByRole("button", { name: "Save note" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Source URL note saved."));
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "PATCH" &&
+            request.pathname === "/commerce-api/catalog/source-urls/101" &&
+            (request.body as Record<string, unknown>).notes === "Checked by operator",
+        ),
+      ).toBe(true),
+    );
+
+    fireEvent.click(within(rowFor(activeUrl)).getByRole("button", { name: "Validate" }));
+    await expect(within(rowFor(activeUrl)).findByText("Validate...")).resolves.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Validation success: URL is reachable."));
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "POST" &&
+            request.pathname === "/commerce-api/catalog/source-urls/101/validate",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("shows an error notice when a product detail source URL action fails", async () => {
+    const detail = cloneJson(catalogProductDetail);
+    const activeUrl = "https://www.skroutz.gr/s/123/midea-md-20l.html";
+    installMockFetch([
+      { method: "GET", path: "/commerce-api/catalog/products/1", response: detail },
+      {
+        method: "PATCH",
+        path: "/commerce-api/catalog/source-urls/101",
+        response: { status: 500, body: { detail: "Source URL update failed." } },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/catalog/products/1");
+
+    await screen.findByRole("heading", { name: "Midea Αφυγραντήρας 20L" });
+    const row = screen.getByText(activeUrl).closest("tr") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "Disable" }));
+
+    await expect(screen.findByRole("alert")).resolves.toHaveTextContent("Source URL update failed.");
   });
 
   it("expands source URL import and keeps apply guarded by preview and confirmation", async () => {

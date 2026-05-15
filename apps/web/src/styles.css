@@ -979,6 +979,14 @@ textarea {
   color: var(--danger-text);
 }
 
+.success-state {
+  border: 1px solid #afd9c7;
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
 .form-warning {
   border: 1px solid #f0d27a;
   border-radius: 8px;
@@ -996,6 +1004,13 @@ textarea {
   border-radius: 8px;
   padding: 18px;
   color: var(--muted);
+}
+
+.state-block.success-state {
+  border-style: solid;
+  border-color: #afd9c7;
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 
 .db-status-banner {
@@ -1203,7 +1218,7 @@ textarea {
 }
 
 .catalog-product-source-url-table-wrap table {
-  min-width: 1900px;
+  min-width: 2240px;
 }
 
 .table-cell-subtext {
@@ -1220,6 +1235,34 @@ textarea {
 .error-cell {
   max-width: 300px;
   overflow-wrap: anywhere;
+}
+
+.notes-cell {
+  max-width: 280px;
+  overflow-wrap: anywhere;
+}
+
+.source-url-detail-actions,
+.source-url-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.source-url-detail-actions {
+  min-width: 300px;
+}
+
+.source-url-note-editor {
+  display: grid;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.source-url-note-editor textarea {
+  min-height: 76px;
+  width: 100%;
+  resize: vertical;
 }
 
 .source-url-import-report,

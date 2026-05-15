@@ -52,7 +52,6 @@ export function useCatalogProductDetail(catalogProductId: string | undefined) {
     isLoading,
     error,
     notFound,
-    reload: () => void loadDetail(),
+    reload: () => loadDetail(),
   };
 }
-
