@@ -27,6 +27,8 @@ export type EcommerceContractSourceUrlUpdateRequest =
   EcommerceSchema<"SourceUrlUpdateRequest">;
 export type EcommerceContractSourceUrlCandidateReviewRequest =
   EcommerceSchema<"SourceUrlCandidateReviewRequest">;
+export type EcommerceContractSourceUrlAgentReadinessResponse =
+  EcommerceSchema<"SourceUrlAgentReadinessResponse">;
 export type EcommerceContractSourceUrlImportRequest =
   EcommerceSchema<"SourceUrlImportRequest">;
 export type EcommerceContractProductFactoryHandoffImportRequest =
@@ -496,6 +498,28 @@ export interface SourceUrlAgentRun extends SourceUrlAgentRunSummary {
 export interface SourceUrlAgentRunArtifactsResponse extends ArtifactListResponse {
   run_id?: string | number | null;
   items: ArtifactItem[];
+}
+
+export type SourceUrlAgentReadinessStatus = "ready" | "warning" | "blocked";
+
+export interface SourceUrlAgentProviderReadiness {
+  provider_name: string;
+  provider_type: string;
+  enabled: boolean;
+  configured: boolean;
+  required_env_keys: string[];
+  missing_env_keys: string[];
+  allow_high_confidence_auto_apply: boolean;
+  notes: string;
+}
+
+export interface SourceUrlAgentReadiness {
+  status: SourceUrlAgentReadinessStatus;
+  providers: SourceUrlAgentProviderReadiness[];
+  default_provider_order: string[];
+  source_cascades: Record<string, string[]>;
+  warnings: string[];
+  blocking_reasons: string[];
 }
 
 export interface VendorSourceCaptureRunRequest {
@@ -1333,6 +1357,7 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<SourceUrlCreateBody, EcommerceContractSourceUrlCreateRequest>,
   AssertAssignable<SourceUrlUpdateBody, EcommerceContractSourceUrlUpdateRequest>,
   AssertAssignable<SourceUrlCandidateReviewBody, EcommerceContractSourceUrlCandidateReviewRequest>,
+  AssertAssignable<SourceUrlAgentReadiness, EcommerceContractSourceUrlAgentReadinessResponse>,
   AssertAssignable<PriceMonitoringSelectionBody, EcommerceContractPriceMonitoringSelectionRequest>,
   AssertAssignable<FetchPriceMonitoringBody, EcommerceContractPriceMonitoringFetchRequest>,
   AssertAssignable<CancelPriceMonitoringFetchBody, EcommerceContractPriceMonitoringFetchCancelRequest>,

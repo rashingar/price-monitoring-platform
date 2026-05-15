@@ -12,6 +12,8 @@ import {
   dbStatusUnavailable,
   priceMonitoringMissingSourceUrlError,
   priceMonitoringMissingSourceUrlSelectionResult,
+  sourceUrlAgentReadinessBlocked,
+  sourceUrlAgentReadinessWarning,
 } from "../fixtures/commerceApi";
 import {
   productFactoryFilterRevision,
@@ -583,6 +585,10 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByRole("option", { name: "bestprice" })).toBeInTheDocument();
     expect(screen.getAllByText("direct vendor").length).toBeGreaterThan(0);
     expect(screen.getAllByText("capture ready").length).toBeGreaterThan(0);
+    await expect(screen.findByRole("heading", { name: "Search provider status" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("Default provider order")).toBeInTheDocument();
+    expect(screen.getAllByText("brave_search").length).toBeGreaterThan(0);
+    expect(screen.getByText("Provider configured")).toBeInTheDocument();
     expect(screen.getByLabelText("Missing only")).toBeChecked();
     expect(screen.getByLabelText("Active only")).toBeChecked();
     expect(screen.getByLabelText("Dry-run")).toBeChecked();
@@ -619,6 +625,88 @@ describe("platform mocked page smoke tests", () => {
           request.body.limit === 20,
       ),
     ).toBe(true);
+  });
+
+  it("disables Find Source launch when provider readiness is blocked", async () => {
+    const mockFetch = installMockFetch([
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/readiness",
+        response: sourceUrlAgentReadinessBlocked,
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/find-source/runs");
+
+    await expect(screen.findByText("Missing configuration")).resolves.toBeInTheDocument();
+    expect(screen.getAllByText(/BRAVE_SEARCH_API_KEY/).length).toBeGreaterThan(0);
+    const launchButton = screen.getByRole("button", { name: "Launch run" });
+    expect(launchButton).toBeDisabled();
+    expect(screen.getByText("Launch disabled: BRAVE_SEARCH_API_KEY is missing.")).toBeInTheDocument();
+
+    fireEvent.click(launchButton);
+    expect(
+      mockFetch.requests.some(
+        (request) =>
+          request.method === "POST" &&
+          request.pathname === "/commerce-api/source-url-agent/runs",
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps Find Source launch enabled when provider readiness is warning", async () => {
+    installMockFetch([
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/readiness",
+        response: sourceUrlAgentReadinessWarning,
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/find-source/runs");
+
+    await expect(screen.findByText("Warning")).resolves.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Launch run" })).toBeEnabled();
+  });
+
+  it("renders compact Source URL Agent readiness on Find Source candidates", async () => {
+    installMockFetch(allRoutes);
+
+    renderWithRouter("/find-source/candidates");
+
+    await expect(screen.findByRole("heading", { name: "Search provider status" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("Provider readiness can explain why new Find Source candidates are not appearing.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh readiness" })).toBeInTheDocument();
+  });
+
+  it("does not render secret values from Source URL Agent readiness payloads", async () => {
+    const secret = "live-secret-value";
+    installMockFetch([
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/readiness",
+        response: {
+          ...sourceUrlAgentReadinessBlocked,
+          providers: [
+            {
+              ...sourceUrlAgentReadinessBlocked.providers[0],
+              notes: `token=${secret}`,
+              unexpected_secret: secret,
+            },
+          ],
+          unexpected_secret: secret,
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/find-source/candidates");
+
+    await expect(screen.findByText("Missing configuration")).resolves.toBeInTheDocument();
+    expect(screen.getAllByText(/BRAVE_SEARCH_API_KEY/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(secret)).not.toBeInTheDocument();
   });
 
   it("renders Vendor Sources source URL coverage and capabilities", async () => {

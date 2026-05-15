@@ -5,11 +5,14 @@ import type {
   ArtifactItem,
   SourceUrlAgentRun,
   SourceUrlAgentRunArtifactsResponse,
+  SourceUrlAgentReadiness,
   SourceUrlAgentRunRequest,
   VendorSourceCapability,
 } from "../api/commerceTypes";
 import { ArtifactList } from "../components/ArtifactList";
 import { EmptyState, ErrorState, LoadingState } from "../components/layout/StateBlocks";
+import { SourceUrlAgentReadinessCard } from "../features/source-url-agent-readiness/SourceUrlAgentReadinessCard";
+import { launchDisabledReason } from "../features/source-url-agent-readiness/sourceUrlAgentReadinessHelpers";
 
 const DEFAULT_RUN_REQUEST: SourceUrlAgentRunRequest = {
   mode: "catalog",
@@ -252,6 +255,11 @@ export function SourceUrlAgentRunsPage() {
   const [vendorSources, setVendorSources] = useState<VendorSourceCapability[]>([]);
   const [isSourcesLoading, setIsSourcesLoading] = useState(true);
   const [sourceError, setSourceError] = useState<string | null>(null);
+  const [readinessState, setReadinessState] = useState<{
+    readiness: SourceUrlAgentReadiness | null;
+    isLoading: boolean;
+    error: string | null;
+  }>({ readiness: null, isLoading: true, error: null });
 
   const loadRuns = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
@@ -341,6 +349,16 @@ export function SourceUrlAgentRunsPage() {
   );
 
   const launchRun = async (requestOverride?: SourceUrlAgentRunRequest) => {
+    const disabledReason = launchDisabledReason(
+      readinessState.readiness,
+      readinessState.isLoading,
+      readinessState.error,
+    );
+    if (disabledReason) {
+      setNotice(disabledReason);
+      return;
+    }
+
     setIsLaunching(true);
     setNotice(null);
     try {
@@ -363,6 +381,9 @@ export function SourceUrlAgentRunsPage() {
     if (!shouldAutoLaunch || handoffModels.length === 0 || autoLaunchStartedRef.current === autoLaunchKey) {
       return;
     }
+    if (readinessState.isLoading) {
+      return;
+    }
 
     autoLaunchStartedRef.current = autoLaunchKey;
     void launchRun(buildRunRequestFromHandoff(searchParams)).finally(() => {
@@ -370,7 +391,14 @@ export function SourceUrlAgentRunsPage() {
       nextParams.delete("auto_launch");
       setSearchParams(nextParams, { replace: true });
     });
-  }, [autoLaunchKey, handoffModels.length, searchParams, setSearchParams, shouldAutoLaunch]);
+  }, [
+    autoLaunchKey,
+    handoffModels.length,
+    readinessState.isLoading,
+    searchParams,
+    setSearchParams,
+    shouldAutoLaunch,
+  ]);
 
   const refreshRun = async (run: SourceUrlAgentRun) => {
     const runId = getRunId(run);
@@ -419,6 +447,18 @@ export function SourceUrlAgentRunsPage() {
 
   const artifacts = artifactResponse?.items ?? [];
   const hasActiveRuns = runs.some((run) => isActiveStatus(run.status));
+  const launchBlockReason = launchDisabledReason(
+    readinessState.readiness,
+    readinessState.isLoading,
+    readinessState.error,
+  );
+  const isLaunchDisabled = isLaunching || Boolean(launchBlockReason);
+  const handleReadinessStateChange = useCallback(
+    (state: { readiness: SourceUrlAgentReadiness | null; isLoading: boolean; error: string | null }) => {
+      setReadinessState(state);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!hasActiveRuns) {
@@ -475,6 +515,12 @@ export function SourceUrlAgentRunsPage() {
           ) : null}
         </section>
       ) : null}
+
+      <SourceUrlAgentReadinessCard
+        blockLaunch
+        className="source-url-readiness-launch-card"
+        onReadinessStateChange={handleReadinessStateChange}
+      />
 
       <section className="panel">
         <div className="section-heading">
@@ -610,10 +656,11 @@ export function SourceUrlAgentRunsPage() {
           ) : null}
 
           <div className="button-row">
-            <button className="button primary" type="submit" disabled={isLaunching}>
+            <button className="button primary" type="submit" disabled={isLaunchDisabled}>
               {isLaunching ? "Launching..." : "Launch run"}
             </button>
           </div>
+          {launchBlockReason ? <p className="form-warning">{launchBlockReason}</p> : null}
         </form>
       </section>
 

@@ -683,6 +683,52 @@ export const sourceUrlAgentRuns = {
   ],
 };
 
+export const sourceUrlAgentReadinessReady = {
+  status: "ready",
+  providers: [
+    {
+      provider_name: "brave_search",
+      provider_type: "brave",
+      enabled: true,
+      configured: true,
+      required_env_keys: ["BRAVE_SEARCH_API_KEY"],
+      missing_env_keys: [],
+      allow_high_confidence_auto_apply: false,
+      notes: "Brave Web Search API provider.",
+    },
+  ],
+  default_provider_order: ["brave_search"],
+  source_cascades: {},
+  warnings: [],
+  blocking_reasons: [],
+};
+
+export const sourceUrlAgentReadinessWarning = {
+  ...sourceUrlAgentReadinessReady,
+  status: "warning",
+  warnings: ["Unsupported Source URL Agent search provider type for custom_search: custom."],
+};
+
+export const sourceUrlAgentReadinessBlocked = {
+  status: "blocked",
+  providers: [
+    {
+      provider_name: "brave_search",
+      provider_type: "brave",
+      enabled: true,
+      configured: false,
+      required_env_keys: ["BRAVE_SEARCH_API_KEY"],
+      missing_env_keys: ["BRAVE_SEARCH_API_KEY"],
+      allow_high_confidence_auto_apply: false,
+      notes: "Brave Web Search API provider.",
+    },
+  ],
+  default_provider_order: ["brave_search"],
+  source_cascades: {},
+  warnings: [],
+  blocking_reasons: ["BRAVE_SEARCH_API_KEY is missing."],
+};
+
 export const sourceUrlAgentRunDetail = {
   run: {
     ...sourceUrlAgentRuns.items[0],
@@ -2021,6 +2067,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
   },
   { method: "GET", path: "/commerce-api/vendor-sources/sources", response: vendorSourceCapabilities },
   { method: "GET", path: "/commerce-api/source-url-agent/sources", response: vendorSourceCapabilities },
+  { method: "GET", path: "/commerce-api/source-url-agent/readiness", response: sourceUrlAgentReadinessReady },
   { method: "GET", path: "/commerce-api/source-url-agent/runs", response: sourceUrlAgentRuns },
   {
     method: "GET",

@@ -73,6 +73,8 @@ import type {
   SourceUrlCandidateReviewBody,
   SourceUrlAgentRun,
   SourceUrlAgentRunArtifactsResponse,
+  SourceUrlAgentReadiness,
+  SourceUrlAgentProviderReadiness,
   SourceUrlAgentRunRequest,
   SourceUrlAgentTask,
   SourceUrlAgentRunSummary,
@@ -900,6 +902,74 @@ function normalizeSourceUrlAgentRunArtifacts(
   payload: unknown,
 ): SourceUrlAgentRunArtifactsResponse {
   return normalizeArtifactList(payload) as SourceUrlAgentRunArtifactsResponse;
+}
+
+function normalizeReadinessStatus(value: unknown): SourceUrlAgentReadiness["status"] {
+  return value === "ready" || value === "warning" ? value : "blocked";
+}
+
+function normalizeSourceCascadeMap(value: unknown): Record<string, string[]> {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<Record<string, string[]>>((record, [key, cascade]) => {
+    record[key] = normalizeStringArray(cascade);
+    return record;
+  }, {});
+}
+
+function sanitizeReadinessText(value: unknown): string {
+  const text = normalizeNullableString(value)?.trim() ?? "";
+  if (!text) {
+    return "";
+  }
+
+  return text
+    .replace(/(password|secret|token|api[_-]?key)\s*[:=]\s*\S+/gi, "$1=<redacted>")
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^@\s]+@[^/\s]+/gi, "<redacted-connection-string>")
+    .slice(0, 500);
+}
+
+function normalizeSourceUrlAgentProviderReadiness(
+  value: unknown,
+): SourceUrlAgentProviderReadiness | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const providerName = normalizeNullableString(value.provider_name ?? value.name);
+  const providerType = normalizeNullableString(value.provider_type ?? value.type);
+  if (!providerName || !providerType) {
+    return null;
+  }
+
+  return {
+    provider_name: providerName,
+    provider_type: providerType,
+    enabled: normalizeBooleanFlag(value.enabled),
+    configured: normalizeBooleanFlag(value.configured),
+    required_env_keys: normalizeStringArray(value.required_env_keys),
+    missing_env_keys: normalizeStringArray(value.missing_env_keys),
+    allow_high_confidence_auto_apply: normalizeBooleanFlag(value.allow_high_confidence_auto_apply),
+    notes: sanitizeReadinessText(value.notes),
+  };
+}
+
+function normalizeSourceUrlAgentReadiness(payload: unknown): SourceUrlAgentReadiness {
+  const source = isRecord(payload) ? payload : {};
+  const providers = getArrayPayload(source.providers, ["items", "providers", "data", "results"])
+    .map(normalizeSourceUrlAgentProviderReadiness)
+    .filter((item): item is SourceUrlAgentProviderReadiness => item !== null);
+
+  return {
+    status: normalizeReadinessStatus(source.status),
+    providers,
+    default_provider_order: normalizeStringArray(source.default_provider_order),
+    source_cascades: normalizeSourceCascadeMap(source.source_cascades),
+    warnings: normalizeStringArray(source.warnings).map(sanitizeReadinessText).filter(Boolean),
+    blocking_reasons: normalizeStringArray(source.blocking_reasons).map(sanitizeReadinessText).filter(Boolean),
+  };
 }
 
 const VENDOR_SOURCE_CAPTURE_RUN_COUNTERS = [
@@ -2385,6 +2455,12 @@ export const commerceClient = {
   async listSourceUrlAgentSources(signal?: AbortSignal): Promise<VendorSourceCapability[]> {
     return normalizeVendorSourceCapabilityList(
       await request<unknown>("/source-url-agent/sources", { signal }),
+    );
+  },
+
+  async getSourceUrlAgentReadiness(signal?: AbortSignal): Promise<SourceUrlAgentReadiness> {
+    return normalizeSourceUrlAgentReadiness(
+      await request<unknown>("/source-url-agent/readiness", { signal }),
     );
   },
 

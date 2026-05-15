@@ -12,6 +12,7 @@ import { SourceUrlCandidatesHeader } from "../features/source-url-candidates/Sou
 import { SourceUrlCandidatesPagination } from "../features/source-url-candidates/SourceUrlCandidatesPagination";
 import { SourceUrlCandidatesTable } from "../features/source-url-candidates/SourceUrlCandidatesTable";
 import { SourceUrlCandidatesToolbar } from "../features/source-url-candidates/SourceUrlCandidatesToolbar";
+import { SourceUrlAgentReadinessCard } from "../features/source-url-agent-readiness/SourceUrlAgentReadinessCard";
 import { useSourceUrlCandidateFilters } from "../features/source-url-candidates/useSourceUrlCandidateFilters";
 import { useSourceUrlCandidateLayout } from "../features/source-url-candidates/useSourceUrlCandidateLayout";
 import { useSourceUrlCandidateReview } from "../features/source-url-candidates/useSourceUrlCandidateReview";
@@ -76,6 +77,8 @@ export function SourceUrlCandidatesPage() {
   return (
     <div className="page-stack source-url-candidates-page">
       <SourceUrlCandidatesHeader />
+
+      <SourceUrlAgentReadinessCard compact />
 
       <SourceUrlCandidateLayoutSettingsCard
         layout={layout}

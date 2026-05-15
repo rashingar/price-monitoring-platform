@@ -16,6 +16,8 @@ import {
   sourceUrlImportApply,
   sourceUrlImportPreview,
   sourceUrlAgentArtifacts,
+  sourceUrlAgentReadinessBlocked,
+  sourceUrlAgentReadinessReady,
   sourceUrlAgentRuns,
   sourceUrlSummary,
   sourceUrlValidationSuccess,
@@ -210,6 +212,21 @@ describe("commerce API client contract fixtures", () => {
   it("constructs Source URL Agent run URLs and normalizes run artifacts", async () => {
     const mockFetch = installMockFetch(commerceFixtureRoutes);
 
+    await expect(commerceClient.getSourceUrlAgentReadiness()).resolves.toMatchObject({
+      status: "ready",
+      default_provider_order: ["brave_search"],
+      providers: [
+        expect.objectContaining({
+          provider_name: "brave_search",
+          provider_type: "brave",
+          enabled: true,
+          configured: true,
+          required_env_keys: ["BRAVE_SEARCH_API_KEY"],
+          missing_env_keys: [],
+        }),
+      ],
+    });
+
     await expect(commerceClient.listSourceUrlAgentSources()).resolves.toEqual([
       expect.objectContaining({
         source_name: "skroutz",
@@ -280,12 +297,56 @@ describe("commerce API client contract fixtures", () => {
     expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toEqual(
       expect.arrayContaining([
         "GET /commerce-api/source-url-agent/sources",
+        "GET /commerce-api/source-url-agent/readiness",
         "GET /commerce-api/source-url-agent/runs",
         "POST /commerce-api/source-url-agent/runs",
         "GET /commerce-api/source-url-agent/runs/source-run-001",
         "GET /commerce-api/source-url-agent/runs/source-run-001/artifacts",
       ]),
     );
+  });
+
+  it("normalizes Source URL Agent readiness without requiring env values", async () => {
+    const secret = "live-secret-value";
+    installMockFetch([
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/readiness",
+        response: {
+          ...sourceUrlAgentReadinessBlocked,
+          providers: [
+            {
+              ...sourceUrlAgentReadinessBlocked.providers[0],
+              notes: `token=${secret}`,
+              unexpected_secret: secret,
+            },
+          ],
+          unexpected_secret: secret,
+        },
+      },
+    ]);
+
+    await expect(commerceClient.getSourceUrlAgentReadiness()).resolves.toEqual({
+      status: "blocked",
+      providers: [
+        {
+          provider_name: "brave_search",
+          provider_type: "brave",
+          enabled: true,
+          configured: false,
+          required_env_keys: ["BRAVE_SEARCH_API_KEY"],
+          missing_env_keys: ["BRAVE_SEARCH_API_KEY"],
+          allow_high_confidence_auto_apply: false,
+          notes: "token=<redacted>",
+        },
+      ],
+      default_provider_order: ["brave_search"],
+      source_cascades: {},
+      warnings: [],
+      blocking_reasons: ["BRAVE_SEARCH_API_KEY is missing."],
+    });
+
+    expect(JSON.stringify(sourceUrlAgentReadinessReady)).not.toContain(secret);
   });
 
   it("does not require a backend Source URL Candidate Review layout preference endpoint", () => {
