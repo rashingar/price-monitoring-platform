@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from ecommerce.artifacts import artifact_link_payload
 from ecommerce.db.models.source_urls import SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
 from ecommerce.db.repositories.common import json_safe_value
+from ecommerce.db.repositories.source_urls import source_url_to_dict
 from ecommerce.source_url_agent.agent import SourceUrlAgentResult
+from ecommerce.source_url_agent.review_service import SourceUrlCandidatePromotionResult
 from ecommerce.source_url_agent.sources import SourceDefinition
 
 
@@ -200,6 +202,17 @@ def candidate_review_panel_payload(row: SourceUrlCandidate) -> dict[str, Any]:
             },
         ],
         "review_endpoint": f"/api/source-url-agent/candidates/{row.id}/review",
+    }
+
+
+def source_url_promotion_to_dict(promotion: SourceUrlCandidatePromotionResult | None) -> dict[str, Any] | None:
+    if promotion is None:
+        return None
+    return {
+        "action": promotion.action,
+        "source_url_id": promotion.source_url_id,
+        "changed_fields": list(promotion.changed_fields),
+        "item": source_url_to_dict(promotion.row) if promotion.row is not None else None,
     }
 
 

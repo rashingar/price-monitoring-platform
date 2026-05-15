@@ -16,12 +16,6 @@ from .source_url_agent.candidates import (
     review_source_url_agent_candidate,
     router as candidates_router,
 )
-from .source_url_agent.review_service import (
-    apply_candidate_review as _apply_candidate_review,
-    promote_candidate_url as _promote_candidate_url,
-    promotion_notes as _promotion_notes,
-    review_notes_text as _review_notes,
-)
 from .source_url_agent.runs import (
     _api_run_limit,
     _create_queued_discovery_run,

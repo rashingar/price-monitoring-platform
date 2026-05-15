@@ -13,11 +13,17 @@ from sqlalchemy.orm import Session
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate
 from ecommerce.db.session import session_scope
 from ecommerce.source_urls import normalize_source_url
+from ecommerce.source_url_agent.review_service import (
+    InvalidSourceUrlCandidateReviewError,
+    SourceUrlCandidateNotFoundError,
+    SourceUrlCandidatePromotionError,
+    SourceUrlCandidateReviewCommand,
+    review_source_url_agent_candidate as review_candidate,
+)
 
 from .errors import safe_db_error
-from .review_service import apply_candidate_review
 from .schemas import SourceUrlCandidateReviewRequest
-from .serializers import candidate_review_panel_payload, candidate_to_dict
+from .serializers import candidate_review_panel_payload, candidate_to_dict, source_url_promotion_to_dict
 from .validation import like_value, optional_decimal, optional_text
 from .validation import require_catalog_database_ready as _real_require_catalog_database_ready
 
@@ -103,16 +109,24 @@ def review_source_url_agent_candidate(candidate_id: int, request: SourceUrlCandi
     _require_catalog_database_ready()
     try:
         with session_scope() as session:
-            candidate = session.get(SourceUrlCandidate, candidate_id)
-            if candidate is None:
-                raise HTTPException(status_code=404, detail="Source URL candidate not found.")
-            source_url_payload = apply_candidate_review(session, candidate, request)
-            payload = candidate_to_dict(candidate)
-            payload["source_url"] = source_url_payload
+            result = review_candidate(
+                session,
+                candidate_id,
+                SourceUrlCandidateReviewCommand(
+                    decision=request.decision,
+                    reviewed_url=request.reviewed_url,
+                    review_notes=request.review_notes,
+                    reviewed_by=request.reviewed_by,
+                ),
+            )
+            payload = candidate_to_dict(result.candidate)
+            payload["source_url"] = source_url_promotion_to_dict(result.source_url_promotion)
             return payload
     except HTTPException:
         raise
-    except (LookupError, ValueError) as exc:
+    except SourceUrlCandidateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (InvalidSourceUrlCandidateReviewError, SourceUrlCandidatePromotionError, LookupError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Source URL candidate review failed: {_safe_db_error(exc)}") from exc

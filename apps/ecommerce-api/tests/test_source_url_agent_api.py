@@ -334,6 +334,7 @@ def test_patch_replace_url_requires_reviewed_url_and_promotes_reviewed_url(tmp_p
     )
 
     assert missing.status_code == 400
+    assert missing.json()["detail"] == "reviewed_url is required for replace_url."
     assert replaced.status_code == 200
     assert replaced.json()["status"] == "accepted"
     with session_scope(database_url) as session:
@@ -364,8 +365,10 @@ def test_source_url_agent_candidate_routes_return_404_and_validation_errors(tmp_
     invalid_product_id = client.get("/api/source-url-agent/candidates", params={"catalog_product_id": "bad"})
 
     assert missing.status_code == 404
+    assert missing.json()["detail"] == "Source URL candidate not found."
     assert invalid_decision.status_code == 422
     assert invalid_product_id.status_code == 400
+    assert invalid_product_id.json()["detail"] == "catalog_product_id must be an integer."
 
 
 def test_openapi_includes_source_url_agent_candidate_endpoints() -> None:
