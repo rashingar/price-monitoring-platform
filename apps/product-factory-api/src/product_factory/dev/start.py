@@ -5,6 +5,8 @@ import ipaddress
 import socket
 import sys
 
+from product_factory.local_env import load_local_env_if_present
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m product_factory.dev.start")
@@ -16,6 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    env_status = load_local_env_if_present()
     args = build_parser().parse_args(argv)
     try:
         _validate_host(args.host)
@@ -30,6 +33,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Health URL: {base_url}/api/health")
     print(f"Docs URL: {base_url}/docs")
     print(f"Jobs URL: {base_url}/api/jobs")
+    for warning in env_status.get("warnings", []):
+        print(f"Local env warning: {warning}")
     if args.dry_run:
         return 0
 

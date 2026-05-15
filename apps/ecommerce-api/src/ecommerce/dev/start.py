@@ -13,7 +13,7 @@ import uvicorn
 
 from ecommerce.db.config import DATABASE_URL_ENV_VAR, is_database_configured
 from ecommerce.db.diagnostics import collect_database_status
-from ecommerce.env import load_local_env_if_present
+from ecommerce.env import describe_local_env_warnings, load_local_env_if_present
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8001
@@ -28,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    load_local_env_if_present()
+    env_status = load_local_env_if_present()
     args = build_parser().parse_args(argv)
     base_url = f"http://{args.host}:{args.port}"
 
@@ -36,6 +36,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     print(f"Health URL: {base_url}/api/health")
     print(f"Docs URL: {base_url}/docs")
     print(f"Price Monitoring DB status URL: {base_url}/api/price-monitoring/db/status")
+    for warning in describe_local_env_warnings(env_status):
+        print(f"Local env warning: {warning}")
     _print_db_setup_hints()
 
     if _print_existing_ecommerce_api_status(args.host, args.port):

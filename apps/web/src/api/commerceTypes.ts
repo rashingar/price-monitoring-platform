@@ -1284,11 +1284,29 @@ export interface PathRootsEnv {
   [key: string]: string | null | undefined;
 }
 
+export interface EnvReadinessGroup {
+  name: string;
+  status: "configured" | "missing" | string;
+  configured_keys: string[];
+  missing_keys: string[];
+}
+
+export interface LocalEnvStatus {
+  root_env_loaded?: boolean | null;
+  deprecated_app_env_detected?: boolean | null;
+  keys_loaded?: string[];
+  keys_skipped_existing?: string[];
+  keys_skipped_deprecated_duplicate?: string[];
+  warnings?: string[];
+}
+
 export interface PathRootsResponse {
   artifact_roots: ArtifactRoot[];
   file_roots: ArtifactRoot[];
   output_roots: ArtifactRoot[];
   env: PathRootsEnv;
+  env_readiness: EnvReadinessGroup[];
+  local_env?: LocalEnvStatus | null;
   path_separator?: string | null;
   platform?: string | null;
 }

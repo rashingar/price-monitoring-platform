@@ -4,6 +4,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $appRoot = Join-Path $repoRoot "apps\ecommerce-api"
 $srcRoot = Join-Path $appRoot "src"
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
+$envLoader = Join-Path $repoRoot "scripts\dev\load-root-env.ps1"
 
 function Write-EcommerceSetupInstructions {
     Write-Host "Ecommerce API setup commands from the repository root:"
@@ -44,6 +45,8 @@ if ($LASTEXITCODE -ne 0) {
     Write-EcommerceSetupInstructions
     exit $LASTEXITCODE
 }
+
+& $envLoader -RepoRoot $repoRoot -DeprecatedAppEnvPath (Join-Path $appRoot ".env") | Out-Null
 
 Set-Location $appRoot
 

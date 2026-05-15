@@ -50,10 +50,20 @@ def load_env_file(path: Path) -> dict[str, str]:
     return values
 
 
+def discover_monorepo_root(app_root: Path) -> Path:
+    for candidate in (app_root, *app_root.parents):
+        if (candidate / "AGENTS.md").is_file() and (candidate / "apps").is_dir():
+            return candidate
+        if (candidate / ".git").exists():
+            return candidate
+    return app_root
+
+
 def _resolve_value(
     explicit_value: str | None,
     env_key: str,
-    env_file_values: dict[str, str],
+    root_env_file_values: dict[str, str],
+    legacy_env_file_values: dict[str, str],
     fallback: str = "",
 ) -> str:
     if explicit_value is not None and str(explicit_value).strip():
@@ -61,7 +71,10 @@ def _resolve_value(
     env_value = os.environ.get(env_key)
     if env_value is not None and str(env_value).strip():
         return str(env_value).strip()
-    file_value = env_file_values.get(env_key)
+    file_value = root_env_file_values.get(env_key)
+    if file_value is not None and str(file_value).strip():
+        return str(file_value).strip()
+    file_value = legacy_env_file_values.get(env_key)
     if file_value is not None and str(file_value).strip():
         return str(file_value).strip()
     return fallback
@@ -76,15 +89,29 @@ def resolve_opencart_config(
     password: str | None = None,
     profile: str | None = None,
 ) -> dict[str, str]:
-    env_file = repo_root / ".secrets" / "opencart.env"
-    env_file_values = load_env_file(env_file)
+    monorepo_root = discover_monorepo_root(repo_root)
+    env_file = monorepo_root / ".env"
+    legacy_env_file = repo_root / ".secrets" / "opencart.env"
+    root_env_file_values = load_env_file(env_file)
+    legacy_env_file_values = load_env_file(legacy_env_file)
     return {
         "env_file": str(env_file),
-        "store_base": _resolve_value(store_base, "OPENCART_STORE_BASE", env_file_values, ""),
-        "admin_path": _resolve_value(admin_path, "OPENCART_ADMIN_PATH", env_file_values, ""),
-        "username": _resolve_value(username, "OPENCART_ADMIN_USER", env_file_values, ""),
-        "password": _resolve_value(password, "OPENCART_ADMIN_PASS", env_file_values, ""),
-        "profile": _resolve_value(profile, "OPENCART_IMPORT_PROFILE", env_file_values, ""),
+        "legacy_env_file": str(legacy_env_file),
+        "store_base": _resolve_value(
+            store_base, "OPENCART_STORE_BASE", root_env_file_values, legacy_env_file_values, ""
+        ),
+        "admin_path": _resolve_value(
+            admin_path, "OPENCART_ADMIN_PATH", root_env_file_values, legacy_env_file_values, ""
+        ),
+        "username": _resolve_value(
+            username, "OPENCART_ADMIN_USER", root_env_file_values, legacy_env_file_values, ""
+        ),
+        "password": _resolve_value(
+            password, "OPENCART_ADMIN_PASS", root_env_file_values, legacy_env_file_values, ""
+        ),
+        "profile": _resolve_value(
+            profile, "OPENCART_IMPORT_PROFILE", root_env_file_values, legacy_env_file_values, ""
+        ),
     }
 
 
@@ -104,6 +131,7 @@ def _export_shell(args: argparse.Namespace) -> int:
     print(f"OPENCART_ADMIN_PASS={shlex.quote(config['password'])}")
     print(f"OPENCART_IMPORT_PROFILE={shlex.quote(config['profile'])}")
     print(f"OPENCART_ENV_FILE={shlex.quote(config['env_file'])}")
+    print(f"OPENCART_LEGACY_ENV_FILE={shlex.quote(config['legacy_env_file'])}")
     return 0
 
 

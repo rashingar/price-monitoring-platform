@@ -28,7 +28,16 @@ def test_paths_roots_endpoint_combines_known_roots(tmp_path: Path, monkeypatch) 
 
     assert response.status_code == 200
     payload = response.json()
-    assert set(payload) == {"artifact_roots", "file_roots", "output_roots", "env", "path_separator", "platform"}
+    assert set(payload) == {
+        "artifact_roots",
+        "file_roots",
+        "output_roots",
+        "env",
+        "env_readiness",
+        "local_env",
+        "path_separator",
+        "platform",
+    }
     assert payload["path_separator"] == ";"
     assert payload["platform"] == "Windows-compatible"
     assert payload["env"] == {
@@ -37,6 +46,14 @@ def test_paths_roots_endpoint_combines_known_roots(tmp_path: Path, monkeypatch) 
         DATABASE_URL_ENV_VAR: "not_configured",
     }
     assert "ECOMMERCE_SECRET_TOKEN" not in payload["env"]
+    database_group = next(item for item in payload["env_readiness"] if item["name"] == "Database")
+    assert database_group == {
+        "name": "Database",
+        "status": "missing",
+        "configured_keys": [],
+        "missing_keys": [DATABASE_URL_ENV_VAR],
+    }
+    assert "ECOMMERCE_SECRET_TOKEN" not in str(payload["env_readiness"])
 
     artifact_paths = {item["path"]: item for item in payload["artifact_roots"]}
     assert str(artifact_root.resolve(strict=False)) in artifact_paths
@@ -72,6 +89,13 @@ def test_paths_roots_endpoint_reports_unconfigured_env(tmp_path: Path, monkeypat
         ARTIFACT_ROOTS_ENV_VAR: "not_configured",
         FILE_ROOTS_ENV_VAR: "not_configured",
         DATABASE_URL_ENV_VAR: "not_configured",
+    }
+    assert {group["name"] for group in payload["env_readiness"]} >= {
+        "Database",
+        "OpenCart",
+        "Brave Search",
+        "File roots",
+        "Product Factory",
     }
     assert payload["file_roots"]
     assert payload["output_roots"]

@@ -54,9 +54,14 @@ intentionally change.
 
 Optional local configuration:
 
-- Copy `.env.example` to `.env` and set `OPENAI_API_KEY` when using OpenAI-backed authoring.
-- Copy `opencart.env.example` to `.secrets/opencart.env` when using OpenCart publishing.
-- Keep real secrets out of version control.
+- Copy the repo-root `.env.example` to repo-root `.env`.
+- Set `OPENAI_API_KEY`, `OPENAI_MODEL`, and `OPENCART_*` values there when using
+  OpenAI-backed authoring or OpenCart publishing.
+- Do not create app-local `.env` files for new setups. Existing app-local
+  `.env` and `.secrets/opencart.env` files are deprecated compatibility
+  fallback only.
+- OS env vars override repo-root `.env`; repo-root `.env` overrides deprecated
+  app-local files. Diagnostics print key names only, never secret values.
 
 ## Local API
 

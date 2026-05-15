@@ -5,15 +5,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${REPO_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
-ENV_FILE="${ENV_FILE:-${REPO_ROOT}/.secrets/opencart.env}"
-
-if [[ -f "${ENV_FILE}" ]]; then
-  # Accept CRLF-formatted env files from Windows editors.
-  # shellcheck disable=SC1090
-  set -a
-  source <(tr -d '\r' < "${ENV_FILE}")
-  set +a
-fi
 
 MODEL="${1:-${MODEL:-}}"
 PRODUCT_FILE="${CURRENT_JOB_PRODUCT_FILE:-${REPO_ROOT}/products/${MODEL}.csv}"

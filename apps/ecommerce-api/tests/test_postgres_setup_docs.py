@@ -1,11 +1,12 @@
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+APP_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_env_example_exists_with_safe_database_placeholder() -> None:
-    env_example = PROJECT_ROOT / ".env.example"
+    env_example = REPO_ROOT / ".env.example"
 
     text = env_example.read_text(encoding="utf-8")
 
@@ -15,15 +16,15 @@ def test_env_example_exists_with_safe_database_placeholder() -> None:
 
 
 def test_gitignore_ignores_dotenv_but_allows_example() -> None:
-    text = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
+    text = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
 
     assert ".env" in text
     assert "!.env.example" in text
 
 
 def test_windows_postgres_setup_script_exists_and_readme_references_it() -> None:
-    script = PROJECT_ROOT / "scripts" / "setup_postgres_windows.ps1"
-    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    script = APP_ROOT / "scripts" / "setup_postgres_windows.ps1"
+    readme = (APP_ROOT / "README.md").read_text(encoding="utf-8")
 
     assert script.exists()
     script_text = script.read_text(encoding="utf-8")
@@ -37,10 +38,10 @@ def test_windows_postgres_setup_script_exists_and_readme_references_it() -> None
 
 
 def test_readme_documents_env_template_and_native_windows_troubleshooting() -> None:
-    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    readme = (APP_ROOT / "README.md").read_text(encoding="utf-8")
 
     assert "Native Windows PostgreSQL setup and first-run verification" in readme
-    assert ".env.example` file is a template" in readme
+    assert ".env.example` file is the canonical template" in readme
     assert "do not commit `.env`" in readme.lower()
     assert "Ecommerce loads `.env` automatically for local commands" in readme
     assert "OS environment value wins over `.env`" in readme

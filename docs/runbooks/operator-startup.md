@@ -48,7 +48,21 @@ If `apps\web\node_modules` is missing, reinstall web dependencies:
 .\scripts\setup\web.ps1
 ```
 
-## 3. Configure Ecommerce Database
+## 3. Configure Local Environment
+
+Create the single private local env file at the repository root:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Fill machine-specific paths and private credentials there. Do not create
+app-local `.env` files for new setups. Existing app-local `.env` files are
+deprecated compatibility fallback only: OS env vars override repo-root `.env`,
+repo-root `.env` overrides app-local `.env`, and app-local `.env` may fill only
+keys missing from both. Diagnostics print key names only, never secret values.
+
+## 4. Configure Ecommerce Database
 
 Create a local database if one does not already exist:
 
@@ -58,11 +72,7 @@ CREATE DATABASE ecommerce OWNER ecommerce;
 GRANT ALL PRIVILEGES ON DATABASE ecommerce TO ecommerce;
 ```
 
-Set the database URL in each terminal that runs Ecommerce commands:
-
-```powershell
-$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
-```
+Set `ECOMMERCE_DATABASE_URL` in repo-root `.env` or the OS environment.
 
 Apply migrations and import the catalog:
 
@@ -76,7 +86,7 @@ Pop-Location
 For database backup, rename, or rebuild steps, see
 [Ecommerce PostgreSQL Local Setup](ecommerce-postgresql-local.md).
 
-## 4. Preflight
+## 5. Preflight
 
 Run one of the setup/dev diagnostics from the repository root:
 
@@ -94,7 +104,7 @@ These checks verify imports, editable installs, web dependencies, mirrored
 contracts, and generated web type freshness when `node_modules` exists. They do
 not start servers or mutate PostgreSQL.
 
-## 5. Start Services
+## 6. Start Services
 
 Use three separate PowerShell terminals from the repository root.
 
@@ -107,7 +117,6 @@ Terminal 1:
 Terminal 2:
 
 ```powershell
-$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
 .\scripts\dev\ecommerce-api.ps1
 ```
 
@@ -117,7 +126,7 @@ Terminal 3:
 .\scripts\dev\web.ps1
 ```
 
-## 6. Open Local URLs
+## 7. Open Local URLs
 
 - Web UI: `http://127.0.0.1:5173`
 - Product Factory API health: `http://127.0.0.1:8000/api/health`
@@ -132,7 +141,7 @@ The web dev proxy keeps these browser routes stable:
 - `/api` -> Product Factory API.
 - `/commerce-api` -> Ecommerce API, rewritten to backend `/api` routes.
 
-## 7. Run Operator Smoke Check
+## 8. Run Operator Smoke Check
 
 After setup, migrations, catalog import, and service startup, run:
 
@@ -171,7 +180,7 @@ Common failures usually mean:
 - Web warning: the Vite dev server is not running; rerun with `-SkipWeb` if
   that is intentional.
 
-## 8. If Ecommerce DB Is Not Ready
+## 9. If Ecommerce DB Is Not Ready
 
 `/api/health` only proves the Ecommerce API process is running. Use the DB
 status endpoint when catalog or price monitoring screens report not ready.
@@ -184,7 +193,7 @@ catalog.
 
 Common causes:
 
-- `ECOMMERCE_DATABASE_URL` is missing in the running terminal.
+- `ECOMMERCE_DATABASE_URL` is missing from OS env and repo-root `.env`.
 - PostgreSQL is stopped.
 - Database/user credentials are wrong.
 - Alembic migrations have not been applied.
@@ -193,7 +202,6 @@ Common causes:
 Recovery path:
 
 ```powershell
-$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
 Push-Location apps\ecommerce-api
 ..\..\.venv\Scripts\python.exe -m alembic upgrade head
 ..\..\.venv\Scripts\python.exe -m ecommerce.jobs.ingest_catalog
@@ -201,7 +209,7 @@ Push-Location apps\ecommerce-api
 Pop-Location
 ```
 
-## 9. Before Committing Startup Changes
+## 10. Before Committing Startup Changes
 
 ```powershell
 .\scripts\check\hygiene.ps1

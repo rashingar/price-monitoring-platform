@@ -4,6 +4,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $appRoot = Join-Path $repoRoot "apps\ecommerce-api"
 $srcRoot = Join-Path $appRoot "src"
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
+$envLoader = Join-Path $repoRoot "scripts\dev\load-root-env.ps1"
 
 function Write-EcommerceSetupInstructions {
     Write-Host "Ecommerce worker setup commands from the repository root:"
@@ -20,6 +21,8 @@ if (-not (Test-Path -LiteralPath $python)) {
     Write-Error "Missing root virtual environment Python: $python"
     exit 1
 }
+
+& $envLoader -RepoRoot $repoRoot -DeprecatedAppEnvPath (Join-Path $appRoot ".env") | Out-Null
 
 if ($env:PYTHONPATH) {
     $env:PYTHONPATH = "$srcRoot;$appRoot;$env:PYTHONPATH"

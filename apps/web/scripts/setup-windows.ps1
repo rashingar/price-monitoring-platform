@@ -1,9 +1,10 @@
 $ErrorActionPreference = "Stop"
 
-$RepoRoot = Split-Path -Parent $PSScriptRoot
+$AppRoot = Split-Path -Parent $PSScriptRoot
+$RepoRoot = (Resolve-Path (Join-Path $AppRoot "..\..")).Path
 $NodeVersion = "22.12.0"
 $NodeFolderName = "node-v$NodeVersion-win-x64"
-$ToolsDir = Join-Path $RepoRoot ".tools"
+$ToolsDir = Join-Path $AppRoot ".tools"
 $LocalNodeDir = Join-Path $ToolsDir $NodeFolderName
 $LocalNodeExe = Join-Path $LocalNodeDir "node.exe"
 $LocalNpmCmd = Join-Path $LocalNodeDir "npm.cmd"
@@ -23,7 +24,7 @@ function Use-LocalNode {
   $env:PATH = "$LocalNodeDir;$env:PATH"
 }
 
-Set-Location $RepoRoot
+Set-Location $AppRoot
 
 $NodePath = Get-CommandPath "node.exe"
 $NpmPath = Get-CommandPath "npm.cmd"
@@ -55,7 +56,7 @@ if (-not $NodePath -or -not $NpmPath) {
 
 if (-not (Test-Path (Join-Path $RepoRoot ".env")) -and (Test-Path (Join-Path $RepoRoot ".env.example"))) {
   Copy-Item (Join-Path $RepoRoot ".env.example") (Join-Path $RepoRoot ".env")
-  Write-Host "Created .env from .env.example"
+  Write-Host "Created repo-root .env from repo-root .env.example"
 }
 
 Write-Host "Node version:"
@@ -64,7 +65,7 @@ Write-Host "npm version:"
 & $NpmPath --version
 
 Write-Host "Installing frontend dependencies ..."
-if (Test-Path (Join-Path $RepoRoot "package-lock.json")) {
+if (Test-Path (Join-Path $AppRoot "package-lock.json")) {
   & $NpmPath ci
 } else {
   Write-Host "package-lock.json was not found; falling back to npm install."

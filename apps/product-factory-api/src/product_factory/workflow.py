@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from .input_validation import FAIL_MESSAGE, validate_input
+from .local_env import load_local_env_if_present
 from .models import CLIInput
 from .prepare_stage import execute_prepare_stage
 from .repo_paths import REPO_ROOT
@@ -67,6 +68,7 @@ def add_input_fields(parser: argparse.ArgumentParser) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_local_env_if_present()
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

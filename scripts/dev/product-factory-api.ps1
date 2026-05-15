@@ -4,6 +4,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $appRoot = Join-Path $repoRoot "apps\product-factory-api"
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 $consoleScript = Join-Path $repoRoot ".venv\Scripts\product-factory-api.exe"
+$envLoader = Join-Path $repoRoot "scripts\dev\load-root-env.ps1"
 
 function Write-ProductFactorySetupInstructions {
     Write-Host "Product Factory setup commands from the repository root:"
@@ -66,6 +67,8 @@ if (-not (Test-Path -LiteralPath $consoleScript)) {
     Write-ProductFactorySetupInstructions
     exit 1
 }
+
+& $envLoader -RepoRoot $repoRoot -DeprecatedAppEnvPath (Join-Path $appRoot ".env") | Out-Null
 
 Set-Location $appRoot
 Write-Host "Starting Product Factory API on http://127.0.0.1:8000"

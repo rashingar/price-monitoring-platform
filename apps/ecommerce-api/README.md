@@ -74,18 +74,23 @@ Install Chromium for Playwright:
 
 ## Environment
 
-The repo-root `.env.example` file is a template with safe local defaults and
-placeholders. Copy it only for private local development:
+The repo-root `.env.example` file is the canonical template with safe local
+defaults and placeholders. Copy it to the repository root for private local
+development:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Do not commit `.env` or any file containing real credentials.
+Do not commit `.env` or any file containing real credentials. Do not create
+app-local `.env` files for new setups.
 
 Ecommerce loads `.env` automatically for local commands. If the same setting
 exists in both `.env` and the real Windows/PowerShell environment, the
-OS environment value wins over `.env`.
+OS environment value wins over `.env`. Repo-root `.env` wins over deprecated
+app-local `.env` files. Existing app-local `.env` files are fallback only for
+keys missing from both OS env and repo-root `.env`, and diagnostics print key
+names only, never secret values.
 
 Important variables:
 
@@ -516,8 +521,8 @@ Review snapshot diffs before committing them.
 
 ## Troubleshooting
 
-- `Database is not configured.` Set `ECOMMERCE_DATABASE_URL` in PowerShell
-  or copy `.env.example` to `.env` for local development.
+- `Database is not configured.` Set `ECOMMERCE_DATABASE_URL` in repo-root
+  `.env` or in the OS environment.
 - `Database is configured but unreachable.` Confirm the native Windows
   PostgreSQL service is running and the host, port, role, password, and
   database name are correct.

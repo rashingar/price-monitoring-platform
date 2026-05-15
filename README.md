@@ -148,6 +148,22 @@ Pop-Location
 
 Docker is not required for the current local setup.
 
+## Local Environment
+
+Use one private env file per machine at the repository root:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Fill machine-specific paths and private credentials in the repo-root `.env`.
+Do not create app-local `.env` files for new setups, and do not commit `.env`.
+Ecommerce loads `.env` automatically for local commands, and the root dev
+scripts load repo-root `.env` before starting apps. OS environment value wins
+over `.env`; repo-root `.env` wins over deprecated app-local `.env` files.
+Deprecated app-local files are accepted for one transition period as fallback
+only, with key-name warnings and no secret values printed.
+
 ## Database Setup
 
 Ecommerce API owns PostgreSQL state for catalog and price monitoring workflows.
@@ -161,11 +177,7 @@ CREATE DATABASE ecommerce OWNER ecommerce;
 GRANT ALL PRIVILEGES ON DATABASE ecommerce TO ecommerce;
 ```
 
-PowerShell environment variable:
-
-```powershell
-$env:ECOMMERCE_DATABASE_URL = "postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
-```
+Set `ECOMMERCE_DATABASE_URL` in repo-root `.env` or the OS environment.
 
 Apply migrations and import the catalog:
 
@@ -176,16 +188,9 @@ Push-Location apps\ecommerce-api
 Pop-Location
 ```
 
-Dashboard can also refresh the active catalog from OpenCart. Configure these
-private environment variables before using `Update DB`:
-
-```powershell
-$env:OPENCART_STORE_BASE = "https://your-store.example"
-$env:OPENCART_ADMIN_PATH = "admin"
-$env:OPENCART_ADMIN_USER = "your-admin-user"
-$env:OPENCART_ADMIN_PASS = "your-admin-password"
-$env:OPENCART_EXPORT_PROFILE = "sourceCata"
-```
+Dashboard can also refresh the active catalog from OpenCart. Configure the
+private `OPENCART_*` values in repo-root `.env` or the OS environment before
+using `Update DB`.
 
 From the Dashboard, click `Update DB`. Ecommerce API creates a durable
 `catalog_update_from_opencart` job, logs into OpenCart with Playwright, exports

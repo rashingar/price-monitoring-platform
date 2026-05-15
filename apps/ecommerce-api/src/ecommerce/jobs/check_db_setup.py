@@ -7,7 +7,7 @@ from typing import Sequence
 
 from ecommerce.db.config import DATABASE_URL_ENV_VAR
 from ecommerce.db.diagnostics import REQUIRED_PRICE_MONITORING_TABLES, collect_database_status
-from ecommerce.env import load_local_env_if_present
+from ecommerce.env import describe_local_env_warnings, load_local_env_if_present
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -16,6 +16,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     status = collect_database_status()
     print(f"{DATABASE_URL_ENV_VAR} configured: {status['configured']}")
     print(f"{DATABASE_URL_ENV_VAR} source: {_database_url_source(env_status, bool(status['configured']))}")
+    for warning in describe_local_env_warnings(env_status):
+        print(f"Local env warning: {warning}")
     print(f"Sanitized database URL: {status['sanitized_database_url'] or '(not configured)'}")
     print(f"Reachable: {status['reachable']}")
     print(f"Dialect: {status['dialect'] or '(unknown)'}")
@@ -50,8 +52,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _database_url_source(env_status: dict[str, object], configured: bool) -> str:
-    if DATABASE_URL_ENV_VAR in env_status.get("keys_loaded", []):
-        return ".env"
+    if DATABASE_URL_ENV_VAR in env_status.get("keys_loaded_from_root", []):
+        return "repo-root .env"
+    if DATABASE_URL_ENV_VAR in env_status.get("keys_loaded_from_deprecated_app", []):
+        return "deprecated app-local .env"
     if configured:
         return "environment"
     return "not_configured"

@@ -32,12 +32,12 @@ Prerequisites:
 - PostgreSQL, current backend migrations, and an active imported catalog for Catalog and
   Price Monitoring workflows.
 
-From this repository:
+From the repository root:
 
 ```powershell
-npm ci
 Copy-Item .env.example .env
-npm run dev
+.\scripts\setup\web.ps1
+.\scripts\dev\web.ps1
 ```
 
 Open the UI at:
@@ -46,7 +46,12 @@ Open the UI at:
 http://127.0.0.1:5173
 ```
 
-The default `.env.example` keeps browser API base URLs empty and uses Vite proxies:
+The repo-root `.env.example` is the canonical env template. Do not create
+app-local `.env` files for new setups. Existing `apps/web/.env` files are
+deprecated fallback only; OS env vars override repo-root `.env`, and repo-root
+`.env` overrides app-local `.env`.
+
+The default Vite values keep browser API base URLs empty and use proxies:
 
 ```bash
 VITE_API_BASE_URL=

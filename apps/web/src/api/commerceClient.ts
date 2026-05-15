@@ -37,6 +37,8 @@ import type {
   FileRoot,
   PathRootsEnv,
   PathRootsResponse,
+  EnvReadinessGroup,
+  LocalEnvStatus,
   ProductFactoryHandoffImportRequest,
   PriceHistoryResponse,
   PriceMonitoringDbStatus,
@@ -1192,6 +1194,37 @@ function normalizePathRootsEnv(value: unknown): PathRootsEnv {
   }, {});
 }
 
+function normalizeEnvReadinessGroup(value: unknown): EnvReadinessGroup | null {
+  if (!isRecord(value) || typeof value.name !== "string") {
+    return null;
+  }
+  return {
+    name: value.name,
+    status: typeof value.status === "string" ? value.status : "missing",
+    configured_keys: normalizeStringArray(value.configured_keys),
+    missing_keys: normalizeStringArray(value.missing_keys),
+  };
+}
+
+function normalizeLocalEnvStatus(value: unknown): LocalEnvStatus | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    root_env_loaded: typeof value.root_env_loaded === "boolean" ? value.root_env_loaded : null,
+    deprecated_app_env_detected:
+      typeof value.deprecated_app_env_detected === "boolean"
+        ? value.deprecated_app_env_detected
+        : null,
+    keys_loaded: normalizeStringArray(value.keys_loaded),
+    keys_skipped_existing: normalizeStringArray(value.keys_skipped_existing),
+    keys_skipped_deprecated_duplicate: normalizeStringArray(
+      value.keys_skipped_deprecated_duplicate,
+    ),
+    warnings: normalizeStringArray(value.warnings),
+  };
+}
+
 function normalizePathRoots(payload: unknown): PathRootsResponse {
   if (!isRecord(payload)) {
     return {
@@ -1199,6 +1232,8 @@ function normalizePathRoots(payload: unknown): PathRootsResponse {
       file_roots: [],
       output_roots: [],
       env: {},
+      env_readiness: [],
+      local_env: null,
       path_separator: null,
       platform: null,
     };
@@ -1215,6 +1250,10 @@ function normalizePathRoots(payload: unknown): PathRootsResponse {
       .map(normalizeArtifactRoot)
       .filter((root): root is ArtifactRoot => root !== null),
     env: normalizePathRootsEnv(payload.env),
+    env_readiness: getArrayPayload(payload.env_readiness, ["groups", "items", "data", "results"])
+      .map(normalizeEnvReadinessGroup)
+      .filter((group): group is EnvReadinessGroup => group !== null),
+    local_env: normalizeLocalEnvStatus(payload.local_env),
     path_separator: typeof payload.path_separator === "string" ? payload.path_separator : null,
     platform: typeof payload.platform === "string" ? payload.platform : null,
   };

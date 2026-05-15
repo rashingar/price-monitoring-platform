@@ -1,7 +1,9 @@
 $ErrorActionPreference = "Stop"
 
-$RepoRoot = Split-Path -Parent $PSScriptRoot
-$ToolsDir = Join-Path $RepoRoot ".tools"
+$AppRoot = Split-Path -Parent $PSScriptRoot
+$RepoRoot = (Resolve-Path (Join-Path $AppRoot "..\..")).Path
+$ToolsDir = Join-Path $AppRoot ".tools"
+$EnvLoader = Join-Path $RepoRoot "scripts\dev\load-root-env.ps1"
 
 function Get-LocalNodeDir {
   if (-not (Test-Path $ToolsDir)) {
@@ -37,7 +39,7 @@ function Get-NpmCommand {
   return $null
 }
 
-Set-Location $RepoRoot
+Set-Location $AppRoot
 
 $NpmCommand = Get-NpmCommand
 if (-not $NpmCommand) {
@@ -45,11 +47,9 @@ if (-not $NpmCommand) {
   exit 1
 }
 
-if (-not (Test-Path (Join-Path $RepoRoot ".env")) -and (Test-Path (Join-Path $RepoRoot ".env.example"))) {
-  Copy-Item (Join-Path $RepoRoot ".env.example") (Join-Path $RepoRoot ".env")
-}
+& $EnvLoader -RepoRoot $RepoRoot -DeprecatedAppEnvPath (Join-Path $AppRoot ".env") | Out-Null
 
-if (-not (Test-Path (Join-Path $RepoRoot "node_modules"))) {
+if (-not (Test-Path (Join-Path $AppRoot "node_modules"))) {
   Write-Host "node_modules is missing. Installing dependencies first ..."
   & $NpmCommand install
 }

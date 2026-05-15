@@ -18,9 +18,15 @@ build/
 .vite/
 
 # Environment and secrets
-.env
+/.env
+/.env.local
+/.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
 .env.*
 !.env.example
+!**/.env.example
 .secrets/
 *.pem
 *.key

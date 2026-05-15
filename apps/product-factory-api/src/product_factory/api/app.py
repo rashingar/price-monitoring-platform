@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from product_factory.local_env import load_local_env_if_present
+
+load_local_env_if_present()
+
 from .job_runner import SequentialJobRunner
 from .job_store import JobStore
 from .routes_filter_review import router as filter_review_router

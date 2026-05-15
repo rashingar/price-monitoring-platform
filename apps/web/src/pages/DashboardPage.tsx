@@ -4,7 +4,7 @@ import { apiClient, getApiErrorMessage } from "../api/client";
 import { commerceClient, getCommerceApiErrorMessage } from "../api/commerceClient";
 import { runApiDiagnostics } from "../api/diagnostics";
 import { getJobProgress } from "../api/jobProgress";
-import type { CatalogUpdateJob } from "../api/commerceTypes";
+import type { CatalogUpdateJob, PathRootsResponse } from "../api/commerceTypes";
 import type { ApiDiagnostics } from "../api/diagnostics";
 import type { HealthResponse } from "../api/types";
 import { ErrorState, LoadingState } from "../components/layout/StateBlocks";
@@ -60,6 +60,10 @@ function getCatalogUpdateImportedCount(job: CatalogUpdateJob | null): number | n
   return null;
 }
 
+function formatMissingKeys(keys: string[]): string {
+  return keys.length > 0 ? keys.join(", ") : "-";
+}
+
 export function DashboardPage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +73,8 @@ export function DashboardPage() {
   const [catalogUpdateJob, setCatalogUpdateJob] = useState<CatalogUpdateJob | null>(null);
   const [catalogUpdateError, setCatalogUpdateError] = useState<string | null>(null);
   const [isCatalogUpdateStarting, setIsCatalogUpdateStarting] = useState(false);
+  const [pathRoots, setPathRoots] = useState<PathRootsResponse | null>(null);
+  const [pathRootsError, setPathRootsError] = useState<string | null>(null);
 
   const loadHealth = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
@@ -112,6 +118,22 @@ export function DashboardPage() {
     } catch (updateError) {
       if (!signal?.aborted) {
         setCatalogUpdateError(getCommerceApiErrorMessage(updateError));
+      }
+    }
+  }, []);
+
+  const loadPathRoots = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const roots = await commerceClient.getPathRoots(signal);
+      if (signal?.aborted) {
+        return;
+      }
+      setPathRoots(roots);
+      setPathRootsError(null);
+    } catch (rootsError) {
+      if (!signal?.aborted) {
+        setPathRoots(null);
+        setPathRootsError(getCommerceApiErrorMessage(rootsError));
       }
     }
   }, []);
@@ -162,6 +184,12 @@ export function DashboardPage() {
     void loadLatestCatalogUpdate(controller.signal);
     return () => controller.abort();
   }, [loadLatestCatalogUpdate]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadPathRoots(controller.signal);
+    return () => controller.abort();
+  }, [loadPathRoots]);
 
   useEffect(() => {
     if (!isCatalogUpdateActive(catalogUpdateJob)) {
@@ -273,7 +301,10 @@ export function DashboardPage() {
           <button
             className="button secondary"
             type="button"
-            onClick={() => void loadDiagnostics()}
+            onClick={() => {
+              void loadDiagnostics();
+              void loadPathRoots();
+            }}
           >
             Refresh diagnostics
           </button>
@@ -328,6 +359,33 @@ export function DashboardPage() {
             </div>
 
             <div className="setup-hint">
+              <strong>Environment readiness</strong>
+              {pathRootsError ? <p className="form-error">{pathRootsError}</p> : null}
+              {pathRoots?.env_readiness?.length ? (
+                <dl className="summary-grid diagnostics-summary-grid">
+                  {pathRoots.env_readiness.map((group) => (
+                    <div key={group.name}>
+                      <dt>{group.name}</dt>
+                      <dd>
+                        {group.status === "configured"
+                          ? "configured"
+                          : `missing ${formatMissingKeys(group.missing_keys)}`}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+              {pathRoots?.local_env?.deprecated_app_env_detected ? (
+                <p className="muted">
+                  Deprecated app-local .env detected. Move values to repo-root .env.
+                </p>
+              ) : null}
+              {pathRoots?.local_env?.warnings?.map((warning) => (
+                <p className="muted" key={warning}>
+                  {warning}
+                </p>
+              ))}
+
               <strong>Commerce setup checklist</strong>
               <ul>
                 <li>Start commerce backend: <code>ecommerce-api</code></li>

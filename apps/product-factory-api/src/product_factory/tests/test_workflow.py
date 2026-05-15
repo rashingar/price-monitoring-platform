@@ -570,7 +570,7 @@ def test_render_workflow_writes_failed_metadata_when_llm_output_is_missing(tmp_p
     def fail_missing_openai_key():
         raise ServiceError(
             ServiceErrorCode.UNEXPECTED_FAILURE.value,
-            "Missing OPENAI_API_KEY. Set it in the environment or repo-root .secrets/.env.local.",
+            "Missing OPENAI_API_KEY. Set it in the environment or repo-root .env.",
         )
 
     monkeypatch.setattr(llm_stage_execution, "load_openai_llm_config", fail_missing_openai_key)

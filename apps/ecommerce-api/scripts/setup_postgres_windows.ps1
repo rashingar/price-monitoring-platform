@@ -13,6 +13,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 
 function Quote-SqlLiteral([string]$Value) {
     return "'" + ($Value -replace "'", "''") + "'"
@@ -109,10 +110,10 @@ try {
     }
 
     if ($WriteDotEnv) {
-        $envPath = Join-Path (Get-Location) ".env"
-        $examplePath = Join-Path (Get-Location) ".env.example"
+        $envPath = Join-Path $RepoRoot ".env"
+        $examplePath = Join-Path $RepoRoot ".env.example"
         if ((Test-Path $envPath) -and -not $Force) {
-            Write-Host ".env already exists. Re-run with -Force to overwrite it."
+            Write-Host "Repo-root .env already exists. Re-run with -Force to overwrite it."
         }
         else {
             if (Test-Path $examplePath) {
@@ -124,7 +125,7 @@ try {
             else {
                 Set-Content -Path $envPath -Value "ECOMMERCE_DATABASE_URL=$rawUrl`n" -Encoding UTF8
             }
-            Write-Host "Wrote local .env. Do not commit it."
+            Write-Host "Wrote repo-root .env. Do not commit it."
         }
     }
 
