@@ -32,7 +32,7 @@ from ecommerce.jobs.worker import build_default_registry, run_worker_iteration  
 from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent  # noqa: E402
 from ecommerce.source_url_agent.artifacts import write_run_artifacts  # noqa: E402
 from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
-from ecommerce.source_url_agent.evidence import PageEvidence, extract_page_evidence  # noqa: E402
+from ecommerce.source_url_agent.evidence import PageEvidence, error_evidence, extract_page_evidence  # noqa: E402
 from ecommerce.source_url_agent import job_handler as source_url_agent_job_handler  # noqa: E402
 from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
 from ecommerce.source_url_agent.progress import (  # noqa: E402
@@ -141,6 +141,65 @@ def _candidate(product: AgentProduct, source_name: str = "skroutz"):
         competing_candidates_count=0,
         searched_queries=["MR25GB"],
     )
+
+
+def test_source_url_agent_scores_marketplace_meta_description_evidence_as_review() -> None:
+    product = _product(
+        mpn="CTN/CTG-356W",
+        name="Toyotomi CTN/CTG-356W air conditioner",
+        manufacturer="Toyotomi",
+    )
+    source = load_source_registry().get("bestprice")
+    evidence = extract_page_evidence(
+        product=product,
+        source=source,
+        requested_url="https://www.bestprice.gr/item/2158816161/toyotomi-erai.html",
+        final_url="https://www.bestprice.gr/item/2158816161/toyotomi-erai.html",
+        html_text="""
+        <html>
+          <head>
+            <title>BestPrice.gr</title>
+            <link rel="canonical" href="https://www.bestprice.gr/item/2158816161/toyotomi-erai.html" />
+            <meta name="description" content="Toyotomi CTN/CTG-356W Κλιματιστικό Inverter 18000 BTU" />
+          </head>
+          <body></body>
+        </html>
+        """,
+    )
+    score = score_candidate(product=product, source=source, evidence=evidence)
+
+    assert evidence.exact_mpn_found
+    assert evidence.exact_mpn_source == "meta"
+    assert evidence.brand_found
+    assert score.match_status == "needs_review"
+    assert score.confidence_score == 0.88
+
+
+def test_source_url_agent_keeps_inaccessible_url_mpn_brand_evidence_for_review() -> None:
+    product = _product(
+        mpn="CTN/CTG-356W",
+        name="Toyotomi CTN/CTG-356W air conditioner",
+        manufacturer="Toyotomi",
+    )
+    source = load_source_registry().get("bestprice")
+    evidence = error_evidence(
+        product=product,
+        source=source,
+        requested_url=(
+            "https://www.bestprice.gr/item/2158816161/"
+            "toyotomi-erai-ctnctg-356w-klimatistiko-inverter-18000-btu.html"
+        ),
+        error_code="inaccessible",
+        error_message="Page.goto: net::ERR_CONNECTION_CLOSED",
+    )
+    score = score_candidate(product=product, source=source, evidence=evidence)
+
+    assert evidence.exact_mpn_found
+    assert evidence.exact_mpn_source == "url"
+    assert evidence.brand_found
+    assert score.match_status == "needs_review"
+    assert score.match_method == "url_identifier_and_brand_inaccessible"
+    assert score.confidence_score == 0.80
 
 
 def _allow_source_url_agent_run_database(monkeypatch) -> None:

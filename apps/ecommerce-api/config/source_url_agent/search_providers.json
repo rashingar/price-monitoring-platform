@@ -13,6 +13,10 @@
       "safesearch": "moderate",
       "result_filter": "web",
       "spellcheck": false,
+      "extra_snippets": true,
+      "text_decorations": false,
+      "include_fetch_metadata": true,
+      "operators": true,
       "timeout_seconds": 10,
       "notes": "Brave Web Search API provider that keeps only configured-source product-shaped top web results."
     }

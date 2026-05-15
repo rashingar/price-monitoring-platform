@@ -8,7 +8,7 @@ from typing import Any
 
 from ecommerce.source_url_agent.browser import SourceUrlBrowserSession
 from ecommerce.source_url_agent.brave_search import BraveSearchProvider
-from ecommerce.source_url_agent.evidence import error_evidence, extract_page_evidence
+from ecommerce.source_url_agent.evidence import error_evidence, extract_page_evidence, provider_search_result_evidence
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.search_providers import (
     SearchProviderRegistry,
@@ -111,19 +111,33 @@ def discover_source_evidence(
     for candidate in provider_result.candidates[:candidate_limit]:
         candidate_url = candidate.candidate_url
         snapshot = browser.fetch_snapshot(candidate_url, rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds)
+        provider_provenance = _candidate_provider_provenance(candidate)
         if snapshot.status == "error":
-            evidence_items.append(
-                error_evidence(
-                    product=product,
-                    requested_url=candidate_url,
-                    final_url=snapshot.final_url,
-                    title=snapshot.title,
-                    body_text=snapshot.body_text,
-                    error_code=snapshot.error_code,
-                    error_message=snapshot.error_message,
-                    provider_provenance=candidate.provenance.to_json(),
+            if candidate.has_provider_text:
+                evidence_items.append(
+                    _provider_fallback_evidence(
+                        product=product,
+                        source=source,
+                        candidate=candidate,
+                        final_url=snapshot.final_url,
+                        page_fetch_error_code=snapshot.error_code,
+                        page_fetch_error_message=snapshot.error_message,
+                    )
                 )
-            )
+            else:
+                evidence_items.append(
+                    error_evidence(
+                        product=product,
+                        requested_url=candidate_url,
+                        final_url=snapshot.final_url,
+                        title=snapshot.title,
+                        body_text=snapshot.body_text,
+                        source=source,
+                        error_code=snapshot.error_code,
+                        error_message=snapshot.error_message,
+                        provider_provenance=provider_provenance,
+                    )
+                )
             continue
         evidence_items.append(
             extract_page_evidence(
@@ -134,7 +148,7 @@ def discover_source_evidence(
                 html_text=snapshot.html,
                 title=snapshot.title,
                 body_text=snapshot.body_text,
-                provider_provenance=candidate.provenance.to_json(),
+                provider_provenance=provider_provenance,
             )
         )
 
@@ -203,16 +217,27 @@ def discover_product_level_search_evidence(
             continue
         snapshot = browser.fetch_snapshot(candidate.candidate_url, rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds)
         if snapshot.status == "error":
-            evidence = error_evidence(
-                product=product,
-                requested_url=candidate.candidate_url,
-                final_url=snapshot.final_url,
-                title=snapshot.title,
-                body_text=snapshot.body_text,
-                error_code=snapshot.error_code,
-                error_message=snapshot.error_message,
-                provider_provenance=candidate.provenance.to_json(),
-            )
+            if candidate.has_provider_text:
+                evidence = _provider_fallback_evidence(
+                    product=product,
+                    source=source,
+                    candidate=candidate,
+                    final_url=snapshot.final_url,
+                    page_fetch_error_code=snapshot.error_code,
+                    page_fetch_error_message=snapshot.error_message,
+                )
+            else:
+                evidence = error_evidence(
+                    product=product,
+                    requested_url=candidate.candidate_url,
+                    final_url=snapshot.final_url,
+                    title=snapshot.title,
+                    body_text=snapshot.body_text,
+                    source=source,
+                    error_code=snapshot.error_code,
+                    error_message=snapshot.error_message,
+                    provider_provenance=_candidate_provider_provenance(candidate),
+                )
         else:
             evidence = extract_page_evidence(
                 product=product,
@@ -222,7 +247,7 @@ def discover_product_level_search_evidence(
                 html_text=snapshot.html,
                 title=snapshot.title,
                 body_text=snapshot.body_text,
-                provider_provenance=candidate.provenance.to_json(),
+                provider_provenance=_candidate_provider_provenance(candidate),
             )
         current = results[source.source_name]
         results[source.source_name] = SourceSearchResult(
@@ -233,6 +258,34 @@ def discover_product_level_search_evidence(
             provider_summary=current.provider_summary,
         )
     return results
+
+
+def _candidate_provider_provenance(candidate) -> dict[str, Any]:
+    return {**candidate.provenance.to_json(), **candidate.provider_evidence_json()}
+
+
+def _provider_fallback_evidence(
+    *,
+    product: AgentProduct,
+    source: SourceDefinition,
+    candidate,
+    final_url: str,
+    page_fetch_error_code: str,
+    page_fetch_error_message: str,
+):
+    provenance = _candidate_provider_provenance(candidate)
+    provenance["page_fetch_error_code"] = page_fetch_error_code
+    provenance["page_fetch_error_message"] = page_fetch_error_message
+    return provider_search_result_evidence(
+        product=product,
+        source=source,
+        requested_url=candidate.candidate_url,
+        final_url=final_url or candidate.candidate_url,
+        title=candidate.provider_title,
+        description=candidate.provider_description,
+        extra_snippets=candidate.provider_extra_snippets,
+        provider_provenance=provenance,
+    )
 
 
 def _product_level_provider_definition(

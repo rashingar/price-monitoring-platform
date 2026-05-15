@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from html.parser import HTMLParser
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import unquote, urljoin, urlsplit
 
 from ecommerce.source_url_agent.matching import extract_name_evidence
 from ecommerce.utils.decimals import format_decimal_two_places
@@ -21,6 +21,14 @@ from ecommerce.utils.text import normalize_product_text, parse_greek_money_text,
 
 CANONICAL_RE = re.compile(r"<link[^>]+rel=[\"'][^\"']*canonical[^\"']*[\"'][^>]+href=[\"']([^\"']+)[\"']", re.IGNORECASE)
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+META_DESCRIPTION_RE = re.compile(
+    r"<meta\b(?=[^>]*\bname=[\"']description[\"'])(?=[^>]*\bcontent=[\"']([^\"']*)[\"'])[^>]*>",
+    re.IGNORECASE | re.DOTALL,
+)
+META_DESCRIPTION_REVERSED = re.compile(
+    r"<meta\b(?=[^>]*\bcontent=[\"']([^\"']*)[\"'])(?=[^>]*\bname=[\"']description[\"'])[^>]*>",
+    re.IGNORECASE | re.DOTALL,
+)
 JSONLD_RE = re.compile(
     r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>",
     re.IGNORECASE | re.DOTALL,
@@ -57,6 +65,7 @@ class PageEvidence:
     blocked_or_captcha: bool = False
     error_code: str = ""
     error_message: str = ""
+    evidence_source: str = "fetched_page"
     provider_provenance: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -104,6 +113,8 @@ class PageEvidence:
         }
         if self.provider_provenance:
             payload["provider_provenance"] = self.provider_provenance
+        if self.evidence_source == "provider_search_result":
+            payload["evidence_source"] = self.evidence_source
         return payload
 
 
@@ -116,15 +127,19 @@ def extract_page_evidence(
     html_text: str,
     title: str = "",
     body_text: str = "",
+    evidence_source: str = "fetched_page",
     provider_provenance: dict[str, Any] | None = None,
 ) -> PageEvidence:
     title_text = _clean_text(title) or _extract_title(html_text)
+    meta_description = _extract_meta_description(html_text)
     visible_text = _clean_text(body_text) or html_to_visible_text(html_text)
     combined_text = "\n".join((title_text, visible_text))
     jsonld_products = tuple(_product_jsonld_items(_parse_jsonld(html_text)))
     jsonld_text = _jsonld_search_text(jsonld_products)
-    search_text = "\n".join((title_text, visible_text, jsonld_text))
     canonical_url = _canonical_url(html_text, final_url or requested_url)
+    url_text = _url_evidence_text(requested_url, final_url, canonical_url)
+    non_url_search_text = "\n".join((title_text, meta_description, visible_text, jsonld_text))
+    search_text = "\n".join((non_url_search_text, url_text))
     if source.is_product_url(canonical_url):
         canonical = source.canonical_candidate_url(canonical_url)
     else:
@@ -145,14 +160,28 @@ def extract_page_evidence(
             provider_provenance=provider_provenance or {},
         )
 
-    mpn_fragment, mpn_source = _find_identifier_evidence(product.mpn, jsonld_text=jsonld_text, title=title_text, body_text=visible_text)
+    mpn_fragment, mpn_source = _find_identifier_evidence(
+        product.mpn,
+        jsonld_text=jsonld_text,
+        title=title_text,
+        meta_description=meta_description,
+        body_text=visible_text,
+        url_text=url_text,
+    )
     model_fragment, model_source = _find_identifier_evidence(
         product.model,
         jsonld_text=jsonld_text,
         title=title_text,
+        meta_description=meta_description,
         body_text=visible_text,
+        url_text=url_text,
     )
-    brand_fragment = _find_brand_fragment(product.manufacturer, search_text, jsonld_products)
+    brand_haystack = (
+        search_text
+        if _identifier_source_supports_url_brand(product, mpn_source, model_source)
+        else non_url_search_text
+    )
+    brand_fragment = _find_brand_fragment(product.manufacturer, brand_haystack, jsonld_products)
     category_fragment = _find_category_fragment(product.category, search_text, jsonld_products)
     candidate_price = _extract_price(jsonld_products, visible_text)
     title_evidence = extract_name_evidence(product.name, title_text) if product.name and title_text else None
@@ -179,7 +208,35 @@ def extract_page_evidence(
         price_compatible=_price_compatible(product.price, candidate_price),
         jsonld_products=jsonld_products,
         blocked_or_captcha=bool(BLOCKED_RE.search(combined_text)),
+        evidence_source=evidence_source,
         provider_provenance=provider_provenance or {},
+    )
+
+
+def provider_search_result_evidence(
+    *,
+    product: AgentProduct,
+    source: SourceDefinition,
+    requested_url: str,
+    final_url: str = "",
+    title: str = "",
+    description: str = "",
+    extra_snippets: tuple[str, ...] = (),
+    provider_provenance: dict[str, Any] | None = None,
+) -> PageEvidence:
+    snippet_text = _clean_text(" ".join([description, *extra_snippets]))
+    provenance = dict(provider_provenance or {})
+    provenance["evidence_source"] = "provider_search_result"
+    return extract_page_evidence(
+        product=product,
+        source=source,
+        requested_url=requested_url,
+        final_url=final_url or requested_url,
+        html_text="",
+        title=title,
+        body_text=snippet_text,
+        evidence_source="provider_search_result",
+        provider_provenance=provenance,
     )
 
 
@@ -190,25 +247,50 @@ def error_evidence(
     final_url: str = "",
     title: str = "",
     body_text: str = "",
+    source: SourceDefinition | None = None,
     error_code: str,
     error_message: str,
     provider_provenance: dict[str, Any] | None = None,
 ) -> PageEvidence:
+    if source is not None:
+        canonical_url = source.canonical_candidate_url(final_url or requested_url)
+    else:
+        canonical_url = final_url or requested_url
+    url_text = _url_evidence_text(requested_url, final_url, canonical_url)
+    title_text = _clean_text(title)
+    body = _clean_text(body_text)
+    mpn_fragment, mpn_source = _find_identifier_evidence(
+        product.mpn,
+        jsonld_text="",
+        title=title_text,
+        meta_description="",
+        body_text=body,
+        url_text=url_text,
+    )
+    model_fragment, model_source = _find_identifier_evidence(
+        product.model,
+        jsonld_text="",
+        title=title_text,
+        meta_description="",
+        body_text=body,
+        url_text=url_text,
+    )
+    brand_fragment = _find_brand_fragment(product.manufacturer, "\n".join((title_text, body, url_text)), ())
     return PageEvidence(
         requested_url=requested_url,
         final_url=final_url or requested_url,
-        canonical_url=final_url or requested_url,
-        title=_clean_text(title),
-        body_text_sample=_clean_text(body_text)[:800],
+        canonical_url=canonical_url,
+        title=title_text,
+        body_text_sample=body[:800],
         candidate_price=None,
-        exact_mpn_found=False,
-        exact_mpn_fragment="",
-        exact_mpn_source="",
-        exact_model_found=False,
-        exact_model_fragment="",
-        exact_model_source="",
-        brand_found=False,
-        brand_fragment="",
+        exact_mpn_found=bool(mpn_fragment),
+        exact_mpn_fragment=mpn_fragment,
+        exact_mpn_source=mpn_source,
+        exact_model_found=bool(model_fragment),
+        exact_model_fragment=model_fragment,
+        exact_model_source=model_source,
+        brand_found=bool(brand_fragment),
+        brand_fragment=brand_fragment,
         category_compatible=False,
         category_fragment="",
         title_similarity=0.0,
@@ -218,6 +300,7 @@ def error_evidence(
         blocked_or_captcha=error_code == "blocked_or_captcha",
         error_code=error_code,
         error_message=error_message,
+        evidence_source="navigation_error",
         provider_provenance=provider_provenance or {},
     )
 
@@ -256,6 +339,7 @@ def _not_public_product_page_evidence(
         blocked_or_captcha=False,
         error_code="not_public_product_page",
         error_message=f"Rejected review page: {reason}.",
+        evidence_source="fetched_page",
         provider_provenance=provider_provenance or {},
     )
 
@@ -275,11 +359,31 @@ def _extract_title(html_text: str) -> str:
     return _clean_text(html.unescape(match.group(1))) if match else ""
 
 
+def _extract_meta_description(html_text: str) -> str:
+    for pattern in (META_DESCRIPTION_RE, META_DESCRIPTION_REVERSED):
+        match = pattern.search(html_text or "")
+        if match is not None:
+            return _clean_text(html.unescape(match.group(1)))
+    return ""
+
+
 def _canonical_url(html_text: str, base_url: str) -> str:
     match = CANONICAL_RE.search(html_text or "")
     if match is None:
         return base_url
     return urljoin(base_url, html.unescape(match.group(1)).strip())
+
+
+def _url_evidence_text(*urls: str) -> str:
+    parts: list[str] = []
+    for url in urls:
+        parsed = urlsplit(str(url or "").strip())
+        if not parsed.netloc:
+            continue
+        parts.append(unquote(parsed.netloc.replace(".", " ")))
+        parts.append(unquote((parsed.path or "").replace("/", " ").replace("-", " ").replace("_", " ")))
+        parts.append(unquote(parsed.path or ""))
+    return _clean_text(" ".join(parts))
 
 
 def _parse_jsonld(html_text: str) -> list[dict[str, Any]]:
@@ -326,8 +430,22 @@ def _jsonld_search_text(items: tuple[dict[str, Any], ...]) -> str:
     return _clean_text(" ".join(part for part in parts if part))
 
 
-def _find_identifier_evidence(identifier: str, *, jsonld_text: str, title: str, body_text: str) -> tuple[str, str]:
-    for source, haystack in (("jsonld", jsonld_text), ("title", title), ("body", body_text)):
+def _find_identifier_evidence(
+    identifier: str,
+    *,
+    jsonld_text: str,
+    title: str,
+    meta_description: str,
+    body_text: str,
+    url_text: str,
+) -> tuple[str, str]:
+    for source, haystack in (
+        ("jsonld", jsonld_text),
+        ("title", title),
+        ("meta", meta_description),
+        ("body", body_text),
+        ("url", url_text),
+    ):
         fragment = _find_identifier_fragment(identifier, haystack)
         if fragment:
             return fragment, source
@@ -344,7 +462,27 @@ def _find_identifier_fragment(identifier: str, haystack: str) -> str:
     normalized_needle_pattern = r"\s+".join(parts)
     pattern = re.compile(rf"(?<![A-Za-z0-9]){normalized_needle_pattern}(?![A-Za-z0-9])", re.IGNORECASE)
     match = pattern.search(haystack or "")
-    return match.group(0) if match is not None else ""
+    if match is not None:
+        return match.group(0)
+    normalized_needle = _identifier_key(needle)
+    normalized_haystack = _identifier_key(haystack)
+    if (
+        len(normalized_needle) >= 4
+        and any(character.isdigit() for character in normalized_needle)
+        and normalized_needle in normalized_haystack
+    ):
+        return needle
+    return ""
+
+
+def _identifier_key(value: str) -> str:
+    return "".join(character.casefold() for character in str(value or "") if character.isalnum())
+
+
+def _identifier_source_supports_url_brand(product: AgentProduct, mpn_source: str, model_source: str) -> bool:
+    if mpn_source == "url":
+        return True
+    return not str(product.mpn or "").strip() and model_source == "url"
 
 
 def _find_brand_fragment(manufacturer: str, haystack: str, jsonld_products: tuple[dict[str, Any], ...]) -> str:

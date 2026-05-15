@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -34,6 +34,10 @@ class SearchProviderDefinition:
     safesearch: str = "moderate"
     result_filter: str = "web"
     spellcheck: bool = False
+    extra_snippets: bool = False
+    text_decorations: bool = True
+    include_fetch_metadata: bool = False
+    operators: bool = False
     timeout_seconds: float = 10.0
     notes: str = ""
 
@@ -58,6 +62,10 @@ class SearchProviderDefinition:
             safesearch=str(payload.get("safesearch") or "moderate").strip(),
             result_filter=str(payload.get("result_filter") or "web").strip(),
             spellcheck=bool(payload.get("spellcheck", False)),
+            extra_snippets=bool(payload.get("extra_snippets", False)),
+            text_decorations=bool(payload.get("text_decorations", True)),
+            include_fetch_metadata=bool(payload.get("include_fetch_metadata", False)),
+            operators=bool(payload.get("operators", False)),
             timeout_seconds=max(0.1, float(payload.get("timeout_seconds", 10))),
             notes=str(payload.get("notes") or "").strip(),
         )
@@ -91,6 +99,29 @@ class SearchProviderProvenance:
 class SearchProviderCandidate:
     candidate_url: str
     provenance: SearchProviderProvenance
+    provider_title: str = ""
+    provider_description: str = ""
+    provider_extra_snippets: tuple[str, ...] = ()
+    provider_profile: dict[str, Any] = field(default_factory=dict)
+    provider_fetch_metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def has_provider_text(self) -> bool:
+        return bool(self.provider_title or self.provider_description or self.provider_extra_snippets)
+
+    def provider_evidence_json(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if self.provider_title:
+            payload["provider_title"] = self.provider_title
+        if self.provider_description:
+            payload["provider_description"] = self.provider_description
+        if self.provider_extra_snippets:
+            payload["provider_extra_snippets"] = list(self.provider_extra_snippets)
+        if self.provider_profile:
+            payload["provider_profile"] = self.provider_profile
+        if self.provider_fetch_metadata:
+            payload["provider_fetch_metadata"] = self.provider_fetch_metadata
+        return payload
 
 
 @dataclass(frozen=True)

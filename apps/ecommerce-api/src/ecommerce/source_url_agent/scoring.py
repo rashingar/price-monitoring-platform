@@ -12,6 +12,10 @@ from ecommerce.source_url_agent.sources import SourceDefinition
 
 BLOCKED_REVIEW_CONFIDENCE = 0.80
 BLOCKED_REVIEW_ERROR_CODES = {"blocked_or_captcha", "http_403"}
+URL_EVIDENCE_REVIEW_CONFIDENCE = 0.80
+URL_EVIDENCE_ERROR_CODES = {"inaccessible", "timeout"}
+URL_OR_META_IDENTIFIER_SOURCES = {"url", "meta"}
+PROVIDER_SEARCH_RESULT_REVIEW_CONFIDENCE = 0.80
 
 
 @dataclass(frozen=True)
@@ -31,6 +35,18 @@ def score_candidate(
     competing_candidates_count: int = 0,
 ) -> CandidateScore:
     if evidence.error_code:
+        if (
+            evidence.error_code in URL_EVIDENCE_ERROR_CODES
+            and _evidence_has_valid_product_url(source, evidence)
+            and evidence.exact_mpn_found
+            and evidence.brand_found
+        ):
+            return CandidateScore(
+                URL_EVIDENCE_REVIEW_CONFIDENCE,
+                "needs_review",
+                "url_identifier_and_brand_inaccessible",
+                "Candidate URL contains exact MPN and brand evidence but the page could not be fetched.",
+            )
         if evidence.error_code in BLOCKED_REVIEW_ERROR_CODES and _evidence_has_valid_product_url(source, evidence):
             return CandidateScore(
                 BLOCKED_REVIEW_CONFIDENCE,
@@ -79,9 +95,26 @@ def score_candidate(
         else:
             notes.append("Candidate does not satisfy exact MPN and brand matching.")
 
-    if source.source_type == "marketplace" and evidence.exact_mpn_found and evidence.exact_mpn_source == "body":
+    if (
+        source.source_type == "marketplace"
+        and evidence.exact_mpn_found
+        and evidence.exact_mpn_source == "body"
+        and evidence.evidence_source != "provider_search_result"
+    ):
         confidence = min(confidence, 0.60)
         notes.append("Marketplace MPN evidence was found only in body text, not title or structured data.")
+    if (
+        source.source_type == "marketplace"
+        and evidence.exact_mpn_found
+        and evidence.exact_mpn_source in URL_OR_META_IDENTIFIER_SOURCES
+    ):
+        confidence = min(confidence, 0.88 if evidence.exact_mpn_source == "meta" else 0.80)
+        notes.append(
+            "Marketplace MPN evidence was found only in metadata or the product URL, not title or structured data."
+        )
+    if evidence.evidence_source == "provider_search_result" and confidence > 0:
+        confidence = min(confidence, PROVIDER_SEARCH_RESULT_REVIEW_CONFIDENCE)
+        notes.append("Evidence came from provider search result title/snippets, not a fetched product page.")
     if evidence.price_compatible is True and confidence > 0:
         confidence = min(1.0, confidence + 0.02)
     elif evidence.price_compatible is False:

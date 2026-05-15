@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import html
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 from urllib.parse import urlencode
@@ -37,6 +39,9 @@ class BraveSearchResultItem:
     url: str
     title: str
     description: str
+    extra_snippets: tuple[str, ...]
+    profile: dict[str, Any]
+    fetch_metadata: dict[str, Any]
     rank: int
 
 
@@ -125,14 +130,20 @@ class BraveSearchProvider:
         sources: list[SourceDefinition],
         max_candidates_per_source: int | None = None,
     ) -> BraveSearchProductResult:
-        queries = build_brave_product_queries(product)
+        query_source = sources[0] if len(sources) == 1 else None
+        queries = build_brave_product_queries(product, source=query_source)
         if not queries:
             return BraveSearchProductResult(query="", status="no_query", candidates=[], searched_urls=[])
         query = queries[0]
         request_url = self.request_url(query)
         api_key = str(os.environ.get(BRAVE_SEARCH_API_KEY_ENV_VAR) or "").strip()
         if not api_key:
-            return self._error_result(query=query, request_url=request_url, status="missing_api_key", message="Missing Brave Search API key.")
+            return self._error_result(
+                query=query,
+                request_url=request_url,
+                status="missing_api_key",
+                message="Missing Brave Search API key.",
+            )
 
         try:
             response = self.client.search(definition=self.definition, query=query, api_key=api_key)
@@ -148,11 +159,26 @@ class BraveSearchProvider:
 
         status_code = int(getattr(response, "status_code", 0) or 0)
         if status_code in {401, 403}:
-            return self._error_result(query=query, request_url=request_url, status="unauthorized", message=f"Brave Search API returned HTTP {status_code}.")
+            return self._error_result(
+                query=query,
+                request_url=request_url,
+                status="unauthorized",
+                message=f"Brave Search API returned HTTP {status_code}.",
+            )
         if status_code == 429:
-            return self._error_result(query=query, request_url=request_url, status="rate_limited", message="Brave Search API returned HTTP 429.")
+            return self._error_result(
+                query=query,
+                request_url=request_url,
+                status="rate_limited",
+                message="Brave Search API returned HTTP 429.",
+            )
         if status_code >= 400:
-            return self._error_result(query=query, request_url=request_url, status="error", message=f"Brave Search API returned HTTP {status_code}.")
+            return self._error_result(
+                query=query,
+                request_url=request_url,
+                status="error",
+                message=f"Brave Search API returned HTTP {status_code}.",
+            )
 
         try:
             payload = response.json()
@@ -231,6 +257,11 @@ class BraveSearchProvider:
                         discovery_method=BRAVE_DISCOVERY_METHOD,
                         allow_high_confidence_auto_apply=self.definition.allow_high_confidence_auto_apply,
                     ),
+                    provider_title=item.title,
+                    provider_description=item.description,
+                    provider_extra_snippets=item.extra_snippets,
+                    provider_profile=item.profile,
+                    provider_fetch_metadata=item.fetch_metadata,
                 )
             )
         status = "found_candidates" if candidates else ("no_results" if not result_items else "no_known_source_product_candidates")
@@ -272,7 +303,7 @@ class BraveSearchProvider:
         )
 
 
-def build_brave_product_queries(product: AgentProduct) -> list[str]:
+def build_brave_product_queries(product: AgentProduct, *, source: SourceDefinition | None = None) -> list[str]:
     brand = collapse_internal_spaces(product.manufacturer)
     identifier = collapse_internal_spaces(product.mpn) or collapse_internal_spaces(product.model)
     if not identifier and brand:
@@ -281,6 +312,12 @@ def build_brave_product_queries(product: AgentProduct) -> list[str]:
             identifier = name
     if not identifier:
         return []
+    if source is not None:
+        domain = source.source_domain.removeprefix("www.")
+        source_queries = [f'site:{domain} "{identifier}"']
+        if brand:
+            source_queries.append(f'site:{domain} "{brand}" "{identifier}"')
+        return source_queries
     query = collapse_internal_spaces(f"{identifier} {brand}") if brand else identifier
     return [query] if query else []
 
@@ -304,8 +341,11 @@ def brave_web_results(payload: object, *, max_results: int = 10) -> list[BraveSe
         items.append(
             BraveSearchResultItem(
                 url=url,
-                title=str(raw.get("title") or "").strip(),
-                description=str(raw.get("description") or raw.get("snippet") or "").strip(),
+                title=_clean_result_text(raw.get("title")),
+                description=_clean_result_text(raw.get("description") or raw.get("snippet")),
+                extra_snippets=tuple(_clean_result_text(item) for item in _raw_extra_snippets(raw)),
+                profile=_compact_mapping(raw.get("profile")),
+                fetch_metadata=_fetch_metadata(raw),
                 rank=len(items) + 1,
             )
         )
@@ -315,7 +355,7 @@ def brave_web_results(payload: object, *, max_results: int = 10) -> list[BraveSe
 
 
 def _brave_query_params(definition: SearchProviderDefinition, query: str) -> dict[str, str | int]:
-    return {
+    params: dict[str, str | int] = {
         "q": query,
         "country": definition.country,
         "search_lang": definition.search_lang,
@@ -326,6 +366,51 @@ def _brave_query_params(definition: SearchProviderDefinition, query: str) -> dic
         "result_filter": definition.result_filter,
         "spellcheck": str(definition.spellcheck).lower(),
     }
+    if definition.extra_snippets:
+        params["extra_snippets"] = "true"
+    if not definition.text_decorations:
+        params["text_decorations"] = "false"
+    if definition.include_fetch_metadata:
+        params["include_fetch_metadata"] = "true"
+    if definition.operators:
+        params["operators"] = "true"
+    return params
+
+
+def _raw_extra_snippets(raw: dict[str, Any]) -> list[object]:
+    value = raw.get("extra_snippets")
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if str(item or "").strip()]
+
+
+def _clean_result_text(value: object) -> str:
+    text = html.unescape(str(value or ""))
+    text = re.sub(r"<[^>]+>", " ", text)
+    return collapse_internal_spaces(text)
+
+
+def _compact_mapping(value: object) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for key, item in value.items():
+        key_text = str(key or "").strip()
+        if not key_text:
+            continue
+        if isinstance(item, (str, int, float, bool)):
+            out[key_text] = item
+    return out
+
+
+def _fetch_metadata(raw: dict[str, Any]) -> dict[str, Any]:
+    metadata = _compact_mapping(raw.get("fetch_metadata"))
+    for key in ("page_age", "page_fetched", "language", "family_friendly"):
+        if key in raw and key not in metadata:
+            value = raw.get(key)
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                metadata[key] = value
+    return metadata
 
 
 def _name_is_precise_enough(name: str) -> bool:

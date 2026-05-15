@@ -37,6 +37,7 @@ from ecommerce.source_url_agent.search_providers import (  # noqa: E402
     discover_with_provider_cascade,
     load_search_provider_registry,
 )
+from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
 from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
 from ecommerce.source_url_agent import task_execution  # noqa: E402
 
@@ -100,6 +101,10 @@ def test_search_provider_registry_loading_and_source_specific_cascade() -> None:
     assert provider.count == 10
     assert provider.result_filter == "web"
     assert provider.spellcheck is False
+    assert provider.extra_snippets is True
+    assert provider.text_decorations is False
+    assert provider.include_fetch_metadata is True
+    assert provider.operators is True
     assert [item.provider_name for item in registry.cascade_for_source("bestprice")] == ["brave_search"]
 
 
@@ -363,6 +368,13 @@ def test_brave_search_query_generation_uses_model_or_mpn_then_brand() -> None:
     assert build_brave_product_queries(_product(mpn="55C8L", manufacturer="TCL")) == ["55C8L TCL"]
     assert build_brave_product_queries(_product(mpn="UTG-12CH", manufacturer="Toyotomi")) == ["UTG-12CH Toyotomi"]
     assert build_brave_product_queries(_product(mpn="", model="HBA514BS3", manufacturer="Bosch")) == ["HBA514BS3 Bosch"]
+    assert build_brave_product_queries(
+        _product(mpn="UTG-12CH", manufacturer="Toyotomi"),
+        source=load_source_registry().get("bestprice"),
+    ) == [
+        'site:bestprice.gr "UTG-12CH"',
+        'site:bestprice.gr "Toyotomi" "UTG-12CH"',
+    ]
 
 
 def test_brave_search_request_uses_configured_api_contract(monkeypatch) -> None:
@@ -378,13 +390,17 @@ def test_brave_search_request_uses_configured_api_contract(monkeypatch) -> None:
     request = client.requests[0]
     assert request["endpoint_url"] == "https://api.search.brave.com/res/v1/web/search"
     assert request["api_key"] == "fake-token"
-    assert request["query"] == "UTG-12CH Toyotomi"
+    assert request["query"] == 'site:skroutz.gr "UTG-12CH"'
     assert request["definition"].country == "GR"
     assert request["definition"].search_lang == "el"
     assert request["definition"].ui_lang == "el-GR"
     assert request["definition"].count == 10
     assert request["definition"].result_filter == "web"
     assert request["definition"].spellcheck is False
+    assert request["definition"].extra_snippets is False
+    assert request["definition"].text_decorations is True
+    assert request["definition"].include_fetch_metadata is False
+    assert request["definition"].operators is False
 
 
 def test_brave_http_client_sends_subscription_token_header(monkeypatch) -> None:
@@ -409,7 +425,12 @@ def test_brave_http_client_sends_subscription_token_header(monkeypatch) -> None:
     monkeypatch.setattr("ecommerce.source_url_agent.brave_search.httpx.Client", FakeHttpxClient)
 
     response = HttpxBraveSearchClient().search(
-        definition=_brave_definition(),
+        definition=_brave_definition(
+            extra_snippets=True,
+            text_decorations=False,
+            include_fetch_metadata=True,
+            operators=True,
+        ),
         query="UTG-12CH Toyotomi",
         api_key="fake-token",
     )
@@ -426,25 +447,33 @@ def test_brave_http_client_sends_subscription_token_header(monkeypatch) -> None:
     assert captured["params"]["count"] == 10
     assert captured["params"]["result_filter"] == "web"
     assert captured["params"]["spellcheck"] == "false"
+    assert captured["params"]["extra_snippets"] == "true"
+    assert captured["params"]["text_decorations"] == "false"
+    assert captured["params"]["include_fetch_metadata"] == "true"
+    assert captured["params"]["operators"] == "true"
 
 
 def test_brave_json_response_parsing_from_web_results() -> None:
     items = brave_web_results(_brave_response(), max_results=10)
 
-    assert [(item.rank, item.url, item.title, item.description) for item in items[:2]] == [
+    assert [(item.rank, item.url, item.title, item.description, item.extra_snippets) for item in items[:2]] == [
         (
             1,
             "https://www.skroutz.gr/s/123456/Toyotomi-UTG-12CH.html?utm_source=brave",
             "Toyotomi UTG-12CH | Skroutz",
             "Skroutz product page",
+            ("Toyotomi UTG-12CH air conditioner", "MPN UTG-12CH by Toyotomi"),
         ),
         (
             2,
             "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html",
             "Toyotomi UTG-12CH | BestPrice",
             "BestPrice product page",
+            (),
         ),
     ]
+    assert items[0].profile == {"name": "Skroutz", "long_name": "Skroutz.gr"}
+    assert items[0].fetch_metadata == {"page_fetched": "2026-05-01T10:00:00Z", "page_age": "May 1, 2026"}
 
 
 def test_known_source_classification_and_product_url_filtering() -> None:
@@ -490,6 +519,13 @@ def test_brave_search_provider_keeps_known_product_urls_grouped_by_source(monkey
     assert provenance["discovery_method"] == BRAVE_DISCOVERY_METHOD
     assert provenance["search_url"].startswith("https://api.search.brave.com/res/v1/web/search?")
     assert "fake-token" not in provenance["search_url"]
+    assert result.candidates[0].provider_evidence_json() == {
+        "provider_title": "Toyotomi UTG-12CH | Skroutz",
+        "provider_description": "Skroutz product page",
+        "provider_extra_snippets": ["Toyotomi UTG-12CH air conditioner", "MPN UTG-12CH by Toyotomi"],
+        "provider_profile": {"name": "Skroutz", "long_name": "Skroutz.gr"},
+        "provider_fetch_metadata": {"page_fetched": "2026-05-01T10:00:00Z", "page_age": "May 1, 2026"},
+    }
 
 
 def test_brave_search_product_evidence_fetches_only_kept_candidates(monkeypatch) -> None:
@@ -522,7 +558,10 @@ def test_brave_search_product_evidence_fetches_only_kept_candidates(monkeypatch)
         }
     )
     client = _FakeBraveClient(_brave_response())
-    monkeypatch.setattr("ecommerce.source_url_agent.search.BraveSearchProvider", lambda definition: BraveSearchProvider(definition, client=client))
+    monkeypatch.setattr(
+        "ecommerce.source_url_agent.search.BraveSearchProvider",
+        lambda definition: BraveSearchProvider(definition, client=client),
+    )
 
     results = discover_product_level_search_evidence(
         product=product,
@@ -545,6 +584,64 @@ def test_brave_search_product_evidence_fetches_only_kept_candidates(monkeypatch)
         "kept_candidates_by_source": {"skroutz": 1, "bestprice": 1, "plaisio": 1},
         "discarded_count": 2,
     }
+
+
+def test_brave_search_snippet_fallback_scores_for_review_when_page_fetch_fails(monkeypatch) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
+    source = load_source_registry().get("bestprice")
+    product = _product(mpn="UTG-12CH", manufacturer="Toyotomi", name="Toyotomi UTG-12CH air conditioner")
+    bestprice_url = "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html"
+    provider_registry = SearchProviderRegistry(
+        default_cascade=("brave_search",),
+        providers={
+            "brave_search": SearchProviderDefinition(
+                provider_name="brave_search",
+                provider_type="brave",
+                enabled=True,
+                allow_high_confidence_auto_apply=False,
+                endpoint_url="https://api.search.brave.com/res/v1/web/search",
+            )
+        },
+        source_cascades={},
+    )
+    browser = _FakeBrowser(
+        {
+            bestprice_url: PageSnapshot(
+                requested_url=bestprice_url,
+                final_url="",
+                title="",
+                html="",
+                body_text="",
+                status="error",
+                error_code="inaccessible",
+                error_message="Page.goto: net::ERR_CONNECTION_CLOSED",
+            )
+        }
+    )
+    client = _FakeBraveClient(_brave_response())
+    monkeypatch.setattr(
+        "ecommerce.source_url_agent.search.BraveSearchProvider",
+        lambda definition: BraveSearchProvider(definition, client=client),
+    )
+
+    result = discover_product_level_search_evidence(
+        product=product,
+        sources=[source],
+        browser=browser,
+        provider_registry=provider_registry,
+        rate_limit_seconds=0,
+    )
+    evidence = result["bestprice"].evidence[0]
+    score = score_candidate(product=product, source=source, evidence=evidence)
+
+    assert evidence.evidence_source == "provider_search_result"
+    assert evidence.to_json()["provider_provenance"]["provider_title"] == "Toyotomi UTG-12CH | BestPrice"
+    assert evidence.to_json()["provider_provenance"]["page_fetch_error_code"] == "inaccessible"
+    assert evidence.exact_mpn_found
+    assert evidence.brand_found
+    assert score.match_status == "needs_review"
+    assert score.confidence_score == 0.8
+    assert score.match_status != "matched"
 
 
 def test_product_level_execution_calls_brave_once_per_product_not_per_source(monkeypatch, tmp_path: Path) -> None:
@@ -673,8 +770,15 @@ def _brave_response() -> dict:
             "results": [
                 {
                     "url": "https://www.skroutz.gr/s/123456/Toyotomi-UTG-12CH.html?utm_source=brave",
-                    "title": "Toyotomi UTG-12CH | Skroutz",
-                    "description": "Skroutz product page",
+                    "title": "<strong>Toyotomi</strong> UTG-12CH | Skroutz",
+                    "description": "Skroutz <strong>product</strong> page",
+                    "extra_snippets": [
+                        "<strong>Toyotomi</strong> UTG-12CH air conditioner",
+                        "MPN <strong>UTG-12CH</strong> by Toyotomi",
+                    ],
+                    "profile": {"name": "Skroutz", "long_name": "Skroutz.gr", "img": None, "nested": {"ignored": True}},
+                    "page_fetched": "2026-05-01T10:00:00Z",
+                    "page_age": "May 1, 2026",
                 },
                 {
                     "url": "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html",
