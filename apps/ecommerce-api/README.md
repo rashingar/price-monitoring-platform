@@ -361,6 +361,19 @@ definitions can prepend `query_templates`, and all variants are deduplicated
 case-insensitively before the source-specific `max_searches_per_product` limit
 is applied.
 
+Source configuration is split by responsibility. `config/source_url_agent/sources.json`
+owns source identity and source URL/search rules: source names, domains, public
+search URL templates, product URL patterns, blocked URL patterns, query
+templates, rate limits, and per-source search/candidate limits.
+`config/source_url_agent/search_providers.json` owns provider definitions and
+provider cascade order. The only implemented provider is `browser_fallback`,
+which wraps the existing public source search behavior. It fetches configured
+source search pages through the browser session, extracts product-looking URLs
+with existing source rules, then fetches candidate product pages for evidence.
+External providers can be added later behind the same abstraction. Provider
+provenance is stored in candidate evidence/details JSON and run artifacts for
+debugging and future quality metrics.
+
 Automatic writes remain conservative: only exact MPN and brand matches above
 `0.90` can be high-confidence. Title-only matches, marketplace body-only MPN
 evidence, and competing plausible candidates stay out of auto-apply and require

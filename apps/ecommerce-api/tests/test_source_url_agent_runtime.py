@@ -1,5 +1,7 @@
 import csv
+import json
 import sys
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -40,6 +42,7 @@ from ecommerce.source_url_agent.progress import (  # noqa: E402
 )
 from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
 from ecommerce.source_url_agent.search import SourceSearchResult  # noqa: E402
+from ecommerce.source_url_agent.search_providers import SearchProviderDefinition  # noqa: E402
 from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
 
 
@@ -210,6 +213,33 @@ def test_artifact_writing_creates_required_files(tmp_path: Path) -> None:
     assert paths.rule_suggestions.exists()
 
 
+def test_artifact_writing_includes_provider_provenance_in_searched_queries(tmp_path: Path) -> None:
+    product = _product()
+    candidate = _candidate(product)
+    provenance = {
+        "provider_name": "browser_fallback",
+        "source_name": "skroutz",
+        "original_query": "MR25GB",
+        "search_url": "https://www.skroutz.gr/search?keyphrase=MR25GB",
+        "candidate_url": candidate.candidate_url,
+        "result_index": 1,
+        "discovery_method": "public_source_search_page",
+        "allow_high_confidence_auto_apply": True,
+    }
+    candidate = replace(candidate, evidence_json={**candidate.evidence_json, "provider_provenance": provenance})
+
+    paths = write_run_artifacts(
+        run_id="run-1",
+        candidates=[candidate],
+        summary={"run_id": "run-1", "selected_count": 1},
+        output_dir=tmp_path,
+    )
+
+    payload = json.loads(paths.searched_queries.read_text(encoding="utf-8"))
+
+    assert payload["items"][0]["provider_provenance"] == [provenance]
+
+
 def test_source_url_agent_progress_definitions_are_stable() -> None:
     assert SOURCE_URL_AGENT_PROGRESS_STEP_IDS == (
         "product_selection_started",
@@ -336,6 +366,72 @@ def test_agent_persists_run_and_candidate_models_when_apply_high_confidence(tmp_
         assert session.query(SourceUrl).count() == 1
 
     assert result.summary["matched_count"] == 1
+
+
+def test_provider_auto_apply_gate_prevents_high_confidence_write(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    registry = load_source_registry()
+    with session_scope(database_url) as session:
+        row = _catalog_product(session)
+        product = _product(catalog_product_id=row.id)
+        source = registry.get("skroutz")
+        fake_provider = SearchProviderDefinition(
+            provider_name="fake_review_only",
+            provider_type="test",
+            enabled=True,
+            allow_high_confidence_auto_apply=False,
+        )
+        evidence = extract_page_evidence(
+            product=product,
+            source=source,
+            requested_url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+            final_url="https://www.skroutz.gr/s/123/LG-MR25GB.html",
+            html_text=_html(),
+            provider_provenance={
+                "provider_name": fake_provider.provider_name,
+                "source_name": "skroutz",
+                "original_query": "MR25GB",
+                "search_url": "https://provider.example/search?q=MR25GB",
+                "candidate_url": "https://www.skroutz.gr/s/123/LG-MR25GB.html",
+                "result_index": 1,
+                "discovery_method": "test_provider",
+                "allow_high_confidence_auto_apply": fake_provider.allow_high_confidence_auto_apply,
+            },
+        )
+
+        def resolver(_product, _source):
+            return SourceSearchResult(evidence=[evidence], searched_queries=["MR25GB"], searched_urls=[], errors=[])
+
+        result = run_source_url_agent(
+            products=[product],
+            options=SourceUrlAgentOptions(
+                mode="csv",
+                source="skroutz",
+                output_dir=tmp_path / "runs",
+                dry_run=False,
+                apply_high_confidence=True,
+            ),
+            registry=registry,
+            session=session,
+            resolver=resolver,
+        )
+
+        assert session.query(SourceUrlDiscoveryRun).count() == 1
+        assert session.query(SourceUrlCandidate).count() == 1
+        assert session.query(SourceUrl).count() == 0
+
+    assert result.summary["matched_count"] == 1
+    assert result.candidates[0].status == "pending"
+    assert result.summary["source_url_write_results"] == [
+        {
+            "candidate_index": 0,
+            "action": "skipped",
+            "source_url_id": None,
+            "reason": "provider_auto_apply_disabled:fake_review_only",
+        }
+    ]
+    assert "source_url_write_skipped: provider_auto_apply_disabled:fake_review_only" in result.warnings
 
 
 def test_agent_persists_high_confidence_needs_review_candidates_during_dry_run(tmp_path: Path) -> None:

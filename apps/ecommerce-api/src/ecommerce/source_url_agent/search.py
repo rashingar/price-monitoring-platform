@@ -5,9 +5,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from ecommerce.source_url_agent.browser import PageSnapshot, SourceUrlBrowserSession
+from ecommerce.source_url_agent.browser import SourceUrlBrowserSession
 from ecommerce.source_url_agent.evidence import error_evidence, extract_page_evidence
 from ecommerce.source_url_agent.products import AgentProduct
+from ecommerce.source_url_agent.search_providers import (
+    SearchProviderRegistry,
+    discover_with_provider_cascade,
+    load_search_provider_registry,
+)
 from ecommerce.source_url_agent.sources import SourceDefinition
 from ecommerce.utils.text import collapse_internal_spaces, normalize_product_text
 
@@ -63,47 +68,45 @@ def discover_source_evidence(
     max_searches: int | None = None,
     max_candidates: int | None = None,
     rate_limit_seconds: float | None = None,
+    provider_registry: SearchProviderRegistry | None = None,
 ) -> SourceSearchResult:
     queries = generate_search_queries(product, source)
     search_limit = max_searches if max_searches is not None else source.max_searches_per_product
     candidate_limit = max_candidates if max_candidates is not None else source.max_candidates_per_product
-    search_urls = source.build_search_urls(queries, max_searches=search_limit)
-    discovered_urls: list[str] = []
-    errors: list[str] = []
-
-    for search_url in search_urls:
-        snapshot = browser.fetch_snapshot(search_url, rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds)
-        if snapshot.status == "error":
-            errors.append(f"{search_url}: {snapshot.error_code}")
-            if snapshot.error_code == "blocked_or_captcha":
-                return SourceSearchResult(
-                    evidence=[
-                        error_evidence(
-                            product=product,
-                            requested_url=search_url,
-                            final_url=snapshot.final_url,
-                            title=snapshot.title,
-                            body_text=snapshot.body_text,
-                            error_code="blocked_or_captcha",
-                            error_message=snapshot.error_message,
-                        )
-                    ],
-                    searched_queries=queries[:search_limit],
-                    searched_urls=search_urls,
-                    errors=errors,
+    registry = provider_registry or load_search_provider_registry()
+    provider_result = discover_with_provider_cascade(
+        product=product,
+        source=source,
+        browser=browser,
+        queries=queries,
+        registry=registry,
+        max_searches=search_limit,
+        max_candidates=candidate_limit,
+        rate_limit_seconds=rate_limit_seconds,
+    )
+    if provider_result.provider_errors:
+        return SourceSearchResult(
+            evidence=[
+                error_evidence(
+                    product=product,
+                    requested_url=item.requested_url,
+                    final_url=item.final_url,
+                    title=item.title,
+                    body_text=item.body_text,
+                    error_code=item.error_code,
+                    error_message=item.error_message,
+                    provider_provenance=item.provenance.to_json(),
                 )
-            continue
-        for url in _candidate_urls_from_snapshot(source, snapshot):
-            if url in discovered_urls:
-                continue
-            discovered_urls.append(url)
-            if len(discovered_urls) >= candidate_limit:
-                break
-        if len(discovered_urls) >= candidate_limit:
-            break
+                for item in provider_result.provider_errors
+            ],
+            searched_queries=provider_result.searched_queries,
+            searched_urls=provider_result.searched_urls,
+            errors=provider_result.errors,
+        )
 
     evidence_items: list[object] = []
-    for candidate_url in discovered_urls[:candidate_limit]:
+    for candidate in provider_result.candidates[:candidate_limit]:
+        candidate_url = candidate.candidate_url
         snapshot = browser.fetch_snapshot(candidate_url, rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds)
         if snapshot.status == "error":
             evidence_items.append(
@@ -115,6 +118,7 @@ def discover_source_evidence(
                     body_text=snapshot.body_text,
                     error_code=snapshot.error_code,
                     error_message=snapshot.error_message,
+                    provider_provenance=candidate.provenance.to_json(),
                 )
             )
             continue
@@ -127,30 +131,16 @@ def discover_source_evidence(
                 html_text=snapshot.html,
                 title=snapshot.title,
                 body_text=snapshot.body_text,
+                provider_provenance=candidate.provenance.to_json(),
             )
         )
 
     return SourceSearchResult(
         evidence=evidence_items,
-        searched_queries=queries[:search_limit],
-        searched_urls=search_urls,
-        errors=errors,
+        searched_queries=provider_result.searched_queries,
+        searched_urls=provider_result.searched_urls,
+        errors=provider_result.errors,
     )
-
-
-def _candidate_urls_from_snapshot(source: SourceDefinition, snapshot: PageSnapshot) -> list[str]:
-    urls = [snapshot.final_url, *snapshot.links]
-    candidates: list[str] = []
-    seen: set[str] = set()
-    for url in urls:
-        if not source.is_product_url(url):
-            continue
-        candidate = source.canonical_candidate_url(url)
-        if not candidate or candidate in seen:
-            continue
-        seen.add(candidate)
-        candidates.append(candidate)
-    return candidates
 
 
 def _dedupe_queries(values: list[str]) -> list[str]:

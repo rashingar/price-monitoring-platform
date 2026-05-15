@@ -1,0 +1,20 @@
+{
+  "default_cascade": ["browser_fallback"],
+  "providers": [
+    {
+      "provider_name": "browser_fallback",
+      "provider_type": "browser",
+      "enabled": true,
+      "allow_high_confidence_auto_apply": true,
+      "notes": "Existing public source search behavior wrapped as a search provider."
+    }
+  ],
+  "source_cascades": {
+    "bestprice": ["browser_fallback"],
+    "skroutz": ["browser_fallback"],
+    "electronet": ["browser_fallback"],
+    "kotsovolos": ["browser_fallback"],
+    "public": ["browser_fallback"],
+    "plaisio": ["browser_fallback"]
+  }
+}

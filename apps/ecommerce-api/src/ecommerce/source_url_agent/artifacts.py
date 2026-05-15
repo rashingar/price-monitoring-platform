@@ -250,9 +250,13 @@ def _searched_queries_payload(candidates: list[SourceUrlAgentCandidate]) -> dict
                 "catalog_product_id": candidate.product.catalog_product_id,
                 "source_name": candidate.source_name,
                 "searched_queries": candidate.searched_queries,
+                "provider_provenance": [],
             },
         )
         item["searched_queries"] = candidate.searched_queries
+        provenance = candidate.evidence_json.get("provider_provenance")
+        if isinstance(provenance, dict) and provenance and provenance not in item["provider_provenance"]:
+            item["provider_provenance"].append(provenance)
     return {"items": list(items.values())}
 
 

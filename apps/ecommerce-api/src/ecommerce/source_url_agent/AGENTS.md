@@ -130,6 +130,35 @@ max_searches_per_product
 notes
 
 
+## Search Provider Configuration
+
+`config/source_url_agent/sources.json` owns source identity and source-specific
+URL/search rules:
+
+* source names, domains, and source types
+* expected-listing fields
+* public search URL templates
+* product and blocked URL patterns
+* query templates
+* source rate limits
+* per-source search and candidate limits
+
+`config/source_url_agent/search_providers.json` owns search provider
+definitions and provider cascade order. It does not own source URL patterns or
+query templates.
+
+Only `browser_fallback` is implemented right now. It wraps the existing public
+source search behavior: deterministic Source URL Agent queries are expanded
+through `sources.json` search templates, search pages are fetched through the
+browser session, product-looking URLs are extracted with the existing source
+rules, and candidate pages are fetched for evidence extraction.
+
+Future external search providers may be added behind the same provider
+abstraction, but they must not bypass conservative scoring, review, provenance,
+or provider-level auto-apply gates. Provider provenance belongs in candidate
+evidence/details JSON and artifacts for debugging and future quality metrics.
+
+
 ## Suggested Module Layout
 
 Prefer a small, explicit module structure:

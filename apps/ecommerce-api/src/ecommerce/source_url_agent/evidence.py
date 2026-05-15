@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from html.parser import HTMLParser
 from typing import Any
@@ -57,13 +57,14 @@ class PageEvidence:
     blocked_or_captcha: bool = False
     error_code: str = ""
     error_message: str = ""
+    provider_provenance: dict[str, Any] = field(default_factory=dict)
 
     @property
     def title_only(self) -> bool:
         return bool(self.title_similarity >= 0.5 and not self.exact_mpn_found and not self.exact_model_found)
 
     def to_json(self) -> dict[str, Any]:
-        return {
+        payload = {
             "requested_url": self.requested_url,
             "final_url": self.final_url,
             "canonical_url": self.canonical_url,
@@ -101,6 +102,9 @@ class PageEvidence:
             "error_message": self.error_message,
             "jsonld_products": [_compact_jsonld_product(item) for item in self.jsonld_products[:3]],
         }
+        if self.provider_provenance:
+            payload["provider_provenance"] = self.provider_provenance
+        return payload
 
 
 def extract_page_evidence(
@@ -112,6 +116,7 @@ def extract_page_evidence(
     html_text: str,
     title: str = "",
     body_text: str = "",
+    provider_provenance: dict[str, Any] | None = None,
 ) -> PageEvidence:
     title_text = _clean_text(title) or _extract_title(html_text)
     visible_text = _clean_text(body_text) or html_to_visible_text(html_text)
@@ -137,6 +142,7 @@ def extract_page_evidence(
             title=title_text,
             body_text=visible_text,
             reason=rejection_reason,
+            provider_provenance=provider_provenance or {},
         )
 
     mpn_fragment, mpn_source = _find_identifier_evidence(product.mpn, jsonld_text=jsonld_text, title=title_text, body_text=visible_text)
@@ -173,6 +179,7 @@ def extract_page_evidence(
         price_compatible=_price_compatible(product.price, candidate_price),
         jsonld_products=jsonld_products,
         blocked_or_captcha=bool(BLOCKED_RE.search(combined_text)),
+        provider_provenance=provider_provenance or {},
     )
 
 
@@ -185,6 +192,7 @@ def error_evidence(
     body_text: str = "",
     error_code: str,
     error_message: str,
+    provider_provenance: dict[str, Any] | None = None,
 ) -> PageEvidence:
     return PageEvidence(
         requested_url=requested_url,
@@ -210,6 +218,7 @@ def error_evidence(
         blocked_or_captcha=error_code == "blocked_or_captcha",
         error_code=error_code,
         error_message=error_message,
+        provider_provenance=provider_provenance or {},
     )
 
 
@@ -221,6 +230,7 @@ def _not_public_product_page_evidence(
     title: str,
     body_text: str,
     reason: str,
+    provider_provenance: dict[str, Any] | None = None,
 ) -> PageEvidence:
     return PageEvidence(
         requested_url=requested_url,
@@ -246,6 +256,7 @@ def _not_public_product_page_evidence(
         blocked_or_captcha=False,
         error_code="not_public_product_page",
         error_message=f"Rejected review page: {reason}.",
+        provider_provenance=provider_provenance or {},
     )
 
 

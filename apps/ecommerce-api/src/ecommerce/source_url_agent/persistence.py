@@ -81,6 +81,16 @@ def apply_high_confidence_source_urls(
             or candidate.confidence_score <= 0.90
         ):
             continue
+        disabled_provider = _auto_apply_disabled_provider(candidate)
+        if disabled_provider:
+            results.append(
+                SourceUrlWriteResult(
+                    index,
+                    "skipped",
+                    reason=f"provider_auto_apply_disabled:{disabled_provider}",
+                )
+            )
+            continue
         result = write_candidate_source_url(
             session,
             candidate,
@@ -186,6 +196,15 @@ def _notes(candidate: SourceUrlAgentCandidate, trust_level: str) -> str:
     if trust_level == "manual":
         suffix = f"Manual review accepted; {suffix}"
     return suffix
+
+
+def _auto_apply_disabled_provider(candidate: SourceUrlAgentCandidate) -> str:
+    provenance = candidate.evidence_json.get("provider_provenance")
+    if not isinstance(provenance, dict):
+        return ""
+    if provenance.get("allow_high_confidence_auto_apply") is not False:
+        return ""
+    return str(provenance.get("provider_name") or "unknown").strip() or "unknown"
 
 
 def _timestamp(value: datetime | None) -> datetime | None:
