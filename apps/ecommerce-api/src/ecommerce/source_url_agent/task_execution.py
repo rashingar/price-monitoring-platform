@@ -11,7 +11,13 @@ from ecommerce.source_url_agent.candidate_results import candidates_from_search_
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate, synthetic_candidate
 from ecommerce.source_url_agent.options import Resolver, SourceUrlAgentOptions
 from ecommerce.source_url_agent.products import AgentProduct
-from ecommerce.source_url_agent.search import discover_source_evidence, generate_search_queries
+from ecommerce.source_url_agent.search import (
+    SourceSearchResult,
+    discover_google_top_results_product_evidence,
+    discover_source_evidence,
+    generate_search_queries,
+)
+from ecommerce.source_url_agent.search_providers import load_search_provider_registry, uses_product_level_google_top_results
 from ecommerce.source_url_agent.sources import SourceDefinition
 
 
@@ -23,11 +29,39 @@ def run_with_browser(
     options: SourceUrlAgentOptions,
     session: Session | None,
 ) -> list[SourceUrlAgentCandidate]:
+    provider_registry = load_search_provider_registry()
     with SourceUrlBrowserSession(
         headed=options.headed,
         no_browser_cache=options.no_browser_cache,
         default_rate_limit_seconds=options.rate_limit_seconds or 2.0,
     ) as browser:
+        if uses_product_level_google_top_results(provider_registry, sources):
+            google_cache: dict[tuple[int | None, str, str, str], dict[str, SourceSearchResult]] = {}
+
+            def google_resolver(product: AgentProduct, source: SourceDefinition) -> SourceSearchResult:
+                key = (product.catalog_product_id, product.model, product.mpn, product.manufacturer)
+                if key not in google_cache:
+                    google_cache[key] = discover_google_top_results_product_evidence(
+                        product=product,
+                        sources=sources,
+                        browser=browser,
+                        provider_registry=provider_registry,
+                        max_candidates=None,
+                        rate_limit_seconds=options.rate_limit_seconds,
+                    )
+                return google_cache[key].get(
+                    source.source_name,
+                    SourceSearchResult(evidence=[], searched_queries=[], searched_urls=[], errors=[]),
+                )
+
+            return run_with_resolver(
+                run_id=run_id,
+                products=products,
+                sources=sources,
+                options=options,
+                session=session,
+                resolver=google_resolver,
+            )
         return run_with_resolver(
             run_id=run_id,
             products=products,

@@ -36,6 +36,8 @@ def assemble_prepare_result(
     downloaded_gallery: list[GalleryImage],
     gallery_warnings: list[str],
     gallery_files: list[str],
+    characteristics_source: Any | None = None,
+    characteristics_raw_html: str | None = None,
     selected_presentation_blocks: list[dict[str, Any]],
     section_warnings: list[str],
     section_image_candidates: list[dict[str, Any]],
@@ -50,16 +52,35 @@ def assemble_prepare_result(
     final_scope_ok: bool,
     final_scope_reason: str,
     scrape_persistence_input: PrepareScrapePersistenceInput,
+    gallery_settings: dict[str, Any] | None = None,
+    characteristics_settings: dict[str, Any] | None = None,
     sections_artifact_payload: dict[str, Any] | None = None,
     schema_matcher_factory: Callable[..., Any] = SchemaMatcher,
 ) -> PrepareResultAssemblyResult:
+    resolved_gallery_settings = gallery_settings or {
+        "gallery_url_used": False,
+        "gallery_extraction_url": cli.url,
+        "product_data_extraction_url": cli.url,
+        "product_data_extraction_uses_main_url": True,
+        "second_opencart_image_index": None,
+        "second_opencart_image_override_applied": False,
+        "second_opencart_image_warning": None,
+        "deduplicated_gallery_count": None,
+    }
+    resolved_characteristics_settings = characteristics_settings or {
+        "characteristics_url_used": False,
+        "characteristics_extraction_url": cli.url,
+        "product_data_extraction_url": cli.url,
+        "product_data_extraction_uses_main_url": True,
+    }
+    effective_characteristics_source = characteristics_source or parsed.source
     schema_matcher = schema_matcher_factory(str(SCHEMA_LIBRARY_PATH))
     effective_spec_sections = build_effective_spec_sections(
-        parsed.source,
-        manufacturer_first=normalize_for_match(parsed.source.source_name) == "skroutz",
+        effective_characteristics_source,
+        manufacturer_first=normalize_for_match(effective_characteristics_source.source_name) == "skroutz",
     )
     characteristics_registry = get_characteristics_registry()
-    preferred_schema_source_files = characteristics_registry.preferred_schema_source_files(parsed.source, taxonomy)
+    preferred_schema_source_files = characteristics_registry.preferred_schema_source_files(effective_characteristics_source, taxonomy)
     schema_match, schema_candidates = schema_matcher.match(
         effective_spec_sections,
         taxonomy.sub_category,
@@ -77,6 +98,8 @@ def assemble_prepare_result(
         downloaded_image_count=len(downloaded_gallery),
         besco_filenames_by_section=besco_filenames_by_section,
         source_raw_html=fetch.html,
+        characteristics_raw_html=characteristics_raw_html,
+        characteristics_source=effective_characteristics_source,
     )
 
     report = {
@@ -97,13 +120,13 @@ def assemble_prepare_result(
         "skroutz_blocks_found": {
             "hero_summary_present": bool(parsed.source.hero_summary),
             "gallery_images_count": len(parsed.source.gallery_images),
-            "spec_sections_count": len(parsed.source.spec_sections),
-            "manufacturer_spec_sections_count": len(parsed.source.manufacturer_spec_sections),
+            "spec_sections_count": len(effective_characteristics_source.spec_sections),
+            "manufacturer_spec_sections_count": len(effective_characteristics_source.manufacturer_spec_sections),
         },
         "characteristics_pairs": {
             "count": sum(len(section.items) for section in effective_spec_sections),
-            "source_count": sum(len(section.items) for section in parsed.source.spec_sections),
-            "manufacturer_count": sum(len(section.items) for section in parsed.source.manufacturer_spec_sections),
+            "source_count": sum(len(section.items) for section in effective_characteristics_source.spec_sections),
+            "manufacturer_count": sum(len(section.items) for section in effective_characteristics_source.manufacturer_spec_sections),
         },
         "taxonomy_resolution": taxonomy.to_dict(),
         "manufacturer_enrichment": manufacturer_enrichment,
@@ -155,6 +178,8 @@ def assemble_prepare_result(
             "downloaded_count": len(downloaded_gallery),
             "requested_photos": cli.photos,
         },
+        "gallery_settings": resolved_gallery_settings,
+        "characteristics_settings": resolved_characteristics_settings,
         "sections_requested": cli.sections,
         "sections_extracted": len(selected_presentation_blocks),
         "section_titles": [block["title"] for block in selected_presentation_blocks],

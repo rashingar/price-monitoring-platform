@@ -165,6 +165,7 @@ def build_summary_payload(
         "warnings": warnings,
         "by_source": _counts_by_source(candidates),
         "by_status": {key: int(value) for key, value in sorted(counts.items())},
+        **_provider_summary(candidates),
     }
 
 
@@ -265,6 +266,34 @@ def _counts_by_source(candidates: list[SourceUrlAgentCandidate]) -> dict[str, di
     for candidate in candidates:
         counts.setdefault(candidate.source_name, Counter())[candidate.match_status] += 1
     return {source: {key: int(value) for key, value in sorted(counter.items())} for source, counter in counts.items()}
+
+
+def _provider_summary(candidates: list[SourceUrlAgentCandidate]) -> dict[str, Any]:
+    google_counts: Counter[str] = Counter()
+    query = ""
+    status = ""
+    for candidate in candidates:
+        provider_summary = candidate.evidence_json.get("provider_summary")
+        if isinstance(provider_summary, dict) and provider_summary.get("status") and not status:
+            status = str(provider_summary.get("status") or "")
+            query = query or str(provider_summary.get("query") or "")
+        provenance = candidate.evidence_json.get("provider_provenance")
+        if not isinstance(provenance, dict) or provenance.get("provider_name") != "google_top_results":
+            continue
+        source_name = str(provenance.get("source_name") or candidate.source_name)
+        google_counts[source_name] += 1
+        query = query or str(provenance.get("original_query") or "")
+    if google_counts:
+        status = "found_candidates"
+    if not query and not google_counts:
+        return {}
+    return {
+        "google_top_results": {
+            "query": query,
+            "status": status or "no_results",
+            "kept_candidates_by_source": dict(sorted(google_counts.items())),
+        }
+    }
 
 
 def _write_csv(path: Path, columns: list[str], rows: list[dict[str, Any]]) -> None:

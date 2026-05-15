@@ -13,6 +13,9 @@ class CLIInput:
     skroutz_status: int = 0
     boxnow: int = 0
     price: str | float | int = 0
+    gallery_url: str | None = None
+    characteristics_url: str | None = None
+    second_opencart_image_index: int | None = None
     out: str = "out"
 
     def to_dict(self) -> dict[str, Any]:

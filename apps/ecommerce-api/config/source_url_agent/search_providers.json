@@ -1,20 +1,15 @@
 {
-  "default_cascade": ["browser_fallback"],
-  "providers": [
-    {
-      "provider_name": "browser_fallback",
-      "provider_type": "browser",
+  "default_provider_order": ["google_top_results"],
+  "providers": {
+    "google_top_results": {
+      "provider_type": "google",
       "enabled": true,
-      "allow_high_confidence_auto_apply": true,
-      "notes": "Existing public source search behavior wrapped as a search provider."
+      "allow_high_confidence_auto_apply": false,
+      "search_url_template": "https://www.google.gr/search?q={query}&hl=el&gl=GR&num=10&pws=0",
+      "max_results_per_query": 10,
+      "stop_after_first_query_with_candidates": true,
+      "notes": "Broad product query provider that keeps only configured-source product-shaped top Google results."
     }
-  ],
-  "source_cascades": {
-    "bestprice": ["browser_fallback"],
-    "skroutz": ["browser_fallback"],
-    "electronet": ["browser_fallback"],
-    "kotsovolos": ["browser_fallback"],
-    "public": ["browser_fallback"],
-    "plaisio": ["browser_fallback"]
-  }
+  },
+  "source_cascades": {}
 }

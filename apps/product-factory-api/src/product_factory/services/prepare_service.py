@@ -112,6 +112,9 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
         skroutz_status=request.skroutz_status,
         boxnow=request.boxnow,
         price=request.price,
+        gallery_url=request.gallery_url,
+        characteristics_url=request.characteristics_url,
+        second_opencart_image_index=request.second_opencart_image_index,
         out=str(WORK_ROOT / request.model / "scrape"),
     )
     try:
@@ -166,6 +169,12 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
         warnings.append(error_detail)
         error_code = ServiceErrorCode.MISSING_ARTIFACT.value
 
+    report_payload = scrape_result.payload.get("report", {})
+    report = report_payload if isinstance(report_payload, dict) else {}
+    gallery_settings_payload = report.get("gallery_settings", {})
+    gallery_settings = gallery_settings_payload if isinstance(gallery_settings_payload, dict) else {}
+    characteristics_settings_payload = report.get("characteristics_settings", {})
+    characteristics_settings = characteristics_settings_payload if isinstance(characteristics_settings_payload, dict) else {}
     details = {
         "source": scrape_result.source,
         "product_name": str(getattr(getattr(parsed, "source", None), "name", "") or ""),
@@ -179,6 +188,26 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
         if str(getattr(getattr(parsed, "source", None), "page_type", "") or "") == "blocked_by_challenge"
         else "split_tasks",
     }
+    if gallery_settings:
+        details.update(
+            {
+                "gallery_url_used": bool(gallery_settings.get("gallery_url_used", False)),
+                "gallery_extraction_url": str(gallery_settings.get("gallery_extraction_url", "") or ""),
+                "second_opencart_image_index": gallery_settings.get("second_opencart_image_index"),
+                "second_opencart_image_override_applied": bool(
+                    gallery_settings.get("second_opencart_image_override_applied", False)
+                ),
+            }
+        )
+    if characteristics_settings:
+        details.update(
+            {
+                "characteristics_url_used": bool(characteristics_settings.get("characteristics_url_used", False)),
+                "characteristics_extraction_url": str(
+                    characteristics_settings.get("characteristics_extraction_url", "") or ""
+                ),
+            }
+        )
     if details["llm_prepare_mode"] == "blocked_snapshot":
         details["blocked_reason"] = "blocked_by_challenge"
 

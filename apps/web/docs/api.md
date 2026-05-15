@@ -92,9 +92,12 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 ```ts
 {
   boxnow?: number; // default: 0
+  characteristics_url?: string | null;
+  gallery_url?: string | null;
   model: string;
   photos?: number; // default: 1
   price?: string | number; // default: 0
+  second_opencart_image_index?: number | null;
   sections?: number; // default: 0
   skroutz_status?: number; // default: 0
   url: string;

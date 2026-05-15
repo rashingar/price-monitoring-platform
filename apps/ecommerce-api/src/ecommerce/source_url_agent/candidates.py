@@ -195,7 +195,21 @@ def synthetic_candidate(
     notes: str,
     candidate_url: str = "",
     canonical_url: str = "",
+    extra_evidence_json: dict[str, Any] | None = None,
 ) -> SourceUrlAgentCandidate:
+    evidence_json = {
+        "mpn": {"expected": product.mpn, "found": False, "fragment": ""},
+        "model": {"expected": product.model, "found": False, "fragment": ""},
+        "brand": {"expected": product.manufacturer, "found": False, "fragment": ""},
+        "category": {"expected": product.category, "compatible": False, "fragment": ""},
+        "price": {"compatible": None},
+        "title_similarity": 0.0,
+        "title_only": False,
+        "error_code": match_method if match_status == "error" else "",
+        "error_message": notes if match_status == "error" else "",
+    }
+    if extra_evidence_json:
+        evidence_json.update(extra_evidence_json)
     return SourceUrlAgentCandidate(
         run_id=run_id,
         product=product,
@@ -208,17 +222,7 @@ def synthetic_candidate(
         match_status=match_status,
         confidence_score=0.0,
         match_method=match_method,
-        evidence_json={
-            "mpn": {"expected": product.mpn, "found": False, "fragment": ""},
-            "model": {"expected": product.model, "found": False, "fragment": ""},
-            "brand": {"expected": product.manufacturer, "found": False, "fragment": ""},
-            "category": {"expected": product.category, "compatible": False, "fragment": ""},
-            "price": {"compatible": None},
-            "title_similarity": 0.0,
-            "title_only": False,
-            "error_code": match_method if match_status == "error" else "",
-            "error_message": notes if match_status == "error" else "",
-        },
+        evidence_json=evidence_json,
         competing_candidates_count=0,
         searched_queries=searched_queries,
         status=status,

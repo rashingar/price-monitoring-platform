@@ -212,6 +212,9 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(tmp_path: P
             "skroutz_status": 1,
             "boxnow": 0,
             "price": "2099",
+            "gallery_url": "https://www.electronet.gr/gallery",
+            "characteristics_url": "https://www.electronet.gr/specs",
+            "second_opencart_image_index": 4,
         },
         job_id="job-1",
     )
@@ -234,6 +237,9 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(tmp_path: P
             skroutz_status=1,
             boxnow=0,
             price="2099",
+            gallery_url="https://www.electronet.gr/gallery",
+            characteristics_url="https://www.electronet.gr/specs",
+            second_opencart_image_index=4,
         )
     ]
     assert loaded.status == JobStatus.SUCCEEDED
@@ -248,6 +254,11 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(tmp_path: P
         "metadata_path": str(tmp_path / "work" / "233541" / "prepare.run.json"),
     }
     assert "Calling prepare service." in logs
+    assert "Prepare gallery_url provided: True" in logs
+    assert "Prepare gallery image extraction URL: https://www.electronet.gr/gallery" in logs
+    assert "Prepare characteristics_url provided: True" in logs
+    assert "Prepare characteristics/specifications extraction URL: https://www.electronet.gr/specs" in logs
+    assert "Requested second OpenCart image index: 4" in logs
     assert "Prepare service returned status: completed" in logs
     assert "Prepare warning: prepare warning" in logs
 

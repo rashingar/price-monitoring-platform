@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from product_factory.models import CLIInput, FetchResult, ParsedProduct, SourceProductData, TaxonomyResolution
+from product_factory.models import CLIInput, FetchResult, ParsedProduct, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.prepare_result_assembly import PrepareResultAssemblyResult
 from product_factory.prepare_scrape_persistence import PrepareScrapePersistenceInput, PrepareScrapePersistenceResult
@@ -294,3 +294,101 @@ def test_execute_prepare_stage_uses_result_assembly_output_for_persistence_and_r
     assert result["report"] == persistence_input.report_payload
     assert result["normalized_json_path"] == persistence_input.normalized_json_path
     assert result["report_json_path"] == persistence_input.report_json_path
+
+
+def test_execute_prepare_stage_passes_characteristics_source_after_taxonomy_resolution(tmp_path: Path) -> None:
+    main_source = _build_source(
+        source_name="electronet",
+        url="https://www.electronet.gr/main-product",
+        product_code="344424",
+        brand="Neff",
+        mpn="MAIN-MPN",
+        name="Main Product",
+    )
+    main_source.spec_sections = [SpecSection(section="Main specs", items=[SpecItem(label="Main", value="A")])]
+    characteristics_source = _build_source(
+        source_name="electronet",
+        url="https://www.electronet.gr/spec-product",
+        product_code="999999",
+        brand="Other",
+        mpn="SPECS-MPN",
+        name="Specs Product",
+    )
+    characteristics_source.spec_sections = [
+        SpecSection(section="Override specs", items=[SpecItem(label="Override", value="B")])
+    ]
+    cli = _build_cli(tmp_path, model="344424", url=main_source.url)
+    cli.characteristics_url = characteristics_source.url
+    parsed = _build_parsed(main_source)
+    acquisition = _build_source_acquisition_result(
+        model_dir=tmp_path / cli.model,
+        source="electronet",
+        provider_id="electronet",
+        url=main_source.url,
+        parsed=parsed,
+        fetch_method="fixture",
+    )
+    acquisition.characteristics_source = characteristics_source
+    acquisition.characteristics_fetch = FetchResult(
+        url=characteristics_source.url,
+        final_url=characteristics_source.url,
+        html="<html>characteristics specs html</html>",
+        status_code=200,
+        method="fixture",
+        fallback_used=False,
+    )
+    acquisition.snapshot_provenance.update(
+        {
+            "characteristics_url_used": True,
+            "characteristics_extraction_url": characteristics_source.url,
+            "product_data_extraction_url": main_source.url,
+        }
+    )
+    taxonomy_calls: list[ParsedProduct] = []
+    assembly_calls: list[dict[str, object]] = []
+
+    class SchemaMatchStub:
+        matched_schema_id = "schema-stub"
+        score = 0.9
+        warnings: list[str] = []
+
+        def to_dict(self) -> dict[str, object]:
+            return {"matched_schema_id": self.matched_schema_id, "score": self.score, "warnings": self.warnings}
+
+    def fake_assemble_prepare_result(**kwargs) -> PrepareResultAssemblyResult:
+        assembly_calls.append(kwargs)
+        return PrepareResultAssemblyResult(
+            schema_match=SchemaMatchStub(),
+            schema_candidates=[],
+            row={"model": kwargs["cli"].model},
+            normalized={"input": kwargs["cli"].to_dict()},
+            report={"source": kwargs["source"], "warnings": []},
+        )
+
+    result = execute_prepare_from_acquisition(
+        cli,
+        acquisition,
+        validate_url_scope_fn=lambda _url: ("electronet", True, "test_scope"),
+        fetcher_factory=lambda: object(),
+        resolve_prepare_taxonomy_enrichment_fn=lambda **kwargs: taxonomy_calls.append(kwargs["parsed"])
+        or PrepareTaxonomyEnrichmentResult(
+            taxonomy=TaxonomyResolution(parent_category="Main category", leaf_category="Main leaf", sub_category="Main sub"),
+            taxonomy_candidates=[],
+            manufacturer_enrichment=_build_manufacturer_enrichment_stub(),
+        ),
+        assemble_prepare_result_fn=fake_assemble_prepare_result,
+        persist_prepare_scrape_artifacts_fn=_persist_stub,
+    )
+
+    assert taxonomy_calls == [parsed]
+    assert taxonomy_calls[0].source.spec_sections[0].items[0].value == "A"
+    assert assembly_calls[0]["parsed"] is parsed
+    assert assembly_calls[0]["characteristics_source"] is characteristics_source
+    assert assembly_calls[0]["characteristics_raw_html"] == "<html>characteristics specs html</html>"
+    assert assembly_calls[0]["characteristics_settings"] == {
+        "characteristics_url_used": True,
+        "characteristics_extraction_url": characteristics_source.url,
+        "product_data_extraction_url": main_source.url,
+        "product_data_extraction_uses_main_url": True,
+    }
+    assert result["row"] == {"model": cli.model}
