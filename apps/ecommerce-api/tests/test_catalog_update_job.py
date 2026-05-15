@@ -13,6 +13,9 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog_update import service  # noqa: E402
+from ecommerce.catalog_update import browser_steps, progress  # noqa: E402
+from ecommerce.catalog_update.exclusions import excluded_models_from_rows  # noqa: E402
+from ecommerce.catalog_update.redaction import redact_opencart_sensitive_data, redact_opencart_url  # noqa: E402
 from ecommerce.catalog_update.service import CatalogExportResult, CatalogUpdateConfigError, CatalogUpdateError  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base, CatalogProductRow, SourceUrl  # noqa: E402
@@ -173,6 +176,26 @@ def test_run_catalog_update_emits_step_progress(tmp_path: Path, monkeypatch) -> 
         "exclusion_purge_started",
         "exclusion_purge_completed",
     ]
+
+
+def test_catalog_update_progress_definitions_separate_phases_from_events() -> None:
+    phase_ids = [phase.id for phase in progress.WORKFLOW_PHASES]
+    event_ids = [event.id for event in progress.PROGRESS_EVENTS]
+
+    assert "alembic_upgrade" in phase_ids
+    assert "alembic_upgrade_started" in event_ids
+    assert "alembic_upgrade_completed" in event_ids
+    assert "alembic_upgrade" not in event_ids
+    assert progress.PROGRESS_EVENT_LABELS["download_waiting"] == "Download waiting"
+
+
+def test_catalog_update_long_step_progress_events_have_started_and_completed_boundaries() -> None:
+    events_by_phase = {event.phase_id: set() for event in progress.PROGRESS_EVENTS}
+    for event in progress.PROGRESS_EVENTS:
+        events_by_phase[event.phase_id].add(event.boundary)
+
+    for phase_id in ("alembic_upgrade", "login", "wait_for_download", "filter_exclusions", "ingest_catalog", "purge_exclusions"):
+        assert {"started", "completed"} <= events_by_phase[phase_id]
 
 
 def test_catalog_update_durable_job_writes_progress_and_heartbeat(tmp_path: Path, monkeypatch) -> None:
@@ -336,6 +359,13 @@ def test_catalog_update_exclusion_matching_preserves_model_string_identity(tmp_p
     assert "5606,M1" not in filtered_text
 
 
+def test_catalog_update_exclusion_parser_preserves_leading_zero_models(tmp_path: Path) -> None:
+    path = tmp_path / "excluded.csv"
+
+    assert excluded_models_from_rows([["model"], ["005606"], ["5606"]], path) == {"005606", "5606"}
+    assert excluded_models_from_rows([["005606"], ["5606"]], path) == {"005606", "5606"}
+
+
 def test_catalog_update_missing_default_exclusion_file_continues_with_zero_exclusions(tmp_path: Path, monkeypatch) -> None:
     output_dir = tmp_path / "catalog_updates" / "job-3"
     monkeypatch.delenv(service.EXCLUDED_MODELS_ENV_VAR, raising=False)
@@ -384,6 +414,21 @@ def test_catalog_update_explicit_missing_exclusion_file_fails(tmp_path: Path, mo
 
     assert "Catalog exclusion file not found" in message
     assert str(missing_path) in message
+
+
+def test_catalog_update_redaction_removes_opencart_secret_values(monkeypatch) -> None:
+    monkeypatch.setenv("OPENCART_ADMIN_USER", "admin@example.test")
+    monkeypatch.setenv("OPENCART_ADMIN_PASS", "supersecret")
+
+    redacted_url = redact_opencart_url(
+        "https://shop.example/admin?route=common/dashboard&user_token=abc123&username=admin@example.test&ok=1"
+    )
+    redacted_text = redact_opencart_sensitive_data("admin@example.test password=supersecret token=abc123")
+
+    assert "admin@example.test" not in redacted_url
+    assert "abc123" not in redacted_url
+    assert "ok=1" in redacted_url
+    assert redacted_text == "[redacted] password=[redacted] token=[redacted]"
 
 
 def test_catalog_update_purges_previously_imported_excluded_catalog_products(tmp_path: Path, monkeypatch) -> None:
@@ -588,17 +633,17 @@ def test_export_catalog_csv_closes_browser_before_playwright_stops(tmp_path: Pat
         sync_playwright=lambda: FakePlaywrightContextManager(),
     )
     monkeypatch.setitem(sys.modules, "playwright.sync_api", fake_sync_api)
-    monkeypatch.setattr(service, "_login_to_opencart", lambda _page, _config, _timeout_ms: None)
-    monkeypatch.setattr(service, "_open_csv_product_export", lambda _page, _config, _timeout_ms: None)
-    monkeypatch.setattr(service, "_load_export_profile", lambda _page, _profile: None)
-    monkeypatch.setattr(service, "_advance_export_step_two", lambda _page: None)
+    monkeypatch.setattr(browser_steps, "login_to_opencart", lambda _page, _config, _timeout_ms: None)
+    monkeypatch.setattr(browser_steps, "open_csv_product_export", lambda _page, _config, _timeout_ms: None)
+    monkeypatch.setattr(browser_steps, "load_export_profile", lambda _page, _profile: None)
+    monkeypatch.setattr(browser_steps, "advance_export_step_two", lambda _page: None)
 
     def fake_download(_page, selected_output_dir: Path, _timeout_ms: int, **_kwargs) -> Path:
         downloaded = selected_output_dir / "opencart-products.csv"
         downloaded.write_text("model,name\n", encoding="utf-8")
         return downloaded
 
-    monkeypatch.setattr(service, "_download_export", fake_download)
+    monkeypatch.setattr(browser_steps, "download_export", fake_download)
 
     result = service.export_catalog_csv(
         service.CatalogUpdateConfig(
@@ -705,12 +750,12 @@ def test_export_catalog_csv_writes_redacted_failure_diagnostics_on_playwright_fa
         ),
     )
     _install_fake_playwright(monkeypatch, page)
-    monkeypatch.setattr(service, "_login_to_opencart", lambda _page, _config, _timeout_ms: None)
+    monkeypatch.setattr(browser_steps, "login_to_opencart", lambda _page, _config, _timeout_ms: None)
 
     def fail_open(_page, _config, _timeout_ms):
         raise service.CatalogUpdateError("profile selector missing for admin@example user_token=abc123 supersecret")
 
-    monkeypatch.setattr(service, "_open_csv_product_export", fail_open)
+    monkeypatch.setattr(browser_steps, "open_csv_product_export", fail_open)
 
     config = service.CatalogUpdateConfig(
         store_base="https://shop.example",
@@ -752,12 +797,12 @@ def test_export_catalog_csv_preserves_original_error_when_screenshot_capture_fai
         screenshot_fails=True,
     )
     _install_fake_playwright(monkeypatch, page)
-    monkeypatch.setattr(service, "_login_to_opencart", lambda _page, _config, _timeout_ms: None)
+    monkeypatch.setattr(browser_steps, "login_to_opencart", lambda _page, _config, _timeout_ms: None)
 
     def fail_open(_page, _config, _timeout_ms):
         raise service.CatalogUpdateError("CSV Product Export menu item not found.")
 
-    monkeypatch.setattr(service, "_open_csv_product_export", fail_open)
+    monkeypatch.setattr(browser_steps, "open_csv_product_export", fail_open)
 
     config = service.CatalogUpdateConfig(
         store_base="https://shop.example",
