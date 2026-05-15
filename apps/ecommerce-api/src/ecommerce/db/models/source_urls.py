@@ -26,6 +26,7 @@ class SourceUrl(Base):
         Index("ix_source_urls_source_name", "source_name"),
         Index("ix_source_urls_source_domain", "source_domain"),
         Index("ix_source_urls_status", "status"),
+        Index("ix_source_urls_catalog_product_status_source", "catalog_product_id", "status", "source_name"),
         Index("ix_source_urls_updated_at", "updated_at"),
     )
 

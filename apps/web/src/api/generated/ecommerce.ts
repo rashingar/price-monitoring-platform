@@ -1210,6 +1210,7 @@ export interface operations {
         page_size?: number;
         sort_by?: ("model" | "name" | "manufacturer" | "category" | "price" | "quantity") | null;
         sort_dir?: "asc" | "desc";
+        debug?: boolean;
       };
     };
     responses: {

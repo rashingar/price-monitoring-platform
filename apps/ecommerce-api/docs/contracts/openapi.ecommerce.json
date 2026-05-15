@@ -2476,6 +2476,16 @@
               "title": "Sort Dir",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "debug",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Debug",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

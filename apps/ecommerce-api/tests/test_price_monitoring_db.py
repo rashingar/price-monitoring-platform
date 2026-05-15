@@ -375,6 +375,10 @@ def test_alembic_configuration_has_price_monitoring_head_migration() -> None:
     )
     assert '"price_observation_listings"' in listings_migration
     assert "ix_price_observation_listings_observation_rank" in listings_migration
+    catalog_listing_migration = (
+        PROJECT_ROOT / "migrations" / "versions" / "20260515_0013_catalog_listing_indexes.py"
+    ).read_text(encoding="utf-8")
+    assert "ix_source_urls_catalog_product_status_source" in catalog_listing_migration
 
 
 def test_sqlite_metadata_schema_contains_expected_indexes(tmp_path: Path) -> None:
@@ -402,6 +406,7 @@ def test_sqlite_metadata_schema_contains_expected_indexes(tmp_path: Path) -> Non
     assert "uq_catalog_products_catalog_source_model" in catalog_indexes
     assert "ix_source_urls_catalog_product_id" in source_url_indexes
     assert "ix_source_urls_status" in source_url_indexes
+    assert "ix_source_urls_catalog_product_status_source" in source_url_indexes
     assert "uq_products_catalog_source_model_present" in product_indexes
     assert "ix_price_observations_match_status" in observation_indexes
     assert "ix_price_observations_observation_batch_id" in observation_indexes
