@@ -99,7 +99,12 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findByRole("heading", { name: "Operator readiness" })).resolves.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Refresh platform health" })).toBeInTheDocument();
     expect(screen.getByText("Ecommerce API is responding.")).toBeInTheDocument();
-    expect(screen.getByText("Product Factory API health could not be checked because no base URL key is configured.")).toBeInTheDocument();
+    expect(screen.queryByText("Required tables present: yes.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Product Factory API health could not be checked because no base URL key is configured."),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Ecommerce DB/ }));
+    expect(screen.getByText("Required tables present: yes.")).toBeInTheDocument();
     expect(screen.queryByText("Backend health")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "OpenCart DB update" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Update DB" })).toBeInTheDocument();
@@ -152,6 +157,9 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/");
 
     const button = await screen.findByRole("button", { name: "Refresh platform health" });
+    fireEvent.click(screen.getByRole("button", { name: /Ecommerce DB/ }));
+    expect(screen.getByText("Required tables present: yes.")).toBeInTheDocument();
+
     fireEvent.click(button);
 
     await waitFor(() =>
@@ -163,6 +171,8 @@ describe("platform mocked page smoke tests", () => {
         ).length,
       ).toBeGreaterThanOrEqual(2),
     );
+    await screen.findByRole("button", { name: /Ecommerce DB/ });
+    expect(screen.queryByText("Required tables present: yes.")).not.toBeInTheDocument();
   });
 
   it("starts Dashboard catalog update and shows Updating while active", async () => {

@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { ErrorState, LoadingState } from "../../components/layout/StateBlocks";
 import {
   platformHealthStatusClass,
@@ -9,7 +10,25 @@ import { usePlatformHealth } from "./usePlatformHealth";
 
 export function PlatformHealthPanel() {
   const { health, isLoading, error, refreshHealth } = usePlatformHealth();
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(() => new Set());
   const status = health?.status ?? "unknown";
+
+  const handleRefreshHealth = useCallback(() => {
+    setExpandedGroupIds(new Set());
+    refreshHealth();
+  }, [refreshHealth]);
+
+  const toggleGroup = useCallback((groupId: string) => {
+    setExpandedGroupIds((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  }, []);
 
   return (
     <section className="panel platform-health-panel" aria-label="Platform health">
@@ -25,7 +44,7 @@ export function PlatformHealthPanel() {
           <button
             className="button secondary"
             type="button"
-            onClick={refreshHealth}
+            onClick={handleRefreshHealth}
             disabled={isLoading}
           >
             {isLoading ? "Refreshing..." : "Refresh platform health"}
@@ -38,12 +57,17 @@ export function PlatformHealthPanel() {
       </p>
 
       {isLoading ? <LoadingState label="Checking platform health..." /> : null}
-      {error ? <ErrorState message={error} onRetry={refreshHealth} /> : null}
+      {error ? <ErrorState message={error} onRetry={handleRefreshHealth} /> : null}
 
       {!isLoading && !error && health ? (
         <div className="platform-health-grid">
           {health.groups.map((group) => (
-            <PlatformHealthGroupCard key={group.id} group={group} />
+            <PlatformHealthGroupCard
+              key={group.id}
+              group={group}
+              isExpanded={expandedGroupIds.has(group.id)}
+              onToggle={() => toggleGroup(group.id)}
+            />
           ))}
         </div>
       ) : null}

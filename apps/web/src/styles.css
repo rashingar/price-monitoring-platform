@@ -2154,6 +2154,25 @@ th {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.platform-health-card-heading:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.platform-health-card-details {
+  display: grid;
+  gap: 12px;
 }
 
 .platform-health-card-heading h4,
