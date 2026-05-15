@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.api import routes_platform_health as platform_health  # noqa: E402
 from ecommerce.api.app import create_app  # noqa: E402
+from ecommerce.platform_health import collectors as platform_health_collectors  # noqa: E402
 from ecommerce.source_url_agent.brave_search import BRAVE_SEARCH_API_KEY_ENV_VAR  # noqa: E402
 
 
@@ -18,10 +18,10 @@ def _client(monkeypatch) -> TestClient:
 
 
 def _install_ready_collectors(monkeypatch) -> None:
-    monkeypatch.setattr(platform_health, "collect_catalog_database_readiness", lambda: _catalog_ready())
-    monkeypatch.setattr(platform_health, "collect_price_monitoring_database_readiness", lambda: _price_ready())
-    monkeypatch.setattr(platform_health, "get_source_url_agent_readiness", lambda: _source_ready())
-    monkeypatch.setattr(platform_health, "_latest_catalog_update_job", lambda: None)
+    monkeypatch.setattr(platform_health_collectors, "collect_catalog_database_readiness", lambda: _catalog_ready())
+    monkeypatch.setattr(platform_health_collectors, "collect_price_monitoring_database_readiness", lambda: _price_ready())
+    monkeypatch.setattr(platform_health_collectors, "get_source_url_agent_readiness", lambda: _source_ready())
+    monkeypatch.setattr(platform_health_collectors, "_latest_catalog_update_job", lambda: None)
 
 
 def _set_opencart_config(monkeypatch, *, secret: str = "opencart-secret-value") -> None:
@@ -131,7 +131,7 @@ def test_platform_health_source_url_agent_reflects_ready_and_blocked(monkeypatch
     ready = _groups(client.get("/api/platform/health").json())["source_url_agent"]
     assert ready["status"] == "ready"
 
-    monkeypatch.setattr(platform_health, "get_source_url_agent_readiness", lambda: _source_blocked())
+    monkeypatch.setattr(platform_health_collectors, "get_source_url_agent_readiness", lambda: _source_blocked())
     blocked_response = client.get("/api/platform/health")
     blocked = _groups(blocked_response.json())["source_url_agent"]
     assert blocked["status"] == "blocked"
@@ -140,7 +140,7 @@ def test_platform_health_source_url_agent_reflects_ready_and_blocked(monkeypatch
 
 
 def test_platform_health_missing_opencart_config_returns_safe_key_names(monkeypatch) -> None:
-    for key in platform_health.OPENCART_REQUIRED_KEYS:
+    for key in platform_health_collectors.OPENCART_REQUIRED_KEYS:
         monkeypatch.delenv(key, raising=False)
     _clear_product_factory_config(monkeypatch)
 
@@ -149,7 +149,7 @@ def test_platform_health_missing_opencart_config_returns_safe_key_names(monkeypa
     group = _groups(response.json())["catalog_update_opencart"]
     assert group["status"] == "blocked"
     assert sorted(reason.rsplit(": ", 1)[-1].rstrip(".") for reason in group["blocking_reasons"]) == sorted(
-        platform_health.OPENCART_REQUIRED_KEYS
+        platform_health_collectors.OPENCART_REQUIRED_KEYS
     )
     assert "OPENCART_ADMIN_PASS" in response.text
 
@@ -158,8 +158,12 @@ def test_platform_health_does_not_return_env_values_or_secrets(monkeypatch) -> N
     secret = "do-not-leak-this-value"
     _set_opencart_config(monkeypatch, secret=secret)
     monkeypatch.setenv("PRODUCT_FACTORY_API_BASE_URL", f"http://user:{secret}@127.0.0.1:9")
-    monkeypatch.setattr(platform_health, "get_source_url_agent_readiness", lambda: _source_ready())
-    monkeypatch.setattr(platform_health.httpx, "get", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError(secret)))
+    monkeypatch.setattr(platform_health_collectors, "get_source_url_agent_readiness", lambda: _source_ready())
+    monkeypatch.setattr(
+        platform_health_collectors.httpx,
+        "get",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError(secret)),
+    )
 
     response = _client(monkeypatch).get("/api/platform/health")
 
@@ -183,8 +187,8 @@ def test_platform_health_product_factory_unconfigured_warns_without_crashing(mon
 def test_platform_health_overall_blocked_when_required_group_blocked(monkeypatch) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
-    monkeypatch.setattr(platform_health, "collect_catalog_database_readiness", lambda: _db_blocked())
-    monkeypatch.setattr(platform_health, "collect_price_monitoring_database_readiness", lambda: _db_blocked())
+    monkeypatch.setattr(platform_health_collectors, "collect_catalog_database_readiness", lambda: _db_blocked())
+    monkeypatch.setattr(platform_health_collectors, "collect_price_monitoring_database_readiness", lambda: _db_blocked())
 
     response = TestClient(create_app()).get("/api/platform/health")
 
