@@ -1,29 +1,90 @@
+import { Suspense, lazy, type ComponentType, type ReactElement } from "react";
 import { render } from "@testing-library/react";
 import { Navigate, createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
-import { CatalogPage } from "../pages/CatalogPage";
-import { CatalogProductDetailPage } from "../pages/CatalogProductDetailPage";
-import { DashboardPage } from "../pages/DashboardPage";
-import { FiltersManagerPage } from "../pages/FiltersManagerPage";
-import { JobDetailPage } from "../pages/JobDetailPage";
-import { JobsPage } from "../pages/JobsPage";
+import { LoadingState } from "../components/layout/StateBlocks";
 import { NotFoundPage } from "../pages/NotFoundPage";
-import { PrepareJobPage } from "../pages/PrepareJobPage";
-import { PriceMonitoringAlertsPage } from "../pages/PriceMonitoringAlertsPage";
-import { PriceMonitoringExecutionsPage } from "../pages/PriceMonitoringExecutionsPage";
-import { PriceMonitoringPage } from "../pages/PriceMonitoringPage";
-import { ProductFactoryWorkflowPage } from "../pages/ProductFactoryWorkflowPage";
-import { PublishJobPage } from "../pages/PublishJobPage";
-import { RenderJobPage } from "../pages/RenderJobPage";
-import { SourceUrlAgentRunsPage } from "../pages/SourceUrlAgentRunsPage";
-import { SourceUrlCandidatesPage } from "../pages/SourceUrlCandidatesPage";
-import { VendorSourceCaptureRunsPage } from "../pages/VendorSourceCaptureRunsPage";
-import { VendorSourceImportsPage } from "../pages/VendorSourceImportsPage";
-import { VendorSourceUrlsPage } from "../pages/VendorSourceUrlsPage";
+
+const DashboardPage = lazy(() => import("../pages/DashboardPage").then(({ DashboardPage }) => ({ default: DashboardPage })));
+const CatalogPage = lazy(() => import("../pages/CatalogPage").then(({ CatalogPage }) => ({ default: CatalogPage })));
+const CatalogProductDetailPage = lazy(() =>
+  import("../pages/CatalogProductDetailPage").then(({ CatalogProductDetailPage }) => ({
+    default: CatalogProductDetailPage,
+  })),
+);
+const PriceMonitoringPage = lazy(() =>
+  import("../pages/PriceMonitoringPage").then(({ PriceMonitoringPage }) => ({ default: PriceMonitoringPage })),
+);
+const PriceMonitoringExecutionsPage = lazy(() =>
+  import("../pages/PriceMonitoringExecutionsPage").then(({ PriceMonitoringExecutionsPage }) => ({
+    default: PriceMonitoringExecutionsPage,
+  })),
+);
+const PriceMonitoringAlertsPage = lazy(() =>
+  import("../pages/PriceMonitoringAlertsPage").then(({ PriceMonitoringAlertsPage }) => ({
+    default: PriceMonitoringAlertsPage,
+  })),
+);
+const SourceUrlAgentRunsPage = lazy(() =>
+  import("../pages/SourceUrlAgentRunsPage").then(({ SourceUrlAgentRunsPage }) => ({
+    default: SourceUrlAgentRunsPage,
+  })),
+);
+const SourceUrlCandidatesPage = lazy(() =>
+  import("../pages/SourceUrlCandidatesPage").then(({ SourceUrlCandidatesPage }) => ({
+    default: SourceUrlCandidatesPage,
+  })),
+);
+const VendorSourceUrlsPage = lazy(() =>
+  import("../pages/VendorSourceUrlsPage").then(({ VendorSourceUrlsPage }) => ({ default: VendorSourceUrlsPage })),
+);
+const VendorSourceCaptureRunsPage = lazy(() =>
+  import("../pages/VendorSourceCaptureRunsPage").then(({ VendorSourceCaptureRunsPage }) => ({
+    default: VendorSourceCaptureRunsPage,
+  })),
+);
+const VendorSourceImportsPage = lazy(() =>
+  import("../pages/VendorSourceImportsPage").then(({ VendorSourceImportsPage }) => ({
+    default: VendorSourceImportsPage,
+  })),
+);
+const ProductFactoryWorkflowPage = lazy(() =>
+  import("../pages/ProductFactoryWorkflowPage").then(({ ProductFactoryWorkflowPage }) => ({
+    default: ProductFactoryWorkflowPage,
+  })),
+);
+const FiltersManagerPage = lazy(() =>
+  import("../pages/FiltersManagerPage").then(({ FiltersManagerPage }) => ({ default: FiltersManagerPage })),
+);
+const PrepareJobPage = lazy(() =>
+  import("../pages/PrepareJobPage").then(({ PrepareJobPage }) => ({ default: PrepareJobPage })),
+);
+const RenderJobPage = lazy(() =>
+  import("../pages/RenderJobPage").then(({ RenderJobPage }) => ({ default: RenderJobPage })),
+);
+const PublishJobPage = lazy(() =>
+  import("../pages/PublishJobPage").then(({ PublishJobPage }) => ({ default: PublishJobPage })),
+);
+const JobsPage = lazy(() => import("../pages/JobsPage").then(({ JobsPage }) => ({ default: JobsPage })));
+const JobDetailPage = lazy(() =>
+  import("../pages/JobDetailPage").then(({ JobDetailPage }) => ({ default: JobDetailPage })),
+);
 
 function RedirectWithSearch({ to }: { to: string }) {
   const location = useLocation();
   return <Navigate to={`${to}${location.search}`} replace />;
+}
+
+function RouteLoadingFallback() {
+  return <LoadingState label="Loading page..." />;
+}
+
+function withPageSuspense(Page: ComponentType): ReactElement {
+  return (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Page />
+    </Suspense>
+  );
 }
 
 const routes = [
@@ -31,31 +92,31 @@ const routes = [
     path: "/",
     element: <AppShell />,
     children: [
-      { index: true, element: <DashboardPage /> },
-      { path: "catalog", element: <CatalogPage /> },
-      { path: "catalog/products/:catalogProductId", element: <CatalogProductDetailPage /> },
-      { path: "price-monitoring", element: <PriceMonitoringPage /> },
-      { path: "price-monitoring/executions", element: <PriceMonitoringExecutionsPage /> },
-      { path: "price-monitoring/alerts", element: <PriceMonitoringAlertsPage /> },
+      { index: true, element: withPageSuspense(DashboardPage) },
+      { path: "catalog", element: withPageSuspense(CatalogPage) },
+      { path: "catalog/products/:catalogProductId", element: withPageSuspense(CatalogProductDetailPage) },
+      { path: "price-monitoring", element: withPageSuspense(PriceMonitoringPage) },
+      { path: "price-monitoring/executions", element: withPageSuspense(PriceMonitoringExecutionsPage) },
+      { path: "price-monitoring/alerts", element: withPageSuspense(PriceMonitoringAlertsPage) },
       { path: "find-source", element: <RedirectWithSearch to="/find-source/runs" /> },
-      { path: "find-source/runs", element: <SourceUrlAgentRunsPage /> },
-      { path: "find-source/candidates", element: <SourceUrlCandidatesPage /> },
+      { path: "find-source/runs", element: withPageSuspense(SourceUrlAgentRunsPage) },
+      { path: "find-source/candidates", element: withPageSuspense(SourceUrlCandidatesPage) },
       { path: "vendor-sources", element: <RedirectWithSearch to="/vendor-sources/source-urls" /> },
       { path: "vendor-sources/runs", element: <RedirectWithSearch to="/find-source/runs" /> },
       { path: "vendor-sources/candidates", element: <RedirectWithSearch to="/find-source/candidates" /> },
-      { path: "vendor-sources/source-urls", element: <VendorSourceUrlsPage /> },
-      { path: "vendor-sources/captures", element: <VendorSourceCaptureRunsPage /> },
-      { path: "vendor-sources/imports", element: <VendorSourceImportsPage /> },
-      { path: "product-factory", element: <ProductFactoryWorkflowPage /> },
-      { path: "product-factory/filters", element: <FiltersManagerPage /> },
-      { path: "product-factory/:model", element: <ProductFactoryWorkflowPage /> },
-      { path: "pipeline", element: <ProductFactoryWorkflowPage /> },
-      { path: "pipeline/:model", element: <ProductFactoryWorkflowPage /> },
-      { path: "prepare", element: <PrepareJobPage /> },
-      { path: "render", element: <RenderJobPage /> },
-      { path: "publish", element: <PublishJobPage /> },
-      { path: "jobs", element: <JobsPage /> },
-      { path: "jobs/:jobId", element: <JobDetailPage /> },
+      { path: "vendor-sources/source-urls", element: withPageSuspense(VendorSourceUrlsPage) },
+      { path: "vendor-sources/captures", element: withPageSuspense(VendorSourceCaptureRunsPage) },
+      { path: "vendor-sources/imports", element: withPageSuspense(VendorSourceImportsPage) },
+      { path: "product-factory", element: withPageSuspense(ProductFactoryWorkflowPage) },
+      { path: "product-factory/filters", element: withPageSuspense(FiltersManagerPage) },
+      { path: "product-factory/:model", element: withPageSuspense(ProductFactoryWorkflowPage) },
+      { path: "pipeline", element: withPageSuspense(ProductFactoryWorkflowPage) },
+      { path: "pipeline/:model", element: withPageSuspense(ProductFactoryWorkflowPage) },
+      { path: "prepare", element: withPageSuspense(PrepareJobPage) },
+      { path: "render", element: withPageSuspense(RenderJobPage) },
+      { path: "publish", element: withPageSuspense(PublishJobPage) },
+      { path: "jobs", element: withPageSuspense(JobsPage) },
+      { path: "jobs/:jobId", element: withPageSuspense(JobDetailPage) },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
