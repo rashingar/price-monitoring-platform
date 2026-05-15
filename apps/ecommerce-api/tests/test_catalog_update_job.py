@@ -12,11 +12,26 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
+import ecommerce.catalog_update as catalog_update  # noqa: E402
+from ecommerce.catalog_update import config as catalog_update_config  # noqa: E402
 from ecommerce.catalog_update import service  # noqa: E402
 from ecommerce.catalog_update import browser_steps, progress  # noqa: E402
-from ecommerce.catalog_update.exclusions import excluded_models_from_rows  # noqa: E402
+from ecommerce.catalog_update.browser_steps import append_session_token  # noqa: E402
+from ecommerce.catalog_update.config import build_admin_index, load_catalog_update_config  # noqa: E402
+from ecommerce.catalog_update.constants import CATALOG_UPDATE_JOB_TYPE  # noqa: E402
+from ecommerce.catalog_update.exclusions import excluded_models_from_rows, filter_source_catalog_exclusions  # noqa: E402
+from ecommerce.catalog_update.exporter import export_catalog_csv  # noqa: E402
+from ecommerce.catalog_update.progress import CatalogUpdateJobProgressReporter  # noqa: E402
 from ecommerce.catalog_update.redaction import redact_opencart_sensitive_data, redact_opencart_url  # noqa: E402
-from ecommerce.catalog_update.service import CatalogExportResult, CatalogUpdateConfigError, CatalogUpdateError  # noqa: E402
+from ecommerce.catalog_update.types import (  # noqa: E402
+    EXCLUDED_MODELS_ENV_VAR,
+    CatalogExclusionCleanupResult,
+    CatalogExportResult,
+    CatalogUpdateConfig,
+    CatalogUpdateConfigError,
+    CatalogUpdateError,
+    ExcludedModels,
+)
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base, CatalogProductRow, SourceUrl  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
@@ -31,7 +46,7 @@ def _client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
 
 
 def test_catalog_update_config_validation_reports_missing_env(monkeypatch) -> None:
-    monkeypatch.setattr(service, "load_local_env_if_present", lambda: None)
+    monkeypatch.setattr(catalog_update_config, "load_local_env_if_present", lambda: None)
     for name in (
         "OPENCART_STORE_BASE",
         "OPENCART_ADMIN_PATH",
@@ -42,7 +57,7 @@ def test_catalog_update_config_validation_reports_missing_env(monkeypatch) -> No
         monkeypatch.delenv(name, raising=False)
 
     try:
-        service.load_catalog_update_config()
+        load_catalog_update_config()
     except CatalogUpdateConfigError as exc:
         message = str(exc)
     else:
@@ -59,7 +74,7 @@ def test_catalog_update_config_defaults_export_profile(monkeypatch) -> None:
     monkeypatch.setenv("OPENCART_ADMIN_PASS", "supersecret")
     monkeypatch.delenv("OPENCART_EXPORT_PROFILE", raising=False)
 
-    config = service.load_catalog_update_config()
+    config = load_catalog_update_config()
 
     assert config.export_profile == "sourceCata"
     assert config.admin_url == "https://shop.example/admin"
@@ -67,14 +82,37 @@ def test_catalog_update_config_defaults_export_profile(monkeypatch) -> None:
 
 
 def test_catalog_update_admin_index_matches_product_factory_normalization() -> None:
-    assert service.build_admin_index("https://shop.example/", "/ADMIN/index.php") == "https://shop.example/ADMIN/index.php"
-    assert service.build_admin_index("https://shop.example", "admin") == "https://shop.example/admin"
-    assert service.build_admin_index("https://shop.example", "") == "https://shop.example/index.php"
-    assert service.build_admin_index("https://shop.example", "C:/site/ADMIN/index.php") == "https://shop.example/ADMIN/index.php"
+    assert build_admin_index("https://shop.example/", "/ADMIN/index.php") == "https://shop.example/ADMIN/index.php"
+    assert build_admin_index("https://shop.example", "admin") == "https://shop.example/admin"
+    assert build_admin_index("https://shop.example", "") == "https://shop.example/index.php"
+    assert build_admin_index("https://shop.example", "C:/site/ADMIN/index.php") == "https://shop.example/ADMIN/index.php"
+
+
+def test_catalog_update_package_preserves_public_exports() -> None:
+    assert catalog_update.CATALOG_UPDATE_JOB_TYPE == CATALOG_UPDATE_JOB_TYPE
+    assert catalog_update.CatalogUpdateConfig is CatalogUpdateConfig
+    assert catalog_update.CatalogUpdateError is CatalogUpdateError
+    assert catalog_update.CatalogUpdateConfigError is CatalogUpdateConfigError
+    assert catalog_update.run_catalog_update is service.run_catalog_update
+    assert catalog_update.run_catalog_update_durable_job is service.run_catalog_update_durable_job
+
+
+def test_catalog_update_service_does_not_expose_old_private_helper_aliases() -> None:
+    old_aliases = (
+        "_append_session_token",
+        "_safe_filename",
+        "_safe_path_segment",
+        "_sanitize_output",
+        "_sanitize_progress_details",
+        "_now",
+        "_elapsed_seconds",
+        "CATALOG_UPDATE_JOB_TYPE",
+    )
+    assert [name for name in old_aliases if hasattr(service, name)] == []
 
 
 def test_export_page_url_reuses_login_session_token() -> None:
-    target = service._append_session_token(
+    target = append_session_token(
         "https://shop.example/ADMIN/index.php?route=extension/ka_extensions/csv_product_export/ka_product_export",
         "https://shop.example/ADMIN/index.php?route=common/dashboard&user_token=abc123",
     )
@@ -104,11 +142,11 @@ def test_run_catalog_update_calls_migration_and_ingests_downloaded_csv(tmp_path:
     monkeypatch.setattr(service, "run_alembic_upgrade", lambda: calls.append(("alembic", None)) or {"status": "succeeded"})
     monkeypatch.setattr(service, "export_catalog_csv", fake_export)
     monkeypatch.setattr(service, "run_catalog_ingest", fake_ingest)
-    monkeypatch.setattr(service, "purge_excluded_catalog_state", lambda _models, **_kwargs: service.CatalogExclusionCleanupResult())
+    monkeypatch.setattr(service, "purge_excluded_catalog_state", lambda _models, **_kwargs: CatalogExclusionCleanupResult())
 
     result = service.run_catalog_update(
         "job-1",
-        config=service.CatalogUpdateConfig(
+        config=CatalogUpdateConfig(
             store_base="https://shop.example",
             admin_path="admin",
             admin_user="admin",
@@ -206,7 +244,7 @@ def test_catalog_update_durable_job_writes_progress_and_heartbeat(tmp_path: Path
     clock = _Clock(datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc))
 
     with session_scope(database_url) as session:
-        create_queued_job(session, job_type=service.CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-progress")
+        create_queued_job(session, job_type=CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-progress")
         mark_running(session, "job-progress")
 
     def fake_export(config, selected_output_dir, **kwargs):
@@ -253,10 +291,10 @@ def test_catalog_update_progress_details_are_sanitized(tmp_path: Path, monkeypat
     clock = _Clock(datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc))
 
     with session_scope(database_url) as session:
-        create_queued_job(session, job_type=service.CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-sanitized")
+        create_queued_job(session, job_type=CATALOG_UPDATE_JOB_TYPE, payload={}, job_id="job-sanitized")
         mark_running(session, "job-sanitized")
 
-    with service.CatalogUpdateJobProgressReporter("job-sanitized", heartbeat_interval_seconds=60, now=clock) as reporter:
+    with CatalogUpdateJobProgressReporter("job-sanitized", heartbeat_interval_seconds=60, now=clock) as reporter:
         reporter.report(
             "profile_loaded",
             {
@@ -284,7 +322,7 @@ def test_run_catalog_update_filters_excluded_models_before_ingest(tmp_path: Path
     output_dir = tmp_path / "catalog_updates" / "job-2"
     exclusions_path = tmp_path / "excluded.csv"
     exclusions_path.write_text("model\n005606\n", encoding="utf-8")
-    monkeypatch.setenv(service.EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
+    monkeypatch.setenv(EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
 
     def fake_export(config, selected_output_dir, **_kwargs):
         calls.append(("export", selected_output_dir))
@@ -305,11 +343,11 @@ def test_run_catalog_update_filters_excluded_models_before_ingest(tmp_path: Path
     monkeypatch.setattr(service, "run_alembic_upgrade", lambda: calls.append(("alembic", None)) or {"status": "succeeded"})
     monkeypatch.setattr(service, "export_catalog_csv", fake_export)
     monkeypatch.setattr(service, "run_catalog_ingest", fake_ingest)
-    monkeypatch.setattr(service, "purge_excluded_catalog_state", lambda _models, **_kwargs: service.CatalogExclusionCleanupResult())
+    monkeypatch.setattr(service, "purge_excluded_catalog_state", lambda _models, **_kwargs: CatalogExclusionCleanupResult())
 
     result = service.run_catalog_update(
         "job-2",
-        config=service.CatalogUpdateConfig(
+        config=CatalogUpdateConfig(
             store_base="https://shop.example",
             admin_path="admin",
             admin_user="admin",
@@ -336,24 +374,24 @@ def test_catalog_update_exclusion_matching_preserves_model_string_identity(tmp_p
         encoding="utf-8",
     )
 
-    exclusions = service.ExcludedModels(
+    exclusions = ExcludedModels(
         path=tmp_path / "excluded.csv",
         found=True,
         explicit_path=True,
         models=frozenset({"005606"}),
     )
-    result = service.filter_source_catalog_exclusions(source, tmp_path, exclusions)
+    result = filter_source_catalog_exclusions(source, tmp_path, exclusions)
     filtered_text = result.filtered_csv_path.read_text(encoding="utf-8")
     assert "5606" in filtered_text
     assert "005606" not in filtered_text
 
-    exclusions = service.ExcludedModels(
+    exclusions = ExcludedModels(
         path=tmp_path / "excluded.csv",
         found=True,
         explicit_path=True,
         models=frozenset({"5606"}),
     )
-    result = service.filter_source_catalog_exclusions(source, tmp_path, exclusions)
+    result = filter_source_catalog_exclusions(source, tmp_path, exclusions)
     filtered_text = result.filtered_csv_path.read_text(encoding="utf-8")
     assert "005606" in filtered_text
     assert "5606,M1" not in filtered_text
@@ -368,7 +406,7 @@ def test_catalog_update_exclusion_parser_preserves_leading_zero_models(tmp_path:
 
 def test_catalog_update_missing_default_exclusion_file_continues_with_zero_exclusions(tmp_path: Path, monkeypatch) -> None:
     output_dir = tmp_path / "catalog_updates" / "job-3"
-    monkeypatch.delenv(service.EXCLUDED_MODELS_ENV_VAR, raising=False)
+    monkeypatch.delenv(EXCLUDED_MODELS_ENV_VAR, raising=False)
     monkeypatch.setattr(service, "repo_root", lambda: tmp_path)
 
     def fake_export(config, selected_output_dir, **_kwargs):
@@ -387,7 +425,7 @@ def test_catalog_update_missing_default_exclusion_file_continues_with_zero_exclu
 
     result = service.run_catalog_update(
         "job-3",
-        config=service.CatalogUpdateConfig(
+        config=CatalogUpdateConfig(
             store_base="https://shop.example",
             admin_path="admin",
             admin_user="admin",
@@ -403,7 +441,7 @@ def test_catalog_update_missing_default_exclusion_file_continues_with_zero_exclu
 
 def test_catalog_update_explicit_missing_exclusion_file_fails(tmp_path: Path, monkeypatch) -> None:
     missing_path = tmp_path / "missing.csv"
-    monkeypatch.setenv(service.EXCLUDED_MODELS_ENV_VAR, str(missing_path))
+    monkeypatch.setenv(EXCLUDED_MODELS_ENV_VAR, str(missing_path))
 
     try:
         service.load_excluded_models()
@@ -438,7 +476,7 @@ def test_catalog_update_purges_previously_imported_excluded_catalog_products(tmp
     output_dir = tmp_path / "catalog_updates" / "job-4"
     exclusions_path = tmp_path / "excluded.csv"
     exclusions_path.write_text("005606\n", encoding="utf-8")
-    monkeypatch.setenv(service.EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
+    monkeypatch.setenv(EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
 
     with session_scope(database_url) as session:
         session.add(_catalog_row("005606", name="Previously imported"))
@@ -477,7 +515,7 @@ def test_catalog_update_purges_source_urls_for_excluded_catalog_products(tmp_pat
     output_dir = tmp_path / "catalog_updates" / "job-5"
     exclusions_path = tmp_path / "excluded.csv"
     exclusions_path.write_text("model\n005606\n", encoding="utf-8")
-    monkeypatch.setenv(service.EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
+    monkeypatch.setenv(EXCLUDED_MODELS_ENV_VAR, str(exclusions_path))
 
     with session_scope(database_url) as session:
         row = _catalog_row("005606", name="Excluded with source URL")
@@ -528,8 +566,8 @@ def test_catalog_update_purges_source_urls_for_excluded_catalog_products(tmp_pat
     assert result["exclusions"]["purged_catalog_products"] == 1
 
 
-def _catalog_update_config() -> service.CatalogUpdateConfig:
-    return service.CatalogUpdateConfig(
+def _catalog_update_config() -> CatalogUpdateConfig:
+    return CatalogUpdateConfig(
         store_base="https://shop.example",
         admin_path="admin",
         admin_user="admin",
@@ -645,8 +683,8 @@ def test_export_catalog_csv_closes_browser_before_playwright_stops(tmp_path: Pat
 
     monkeypatch.setattr(browser_steps, "download_export", fake_download)
 
-    result = service.export_catalog_csv(
-        service.CatalogUpdateConfig(
+    result = export_catalog_csv(
+        CatalogUpdateConfig(
             store_base="https://shop.example",
             admin_path="admin",
             admin_user="admin",
@@ -753,11 +791,11 @@ def test_export_catalog_csv_writes_redacted_failure_diagnostics_on_playwright_fa
     monkeypatch.setattr(browser_steps, "login_to_opencart", lambda _page, _config, _timeout_ms: None)
 
     def fail_open(_page, _config, _timeout_ms):
-        raise service.CatalogUpdateError("profile selector missing for admin@example user_token=abc123 supersecret")
+        raise CatalogUpdateError("profile selector missing for admin@example user_token=abc123 supersecret")
 
     monkeypatch.setattr(browser_steps, "open_csv_product_export", fail_open)
 
-    config = service.CatalogUpdateConfig(
+    config = CatalogUpdateConfig(
         store_base="https://shop.example",
         admin_path="admin",
         admin_user="admin@example",
@@ -765,8 +803,8 @@ def test_export_catalog_csv_writes_redacted_failure_diagnostics_on_playwright_fa
     )
 
     try:
-        service.export_catalog_csv(config, tmp_path, job_id="job-1")
-    except service.CatalogUpdateError as exc:
+        export_catalog_csv(config, tmp_path, job_id="job-1")
+    except CatalogUpdateError as exc:
         message = str(exc)
     else:
         raise AssertionError("Expected CatalogUpdateError")
@@ -800,11 +838,11 @@ def test_export_catalog_csv_preserves_original_error_when_screenshot_capture_fai
     monkeypatch.setattr(browser_steps, "login_to_opencart", lambda _page, _config, _timeout_ms: None)
 
     def fail_open(_page, _config, _timeout_ms):
-        raise service.CatalogUpdateError("CSV Product Export menu item not found.")
+        raise CatalogUpdateError("CSV Product Export menu item not found.")
 
     monkeypatch.setattr(browser_steps, "open_csv_product_export", fail_open)
 
-    config = service.CatalogUpdateConfig(
+    config = CatalogUpdateConfig(
         store_base="https://shop.example",
         admin_path="admin",
         admin_user="admin@example",
@@ -812,8 +850,8 @@ def test_export_catalog_csv_preserves_original_error_when_screenshot_capture_fai
     )
 
     try:
-        service.export_catalog_csv(config, tmp_path, job_id="job-1")
-    except service.CatalogUpdateError as exc:
+        export_catalog_csv(config, tmp_path, job_id="job-1")
+    except CatalogUpdateError as exc:
         message = str(exc)
     else:
         raise AssertionError("Expected CatalogUpdateError")

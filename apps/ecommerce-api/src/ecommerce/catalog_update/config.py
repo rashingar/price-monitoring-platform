@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import os
-import re
-from urllib.parse import urlparse
 
+from ecommerce.catalog_update.admin_paths import build_admin_index, normalize_admin_path
 from ecommerce.catalog_update.types import (
     DEFAULT_EXPORT_PROFILE,
     DEFAULT_EXPORT_TIMEOUT_SECONDS,
@@ -13,6 +12,15 @@ from ecommerce.catalog_update.types import (
     CatalogUpdateConfigError,
 )
 from ecommerce.env import load_local_env_if_present
+
+__all__ = [
+    "build_admin_index",
+    "env_bool",
+    "env_int",
+    "env_text",
+    "load_catalog_update_config",
+    "normalize_admin_path",
+]
 
 
 def load_catalog_update_config() -> CatalogUpdateConfig:
@@ -39,24 +47,6 @@ def load_catalog_update_config() -> CatalogUpdateConfig:
         timeout_seconds=env_int("OPENCART_EXPORT_TIMEOUT_SECONDS", DEFAULT_EXPORT_TIMEOUT_SECONDS),
         headed=env_bool("OPENCART_EXPORT_HEADED", False),
     )
-
-
-def normalize_admin_path(admin_path: str) -> str:
-    value = (admin_path or "").strip().replace("\\", "/")
-    if not value:
-        return "/index.php"
-    if re.match(r"^[A-Za-z]:/", value):
-        parts = [part for part in value.split("/") if part]
-        if len(parts) >= 2 and parts[-1].lower() == "index.php":
-            return "/" + "/".join(parts[-2:])
-    if "://" in value:
-        return urlparse(value).path or "/index.php"
-    return value if value.startswith("/") else f"/{value}"
-
-
-def build_admin_index(store_base: str, admin_path: str) -> str:
-    normalized_admin_path = normalize_admin_path(admin_path)
-    return f"{store_base.rstrip('/')}/{normalized_admin_path.lstrip('/')}"
 
 
 def env_text(name: str) -> str | None:

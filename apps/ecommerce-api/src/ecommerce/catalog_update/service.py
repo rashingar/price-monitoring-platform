@@ -7,94 +7,29 @@ from pathlib import Path
 from typing import Any, Callable
 
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.catalog_update.browser_steps import (
-    CSV_PRODUCT_EXPORT_ROUTE,
-    advance_export_step_two as _advance_export_step_two,
-    append_session_token as _append_session_token,
-    click_by_role_or_text as _click_by_role_or_text,
-    click_first_locator as _click_first_locator,
-    download_export as _download_export,
-    download_locator as _download_locator,
-    fill_first as _fill_first,
-    load_export_profile as _load_export_profile,
-    login_to_opencart as _login_to_opencart,
-    navigate_to_csv_product_export as _navigate_to_csv_product_export,
-    open_csv_product_export as _open_csv_product_export,
-    try_click_text as _try_click_text,
-    wait_for_text as _wait_for_text,
-)
-from ecommerce.catalog_update.cleanup import model_batches as _model_batches
-from ecommerce.catalog_update.cleanup import purge_excluded_catalog_state, rowcount as _rowcount
-from ecommerce.catalog_update.config import (
-    build_admin_index,
-    env_bool as _env_bool,
-    env_int as _env_int,
-    env_text as _env_text,
-    load_catalog_update_config,
-    normalize_admin_path,
-)
-from ecommerce.catalog_update.diagnostics import (
-    capture_export_failure_diagnostics as _capture_export_failure_diagnostics,
-    format_export_failure as _format_export_failure,
-    now_iso as _now_iso,
-    redact_visible_credentials as _redact_visible_credentials,
-)
+from ecommerce.catalog_update.cleanup import purge_excluded_catalog_state
+from ecommerce.catalog_update.config import load_catalog_update_config
 from ecommerce.catalog_update.exclusions import (
-    excluded_models_from_rows as _excluded_models_from_rows,
     filter_source_catalog_exclusions,
     load_excluded_models as _load_excluded_models,
     normalize_downloaded_csv,
 )
 from ecommerce.catalog_update.exporter import export_catalog_csv
 from ecommerce.catalog_update.migration import run_alembic_upgrade
-from ecommerce.catalog_update.paths import (
-    catalog_update_output_dir,
-    display_path as _display_path,
-    ecommerce_app_root,
-    repo_root,
-    safe_filename as _safe_filename,
-    safe_path_segment as _safe_path_segment,
-)
+from ecommerce.catalog_update.paths import catalog_update_output_dir, display_path, repo_root
 from ecommerce.catalog_update.progress import (
     CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS,
-    CATALOG_UPDATE_PROGRESS_STEPS,
-    CATALOG_UPDATE_STEPS,
-    PROGRESS_EVENTS,
-    WORKFLOW_PHASES,
-    CatalogUpdateCompletedStep,
     CatalogUpdateJobProgressReporter,
     CatalogUpdateProgressCallback,
-    CatalogUpdateProgressEvent,
     CatalogUpdateStepTracker,
-    CatalogUpdateWorkflowPhase,
 )
-from ecommerce.catalog_update.redaction import (
-    REDACTED_VALUE,
-    SENSITIVE_QUERY_KEYS,
-    is_sensitive_query_key as _is_sensitive_query_key,
-    redact_opencart_sensitive_data,
-    redact_opencart_url,
-    sanitize_output as _sanitize_output,
-    sanitize_progress_details as _sanitize_progress_details,
-    sanitize_progress_value as _sanitize_progress_value,
-)
+from ecommerce.catalog_update.redaction import redact_opencart_sensitive_data
 from ecommerce.catalog_update.types import (
-    DEFAULT_EXCLUDED_MODELS_RELATIVE_PATH,
-    DEFAULT_EXPORT_PROFILE,
-    DEFAULT_EXPORT_TIMEOUT_SECONDS,
-    EXCLUDED_MODELS_ENV_VAR,
-    CatalogExclusionCleanupResult,
-    CatalogExclusionFilterResult,
-    CatalogExportResult,
     CatalogUpdateConfig,
-    CatalogUpdateConfigError,
     CatalogUpdateError,
     ExcludedModels,
 )
-from ecommerce.env import load_local_env_if_present
 from ecommerce.jobs.ingest_catalog import ingest_catalog_file
-
-CATALOG_UPDATE_JOB_TYPE = "catalog_update_from_opencart"
 
 
 def run_catalog_update(
@@ -164,12 +99,12 @@ def run_catalog_update(
 
     return {
         "job_id": job_id,
-        "artifact_dir": _display_path(output_dir),
-        "download_dir": _display_path(output_dir),
+        "artifact_dir": display_path(output_dir),
+        "download_dir": display_path(output_dir),
         "export_profile": selected_config.export_profile,
-        "downloaded_csv_path": _display_path(export.downloaded_path),
-        "normalized_csv_path": _display_path(normalized_csv_path),
-        "imported_csv_path": _display_path(filter_result.filtered_csv_path),
+        "downloaded_csv_path": display_path(export.downloaded_path),
+        "normalized_csv_path": display_path(normalized_csv_path),
+        "imported_csv_path": display_path(filter_result.filtered_csv_path),
         "downloaded_filename": export.downloaded_path.name,
         "downloaded_file_size": export.downloaded_size,
         "migration": migration,
@@ -205,15 +140,3 @@ def _message_with_step(message: str, step: str) -> str:
     if "Step:" in safe_message or " at step " in safe_message:
         return safe_message
     return f"{safe_message} Step: {step}."
-
-
-def _now() -> datetime:
-    from ecommerce.catalog_update.progress import now_utc
-
-    return now_utc()
-
-
-def _elapsed_seconds(started_at: datetime, ended_at: datetime) -> float:
-    from ecommerce.catalog_update.progress import elapsed_seconds
-
-    return elapsed_seconds(started_at, ended_at)

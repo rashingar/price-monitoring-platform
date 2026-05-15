@@ -41,7 +41,7 @@ class CatalogUpdateConfig:
 
     @property
     def admin_index_url(self) -> str:
-        from ecommerce.catalog_update.config import build_admin_index
+        from ecommerce.catalog_update.admin_paths import build_admin_index
 
         return build_admin_index(self.store_base, self.admin_path)
 
