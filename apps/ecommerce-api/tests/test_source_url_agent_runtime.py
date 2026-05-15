@@ -1,6 +1,6 @@
 import csv
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -13,8 +13,10 @@ from ecommerce.api import routes_source_url_agent  # noqa: E402
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs import source_url_agent as source_url_agent_job  # noqa: E402
 from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent  # noqa: E402
@@ -22,6 +24,13 @@ from ecommerce.source_url_agent.artifacts import write_run_artifacts  # noqa: E4
 from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
 from ecommerce.source_url_agent.evidence import PageEvidence, extract_page_evidence  # noqa: E402
 from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
+from ecommerce.source_url_agent.progress import (  # noqa: E402
+    SOURCE_URL_AGENT_JOB_TYPE,
+    SOURCE_URL_AGENT_PROGRESS_STEP_DEFINITIONS,
+    SOURCE_URL_AGENT_PROGRESS_STEP_IDS,
+    SOURCE_URL_AGENT_PROGRESS_STEP_LABELS,
+    SourceUrlAgentProgressReporter,
+)
 from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
 from ecommerce.source_url_agent.search import SourceSearchResult  # noqa: E402
 from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
@@ -153,6 +162,16 @@ def _fake_resolver(product, source) -> SourceSearchResult:
     return SourceSearchResult(evidence=[evidence], searched_queries=[f"{product.manufacturer} {product.mpn}"], searched_urls=[], errors=[])
 
 
+class _Clock:
+    def __init__(self, start: datetime) -> None:
+        self.current = start
+
+    def __call__(self) -> datetime:
+        value = self.current
+        self.current = self.current + timedelta(seconds=1)
+        return value
+
+
 def _run_api_client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
     monkeypatch.chdir(tmp_path)
     _allow_source_url_agent_run_database(monkeypatch)
@@ -182,6 +201,94 @@ def test_artifact_writing_creates_required_files(tmp_path: Path) -> None:
     assert paths.source_url_run_summary.exists()
     assert paths.searched_queries.exists()
     assert paths.rule_suggestions.exists()
+
+
+def test_source_url_agent_progress_definitions_are_stable() -> None:
+    assert SOURCE_URL_AGENT_PROGRESS_STEP_IDS == (
+        "product_selection_started",
+        "product_selection_completed",
+        "source_registry_loaded",
+        "discovery_started",
+        "product_source_started",
+        "product_source_completed",
+        "candidate_scoring_started",
+        "candidate_scoring_completed",
+        "high_confidence_apply_started",
+        "high_confidence_apply_completed",
+        "artifact_writing_started",
+        "artifact_writing_completed",
+        "candidate_persistence_started",
+        "candidate_persistence_completed",
+        "run_completed",
+    )
+    assert [definition.label for definition in SOURCE_URL_AGENT_PROGRESS_STEP_DEFINITIONS]
+    assert SOURCE_URL_AGENT_PROGRESS_STEP_LABELS["product_source_completed"] == "Product-source completed"
+
+
+def test_agent_records_durable_progress_counts_and_resolver_errors(tmp_path: Path, monkeypatch) -> None:
+    database_url = _sqlite_url(tmp_path)
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    _create_schema(database_url)
+    registry = load_source_registry()
+    clock = _Clock(datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc))
+
+    with session_scope(database_url) as session:
+        row = _catalog_product(session)
+        create_queued_job(session, job_type=SOURCE_URL_AGENT_JOB_TYPE, payload={}, job_id="job-source-agent")
+        mark_running(session, "job-source-agent")
+        catalog_product_id = row.id
+
+    product = _product(catalog_product_id=catalog_product_id)
+
+    def resolver(_product, source):
+        return SourceSearchResult(
+            evidence=[],
+            searched_queries=["MR25GB"],
+            searched_urls=[f"https://{source.source_domain}/search?q=MR25GB&token=secret"],
+            errors=[f"https://{source.source_domain}/search?q=MR25GB&token=secret: timeout"],
+        )
+
+    with SourceUrlAgentProgressReporter("job-source-agent", heartbeat_interval_seconds=60, now=clock) as reporter:
+        with session_scope(database_url) as session:
+            result = run_source_url_agent(
+                products=[product],
+                options=SourceUrlAgentOptions(
+                    mode="catalog",
+                    source="bestprice",
+                    output_dir=tmp_path / "runs",
+                    dry_run=True,
+                    apply_high_confidence=False,
+                    progress_reporter=reporter,
+                ),
+                registry=registry,
+                session=session,
+                resolver=resolver,
+            )
+            assert session.query(SourceUrl).count() == 0
+        progress = reporter.current_payload()
+
+    with session_scope(database_url) as session:
+        job = get_job_by_id(session, "job-source-agent")
+        assert job is not None
+        persisted_progress = job.result_json["progress"]
+
+    assert result.summary["error_count"] == 1
+    assert progress["current_step"] == "run_completed"
+    assert persisted_progress["current_step"] in {"candidate_persistence_started", "candidate_persistence_completed", "run_completed"}
+    assert progress["details"]["product_count"] == 1
+    assert progress["details"]["source_count"] == 1
+    assert progress["details"]["product_source_task_count"] == 1
+    assert progress["details"]["completed_product_source_task_count"] == 1
+    assert progress["details"]["candidate_count"] == 1
+    assert progress["details"]["error_count"] == 1
+    assert progress["details"]["persisted_candidate_count"] == 1
+    assert progress["details"]["applied_high_confidence_url_count"] == 0
+    completed = {step["step"]: step for step in progress["completed_steps"]}
+    assert completed["product_source_completed"]["details"]["completed_product_source_task_count"] == 1
+    scoring_errors = completed["candidate_scoring_completed"]["errors"]
+    assert scoring_errors
+    assert "token=secret" not in str(scoring_errors)
+    assert "token=%5Bredacted%5D" in str(scoring_errors)
 
 
 def test_agent_persists_run_and_candidate_models_when_apply_high_confidence(tmp_path: Path) -> None:
@@ -489,11 +596,16 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
     with session_scope(database_url) as session:
         run = session.query(SourceUrlDiscoveryRun).one()
         candidate = session.query(SourceUrlCandidate).one()
+        job = session.query(EcommerceJob).filter_by(job_id=payload["run_id"]).one()
         assert run.run_id == payload["run_id"]
         assert run.source_name == "bestprice"
         assert run.status == "completed"
         assert candidate.run_id == payload["run_id"]
         assert candidate.match_status == "matched"
+        assert job.job_type == SOURCE_URL_AGENT_JOB_TYPE
+        assert job.status == "succeeded"
+        assert job.result_json["progress"]["current_step"] == "run_completed"
+        assert job.result_json["progress"]["details"]["matched_count"] == 1
     history = client.get("/api/source-url-agent/runs")
     detail = client.get(f"/api/source-url-agent/runs/{payload['run_id']}")
     assert history.status_code == 200

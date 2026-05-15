@@ -20,12 +20,14 @@ from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
 from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness, require_database_ready_for_catalog
 from ecommerce.db.repositories.common import json_safe_value
+from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_failed, mark_running, mark_succeeded
 from ecommerce.db.session import session_scope
 from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, source_url_to_dict
 from ecommerce.source_urls import normalize_source_url
 from ecommerce.source_url_agent.agent import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult, run_source_url_agent
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate
 from ecommerce.source_url_agent.products import AgentProduct, SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
+from ecommerce.source_url_agent.progress import SOURCE_URL_AGENT_JOB_TYPE, SourceUrlAgentProgressReporter
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES, SourceDefinition, load_source_registry
 
 ReviewDecision = Literal["accept", "reject", "replace_url"]
@@ -170,6 +172,12 @@ def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_t
                 selected_models=selected_models,
             )
             _create_queued_discovery_tasks(session, run_id=run_id, products=products, sources=sources)
+            create_queued_job(
+                session,
+                job_id=run_id,
+                job_type=SOURCE_URL_AGENT_JOB_TYPE,
+                payload=_source_url_agent_job_payload(request, run_id=run_id, source_name=source_name),
+            )
             payload = _discovery_run_to_dict(row, session=session, include_tasks=True)
     except (FileNotFoundError, SourceUrlAgentInputError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -182,55 +190,62 @@ def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_t
 
 def _run_enqueued_source_url_agent(run_id: str, request: SourceUrlAgentRunRequest) -> None:
     _mark_discovery_run_running(run_id)
+    _mark_source_url_agent_job_running(run_id)
     limit = _api_run_limit(request)
     max_products_per_batch = request.max_products_per_batch or DEFAULT_API_MAX_PRODUCTS_PER_BATCH
     input_path = _source_url_agent_input_path(request)
     selected_models = _selected_models(request.selected_models)
-    options = SourceUrlAgentOptions(
-        mode=request.mode,
-        run_id=run_id,
-        source=request.source.strip().lower(),
-        input_path=input_path,
-        limit=limit,
-        offset=request.offset,
-        catalog_product_id=request.catalog_product_id,
-        model=_optional_text(request.model),
-        selected_models=selected_models,
-        missing_only=bool(request.missing_only),
-        active_only=bool(request.active_only),
-        dry_run=bool(request.dry_run),
-        apply_high_confidence=bool(request.apply_high_confidence),
-        max_products_per_batch=max_products_per_batch,
-        max_searches_per_product_source=request.max_searches_per_product_source,
-        rate_limit_seconds=request.rate_limit_seconds,
-        headed=bool(request.headed),
-        no_browser_cache=bool(request.no_browser_cache),
-        progress_callback=lambda event, product, source, candidates, error: _record_discovery_task_progress(
-            run_id,
-            event=event,
-            product=product,
-            source=source,
-            candidates=candidates,
-            error_message=error,
-        ),
-    )
     try:
-        with session_scope() as session:
-            products = _products_for_request(
-                session,
-                request=request,
-                limit=limit,
+        with SourceUrlAgentProgressReporter(run_id) as progress_reporter:
+            options = SourceUrlAgentOptions(
+                mode=request.mode,
+                run_id=run_id,
+                source=request.source.strip().lower(),
                 input_path=input_path,
+                limit=limit,
+                offset=request.offset,
+                catalog_product_id=request.catalog_product_id,
+                model=_optional_text(request.model),
                 selected_models=selected_models,
+                missing_only=bool(request.missing_only),
+                active_only=bool(request.active_only),
+                dry_run=bool(request.dry_run),
+                apply_high_confidence=bool(request.apply_high_confidence),
+                max_products_per_batch=max_products_per_batch,
+                max_searches_per_product_source=request.max_searches_per_product_source,
+                rate_limit_seconds=request.rate_limit_seconds,
+                headed=bool(request.headed),
+                no_browser_cache=bool(request.no_browser_cache),
+                progress_reporter=progress_reporter,
+                progress_callback=lambda event, product, source, candidates, error: _record_discovery_task_progress(
+                    run_id,
+                    event=event,
+                    product=product,
+                    source=source,
+                    candidates=candidates,
+                    error_message=error,
+                ),
             )
-            run_source_url_agent(
-                products=products,
-                options=options,
-                session=session,
-                resolver=SOURCE_URL_AGENT_API_RESOLVER,
-            )
+            with session_scope() as session:
+                products = _products_for_request(
+                    session,
+                    request=request,
+                    limit=limit,
+                    input_path=input_path,
+                    selected_models=selected_models,
+                )
+                result = run_source_url_agent(
+                    products=products,
+                    options=options,
+                    session=session,
+                    resolver=SOURCE_URL_AGENT_API_RESOLVER,
+                )
+            final_progress = progress_reporter.current_payload()
+        _mark_source_url_agent_job_succeeded(run_id, result, progress=final_progress)
     except Exception as exc:
-        _mark_discovery_run_failed(run_id, str(exc).strip() or exc.__class__.__name__)
+        message = str(exc).strip() or exc.__class__.__name__
+        _mark_discovery_run_failed(run_id, message)
+        _mark_source_url_agent_job_failed(run_id, message)
 
 
 def _products_for_request(
@@ -348,6 +363,54 @@ def _mark_discovery_run_running(run_id: str) -> None:
         row.updated_at = timestamp
 
 
+def _mark_source_url_agent_job_running(run_id: str) -> None:
+    try:
+        with session_scope() as session:
+            job = get_job_by_id(session, run_id)
+            if job is None:
+                return
+            if job.status == "queued":
+                mark_running(session, run_id)
+    except Exception:
+        return
+
+
+def _mark_source_url_agent_job_succeeded(
+    run_id: str,
+    result: SourceUrlAgentResult,
+    *,
+    progress: dict[str, Any] | None = None,
+) -> None:
+    try:
+        with session_scope() as session:
+            job = get_job_by_id(session, run_id)
+            if job is None:
+                return
+            existing_result = job.result_json if isinstance(job.result_json, dict) else {}
+            payload: dict[str, Any] = {
+                "run_id": result.run_id,
+                "summary": json_safe_value(result.summary),
+                "warnings": list(result.warnings),
+                "artifacts": result.artifacts.to_dict(),
+            }
+            if progress is not None:
+                payload["progress"] = progress
+            elif "progress" in existing_result:
+                payload["progress"] = existing_result["progress"]
+            mark_succeeded(session, run_id, result=payload)
+    except Exception:
+        return
+
+
+def _mark_source_url_agent_job_failed(run_id: str, message: str) -> None:
+    try:
+        with session_scope() as session:
+            if get_job_by_id(session, run_id) is not None:
+                mark_failed(session, run_id, error_message=message)
+    except Exception:
+        return
+
+
 def _mark_discovery_run_failed(run_id: str, message: str) -> None:
     with session_scope() as session:
         timestamp = _now()
@@ -397,6 +460,21 @@ def _record_discovery_task_progress(
             task.completed_at = timestamp
         task.updated_at = timestamp
         _refresh_discovery_run_progress(session, run_id)
+
+
+def _source_url_agent_job_payload(
+    request: SourceUrlAgentRunRequest,
+    *,
+    run_id: str,
+    source_name: str,
+) -> dict[str, Any]:
+    request_payload = request.model_dump() if hasattr(request, "model_dump") else request.dict()
+    return {
+        "run_id": run_id,
+        "source": source_name,
+        "mode": request.mode,
+        "request": json_safe_value(request_payload),
+    }
 
 
 def _find_discovery_task(
