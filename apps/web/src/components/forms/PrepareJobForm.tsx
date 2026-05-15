@@ -20,6 +20,7 @@ export interface PrepareFormState {
   boxnow: boolean;
   price: string;
   gallery_url: string;
+  characteristics_url: string;
   second_opencart_image_index: string;
 }
 
@@ -32,6 +33,7 @@ export const initialPrepareFormState: PrepareFormState = {
   boxnow: false,
   price: "0",
   gallery_url: "",
+  characteristics_url: "",
   second_opencart_image_index: "",
 };
 
@@ -112,6 +114,7 @@ export function PrepareJobForm({
     }
 
     const galleryUrl = form.gallery_url.trim();
+    const characteristicsUrl = form.characteristics_url.trim();
     const secondImageIndexInput = form.second_opencart_image_index.trim();
     let secondOpenCartImageIndex: number | null = null;
     if (secondImageIndexInput.length > 0) {
@@ -134,6 +137,9 @@ export function PrepareJobForm({
     };
     if (galleryUrl.length > 0) {
       request.gallery_url = galleryUrl;
+    }
+    if (characteristicsUrl.length > 0) {
+      request.characteristics_url = characteristicsUrl;
     }
     if (secondOpenCartImageIndex !== null) {
       request.second_opencart_image_index = secondOpenCartImageIndex;
@@ -247,6 +253,17 @@ export function PrepareJobForm({
               />
             </label>
             <small>Optional URL used only for gallery image extraction. Product data still comes from the main URL.</small>
+
+            <label>
+              <span>Characteristics URL</span>
+              <input
+                type="url"
+                value={form.characteristics_url}
+                onChange={(event) => updateField("characteristics_url", event.target.value)}
+                placeholder="https://example.com/product-specifications"
+              />
+            </label>
+            <small>Optional URL used only for characteristics/specifications extraction. Product data still comes from the main URL unless overridden for this extraction step.</small>
 
             <label>
               <span>Second OpenCart image index</span>

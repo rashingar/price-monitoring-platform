@@ -1377,6 +1377,17 @@
             "title": "Boxnow",
             "type": "integer"
           },
+          "characteristics_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Characteristics Url"
+          },
           "gallery_url": {
             "anyOf": [
               {

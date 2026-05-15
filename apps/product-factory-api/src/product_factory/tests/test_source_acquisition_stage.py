@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from product_factory.fetcher import FetchError
-from product_factory.models import FetchResult, GalleryImage, ParsedProduct, SourceProductData
+from product_factory.models import FetchResult, GalleryImage, ParsedProduct, SourceProductData, SpecItem, SpecSection
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import apply_second_opencart_image_index, execute_source_acquisition_stage
@@ -159,6 +159,8 @@ def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
         "gallery_extraction_url": url,
         "product_data_extraction_url": url,
         "product_data_extraction_uses_main_url": True,
+        "characteristics_url_used": False,
+        "characteristics_extraction_url": url,
         "second_opencart_image_index": None,
         "second_opencart_image_override_applied": False,
         "second_opencart_image_warning": None,
@@ -281,6 +283,86 @@ def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_imag
     assert result.snapshot_provenance["gallery_extraction_url"] == gallery_url
     assert result.snapshot_provenance["product_data_extraction_url"] == main_url
     assert result.snapshot_provenance["product_data_extraction_uses_main_url"] is True
+
+
+def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_specs(tmp_path: Path) -> None:
+    model = "233541"
+    main_url = "https://www.electronet.gr/main-product"
+    characteristics_url = "https://www.electronet.gr/spec-product"
+    main_parsed = ParsedProduct(
+        source=SourceProductData(
+            source_name="electronet",
+            page_type="product",
+            url=main_url,
+            canonical_url=main_url,
+            product_code=model,
+            brand="LG",
+            mpn="MAIN-MPN",
+            name="Main Product",
+            price_text="199,00",
+            price_value=199.0,
+            gallery_images=[GalleryImage(url="https://cdn.example/main-a.jpg", alt="main", position=1)],
+        )
+    )
+    characteristics_parsed = ParsedProduct(
+        source=SourceProductData(
+            source_name="electronet",
+            page_type="product",
+            url=characteristics_url,
+            canonical_url=characteristics_url,
+            product_code="999999",
+            brand="Other",
+            mpn="SPECS-MPN",
+            name="Specs Product",
+            price_text="999,00",
+            price_value=999.0,
+            gallery_images=[GalleryImage(url="https://cdn.example/specs-gallery.jpg", alt="specs gallery", position=1)],
+            key_specs=[],
+            spec_sections=[
+                SpecSection(section="Specs", items=[SpecItem(label="Capacity", value="10Lt")]),
+            ],
+        )
+    )
+    fetcher = RecordingFetcher()
+    provider_urls: list[str] = []
+
+    def fake_resolve_prepare_provider_input(cli, **_kwargs):
+        provider_urls.append(cli.url)
+        parsed = characteristics_parsed if cli.url == characteristics_url else main_parsed
+        return _build_provider_resolution_result(
+            source="electronet",
+            provider_id="electronet",
+            url=cli.url,
+            parsed=parsed,
+        )
+
+    result = execute_source_acquisition_stage(
+        model=model,
+        url=main_url,
+        photos=1,
+        model_dir=tmp_path / model,
+        characteristics_url=characteristics_url,
+        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
+        fetcher_factory=lambda: fetcher,
+        resolve_prepare_provider_input_fn=fake_resolve_prepare_provider_input,
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+    )
+
+    assert provider_urls == [main_url, characteristics_url]
+    assert result.parsed is main_parsed
+    assert result.parsed.source.name == "Main Product"
+    assert result.parsed.source.price_value == 199.0
+    assert [image.url for image in fetcher.gallery_download_calls[0]["images"]] == [
+        "https://cdn.example/main-a.jpg",
+    ]
+    assert result.characteristics_source is characteristics_parsed.source
+    assert result.characteristics_fetch is not None
+    assert result.characteristics_fetch.url == characteristics_url
+    assert result.characteristics_source.spec_sections[0].items[0].value == "10Lt"
+    assert result.snapshot_provenance["characteristics_url_used"] is True
+    assert result.snapshot_provenance["characteristics_extraction_url"] == characteristics_url
+    assert result.snapshot_provenance["gallery_url_used"] is False
+    assert result.snapshot_provenance["gallery_extraction_url"] == main_url
 
 
 def test_apply_second_opencart_image_index_moves_selected_after_deduplication() -> None:

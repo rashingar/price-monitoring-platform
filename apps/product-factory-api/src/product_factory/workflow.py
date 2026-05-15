@@ -62,6 +62,7 @@ def add_input_fields(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--boxnow", type=int, default=None)
     parser.add_argument("--price", default=None)
     parser.add_argument("--gallery-url", default=None, dest="gallery_url")
+    parser.add_argument("--characteristics-url", default=None, dest="characteristics_url")
     parser.add_argument("--second-opencart-image-index", type=int, default=None, dest="second_opencart_image_index")
 
 
@@ -81,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
                     boxnow=cli.boxnow,
                     price=cli.price,
                     gallery_url=cli.gallery_url,
+                    characteristics_url=cli.characteristics_url,
                     second_opencart_image_index=cli.second_opencart_image_index,
                 )
             )
@@ -129,6 +131,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "boxnow": template_values.get("boxnow", "0"),
         "price": template_values.get("price", "0"),
         "gallery_url": template_values.get("gallery_url", ""),
+        "characteristics_url": template_values.get("characteristics_url", ""),
         "second_opencart_image_index": template_values.get("second_opencart_image_index", ""),
     }
     for key in [
@@ -140,6 +143,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "boxnow",
         "price",
         "gallery_url",
+        "characteristics_url",
         "second_opencart_image_index",
     ]:
         value = getattr(args, key, None)
@@ -154,6 +158,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         boxnow=merged["boxnow"],
         price=merged["price"],
         gallery_url=merged["gallery_url"],
+        characteristics_url=merged["characteristics_url"],
         second_opencart_image_index=merged["second_opencart_image_index"],
         out=str(WORK_ROOT),
     )
@@ -167,6 +172,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         boxnow=cli.boxnow,
         price=cli.price,
         gallery_url=cli.gallery_url,
+        characteristics_url=cli.characteristics_url,
         second_opencart_image_index=cli.second_opencart_image_index,
         out=str(WORK_ROOT / cli.model / "scrape"),
     )
@@ -199,6 +205,7 @@ def parse_template_text(text: str) -> dict[str, str]:
             "boxnow",
             "price",
             "gallery_url",
+            "characteristics_url",
             "second_opencart_image_index",
         }:
             values[normalized_key] = value.strip()

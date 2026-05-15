@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .models import FetchResult, GalleryImage, ParsedProduct
+from .models import FetchResult, GalleryImage, ParsedProduct, SourceProductData
 
 
 @dataclass(slots=True)
@@ -19,4 +19,6 @@ class SourceAcquisitionResult:
     downloaded_gallery: list[GalleryImage] = field(default_factory=list)
     gallery_warnings: list[str] = field(default_factory=list)
     gallery_files: list[str] = field(default_factory=list)
+    characteristics_source: SourceProductData | None = None
+    characteristics_fetch: FetchResult | None = None
     snapshot_provenance: dict[str, Any] = field(default_factory=dict)

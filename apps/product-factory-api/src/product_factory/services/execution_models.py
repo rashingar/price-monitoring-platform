@@ -210,6 +210,7 @@ class PreparedProductContext:
             boxnow=int(input_data.get("boxnow", 0)),
             price=input_data.get("price", 0),
             gallery_url=str(input_data.get("gallery_url") or "") or None,
+            characteristics_url=str(input_data.get("characteristics_url") or "") or None,
             second_opencart_image_index=(
                 int(input_data["second_opencart_image_index"])
                 if input_data.get("second_opencart_image_index") not in (None, "")

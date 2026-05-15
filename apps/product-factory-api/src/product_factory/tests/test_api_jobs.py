@@ -51,6 +51,7 @@ def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(tmp_path: Pat
                 "boxnow": 0,
                 "price": "2099",
                 "gallery_url": "https://www.electronet.gr/gallery",
+                "characteristics_url": "https://www.electronet.gr/specs",
                 "second_opencart_image_index": 4,
             },
         )
@@ -58,6 +59,7 @@ def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(tmp_path: Pat
         job_id = response.json()["job_id"]
         queued_payload = store.get_job(job_id).payload
         assert queued_payload["gallery_url"] == "https://www.electronet.gr/gallery"
+        assert queued_payload["characteristics_url"] == "https://www.electronet.gr/specs"
         assert queued_payload["second_opencart_image_index"] == 4
 
         assert runner.wait_until_idle(timeout=2.0)
@@ -118,6 +120,7 @@ def test_prepare_route_accepts_legacy_payload_and_rejects_invalid_second_image_i
 
     assert legacy_response.status_code == 202
     assert store.get_job(legacy_response.json()["job_id"]).payload.get("gallery_url") is None
+    assert store.get_job(legacy_response.json()["job_id"]).payload.get("characteristics_url") is None
     assert invalid_response.status_code == 422
 
 

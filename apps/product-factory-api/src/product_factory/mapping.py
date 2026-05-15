@@ -16,7 +16,7 @@ from .category_filters import (
 from .characteristics_pipeline import build_characteristics_for_product
 from .deterministic_fields import build_deterministic_product_fields
 from .html_builders import build_description_html, build_description_html_from_intro_and_sections, build_description_html_from_llm, build_deterministic_cta
-from .models import CLIInput, ParsedProduct, SchemaMatchResult, TaxonomyResolution
+from .models import CLIInput, ParsedProduct, SchemaMatchResult, SourceProductData, TaxonomyResolution
 from .normalize import normalize_for_match, normalize_whitespace, slugify_greek_for_seo
 from .utils import as_decimal_string, build_additional_image_value
 
@@ -96,12 +96,15 @@ def build_row(
     deterministic_presentation_sections: list[dict[str, Any]] | None = None,
     llm_presentation: dict[str, Any] | None = None,
     source_raw_html: str | None = None,
+    characteristics_raw_html: str | None = None,
+    characteristics_source: SourceProductData | None = None,
     model_root: Path | None = None,
     filter_map: dict[str, Any] | None = None,
     category_filter_resolver: Callable[..., CategoryFilterResolution] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
     warnings: list[str] = []
     source = parsed.source
+    characteristics_source = characteristics_source or source
     cta_label = _cta_label_for_taxonomy(taxonomy)
     cta_text = _cta_text_for_taxonomy(taxonomy)
     deterministic = build_deterministic_product_fields(
@@ -161,10 +164,10 @@ def build_row(
         )
     warnings.extend(desc_warnings)
     characteristics_html, characteristics_diagnostics, characteristics_warnings = build_characteristics_for_product(
-        source=source,
+        source=characteristics_source,
         taxonomy=taxonomy,
         schema_match=schema_match,
-        raw_html=source_raw_html,
+        raw_html=characteristics_raw_html or source_raw_html,
     )
     warnings.extend(characteristics_warnings)
 
@@ -228,6 +231,7 @@ def build_row(
     normalized = {
         "input": cli.to_dict(),
         "source": source.to_dict(),
+        "characteristics_source": characteristics_source.to_dict() if characteristics_source is not source else None,
         "taxonomy": taxonomy.to_dict(),
         "schema_match": schema_match.to_dict(),
         "deterministic_product": deterministic,

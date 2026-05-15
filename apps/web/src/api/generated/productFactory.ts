@@ -665,6 +665,8 @@ export interface components {
        * @default 0
        */
       boxnow?: number;
+      /** Characteristics Url */
+      characteristics_url?: string | null;
       /** Gallery Url */
       gallery_url?: string | null;
       /** Model */

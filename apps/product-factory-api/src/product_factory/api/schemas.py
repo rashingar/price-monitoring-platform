@@ -22,11 +22,12 @@ class PrepareJobRequest(BaseModel):
     boxnow: int = 0
     price: str | float | int = 0
     gallery_url: str | None = None
+    characteristics_url: str | None = None
     second_opencart_image_index: int | None = Field(default=None, ge=1)
 
-    @field_validator("gallery_url", mode="before")
+    @field_validator("gallery_url", "characteristics_url", mode="before")
     @classmethod
-    def _normalize_gallery_url(cls, value: object) -> object:
+    def _normalize_optional_url(cls, value: object) -> object:
         if value is None:
             return None
         if isinstance(value, str):
@@ -34,14 +35,14 @@ class PrepareJobRequest(BaseModel):
             return trimmed or None
         return value
 
-    @field_validator("gallery_url")
+    @field_validator("gallery_url", "characteristics_url")
     @classmethod
-    def _gallery_url_must_be_absolute(cls, value: str | None) -> str | None:
+    def _optional_url_must_be_absolute(cls, value: str | None) -> str | None:
         if value is None:
             return None
         parts = urlsplit(value)
         if not parts.scheme or not parts.netloc:
-            raise ValueError("gallery_url must be an absolute URL")
+            raise ValueError("URL override must be an absolute URL")
         return value
 
 

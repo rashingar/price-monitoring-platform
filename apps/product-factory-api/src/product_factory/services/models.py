@@ -29,6 +29,7 @@ class PrepareRequest:
     boxnow: int = 0
     price: str | float | int = 0
     gallery_url: str | None = None
+    characteristics_url: str | None = None
     second_opencart_image_index: int | None = None
 
 

@@ -26,6 +26,7 @@ def execute_source_acquisition_stage(
     photos: int,
     model_dir: Path,
     gallery_url: str | None = None,
+    characteristics_url: str | None = None,
     second_opencart_image_index: int | None = None,
     validate_url_scope_fn: Callable[[str], tuple[str, bool, str]] = validate_url_scope,
     fetcher_factory: Callable[[], ElectronetFetcher] = ElectronetFetcher,
@@ -68,6 +69,30 @@ def execute_source_acquisition_stage(
         parsed.source.gallery_images = list(gallery_provider_resolution.parsed.source.gallery_images)
         if gallery_source_capture_warnings:
             parsed.warnings.extend(f"gallery_{warning}" for warning in gallery_source_capture_warnings)
+    characteristics_extraction_url = str(characteristics_url or "").strip() or url
+    characteristics_url_used = bool(str(characteristics_url or "").strip())
+    characteristics_fetch: FetchResult | None = None
+    characteristics_source: SourceProductData | None = None
+    if characteristics_url_used:
+        (
+            characteristics_provider_resolution,
+            characteristics_source_capture_warnings,
+            _characteristics_capture_sync,
+        ) = _resolve_provider_for_acquisition_url(
+            model=model,
+            url=characteristics_extraction_url,
+            photos=photos,
+            model_dir=resolved_model_dir,
+            validate_url_scope_fn=validate_url_scope_fn,
+            fetcher=fetcher,
+            resolve_prepare_provider_input_fn=resolve_prepare_provider_input_fn,
+            source_capture_sync_fn=source_capture_sync_fn,
+        )
+        characteristics_fetch = characteristics_provider_resolution.fetch
+        characteristics_source = characteristics_provider_resolution.parsed.source
+        _repair_source_product_text(characteristics_source)
+        if characteristics_source_capture_warnings:
+            parsed.warnings.extend(f"characteristics_{warning}" for warning in characteristics_source_capture_warnings)
     extracted_gallery_count = len(parsed.source.gallery_images)
     image_order_metadata: dict[str, Any] = {
         "second_opencart_image_index": second_opencart_image_index,
@@ -120,6 +145,8 @@ def execute_source_acquisition_stage(
         "gallery_extraction_url": gallery_extraction_url,
         "product_data_extraction_url": url,
         "product_data_extraction_uses_main_url": True,
+        "characteristics_url_used": characteristics_url_used,
+        "characteristics_extraction_url": characteristics_extraction_url,
         "second_opencart_image_index": second_opencart_image_index,
         "second_opencart_image_override_applied": image_order_metadata["second_opencart_image_override_applied"],
         "second_opencart_image_warning": image_order_metadata.get("second_opencart_image_warning"),
@@ -131,6 +158,14 @@ def execute_source_acquisition_stage(
                 "gallery_fetch_final_url": gallery_fetch.final_url,
                 "gallery_fetch_method": gallery_fetch.method,
                 "gallery_fetch_status_code": gallery_fetch.status_code,
+            }
+        )
+    if characteristics_fetch is not None:
+        snapshot_provenance.update(
+            {
+                "characteristics_fetch_final_url": characteristics_fetch.final_url,
+                "characteristics_fetch_method": characteristics_fetch.method,
+                "characteristics_fetch_status_code": characteristics_fetch.status_code,
             }
         )
     if capture_sync.status != "skipped" or fetch.method == "shared_source_capture":
@@ -156,6 +191,8 @@ def execute_source_acquisition_stage(
         downloaded_gallery=downloaded_gallery,
         gallery_warnings=gallery_warnings,
         gallery_files=gallery_files,
+        characteristics_source=characteristics_source,
+        characteristics_fetch=characteristics_fetch,
         snapshot_provenance=snapshot_provenance,
     )
 

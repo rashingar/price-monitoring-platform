@@ -92,6 +92,7 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 ```ts
 {
   boxnow?: number; // default: 0
+  characteristics_url?: string | null;
   gallery_url?: string | null;
   model: string;
   photos?: number; // default: 1

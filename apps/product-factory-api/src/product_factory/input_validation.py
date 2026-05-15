@@ -28,6 +28,16 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
         _gallery_source, gallery_scope_ok, _gallery_scope_reason = validate_url_scope(gallery_url)
         if not gallery_scope_ok:
             raise ValueError(SUPPORTED_URL_MESSAGE)
+    characteristics_url = str(getattr(args, "characteristics_url", "") or "").strip() or None
+    if characteristics_url is not None:
+        parsed_characteristics_url = urlparse(characteristics_url)
+        if parsed_characteristics_url.scheme not in {"http", "https"}:
+            raise ValueError(SUPPORTED_URL_MESSAGE)
+        _characteristics_source, characteristics_scope_ok, _characteristics_scope_reason = validate_url_scope(
+            characteristics_url
+        )
+        if not characteristics_scope_ok:
+            raise ValueError(SUPPORTED_URL_MESSAGE)
     second_opencart_image_index = getattr(args, "second_opencart_image_index", None)
     if second_opencart_image_index in ("", None):
         second_opencart_image_index = None
@@ -44,6 +54,7 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
         boxnow=int(args.boxnow),
         price=args.price,
         gallery_url=gallery_url,
+        characteristics_url=characteristics_url,
         second_opencart_image_index=second_opencart_image_index,
         out=args.out,
     )

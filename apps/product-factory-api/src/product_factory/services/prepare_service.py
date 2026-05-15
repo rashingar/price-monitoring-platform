@@ -113,6 +113,7 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
         boxnow=request.boxnow,
         price=request.price,
         gallery_url=request.gallery_url,
+        characteristics_url=request.characteristics_url,
         second_opencart_image_index=request.second_opencart_image_index,
         out=str(WORK_ROOT / request.model / "scrape"),
     )
@@ -172,6 +173,8 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
     report = report_payload if isinstance(report_payload, dict) else {}
     gallery_settings_payload = report.get("gallery_settings", {})
     gallery_settings = gallery_settings_payload if isinstance(gallery_settings_payload, dict) else {}
+    characteristics_settings_payload = report.get("characteristics_settings", {})
+    characteristics_settings = characteristics_settings_payload if isinstance(characteristics_settings_payload, dict) else {}
     details = {
         "source": scrape_result.source,
         "product_name": str(getattr(getattr(parsed, "source", None), "name", "") or ""),
@@ -193,6 +196,15 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
                 "second_opencart_image_index": gallery_settings.get("second_opencart_image_index"),
                 "second_opencart_image_override_applied": bool(
                     gallery_settings.get("second_opencart_image_override_applied", False)
+                ),
+            }
+        )
+    if characteristics_settings:
+        details.update(
+            {
+                "characteristics_url_used": bool(characteristics_settings.get("characteristics_url_used", False)),
+                "characteristics_extraction_url": str(
+                    characteristics_settings.get("characteristics_extraction_url", "") or ""
                 ),
             }
         )

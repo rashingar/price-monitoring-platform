@@ -53,6 +53,7 @@ def execute_prepare_stage(
         "photos": cli.photos,
         "model_dir": resolved_model_dir,
         "gallery_url": cli.gallery_url,
+        "characteristics_url": cli.characteristics_url,
         "second_opencart_image_index": cli.second_opencart_image_index,
         "validate_url_scope_fn": validate_url_scope_fn,
         "fetcher_factory": fetcher_factory,
@@ -144,6 +145,14 @@ def execute_prepare_from_acquisition(
         ),
         "second_opencart_image_warning": acquisition.snapshot_provenance.get("second_opencart_image_warning"),
         "deduplicated_gallery_count": acquisition.snapshot_provenance.get("deduplicated_gallery_count"),
+    }
+    characteristics_settings = {
+        "characteristics_url_used": bool(acquisition.snapshot_provenance.get("characteristics_url_used", False)),
+        "characteristics_extraction_url": str(
+            acquisition.snapshot_provenance.get("characteristics_extraction_url") or cli.url
+        ),
+        "product_data_extraction_url": str(acquisition.snapshot_provenance.get("product_data_extraction_url") or cli.url),
+        "product_data_extraction_uses_main_url": True,
     }
 
     selected_presentation_blocks = []
@@ -249,6 +258,9 @@ def execute_prepare_from_acquisition(
         gallery_warnings=gallery_warnings,
         gallery_files=gallery_files,
         gallery_settings=gallery_settings,
+        characteristics_source=acquisition.characteristics_source,
+        characteristics_raw_html=acquisition.characteristics_fetch.html if acquisition.characteristics_fetch else None,
+        characteristics_settings=characteristics_settings,
         selected_presentation_blocks=selected_presentation_blocks,
         section_warnings=section_warnings,
         section_image_candidates=section_image_candidates,
@@ -385,6 +397,12 @@ def _persist_blocked_prepare_result(
             "second_opencart_image_override_applied": False,
             "second_opencart_image_warning": None,
             "deduplicated_gallery_count": 0,
+        },
+        "characteristics_settings": {
+            "characteristics_url_used": bool(cli.characteristics_url),
+            "characteristics_extraction_url": cli.characteristics_url or cli.url,
+            "product_data_extraction_url": cli.url,
+            "product_data_extraction_uses_main_url": True,
         },
         "critical_extractors": {
             "product_code": "blocked",
