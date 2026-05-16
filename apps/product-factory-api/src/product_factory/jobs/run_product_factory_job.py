@@ -4,8 +4,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from ..api.job_models import JobRecord, JobStatus, JobType, is_terminal_job_status
-from ..api.job_runner import (
+from .models import JobRecord, JobStatus, JobType, is_terminal_job_status
+from .runner import (
     JobRunResult,
     LogCallback,
     run_authoring_intro_job,
@@ -15,7 +15,7 @@ from ..api.job_runner import (
     run_publish_job,
     run_render_job,
 )
-from ..api.job_store import DEFAULT_JOBS_DIR, JobStore
+from .store import DEFAULT_JOBS_DIR, JobStore
 from ..services import ServiceError
 
 

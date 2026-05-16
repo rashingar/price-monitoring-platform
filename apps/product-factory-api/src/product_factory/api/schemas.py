@@ -5,9 +5,10 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
+from product_factory.jobs.models import JobRecord, JobStatus, JobType
+
 from ..source_detection import validate_url_scope
 from .artifact_resolver import ResolvedArtifact
-from .job_models import JobRecord, JobStatus, JobType
 
 DEFAULT_FULL_PIPELINE_PHOTOS = 100
 DEFAULT_FULL_PIPELINE_SECTIONS = 20

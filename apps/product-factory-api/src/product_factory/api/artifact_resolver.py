@@ -4,8 +4,9 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 
+from product_factory.jobs.models import JobRecord, JobType
+
 from ..repo_paths import REPO_ROOT, category_filter_review_path
-from .job_models import JobRecord, JobType
 
 
 @dataclass(frozen=True, slots=True)

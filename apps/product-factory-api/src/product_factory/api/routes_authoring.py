@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request, status
 
+from product_factory.jobs.models import JobType
+
 from ..services.authoring_service import (
     PreparedAuthoringArtifactsNotFoundError,
     get_authoring_status,
 )
-from .job_models import JobType
 from .schemas import AuthoringStatusResponse, ErrorResponse, JobResponse
 
 

@@ -6,8 +6,8 @@ from product_factory.local_env import load_local_env_if_present
 
 load_local_env_if_present()
 
-from .job_runner import SequentialJobRunner
-from .job_store import JobStore
+from product_factory.jobs.runner import SequentialJobRunner
+from product_factory.jobs.store import JobStore
 from .routes_filter_review import router as filter_review_router
 from .routes_filters import router as filters_router
 from .routes_health import router as health_router
