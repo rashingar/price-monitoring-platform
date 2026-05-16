@@ -25,6 +25,9 @@ import {
   sourceUrlSummary,
   sourceUrlValidationSuccess,
   sourceUrlsForCatalogProduct,
+  stockSyncLatest,
+  stockSyncReadiness,
+  stockSyncRunTriggered,
   vendorSourceCaptureArtifacts,
   vendorSourceCaptureRuns,
   vendorSourceCapabilities,
@@ -57,6 +60,39 @@ describe("commerce API client contract fixtures", () => {
 
     expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toContain(
       "GET /commerce-api/platform/health",
+    );
+  });
+
+  it("constructs Stock Sync URLs and normalizes latest status", async () => {
+    const mockFetch = installMockFetch(commerceFixtureRoutes);
+
+    await expect(commerceClient.getStockSyncReadiness()).resolves.toMatchObject({
+      enabled: true,
+      server: "ERPSERVER",
+      tasks: stockSyncReadiness.tasks,
+      latest_review_readable: true,
+      schtasks_available: true,
+    });
+
+    await expect(commerceClient.getLatestStockSync()).resolves.toMatchObject({
+      available: true,
+      status: "reviewed",
+      run_id: stockSyncLatest.run_id,
+      counts: expect.objectContaining({ output_rows: 120 }),
+      warnings: ["Manual review recommended."],
+    });
+
+    await expect(commerceClient.triggerStockSyncRun({ mode: "review" })).resolves.toMatchObject({
+      task_name: stockSyncRunTriggered.task_name,
+      message: "Scheduled task triggered. Check email for the final report.",
+    });
+
+    expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toEqual(
+      expect.arrayContaining([
+        "GET /commerce-api/stock-sync/readiness",
+        "GET /commerce-api/stock-sync/latest",
+        "POST /commerce-api/stock-sync/runs",
+      ]),
     );
   });
 

@@ -316,6 +316,18 @@ export interface paths {
     /** List Source Url Agent Sources */
     get: operations["list_source_url_agent_sources_api_source_url_agent_sources_get"];
   };
+  "/api/stock-sync/latest": {
+    /** Get Latest Stock Sync */
+    get: operations["get_latest_stock_sync_api_stock_sync_latest_get"];
+  };
+  "/api/stock-sync/readiness": {
+    /** Get Stock Sync Readiness */
+    get: operations["get_stock_sync_readiness_api_stock_sync_readiness_get"];
+  };
+  "/api/stock-sync/runs": {
+    /** Trigger Stock Sync Run */
+    post: operations["trigger_stock_sync_run_api_stock_sync_runs_post"];
+  };
   "/api/vendor-sources/captures/runs": {
     /** Get Vendor Source Capture Runs */
     get: operations["get_vendor_source_capture_runs_api_vendor_sources_captures_runs_get"];
@@ -1102,6 +1114,90 @@ export interface components {
       trust_level?: string | null;
       /** Url */
       url?: string | null;
+    };
+    /** StockSyncLatestResponse */
+    StockSyncLatestResponse: {
+      /** Available */
+      available: boolean;
+      /** Counts */
+      counts?: {
+        [key: string]: unknown;
+      };
+      /** Created At */
+      created_at?: string | null;
+      /** Hard Failures */
+      hard_failures?: unknown[];
+      /** Message */
+      message?: string | null;
+      /** Ok To Upload */
+      ok_to_upload?: boolean | null;
+      /** Orchestrator */
+      orchestrator?: {
+        [key: string]: unknown;
+      } | null;
+      /** Run Dir */
+      run_dir?: string | null;
+      /** Run Id */
+      run_id?: string | null;
+      /** Safety */
+      safety?: {
+        [key: string]: unknown;
+      } | null;
+      /** Status */
+      status?: string | null;
+      /** Warnings */
+      warnings?: unknown[];
+    };
+    /** StockSyncReadinessResponse */
+    StockSyncReadinessResponse: {
+      /** Enabled */
+      enabled: boolean;
+      /** Latest Review Error */
+      latest_review_error?: string | null;
+      /** Latest Review Exists */
+      latest_review_exists: boolean;
+      /** Latest Review Path */
+      latest_review_path: string;
+      /** Latest Review Readable */
+      latest_review_readable: boolean;
+      /** Schtasks Available */
+      schtasks_available: boolean;
+      /** Server */
+      server: string;
+      /** Tasks */
+      tasks: {
+        [key: string]: string;
+      };
+    };
+    /** StockSyncRunRequest */
+    StockSyncRunRequest: {
+      /** Confirmation */
+      confirmation?: string | null;
+      /**
+       * Mode
+       * @description One of review, dry_run, or import.
+       */
+      mode: string;
+    };
+    /** StockSyncRunResponse */
+    StockSyncRunResponse: {
+      /** Message */
+      message: string;
+      /** Mode */
+      mode: string;
+      /** Server */
+      server: string;
+      /** Stderr */
+      stderr?: string | null;
+      /** Stdout */
+      stdout?: string | null;
+      /** Task Name */
+      task_name: string;
+      /**
+       * Triggered At
+       * Format: date-time
+       */
+      triggered_at: string;
     };
     /** ValidationError */
     ValidationError: {
@@ -2991,6 +3087,50 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
+        };
+      };
+    };
+  };
+  /** Get Latest Stock Sync */
+  get_latest_stock_sync_api_stock_sync_latest_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["StockSyncLatestResponse"];
+        };
+      };
+    };
+  };
+  /** Get Stock Sync Readiness */
+  get_stock_sync_readiness_api_stock_sync_readiness_get: {
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["StockSyncReadinessResponse"];
+        };
+      };
+    };
+  };
+  /** Trigger Stock Sync Run */
+  trigger_stock_sync_run_api_stock_sync_runs_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StockSyncRunRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["StockSyncRunResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

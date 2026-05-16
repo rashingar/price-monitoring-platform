@@ -112,6 +112,12 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.queryByText("Backend health")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "OpenCart DB update" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Update DB" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "OpenCart Stock Sync" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run Review Only" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run Dry-run Import" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run Real Import" })).toBeInTheDocument();
+    expect(screen.getByText("stock-sync-20260516")).toBeInTheDocument();
+    expect(screen.getByText("Output rows").closest("div")).toHaveTextContent("120");
     expect(screen.getByRole("heading", { name: "Advanced diagnostics" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show diagnostics" })).toHaveAttribute(
       "aria-expanded",
@@ -238,6 +244,41 @@ describe("platform mocked page smoke tests", () => {
           (request) =>
             request.method === "POST" &&
             request.pathname === "/commerce-api/catalog/update-db",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("guards Dashboard Stock Sync real import with typed confirmation", async () => {
+    const mockFetch = installMockFetch(allRoutes);
+
+    renderWithRouter("/");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Run Real Import" }));
+
+    const confirmButton = screen.getByRole("button", { name: "Confirm Real Import" });
+    expect(confirmButton).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Confirm real import"), {
+      target: { value: "RUN IMPORT" },
+    });
+    expect(confirmButton).not.toBeDisabled();
+
+    fireEvent.click(confirmButton);
+
+    await expect(screen.findByText("Scheduled task triggered. Check email for the final report.")).resolves.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "POST" &&
+            request.pathname === "/commerce-api/stock-sync/runs" &&
+            request.body &&
+            typeof request.body === "object" &&
+            "mode" in request.body &&
+            request.body.mode === "import" &&
+            "confirmation" in request.body &&
+            request.body.confirmation === "RUN IMPORT",
         ),
       ).toBe(true),
     );

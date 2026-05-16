@@ -121,6 +121,53 @@ export const catalogSummary = {
   manufacturer_count: 3,
 };
 
+export const stockSyncReadiness = {
+  enabled: true,
+  server: "ERPSERVER",
+  tasks: {
+    review: "OpenCartStockSync-ReviewOnly",
+    dry_run: "OpenCartStockSync-DryRunImport",
+    import: "OpenCartStockSync-RunImport",
+  },
+  latest_review_path: "\\\\ERPSERVER\\C$\\OpenCartStockSync\\runs\\latest\\review.json",
+  latest_review_exists: true,
+  latest_review_readable: true,
+  latest_review_error: null,
+  schtasks_available: true,
+};
+
+export const stockSyncLatest = {
+  available: true,
+  status: "reviewed",
+  ok_to_upload: true,
+  run_id: "stock-sync-20260516",
+  run_dir: "\\\\ERPSERVER\\C$\\OpenCartStockSync\\runs\\stock-sync-20260516",
+  created_at: "2026-05-16T10:00:00Z",
+  counts: {
+    output_rows: 120,
+    disabled_count: 8,
+    price_zero_forced_disabled_count: 2,
+    warning_count: 1,
+  },
+  warnings: ["Manual review recommended."],
+  hard_failures: [],
+  safety: {
+    warnings: ["Manual review recommended."],
+    hard_failures: [],
+  },
+  orchestrator: { host: "ERPSERVER" },
+};
+
+export const stockSyncRunTriggered = {
+  mode: "review",
+  task_name: "OpenCartStockSync-ReviewOnly",
+  server: "ERPSERVER",
+  triggered_at: "2026-05-16T10:05:00Z",
+  stdout: "SUCCESS",
+  stderr: null,
+  message: "Scheduled task triggered. Check email for the final report.",
+};
+
 export const catalogBrands = {
   items: [
     { manufacturer: "Midea", count: 1 },
@@ -2313,6 +2360,14 @@ export const commerceFixtureRoutes: MockRoute[] = [
     response: emptyProductSourceUrlCandidateHistory,
   },
   { method: "GET", path: "/commerce-api/catalog/update-db/latest", response: null },
+  { method: "GET", path: "/commerce-api/stock-sync/readiness", response: stockSyncReadiness },
+  { method: "GET", path: "/commerce-api/stock-sync/latest", response: stockSyncLatest },
+  {
+    method: "POST",
+    path: "/commerce-api/stock-sync/runs",
+    requestExample: { mode: "review" },
+    response: stockSyncRunTriggered,
+  },
   { method: "GET", path: "/commerce-api/catalog/products/1/source-urls", response: sourceUrlsForCatalogProduct },
   {
     method: "POST",

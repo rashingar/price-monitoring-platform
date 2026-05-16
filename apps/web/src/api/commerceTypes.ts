@@ -35,6 +35,12 @@ export type EcommerceContractSourceUrlImportRequest =
   EcommerceSchema<"SourceUrlImportRequest">;
 export type EcommerceContractProductFactoryHandoffImportRequest =
   EcommerceSchema<"ProductFactoryHandoffImportRequest">;
+export type EcommerceContractStockSyncRunRequest =
+  EcommerceSchema<"StockSyncRunRequest">;
+export type EcommerceContractStockSyncLatestResponse =
+  EcommerceSchema<"StockSyncLatestResponse">;
+export type EcommerceContractStockSyncReadinessResponse =
+  EcommerceSchema<"StockSyncReadinessResponse">;
 
 export type MarketplaceFilter = "all" | "bestprice" | "skroutz" | "both" | "none";
 
@@ -1463,6 +1469,52 @@ export interface CatalogUpdateJob {
   [key: string]: unknown;
 }
 
+export type StockSyncMode = "review" | "dry_run" | "import";
+
+export interface StockSyncRunRequest {
+  mode: StockSyncMode;
+  confirmation?: string | null;
+}
+
+export interface StockSyncRunResponse {
+  mode: StockSyncMode | string;
+  task_name: string;
+  server: string;
+  triggered_at: string;
+  stdout?: string | null;
+  stderr?: string | null;
+  message: string;
+  [key: string]: unknown;
+}
+
+export interface StockSyncLatestResponse {
+  available: boolean;
+  message?: string | null;
+  status?: string | null;
+  ok_to_upload?: boolean | null;
+  run_id?: string | null;
+  run_dir?: string | null;
+  created_at?: string | null;
+  counts: Record<string, unknown>;
+  warnings: unknown[];
+  hard_failures: unknown[];
+  safety?: Record<string, unknown> | null;
+  orchestrator?: Record<string, unknown> | null;
+  [key: string]: unknown;
+}
+
+export interface StockSyncReadinessResponse {
+  enabled: boolean;
+  server: string;
+  tasks: Record<StockSyncMode | string, string>;
+  latest_review_path: string;
+  latest_review_exists: boolean;
+  latest_review_readable: boolean;
+  latest_review_error?: string | null;
+  schtasks_available: boolean;
+  [key: string]: unknown;
+}
+
 type _EcommerceGeneratedContractChecks = [
   AssertAssignable<SourceUrlCreateBody, EcommerceContractSourceUrlCreateRequest>,
   AssertAssignable<SourceUrlUpdateBody, EcommerceContractSourceUrlUpdateRequest>,
@@ -1480,4 +1532,7 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<ReadCsvFileBody, EcommerceContractCsvReadRequest>,
   AssertAssignable<SaveCsvFileBody, EcommerceContractCsvSaveRequest>,
   AssertAssignable<SaveCsvCopyBody, EcommerceContractCsvSaveCopyRequest>,
+  AssertAssignable<StockSyncRunRequest, EcommerceContractStockSyncRunRequest>,
+  AssertAssignable<StockSyncLatestResponse, EcommerceContractStockSyncLatestResponse>,
+  AssertAssignable<StockSyncReadinessResponse, EcommerceContractStockSyncReadinessResponse>,
 ];

@@ -85,6 +85,10 @@ import type {
   SourceUrlAgentRunRequest,
   SourceUrlAgentTask,
   SourceUrlAgentRunSummary,
+  StockSyncLatestResponse,
+  StockSyncReadinessResponse,
+  StockSyncRunRequest,
+  StockSyncRunResponse,
   SkroutzNetworkCapturedEndpoint,
   SkroutzNetworkDiagnosticReport,
   SkroutzNetworkDiagnosticSummary,
@@ -1249,8 +1253,8 @@ function normalizeVendorSourceHealth(payload: unknown): VendorSourceHealthRespon
   return {
     ...source,
     items,
-    limit: normalizeOptionalNumber(source.limit),
-    offset: normalizeOptionalNumber(source.offset),
+    limit: normalizeOptionalNumber(source.limit) ?? undefined,
+    offset: normalizeOptionalNumber(source.offset) ?? undefined,
     count: normalizeOptionalNumber(source.count) ?? items.length,
   };
 }
@@ -2472,6 +2476,56 @@ function normalizeCatalogUpdateJob(payload: unknown): CatalogUpdateJob | null {
   };
 }
 
+function normalizeStockSyncReadiness(payload: unknown): StockSyncReadinessResponse {
+  const source = isRecord(payload) ? payload : {};
+  return {
+    ...source,
+    enabled: source.enabled === true,
+    server: normalizeNullableString(source.server) ?? "ERPSERVER",
+    tasks: isRecord(source.tasks) ? Object.fromEntries(
+      Object.entries(source.tasks).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    ) : {},
+    latest_review_path: normalizeNullableString(source.latest_review_path) ?? "",
+    latest_review_exists: source.latest_review_exists === true,
+    latest_review_readable: source.latest_review_readable === true,
+    latest_review_error: normalizeNullableString(source.latest_review_error),
+    schtasks_available: source.schtasks_available === true,
+  };
+}
+
+function normalizeStockSyncLatest(payload: unknown): StockSyncLatestResponse {
+  const source = isRecord(payload) ? payload : {};
+  return {
+    ...source,
+    available: source.available === true,
+    message: normalizeNullableString(source.message),
+    status: normalizeNullableString(source.status),
+    ok_to_upload: typeof source.ok_to_upload === "boolean" ? source.ok_to_upload : null,
+    run_id: normalizeNullableString(source.run_id),
+    run_dir: normalizeNullableString(source.run_dir),
+    created_at: normalizeNullableString(source.created_at),
+    counts: isRecord(source.counts) ? source.counts : {},
+    warnings: Array.isArray(source.warnings) ? source.warnings : [],
+    hard_failures: Array.isArray(source.hard_failures) ? source.hard_failures : [],
+    safety: isRecord(source.safety) ? source.safety : null,
+    orchestrator: isRecord(source.orchestrator) ? source.orchestrator : null,
+  };
+}
+
+function normalizeStockSyncRun(payload: unknown): StockSyncRunResponse {
+  const source = isRecord(payload) ? payload : {};
+  return {
+    ...source,
+    mode: normalizeNullableString(source.mode) ?? "review",
+    task_name: normalizeNullableString(source.task_name) ?? "",
+    server: normalizeNullableString(source.server) ?? "",
+    triggered_at: normalizeNullableString(source.triggered_at) ?? "",
+    stdout: normalizeNullableString(source.stdout),
+    stderr: normalizeNullableString(source.stderr),
+    message: normalizeNullableString(source.message) ?? "",
+  };
+}
+
 function normalizeCatalogBrandOptions(payload: unknown): CatalogBrandOption[] {
   const list = getArrayPayload(payload, ["items", "brands", "manufacturers", "data", "results"]);
 
@@ -2595,6 +2649,27 @@ export const commerceClient = {
       throw new CommerceApiError("Commerce API returned an invalid durable job.", 500, null, `/jobs/${jobId}`);
     }
     return job;
+  },
+
+  async getStockSyncReadiness(signal?: AbortSignal): Promise<StockSyncReadinessResponse> {
+    return normalizeStockSyncReadiness(await request<unknown>("/stock-sync/readiness", { signal }));
+  },
+
+  async getLatestStockSync(signal?: AbortSignal): Promise<StockSyncLatestResponse> {
+    return normalizeStockSyncLatest(await request<unknown>("/stock-sync/latest", { signal }));
+  },
+
+  async triggerStockSyncRun(
+    body: StockSyncRunRequest,
+    signal?: AbortSignal,
+  ): Promise<StockSyncRunResponse> {
+    return normalizeStockSyncRun(
+      await request<unknown>("/stock-sync/runs", {
+        method: "POST",
+        body,
+        signal,
+      }),
+    );
   },
 
   async listCatalogProductSourceUrls(

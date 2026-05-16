@@ -2045,6 +2045,262 @@
         "title": "SourceUrlUpdateRequest",
         "type": "object"
       },
+      "StockSyncLatestResponse": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "counts": {
+            "additionalProperties": true,
+            "title": "Counts",
+            "type": "object"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "hard_failures": {
+            "items": {},
+            "title": "Hard Failures",
+            "type": "array"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "ok_to_upload": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ok To Upload"
+          },
+          "orchestrator": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orchestrator"
+          },
+          "run_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Dir"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "safety": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safety"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "warnings": {
+            "items": {},
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "StockSyncLatestResponse",
+        "type": "object"
+      },
+      "StockSyncReadinessResponse": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "latest_review_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Review Error"
+          },
+          "latest_review_exists": {
+            "title": "Latest Review Exists",
+            "type": "boolean"
+          },
+          "latest_review_path": {
+            "title": "Latest Review Path",
+            "type": "string"
+          },
+          "latest_review_readable": {
+            "title": "Latest Review Readable",
+            "type": "boolean"
+          },
+          "schtasks_available": {
+            "title": "Schtasks Available",
+            "type": "boolean"
+          },
+          "server": {
+            "title": "Server",
+            "type": "string"
+          },
+          "tasks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tasks",
+            "type": "object"
+          }
+        },
+        "required": [
+          "enabled",
+          "server",
+          "tasks",
+          "latest_review_path",
+          "latest_review_exists",
+          "latest_review_readable",
+          "schtasks_available"
+        ],
+        "title": "StockSyncReadinessResponse",
+        "type": "object"
+      },
+      "StockSyncRunRequest": {
+        "properties": {
+          "confirmation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation"
+          },
+          "mode": {
+            "description": "One of review, dry_run, or import.",
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "StockSyncRunRequest",
+        "type": "object"
+      },
+      "StockSyncRunResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "server": {
+            "title": "Server",
+            "type": "string"
+          },
+          "stderr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stderr"
+          },
+          "stdout": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stdout"
+          },
+          "task_name": {
+            "title": "Task Name",
+            "type": "string"
+          },
+          "triggered_at": {
+            "format": "date-time",
+            "title": "Triggered At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "task_name",
+          "server",
+          "triggered_at",
+          "message"
+        ],
+        "title": "StockSyncRunResponse",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -6320,6 +6576,89 @@
         "summary": "List Source Url Agent Sources",
         "tags": [
           "source-url-agent"
+        ]
+      }
+    },
+    "/api/stock-sync/latest": {
+      "get": {
+        "operationId": "get_latest_stock_sync_api_stock_sync_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockSyncLatestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Latest Stock Sync",
+        "tags": [
+          "stock-sync"
+        ]
+      }
+    },
+    "/api/stock-sync/readiness": {
+      "get": {
+        "operationId": "get_stock_sync_readiness_api_stock_sync_readiness_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockSyncReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Stock Sync Readiness",
+        "tags": [
+          "stock-sync"
+        ]
+      }
+    },
+    "/api/stock-sync/runs": {
+      "post": {
+        "operationId": "trigger_stock_sync_run_api_stock_sync_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockSyncRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockSyncRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trigger Stock Sync Run",
+        "tags": [
+          "stock-sync"
         ]
       }
     },

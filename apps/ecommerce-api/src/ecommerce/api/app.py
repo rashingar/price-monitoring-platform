@@ -26,6 +26,7 @@ from ecommerce.api.routes_product_sources import router as product_sources_route
 from ecommerce.api.routes_source_url_agent import router as source_url_agent_router
 from ecommerce.api.routes_source_url_import import router as source_url_import_router
 from ecommerce.api.routes_source_urls import router as source_urls_router
+from ecommerce.api.routes_stock_sync import router as stock_sync_router
 from ecommerce.api.routes_vendor_sources import router as vendor_sources_router
 
 
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(vendor_sources_router)
     app.include_router(source_url_import_router)
     app.include_router(source_urls_router)
+    app.include_router(stock_sync_router)
     app.include_router(artifacts_router)
     return app
 

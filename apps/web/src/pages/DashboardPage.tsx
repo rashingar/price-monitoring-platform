@@ -4,7 +4,13 @@ import { apiClient } from "../api/client";
 import { commerceClient, getCommerceApiErrorMessage } from "../api/commerceClient";
 import { runApiDiagnostics } from "../api/diagnostics";
 import { getJobProgress } from "../api/jobProgress";
-import type { CatalogUpdateJob, PathRootsResponse } from "../api/commerceTypes";
+import type {
+  CatalogUpdateJob,
+  PathRootsResponse,
+  StockSyncLatestResponse,
+  StockSyncMode,
+  StockSyncReadinessResponse,
+} from "../api/commerceTypes";
 import type { ApiDiagnostics } from "../api/diagnostics";
 import { JobProgressPanel } from "../components/jobs/JobProgressPanel";
 import { AdvancedDiagnosticsPanel } from "../features/dashboard/AdvancedDiagnosticsPanel";
@@ -45,6 +51,50 @@ function getCatalogUpdateImportedCount(job: CatalogUpdateJob | null): number | n
   return null;
 }
 
+function getStockSyncBadge(latest: StockSyncLatestResponse | null) {
+  if (!latest?.available) {
+    return { label: "No review", className: "neutral" };
+  }
+  if (latest.hard_failures.length > 0) {
+    return { label: latest.status ?? "Blocked", className: "danger" };
+  }
+  if (latest.ok_to_upload === true) {
+    return { label: latest.status ?? "Ready", className: "success" };
+  }
+  if (latest.warnings.length > 0) {
+    return { label: latest.status ?? "Warnings", className: "warning" };
+  }
+  return { label: latest.status ?? "Reviewed", className: "neutral" };
+}
+
+function getStockSyncCount(
+  latest: StockSyncLatestResponse | null,
+  keys: string[],
+): number | null {
+  const counts = latest?.counts;
+  if (!counts) {
+    return null;
+  }
+
+  for (const key of keys) {
+    const value = counts[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+  return null;
+}
+
+function formatStockSyncValue(value: string | number | null | undefined): string {
+  return value === null || value === undefined || value === "" ? "-" : String(value);
+}
+
 export function DashboardPage() {
   const [diagnostics, setDiagnostics] = useState<ApiDiagnostics | null>(null);
   const [isDiagnosticsLoading, setIsDiagnosticsLoading] = useState(true);
@@ -53,6 +103,13 @@ export function DashboardPage() {
   const [isCatalogUpdateStarting, setIsCatalogUpdateStarting] = useState(false);
   const [pathRoots, setPathRoots] = useState<PathRootsResponse | null>(null);
   const [pathRootsError, setPathRootsError] = useState<string | null>(null);
+  const [stockSyncReadiness, setStockSyncReadiness] = useState<StockSyncReadinessResponse | null>(null);
+  const [stockSyncLatest, setStockSyncLatest] = useState<StockSyncLatestResponse | null>(null);
+  const [stockSyncError, setStockSyncError] = useState<string | null>(null);
+  const [stockSyncMessage, setStockSyncMessage] = useState<string | null>(null);
+  const [stockSyncTriggerMode, setStockSyncTriggerMode] = useState<StockSyncMode | null>(null);
+  const [isStockSyncImportConfirmOpen, setIsStockSyncImportConfirmOpen] = useState(false);
+  const [stockSyncImportConfirmation, setStockSyncImportConfirmation] = useState("");
   const [isAdvancedDiagnosticsOpen, setIsAdvancedDiagnosticsOpen] = useState(() => {
     return window.localStorage.getItem(ADVANCED_DIAGNOSTICS_STORAGE_KEY) === "true";
   });
@@ -98,6 +155,25 @@ export function DashboardPage() {
     }
   }, []);
 
+  const loadStockSync = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const [readiness, latest] = await Promise.all([
+        commerceClient.getStockSyncReadiness(signal),
+        commerceClient.getLatestStockSync(signal),
+      ]);
+      if (signal?.aborted) {
+        return;
+      }
+      setStockSyncReadiness(readiness);
+      setStockSyncLatest(latest);
+      setStockSyncError(null);
+    } catch (stockSyncLoadError) {
+      if (!signal?.aborted) {
+        setStockSyncError(getCommerceApiErrorMessage(stockSyncLoadError));
+      }
+    }
+  }, []);
+
   const pollCatalogUpdateJob = useCallback(async (jobId: string, signal?: AbortSignal) => {
     try {
       const nextJob = await commerceClient.getCatalogUpdateJob(jobId, signal);
@@ -129,6 +205,28 @@ export function DashboardPage() {
     }
   }, [pollCatalogUpdateJob]);
 
+  const triggerStockSyncRun = useCallback(
+    async (mode: StockSyncMode, confirmation?: string) => {
+      setStockSyncTriggerMode(mode);
+      setStockSyncError(null);
+      setStockSyncMessage(null);
+      try {
+        const result = await commerceClient.triggerStockSyncRun({ mode, confirmation });
+        setStockSyncMessage(result.message || "Scheduled task triggered. Check email for the final report.");
+        if (mode === "import") {
+          setIsStockSyncImportConfirmOpen(false);
+          setStockSyncImportConfirmation("");
+        }
+        await loadStockSync();
+      } catch (stockSyncRunError) {
+        setStockSyncError(getCommerceApiErrorMessage(stockSyncRunError));
+      } finally {
+        setStockSyncTriggerMode(null);
+      }
+    },
+    [loadStockSync],
+  );
+
   useEffect(() => {
     void loadDiagnostics();
   }, [loadDiagnostics]);
@@ -144,6 +242,12 @@ export function DashboardPage() {
     void loadPathRoots(controller.signal);
     return () => controller.abort();
   }, [loadPathRoots]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadStockSync(controller.signal);
+    return () => controller.abort();
+  }, [loadStockSync]);
 
   useEffect(() => {
     if (!isCatalogUpdateActive(catalogUpdateJob)) {
@@ -177,6 +281,29 @@ export function DashboardPage() {
   const catalogUpdateActive = isCatalogUpdateActive(catalogUpdateJob);
   const importedCount = getCatalogUpdateImportedCount(catalogUpdateJob);
   const catalogUpdateProgress = getJobProgress(catalogUpdateJob);
+  const stockSyncBadge = getStockSyncBadge(stockSyncLatest);
+  const stockSyncTriggerInFlight = stockSyncTriggerMode !== null;
+  const stockSyncConfigReady = stockSyncReadiness?.enabled === true && stockSyncReadiness.schtasks_available === true;
+  const stockSyncButtonsDisabled = stockSyncTriggerInFlight || !stockSyncConfigReady;
+  const stockSyncOutputRows = getStockSyncCount(stockSyncLatest, [
+    "output_rows",
+    "output_row_count",
+    "rows",
+    "row_count",
+  ]);
+  const stockSyncDisabledCount = getStockSyncCount(stockSyncLatest, [
+    "disabled_count",
+    "disabled_rows",
+  ]);
+  const stockSyncPriceZeroForcedDisabledCount = getStockSyncCount(stockSyncLatest, [
+    "price_zero_forced_disabled_count",
+    "price_zero_disabled_count",
+    "forced_disabled_price_zero_count",
+  ]);
+  const stockSyncWarningCount =
+    getStockSyncCount(stockSyncLatest, ["warning_count", "warnings_count"]) ??
+    stockSyncLatest?.warnings.length ??
+    null;
 
   return (
     <div className="page-stack">
@@ -238,6 +365,131 @@ export function DashboardPage() {
         {catalogUpdateError ? <p className="form-error">{catalogUpdateError}</p> : null}
         {catalogUpdateJob?.status?.toLowerCase() === "failed" && catalogUpdateJob.error_message ? (
           <p className="form-error">{catalogUpdateJob.error_message}</p>
+        ) : null}
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Catalog</p>
+            <h3>OpenCart Stock Sync</h3>
+          </div>
+          <div className="section-heading-actions">
+            <span className={`status-badge ${stockSyncBadge.className}`}>
+              {stockSyncBadge.label}
+            </span>
+            <button
+              className="button"
+              type="button"
+              disabled={stockSyncButtonsDisabled}
+              onClick={() => void triggerStockSyncRun("review")}
+            >
+              {stockSyncTriggerMode === "review" ? "Triggering..." : "Run Review Only"}
+            </button>
+            <button
+              className="button"
+              type="button"
+              disabled={stockSyncButtonsDisabled}
+              onClick={() => void triggerStockSyncRun("dry_run")}
+            >
+              {stockSyncTriggerMode === "dry_run" ? "Triggering..." : "Run Dry-run Import"}
+            </button>
+            <button
+              className="button danger"
+              type="button"
+              disabled={stockSyncButtonsDisabled}
+              onClick={() => {
+                setStockSyncError(null);
+                setStockSyncMessage(null);
+                setIsStockSyncImportConfirmOpen(true);
+              }}
+            >
+              Run Real Import
+            </button>
+          </div>
+        </div>
+
+        {stockSyncLatest?.available ? (
+          <dl className="summary-grid diagnostics-summary-grid">
+            <div>
+              <dt>Status</dt>
+              <dd>{formatStockSyncValue(stockSyncLatest.status)}</dd>
+            </div>
+            <div>
+              <dt>Run id</dt>
+              <dd>{formatStockSyncValue(stockSyncLatest.run_id)}</dd>
+            </div>
+            <div>
+              <dt>Output rows</dt>
+              <dd>{formatStockSyncValue(stockSyncOutputRows)}</dd>
+            </div>
+            <div>
+              <dt>Disabled</dt>
+              <dd>{formatStockSyncValue(stockSyncDisabledCount)}</dd>
+            </div>
+            <div>
+              <dt>Price-zero disabled</dt>
+              <dd>{formatStockSyncValue(stockSyncPriceZeroForcedDisabledCount)}</dd>
+            </div>
+            <div>
+              <dt>Warnings</dt>
+              <dd>{formatStockSyncValue(stockSyncWarningCount)}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="muted">
+            {stockSyncLatest?.message ?? "Latest stock sync status has not been loaded yet."}
+          </p>
+        )}
+
+        {stockSyncReadiness && !stockSyncReadiness.enabled ? (
+          <p className="form-error">
+            OpenCart Stock Sync API is disabled. Set ECOMMERCE_STOCK_SYNC_ENABLED=true to enable it.
+          </p>
+        ) : null}
+        {stockSyncReadiness && !stockSyncReadiness.schtasks_available ? (
+          <p className="form-error">schtasks is not available on this machine.</p>
+        ) : null}
+        {stockSyncReadiness?.latest_review_error ? (
+          <p className="form-error">{stockSyncReadiness.latest_review_error}</p>
+        ) : null}
+        {stockSyncMessage ? <p className="muted">{stockSyncMessage}</p> : null}
+        {stockSyncError ? <p className="form-error">{stockSyncError}</p> : null}
+
+        {isStockSyncImportConfirmOpen ? (
+          <div className="inline-field">
+            <label htmlFor="stock-sync-import-confirmation">Confirm real import</label>
+            <input
+              id="stock-sync-import-confirmation"
+              value={stockSyncImportConfirmation}
+              onChange={(event) => setStockSyncImportConfirmation(event.target.value)}
+              placeholder="RUN IMPORT"
+              disabled={stockSyncTriggerInFlight}
+            />
+            <button
+              className="button danger"
+              type="button"
+              disabled={
+                stockSyncTriggerInFlight ||
+                !stockSyncConfigReady ||
+                stockSyncImportConfirmation !== "RUN IMPORT"
+              }
+              onClick={() => void triggerStockSyncRun("import", stockSyncImportConfirmation)}
+            >
+              {stockSyncTriggerMode === "import" ? "Triggering..." : "Confirm Real Import"}
+            </button>
+            <button
+              className="button"
+              type="button"
+              disabled={stockSyncTriggerInFlight}
+              onClick={() => {
+                setIsStockSyncImportConfirmOpen(false);
+                setStockSyncImportConfirmation("");
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         ) : null}
       </section>
 
