@@ -80,6 +80,24 @@ export const platformHealth = {
       links: [{ label: "Price Monitoring", url: "/price-monitoring" }],
     },
     {
+      id: "vendor_sources_capture",
+      label: "Vendor Sources Capture",
+      status: "ready",
+      summary: "Vendor Sources capture configuration is ready.",
+      details: [
+        "Skroutz capture strategy: Firecrawl.",
+        "Firecrawl API key configured: yes.",
+        "Direct JSON fallback: removed.",
+        "Supported capture vendors: bestprice, electronet, skroutz.",
+      ],
+      blocking_reasons: [],
+      warnings: [],
+      links: [
+        { label: "Source Health", url: "/vendor-sources/source-health" },
+        { label: "Capture Runs", url: "/vendor-sources/captures" },
+      ],
+    },
+    {
       id: "product_factory_api",
       label: "Product Factory API",
       status: "warning",
@@ -310,6 +328,65 @@ export const sourceUrlSummary = {
 export const vendorSourceUrlSummary = {
   ...sourceUrlSummary,
   summary_scope: "vendor_sources",
+};
+
+export const vendorSourceHealth = {
+  items: [
+    {
+      product_source_id: 1001,
+      product_id: 501,
+      model: "005606",
+      mpn: "MD-20L",
+      vendor: "skroutz",
+      source_url: "https://www.skroutz.gr/s/123/midea-md-20l.html",
+      canonical_url: "https://www.skroutz.gr/s/123/midea-md-20l.html",
+      active: true,
+      health: "failing",
+      last_fetch_status: "failed",
+      last_success_at: "2026-05-02T08:00:00Z",
+      last_error_at: "2026-05-15T08:00:00Z",
+      last_error_code: "FIRECRAWL_PARSE_FAILED",
+      last_error_message: "Firecrawl returned content but no Skroutz offers were parsed.",
+      health_reason: "firecrawl_parse_failed",
+      consecutive_failures: 2,
+      data_quality_flags: ["FIRECRAWL_PARSE_FAILED", "firecrawl_parse_failed"],
+      updated_at: "2026-05-15T08:00:00Z",
+    },
+    {
+      product_source_id: 1002,
+      product_id: 502,
+      model: "EL-100",
+      mpn: "EL-100",
+      vendor: "electronet",
+      source_url: "https://www.electronet.gr/p/el-100",
+      canonical_url: "https://www.electronet.gr/p/el-100",
+      active: true,
+      health: "healthy",
+      last_fetch_status: "success",
+      last_success_at: "2026-05-15T07:00:00Z",
+      last_error_at: null,
+      last_error_code: null,
+      last_error_message: null,
+      health_reason: null,
+      consecutive_failures: 0,
+      data_quality_flags: [],
+      updated_at: "2026-05-15T07:00:00Z",
+    },
+  ],
+  limit: 100,
+  offset: 0,
+  count: 2,
+};
+
+export const vendorSourceRecaptureResponse = {
+  product_source_id: 1001,
+  vendor: "skroutz",
+  status: "failed",
+  snapshot_id: 9002,
+  error_code: "FIRECRAWL_PARSE_FAILED",
+  health_reason: "firecrawl_parse_failed",
+  capture_run_id: "capture-run-rec-001",
+  observation_batch_id: "capture-run-rec-001",
 };
 
 export const sourceUrlsForCatalogProduct = {
@@ -2258,6 +2335,12 @@ export const commerceFixtureRoutes: MockRoute[] = [
   { method: "POST", path: "/commerce-api/catalog/source-urls/101/validate", response: sourceUrlValidationBroken },
   { method: "GET", path: "/commerce-api/catalog/source-urls/summary", response: sourceUrlSummary },
   { method: "GET", path: "/commerce-api/vendor-sources/source-urls/summary", response: vendorSourceUrlSummary },
+  { method: "GET", path: "/commerce-api/vendor-sources/source-health", response: vendorSourceHealth },
+  {
+    method: "POST",
+    path: "/commerce-api/vendor-sources/source-health/1001/recapture",
+    response: vendorSourceRecaptureResponse,
+  },
   {
     method: "POST",
     path: "/commerce-api/source-url-agent/runs",

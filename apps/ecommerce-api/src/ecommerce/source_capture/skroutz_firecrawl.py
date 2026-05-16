@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from ecommerce.source_capture.egress_policy import EgressPolicyError, validate_outbound_url
+from ecommerce.source_capture.firecrawl_health import firecrawl_health_flags
 from ecommerce.source_capture.parsing import parse_skroutz_firecrawl_content
 from ecommerce.source_capture.sanitize import content_hash, sanitize_json
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload
@@ -231,7 +232,14 @@ def _failed_result(
     parsed_at: datetime | None = None,
     content_text: str | None = None,
 ) -> CaptureResult:
-    flags = data_quality_flags or [error_code]
+    flags = firecrawl_health_flags(
+        vendor_slug="skroutz",
+        capture_strategy=CAPTURE_STRATEGY,
+        error_code=error_code,
+        response_status=response_status,
+        data_quality_flags=data_quality_flags or [error_code],
+        error_message=error_message,
+    )
     return CaptureResult(
         vendor_slug="skroutz",
         status="failed",

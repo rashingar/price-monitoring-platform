@@ -18,7 +18,8 @@ from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.price_monitoring.source_url_coverage import compute_source_url_coverage
 from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
-from ecommerce.source_capture.runner import capture_source_url
+from ecommerce.source_capture.firecrawl_health import firecrawl_health_reason
+from ecommerce.source_capture.runner import CAPTURE_IMPLEMENTED_VENDOR_SLUGS, capture_source_url
 from ecommerce.source_urls import infer_source_name
 from ecommerce.vendor_sources.payloads import (
     SOURCE_URL_CAPTURE_RESULT_FILENAME,
@@ -398,6 +399,106 @@ def run_vendor_source_capture(
     session.flush()
     return result
 
+
+def recapture_product_source(
+    session: Session,
+    *,
+    product_source_id: int,
+    capture_fn=None,
+    runs_dir: Path = VENDOR_SOURCE_CAPTURE_RUNS_DIR,
+) -> dict[str, Any]:
+    from ecommerce.source_capture.scheduled import capture_due_product_sources
+
+    product_source = session.get(ProductSource, int(product_source_id))
+    if product_source is None:
+        raise LookupError("Product source not found.")
+    if not product_source.active:
+        raise LookupError("Product source is inactive.")
+
+    vendor_slug = _product_source_vendor_slug(session, product_source)
+    if not vendor_slug or vendor_slug not in CAPTURE_IMPLEMENTED_VENDOR_SLUGS:
+        raise ValueError("Product source vendor is not supported for capture.")
+
+    run_id = make_vendor_capture_run_id()
+    run_dir = Path(runs_dir) / run_id
+    result_path = run_dir / VENDOR_SOURCE_CAPTURE_RESULT_FILENAME
+    observation_batch_id = run_id
+    row = create_vendor_source_capture_run_row(
+        session,
+        run_id=run_id,
+        observation_batch_id=observation_batch_id,
+        status="running",
+        source_filter=vendor_slug,
+        catalog_source=None,
+        filters={
+            "product_source_ids": [int(product_source_id)],
+            "include_not_due": True,
+            "manual_recapture": True,
+        },
+        result_path=result_path,
+    )
+    try:
+        summary = capture_due_product_sources(
+            session,
+            refresh_after_minutes=0,
+            limit=1,
+            vendor_slug=vendor_slug,
+            product_source_ids=[int(product_source_id)],
+            include_not_due=True,
+            run_id=run_id,
+            observation_batch_id=observation_batch_id,
+            capture_fn=capture_fn or capture_source_url,
+        )
+        result = _capture_result_from_summary(
+            source=vendor_slug,
+            vendor=vendor_slug,
+            selected_catalog_product_count=1 if summary.selected_count else 0,
+            selected_source_url_count=summary.selected_count,
+            selected_product_source_count=summary.selected_count,
+            summary=summary,
+            warnings=[],
+            source_urls=[],
+            result_path=result_path,
+        )
+        result = _with_vendor_run_metadata(
+            result,
+            run_id=run_id,
+            observation_batch_id=observation_batch_id,
+            source_filter=vendor_slug,
+            catalog_source=None,
+            result_path=result_path,
+        )
+        _write_result(result_path, result)
+        update_vendor_source_capture_run(row, result)
+    except Exception as exc:
+        mark_vendor_source_capture_run_failed(row, error=exc, result_path=result_path)
+        session.flush()
+        raise
+
+    if summary.selected_count != 1:
+        raise LookupError("Product source not found or inactive.")
+
+    item = summary.items[0] if summary.items else {}
+    session.flush()
+    session.refresh(product_source)
+    return {
+        "product_source_id": int(product_source_id),
+        "vendor": vendor_slug,
+        "status": item.get("status") or product_source.last_fetch_status or "unknown",
+        "snapshot_id": item.get("snapshot_id"),
+        "error_code": item.get("error_code") or product_source.last_error_code,
+        "health_reason": item.get("health_reason")
+        or firecrawl_health_reason(
+            vendor_slug=vendor_slug,
+            capture_strategy=product_source.last_capture_strategy,
+            error_code=product_source.last_error_code,
+            data_quality_flags=product_source.data_quality_flags or [],
+            error_message=product_source.last_error_message,
+        ),
+        "capture_run_id": run_id,
+        "observation_batch_id": observation_batch_id,
+    }
+
 def _capture_result_from_summary(
     *,
     source: str,
@@ -549,6 +650,13 @@ def _selected_product_source_context(session: Session, product_source_ids: list[
         catalog_product_ids.add(int(source_url.catalog_product_id))
     session.flush()
     return len(catalog_product_ids), source_url_payloads
+
+
+def _product_source_vendor_slug(session: Session, source: ProductSource) -> str | None:
+    if source.vendor_id is None:
+        return detect_vendor_slug(source.canonical_url or source.source_url)
+    vendor = session.get(Vendor, source.vendor_id)
+    return vendor.slug if vendor is not None else detect_vendor_slug(source.canonical_url or source.source_url)
 
 
 def _missing_source_url_product_count(session: Session, catalog_product_ids: list[int], source: str) -> int:

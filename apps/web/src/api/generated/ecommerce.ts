@@ -334,6 +334,10 @@ export interface paths {
     /** Get Vendor Source Health */
     get: operations["get_vendor_source_health_api_vendor_sources_source_health_get"];
   };
+  "/api/vendor-sources/source-health/{product_source_id}/recapture": {
+    /** Post Vendor Source Health Recapture */
+    post: operations["post_vendor_source_health_recapture_api_vendor_sources_source_health__product_source_id__recapture_post"];
+  };
   "/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network": {
     /** Post Skroutz Network Diagnostic */
     post: operations["post_skroutz_network_diagnostic_api_vendor_sources_source_urls__source_url_id__diagnostics_skroutz_network_post"];
@@ -3093,8 +3097,33 @@ export interface operations {
     parameters: {
       query?: {
         vendor?: string | null;
+        health_reason?: string | null;
         limit?: number;
         offset?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Post Vendor Source Health Recapture */
+  post_vendor_source_health_recapture_api_vendor_sources_source_health__product_source_id__recapture_post: {
+    parameters: {
+      path: {
+        product_source_id: number;
       };
     };
     responses: {

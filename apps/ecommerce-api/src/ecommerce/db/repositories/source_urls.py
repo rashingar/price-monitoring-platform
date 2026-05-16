@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ecommerce.db.models.catalog import CatalogProductRow
+from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
@@ -19,6 +20,7 @@ from ecommerce.source_urls import (
     infer_source_name,
     normalize_source_url,
 )
+from ecommerce.source_capture.canonicalize_url import canonicalize_url
 
 SOURCE_URL_STATUSES = {"active", "disabled", "broken", "redirected", "needs_review"}
 SOURCE_URL_TYPES = {"manual", "imported", "discovered"}
@@ -260,6 +262,19 @@ def update_source_url(session: Session, source_url_id: int, payload: dict[str, A
     return row
 
 
+def find_source_url_for_product_source(session: Session, product_source: ProductSource) -> SourceUrl | None:
+    product = session.get(Product, product_source.product_id)
+    if product is None:
+        return None
+
+    catalog_product = _catalog_product_for_product(session, product)
+    if catalog_product is None:
+        return None
+
+    normalized_url = normalize_source_url(canonicalize_url(product_source.canonical_url or product_source.source_url))
+    return _find_source_url_by_normalized_url(session, catalog_product.id, normalized_url)
+
+
 def apply_source_url_validation_result(
     session: Session,
     source_url_id: int,
@@ -324,6 +339,30 @@ def _find_source_url_by_normalized_url(session: Session, catalog_product_id: int
             SourceUrl.url_normalized == normalized_url,
         )
     ).scalar_one_or_none()
+
+
+def _catalog_product_for_product(session: Session, product: Product) -> CatalogProductRow | None:
+    if product.model:
+        row = session.execute(
+            select(CatalogProductRow).where(
+                CatalogProductRow.catalog_source == product.catalog_source,
+                CatalogProductRow.model == product.model,
+                CatalogProductRow.active.is_(True),
+            )
+        ).scalar_one_or_none()
+        if row is not None:
+            return row
+    if product.mpn:
+        return session.execute(
+            select(CatalogProductRow)
+            .where(
+                CatalogProductRow.catalog_source == product.catalog_source,
+                CatalogProductRow.mpn == product.mpn,
+                CatalogProductRow.active.is_(True),
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+    return None
 
 
 def _sync_catalog_fields(row: SourceUrl, product: CatalogProductRow) -> None:

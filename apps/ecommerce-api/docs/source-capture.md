@@ -94,7 +94,11 @@ Vendor Sources exposes source URL coverage and source health through:
 
 Skroutz production capture uses Firecrawl only. `FIRECRAWL_API_KEY` is required
 for production Skroutz capture; `FIRECRAWL_API_BASE_URL` and
-`FIRECRAWL_TIMEOUT_SECONDS` are optional operational overrides. Direct
+`FIRECRAWL_TIMEOUT_SECONDS` are optional operational overrides.
+`ECOMMERCE_FIRECRAWL_SOURCE_REVIEW_FAILURE_THRESHOLD` controls how many
+consecutive Skroutz Firecrawl blocked/parse failures move an active source URL
+to `needs_review`; invalid values fall back to `2`, and values below `1` become
+`1`. Direct
 `filter_products.json` / `shops_details.json` production capture has been
 removed and is not available as a fallback or config toggle.
 

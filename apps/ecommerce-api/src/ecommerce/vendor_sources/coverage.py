@@ -13,6 +13,7 @@ from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.models.vendor_sources import Vendor
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.repositories.common import json_safe_value
+from ecommerce.source_capture.firecrawl_health import firecrawl_health_reason
 from ecommerce.source_capture.skroutz_network_diagnostic import CAPTURE_STRATEGY as SKROUTZ_NETWORK_DIAGNOSTIC_STRATEGY
 
 
@@ -101,10 +102,12 @@ def source_health_items(
     session: Session,
     *,
     vendor: str | None = None,
+    health_reason: str | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> dict[str, Any]:
     normalized_vendor = _optional_text(vendor)
+    normalized_health_reason = _optional_text(health_reason)
     safe_limit = max(1, min(int(limit), 500))
     safe_offset = max(0, int(offset))
     statement = (
@@ -132,6 +135,7 @@ def source_health_items(
             "last_error_at": json_safe_value(source.last_error_at),
             "last_error_code": source.last_error_code,
             "last_error_message": source.last_error_message,
+            "health_reason": _health_reason(source, vendor_row.slug if vendor_row is not None else None),
             "consecutive_failures": int(source.consecutive_failures or 0),
             "data_quality_flags": source.data_quality_flags or [],
             "latest_skroutz_network_diagnostic": _latest_skroutz_network_diagnostic_summary(session, source) if (vendor_row.slug if vendor_row is not None else None) == "skroutz" else None,
@@ -139,6 +143,8 @@ def source_health_items(
         }
         for source, product, vendor_row in rows
     ]
+    if normalized_health_reason:
+        items = [item for item in items if item.get("health_reason") == normalized_health_reason]
     return {"items": items, "limit": safe_limit, "offset": safe_offset, "count": len(items)}
 
 
@@ -165,6 +171,16 @@ def _product_source_health(row: ProductSource) -> str:
     if row.last_fetch_status == "success":
         return "healthy"
     return "unknown"
+
+
+def _health_reason(row: ProductSource, vendor_slug: str | None) -> str | None:
+    return firecrawl_health_reason(
+        vendor_slug=vendor_slug,
+        capture_strategy=row.last_capture_strategy,
+        error_code=row.last_error_code,
+        data_quality_flags=row.data_quality_flags or [],
+        error_message=row.last_error_message,
+    )
 
 
 def _latest_skroutz_network_diagnostic_summary(session: Session, source: ProductSource) -> dict[str, Any] | None:

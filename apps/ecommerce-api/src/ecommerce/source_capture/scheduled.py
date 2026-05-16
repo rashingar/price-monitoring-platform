@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from ecommerce.db.models.vendor_sources import Vendor
 from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.db.repositories.capture_persistence import persist_capture_result
+from ecommerce.source_capture.firecrawl_health import firecrawl_health_reason
 from ecommerce.source_capture.runner import capture_source_url
 
 
@@ -79,6 +80,14 @@ def capture_due_product_sources(
                 "status": result.status,
                 "snapshot_id": snapshot.id,
                 "error_code": result.error_code,
+                "health_reason": firecrawl_health_reason(
+                    vendor_slug=vendor_slug or result.vendor_slug,
+                    capture_strategy=snapshot.capture_strategy,
+                    error_code=snapshot.error_code or result.error_code,
+                    response_status=snapshot.response_status,
+                    data_quality_flags=source.data_quality_flags or snapshot.data_quality_flags or [],
+                    error_message=snapshot.error_message or result.error_message,
+                ),
             }
         )
     return ScheduledCaptureSummary(

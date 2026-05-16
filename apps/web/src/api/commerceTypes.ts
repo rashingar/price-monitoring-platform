@@ -625,6 +625,58 @@ export interface VendorSourceCaptureRunArtifactsResponse extends ArtifactListRes
   items: ArtifactItem[];
 }
 
+export type FirecrawlHealthReason =
+  | "firecrawl_api_key_missing"
+  | "firecrawl_timeout"
+  | "firecrawl_rate_limited"
+  | "firecrawl_blocked"
+  | "firecrawl_http_error"
+  | "firecrawl_parse_failed"
+  | "firecrawl_no_offers"
+  | "firecrawl_unknown_error";
+
+export interface VendorSourceHealthItem {
+  product_source_id: number | string;
+  product_id?: number | string | null;
+  model?: string | null;
+  mpn?: string | null;
+  vendor?: SourceName | string | null;
+  source_url?: string | null;
+  canonical_url?: string | null;
+  active?: boolean | null;
+  health?: string | null;
+  last_fetch_status?: string | null;
+  last_success_at?: string | null;
+  last_error_at?: string | null;
+  last_error_code?: string | null;
+  last_error_message?: string | null;
+  health_reason?: FirecrawlHealthReason | string | null;
+  consecutive_failures?: number;
+  data_quality_flags?: string[];
+  updated_at?: string | null;
+  [key: string]: unknown;
+}
+
+export interface VendorSourceHealthResponse {
+  items: VendorSourceHealthItem[];
+  limit?: number;
+  offset?: number;
+  count: number;
+  [key: string]: unknown;
+}
+
+export interface VendorSourceRecaptureResponse {
+  product_source_id: number | string;
+  vendor?: string | null;
+  status?: string | null;
+  snapshot_id?: number | string | null;
+  error_code?: string | null;
+  health_reason?: FirecrawlHealthReason | string | null;
+  capture_run_id?: string | number | null;
+  observation_batch_id?: string | number | null;
+  [key: string]: unknown;
+}
+
 export interface SourceUrlCandidateReviewLayoutColumn {
   key?: string | null;
   id?: string | null;

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
+from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.repositories.observation_persistence import (
     add_price_observation_listings,
@@ -18,6 +19,12 @@ from ecommerce.db.repositories.observation_persistence import (
 )
 from ecommerce.db.repositories.source_convergence import sync_product_source_to_source_url
 from ecommerce.db.repositories.source_health import update_source_health
+from ecommerce.db.repositories.source_urls import find_source_url_for_product_source
+from ecommerce.source_capture.firecrawl_health import (
+    FIRECRAWL_SOURCE_REVIEW_HEALTH_REASONS,
+    firecrawl_health_reason,
+    firecrawl_source_review_failure_threshold,
+)
 from ecommerce.source_capture.sanitize import content_hash, sanitize_json
 from ecommerce.source_capture.types import CaptureResult
 
@@ -114,8 +121,42 @@ def persist_capture_result(
         )
     update_source_health(source, result, snapshot)
     session.flush()
-    sync_product_source_to_source_url(session, source)
+    source_url = sync_product_source_to_source_url(session, source) or find_source_url_for_product_source(session, source)
+    _maybe_escalate_firecrawl_source_url(source_url, source=source, result=result, snapshot=snapshot)
+    session.flush()
     return snapshot
+
+
+def _maybe_escalate_firecrawl_source_url(
+    source_url: SourceUrl | None,
+    *,
+    source: ProductSource,
+    result: CaptureResult,
+    snapshot: SourceCaptureSnapshot,
+) -> None:
+    if source_url is None or source_url.status != "active":
+        return
+    reason = firecrawl_health_reason(
+        vendor_slug=result.vendor_slug,
+        capture_strategy=snapshot.capture_strategy,
+        error_code=snapshot.error_code or result.error_code,
+        response_status=snapshot.response_status,
+        data_quality_flags=source.data_quality_flags or snapshot.data_quality_flags or [],
+        error_message=snapshot.error_message or result.error_message,
+    )
+    if reason not in FIRECRAWL_SOURCE_REVIEW_HEALTH_REASONS:
+        return
+    if int(source.consecutive_failures or 0) < firecrawl_source_review_failure_threshold():
+        return
+    source_url.status = "needs_review"
+    source_url.last_failed_at = _now()
+    source_url.failure_count = max(int(source_url.failure_count or 0), int(source.consecutive_failures or 0))
+    source_url.last_error = _short_text(snapshot.error_message or result.error_message or reason)
+    source_url.notes = _append_note(
+        source_url.notes,
+        f"Moved to needs_review after repeated Firecrawl capture failures: {reason}.",
+    )
+    source_url.updated_at = _now()
 
 
 def _inline_text_ref(text: str | None, *, kind: str, limit: int = 100_000) -> str | None:
@@ -144,6 +185,18 @@ def _sanitize_text_content(text: str) -> str:
             continue
         clean_lines.append(line)
     return "\n".join(clean_lines)
+
+
+def _append_note(current: str | None, note: str) -> str:
+    existing = str(current or "").strip()
+    if note in existing:
+        return existing
+    return f"{existing}\n{note}".strip() if existing else note
+
+
+def _short_text(value: object, *, limit: int = 500) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else f"{text[: limit - 3]}..."
 
 
 def _now() -> datetime:

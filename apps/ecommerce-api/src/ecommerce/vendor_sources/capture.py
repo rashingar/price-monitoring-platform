@@ -12,6 +12,7 @@ from ecommerce.vendor_sources.capture_service import (
     capture_selected_source_urls_for_run,
     get_vendor_source_capture_run,
     list_vendor_source_capture_runs,
+    recapture_product_source,
     run_vendor_source_capture,
     vendor_source_capture_run_to_dict,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "capture_selected_source_urls_for_run",
     "get_vendor_source_capture_run",
     "list_vendor_source_capture_runs",
+    "recapture_product_source",
     "run_vendor_source_capture",
     "vendor_source_capture_run_to_dict",
 ]

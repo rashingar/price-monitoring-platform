@@ -99,12 +99,16 @@ describe("platform mocked page smoke tests", () => {
     await expect(screen.findByRole("heading", { name: "Operator readiness" })).resolves.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Refresh platform health" })).toBeInTheDocument();
     expect(screen.getByText("Ecommerce API is responding.")).toBeInTheDocument();
+    expect(screen.getByText("Vendor Sources capture configuration is ready.")).toBeInTheDocument();
     expect(screen.queryByText("Required tables present: yes.")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Product Factory API health could not be checked because no base URL key is configured."),
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Ecommerce DB/ }));
     expect(screen.getByText("Required tables present: yes.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Vendor Sources Capture/ }));
+    expect(screen.getByText("Skroutz capture strategy: Firecrawl.")).toBeInTheDocument();
+    expect(screen.getByText("Direct JSON fallback: removed.")).toBeInTheDocument();
     expect(screen.queryByText("Backend health")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "OpenCart DB update" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Update DB" })).toBeInTheDocument();
@@ -1071,6 +1075,7 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("Use Find Source to discover and review candidate URLs before capture.")).toBeInTheDocument();
     expect(screen.getByText("Broken, disabled, redirected, and needs-review URLs are not monitorable.")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Vendor Sources navigation" })).toHaveTextContent("Source URLs / Coverage");
+    expect(screen.queryByRole("button", { name: "Recapture" })).not.toBeInTheDocument();
     expect(
       within(screen.getByRole("navigation", { name: "Vendor Sources navigation" })).getByRole("link", {
         name: "Source URLs / Coverage",
@@ -1107,6 +1112,47 @@ describe("platform mocked page smoke tests", () => {
       expect(row).not.toBeNull();
       expect(within(row as HTMLTableRowElement).getByText("capture not implemented")).toBeInTheDocument();
     }
+  });
+
+  it("renders Vendor Sources source health with reason filter and row recapture", async () => {
+    const mockFetch = installMockFetch(allRoutes);
+
+    renderWithRouter("/vendor-sources/source-health");
+
+    await expect(screen.findByRole("heading", { name: "Source Health" })).resolves.toBeInTheDocument();
+    const vendorSourcesNav = screen.getByRole("navigation", { name: "Vendor Sources navigation" });
+    expect(within(vendorSourcesNav).getByRole("link", { name: "Source Health" })).toHaveAttribute(
+      "href",
+      "/vendor-sources/source-health",
+    );
+    expect(screen.getByLabelText("health_reason")).toHaveValue("");
+    expect(screen.getAllByText("firecrawl_parse_failed").length).toBeGreaterThan(0);
+    expect(screen.getByText("EL-100")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("health_reason"), {
+      target: { value: "firecrawl_parse_failed" },
+    });
+    expect(screen.getByText("005606")).toBeInTheDocument();
+    expect(screen.queryByText("EL-100")).not.toBeInTheDocument();
+
+    const row = screen.getByText("005606").closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row as HTMLTableRowElement).getByRole("button", { name: "Recapture" }));
+    await expect(screen.findByText("Recaptured product source 1001.")).resolves.toBeInTheDocument();
+    expect(
+      mockFetch.requests.some(
+        (request) =>
+          request.method === "POST" &&
+          request.pathname === "/commerce-api/vendor-sources/source-health/1001/recapture",
+      ),
+    ).toBe(true);
+    expect(
+      mockFetch.requests.filter(
+        (request) =>
+          request.method === "GET" &&
+          request.pathname === "/commerce-api/vendor-sources/source-health",
+      ).length,
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("renders Vendor Sources capture runs and opens capture artifacts", async () => {

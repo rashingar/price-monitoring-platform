@@ -16,6 +16,7 @@ from ecommerce.db.session import session_scope
 from ecommerce.vendor_sources.capture import (
     get_vendor_source_capture_run,
     list_vendor_source_capture_runs,
+    recapture_product_source,
     run_vendor_source_capture,
     vendor_source_capture_run_to_dict,
 )
@@ -66,15 +67,33 @@ def get_vendor_source_url_summary(source_name: str | None = None) -> dict[str, A
 @router.get("/source-health")
 def get_vendor_source_health(
     vendor: str | None = None,
+    health_reason: str | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> dict[str, Any]:
     _require_vendor_sources_database_ready()
     try:
         with session_scope() as session:
-            return source_health_items(session, vendor=vendor, limit=limit, offset=offset)
+            return source_health_items(session, vendor=vendor, health_reason=health_reason, limit=limit, offset=offset)
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Vendor source health query failed: {_safe_db_error(exc)}") from exc
+
+
+@router.post("/source-health/{product_source_id}/recapture")
+def post_vendor_source_health_recapture(product_source_id: int) -> dict[str, Any]:
+    _require_vendor_sources_database_ready()
+    try:
+        with session_scope() as session:
+            return recapture_product_source(session, product_source_id=product_source_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=500, detail=f"Vendor source recapture failed: {_safe_db_error(exc)}") from exc
+    except Exception as exc:
+        message = str(exc).strip() or exc.__class__.__name__
+        raise HTTPException(status_code=500, detail=f"Vendor source recapture failed: {message}") from exc
 
 
 @router.post("/source-urls/{source_url_id}/diagnostics/skroutz-network")

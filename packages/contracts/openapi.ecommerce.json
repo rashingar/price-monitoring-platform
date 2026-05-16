@@ -6532,6 +6532,22 @@
           },
           {
             "in": "query",
+            "name": "health_reason",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Health Reason"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -6579,6 +6595,50 @@
           }
         },
         "summary": "Get Vendor Source Health",
+        "tags": [
+          "vendor-sources"
+        ]
+      }
+    },
+    "/api/vendor-sources/source-health/{product_source_id}/recapture": {
+      "post": {
+        "operationId": "post_vendor_source_health_recapture_api_vendor_sources_source_health__product_source_id__recapture_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_source_id",
+            "required": true,
+            "schema": {
+              "title": "Product Source Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Vendor Source Health Recapture Api Vendor Sources Source Health  Product Source Id  Recapture Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Vendor Source Health Recapture",
         "tags": [
           "vendor-sources"
         ]

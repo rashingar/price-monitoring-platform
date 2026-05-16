@@ -150,7 +150,9 @@ def sync_product_source_to_source_url(session: Session, product_source: ProductS
     existing.source_domain = domain
     existing.url = product_source.source_url.strip() or canonical
     existing.url_normalized = normalized
-    if existing.status != "disabled" or not product_source.active:
+    if not product_source.active:
+        existing.status = status
+    elif existing.status not in {"disabled", "needs_review", "broken", "redirected"}:
         existing.status = status
     if existing.url_type != "manual":
         existing.url_type = "imported"

@@ -38,6 +38,11 @@ const SourceUrlCandidatesPage = lazy(() =>
 const VendorSourceUrlsPage = lazy(() =>
   import("../pages/VendorSourceUrlsPage").then(({ VendorSourceUrlsPage }) => ({ default: VendorSourceUrlsPage })),
 );
+const VendorSourceHealthPage = lazy(() =>
+  import("../pages/VendorSourceHealthPage").then(({ VendorSourceHealthPage }) => ({
+    default: VendorSourceHealthPage,
+  })),
+);
 const VendorSourceCaptureRunsPage = lazy(() =>
   import("../pages/VendorSourceCaptureRunsPage").then(({ VendorSourceCaptureRunsPage }) => ({
     default: VendorSourceCaptureRunsPage,
@@ -105,6 +110,7 @@ const routes = [
       { path: "vendor-sources/runs", element: <RedirectWithSearch to="/find-source/runs" /> },
       { path: "vendor-sources/candidates", element: <RedirectWithSearch to="/find-source/candidates" /> },
       { path: "vendor-sources/source-urls", element: withPageSuspense(VendorSourceUrlsPage) },
+      { path: "vendor-sources/source-health", element: withPageSuspense(VendorSourceHealthPage) },
       { path: "vendor-sources/captures", element: withPageSuspense(VendorSourceCaptureRunsPage) },
       { path: "vendor-sources/imports", element: withPageSuspense(VendorSourceImportsPage) },
       { path: "product-factory", element: withPageSuspense(ProductFactoryWorkflowPage) },

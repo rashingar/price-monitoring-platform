@@ -18,6 +18,7 @@ const catalogNavItems = [
 
 const vendorSourcesNavItems = [
   { to: "/vendor-sources/source-urls", label: "Source URLs / Coverage" },
+  { to: "/vendor-sources/source-health", label: "Source Health" },
   { to: "/vendor-sources/captures", label: "Capture Runs" },
   { to: "/vendor-sources/imports", label: "Imports" },
 ];
@@ -141,6 +142,7 @@ export function AppShell() {
               to={item.to}
               end={
                 item.to === "/vendor-sources/source-urls" ||
+                item.to === "/vendor-sources/source-health" ||
                 item.to === "/vendor-sources/captures" ||
                 item.to === "/vendor-sources/imports"
               }

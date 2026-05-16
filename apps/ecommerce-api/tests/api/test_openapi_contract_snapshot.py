@@ -53,6 +53,7 @@ def test_openapi_snapshot_contains_ui_facing_routes() -> None:
         ("GET", "/api/vendor-sources/sources"),
         ("GET", "/api/vendor-sources/source-urls/summary"),
         ("GET", "/api/vendor-sources/source-health"),
+        ("POST", "/api/vendor-sources/source-health/{product_source_id}/recapture"),
         ("POST", "/api/vendor-sources/captures/runs"),
         ("GET", "/api/vendor-sources/captures/runs"),
         ("GET", "/api/vendor-sources/captures/runs/{run_id}"),

@@ -24,6 +24,7 @@ def collect_platform_health() -> PlatformHealthResponse:
             collectors.collect_catalog_update_health(catalog_readiness=catalog_readiness),
             collectors.collect_source_url_agent_health(),
             collectors.collect_price_monitoring_health(price_readiness=price_readiness),
+            collectors.collect_vendor_sources_capture_health(),
             collectors.collect_product_factory_health(),
         ]
         status = overall_status(groups)

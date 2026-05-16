@@ -28,6 +28,7 @@ from ecommerce.platform_health.sanitization import (
     safe_text,
     unique_strings,
 )
+from ecommerce.source_capture.runner import CAPTURE_IMPLEMENTED_VENDOR_SLUGS
 
 OPENCART_REQUIRED_KEYS = (
     "OPENCART_STORE_BASE",
@@ -262,6 +263,51 @@ def collect_price_monitoring_health(*, price_readiness: dict | None = None) -> P
     )
 
 
+def collect_vendor_sources_capture_health() -> PlatformHealthGroup:
+    firecrawl_key_configured = bool(str(os.environ.get("FIRECRAWL_API_KEY") or "").strip())
+    skroutz_count = _active_skroutz_source_url_count()
+    details = [
+        "Skroutz capture strategy: Firecrawl.",
+        f"Firecrawl API key configured: {'yes' if firecrawl_key_configured else 'no'}.",
+        "Direct JSON fallback: removed.",
+        "Supported capture vendors: " + ", ".join(sorted(CAPTURE_IMPLEMENTED_VENDOR_SLUGS)) + ".",
+    ]
+    if skroutz_count is not None:
+        details.append(f"Active Skroutz source URLs: {skroutz_count}.")
+
+    if firecrawl_key_configured:
+        return group(
+            "vendor_sources_capture",
+            "Vendor Sources Capture",
+            "ready",
+            "Vendor Sources capture configuration is ready.",
+            details=details,
+            links=[link("Source Health", "/vendor-sources/source-health"), link("Capture Runs", "/vendor-sources/captures")],
+        )
+
+    reason = "FIRECRAWL_API_KEY is missing for Skroutz Firecrawl capture."
+    if skroutz_count is not None and skroutz_count > 0:
+        return group(
+            "vendor_sources_capture",
+            "Vendor Sources Capture",
+            "blocked",
+            "Vendor Sources capture is blocked for active Skroutz source URLs.",
+            details=details,
+            blocking_reasons=[reason],
+            links=[link("Source Health", "/vendor-sources/source-health"), link("Capture Runs", "/vendor-sources/captures")],
+        )
+
+    return group(
+        "vendor_sources_capture",
+        "Vendor Sources Capture",
+        "warning",
+        "Skroutz Firecrawl capture is not configured.",
+        details=details,
+        warnings=[reason],
+        links=[link("Source Health", "/vendor-sources/source-health"), link("Capture Runs", "/vendor-sources/captures")],
+    )
+
+
 def collect_product_factory_health() -> PlatformHealthGroup:
     base_url, source_key = _product_factory_base_url()
     if not base_url:
@@ -360,6 +406,21 @@ def _source_url_coverage_summary() -> dict[str, int] | None:
         "catalog_product_count": catalog_product_count,
         "products_with_active_source_urls": active_source_product_count,
     }
+
+
+def _active_skroutz_source_url_count() -> int | None:
+    try:
+        with session_scope() as session:
+            return int(
+                session.execute(
+                    select(func.count(SourceUrl.id)).where(
+                        SourceUrl.status == "active",
+                        func.lower(SourceUrl.source_name) == "skroutz",
+                    )
+                ).scalar_one()
+            )
+    except Exception:
+        return None
 
 
 def _product_factory_base_url() -> tuple[str | None, str | None]:

@@ -98,6 +98,9 @@ import type {
   VendorSourceCaptureRunRequest,
   VendorSourceCaptureRunSummary,
   VendorSourceCapability,
+  VendorSourceHealthItem,
+  VendorSourceHealthResponse,
+  VendorSourceRecaptureResponse,
 } from "./commerceTypes";
 import { normalizePriceMonitoringFetchStatus } from "./priceMonitoringNormalizers";
 
@@ -1203,6 +1206,68 @@ function normalizeVendorSourceCaptureRunArtifacts(
   payload: unknown,
 ): VendorSourceCaptureRunArtifactsResponse {
   return normalizeArtifactList(payload) as VendorSourceCaptureRunArtifactsResponse;
+}
+
+function normalizeVendorSourceHealthItem(value: unknown): VendorSourceHealthItem | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const productSourceId = normalizeNullableId(value.product_source_id ?? value.id);
+  if (productSourceId === null) {
+    return null;
+  }
+
+  return {
+    ...value,
+    product_source_id: productSourceId,
+    product_id: normalizeNullableId(value.product_id),
+    model: normalizeNullableString(value.model),
+    mpn: normalizeNullableString(value.mpn),
+    vendor: normalizeNullableString(value.vendor),
+    source_url: normalizeNullableString(value.source_url),
+    canonical_url: normalizeNullableString(value.canonical_url),
+    active: typeof value.active === "boolean" ? value.active : null,
+    health: normalizeNullableString(value.health),
+    last_fetch_status: normalizeNullableString(value.last_fetch_status),
+    last_success_at: normalizeNullableString(value.last_success_at),
+    last_error_at: normalizeNullableString(value.last_error_at),
+    last_error_code: normalizeNullableString(value.last_error_code),
+    last_error_message: normalizeNullableString(value.last_error_message),
+    health_reason: normalizeNullableString(value.health_reason),
+    consecutive_failures: normalizeCounter(value.consecutive_failures),
+    data_quality_flags: normalizeStringArray(value.data_quality_flags),
+    updated_at: normalizeNullableString(value.updated_at),
+  };
+}
+
+function normalizeVendorSourceHealth(payload: unknown): VendorSourceHealthResponse {
+  const source = isRecord(payload) ? payload : {};
+  const items = getArrayPayload(payload, ["items", "data", "results"])
+    .map(normalizeVendorSourceHealthItem)
+    .filter((item): item is VendorSourceHealthItem => item !== null);
+  return {
+    ...source,
+    items,
+    limit: normalizeOptionalNumber(source.limit),
+    offset: normalizeOptionalNumber(source.offset),
+    count: normalizeOptionalNumber(source.count) ?? items.length,
+  };
+}
+
+function normalizeVendorSourceRecapture(payload: unknown): VendorSourceRecaptureResponse {
+  const source = isRecord(payload) ? payload : {};
+  return {
+    ...source,
+    product_source_id: normalizeNullableId(source.product_source_id) ?? "",
+    vendor: normalizeNullableString(source.vendor),
+    status: normalizeNullableString(source.status),
+    snapshot_id: normalizeNullableId(source.snapshot_id),
+    error_code: normalizeNullableString(source.error_code),
+    health_reason: normalizeNullableString(source.health_reason),
+    capture_run_id: normalizeNullableId(source.capture_run_id),
+    observation_batch_id: normalizeNullableId(source.observation_batch_id),
+  };
 }
 
 function normalizeSkroutzNetworkEndpoint(value: unknown): SkroutzNetworkCapturedEndpoint | null {
@@ -2734,6 +2799,33 @@ export const commerceClient = {
       await request<unknown>(
         `/vendor-sources/captures/runs/${encodeURIComponent(String(runId))}/artifacts`,
         { signal },
+      ),
+    );
+  },
+
+  async getVendorSourceHealth(
+    params: { vendor?: string | null; health_reason?: string | null; limit?: number; offset?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<VendorSourceHealthResponse> {
+    return normalizeVendorSourceHealth(
+      await request<unknown>(
+        appendQuery("/vendor-sources/source-health", params as QueryParams),
+        { signal },
+      ),
+    );
+  },
+
+  async recaptureVendorSourceHealth(
+    productSourceId: string | number,
+    signal?: AbortSignal,
+  ): Promise<VendorSourceRecaptureResponse> {
+    return normalizeVendorSourceRecapture(
+      await request<unknown>(
+        `/vendor-sources/source-health/${encodeURIComponent(String(productSourceId))}/recapture`,
+        {
+          method: "POST",
+          signal,
+        },
       ),
     );
   },

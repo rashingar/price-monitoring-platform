@@ -506,6 +506,42 @@ describe("commerce API client contract fixtures", () => {
     );
   });
 
+  it("constructs Vendor Sources source health and recapture URLs", async () => {
+    const mockFetch = installMockFetch(commerceFixtureRoutes);
+
+    await expect(commerceClient.getVendorSourceHealth()).resolves.toMatchObject({
+      count: 2,
+      items: [
+        expect.objectContaining({
+          product_source_id: 1001,
+          vendor: "skroutz",
+          health_reason: "firecrawl_parse_failed",
+          consecutive_failures: 2,
+        }),
+        expect.objectContaining({
+          product_source_id: 1002,
+          vendor: "electronet",
+          health_reason: null,
+        }),
+      ],
+    });
+
+    await expect(commerceClient.recaptureVendorSourceHealth(1001)).resolves.toMatchObject({
+      product_source_id: 1001,
+      vendor: "skroutz",
+      status: "failed",
+      health_reason: "firecrawl_parse_failed",
+      capture_run_id: "capture-run-rec-001",
+    });
+
+    expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toEqual(
+      expect.arrayContaining([
+        "GET /commerce-api/vendor-sources/source-health",
+        "POST /commerce-api/vendor-sources/source-health/1001/recapture",
+      ]),
+    );
+  });
+
   it("normalizes malformed source URL payloads to stable empty shapes", async () => {
     installMockFetch([
       { method: "GET", path: "/commerce-api/catalog/products/1/source-urls", response: { items: [null, { nope: true }] } },

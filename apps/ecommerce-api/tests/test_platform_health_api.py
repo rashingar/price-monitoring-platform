@@ -22,6 +22,7 @@ def _install_ready_collectors(monkeypatch) -> None:
     monkeypatch.setattr(platform_health_collectors, "collect_price_monitoring_database_readiness", lambda: _price_ready())
     monkeypatch.setattr(platform_health_collectors, "get_source_url_agent_readiness", lambda: _source_ready())
     monkeypatch.setattr(platform_health_collectors, "_latest_catalog_update_job", lambda: None)
+    monkeypatch.setattr(platform_health_collectors, "_active_skroutz_source_url_count", lambda: 0)
 
 
 def _set_opencart_config(monkeypatch, *, secret: str = "opencart-secret-value") -> None:
@@ -184,6 +185,38 @@ def test_platform_health_product_factory_unconfigured_warns_without_crashing(mon
     assert group["warnings"]
 
 
+def test_platform_health_vendor_sources_capture_reports_firecrawl_readiness(monkeypatch) -> None:
+    secret = "fc-secret-value"
+    _set_opencart_config(monkeypatch)
+    _clear_product_factory_config(monkeypatch)
+    monkeypatch.setenv("FIRECRAWL_API_KEY", secret)
+
+    response = _client(monkeypatch).get("/api/platform/health")
+
+    group = _groups(response.json())["vendor_sources_capture"]
+    assert group["label"] == "Vendor Sources Capture"
+    assert group["status"] == "ready"
+    assert "Skroutz capture strategy: Firecrawl." in group["details"]
+    assert "Firecrawl API key configured: yes." in group["details"]
+    assert "Direct JSON fallback: removed." in group["details"]
+    assert secret not in response.text
+
+
+def test_platform_health_vendor_sources_capture_blocks_when_skroutz_sources_need_missing_key(monkeypatch) -> None:
+    _set_opencart_config(monkeypatch)
+    _clear_product_factory_config(monkeypatch)
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "")
+    client = _client(monkeypatch)
+    monkeypatch.setattr(platform_health_collectors, "_active_skroutz_source_url_count", lambda: 3)
+
+    response = client.get("/api/platform/health")
+
+    group = _groups(response.json())["vendor_sources_capture"]
+    assert group["status"] == "blocked"
+    assert group["blocking_reasons"] == ["FIRECRAWL_API_KEY is missing for Skroutz Firecrawl capture."]
+    assert "Firecrawl API key configured: no." in group["details"]
+
+
 def test_platform_health_overall_blocked_when_required_group_blocked(monkeypatch) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
@@ -221,6 +254,7 @@ def test_platform_health_response_shape_is_stable(monkeypatch) -> None:
         "catalog_update_opencart",
         "source_url_agent",
         "price_monitoring",
+        "vendor_sources_capture",
         "product_factory_api",
     ]
     for group in payload["groups"]:
