@@ -6,7 +6,11 @@ from product_factory.fetcher import FetchError
 from product_factory.models import FetchResult, GalleryImage, ParsedProduct, SourceProductData, SpecItem, SpecSection
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.source_capture_client import SourceCaptureSyncResult
-from product_factory.source_acquisition_stage import apply_second_opencart_image_index, execute_source_acquisition_stage
+from product_factory.source_acquisition_stage import (
+    apply_second_opencart_image_index,
+    apply_source_specific_gallery_rules,
+    execute_source_acquisition_stage,
+)
 
 
 def _build_provider_resolution_result(
@@ -153,10 +157,20 @@ def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
         "fetch_method": "fixture",
         "fallback_used": False,
         "response_headers": {"content-type": "text/html", "x-test": "1"},
+        "gallery_mode": None,
+        "gallery_whole_mode": False,
         "gallery_requested_photos": 3,
         "gallery_downloaded_count": 3,
         "gallery_url_used": False,
         "gallery_extraction_url": url,
+        "gallery_source_filter_url": url,
+        "gallery_source_filter_final_url": url,
+        "gallery_source_filter_domain": "electronet.gr",
+        "gallery_source_filter_rule": "",
+        "gallery_extracted_before_source_filter_count": 2,
+        "gallery_after_source_filter_count": 2,
+        "gallery_skroutz_skip_last_applied": False,
+        "gallery_skroutz_skip_last_skipped_url": "",
         "product_data_extraction_url": url,
         "product_data_extraction_uses_main_url": True,
         "characteristics_url_used": False,
@@ -283,6 +297,149 @@ def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_imag
     assert result.snapshot_provenance["gallery_extraction_url"] == gallery_url
     assert result.snapshot_provenance["product_data_extraction_url"] == main_url
     assert result.snapshot_provenance["product_data_extraction_uses_main_url"] is True
+
+
+def test_execute_source_acquisition_stage_gallery_mode_all_removes_download_cap(tmp_path: Path) -> None:
+    model = "233541"
+    url = "https://www.electronet.gr/example"
+    parsed = ParsedProduct(
+        source=SourceProductData(
+            source_name="electronet",
+            page_type="product",
+            url=url,
+            canonical_url=url,
+            product_code=model,
+            brand="LG",
+            mpn="GSGV80PYLL",
+            name="LG GSGV80PYLL",
+            gallery_images=[
+                GalleryImage(url="https://cdn.example/1.jpg", position=1),
+                GalleryImage(url="https://cdn.example/2.jpg", position=2),
+                GalleryImage(url="https://cdn.example/3.jpg", position=3),
+            ],
+        )
+    )
+    fetcher = RecordingFetcher()
+
+    result = execute_source_acquisition_stage(
+        model=model,
+        url=url,
+        photos=1,
+        gallery_mode="all",
+        model_dir=tmp_path / model,
+        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
+        fetcher_factory=lambda: fetcher,
+        resolve_prepare_provider_input_fn=lambda cli, **_kwargs: _build_provider_resolution_result(
+            source="electronet",
+            provider_id="electronet",
+            url=cli.url,
+            parsed=parsed,
+        ),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+    )
+
+    assert fetcher.gallery_download_calls[0]["requested_photos"] is None
+    assert [image.url for image in fetcher.gallery_download_calls[0]["images"]] == [
+        "https://cdn.example/1.jpg",
+        "https://cdn.example/2.jpg",
+        "https://cdn.example/3.jpg",
+    ]
+    assert result.snapshot_provenance["gallery_mode"] == "all"
+    assert result.snapshot_provenance["gallery_whole_mode"] is True
+
+
+def test_apply_source_specific_gallery_rules_skroutz_source_url_skips_last_image() -> None:
+    images = [
+        GalleryImage(url="https://cdn.example/1.jpg", position=1),
+        GalleryImage(url="https://cdn.example/2.jpg", position=2),
+        GalleryImage(url="https://cdn.example/3.jpg", position=3),
+    ]
+
+    filtered, metadata = apply_source_specific_gallery_rules(
+        images,
+        source_url="https://www.skroutz.gr/s/123456/example.html",
+    )
+
+    assert [image.url for image in filtered] == ["https://cdn.example/1.jpg", "https://cdn.example/2.jpg"]
+    assert metadata["domain"] == "skroutz.gr"
+    assert metadata["rule"] == "skroutz_skip_last_gallery_image"
+    assert metadata["skroutz_skip_last_applied"] is True
+    assert metadata["skipped_url"] == "https://cdn.example/3.jpg"
+
+
+def test_apply_source_specific_gallery_rules_manual_skroutz_url_skips_last_image() -> None:
+    images = [GalleryImage(url="https://cdn.example/1.jpg"), GalleryImage(url="https://cdn.example/2.jpg")]
+
+    filtered, metadata = apply_source_specific_gallery_rules(
+        images,
+        source_url="https://skroutz.cy/s/123456/example.html",
+    )
+
+    assert [image.url for image in filtered] == ["https://cdn.example/1.jpg"]
+    assert metadata["domain"] == "skroutz.cy"
+    assert metadata["skroutz_skip_last_applied"] is True
+
+
+def test_apply_source_specific_gallery_rules_non_skroutz_source_does_not_skip_last_image() -> None:
+    images = [GalleryImage(url="https://cdn.example/1.jpg"), GalleryImage(url="https://cdn.example/2.jpg")]
+
+    filtered, metadata = apply_source_specific_gallery_rules(
+        images,
+        source_url="https://www.electronet.gr/example",
+    )
+
+    assert [image.url for image in filtered] == ["https://cdn.example/1.jpg", "https://cdn.example/2.jpg"]
+    assert metadata["domain"] == "electronet.gr"
+    assert metadata["rule"] == ""
+    assert metadata["skroutz_skip_last_applied"] is False
+
+
+def test_execute_source_acquisition_stage_skroutz_enabled_non_skroutz_url_does_not_skip_last_image(
+    tmp_path: Path,
+) -> None:
+    model = "233541"
+    url = "https://www.electronet.gr/example"
+    parsed = ParsedProduct(
+        source=SourceProductData(
+            source_name="electronet",
+            page_type="product",
+            url=url,
+            canonical_url=url,
+            product_code=model,
+            brand="LG",
+            mpn="GSGV80PYLL",
+            name="LG GSGV80PYLL",
+            gallery_images=[
+                GalleryImage(url="https://cdn.example/1.jpg", position=1),
+                GalleryImage(url="https://cdn.example/2.jpg", position=2),
+            ],
+        )
+    )
+    fetcher = RecordingFetcher()
+
+    result = execute_source_acquisition_stage(
+        model=model,
+        url=url,
+        photos=2,
+        model_dir=tmp_path / model,
+        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
+        fetcher_factory=lambda: fetcher,
+        resolve_prepare_provider_input_fn=lambda cli, **_kwargs: _build_provider_resolution_result(
+            source="electronet",
+            provider_id="electronet",
+            url=cli.url,
+            parsed=parsed,
+        ),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+    )
+
+    assert [image.url for image in fetcher.gallery_download_calls[0]["images"]] == [
+        "https://cdn.example/1.jpg",
+        "https://cdn.example/2.jpg",
+    ]
+    assert result.snapshot_provenance["gallery_skroutz_skip_last_applied"] is False
+    assert result.snapshot_provenance["gallery_extracted_before_source_filter_count"] == 2
+    assert result.snapshot_provenance["gallery_after_source_filter_count"] == 2
 
 
 def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_specs(tmp_path: Path) -> None:

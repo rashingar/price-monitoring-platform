@@ -199,6 +199,13 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(tmp_path: P
                 llm_task_manifest_path=tmp_path / "work" / request.model / "llm" / "task_manifest.json",
                 metadata_path=tmp_path / "work" / request.model / "prepare.run.json",
             ),
+            details={
+                "gallery_whole_mode": True,
+                "gallery_extracted_before_source_filter_count": 4,
+                "gallery_after_source_filter_count": 3,
+                "gallery_skroutz_skip_last_applied": True,
+                "gallery_source_filter_domain": "skroutz.gr",
+            },
         )
 
     monkeypatch.setattr(job_runner, "prepare_product", fake_prepare_product)
@@ -262,6 +269,9 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(tmp_path: P
     assert "Requested second OpenCart image index: 4" in logs
     assert "Prepare service returned status: completed" in logs
     assert "Prepare warning: prepare warning" in logs
+    assert "Prepare whole-gallery mode confirmed by artifacts." in logs
+    assert "Prepare gallery source-filter counts: before=4, after=3" in logs
+    assert "Prepare Skroutz skip-last gallery rule applied for source domain: skroutz.gr" in logs
 
 
 def test_default_runner_marks_prepare_service_error_failed(tmp_path: Path, monkeypatch) -> None:
@@ -453,8 +463,9 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(tmp_path
             "bestprice_enabled": True,
             "skroutz_enabled": True,
             "boxnow_enabled": True,
-            "photos": 20,
+            "photos": 100,
             "sections": 20,
+            "gallery_mode": "all",
         },
     )
     calls: list[object] = []
@@ -493,12 +504,13 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(tmp_path
     assert calls[0] == PrepareRequest(
         model=model,
         url=source_url,
-        photos=20,
+        photos=100,
         sections=20,
         bestprice_status=1,
         skroutz_status=1,
         boxnow=1,
         price=0,
+        gallery_mode="all",
     )
     assert calls[1:4] == [
         ("intro", model, False),
@@ -507,6 +519,7 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(tmp_path
     ]
     assert calls[4] == PublishRequest(model=model, current_job_product_file=product_file)
     assert "Full pipeline stage prepare starting." in logs
+    assert "Prepare whole-gallery mode active." in logs
     assert "Full pipeline stage publish succeeded." in logs
 
 
@@ -819,8 +832,9 @@ def _run_full_pipeline_with_failure(stage: str) -> tuple[object, list[str], list
             "bestprice_enabled": False,
             "skroutz_enabled": False,
             "boxnow_enabled": False,
-            "photos": 20,
+            "photos": 100,
             "sections": 20,
+            "gallery_mode": "all",
         },
     )
     calls: list[str] = []

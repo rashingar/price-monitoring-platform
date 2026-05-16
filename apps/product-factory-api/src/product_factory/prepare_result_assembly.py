@@ -177,6 +177,12 @@ def assemble_prepare_result(
             "extracted_count": extracted_gallery_count,
             "downloaded_count": len(downloaded_gallery),
             "requested_photos": cli.photos,
+            "gallery_mode": resolved_gallery_settings.get("gallery_mode"),
+            "whole_gallery_mode": bool(resolved_gallery_settings.get("gallery_whole_mode", False)),
+            "extracted_before_source_filter_count": resolved_gallery_settings.get(
+                "extracted_before_source_filter_count"
+            ),
+            "after_source_filter_count": resolved_gallery_settings.get("after_source_filter_count"),
         },
         "gallery_settings": resolved_gallery_settings,
         "characteristics_settings": resolved_characteristics_settings,

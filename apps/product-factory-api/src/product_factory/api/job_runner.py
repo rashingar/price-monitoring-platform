@@ -92,6 +92,7 @@ def run_prepare_job(
         gallery_url=record.payload.get("gallery_url") or None,
         characteristics_url=record.payload.get("characteristics_url") or None,
         second_opencart_image_index=record.payload.get("second_opencart_image_index"),
+        gallery_mode=record.payload.get("gallery_mode") or None,
     )
     gallery_extraction_url = request.gallery_url or request.url
     characteristics_extraction_url = request.characteristics_url or request.url
@@ -106,8 +107,11 @@ def run_prepare_job(
         log("Prepare characteristics/specifications extraction uses the characteristics URL only.")
     if request.second_opencart_image_index is not None:
         log(f"Requested second OpenCart image index: {request.second_opencart_image_index}")
+    if request.gallery_mode == "all":
+        log("Prepare whole-gallery mode active.")
     log("Calling prepare service.")
     result = prepare_product_fn(request)
+    _log_prepare_gallery_details(result, log)
     if "second_opencart_image_override_applied" in result.details:
         log(f"Second OpenCart image override applied: {bool(result.details['second_opencart_image_override_applied'])}")
     return _job_result_from_service_result(
@@ -335,13 +339,27 @@ def _full_pipeline_prepare_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "model": payload["model"],
         "url": payload["source_url"],
-        "photos": payload.get("photos", 20),
+        "photos": payload.get("photos", 100),
         "sections": payload.get("sections", 20),
         "bestprice_status": int(bool(payload.get("bestprice_enabled", False))),
         "skroutz_status": int(bool(payload.get("skroutz_enabled", False))),
         "boxnow": int(bool(payload.get("boxnow_enabled", False))),
         "price": 0,
+        "gallery_mode": payload.get("gallery_mode") or "all",
     }
+
+
+def _log_prepare_gallery_details(result: ServiceResult, log: LogCallback) -> None:
+    details = result.details
+    if bool(details.get("gallery_whole_mode", False)):
+        log("Prepare whole-gallery mode confirmed by artifacts.")
+    before_count = details.get("gallery_extracted_before_source_filter_count")
+    after_count = details.get("gallery_after_source_filter_count")
+    if before_count is not None or after_count is not None:
+        log(f"Prepare gallery source-filter counts: before={before_count}, after={after_count}")
+    if bool(details.get("gallery_skroutz_skip_last_applied", False)):
+        domain = str(details.get("gallery_source_filter_domain", "") or "")
+        log(f"Prepare Skroutz skip-last gallery rule applied for source domain: {domain}")
 
 
 def _run_full_pipeline_stage(

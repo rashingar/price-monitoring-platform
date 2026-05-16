@@ -54,6 +54,26 @@ If `model` is missing or not exactly 6 digits, fail with:
 Generation failed, provide 6-digit model
 ```
 
+## Product Factory Full-Pipeline API/Telegram Defaults
+
+For Product Factory full-pipeline jobs submitted through the API/Telegram job
+runner, default `sections` to `20` as a maximum cap, not an exact required
+count. Sources with fewer available normal presentation sections must still
+succeed and extract the available sections.
+
+Full-pipeline jobs default to whole-gallery extraction with `gallery_mode=all`.
+The numeric `photos` default is intentionally large for compatibility with
+existing numeric request/render fields; whole-gallery mode uses the actual
+downloaded image count for final output.
+
+Manual template-triggered prepare defaults above remain unchanged unless the
+operator explicitly opts into whole-gallery behavior.
+
+When the actual source/gallery URL domain is Skroutz, skip the last extracted
+gallery image after gallery extraction and before final ordering/deduplication
+output. Apply this based on URL/domain, not on `skroutz_status` or
+`skroutz_enabled`.
+
 ## Source URL Agent / Find Source Namespace
 
 Source URL Agent, shown in the UI as Find Source, owns product source URL discovery, candidate runs, candidate review, and source URL candidate promotion. Its canonical backend namespace is `/api/source-url-agent/...`; through the web proxy, frontend calls must resolve as `/commerce-api/source-url-agent/...`.

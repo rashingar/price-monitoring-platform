@@ -116,6 +116,7 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
         gallery_url=request.gallery_url,
         characteristics_url=request.characteristics_url,
         second_opencart_image_index=request.second_opencart_image_index,
+        gallery_mode=request.gallery_mode,
         out=str(WORK_ROOT / request.model / "scrape"),
     )
     try:
@@ -197,6 +198,16 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
                 "second_opencart_image_index": gallery_settings.get("second_opencart_image_index"),
                 "second_opencart_image_override_applied": bool(
                     gallery_settings.get("second_opencart_image_override_applied", False)
+                ),
+                "gallery_mode": str(gallery_settings.get("gallery_mode", "") or ""),
+                "gallery_whole_mode": bool(gallery_settings.get("gallery_whole_mode", False)),
+                "gallery_source_filter_domain": str(gallery_settings.get("source_filter_domain", "") or ""),
+                "gallery_extracted_before_source_filter_count": gallery_settings.get(
+                    "extracted_before_source_filter_count"
+                ),
+                "gallery_after_source_filter_count": gallery_settings.get("after_source_filter_count"),
+                "gallery_skroutz_skip_last_applied": bool(
+                    gallery_settings.get("skroutz_skip_last_applied", False)
                 ),
             }
         )

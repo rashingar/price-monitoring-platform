@@ -217,6 +217,7 @@ class PreparedProductContext:
                 if input_data.get("second_opencart_image_index") not in (None, "")
                 else None
             ),
+            gallery_mode=str(input_data.get("gallery_mode") or "") or None,
             out=str(candidate_out),
         )
 

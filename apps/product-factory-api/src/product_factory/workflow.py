@@ -65,6 +65,7 @@ def add_input_fields(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--gallery-url", default=None, dest="gallery_url")
     parser.add_argument("--characteristics-url", default=None, dest="characteristics_url")
     parser.add_argument("--second-opencart-image-index", type=int, default=None, dest="second_opencart_image_index")
+    parser.add_argument("--gallery-mode", default=None, dest="gallery_mode")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -86,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
                     gallery_url=cli.gallery_url,
                     characteristics_url=cli.characteristics_url,
                     second_opencart_image_index=cli.second_opencart_image_index,
+                    gallery_mode=cli.gallery_mode,
                 )
             )
             print(f"Scrape artifacts: {result.artifacts.scrape_dir}")
@@ -135,6 +137,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "gallery_url": template_values.get("gallery_url", ""),
         "characteristics_url": template_values.get("characteristics_url", ""),
         "second_opencart_image_index": template_values.get("second_opencart_image_index", ""),
+        "gallery_mode": template_values.get("gallery_mode", ""),
     }
     for key in [
         "model",
@@ -147,6 +150,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "gallery_url",
         "characteristics_url",
         "second_opencart_image_index",
+        "gallery_mode",
     ]:
         value = getattr(args, key, None)
         if value is not None:
@@ -162,6 +166,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         gallery_url=merged["gallery_url"],
         characteristics_url=merged["characteristics_url"],
         second_opencart_image_index=merged["second_opencart_image_index"],
+        gallery_mode=merged["gallery_mode"],
         out=str(WORK_ROOT),
     )
     cli = validate_input(namespace)
@@ -209,6 +214,7 @@ def parse_template_text(text: str) -> dict[str, str]:
             "gallery_url",
             "characteristics_url",
             "second_opencart_image_index",
+            "gallery_mode",
         }:
             values[normalized_key] = value.strip()
     return values

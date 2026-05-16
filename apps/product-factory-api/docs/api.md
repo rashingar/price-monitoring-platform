@@ -181,8 +181,9 @@ Settings:
   "bestprice_enabled": false,
   "skroutz_enabled": true,
   "boxnow_enabled": false,
-  "photos": 20,
+  "photos": 100,
   "sections": 20,
+  "gallery_mode": "all",
   "trigger_source": "telegram",
   "telegram_chat_id": "123456789",
   "source_resolution": {
@@ -190,6 +191,27 @@ Settings:
   }
 }
 ```
+
+Full-pipeline jobs, including Telegram-triggered jobs, default to `sections: 20`.
+This is a maximum cap, not an exact required count: a source with fewer normal
+presentation sections succeeds and extracts the available sections.
+
+Full-pipeline jobs also default to `gallery_mode: "all"`, which downloads the
+whole available gallery instead of treating `photos` as a cap. The `photos`
+default remains numeric (`100`) because older prepare/render request models and
+CSV accounting expect a numeric photo field; whole-gallery mode causes the
+downloaded image count to drive the final OpenCart image list.
+
+Manual `POST /api/jobs/prepare` defaults are unchanged (`photos: 1`,
+`sections: 0`, no whole-gallery mode) unless the request explicitly sends
+`gallery_mode: "all"`.
+
+Skroutz gallery filtering is based on the actual gallery/source URL domain, not
+on the `skroutz_enabled` listing flag. When the scraping URL is a Skroutz domain,
+Product Factory skips the last extracted gallery image after extraction and
+before final gallery ordering/deduplication output. This rule does not apply to
+Electronet, BestPrice, or other non-Skroutz URLs, even when `skroutz_enabled` is
+true.
 
 `POST /api/jobs/{job_id}/stop` requests cancellation for a queued or running job.
 

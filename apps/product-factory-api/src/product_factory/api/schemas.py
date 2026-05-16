@@ -9,7 +9,9 @@ from ..source_detection import validate_url_scope
 from .artifact_resolver import ResolvedArtifact
 from .job_models import JobRecord, JobStatus, JobType
 
-DEFAULT_FULL_PIPELINE_PHOTOS = 20
+DEFAULT_FULL_PIPELINE_PHOTOS = 100
+DEFAULT_FULL_PIPELINE_SECTIONS = 20
+DEFAULT_FULL_PIPELINE_GALLERY_MODE = "all"
 
 
 class HealthResponse(BaseModel):
@@ -27,6 +29,7 @@ class PrepareJobRequest(BaseModel):
     gallery_url: str | None = None
     characteristics_url: str | None = None
     second_opencart_image_index: int | None = Field(default=None, ge=1)
+    gallery_mode: Literal["all"] | None = None
 
     @field_validator("gallery_url", "characteristics_url", mode="before")
     @classmethod
@@ -92,7 +95,8 @@ class FullPipelineJobRequest(BaseModel):
     skroutz_enabled: bool = False
     boxnow_enabled: bool = False
     photos: int = Field(default=DEFAULT_FULL_PIPELINE_PHOTOS, ge=1)
-    sections: int = Field(default=20, ge=0)
+    sections: int = Field(default=DEFAULT_FULL_PIPELINE_SECTIONS, ge=0)
+    gallery_mode: Literal["all"] = DEFAULT_FULL_PIPELINE_GALLERY_MODE
     trigger_source: str | None = None
     telegram_chat_id: str | None = None
     source_resolution: dict[str, Any] | None = None

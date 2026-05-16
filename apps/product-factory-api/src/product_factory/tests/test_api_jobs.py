@@ -121,6 +121,7 @@ def test_prepare_route_accepts_legacy_payload_and_rejects_invalid_second_image_i
     assert legacy_response.status_code == 202
     assert store.get_job(legacy_response.json()["job_id"]).payload.get("gallery_url") is None
     assert store.get_job(legacy_response.json()["job_id"]).payload.get("characteristics_url") is None
+    assert store.get_job(legacy_response.json()["job_id"]).payload.get("gallery_mode") is None
     assert invalid_response.status_code == 422
 
 
@@ -215,8 +216,9 @@ def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(tmp_p
     assert record.payload["bestprice_enabled"] is True
     assert record.payload["skroutz_enabled"] is True
     assert record.payload["boxnow_enabled"] is False
-    assert record.payload["photos"] == 20
+    assert record.payload["photos"] == 100
     assert record.payload["sections"] == 20
+    assert record.payload["gallery_mode"] == "all"
     assert record.payload["source_resolution"] == {"candidate_id": "abc"}
 
 
@@ -232,8 +234,9 @@ def test_retry_requeues_failed_full_pipeline_with_same_payload(tmp_path: Path) -
         "bestprice_enabled": False,
         "skroutz_enabled": True,
         "boxnow_enabled": True,
-        "photos": 20,
+        "photos": 100,
         "sections": 20,
+        "gallery_mode": "all",
         "source_resolution": {"source": "operator"},
     }
     failed = store.enqueue(JobType.FULL_PIPELINE, payload, job_id="job-1")

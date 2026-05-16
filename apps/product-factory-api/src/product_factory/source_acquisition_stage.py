@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import fields
 from pathlib import Path
 from typing import Any, Callable, Mapping
+from urllib.parse import urlsplit
 
 from .fetcher import ElectronetFetcher, FetchError
 from .models import CLIInput, FetchResult, GalleryImage, ParsedProduct, SourceProductData, SpecItem, SpecSection
@@ -28,6 +29,7 @@ def execute_source_acquisition_stage(
     gallery_url: str | None = None,
     characteristics_url: str | None = None,
     second_opencart_image_index: int | None = None,
+    gallery_mode: str | None = None,
     validate_url_scope_fn: Callable[[str], tuple[str, bool, str]] = validate_url_scope,
     fetcher_factory: Callable[[], ElectronetFetcher] = ElectronetFetcher,
     resolve_prepare_provider_input_fn: Callable[..., PrepareProviderResolutionResult] = resolve_prepare_provider_resolution,
@@ -69,6 +71,15 @@ def execute_source_acquisition_stage(
         parsed.source.gallery_images = list(gallery_provider_resolution.parsed.source.gallery_images)
         if gallery_source_capture_warnings:
             parsed.warnings.extend(f"gallery_{warning}" for warning in gallery_source_capture_warnings)
+    gallery_filter_final_url = gallery_fetch.final_url if gallery_fetch is not None else fetch.final_url
+    gallery_extracted_before_source_filter_count = len(parsed.source.gallery_images)
+    gallery_images_after_source_filter, gallery_source_filter_metadata = apply_source_specific_gallery_rules(
+        parsed.source.gallery_images,
+        source_url=gallery_extraction_url,
+        final_url=gallery_filter_final_url,
+    )
+    parsed.source.gallery_images = gallery_images_after_source_filter
+    gallery_after_source_filter_count = len(parsed.source.gallery_images)
     characteristics_extraction_url = str(characteristics_url or "").strip() or url
     characteristics_url_used = bool(str(characteristics_url or "").strip())
     characteristics_fetch: FetchResult | None = None
@@ -93,7 +104,7 @@ def execute_source_acquisition_stage(
         _repair_source_product_text(characteristics_source)
         if characteristics_source_capture_warnings:
             parsed.warnings.extend(f"characteristics_{warning}" for warning in characteristics_source_capture_warnings)
-    extracted_gallery_count = len(parsed.source.gallery_images)
+    extracted_gallery_count = gallery_extracted_before_source_filter_count
     image_order_metadata: dict[str, Any] = {
         "second_opencart_image_index": second_opencart_image_index,
         "second_opencart_image_override_applied": False,
@@ -113,7 +124,12 @@ def execute_source_acquisition_stage(
             gallery_images_for_download = _inject_energy_label_into_gallery(parsed.source)
     else:
         gallery_images_for_download = _inject_energy_label_into_gallery(parsed.source)
-    requested_gallery_photos = _resolve_requested_gallery_photos(photos, parsed.source)
+    normalized_gallery_mode = _normalize_gallery_mode(gallery_mode)
+    requested_gallery_photos = _resolve_requested_gallery_photos(
+        photos,
+        parsed.source,
+        gallery_mode=normalized_gallery_mode,
+    )
     gallery_warnings: list[str] = list(image_order_warnings)
     gallery_files: list[str] = []
     downloaded_gallery: list[GalleryImage] = []
@@ -139,10 +155,20 @@ def execute_source_acquisition_stage(
         "fetch_method": fetch.method,
         "fallback_used": fetch.fallback_used,
         "response_headers": dict(fetch.response_headers),
+        "gallery_mode": normalized_gallery_mode,
+        "gallery_whole_mode": normalized_gallery_mode == "all",
         "gallery_requested_photos": requested_gallery_photos,
         "gallery_downloaded_count": len(downloaded_gallery),
         "gallery_url_used": gallery_url_used,
         "gallery_extraction_url": gallery_extraction_url,
+        "gallery_source_filter_url": gallery_extraction_url,
+        "gallery_source_filter_final_url": gallery_filter_final_url,
+        "gallery_source_filter_domain": gallery_source_filter_metadata["domain"],
+        "gallery_source_filter_rule": gallery_source_filter_metadata["rule"],
+        "gallery_extracted_before_source_filter_count": gallery_extracted_before_source_filter_count,
+        "gallery_after_source_filter_count": gallery_after_source_filter_count,
+        "gallery_skroutz_skip_last_applied": gallery_source_filter_metadata["skroutz_skip_last_applied"],
+        "gallery_skroutz_skip_last_skipped_url": gallery_source_filter_metadata["skipped_url"],
         "product_data_extraction_url": url,
         "product_data_extraction_uses_main_url": True,
         "characteristics_url_used": characteristics_url_used,
@@ -556,13 +582,66 @@ def _renumber_gallery_images(images: list[GalleryImage]) -> list[GalleryImage]:
     ]
 
 
-def _resolve_requested_gallery_photos(requested_photos: int, source: SourceProductData) -> int:
+def apply_source_specific_gallery_rules(
+    images: list[GalleryImage],
+    *,
+    source_url: str,
+    final_url: str = "",
+) -> tuple[list[GalleryImage], dict[str, Any]]:
+    filter_url = final_url if _is_skroutz_url(final_url) else source_url
+    domain = _normalized_domain(filter_url)
+    metadata: dict[str, Any] = {
+        "domain": domain,
+        "rule": "",
+        "skroutz_skip_last_applied": False,
+        "skipped_url": "",
+    }
+    if not _is_skroutz_url(source_url) and not _is_skroutz_url(final_url):
+        return list(images), metadata
+
+    metadata["rule"] = "skroutz_skip_last_gallery_image"
+    if not images:
+        return [], metadata
+
+    skipped = images[-1]
+    metadata["skroutz_skip_last_applied"] = True
+    metadata["skipped_url"] = skipped.url
+    return list(images[:-1]), metadata
+
+
+def _resolve_requested_gallery_photos(
+    requested_photos: int,
+    source: SourceProductData,
+    *,
+    gallery_mode: str | None = None,
+) -> int | None:
+    if gallery_mode == "all":
+        return None
     requested = max(int(requested_photos), 0)
     if requested <= 0:
         return requested
     if not str(source.energy_label_asset_url or "").strip():
         return requested
     return requested + 1
+
+
+def _normalize_gallery_mode(value: str | None) -> str | None:
+    normalized = str(value or "").strip().lower()
+    return "all" if normalized == "all" else None
+
+
+def _is_skroutz_url(value: str) -> bool:
+    domain = _normalized_domain(value)
+    return domain in {"skroutz.gr", "skroutz.cy"} or domain.endswith(".skroutz.gr")
+
+
+def _normalized_domain(value: str) -> str:
+    try:
+        netloc = urlsplit(value).netloc
+    except ValueError:
+        return ""
+    domain = netloc.split("@")[-1].split(":")[0].lower().strip(".")
+    return domain[4:] if domain.startswith("www.") else domain
 
 
 def _repair_source_product_text(source: SourceProductData) -> None:

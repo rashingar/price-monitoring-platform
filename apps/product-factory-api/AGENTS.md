@@ -160,6 +160,14 @@ Rules for the completion message:
 - Current supported scope includes Electronet product URLs, Skroutz product URLs, and supported manufacturer product URLs implemented in the codebase.
 - Do not invent unsupported provider behavior.
 
+## Full-Pipeline Extraction Defaults
+
+- Full-pipeline API/Telegram jobs default to `sections=20`. Treat this as a maximum cap, not an exact required count; sources with fewer available normal sections must succeed and extract the available sections.
+- Full-pipeline jobs default to whole-gallery extraction with `gallery_mode=all`.
+- The numeric full-pipeline `photos` default is intentionally large for compatibility with existing numeric request/render fields; whole-gallery mode uses the actual downloaded count for final image output.
+- Manual prepare defaults remain `photos=1`, `sections=0`, and no whole-gallery mode unless explicitly requested.
+- When the actual source/gallery URL domain is Skroutz, skip the last gallery image after extraction and before final ordering/deduplication output. This rule is based on the URL/domain, not on the `skroutz_status` or `skroutz_enabled` listing flag.
+
 ## Test Guidance
 
 - Run future Product Factory checks from repo root.

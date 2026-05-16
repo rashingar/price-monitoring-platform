@@ -15,7 +15,7 @@ class SourceAcquisitionResult:
     fetch: FetchResult
     parsed: ParsedProduct
     extracted_gallery_count: int = 0
-    requested_gallery_photos: int = 0
+    requested_gallery_photos: int | None = 0
     downloaded_gallery: list[GalleryImage] = field(default_factory=list)
     gallery_warnings: list[str] = field(default_factory=list)
     gallery_files: list[str] = field(default_factory=list)

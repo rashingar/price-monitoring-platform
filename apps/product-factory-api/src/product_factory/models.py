@@ -17,6 +17,7 @@ class CLIInput:
     gallery_url: str | None = None
     characteristics_url: str | None = None
     second_opencart_image_index: int | None = None
+    gallery_mode: str | None = None
     out: str = "out"
 
     def to_dict(self) -> dict[str, Any]:

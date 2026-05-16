@@ -55,6 +55,7 @@ def execute_prepare_stage(
         "gallery_url": cli.gallery_url,
         "characteristics_url": cli.characteristics_url,
         "second_opencart_image_index": cli.second_opencart_image_index,
+        "gallery_mode": cli.gallery_mode,
         "validate_url_scope_fn": validate_url_scope_fn,
         "fetcher_factory": fetcher_factory,
         "resolve_prepare_provider_input_fn": resolve_prepare_provider_input_fn,
@@ -145,6 +146,18 @@ def execute_prepare_from_acquisition(
         ),
         "second_opencart_image_warning": acquisition.snapshot_provenance.get("second_opencart_image_warning"),
         "deduplicated_gallery_count": acquisition.snapshot_provenance.get("deduplicated_gallery_count"),
+        "gallery_mode": acquisition.snapshot_provenance.get("gallery_mode"),
+        "gallery_whole_mode": bool(acquisition.snapshot_provenance.get("gallery_whole_mode", False)),
+        "extracted_before_source_filter_count": acquisition.snapshot_provenance.get(
+            "gallery_extracted_before_source_filter_count"
+        ),
+        "after_source_filter_count": acquisition.snapshot_provenance.get("gallery_after_source_filter_count"),
+        "source_filter_url": acquisition.snapshot_provenance.get("gallery_source_filter_url"),
+        "source_filter_final_url": acquisition.snapshot_provenance.get("gallery_source_filter_final_url"),
+        "source_filter_domain": acquisition.snapshot_provenance.get("gallery_source_filter_domain"),
+        "source_filter_rule": acquisition.snapshot_provenance.get("gallery_source_filter_rule"),
+        "skroutz_skip_last_applied": bool(acquisition.snapshot_provenance.get("gallery_skroutz_skip_last_applied", False)),
+        "skroutz_skip_last_skipped_url": acquisition.snapshot_provenance.get("gallery_skroutz_skip_last_skipped_url"),
     }
     characteristics_settings = {
         "characteristics_url_used": bool(acquisition.snapshot_provenance.get("characteristics_url_used", False)),
@@ -397,6 +410,16 @@ def _persist_blocked_prepare_result(
             "second_opencart_image_override_applied": False,
             "second_opencart_image_warning": None,
             "deduplicated_gallery_count": 0,
+            "gallery_mode": cli.gallery_mode,
+            "gallery_whole_mode": cli.gallery_mode == "all",
+            "extracted_before_source_filter_count": 0,
+            "after_source_filter_count": 0,
+            "source_filter_url": cli.gallery_url or cli.url,
+            "source_filter_final_url": fetch.final_url,
+            "source_filter_domain": "",
+            "source_filter_rule": "",
+            "skroutz_skip_last_applied": False,
+            "skroutz_skip_last_skipped_url": "",
         },
         "characteristics_settings": {
             "characteristics_url_used": bool(cli.characteristics_url),

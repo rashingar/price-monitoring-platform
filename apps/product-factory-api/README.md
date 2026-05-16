@@ -115,6 +115,27 @@ The final machine-readable validation report for a product run is `work/{model}/
 
 Prefer fixing pipeline behavior over hand-editing generated files.
 
+## Full-Pipeline Extraction Defaults
+
+Full-pipeline jobs from the API and Telegram default to `sections: 20` as a
+safe maximum cap. The cap is not an exact requirement: sources with fewer normal
+presentation sections still succeed and use the available sections.
+
+Full-pipeline jobs default to `gallery_mode: "all"` so Product Factory downloads
+the whole available gallery. The numeric `photos` default is `100` for
+compatibility with existing request and render contracts that require a numeric
+photo field; in whole-gallery mode the final image list is based on the number
+of images actually downloaded.
+
+Manual prepare defaults remain `photos: 1`, `sections: 0`, and no whole-gallery
+mode unless the caller explicitly sets `gallery_mode: "all"`.
+
+For Skroutz source URLs, Product Factory skips the last extracted gallery image
+after gallery extraction and before final image ordering/deduplication output.
+The rule is based on the actual source/gallery URL domain, not the
+`skroutz_enabled` listing flag, so it does not apply to Electronet, BestPrice,
+or other non-Skroutz URLs.
+
 ## More Documentation
 
 - `docs/api.md` describes the active local API and contract workflow.

@@ -124,6 +124,15 @@ Render writes:
 
 Generated runtime folders are ignored by Git and must not be committed.
 
+## Full-Pipeline Extraction Defaults
+
+- Full-pipeline API/Telegram jobs default to `sections=20` as a cap, not an exact required count.
+- A source with fewer than 20 available normal sections succeeds and extracts the available sections.
+- Full-pipeline jobs default to whole-gallery extraction with `gallery_mode=all`.
+- The numeric full-pipeline `photos` default is intentionally large for compatibility with numeric request/render fields; whole-gallery mode uses the actual downloaded count for final image output.
+- Manual prepare defaults remain `photos=1`, `sections=0`, and no whole-gallery mode unless explicitly requested.
+- Skroutz skip-last gallery filtering is based on the actual source/gallery URL domain, not the listing flag.
+
 ## Validation
 
 - `work/{model}/candidate/{model}.validation.json` is the final machine-readable health report.

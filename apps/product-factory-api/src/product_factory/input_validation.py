@@ -45,6 +45,9 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
         second_opencart_image_index = int(second_opencart_image_index)
         if second_opencart_image_index < 1:
             raise ValueError("second_opencart_image_index must be a positive integer")
+    gallery_mode = str(getattr(args, "gallery_mode", "") or "").strip().lower() or None
+    if gallery_mode is not None and gallery_mode != "all":
+        raise ValueError("gallery_mode must be 'all' when provided")
     return CLIInput(
         model=model,
         url=args.url.strip(),
@@ -56,5 +59,6 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
         gallery_url=gallery_url,
         characteristics_url=characteristics_url,
         second_opencart_image_index=second_opencart_image_index,
+        gallery_mode=gallery_mode,
         out=args.out,
     )
