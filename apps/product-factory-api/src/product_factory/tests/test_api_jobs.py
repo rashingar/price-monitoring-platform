@@ -179,6 +179,78 @@ def test_authoring_get_remains_read_status_endpoint(tmp_path: Path, monkeypatch:
     assert store.list_jobs() == []
 
 
+def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(tmp_path: Path) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: log(f"queued {record.job_type.value}"))
+    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    source_url = "https://www.electronet.gr/example"
+
+    try:
+        response = client.post(
+            "/api/jobs/full-pipeline",
+            json={
+                "model": "000001",
+                "product_name": "Example product",
+                "source_url": source_url,
+                "bestprice_enabled": True,
+                "skroutz_enabled": True,
+                "boxnow_enabled": False,
+                "trigger_source": "telegram",
+                "telegram_chat_id": "12345",
+                "source_resolution": {"candidate_id": "abc"},
+            },
+        )
+        assert runner.wait_until_idle(timeout=2.0)
+    finally:
+        runner.stop()
+
+    assert response.status_code == 202
+    body = response.json()
+    record = store.get_job(body["job_id"])
+    assert body["job_type"] == JobType.FULL_PIPELINE.value
+    assert record.payload["source_url"] == source_url
+    assert record.payload["bestprice_enabled"] is True
+    assert record.payload["skroutz_enabled"] is True
+    assert record.payload["boxnow_enabled"] is False
+    assert record.payload["photos"] == 20
+    assert record.payload["sections"] == 20
+    assert record.payload["source_resolution"] == {"candidate_id": "abc"}
+
+
+def test_retry_requeues_failed_full_pipeline_with_same_payload(tmp_path: Path) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: log(f"queued {record.job_type.value}"))
+    payload = {
+        "model": "233541",
+        "source_url": "https://www.electronet.gr/example",
+        "bestprice_enabled": False,
+        "skroutz_enabled": True,
+        "boxnow_enabled": True,
+        "photos": 20,
+        "sections": 20,
+        "source_resolution": {"source": "operator"},
+    }
+    failed = store.enqueue(JobType.FULL_PIPELINE, payload, job_id="job-1")
+    store.mark_failed(failed.job_id, "publish failed", message="Full pipeline failed during publish.")
+    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+
+    try:
+        response = client.post(f"/api/jobs/{failed.job_id}/retry")
+    finally:
+        runner.stop()
+
+    assert response.status_code == 200
+    retried = store.get_job(response.json()["job_id"])
+    assert response.json()["job_type"] == JobType.FULL_PIPELINE.value
+    assert retried.payload == payload
+
+
 def test_authoring_intro_runner_dispatches_and_exposes_preview_artifacts(tmp_path: Path) -> None:
     llm_dir = tmp_path / "work" / "000001" / "llm"
     llm_dir.mkdir(parents=True)

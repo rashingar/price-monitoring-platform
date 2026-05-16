@@ -13,6 +13,7 @@ REQUIRED_ENDPOINTS: dict[str, set[str]] = {
     "/api/jobs/prepare": {"post"},
     "/api/jobs/authoring/intro-text": {"post"},
     "/api/jobs/authoring/seo-meta": {"post"},
+    "/api/jobs/full-pipeline": {"post"},
     "/api/jobs/render": {"post"},
     "/api/jobs/publish": {"post"},
     "/api/jobs/{job_id}": {"get"},
@@ -73,4 +74,4 @@ def test_openapi_snapshot_documents_authoring_posts_as_queued_jobs() -> None:
         assert schema_ref.endswith("/JobResponse")
 
     job_type_schema = snapshot["components"]["schemas"]["JobType"]
-    assert {"authoring_intro", "authoring_seo"}.issubset(set(job_type_schema["enum"]))
+    assert {"authoring_intro", "authoring_seo", "full_pipeline"}.issubset(set(job_type_schema["enum"]))

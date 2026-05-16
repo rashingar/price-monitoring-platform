@@ -12,6 +12,7 @@ class JobType(str, Enum):
     AUTHORING_SEO = "authoring_seo"
     RENDER = "render"
     PUBLISH = "publish"
+    FULL_PIPELINE = "full_pipeline"
 
 
 class JobStatus(str, Enum):

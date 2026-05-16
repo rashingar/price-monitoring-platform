@@ -25,6 +25,7 @@ class PrepareRequest:
     url: str
     photos: int = 1
     sections: int = 0
+    bestprice_status: int = 1
     skroutz_status: int = 0
     boxnow: int = 0
     price: str | float | int = 0

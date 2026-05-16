@@ -213,7 +213,7 @@ def build_row(
         "seo_keyword": seo_keyword,
         "product_url": f"https://www.etranoulis.gr/{seo_keyword}" if seo_keyword else "",
         "related_product": "",
-        "bestprice_status": "1",
+        "bestprice_status": str(cli.bestprice_status),
         "skroutz_status": str(cli.skroutz_status),
         "boxnow": str(cli.boxnow),
     }

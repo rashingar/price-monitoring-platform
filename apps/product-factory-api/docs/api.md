@@ -69,7 +69,7 @@ Job metadata is file-backed under `work/api/jobs/`:
 
 Jobs are queued and run in queue order. The default worker count is one active job at a time. If worker count is raised, jobs for the same trimmed/lowercase model are not allowed to run concurrently.
 
-New job IDs are model-first (`{model}-{stage}-{suffix}`), so workflow screens can group prepare, render, and publish attempts by model. Use `GET /api/jobs/by-model/{model}` to open a model workflow history with the newest attempt first. Use `POST /api/jobs/{job_id}/retry` to enqueue the same stage payload again from a terminal job, which lets an operator rerun only the failed prepare, render, or publish stage.
+New job IDs are model-first (`{model}-{stage}-{suffix}`), so workflow screens can group prepare, render, and publish attempts by model. Use `GET /api/jobs/by-model/{model}` to open a model workflow history with the newest attempt first. Use `POST /api/jobs/{job_id}/retry` to enqueue the same payload again from a terminal job, including `full_pipeline` jobs.
 
 Runtime knobs:
 
@@ -92,6 +92,7 @@ Health:
 Jobs:
 
 - `POST /api/jobs/prepare`
+- `POST /api/jobs/full-pipeline`
 - `POST /api/jobs/render`
 - `POST /api/jobs/publish`
 - `POST /api/jobs/{job_id}/stop`
@@ -165,6 +166,28 @@ Settings:
 {
   "model": "234385",
   "current_job_product_file": "products/234385.csv"
+}
+```
+
+`POST /api/jobs/full-pipeline` enqueues the complete Product Factory pipeline for one model: prepare, intro text authoring, SEO meta authoring, render, and publish. The job stops at the first failed stage and records the failing stage in logs and terminal job metadata.
+
+`source_url` is always the scraping source URL. `bestprice_enabled`, `skroutz_enabled`, and `boxnow_enabled` are product listing/configuration flags and do not choose or rewrite the scraping source.
+
+```json
+{
+  "model": "234385",
+  "product_name": "Example product",
+  "source_url": "https://www.electronet.gr/example-product",
+  "bestprice_enabled": false,
+  "skroutz_enabled": true,
+  "boxnow_enabled": false,
+  "photos": 20,
+  "sections": 20,
+  "trigger_source": "telegram",
+  "telegram_chat_id": "123456789",
+  "source_resolution": {
+    "candidate_id": "source-candidate-id"
+  }
 }
 ```
 

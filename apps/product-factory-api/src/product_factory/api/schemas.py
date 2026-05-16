@@ -5,8 +5,11 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
+from ..source_detection import validate_url_scope
 from .artifact_resolver import ResolvedArtifact
 from .job_models import JobRecord, JobStatus, JobType
+
+DEFAULT_FULL_PIPELINE_PHOTOS = 20
 
 
 class HealthResponse(BaseModel):
@@ -78,6 +81,59 @@ class AuthoringSeoJobRequest(BaseModel):
         value = str(value or "").strip()
         if not value:
             raise ValueError("model must not be empty")
+        return value
+
+
+class FullPipelineJobRequest(BaseModel):
+    model: str
+    product_name: str | None = None
+    source_url: str
+    bestprice_enabled: bool = False
+    skroutz_enabled: bool = False
+    boxnow_enabled: bool = False
+    photos: int = Field(default=DEFAULT_FULL_PIPELINE_PHOTOS, ge=1)
+    sections: int = Field(default=20, ge=0)
+    trigger_source: str | None = None
+    telegram_chat_id: str | None = None
+    source_resolution: dict[str, Any] | None = None
+
+    @field_validator("model")
+    @classmethod
+    def _model_not_empty(cls, value: str) -> str:
+        value = str(value or "").strip()
+        if not value:
+            raise ValueError("model must not be empty")
+        return value
+
+    @field_validator("product_name", "trigger_source", "telegram_chat_id", mode="before")
+    @classmethod
+    def _normalize_optional_text(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            trimmed = value.strip()
+            return trimmed or None
+        return value
+
+    @field_validator("source_url", mode="before")
+    @classmethod
+    def _normalize_source_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @field_validator("source_url")
+    @classmethod
+    def _source_url_must_be_supported(cls, value: str) -> str:
+        parts = urlsplit(value)
+        if parts.scheme not in {"http", "https"} or not parts.netloc:
+            raise ValueError("source_url must be an absolute HTTP(S) URL")
+        try:
+            _source, scope_ok, _reason = validate_url_scope(value)
+        except ValueError as exc:
+            raise ValueError("source_url must be a supported Product Factory source URL") from exc
+        if not scope_ok:
+            raise ValueError("source_url must be a supported Product Factory source URL")
         return value
 
 

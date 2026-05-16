@@ -40,6 +40,7 @@ def test_worker_cli_missing_job_returns_nonzero(tmp_path: Path) -> None:
         (JobType.PREPARE, "run_prepare_job", {"model": "233541", "url": "https://example.invalid"}),
         (JobType.RENDER, "run_render_job", {"model": "233541"}),
         (JobType.PUBLISH, "run_publish_job", {"model": "233541"}),
+        (JobType.FULL_PIPELINE, "run_full_pipeline_job", {"model": "233541", "source_url": "https://www.electronet.gr/example"}),
     ],
 )
 def test_worker_cli_runs_queued_job_through_stub_service(

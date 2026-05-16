@@ -42,7 +42,7 @@ Full suite from `apps/product-factory-api`:
 
 Snapshot diffs should be explained in commit output. There is no separate manual approval gate; the contract change is made explicit by the snapshot diff, backend tests, and commit notes.
 
-Current Product Factory contract coverage includes health, jobs, filters, filter review, authoring, and settings routes. Contract tests are intentionally fast and do not run full prepare/render/publish workflows.
+Current Product Factory contract coverage includes health, jobs, full-pipeline job enqueueing, filters, filter review, authoring, and settings routes. Contract tests are intentionally fast and do not run full prepare/render/publish workflows.
 
 ## Filters Manager Persistence
 

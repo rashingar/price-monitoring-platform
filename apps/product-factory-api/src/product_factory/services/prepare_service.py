@@ -109,6 +109,7 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
         url=request.url,
         photos=request.photos,
         sections=request.sections,
+        bestprice_status=request.bestprice_status,
         skroutz_status=request.skroutz_status,
         boxnow=request.boxnow,
         price=request.price,

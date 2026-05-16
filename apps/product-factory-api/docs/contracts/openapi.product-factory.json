@@ -1116,6 +1116,96 @@
         "title": "FilterValueResponse",
         "type": "object"
       },
+      "FullPipelineJobRequest": {
+        "properties": {
+          "bestprice_enabled": {
+            "default": false,
+            "title": "Bestprice Enabled",
+            "type": "boolean"
+          },
+          "boxnow_enabled": {
+            "default": false,
+            "title": "Boxnow Enabled",
+            "type": "boolean"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "photos": {
+            "default": 20,
+            "minimum": 1.0,
+            "title": "Photos",
+            "type": "integer"
+          },
+          "product_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Name"
+          },
+          "sections": {
+            "default": 20,
+            "minimum": 0.0,
+            "title": "Sections",
+            "type": "integer"
+          },
+          "skroutz_enabled": {
+            "default": false,
+            "title": "Skroutz Enabled",
+            "type": "boolean"
+          },
+          "source_resolution": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Resolution"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "telegram_chat_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Chat Id"
+          },
+          "trigger_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Source"
+          }
+        },
+        "required": [
+          "model",
+          "source_url"
+        ],
+        "title": "FullPipelineJobRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1365,7 +1455,8 @@
           "authoring_intro",
           "authoring_seo",
           "render",
-          "publish"
+          "publish",
+          "full_pipeline"
         ],
         "title": "JobType",
         "type": "string"
@@ -3187,6 +3278,47 @@
           }
         },
         "summary": "List Jobs By Model",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/jobs/full-pipeline": {
+      "post": {
+        "operationId": "full_pipeline_job_api_jobs_full_pipeline_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FullPipelineJobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Full Pipeline Job",
         "tags": [
           "jobs"
         ]

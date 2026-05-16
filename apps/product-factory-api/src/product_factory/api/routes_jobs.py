@@ -12,6 +12,7 @@ from .schemas import (
     ErrorResponse,
     AuthoringIntroJobRequest,
     AuthoringSeoJobRequest,
+    FullPipelineJobRequest,
     JobArtifactsResponse,
     JobListResponse,
     JobLogsResponse,
@@ -106,6 +107,15 @@ def authoring_intro_job(request: AuthoringIntroJobRequest, api_request: Request)
 )
 def authoring_seo_job(request: AuthoringSeoJobRequest, api_request: Request) -> JobResponse:
     return _enqueue_job(api_request, JobType.AUTHORING_SEO, _request_payload(request))
+
+
+@router.post(
+    "/full-pipeline",
+    response_model=JobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def full_pipeline_job(request: FullPipelineJobRequest, api_request: Request) -> JobResponse:
+    return _enqueue_job(api_request, JobType.FULL_PIPELINE, _request_payload(request))
 
 
 @router.post("/{job_id}/stop", response_model=JobResponse, responses=_NOT_FOUND_RESPONSE)

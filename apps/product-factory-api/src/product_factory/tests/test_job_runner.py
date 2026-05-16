@@ -7,8 +7,9 @@ from pathlib import Path
 
 from product_factory.api import job_runner
 from product_factory.api.job_models import JobRecord, JobStatus, JobType
-from product_factory.api.job_runner import LogCallback, SequentialJobRunner
+from product_factory.api.job_runner import LogCallback, SequentialJobRunner, run_full_pipeline_job
 from product_factory.api.job_store import JobStore
+from product_factory.services.authoring_service import AuthoringStatus, IntroTextTaskStatus, SeoMetaTaskStatus
 from product_factory.services import (
     PrepareRequest,
     PublishRequest,
@@ -438,6 +439,119 @@ def test_default_runner_calls_publish_service_and_captures_artifacts(tmp_path: P
     assert "Publish service returned status: completed" in logs
 
 
+def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(tmp_path: Path) -> None:
+    model = "233541"
+    source_url = "https://www.electronet.gr/example"
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatus.RUNNING,
+        model=model,
+        payload={
+            "model": model,
+            "source_url": source_url,
+            "bestprice_enabled": True,
+            "skroutz_enabled": True,
+            "boxnow_enabled": True,
+            "photos": 20,
+            "sections": 20,
+        },
+    )
+    calls: list[object] = []
+    logs: list[str] = []
+    product_file = tmp_path / "products" / f"{model}.csv"
+
+    result = run_full_pipeline_job(
+        record,
+        logs.append,
+        prepare_product_fn=lambda request: calls.append(request)
+        or _service_result(
+            request.model,
+            RunType.PREPARE,
+            artifacts=RunArtifacts(source_json_path=tmp_path / "work" / model / "scrape" / f"{model}.source.json"),
+        ),
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append(("intro", model, retry))
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append(("seo", model, retry))
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        render_product_fn=lambda request: calls.append(request)
+        or _service_result(
+            request.model,
+            RunType.RENDER,
+            artifacts=RunArtifacts(published_csv_path=product_file),
+        ),
+        publish_product_fn=lambda request: calls.append(request)
+        or _service_result(
+            request.model,
+            RunType.PUBLISH,
+            artifacts=RunArtifacts(published_csv_path=request.current_job_product_file),
+        ),
+    )
+
+    assert result.status == JobStatus.SUCCEEDED
+    assert result.message == "Full pipeline job succeeded."
+    assert calls[0] == PrepareRequest(
+        model=model,
+        url=source_url,
+        photos=20,
+        sections=20,
+        bestprice_status=1,
+        skroutz_status=1,
+        boxnow=1,
+        price=0,
+    )
+    assert calls[1:4] == [
+        ("intro", model, False),
+        ("seo", model, False),
+        RenderRequest(model=model),
+    ]
+    assert calls[4] == PublishRequest(model=model, current_job_product_file=product_file)
+    assert "Full pipeline stage prepare starting." in logs
+    assert "Full pipeline stage publish succeeded." in logs
+
+
+def test_full_pipeline_prepare_failure_stops_later_stages() -> None:
+    result, calls, logs = _run_full_pipeline_with_failure("prepare")
+
+    assert result.status == JobStatus.FAILED
+    assert result.message == "Full pipeline failed during prepare."
+    assert calls == ["prepare"]
+    assert any("Full pipeline stage prepare failed" in line for line in logs)
+
+
+def test_full_pipeline_intro_authoring_failure_stops_later_stages() -> None:
+    result, calls, _logs = _run_full_pipeline_with_failure("intro text authoring")
+
+    assert result.status == JobStatus.FAILED
+    assert result.message == "Full pipeline failed during intro text authoring."
+    assert calls == ["prepare", "intro"]
+
+
+def test_full_pipeline_seo_authoring_failure_stops_later_stages() -> None:
+    result, calls, _logs = _run_full_pipeline_with_failure("SEO meta authoring")
+
+    assert result.status == JobStatus.FAILED
+    assert result.message == "Full pipeline failed during SEO meta authoring."
+    assert calls == ["prepare", "intro", "seo"]
+
+
+def test_full_pipeline_render_failure_stops_publish() -> None:
+    result, calls, _logs = _run_full_pipeline_with_failure("render")
+
+    assert result.status == JobStatus.FAILED
+    assert result.message == "Full pipeline failed during render."
+    assert calls == ["prepare", "intro", "seo", "render"]
+
+
+def test_full_pipeline_publish_failure_marks_job_failed() -> None:
+    result, calls, _logs = _run_full_pipeline_with_failure("publish")
+
+    assert result.status == JobStatus.FAILED
+    assert result.message == "Full pipeline failed during publish."
+    assert calls == ["prepare", "intro", "seo", "render", "publish"]
+    assert result.error_code == ServiceErrorCode.PUBLISH_FAILURE.value
+
+
 def test_subprocess_runner_launches_child_and_records_process_metadata(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs")
     code = (
@@ -648,3 +762,130 @@ def test_same_model_jobs_do_not_run_concurrently_with_multiple_workers(tmp_path:
 
     assert store.get_job(first.job_id).status == JobStatus.SUCCEEDED
     assert store.get_job(second.job_id).status == JobStatus.SUCCEEDED
+
+
+def _service_result(
+    model: str,
+    run_type: RunType,
+    *,
+    status: RunStatus = RunStatus.COMPLETED,
+    error_code: str | None = None,
+    error_detail: str | None = None,
+    artifacts: RunArtifacts | None = None,
+) -> ServiceResult:
+    return ServiceResult(
+        run=RunMetadata(
+            model=model,
+            run_type=run_type,
+            status=status,
+            error_code=error_code,
+            error_detail=error_detail,
+        ),
+        artifacts=artifacts or RunArtifacts(),
+    )
+
+
+def _authoring_status(llm_dir: Path, *, model: str = "233541") -> AuthoringStatus:
+    return AuthoringStatus(
+        model=model,
+        llm_dir=str(llm_dir),
+        intro_text=IntroTextTaskStatus(
+            status="valid",
+            output_path=str(llm_dir / "intro_text.output.txt"),
+            trace_path=str(llm_dir / "intro_text.retry_trace.json"),
+            word_count=90,
+            min_words=70,
+            max_words=180,
+            max_attempts=3,
+        ),
+        seo_meta=SeoMetaTaskStatus(
+            status="valid",
+            output_path=str(llm_dir / "seo_meta.output.json"),
+        ),
+        ready_for_render=True,
+    )
+
+
+def _run_full_pipeline_with_failure(stage: str) -> tuple[object, list[str], list[str]]:
+    model = "233541"
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatus.RUNNING,
+        model=model,
+        payload={
+            "model": model,
+            "source_url": "https://www.electronet.gr/example",
+            "bestprice_enabled": False,
+            "skroutz_enabled": False,
+            "boxnow_enabled": False,
+            "photos": 20,
+            "sections": 20,
+        },
+    )
+    calls: list[str] = []
+    logs: list[str] = []
+
+    def prepare_fn(request: PrepareRequest) -> ServiceResult:
+        calls.append("prepare")
+        return _stage_service_result(stage, "prepare", request.model, RunType.PREPARE)
+
+    def intro_fn(model: str, retry: bool = False) -> AuthoringStatus:
+        del retry
+        calls.append("intro")
+        if stage == "intro text authoring":
+            raise ServiceError(ServiceErrorCode.PROVIDER_FAILURE.value, "intro failed")
+        return _authoring_status(Path("work") / model / "llm", model=model)
+
+    def seo_fn(model: str, retry: bool = False) -> AuthoringStatus:
+        del retry
+        calls.append("seo")
+        if stage == "SEO meta authoring":
+            raise ServiceError(ServiceErrorCode.PROVIDER_FAILURE.value, "seo failed")
+        return _authoring_status(Path("work") / model / "llm", model=model)
+
+    def render_fn(request: RenderRequest) -> ServiceResult:
+        calls.append("render")
+        return _stage_service_result(stage, "render", request.model, RunType.RENDER)
+
+    def publish_fn(request: PublishRequest) -> ServiceResult:
+        calls.append("publish")
+        return _stage_service_result(stage, "publish", request.model, RunType.PUBLISH)
+
+    result = run_full_pipeline_job(
+        record,
+        logs.append,
+        prepare_product_fn=prepare_fn,
+        run_intro_text_authoring_fn=intro_fn,
+        run_seo_meta_authoring_fn=seo_fn,
+        render_product_fn=render_fn,
+        publish_product_fn=publish_fn,
+    )
+    return result, calls, logs
+
+
+def _stage_service_result(
+    failing_stage: str,
+    current_stage: str,
+    model: str,
+    run_type: RunType,
+) -> ServiceResult:
+    if failing_stage == current_stage:
+        error_code = (
+            ServiceErrorCode.PUBLISH_FAILURE.value
+            if current_stage == "publish"
+            else ServiceErrorCode.VALIDATION_FAILURE.value
+        )
+        return _service_result(
+            model,
+            run_type,
+            status=RunStatus.FAILED,
+            error_code=error_code,
+            error_detail=f"{current_stage} failed",
+        )
+    artifacts = (
+        RunArtifacts(published_csv_path=Path("products") / f"{model}.csv")
+        if current_stage == "render"
+        else RunArtifacts()
+    )
+    return _service_result(model, run_type, artifacts=artifacts)

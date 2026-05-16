@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable
+from typing import Any
 
 from ..services import (
     PrepareRequest,
@@ -67,6 +68,8 @@ def service_runner_callback(record: JobRecord, log: LogCallback) -> JobRunResult
         return run_render_job(record, log)
     if record.job_type == JobType.PUBLISH:
         return run_publish_job(record, log)
+    if record.job_type == JobType.FULL_PIPELINE:
+        return run_full_pipeline_job(record, log)
     return stub_runner_callback(record, log)
 
 
@@ -82,6 +85,7 @@ def run_prepare_job(
         url=str(record.payload["url"]),
         photos=record.payload.get("photos", 1),
         sections=record.payload.get("sections", 0),
+        bestprice_status=record.payload.get("bestprice_status", 1),
         skroutz_status=record.payload.get("skroutz_status", 0),
         boxnow=record.payload.get("boxnow", 0),
         price=record.payload.get("price", 0),
@@ -157,6 +161,114 @@ def run_publish_job(
     )
 
 
+def run_full_pipeline_job(
+    record: JobRecord,
+    log: LogCallback,
+    *,
+    prepare_product_fn: Callable[[PrepareRequest], ServiceResult] | None = None,
+    run_intro_text_authoring_fn: Callable[..., AuthoringStatus] | None = None,
+    run_seo_meta_authoring_fn: Callable[..., AuthoringStatus] | None = None,
+    render_product_fn: Callable[[RenderRequest], ServiceResult] | None = None,
+    publish_product_fn: Callable[[PublishRequest], ServiceResult] | None = None,
+) -> JobRunResult:
+    model = str(record.payload["model"])
+    source_url = str(record.payload["source_url"])
+    artifacts: dict[str, str] = {}
+
+    log(f"Full pipeline source URL: {source_url}")
+    log(
+        "Full pipeline listing flags: "
+        f"bestprice_enabled={bool(record.payload.get('bestprice_enabled', False))}, "
+        f"skroutz_enabled={bool(record.payload.get('skroutz_enabled', False))}, "
+        f"boxnow_enabled={bool(record.payload.get('boxnow_enabled', False))}"
+    )
+
+    prepare_record = _stage_record(
+        record,
+        JobType.PREPARE,
+        _full_pipeline_prepare_payload(record.payload),
+    )
+    prepare_result = _run_full_pipeline_stage(
+        "prepare",
+        log,
+        lambda: run_prepare_job(
+            prepare_record,
+            log,
+            prepare_product_fn=prepare_product_fn,
+        ),
+    )
+    _merge_stage_artifacts(artifacts, "prepare", prepare_result.artifacts)
+    if prepare_result.status == JobStatus.FAILED:
+        return _full_pipeline_failed_result("prepare", prepare_result, artifacts)
+
+    intro_record = _stage_record(record, JobType.AUTHORING_INTRO, {"model": model})
+    intro_result = _run_full_pipeline_stage(
+        "intro text authoring",
+        log,
+        lambda: run_authoring_intro_job(
+            intro_record,
+            log,
+            run_intro_text_authoring_fn=run_intro_text_authoring_fn,
+        ),
+    )
+    _merge_stage_artifacts(artifacts, "intro_text_authoring", intro_result.artifacts)
+    if intro_result.status == JobStatus.FAILED:
+        return _full_pipeline_failed_result("intro text authoring", intro_result, artifacts)
+
+    seo_record = _stage_record(record, JobType.AUTHORING_SEO, {"model": model})
+    seo_result = _run_full_pipeline_stage(
+        "SEO meta authoring",
+        log,
+        lambda: run_authoring_seo_job(
+            seo_record,
+            log,
+            run_seo_meta_authoring_fn=run_seo_meta_authoring_fn,
+        ),
+    )
+    _merge_stage_artifacts(artifacts, "seo_meta_authoring", seo_result.artifacts)
+    if seo_result.status == JobStatus.FAILED:
+        return _full_pipeline_failed_result("SEO meta authoring", seo_result, artifacts)
+
+    render_record = _stage_record(record, JobType.RENDER, {"model": model})
+    render_result = _run_full_pipeline_stage(
+        "render",
+        log,
+        lambda: run_render_job(
+            render_record,
+            log,
+            render_product_fn=render_product_fn,
+        ),
+    )
+    _merge_stage_artifacts(artifacts, "render", render_result.artifacts)
+    if render_result.status == JobStatus.FAILED:
+        return _full_pipeline_failed_result("render", render_result, artifacts)
+
+    publish_payload = {"model": model}
+    if render_result.artifacts.get("published_csv_path"):
+        publish_payload["current_job_product_file"] = render_result.artifacts["published_csv_path"]
+    publish_record = _stage_record(record, JobType.PUBLISH, publish_payload)
+    publish_result = _run_full_pipeline_stage(
+        "publish",
+        log,
+        lambda: run_publish_job(
+            publish_record,
+            log,
+            publish_product_fn=publish_product_fn,
+        ),
+    )
+    _merge_stage_artifacts(artifacts, "publish", publish_result.artifacts)
+    if publish_result.status == JobStatus.FAILED:
+        return _full_pipeline_failed_result("publish", publish_result, artifacts)
+
+    return JobRunResult(
+        status=JobStatus.SUCCEEDED,
+        message="Full pipeline job succeeded.",
+        error=publish_result.error,
+        error_code=publish_result.error_code,
+        artifacts=artifacts,
+    )
+
+
 def run_authoring_intro_job(
     record: JobRecord,
     log: LogCallback,
@@ -202,6 +314,88 @@ def run_authoring_seo_job(
         status=JobStatus.SUCCEEDED,
         message="SEO meta authoring succeeded.",
         artifacts=_authoring_artifacts(status, "seo_meta"),
+    )
+
+
+def _stage_record(
+    parent: JobRecord,
+    job_type: JobType,
+    payload: dict[str, Any],
+) -> JobRecord:
+    return JobRecord(
+        job_id=parent.job_id,
+        job_type=job_type,
+        status=parent.status,
+        model=parent.model,
+        payload=payload,
+    )
+
+
+def _full_pipeline_prepare_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "model": payload["model"],
+        "url": payload["source_url"],
+        "photos": payload.get("photos", 20),
+        "sections": payload.get("sections", 20),
+        "bestprice_status": int(bool(payload.get("bestprice_enabled", False))),
+        "skroutz_status": int(bool(payload.get("skroutz_enabled", False))),
+        "boxnow": int(bool(payload.get("boxnow_enabled", False))),
+        "price": 0,
+    }
+
+
+def _run_full_pipeline_stage(
+    stage: str,
+    log: LogCallback,
+    callback: Callable[[], JobRunResult],
+) -> JobRunResult:
+    log(f"Full pipeline stage {stage} starting.")
+    try:
+        result = callback()
+    except ServiceError as exc:
+        log(f"Full pipeline stage {stage} failed [{exc.code}]: {exc.message}")
+        return JobRunResult(
+            status=JobStatus.FAILED,
+            message=f"Full pipeline failed during {stage}.",
+            error=exc.message,
+            error_code=exc.code,
+        )
+    except Exception as exc:
+        log(f"Full pipeline stage {stage} failed: {exc}")
+        return JobRunResult(
+            status=JobStatus.FAILED,
+            message=f"Full pipeline failed during {stage}.",
+            error=str(exc),
+        )
+    if result.status == JobStatus.FAILED:
+        log(f"Full pipeline stage {stage} failed: {result.error or result.message or 'stage failed'}")
+    else:
+        log(f"Full pipeline stage {stage} succeeded.")
+    return result
+
+
+def _merge_stage_artifacts(
+    merged: dict[str, str],
+    stage: str,
+    stage_artifacts: dict[str, str],
+) -> None:
+    for name, path in stage_artifacts.items():
+        merged.setdefault(name, path)
+        merged[f"{stage}_{name}"] = path
+
+
+def _full_pipeline_failed_result(
+    stage: str,
+    result: JobRunResult,
+    artifacts: dict[str, str],
+) -> JobRunResult:
+    error = result.error or result.message or f"Full pipeline stage {stage} failed."
+    return JobRunResult(
+        status=JobStatus.FAILED,
+        message=f"Full pipeline failed during {stage}.",
+        error=f"Full pipeline stage {stage} failed: {error}",
+        error_code=result.error_code,
+        artifacts=artifacts,
     )
 
 

@@ -206,6 +206,7 @@ class PreparedProductContext:
             url=str(input_data.get("url", "")),
             photos=int(input_data.get("photos", 1)),
             sections=int(input_data.get("sections", 0)),
+            bestprice_status=int(input_data.get("bestprice_status", 1)),
             skroutz_status=int(input_data.get("skroutz_status", 0)),
             boxnow=int(input_data.get("boxnow", 0)),
             price=input_data.get("price", 0),

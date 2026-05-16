@@ -71,7 +71,22 @@ def _expected_paths(job_type: JobType, model: str, *, repo_root: Path) -> dict[s
         "category_filter_review_path": review_path,
         "metadata_path": model_root / "prepare.run.json",
     }
-    if job_type == JobType.PREPARE:
+    if job_type in {JobType.PREPARE, JobType.FULL_PIPELINE}:
+        if job_type == JobType.FULL_PIPELINE:
+            return {
+                **prepare_paths,
+                "candidate_dir": candidate_dir,
+                "candidate_csv_path": candidate_dir / f"{model}.csv",
+                "published_csv_path": products_csv,
+                "candidate_normalized_json_path": candidate_dir / f"{model}.normalized.json",
+                "validation_report_path": candidate_dir / f"{model}.validation.json",
+                "description_html_path": candidate_dir / "description.html",
+                "characteristics_html_path": candidate_dir / "characteristics.html",
+                "render_metadata_path": model_root / "render.run.json",
+                "publish_metadata_path": model_root / "publish.run.json",
+                "upload_report_path": model_root / "upload.opencart.json",
+                "import_report_path": model_root / "import.opencart.json",
+            }
         return prepare_paths
     if job_type == JobType.AUTHORING_INTRO:
         return {

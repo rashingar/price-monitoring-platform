@@ -10,6 +10,7 @@ from ..api.job_runner import (
     LogCallback,
     run_authoring_intro_job,
     run_authoring_seo_job,
+    run_full_pipeline_job,
     run_prepare_job,
     run_publish_job,
     run_render_job,
@@ -101,6 +102,8 @@ def _run_record(record: JobRecord, log: LogCallback) -> JobRunResult | None:
         return run_render_job(record, log)
     if record.job_type == JobType.PUBLISH:
         return run_publish_job(record, log)
+    if record.job_type == JobType.FULL_PIPELINE:
+        return run_full_pipeline_job(record, log)
     raise ValueError(f"Unsupported job type: {record.job_type.value}")
 
 
