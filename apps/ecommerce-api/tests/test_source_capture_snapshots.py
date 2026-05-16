@@ -122,7 +122,7 @@ def test_skroutz_parser_snapshots(fixtures_root: Path) -> None:
         "price_min_summary": _price_observation(summary, summary_flags) if summary else None,
     }
 
-    assert actual == _snapshot(fixtures_root, "source_capture", "skroutz_direct_json", "parser.expected.json")
+    assert actual == _snapshot(fixtures_root, "source_capture", "skroutz_parser", "parser.expected.json")
 
 
 def test_bestprice_parser_reads_aggregate_offer_low_price() -> None:

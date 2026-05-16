@@ -11,7 +11,7 @@ from ecommerce.source_capture.egress_policy import (
 )
 from ecommerce.source_capture.parsing import parse_bestprice_html, parse_bestprice_offers, parse_electronet_html
 from ecommerce.source_capture.sanitize import content_hash
-from ecommerce.source_capture.skroutz_xhr import capture_skroutz_xhr
+from ecommerce.source_capture.skroutz_firecrawl import capture_skroutz_firecrawl
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload
 
 CAPTURE_IMPLEMENTED_VENDOR_SLUGS = frozenset({"bestprice", "electronet", "skroutz"})
@@ -37,7 +37,7 @@ def capture_source_url(url: str, *, vendor_slug: str | None = None, timeout_seco
     if resolved_vendor == "bestprice":
         return _capture_bestprice(url, timeout_seconds=timeout_seconds)
     if resolved_vendor == "skroutz":
-        return capture_skroutz_xhr(url, timeout_seconds=timeout_seconds)
+        return capture_skroutz_firecrawl(url, timeout_seconds=timeout_seconds)
     return _failed_result(resolved_vendor, url, "VENDOR_NOT_IMPLEMENTED", f"{resolved_vendor} capture is scaffolded but not implemented.")
 
 

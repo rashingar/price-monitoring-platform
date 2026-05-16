@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import replace
 from decimal import Decimal, InvalidOperation
 from html import unescape
 from typing import Any, Iterable
@@ -297,14 +298,219 @@ def parse_skroutz_price_summary(payload: Any, *, page_url: str) -> tuple[ParsedP
                 product_name=_first_text_from_keys(node, ("name", "title", "product_name", "productname")),
                 raw_observation={
                     "page_url": page_url,
-                    "parser": "skroutz_filter_products_v1",
-                    "source": "filter_products",
+                    "parser": "skroutz_json_summary_v1",
+                    "source": "json_summary",
                     "payload": node,
                 },
             ),
             [],
         )
     return None, ["PRICE_MISSING"]
+
+
+def parse_skroutz_firecrawl_content(
+    content: str,
+    *,
+    page_url: str,
+    data: Any = None,
+) -> tuple[list[ParsedOfferObservation], ParsedPriceObservation | None, list[str]]:
+    flags: list[str] = []
+
+    offers, offer_flags = parse_skroutz_offers(data)
+    if offers:
+        return _firecrawl_offers(offers, source="firecrawl_data"), None, []
+    flags.extend(flag for flag in offer_flags if flag not in flags)
+
+    for payload in _json_ld_payloads(content):
+        offers, offer_flags = parse_skroutz_offers(payload)
+        if offers:
+            return _firecrawl_offers(offers, source="firecrawl_json_ld"), None, [flag for flag in offer_flags if flag not in flags]
+        flags.extend(flag for flag in offer_flags if flag not in flags)
+
+    table_offers = _parse_skroutz_firecrawl_tables(content, page_url=page_url)
+    if table_offers:
+        return table_offers, None, []
+
+    line_offers = _parse_skroutz_firecrawl_lines(content, page_url=page_url)
+    if line_offers:
+        return line_offers, None, []
+
+    price_observation, price_flags = parse_skroutz_price_summary(data, page_url=page_url)
+    if price_observation is None:
+        for payload in _json_ld_payloads(content):
+            price_observation, price_flags = parse_skroutz_price_summary(payload, page_url=page_url)
+            if price_observation is not None:
+                break
+    if price_observation is None:
+        price_observation = _parse_skroutz_firecrawl_price_summary(content, page_url=page_url)
+        price_flags = [] if price_observation is not None else price_flags
+    if price_observation is not None:
+        price_observation = replace(
+            price_observation,
+            raw_observation={
+                **price_observation.raw_observation,
+                "parser": "skroutz_firecrawl_v1",
+                "source": "firecrawl_summary",
+            },
+        )
+        flags.extend(flag for flag in price_flags if flag not in flags)
+        flags.append("NO_OFFER_OBSERVATIONS_PARSED")
+        return [], price_observation, list(dict.fromkeys(flags))
+
+    flags.extend(flag for flag in price_flags if flag not in flags)
+    return [], None, list(dict.fromkeys(flags or ["NO_OFFER_OBSERVATIONS_PARSED", "PRICE_MISSING"]))
+
+
+def _parse_skroutz_firecrawl_tables(content: str, *, page_url: str) -> list[ParsedOfferObservation]:
+    offers: list[ParsedOfferObservation] = []
+    headers: list[str] = []
+    for line in (content or "").splitlines():
+        if "|" not in line:
+            if line.strip():
+                headers = []
+            continue
+        cells = [_clean_html_text(cell) or "" for cell in line.strip().strip("|").split("|")]
+        if not cells or all(set(cell) <= {"-", ":", " "} for cell in cells):
+            continue
+        if not any(_first_decimal(cell) for cell in cells):
+            headers = [_normalize_key(cell) for cell in cells]
+            continue
+        if "€" not in line and not headers:
+            continue
+
+        seller_index = _first_header_index(headers, ("store", "shop", "seller", "merchant", "καταστημα", "πωλητης")) or 0
+        price_index = _first_header_index(headers, ("item_price", "price", "τιμη")) or _first_price_cell_index(cells)
+        shipping_index = _first_header_index(headers, ("shipping", "shipping_cost", "μεταφορικα", "αποστολη"))
+        landed_index = _first_header_index(headers, ("landed", "total", "final", "συνολο", "τελικη"))
+        if price_index is None:
+            continue
+
+        seller_cell = cells[seller_index] if seller_index < len(cells) else ""
+        price = _first_decimal(cells[price_index])
+        if price is None:
+            continue
+        shipping = _first_decimal(cells[shipping_index]) if shipping_index is not None and shipping_index < len(cells) else None
+        landed = _first_decimal(cells[landed_index]) if landed_index is not None and landed_index < len(cells) else None
+        landed_source = "explicit" if landed is not None else "computed" if price is not None and shipping is not None else "missing"
+        if landed is None and shipping is not None:
+            landed = (price + shipping).quantize(Decimal("0.01"))
+
+        seller_name = _markdown_link_text(seller_cell) or seller_cell
+        seller_url = _absolute_skroutz_url(_markdown_link_url(seller_cell) or _first_match(seller_cell, (r"href=[\"']([^\"']+)[\"']",)))
+        offers.append(
+            ParsedOfferObservation(
+                seller_name=_clean_html_text(seller_name),
+                seller_url=seller_url,
+                price=price,
+                currency="EUR",
+                shipping_cost=shipping,
+                raw_observation={
+                    "parser": "skroutz_firecrawl_v1",
+                    "rank": len(offers) + 1,
+                    "page_url": page_url,
+                    "source": "firecrawl_table",
+                    "row": cells,
+                    "landed_price": str(landed) if landed is not None else None,
+                    "landed_price_source": landed_source,
+                },
+            )
+        )
+    return offers
+
+
+def _firecrawl_offers(offers: list[ParsedOfferObservation], *, source: str) -> list[ParsedOfferObservation]:
+    return [
+        replace(
+            offer,
+            raw_observation={
+                **offer.raw_observation,
+                "parser": "skroutz_firecrawl_v1",
+                "source": source,
+            },
+        )
+        for offer in offers
+    ]
+
+
+def _parse_skroutz_firecrawl_lines(content: str, *, page_url: str) -> list[ParsedOfferObservation]:
+    offers: list[ParsedOfferObservation] = []
+    for line in (content or "").splitlines():
+        text = _clean_html_text(line)
+        if not text or "€" not in text:
+            continue
+        match = re.search(
+            r"^(?:\d+[\).]\s*)?(?P<seller>[A-Za-zΑ-Ωα-ω0-9][^€|]{1,80}?)\s+(?P<price>[0-9]+(?:[.,][0-9]{1,2})?)\s*€",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            continue
+        seller = _clean_html_text(match.group("seller"))
+        price = _first_decimal(match.group("price"))
+        if not seller or price is None:
+            continue
+        after_price = text[match.end() :]
+        shipping = _first_decimal(_first_match(after_price, (r"(?:shipping|μεταφορικά|μεταφορικα|αποστολή|αποστολη)[^\d]{0,20}([0-9]+(?:[.,][0-9]{1,2})?)",)))
+        landed = (price + shipping).quantize(Decimal("0.01")) if shipping is not None else None
+        offers.append(
+            ParsedOfferObservation(
+                seller_name=seller,
+                seller_url=_absolute_skroutz_url(_markdown_link_url(line)),
+                price=price,
+                currency="EUR",
+                shipping_cost=shipping,
+                raw_observation={
+                    "parser": "skroutz_firecrawl_v1",
+                    "rank": len(offers) + 1,
+                    "page_url": page_url,
+                    "source": "firecrawl_line",
+                    "line": text,
+                    "landed_price": str(landed) if landed is not None else None,
+                    "landed_price_source": "computed" if landed is not None else "missing",
+                },
+            )
+        )
+    return offers
+
+
+def _parse_skroutz_firecrawl_price_summary(content: str, *, page_url: str) -> ParsedPriceObservation | None:
+    text = _clean_html_text(content)
+    if not text:
+        return None
+    price = _first_decimal(_first_match(text, (r"(?:από|from|lowest|τιμή)[^\d]{0,40}([0-9]+(?:[.,][0-9]{1,2})?)\s*€",)))
+    if price is None:
+        return None
+    return ParsedPriceObservation(
+        price=price,
+        currency="EUR",
+        raw_observation={
+            "page_url": page_url,
+            "parser": "skroutz_firecrawl_v1",
+            "source": "firecrawl_price_summary",
+        },
+    )
+
+
+def _first_header_index(headers: list[str], tokens: tuple[str, ...]) -> int | None:
+    for index, header in enumerate(headers):
+        if any(token in header for token in tokens):
+            return index
+    return None
+
+
+def _first_price_cell_index(cells: list[str]) -> int | None:
+    for index, cell in enumerate(cells):
+        if _first_decimal(cell) is not None:
+            return index
+    return None
+
+
+def _markdown_link_text(value: str) -> str | None:
+    return _first_match(value, (r"\[([^\]]+)\]\([^)]+\)",))
+
+
+def _markdown_link_url(value: str) -> str | None:
+    return _first_match(value, (r"\[[^\]]+\]\(([^)]+)\)",))
 
 
 def _parse_skroutz_product_cards(data: Any, shops: dict[str, dict[str, Any]]) -> list[ParsedOfferObservation]:
@@ -349,7 +555,7 @@ def _parse_skroutz_product_cards(data: Any, shops: dict[str, dict[str, Any]]) ->
                 delivery_text=_first_text_from_keys(card, DELIVERY_KEYS)
                 or _first_text_from_keys(shipping_node, DELIVERY_KEYS + ("text", "title", "description", "label")),
                 raw_observation={
-                    "parser": "skroutz_filter_products_v1",
+                    "parser": "skroutz_json_offer_v1",
                     "shop_id": shop_id,
                     "card": card,
                     "shop": shop or None,

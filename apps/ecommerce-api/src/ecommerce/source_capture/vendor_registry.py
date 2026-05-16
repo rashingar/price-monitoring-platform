@@ -23,7 +23,7 @@ VENDOR_DEFINITIONS: tuple[VendorDefinition, ...] = (
         active=True,
         supports_direct_product_url=True,
         supports_search=True,
-        supports_xhr_capture=True,
+        supports_xhr_capture=False,
         domains=("skroutz.gr", "www.skroutz.gr"),
     ),
     VendorDefinition(

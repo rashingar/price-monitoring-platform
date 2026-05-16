@@ -18,9 +18,11 @@ The shared vendor capture implementation lives in `ecommerce.source_capture`:
 - `egress_policy.py` validates outbound URLs, blocks localhost/private/reserved
   hosts, enforces vendor-domain redirects, and provides bounded safe HTTP GETs.
 - `runner.py` owns vendor capture strategy dispatch.
-- `skroutz_xhr.py` captures Skroutz through direct `filter_products.json` and `shops_details.json` endpoints derived from the product URL.
+- `skroutz_firecrawl.py` captures Skroutz through Firecrawl using the active
+  source URL supplied by Vendor Sources.
 - `skroutz_network_diagnostic.py` is an operator-triggered browser network diagnostic for Skroutz product pages.
-- `parsing.py` contains normalized Electronet price and Skroutz direct JSON offer parsers.
+- `parsing.py` contains normalized Electronet, BestPrice, and Skroutz content
+  parsers.
 - `scheduled.py` lets Vendor Sources refresh due `product_sources` without duplicating vendor logic.
 
 ## BestPrice Listings
@@ -41,8 +43,8 @@ use item price. Future landed-cost ranking should be added as a separate review
 toggle so the existing item-price workflow remains stable; shipping and landed
 price evidence is retained in listing raw payloads for that future mode.
 
-Testing is split by profile. Parser, scoring, sanitization, direct Skroutz
-endpoint, selection, run-result, and API response behavior uses small golden
+Testing is split by profile. Parser, scoring, sanitization, Skroutz Firecrawl
+capture, selection, run-result, and API response behavior uses small golden
 JSON snapshots under `tests/fixtures/golden_snapshots/`. Local source URL and
 product source persistence uses `db_contract` tests. Runtime Vendor Sources
 capture workflows, run history, artifact writing, scheduled capture, and Price
@@ -90,6 +92,12 @@ Vendor Sources exposes source URL coverage and source health through:
 - `GET /api/vendor-sources/source-urls/summary`
 - `GET /api/vendor-sources/source-health`
 
+Skroutz production capture uses Firecrawl only. `FIRECRAWL_API_KEY` is required
+for production Skroutz capture; `FIRECRAWL_API_BASE_URL` and
+`FIRECRAWL_TIMEOUT_SECONDS` are optional operational overrides. Direct
+`filter_products.json` / `shops_details.json` production capture has been
+removed and is not available as a fallback or config toggle.
+
 Skroutz browser network diagnostics are available for active Skroutz source URLs:
 
 - API: `POST /api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network`
@@ -100,17 +108,18 @@ This is an admin diagnostic workflow only. It launches Chromium with Playwright,
 opens the operator-provided Skroutz product URL, captures JSON/XHR/fetch-like
 responses, classifies likely product/offer endpoints, and compares browser
 observations with the currently derived `filter_products.json` and
-`shops_details.json` URLs. It does not replace direct JSON production capture,
-does not run from scheduled monitoring, does not create price observations, and
-does not mutate source capture strategy.
+`shops_details.json` URLs. It is diagnostic-only historical visibility for what
+the browser sees; it does not run from scheduled monitoring, does not create
+price observations, and does not mutate the Firecrawl production capture
+strategy.
 
 Persisted reports store sanitized endpoint summaries only: method, sanitized
 URL, status, resource type, content type, body size, JSON key summaries,
 classification, derived-endpoint match, capped body sample, and parse errors.
 The workflow never persists request headers, cookies, auth headers, CSRF/session
 tokens, fingerprint-sensitive headers, or full unbounded response bodies.
-Operators can launch the diagnostic from Find Source for a
-linked Skroutz source URL and then inspect whether `filter_products.json`,
+Operators can launch the diagnostic from Vendor Sources for a linked Skroutz
+source URL and then inspect whether `filter_products.json`,
 `shops_details.json`, another product-data endpoint, or a block/challenge was
 observed.
 
@@ -138,4 +147,6 @@ The handoff importer resolves catalog identity by `catalog_product_id`, then mod
 Live smoke notes from 2026-05-03:
 
 - Electronet direct HTML capture succeeded against a current Electronet product URL and parsed a price observation.
-- Skroutz capture uses direct JSON endpoints only. Anti-bot/challenge responses from those endpoints are persisted as source health diagnostics instead of breaking product/source creation.
+- Skroutz capture now uses Firecrawl only. Firecrawl API/key failures and parse
+  failures are persisted as source health diagnostics instead of breaking
+  product/source creation.

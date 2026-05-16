@@ -20,12 +20,12 @@
     "product_name": null,
     "raw_observation": {
       "page_url": "https://www.skroutz.gr/s/8/product.html",
-      "parser": "skroutz_filter_products_v1",
+      "parser": "skroutz_json_summary_v1",
       "payload": {
         "availability": "available",
         "price_min": "187,50"
       },
-      "source": "filter_products"
+      "source": "json_summary"
     },
     "stock_status": "available"
   },
