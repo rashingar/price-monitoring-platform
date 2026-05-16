@@ -9,12 +9,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
-from ecommerce.api.source_url_agent import readiness as readiness_module  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.source_url_agent import readiness as readiness_module  # noqa: E402
 from ecommerce.source_url_agent.brave_search import BRAVE_SEARCH_API_KEY_ENV_VAR  # noqa: E402
 from ecommerce.source_url_agent.search_providers import SearchProviderDefinition, SearchProviderRegistry  # noqa: E402
 
@@ -357,6 +357,29 @@ def test_get_source_url_agent_candidates_filters(tmp_path: Path, monkeypatch) ->
     payload = response.json()
     assert payload["total"] == 1
     assert payload["items"][0]["id"] == wanted.id
+
+
+def test_get_source_url_agent_candidates_treats_like_wildcards_literally(tmp_path: Path, monkeypatch) -> None:
+    client, database_url = _client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+        percent_match = _candidate(session, product, run_id="run-percent", model="ABC%1")
+        _candidate(session, product, run_id="run-percent-broad", model="ABCX1")
+        underscore_match = _candidate(session, product, run_id="run-underscore", model="UNDER_score")
+        _candidate(session, product, run_id="run-underscore-broad", model="UNDERXscore")
+        backslash_match = _candidate(session, product, run_id="run-backslash", source_name=r"best\price")
+        _candidate(session, product, run_id="run-backslash-broad", source_name="bestXprice")
+
+    percent_response = client.get("/api/source-url-agent/candidates", params={"model": "ABC%"})
+    underscore_response = client.get("/api/source-url-agent/candidates", params={"model": "UNDER_"})
+    backslash_response = client.get("/api/source-url-agent/candidates", params={"source_name": r"best\price"})
+
+    assert percent_response.status_code == 200
+    assert underscore_response.status_code == 200
+    assert backslash_response.status_code == 200
+    assert [item["id"] for item in percent_response.json()["items"]] == [percent_match.id]
+    assert [item["id"] for item in underscore_response.json()["items"]] == [underscore_match.id]
+    assert [item["id"] for item in backslash_response.json()["items"]] == [backslash_match.id]
 
 
 def test_get_source_url_agent_candidates_returns_empty_for_no_matches(tmp_path: Path, monkeypatch) -> None:

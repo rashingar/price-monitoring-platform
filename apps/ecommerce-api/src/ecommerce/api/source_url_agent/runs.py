@@ -2,29 +2,25 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models.source_urls import SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
-from ecommerce.db.repositories.jobs import create_queued_job
+from ecommerce.db.models.source_urls import SourceUrlDiscoveryRun
 from ecommerce.db.session import session_scope
+from ecommerce.jobs.execution_policy import api_execute_durable_jobs_inline_enabled
 from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent
-from ecommerce.source_url_agent.job_handler import (
-    execute_source_url_agent_job,
-    products_for_source_url_agent_request,
-    source_url_agent_job_payload,
+from ecommerce.source_url_agent.enqueue_service import (
+    SourceUrlAgentEnqueueCommand,
+    enqueue_source_url_agent_run_setup,
 )
-from ecommerce.source_url_agent.products import AgentProduct, SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
-from ecommerce.source_url_agent.progress import SOURCE_URL_AGENT_JOB_TYPE
-from ecommerce.source_url_agent.sources import SourceDefinition, load_source_registry
+from ecommerce.source_url_agent.job_handler import execute_source_url_agent_job
+from ecommerce.source_url_agent.products import SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
+from ecommerce.source_url_agent.sources import load_source_registry
 
 from .artifacts import source_url_agent_artifact_items, source_url_agent_artifact_listing
 from .errors import safe_db_error
@@ -124,128 +120,44 @@ def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_t
     if request.apply_high_confidence and request.dry_run:
         raise HTTPException(status_code=400, detail="apply_high_confidence requires dry_run=false.")
 
-    run_id = _make_api_run_id()
     limit = _api_run_limit(request)
     input_path = _source_url_agent_input_path(request)
     request_selected_models = _selected_models(request.selected_models)
     source_name = request.source.strip().lower()
     try:
-        sources = load_source_registry().selected(source_name)
         with session_scope() as session:
-            products = products_for_source_url_agent_request(
+            result = enqueue_source_url_agent_run_setup(
                 session,
-                request=request,
-                limit=limit,
-                input_path=input_path,
-                selected_models=request_selected_models,
-            )
-            row = _create_queued_discovery_run(
-                session,
-                run_id=run_id,
-                request=request,
-                source_name=source_name,
-                input_path=input_path,
-                selected_count=len(products),
-                task_count=len(products) * len(sources),
-                selected_models=request_selected_models,
-            )
-            _create_queued_discovery_tasks(session, run_id=run_id, products=products, sources=sources)
-            create_queued_job(
-                session,
-                job_id=run_id,
-                job_type=SOURCE_URL_AGENT_JOB_TYPE,
-                payload=source_url_agent_job_payload(
-                    request,
-                    run_id=run_id,
+                SourceUrlAgentEnqueueCommand(
                     source_name=source_name,
-                    limit=limit,
+                    mode=request.mode,
                     input_path=input_path,
+                    limit=limit,
+                    offset=request.offset,
+                    catalog_product_id=request.catalog_product_id,
+                    model=_optional_text(request.model),
                     selected_models=request_selected_models,
+                    missing_only=bool(request.missing_only),
+                    active_only=bool(request.active_only),
+                    dry_run=bool(request.dry_run),
+                    apply_high_confidence=bool(request.apply_high_confidence),
+                    max_products_per_batch=request.max_products_per_batch,
+                    max_searches_per_product_source=request.max_searches_per_product_source,
+                    rate_limit_seconds=request.rate_limit_seconds,
+                    headed=bool(request.headed),
+                    no_browser_cache=bool(request.no_browser_cache),
+                    request_payload=_request_payload(request),
                 ),
             )
-            payload = discovery_run_to_dict(row, session=session, include_tasks=True)
+            payload = discovery_run_to_dict(result.run, session=session, include_tasks=True)
     except (FileNotFoundError, SourceUrlAgentInputError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Source URL Agent run enqueue failed: {_safe_db_error(exc)}") from exc
 
-    background_tasks.add_task(_execute_source_url_agent_job, run_id, resolver=get_api_resolver())
+    if api_execute_durable_jobs_inline_enabled():
+        background_tasks.add_task(_execute_source_url_agent_job, payload["run_id"], resolver=get_api_resolver())
     return payload
-
-
-def _create_queued_discovery_run(
-    session: Session,
-    *,
-    run_id: str,
-    request: SourceUrlAgentRunRequest,
-    source_name: str,
-    input_path: Path | None,
-    selected_count: int,
-    task_count: int,
-    selected_models: list[str],
-) -> SourceUrlDiscoveryRun:
-    timestamp = _now()
-    row = SourceUrlDiscoveryRun(
-        run_id=run_id,
-        source_name=source_name,
-        mode=request.mode,
-        status="queued",
-        input_path=str(input_path) if input_path else None,
-        filters_json={
-            "source": source_name,
-            "limit": _api_run_limit(request),
-            "offset": request.offset,
-            "catalog_product_id": request.catalog_product_id,
-            "model": request.model,
-            "selected_models": selected_models,
-            "missing_only": request.missing_only,
-            "active_only": request.active_only,
-            "dry_run": request.dry_run,
-            "apply_high_confidence": request.apply_high_confidence,
-            "max_products_per_batch": request.max_products_per_batch,
-            "max_searches_per_product_source": request.max_searches_per_product_source,
-            "rate_limit_seconds": request.rate_limit_seconds,
-            "headed": request.headed,
-            "no_browser_cache": request.no_browser_cache,
-            "task_count": task_count,
-        },
-        selected_count=selected_count,
-        candidate_count=0,
-        matched_count=0,
-        needs_review_count=0,
-        not_found_count=0,
-        error_count=0,
-        created_at=timestamp,
-        updated_at=timestamp,
-    )
-    session.add(row)
-    session.flush()
-    return row
-
-
-def _create_queued_discovery_tasks(
-    session: Session,
-    *,
-    run_id: str,
-    products: list[AgentProduct],
-    sources: list[SourceDefinition],
-) -> None:
-    timestamp = _now()
-    for product in products:
-        for source in sources:
-            session.add(
-                SourceUrlDiscoveryTask(
-                    run_id=run_id,
-                    catalog_product_id=product.catalog_product_id,
-                    model=product.model,
-                    source_name=source.source_name,
-                    status="queued",
-                    candidate_count=0,
-                    created_at=timestamp,
-                    updated_at=timestamp,
-                )
-            )
-    session.flush()
 
 
 @router.get("/runs")
@@ -319,13 +231,9 @@ def _execute_source_url_agent_job(*args: Any, **kwargs: Any) -> Any:
     return execute_source_url_agent_job(*args, **kwargs)
 
 
+def _request_payload(request: SourceUrlAgentRunRequest) -> dict[str, Any]:
+    return request.model_dump() if hasattr(request, "model_dump") else request.dict()
+
+
 def _safe_db_error(exc: Exception) -> str:
     return safe_db_error(exc)
-
-
-def _make_api_run_id() -> str:
-    return f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid4().hex[:8]}"
-
-
-def _now() -> datetime:
-    return datetime.now(timezone.utc).replace(microsecond=0)

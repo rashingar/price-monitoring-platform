@@ -15,6 +15,7 @@ from ecommerce.db.policy import catalog_database_unavailable_detail, collect_cat
 from ecommerce.db.session import create_session_factory, session_scope
 from ecommerce.db.repositories.jobs import create_queued_job, job_to_dict, list_jobs
 from ecommerce.jobs.durable import execute_job
+from ecommerce.jobs.execution_policy import api_execute_durable_jobs_inline_enabled
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
@@ -52,7 +53,8 @@ def start_catalog_update(background_tasks: BackgroundTasks) -> dict[str, Any]:
     except SQLAlchemyError as exc:
         raise _database_unavailable(exc) from exc
 
-    background_tasks.add_task(_execute_catalog_update_job, payload["job_id"])
+    if api_execute_durable_jobs_inline_enabled():
+        background_tasks.add_task(_execute_catalog_update_job, payload["job_id"])
     return payload
 
 

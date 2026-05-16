@@ -36,6 +36,7 @@ from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models import Base, CatalogProductRow, SourceUrl  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
+from ecommerce.jobs.execution_policy import API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR  # noqa: E402
 
 
 def _client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
@@ -867,6 +868,7 @@ def test_export_catalog_csv_preserves_original_error_when_screenshot_capture_fai
 
 
 def test_catalog_update_endpoint_creates_durable_job(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv(API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR, "true")
     client, _database_url = _client(tmp_path, monkeypatch)
     monkeypatch.setattr(
         "ecommerce.api.routes_catalog_update.run_catalog_update_durable_job",
@@ -884,6 +886,30 @@ def test_catalog_update_endpoint_creates_durable_job(tmp_path: Path, monkeypatch
     detail = client.get(f"/api/jobs/{payload['job_id']}").json()
     assert detail["status"] == "succeeded"
     assert detail["result"]["ingest"]["imported"] == 1
+
+
+def test_catalog_update_endpoint_enqueues_only_when_api_inline_execution_disabled(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv(API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR, "false")
+    client, _database_url = _client(tmp_path, monkeypatch)
+
+    def fail_if_executed(job_id: str):
+        raise AssertionError(f"catalog update job should not execute inline: {job_id}")
+
+    monkeypatch.setattr("ecommerce.api.routes_catalog_update.run_catalog_update_durable_job", fail_if_executed)
+
+    response = client.post("/api/catalog/update-db")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["job_type"] == "catalog_update_from_opencart"
+    assert payload["status"] == "queued"
+    assert payload["status_url"] == f"/api/jobs/{payload['job_id']}"
+
+    detail = client.get(f"/api/jobs/{payload['job_id']}").json()
+    latest = client.get("/api/catalog/update-db/latest").json()
+    assert detail["status"] == "queued"
+    assert latest["job_id"] == payload["job_id"]
+    assert latest["status"] == "queued"
 
 
 def test_catalog_update_job_failure_is_finalized(tmp_path: Path, monkeypatch) -> None:

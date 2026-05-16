@@ -1,4 +1,5 @@
 import sys
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -123,6 +124,12 @@ def test_platform_health_returns_ecommerce_api_group(monkeypatch) -> None:
     group = _groups(response.json())["ecommerce_api"]
     assert group["status"] == "ready"
     assert group["summary"] == "Ecommerce API is responding."
+
+
+def test_platform_health_collectors_do_not_import_api_readiness_modules() -> None:
+    source = inspect.getsource(platform_health_collectors)
+
+    assert "ecommerce.api.source_url_agent.readiness" not in source
 
 
 def test_platform_health_source_url_agent_reflects_ready_and_blocked(monkeypatch) -> None:

@@ -7,7 +7,6 @@ import os
 import httpx
 from sqlalchemy import distinct, func, select
 
-from ecommerce.api.source_url_agent.readiness import get_source_url_agent_readiness
 from ecommerce.catalog_update.config import env_text
 from ecommerce.catalog_update.constants import CATALOG_UPDATE_JOB_TYPE
 from ecommerce.db.models.catalog import CatalogProductRow
@@ -29,6 +28,7 @@ from ecommerce.platform_health.sanitization import (
     unique_strings,
 )
 from ecommerce.source_capture.runner import CAPTURE_IMPLEMENTED_VENDOR_SLUGS
+from ecommerce.source_url_agent.readiness import get_source_url_agent_readiness
 
 OPENCART_REQUIRED_KEYS = (
     "OPENCART_STORE_BASE",

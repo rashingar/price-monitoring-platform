@@ -261,13 +261,23 @@ are runtime artifacts and may describe local operator state.
 
 ### Durable job worker
 
-The API still starts Dashboard `Update DB` jobs in a FastAPI background task by
-default so local Dashboard behavior is unchanged. For crash-resumable operator
-execution, run the DB-backed worker in a separate terminal from the repository
-root:
+The durable worker is the canonical executor for DB-backed durable jobs. The API
+still preserves local Dashboard and Find Source behavior by default through
+`ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE=true`: API routes enqueue the durable
+job row and immediately start local FastAPI background execution.
+
+Set `ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE=false` when the API should only
+enqueue durable jobs and a separate worker process should execute them. Valid
+true values are `1`, `true`, `yes`, and `on`; valid false values are `0`,
+`false`, `no`, and `off`. Invalid values fall back to the default enabled local
+fallback.
+
+For crash-resumable operator execution, run the DB-backed worker in a separate
+terminal from the repository root:
 
 ```powershell
 .\scripts\dev\ecommerce-worker.ps1 --job-type catalog_update_from_opencart --poll-seconds 5 --limit 1
+.\scripts\dev\ecommerce-worker.ps1 --job-type source_url_agent_run --poll-seconds 5 --limit 1
 ```
 
 Useful one-shot inspection and execution commands:
@@ -279,9 +289,8 @@ Useful one-shot inspection and execution commands:
 
 The worker loads `.env`, uses `ECOMMERCE_DATABASE_URL`, selects the oldest
 queued matching jobs, claims them in the database, and runs registered handlers
-through the same durable `execute_job` finalization path as API-triggered work.
-On PostgreSQL it uses row locking with `SKIP LOCKED` to reduce duplicate local
-worker execution.
+through the same durable `execute_job` finalization path. On PostgreSQL it uses
+row locking with `SKIP LOCKED` to reduce duplicate local worker execution.
 
 By default, each worker pass marks `running` jobs with no heartbeat for more
 than 60 minutes as `failed` before claiming new queued jobs:

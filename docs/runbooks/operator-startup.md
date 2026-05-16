@@ -106,7 +106,7 @@ not start servers or mutate PostgreSQL.
 
 ## 6. Start Services
 
-Use three separate PowerShell terminals from the repository root.
+Use four separate PowerShell terminals from the repository root.
 
 Terminal 1:
 
@@ -121,6 +121,18 @@ Terminal 2:
 ```
 
 Terminal 3:
+
+```powershell
+.\scripts\dev\ecommerce-worker.ps1 --poll-seconds 5 --limit 1
+```
+
+The Ecommerce durable worker is the canonical executor for queued DB-backed
+jobs. By default, `ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE=true` preserves
+local operator behavior: the Ecommerce API enqueues durable jobs and immediately
+starts local FastAPI background execution. Set it to `false` when the API should
+enqueue only and this worker terminal must execute queued jobs.
+
+Terminal 4:
 
 ```powershell
 .\scripts\dev\web.ps1

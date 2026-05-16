@@ -11,6 +11,10 @@ from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.session import create_session_factory, get_engine, session_scope  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, heartbeat, list_jobs, mark_running, mark_succeeded, record_progress, request_cancel  # noqa: E402
 from ecommerce.jobs.durable import execute_job  # noqa: E402
+from ecommerce.jobs.execution_policy import (  # noqa: E402
+    API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR,
+    api_execute_durable_jobs_inline_enabled,
+)
 
 
 def _database_url(tmp_path: Path) -> str:
@@ -19,6 +23,19 @@ def _database_url(tmp_path: Path) -> str:
 
 def _create_schema(database_url: str) -> None:
     Base.metadata.create_all(get_engine(database_url))
+
+
+def test_api_execute_durable_jobs_inline_policy_parses_env_values() -> None:
+    assert api_execute_durable_jobs_inline_enabled({}) is True
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "1"}) is True
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "true"}) is True
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "yes"}) is True
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "on"}) is True
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "0"}) is False
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "false"}) is False
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "no"}) is False
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "off"}) is False
+    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "invalid"}) is True
 
 
 def test_create_get_and_list_jobs_with_filters(tmp_path: Path) -> None:

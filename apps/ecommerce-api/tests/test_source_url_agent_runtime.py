@@ -28,12 +28,17 @@ from ecommerce.db.models.source_urls import (  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs import source_url_agent as source_url_agent_job  # noqa: E402
+from ecommerce.jobs.execution_policy import API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR  # noqa: E402
 from ecommerce.jobs.worker import build_default_registry, run_worker_iteration  # noqa: E402
 from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent  # noqa: E402
 from ecommerce.source_url_agent.artifacts import write_run_artifacts  # noqa: E402
 from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
 from ecommerce.source_url_agent.evidence import PageEvidence, error_evidence, extract_page_evidence  # noqa: E402
 from ecommerce.source_url_agent import job_handler as source_url_agent_job_handler  # noqa: E402
+from ecommerce.source_url_agent.enqueue_service import (  # noqa: E402
+    SourceUrlAgentEnqueueCommand,
+    enqueue_source_url_agent_run_setup,
+)
 from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
 from ecommerce.source_url_agent.progress import (  # noqa: E402
     SOURCE_URL_AGENT_JOB_TYPE,
@@ -251,6 +256,60 @@ def _run_api_client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     _create_schema(database_url)
     return TestClient(create_app()), database_url
+
+
+def test_source_url_agent_enqueue_service_creates_queued_run_tasks_and_job(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+        result = enqueue_source_url_agent_run_setup(
+            session,
+            SourceUrlAgentEnqueueCommand(
+                run_id="run-service",
+                source_name="bestprice",
+                mode="catalog",
+                input_path=None,
+                limit=1,
+                catalog_product_id=product.id,
+                selected_models=[],
+                missing_only=False,
+                active_only=True,
+                dry_run=True,
+                apply_high_confidence=False,
+                max_products_per_batch=1,
+                request_payload={
+                    "source": "bestprice",
+                    "mode": "catalog",
+                    "catalog_product_id": product.id,
+                    "limit": 1,
+                    "dry_run": True,
+                    "max_products_per_batch": 1,
+                },
+            ),
+        )
+
+        run = session.query(SourceUrlDiscoveryRun).filter_by(run_id="run-service").one()
+        task = session.query(SourceUrlDiscoveryTask).filter_by(run_id="run-service").one()
+        job = session.query(EcommerceJob).filter_by(job_id="run-service").one()
+
+        assert result.run_id == "run-service"
+        assert result.run is run
+        assert result.selected_count == 1
+        assert result.task_count == 1
+        assert run.status == "queued"
+        assert run.source_name == "bestprice"
+        assert run.filters_json["limit"] == 1
+        assert run.filters_json["task_count"] == 1
+        assert task.status == "queued"
+        assert task.catalog_product_id == product.id
+        assert task.source_name == "bestprice"
+        assert job.job_type == SOURCE_URL_AGENT_JOB_TYPE
+        assert job.status == "queued"
+        assert job.payload_json["run_id"] == "run-service"
+        assert job.payload_json["source"] == "bestprice"
+        assert job.payload_json["request"]["source"] == "bestprice"
+        assert job.payload_json["effective_limit"] == 1
 
 
 def test_artifact_writing_creates_required_files(tmp_path: Path) -> None:
@@ -734,6 +793,7 @@ def test_source_url_agent_csv_run_requires_database_for_direct_persistence(tmp_p
 
 
 def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidates(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv(API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR, "true")
     client, database_url = _run_api_client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         product = _catalog_product(session)
@@ -779,6 +839,46 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
     assert detail.json()["summary"]["matched_count"] == 1
     assert detail.json()["summary"]["task_finished_count"] == 1
     assert detail.json()["artifacts"]
+
+
+def test_source_url_agent_run_api_enqueues_only_when_api_inline_execution_disabled(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv(API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR, "false")
+    client, database_url = _run_api_client(tmp_path, monkeypatch)
+
+    def fail_if_executed(*_args, **_kwargs):
+        raise AssertionError("Source URL Agent job should not execute inline")
+
+    monkeypatch.setattr(source_url_agent_run_routes, "execute_source_url_agent_job", fail_if_executed)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+
+    response = client.post(
+        "/api/source-url-agent/runs",
+        json={
+            "source": "bestprice",
+            "mode": "catalog",
+            "catalog_product_id": product.id,
+            "limit": 1,
+            "dry_run": True,
+            "max_products_per_batch": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_id"]
+    assert payload["status"] == "queued"
+    assert payload["summary"]["selected_count"] == 1
+    assert payload["summary"]["task_total_count"] == 1
+
+    with session_scope(database_url) as session:
+        run = session.query(SourceUrlDiscoveryRun).filter_by(run_id=payload["run_id"]).one()
+        task = session.query(SourceUrlDiscoveryTask).filter_by(run_id=payload["run_id"]).one()
+        job = get_job_by_id(session, payload["run_id"])
+        assert run.status == "queued"
+        assert task.status == "queued"
+        assert session.query(SourceUrlCandidate).count() == 0
+        assert job.status == "queued"
 
 
 def test_source_url_agent_worker_executes_queued_run_and_persists_progress(tmp_path: Path, monkeypatch) -> None:
