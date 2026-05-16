@@ -2,20 +2,21 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from time import perf_counter
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 
-from ecommerce.catalog import CatalogProduct
-from ecommerce.catalog_db import load_active_catalog_products
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.policy import require_database_ready_for_catalog
 from ecommerce.db.repositories.catalog import (
     CatalogProductListFilters,
+    get_catalog_brands,
+    get_catalog_categories,
+    get_catalog_category_hierarchy,
     get_catalog_product_detail,
+    get_catalog_summary,
     list_catalog_products_page,
 )
 from ecommerce.db.session import session_scope
@@ -150,108 +151,29 @@ def get_product_source_url_candidate_history(catalog_product_id: int) -> dict:
 
 @router.get("/categories")
 def get_categories() -> dict:
-    products = _load_catalog_or_raise()
-    counts = Counter(product.category for product in products if product.category)
-    return {
-        "items": [
-            _category_to_response(category, counts[category], products)
-            for category in sorted(counts)
-        ],
-        **_empty_catalog_warning(products),
-    }
+    return _catalog_query_or_raise(get_catalog_categories)
 
 
 @router.get("/category-hierarchy")
 def get_category_hierarchy() -> dict:
-    products = _load_catalog_or_raise()
-    hierarchy: dict[str, dict[str, dict[str, dict[str, object]]]] = {}
-
-    for product in products:
-        if not product.family:
-            continue
-        family_node = hierarchy.setdefault(product.family, {})
-        category_node = family_node.setdefault(product.category_name, {})
-        sub_node = category_node.setdefault(product.sub_category, {"count": 0, "raw_categories": set()})
-        sub_node["count"] = int(sub_node["count"]) + 1
-        if product.raw_category:
-            raw_categories = sub_node["raw_categories"]
-            if isinstance(raw_categories, set):
-                raw_categories.add(product.raw_category)
-
-    items: list[dict] = []
-    for family in sorted(hierarchy):
-        category_items: list[dict] = []
-        family_count = 0
-        for category_name in sorted(hierarchy[family]):
-            sub_category_items: list[dict] = []
-            category_count = 0
-            for sub_category in sorted(hierarchy[family][category_name]):
-                sub_node = hierarchy[family][category_name][sub_category]
-                sub_count = int(sub_node["count"])
-                category_count += sub_count
-                raw_categories = sub_node["raw_categories"]
-                sub_category_items.append(
-                    {
-                        "sub_category": sub_category,
-                        "count": sub_count,
-                        "raw_categories": sorted(raw_categories) if isinstance(raw_categories, set) else [],
-                    }
-                )
-            family_count += category_count
-            category_items.append(
-                {
-                    "category_name": category_name,
-                    "count": category_count,
-                    "sub_categories": sub_category_items,
-                }
-            )
-        items.append({"family": family, "count": family_count, "categories": category_items})
-
-    return {"items": items, **_empty_catalog_warning(products)}
+    return _catalog_query_or_raise(get_catalog_category_hierarchy)
 
 
 @router.get("/brands")
 def get_brands() -> dict:
-    products = _load_catalog_or_raise()
-    counts = Counter(product.manufacturer for product in products if product.manufacturer)
-    return {
-        "items": [
-            {"manufacturer": manufacturer, "count": counts[manufacturer]}
-            for manufacturer in sorted(counts)
-        ],
-        **_empty_catalog_warning(products),
-    }
+    return _catalog_query_or_raise(get_catalog_brands)
 
 
 @router.get("/summary")
 def get_summary() -> dict:
-    products = _load_catalog_or_raise()
-    categories = {product.category for product in products if product.category}
-    families = {product.family for product in products if product.family}
-    category_names = {product.category_name for product in products if product.category_name}
-    sub_categories = {product.sub_category for product in products if product.sub_category}
-    manufacturers = {product.manufacturer for product in products if product.manufacturer}
-    return {
-        "total_products": len(products),
-        "active_products": sum(1 for product in products if product.status == 1),
-        "atomic_products": sum(1 for product in products if product.is_atomic_model),
-        "composite_or_invalid_models": sum(1 for product in products if not product.is_atomic_model),
-        "bestprice_products": sum(1 for product in products if product.bestprice_status == 1),
-        "skroutz_products": sum(1 for product in products if product.skroutz_status == 1),
-        "missing_mpn": sum(1 for product in products if not product.mpn),
-        "category_count": len(categories),
-        "family_count": len(families),
-        "category_name_count": len(category_names),
-        "sub_category_count": len(sub_categories),
-        "manufacturer_count": len(manufacturers),
-        **_empty_catalog_warning(products),
-    }
+    return _catalog_query_or_raise(get_catalog_summary)
 
 
-def _load_catalog_or_raise() -> list[CatalogProduct]:
+def _catalog_query_or_raise(query_func) -> dict:
     require_database_ready_for_catalog()
     try:
-        return load_active_catalog_products()
+        with session_scope() as session:
+            return query_func(session)
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}") from exc
     except Exception as exc:
@@ -265,25 +187,6 @@ def _load_ignored_models_or_raise() -> set[str]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Ignore list loading failed.") from exc
-
-
-def _category_to_response(category: str, count: int, products: list[CatalogProduct]) -> dict:
-    product = next(item for item in products if item.category == category)
-    return {
-        "category": category,
-        "raw_category": product.raw_category,
-        "family": product.family,
-        "category_name": product.category_name,
-        "sub_category": product.sub_category,
-        "category_levels": product.category_levels,
-        "count": count,
-    }
-
-
-def _empty_catalog_warning(products: list[CatalogProduct]) -> dict[str, str]:
-    if products:
-        return {}
-    return {"warning": "Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog."}
 
 
 def _empty_catalog_warning_from_total(total: int) -> dict[str, str]:

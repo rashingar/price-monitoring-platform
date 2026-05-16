@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Literal
@@ -167,8 +168,146 @@ def get_catalog_product_detail(
     )
 
 
+def get_catalog_categories(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+    rows = _active_catalog_rows(session, catalog_source=catalog_source)
+    counts = Counter(str(row.category or "") for row in rows if row.category)
+    first_row_by_category: dict[str, CatalogProductRow] = {}
+    for row in rows:
+        category = str(row.category or "")
+        if category and category not in first_row_by_category:
+            first_row_by_category[category] = row
+    return {
+        "items": [
+            _category_to_response(first_row_by_category[category], category, counts[category])
+            for category in sorted(counts)
+        ],
+        **_empty_catalog_warning_from_total(len(rows)),
+    }
+
+
+def get_catalog_category_hierarchy(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+    rows = _active_catalog_rows(session, catalog_source=catalog_source)
+    hierarchy: dict[str, dict[str, dict[str, dict[str, object]]]] = {}
+
+    for row in rows:
+        family = _row_text(row.family)
+        if not family:
+            continue
+        category_name = _row_text(row.category_name)
+        sub_category = _row_text(row.sub_category)
+        family_node = hierarchy.setdefault(family, {})
+        category_node = family_node.setdefault(category_name, {})
+        sub_node = category_node.setdefault(sub_category, {"count": 0, "raw_categories": set()})
+        sub_node["count"] = int(sub_node["count"]) + 1
+        raw_category = _row_text(row.raw_category)
+        if raw_category:
+            raw_categories = sub_node["raw_categories"]
+            if isinstance(raw_categories, set):
+                raw_categories.add(raw_category)
+
+    items: list[dict[str, Any]] = []
+    for family in sorted(hierarchy):
+        category_items: list[dict[str, Any]] = []
+        family_count = 0
+        for category_name in sorted(hierarchy[family]):
+            sub_category_items: list[dict[str, Any]] = []
+            category_count = 0
+            for sub_category in sorted(hierarchy[family][category_name]):
+                sub_node = hierarchy[family][category_name][sub_category]
+                sub_count = int(sub_node["count"])
+                category_count += sub_count
+                raw_categories = sub_node["raw_categories"]
+                sub_category_items.append(
+                    {
+                        "sub_category": sub_category,
+                        "count": sub_count,
+                        "raw_categories": sorted(raw_categories) if isinstance(raw_categories, set) else [],
+                    }
+                )
+            family_count += category_count
+            category_items.append(
+                {
+                    "category_name": category_name,
+                    "count": category_count,
+                    "sub_categories": sub_category_items,
+                }
+            )
+        items.append({"family": family, "count": family_count, "categories": category_items})
+
+    return {"items": items, **_empty_catalog_warning_from_total(len(rows))}
+
+
+def get_catalog_brands(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+    rows = _active_catalog_rows(session, catalog_source=catalog_source)
+    counts = Counter(str(row.manufacturer or "") for row in rows if row.manufacturer)
+    return {
+        "items": [
+            {"manufacturer": manufacturer, "count": counts[manufacturer]}
+            for manufacturer in sorted(counts)
+        ],
+        **_empty_catalog_warning_from_total(len(rows)),
+    }
+
+
+def get_catalog_summary(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+    rows = _active_catalog_rows(session, catalog_source=catalog_source)
+    categories = {_row_text(row.category) for row in rows if row.category}
+    families = {_row_text(row.family) for row in rows if row.family}
+    category_names = {_row_text(row.category_name) for row in rows if row.category_name}
+    sub_categories = {_row_text(row.sub_category) for row in rows if row.sub_category}
+    manufacturers = {_row_text(row.manufacturer) for row in rows if row.manufacturer}
+    return {
+        "total_products": len(rows),
+        "active_products": sum(1 for row in rows if row.status == 1),
+        "atomic_products": sum(1 for row in rows if bool(row.is_atomic_model)),
+        "composite_or_invalid_models": sum(1 for row in rows if not bool(row.is_atomic_model)),
+        "bestprice_products": sum(1 for row in rows if row.bestprice_status == 1),
+        "skroutz_products": sum(1 for row in rows if row.skroutz_status == 1),
+        "missing_mpn": sum(1 for row in rows if not row.mpn),
+        "category_count": len(categories),
+        "family_count": len(families),
+        "category_name_count": len(category_names),
+        "sub_category_count": len(sub_categories),
+        "manufacturer_count": len(manufacturers),
+        **_empty_catalog_warning_from_total(len(rows)),
+    }
+
+
 def _count_products(session: Session, clauses: list[Any]) -> int:
     return int(session.execute(select(func.count(CatalogProductRow.id)).where(*clauses)).scalar_one())
+
+
+def _active_catalog_rows(session: Session, *, catalog_source: str) -> list[CatalogProductRow]:
+    return list(
+        session.execute(
+            select(CatalogProductRow)
+            .where(
+                CatalogProductRow.catalog_source == catalog_source,
+                CatalogProductRow.active.is_(True),
+            )
+            .order_by(CatalogProductRow.id.asc())
+        )
+        .scalars()
+        .all()
+    )
+
+
+def _category_to_response(row: CatalogProductRow, category: str, count: int) -> dict[str, Any]:
+    return {
+        "category": category,
+        "raw_category": _row_text(row.raw_category),
+        "family": _row_text(row.family),
+        "category_name": _row_text(row.category_name),
+        "sub_category": _row_text(row.sub_category),
+        "category_levels": _string_list(row.category_levels),
+        "count": count,
+    }
+
+
+def _empty_catalog_warning_from_total(total: int) -> dict[str, str]:
+    if total:
+        return {}
+    return {"warning": "Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog."}
 
 
 def _product_filters(
@@ -535,6 +674,10 @@ def _increment(counter: dict[str, int], key: object) -> None:
 
 def _empty_status_counts() -> dict[str, int]:
     return {status: 0 for status in SOURCE_URL_STATUSES}
+
+
+def _row_text(value: object) -> str:
+    return str(value or "")
 
 
 def _string_list(value: object) -> list[str]:

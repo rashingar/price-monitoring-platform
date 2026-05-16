@@ -16,6 +16,12 @@ from ecommerce.db.models import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.repositories.catalog import (  # noqa: E402
+    get_catalog_brands,
+    get_catalog_categories,
+    get_catalog_category_hierarchy,
+    get_catalog_summary,
+)
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, create_or_update_manual_source_url  # noqa: E402
 from ecommerce.db.repositories.source_url_candidates import _candidate_sort_key  # noqa: E402
@@ -802,6 +808,39 @@ def test_catalog_summary(tmp_path: Path, monkeypatch) -> None:
         "sub_category_count": 1,
         "manufacturer_count": 3,
     }
+
+
+def test_catalog_aggregation_repository_helpers_match_catalog_endpoint_shapes(tmp_path: Path, monkeypatch) -> None:
+    catalog_path = tmp_path / "sourceCata.csv"
+    _write_api_catalog(catalog_path)
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
+    Base.metadata.create_all(get_engine(database_url))
+    with session_scope(database_url) as session:
+        ingest_source_catalog(session, source_cata_path=catalog_path)
+
+        categories = get_catalog_categories(session)
+        hierarchy = get_catalog_category_hierarchy(session)
+        brands = get_catalog_brands(session)
+        summary = get_catalog_summary(session)
+
+    cookware = next(item for item in categories["items"] if item["category"] == RAW_COOKWARE)
+    cookware_family = next(item for item in hierarchy["items"] if item["family"] == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ")
+
+    assert cookware["count"] == 2
+    assert cookware["category_levels"] == ["ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "Σκεύη Μαγειρικής", "Γάστρες"]
+    assert cookware_family["count"] == 2
+    assert cookware_family["categories"][0]["sub_categories"][0]["raw_categories"] == [RAW_COOKWARE]
+    assert brands == {
+        "items": [
+            {"manufacturer": "Bosch", "count": 2},
+            {"manufacturer": "Miele", "count": 1},
+            {"manufacturer": "Philips", "count": 1},
+        ]
+    }
+    assert summary["total_products"] == 4
+    assert summary["category_count"] == 3
+    assert summary["manufacturer_count"] == 3
 
 
 def test_catalog_missing_file_returns_404(tmp_path: Path, monkeypatch) -> None:
