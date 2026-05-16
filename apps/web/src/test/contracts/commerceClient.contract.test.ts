@@ -305,6 +305,25 @@ describe("commerce API client contract fixtures", () => {
       ]),
     });
 
+    const sourceImportPreviewBody = mockFetch.requests.find(
+      (request) =>
+        request.method === "POST" &&
+        request.pathname === "/commerce-api/catalog/source-urls/import/preview",
+    )?.body;
+    const sourceImportApplyBody = mockFetch.requests.find(
+      (request) =>
+        request.method === "POST" &&
+        request.pathname === "/commerce-api/catalog/source-urls/import/apply",
+    )?.body;
+    expect(sourceImportPreviewBody).toEqual({
+      catalog_source: "sourceCata",
+      include_observations: true,
+      include_artifacts: true,
+      report_items_limit: 200,
+    });
+    expect(sourceImportApplyBody).toEqual(sourceImportPreviewBody);
+    expect(sourceImportPreviewBody).not.toHaveProperty("report_item_limit");
+
     const handoffBody = {
       file_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",

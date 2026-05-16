@@ -234,25 +234,10 @@ export interface SourceUrlSummaryResponse {
   [key: string]: unknown;
 }
 
-export interface SourceUrlImportRequest {
-  catalog_source?: string | null;
-  include_observations?: boolean;
-  include_artifacts?: boolean;
-  limit?: number | null;
-  report_items_limit?: number | null;
-  report_item_limit?: number | null;
-  [key: string]: unknown;
-}
+export type SourceUrlImportRequest = EcommerceContractSourceUrlImportRequest;
 
-export interface ProductFactoryHandoffImportRequest {
-  file_path: string;
-  file?: string | null;
-  catalog_source?: string | null;
-  persist_initial_capture: boolean;
-  limit?: number | null;
-  report_items_limit?: number | null;
-  [key: string]: unknown;
-}
+export type ProductFactoryHandoffImportRequest =
+  EcommerceContractProductFactoryHandoffImportRequest;
 
 export interface SourceUrlImportSummary {
   candidates_found: number;
@@ -589,19 +574,8 @@ export interface PlatformHealthResponse {
   updated_at: string;
 }
 
-export interface VendorSourceCaptureRunRequest {
-  source_name?: SourceName | string;
-  vendor_slug?: string;
-  catalog_source?: string;
-  limit?: number;
-  include_not_due?: boolean;
-  refresh_after_minutes?: number;
-  catalog_product_ids?: number[];
-  product_source_ids?: number[];
-  dry_run?: boolean;
-  admin_all_sources?: boolean;
-  [key: string]: unknown;
-}
+export type VendorSourceCaptureRunRequest =
+  EcommerceContractVendorSourceCaptureRunRequest;
 
 export interface VendorSourceCaptureRunSummary {
   selected_source_url_count?: number;
