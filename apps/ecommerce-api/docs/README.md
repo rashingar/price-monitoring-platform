@@ -174,6 +174,27 @@ falls back to Product Factory jobs by model when no audit match is available.
 Status replies are intentionally limited to job status/message fields and do
 not include logs, scrape-source URLs, source titles, or confidence values.
 
+Completion notifications are intentionally outside the Ecommerce API webhook
+process. Run the separate notifier CLI to poll Product Factory and notify
+Telegram exactly once when a Telegram-started job reaches a terminal state:
+
+```powershell
+.\.venv\Scripts\python.exe -m ecommerce.product_factory_telegram.notifier --once
+.\.venv\Scripts\python.exe -m ecommerce.product_factory_telegram.notifier --poll-seconds 30
+```
+
+`--limit N` caps jobs checked per pass and defaults to `50`. Terminal states
+that trigger a notification are `succeeded`, `failed`, `cancelled`, and
+`killed`. The notifier loads repo-root `.env`, reads
+`PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH`, does not fetch Product Factory logs,
+and appends sent or failed notification audit events after delivery attempts.
+
+For Windows Task Scheduler, use the repository root as `Start in`, set the
+program to the root virtualenv Python executable, and pass
+`-m ecommerce.product_factory_telegram.notifier --poll-seconds 30` as
+arguments. This keeps completion polling independent from the webhook server
+restart lifecycle.
+
 Verify readiness from the repo root:
 
 ```powershell

@@ -169,6 +169,25 @@ then falls back to Product Factory jobs by model. Status replies show only job
 status/message fields and never include logs, scrape-source URL, source title,
 or confidence.
 
+Telegram completion notifications are sent by a separate polling CLI, not by
+the `ecommerce-api` webhook process and not by a FastAPI background thread. The
+notifier reads the JSONL audit log, polls Product Factory job status, and sends
+one Telegram message when a Telegram-started job reaches `succeeded`, `failed`,
+`cancelled`, or `killed`:
+
+```powershell
+.\.venv\Scripts\python.exe -m ecommerce.product_factory_telegram.notifier --once
+.\.venv\Scripts\python.exe -m ecommerce.product_factory_telegram.notifier --poll-seconds 30
+```
+
+Use `--limit N` to cap checked jobs per pass; the default is `50`. For Windows
+Task Scheduler, create a task with the repo root as `Start in`, program
+`D:\Programs\Repos\pipelines\Price Monitoring Platform\price-monitoring-platform\.venv\Scripts\python.exe`,
+and arguments `-m ecommerce.product_factory_telegram.notifier --poll-seconds 30`.
+The notifier loads repo-root `.env`, uses
+`PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH`, and records sent or failed terminal
+notification attempts in the same audit log.
+
 Dashboard `Update DB` also requires OpenCart export settings. Keep these only
 in private `.env` or OS environment variables:
 

@@ -294,6 +294,23 @@ Telegram-started enqueue for that model, then falls back to Product Factory
 responses contain only Product Factory job status/message fields and do not
 fetch or include logs, scrape-source URLs, source titles, or confidence scores.
 
+Terminal Telegram notifications are handled by a separate CLI process rather
+than by the Ecommerce API webhook process:
+
+```powershell
+.\.venv\Scripts\python.exe -m ecommerce.product_factory_telegram.notifier --once
+.\.venv\Scripts\python.exe -m ecommerce.product_factory_telegram.notifier --poll-seconds 30
+```
+
+The notifier reads `PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH`, polls Product
+Factory `GET /api/jobs/{job_id}`, and sends one Telegram message for
+Telegram-started jobs that reach `succeeded`, `failed`, `cancelled`, or
+`killed`. It does not fetch logs or include scrape URLs, source titles, or
+confidence. Windows Task Scheduler should run it with the repository root as
+`Start in`, the root virtualenv Python as the program, and
+`-m ecommerce.product_factory_telegram.notifier --poll-seconds 30` as the
+arguments.
+
 ### Vendor Sources
 
 ```text
