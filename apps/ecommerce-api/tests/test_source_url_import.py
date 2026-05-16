@@ -13,6 +13,7 @@ from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.models.products import Product  # noqa: E402
 from ecommerce.db.models.price_monitoring import MonitoringRun, PriceObservation  # noqa: E402
+from ecommerce.db.repositories.source_urls import source_url_summary  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs.import_source_urls import main as import_job_main  # noqa: E402
 from ecommerce.source_url_import import import_source_urls  # noqa: E402
@@ -115,6 +116,78 @@ def _observation(
     session.add(row)
     session.flush()
     return row
+
+
+def _source_url(
+    session,
+    product: CatalogProductRow,
+    *,
+    url: str,
+    status: str = "active",
+    url_type: str = "imported",
+    source_name: str = "skroutz",
+) -> SourceUrl:
+    row = SourceUrl(
+        catalog_product_id=product.id,
+        catalog_source=product.catalog_source,
+        model=product.model,
+        mpn=product.mpn,
+        manufacturer=product.manufacturer,
+        source_name=source_name,
+        source_domain="www.skroutz.gr" if source_name == "skroutz" else "www.bestprice.gr",
+        url=url,
+        url_normalized=url,
+        status=status,
+        url_type=url_type,
+        trust_level=url_type,
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def test_source_url_summary_repository_counts_active_catalog_products_and_groups(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    with session_scope(database_url) as session:
+        first = _catalog_product(session, model="005606")
+        second = _catalog_product(session, model="123456", mpn="MPN-2")
+        _catalog_product(session, model="999999", mpn="MPN-3")
+        inactive = _catalog_product(session, model="OLD", active=False)
+        foreign = _catalog_product(session, model="FOREIGN", catalog_source="other")
+        _source_url(session, first, url="https://www.skroutz.gr/s/1", status="active", url_type="manual")
+        _source_url(
+            session,
+            first,
+            url="https://www.bestprice.gr/item/1",
+            status="needs_review",
+            url_type="imported",
+            source_name="bestprice",
+        )
+        _source_url(session, second, url="https://www.skroutz.gr/s/2", status="disabled", url_type="discovered")
+        _source_url(session, inactive, url="https://www.skroutz.gr/s/old", status="active")
+        _source_url(session, foreign, url="https://www.skroutz.gr/s/foreign", status="active")
+
+        summary = source_url_summary(session, "sourceCata")
+
+    assert summary["catalog_source"] == "sourceCata"
+    assert summary["catalog_product_count"] == 3
+    assert summary["products_with_active_source_urls"] == 1
+    assert summary["products_without_active_source_urls"] == 2
+    assert summary["coverage_percent"] == 33.33
+    assert summary["source_url_count"] == 3
+    assert summary["by_status"] == {
+        "active": 1,
+        "broken": 0,
+        "disabled": 1,
+        "needs_review": 1,
+        "redirected": 0,
+    }
+    assert summary["by_source_name"] == {"bestprice": 1, "skroutz": 2}
+    assert summary["by_url_type"] == {"discovered": 1, "imported": 1, "manual": 1}
+    assert summary["updated_at"] == NOW.isoformat()
 
 
 def test_db_observation_exact_model_imports_active_and_is_idempotent(tmp_path: Path) -> None:

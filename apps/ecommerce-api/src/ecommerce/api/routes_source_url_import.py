@@ -2,25 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import distinct, func, select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
 from ecommerce.artifacts import get_artifact_roots
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import sanitize_database_error
-from ecommerce.db.models.catalog import CatalogProductRow
-from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.policy import require_database_ready_for_catalog
-from ecommerce.db.repositories.common import json_safe_value
+from ecommerce.db.repositories.source_urls import source_url_summary
 from ecommerce.db.session import session_scope
-from ecommerce.db.repositories.source_urls import SOURCE_URL_STATUSES, SOURCE_URL_TYPES
 from ecommerce.file_editor import get_allowed_roots, is_path_allowed
 from ecommerce.product_factory_handoff import ProductFactoryHandoffImportResult, import_product_factory_handoff
 from ecommerce.source_url_import import SUMMARY_COUNTERS, SourceUrlImportResult, import_source_urls
@@ -112,7 +106,7 @@ def get_source_url_summary(catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict
     catalog_source = _validated_catalog_source(catalog_source)
     try:
         with session_scope() as session:
-            return _source_url_summary(session, catalog_source)
+            return source_url_summary(session, catalog_source)
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Source URL summary failed: {_safe_db_error(exc)}") from exc
 
@@ -199,69 +193,6 @@ def _run_product_factory_handoff_import(request: ProductFactoryHandoffImportRequ
         raise HTTPException(status_code=500, detail=f"Product Factory handoff import failed: {_safe_db_error(exc)}") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Product Factory handoff import failed: {type(exc).__name__}") from exc
-
-
-def _source_url_summary(session: Session, catalog_source: str) -> dict[str, Any]:
-    active_catalog_filter = (
-        CatalogProductRow.catalog_source == catalog_source,
-        CatalogProductRow.active.is_(True),
-    )
-    catalog_product_count = int(
-        session.execute(select(func.count(CatalogProductRow.id)).where(*active_catalog_filter)).scalar_one()
-    )
-    active_source_product_count = int(
-        session.execute(
-            select(func.count(distinct(SourceUrl.catalog_product_id)))
-            .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
-            .where(*active_catalog_filter, SourceUrl.status == "active")
-        ).scalar_one()
-    )
-    source_url_count = int(
-        session.execute(
-            select(func.count(SourceUrl.id))
-            .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
-            .where(*active_catalog_filter)
-        ).scalar_one()
-    )
-    by_status = _grouped_counts(session, SourceUrl.status, catalog_source)
-    by_source_name = _grouped_counts(session, SourceUrl.source_name, catalog_source)
-    by_url_type = _grouped_counts(session, SourceUrl.url_type, catalog_source)
-    updated_at = session.execute(
-        select(func.max(SourceUrl.updated_at))
-        .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
-        .where(*active_catalog_filter)
-    ).scalar_one_or_none()
-    if updated_at is None:
-        updated_at = datetime.now(timezone.utc).replace(microsecond=0)
-
-    products_without = max(catalog_product_count - active_source_product_count, 0)
-    coverage = round((active_source_product_count / catalog_product_count) * 100, 2) if catalog_product_count else 0.0
-    return {
-        "catalog_source": catalog_source,
-        "catalog_product_count": catalog_product_count,
-        "products_with_active_source_urls": active_source_product_count,
-        "products_without_active_source_urls": products_without,
-        "coverage_percent": coverage,
-        "source_url_count": source_url_count,
-        "by_status": {status: int(by_status.get(status, 0)) for status in sorted(SOURCE_URL_STATUSES)},
-        "by_source_name": by_source_name,
-        "by_url_type": {url_type: int(by_url_type.get(url_type, 0)) for url_type in sorted(SOURCE_URL_TYPES)},
-        "updated_at": str(json_safe_value(updated_at)),
-    }
-
-
-def _grouped_counts(session: Session, column, catalog_source: str) -> dict[str, int]:
-    rows = session.execute(
-        select(column, func.count(SourceUrl.id))
-        .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
-        .where(
-            CatalogProductRow.catalog_source == catalog_source,
-            CatalogProductRow.active.is_(True),
-        )
-        .group_by(column)
-        .order_by(column.asc())
-    ).all()
-    return {str(key or ""): int(value) for key, value in rows}
 
 
 def _import_response(result: SourceUrlImportResult, *, apply: bool, report_items_limit: int) -> dict[str, Any]:

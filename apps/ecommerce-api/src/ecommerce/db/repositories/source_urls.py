@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
 from ecommerce.db.models.catalog import CatalogProductRow
@@ -77,6 +77,55 @@ def list_active_source_urls_for_catalog_products(
     if source_name:
         statement = statement.where(SourceUrl.source_name == source_name)
     return list(session.execute(statement).scalars().all())
+
+
+def source_url_summary(session: Session, catalog_source: str) -> dict[str, Any]:
+    active_catalog_filter = (
+        CatalogProductRow.catalog_source == catalog_source,
+        CatalogProductRow.active.is_(True),
+    )
+    catalog_product_count = int(
+        session.execute(select(func.count(CatalogProductRow.id)).where(*active_catalog_filter)).scalar_one()
+    )
+    active_source_product_count = int(
+        session.execute(
+            select(func.count(distinct(SourceUrl.catalog_product_id)))
+            .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
+            .where(*active_catalog_filter, SourceUrl.status == "active")
+        ).scalar_one()
+    )
+    source_url_count = int(
+        session.execute(
+            select(func.count(SourceUrl.id))
+            .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
+            .where(*active_catalog_filter)
+        ).scalar_one()
+    )
+    by_status = _grouped_source_url_counts(session, SourceUrl.status, catalog_source)
+    by_source_name = _grouped_source_url_counts(session, SourceUrl.source_name, catalog_source)
+    by_url_type = _grouped_source_url_counts(session, SourceUrl.url_type, catalog_source)
+    updated_at = session.execute(
+        select(func.max(SourceUrl.updated_at))
+        .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
+        .where(*active_catalog_filter)
+    ).scalar_one_or_none()
+    if updated_at is None:
+        updated_at = _now()
+
+    products_without = max(catalog_product_count - active_source_product_count, 0)
+    coverage = round((active_source_product_count / catalog_product_count) * 100, 2) if catalog_product_count else 0.0
+    return {
+        "catalog_source": catalog_source,
+        "catalog_product_count": catalog_product_count,
+        "products_with_active_source_urls": active_source_product_count,
+        "products_without_active_source_urls": products_without,
+        "coverage_percent": coverage,
+        "source_url_count": source_url_count,
+        "by_status": {status: int(by_status.get(status, 0)) for status in sorted(SOURCE_URL_STATUSES)},
+        "by_source_name": by_source_name,
+        "by_url_type": {url_type: int(by_url_type.get(url_type, 0)) for url_type in sorted(SOURCE_URL_TYPES)},
+        "updated_at": str(json_safe_value(updated_at)),
+    }
 
 
 def create_or_update_manual_source_url(
@@ -339,6 +388,20 @@ def _find_source_url_by_normalized_url(session: Session, catalog_product_id: int
             SourceUrl.url_normalized == normalized_url,
         )
     ).scalar_one_or_none()
+
+
+def _grouped_source_url_counts(session: Session, column, catalog_source: str) -> dict[str, int]:
+    rows = session.execute(
+        select(column, func.count(SourceUrl.id))
+        .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
+        .where(
+            CatalogProductRow.catalog_source == catalog_source,
+            CatalogProductRow.active.is_(True),
+        )
+        .group_by(column)
+        .order_by(column.asc())
+    ).all()
+    return {str(key or ""): int(value) for key, value in rows}
 
 
 def _catalog_product_for_product(session: Session, product: Product) -> CatalogProductRow | None:
