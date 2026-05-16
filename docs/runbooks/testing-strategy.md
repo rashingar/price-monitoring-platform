@@ -254,6 +254,12 @@ candidates through a broader service path. Root fast includes only
 fast/golden/`db_contract`-safe Source URL Agent checks, not runtime,
 `db_integration`, `postgres_required`, external, e2e, legacy, or slow coverage.
 
+Ecommerce architecture-boundary tests live in
+`apps/ecommerce-api/tests/test_architecture_boundaries.py`. They are lightweight
+AST checks for import ownership rules and compatibility-facade guardrails. If a
+boundary exception is intentional, update the architecture debt register with
+the owner, risk, next action, and explicit allowlist entry.
+
 Ecommerce DB tests are split by profile:
 
 ```powershell
