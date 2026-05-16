@@ -274,6 +274,10 @@ export interface paths {
      */
     post: operations["preview_selection_api_price_monitoring_selection_preview_post"];
   };
+  "/api/product-factory/telegram/webhook": {
+    /** Product Factory Telegram Webhook */
+    post: operations["product_factory_telegram_webhook_api_product_factory_telegram_webhook_post"];
+  };
   "/api/products/from-source": {
     /** Post Product From Source */
     post: operations["post_product_from_source_api_products_from_source_post"];
@@ -756,6 +760,15 @@ export interface components {
        * @default 200
        */
       report_items_limit?: number;
+    };
+    /** ProductFactoryTelegramWebhookResponse */
+    ProductFactoryTelegramWebhookResponse: {
+      /** Job Id */
+      job_id?: string | null;
+      /** Message */
+      message: string;
+      /** Status */
+      status: string;
     };
     /** ProductFromSourceRequest */
     ProductFromSourceRequest: {
@@ -2827,6 +2840,35 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Product Factory Telegram Webhook */
+  product_factory_telegram_webhook_api_product_factory_telegram_webhook_post: {
+    parameters: {
+      header?: {
+        "X-Telegram-Bot-Api-Secret-Token"?: string | null;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          [key: string]: unknown;
+        };
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryTelegramWebhookResponse"];
         };
       };
       /** @description Validation Error */

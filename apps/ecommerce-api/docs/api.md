@@ -210,6 +210,49 @@ Product Factory handoff import accepts `ecommerce_source_handoff.json` files
 only from allowed artifact roots or configured file editor roots. The canonical
 route path uses `/product-factory/`.
 
+### Product Factory Telegram Intake
+
+```text
+POST /api/product-factory/telegram/webhook
+```
+
+This endpoint receives Telegram webhook updates for compact Product Factory
+commands. It is disabled unless `PRODUCT_FACTORY_TELEGRAM_ENABLED=true`,
+requires the `X-Telegram-Bot-Api-Secret-Token` header to match
+`PRODUCT_FACTORY_TELEGRAM_WEBHOOK_SECRET`, and only accepts configured chat/user
+IDs.
+
+Supported command examples:
+
+```text
+012345
+012345 B
+012345 S
+012345 B S
+012345 B B
+012345 S B
+012345 B S B
+012345 https://example.com/product
+012345 B https://example.com/product
+012345 S https://example.com/product
+012345 B S https://example.com/product
+012345 B B https://example.com/product
+012345 S B https://example.com/product
+012345 B S B https://example.com/product
+```
+
+`B` before `S` enables BestPrice, `S` enables Skroutz, and a trailing `B` after
+marketplace flags enables BoxNow. The optional URL is a manual scrape source and
+must be absolute `http` or `https`. BestPrice/Skroutz flags are listing
+configuration only; they do not choose the scrape source.
+
+For now, automatic source resolution is not implemented. Commands without a
+manual URL return a Telegram message and do not enqueue Product Factory. When a
+manual URL is provided, Ecommerce API looks up the product name from the ERP
+warehouse CSV configured by `PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH`, then calls
+Product Factory API `POST /api/jobs/full-pipeline`. Ecommerce DB is not used for
+this product-name lookup.
+
 ### Vendor Sources
 
 ```text

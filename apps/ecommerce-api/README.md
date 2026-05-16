@@ -106,6 +106,27 @@ $env:ECOMMERCE_FILE_ROOTS = "C:\Users\user\Downloads;C:\Exports;output"
 `ECOMMERCE_DATABASE_URL` is required before Catalog import, Catalog browsing,
 Price Monitoring runs, observations, history, or alerts are ready.
 
+Telegram Product Factory intake is hosted by Ecommerce API but starts jobs in
+Product Factory API. It is disabled by default and requires Telegram's webhook
+secret header plus allowed chat/user IDs:
+
+```powershell
+$env:PRODUCT_FACTORY_TELEGRAM_ENABLED = "true"
+$env:PRODUCT_FACTORY_TELEGRAM_BOT_TOKEN = "your-telegram-bot-token"
+$env:PRODUCT_FACTORY_TELEGRAM_WEBHOOK_SECRET = "your-shared-webhook-secret"
+$env:PRODUCT_FACTORY_TELEGRAM_ALLOWED_CHAT_IDS = "-1001234567890"
+$env:PRODUCT_FACTORY_TELEGRAM_ALLOWED_USER_IDS = "123456789"
+$env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH = "\\ERPSERVER\Share\warehouse.csv"
+$env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_MODEL_COLUMN = "model"
+$env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN = "name"
+$env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_ENCODING = "utf-8-sig"
+$env:PRODUCT_FACTORY_API_BASE_URL = "http://127.0.0.1:8000"
+```
+
+The Telegram intake looks up the Product Factory product name only from the ERP
+warehouse CSV at `PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH`. It does not use the
+Ecommerce database for this product-name lookup.
+
 Dashboard `Update DB` also requires OpenCart export settings. Keep these only
 in private `.env` or OS environment variables:
 

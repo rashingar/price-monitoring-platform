@@ -81,6 +81,7 @@ def test_openapi_snapshot_contains_ui_facing_routes() -> None:
         ("GET", "/api/jobs/{job_id}"),
         ("POST", "/api/jobs/{job_id}/cancel"),
         ("POST", "/api/price-monitoring/selection/preview"),
+        ("POST", "/api/product-factory/telegram/webhook"),
         ("POST", "/api/price-monitoring/runs"),
         ("GET", "/api/price-monitoring/runs"),
         ("GET", "/api/price-monitoring/runs/{run_id}"),

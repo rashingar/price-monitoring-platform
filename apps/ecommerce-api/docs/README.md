@@ -87,6 +87,49 @@ python -m ecommerce.jobs.import_product_factory_handoff --file work\<model>\inte
 
 The handoff importer resolves catalog identity without importing Product Factory code, writes active or needs-review `source_urls`, and uses the existing source convergence helpers for `product_sources`.
 
+## Telegram Product Factory Intake
+
+Ecommerce API exposes `POST /api/product-factory/telegram/webhook` for compact
+Telegram Product Factory commands. The endpoint is disabled by default with
+`PRODUCT_FACTORY_TELEGRAM_ENABLED=false`. Enable it only after setting
+`PRODUCT_FACTORY_TELEGRAM_BOT_TOKEN`,
+`PRODUCT_FACTORY_TELEGRAM_WEBHOOK_SECRET`,
+`PRODUCT_FACTORY_TELEGRAM_ALLOWED_CHAT_IDS`, and
+`PRODUCT_FACTORY_TELEGRAM_ALLOWED_USER_IDS`.
+
+Accepted examples:
+
+```text
+012345
+012345 B
+012345 S
+012345 B S
+012345 B B
+012345 S B
+012345 B S B
+012345 https://example.com/product
+012345 B https://example.com/product
+012345 S https://example.com/product
+012345 B S https://example.com/product
+012345 B B https://example.com/product
+012345 S B https://example.com/product
+012345 B S B https://example.com/product
+```
+
+The first token is always the 6-digit Product Factory model and leading zeros
+are preserved. `B` before `S` enables BestPrice, `S` enables Skroutz, and a
+trailing `B` after marketplace flags enables BoxNow. URLs are manual scrape
+overrides and must be absolute `http` or `https`.
+
+Automatic Brave/source resolution is intentionally not implemented in this
+intake yet. Without a manual URL, no Product Factory job is started. With a
+manual URL, Ecommerce API looks up the product name from the CSV file at
+`PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH` using
+`PRODUCT_FACTORY_WAREHOUSE_CATALOG_MODEL_COLUMN` and
+`PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN`, then calls Product Factory API
+`POST /api/jobs/full-pipeline`. The Ecommerce database is not used for this
+product-name lookup.
+
 Verify readiness from the repo root:
 
 ```powershell

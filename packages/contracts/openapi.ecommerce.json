@@ -1160,6 +1160,35 @@
         "title": "ProductFactoryHandoffImportRequest",
         "type": "object"
       },
+      "ProductFactoryTelegramWebhookResponse": {
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "ProductFactoryTelegramWebhookResponse",
+        "type": "object"
+      },
       "ProductFromSourceRequest": {
         "properties": {
           "capture": {
@@ -5991,6 +6020,67 @@
         "summary": "Preview Selection",
         "tags": [
           "price-monitoring"
+        ]
+      }
+    },
+    "/api/product-factory/telegram/webhook": {
+      "post": {
+        "operationId": "product_factory_telegram_webhook_api_product_factory_telegram_webhook_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Telegram-Bot-Api-Secret-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Telegram-Bot-Api-Secret-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Update",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryTelegramWebhookResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Product Factory Telegram Webhook",
+        "tags": [
+          "product-factory-telegram"
         ]
       }
     },
