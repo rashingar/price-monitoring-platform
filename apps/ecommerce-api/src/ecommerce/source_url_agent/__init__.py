@@ -1,4 +1,9 @@
-"""Supervised source URL discovery for catalog products."""
+"""Public Source URL Agent package exports.
+
+The top-level package keeps the stable operator-facing imports for the agent
+runner and option/result types. New internal code should prefer the concrete
+``options`` and ``runner`` modules when it needs those lower-level seams.
+"""
 
 from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, SourceUrlAgentResult, run_source_url_agent
 

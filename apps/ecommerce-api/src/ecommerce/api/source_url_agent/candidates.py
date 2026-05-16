@@ -25,7 +25,7 @@ from ecommerce.source_url_agent.review_service import (
 from .errors import safe_db_error
 from .schemas import SourceUrlCandidateReviewRequest
 from .serializers import candidate_review_panel_payload, candidate_to_dict, source_url_promotion_to_dict
-from .validation import require_catalog_database_ready as _real_require_catalog_database_ready
+from .validation import require_catalog_database_ready
 
 router = APIRouter()
 
@@ -42,7 +42,7 @@ def list_source_url_agent_candidates(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> dict[str, Any]:
-    _require_catalog_database_ready()
+    require_catalog_database_ready()
     try:
         with session_scope() as session:
             page = list_candidates(
@@ -65,13 +65,13 @@ def list_source_url_agent_candidates(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(status_code=500, detail=f"Source URL candidate query failed: {safe_db_error(exc)}") from exc
     return {"items": items, "total": page.total, "limit": page.limit, "offset": page.offset}
 
 
 @router.get("/candidates/{candidate_id}")
 def get_source_url_agent_candidate(candidate_id: int) -> dict[str, Any]:
-    _require_catalog_database_ready()
+    require_catalog_database_ready()
     try:
         with session_scope() as session:
             candidate = get_candidate(session, candidate_id)
@@ -84,12 +84,12 @@ def get_source_url_agent_candidate(candidate_id: int) -> dict[str, Any]:
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(status_code=500, detail=f"Source URL candidate query failed: {safe_db_error(exc)}") from exc
 
 
 @router.patch("/candidates/{candidate_id}/review")
 def review_source_url_agent_candidate(candidate_id: int, request: SourceUrlCandidateReviewRequest) -> dict[str, Any]:
-    _require_catalog_database_ready()
+    require_catalog_database_ready()
     try:
         with session_scope() as session:
             result = review_candidate(
@@ -112,12 +112,4 @@ def review_source_url_agent_candidate(candidate_id: int, request: SourceUrlCandi
     except (InvalidSourceUrlCandidateReviewError, SourceUrlCandidatePromotionError, LookupError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate review failed: {_safe_db_error(exc)}") from exc
-
-
-def _require_catalog_database_ready() -> None:
-    return _real_require_catalog_database_ready()
-
-
-def _safe_db_error(exc: Exception) -> str:
-    return safe_db_error(exc)
+        raise HTTPException(status_code=500, detail=f"Source URL candidate review failed: {safe_db_error(exc)}") from exc

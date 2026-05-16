@@ -1,4 +1,8 @@
-"""Source URL Agent API router."""
+"""Canonical aggregate router for the Source URL Agent API namespace.
+
+The application mounts this module at ``/api/source-url-agent`` so subroute
+modules can stay focused on readiness, runs, and candidate review endpoints.
+"""
 
 from __future__ import annotations
 

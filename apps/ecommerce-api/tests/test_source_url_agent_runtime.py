@@ -208,7 +208,7 @@ def test_source_url_agent_keeps_inaccessible_url_mpn_brand_evidence_for_review()
 
 
 def _allow_source_url_agent_run_database(monkeypatch) -> None:
-    monkeypatch.setattr(source_url_agent_run_routes, "_require_source_url_agent_run_database_ready", lambda: None)
+    monkeypatch.setattr(source_url_agent_run_routes, "require_source_url_agent_run_database_ready", lambda: None)
 
 
 def _fake_resolver(product, source) -> SourceSearchResult:
