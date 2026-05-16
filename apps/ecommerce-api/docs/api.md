@@ -246,12 +246,30 @@ marketplace flags enables BoxNow. The optional URL is a manual scrape source and
 must be absolute `http` or `https`. BestPrice/Skroutz flags are listing
 configuration only; they do not choose the scrape source.
 
-For now, automatic source resolution is not implemented. Commands without a
-manual URL return a Telegram message and do not enqueue Product Factory. When a
-manual URL is provided, Ecommerce API looks up the product name from the ERP
-warehouse CSV configured by `PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH`, then calls
-Product Factory API `POST /api/jobs/full-pipeline`. Ecommerce DB is not used for
-this product-name lookup.
+When a manual URL is provided, Ecommerce API looks up the product name from the
+ERP warehouse CSV configured by `PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH`, sends
+`source_resolution.method=manual_url`, and calls Product Factory API
+`POST /api/jobs/full-pipeline`. Ecommerce DB is not used for this product-name
+lookup.
+
+When no manual URL is provided, Ecommerce API resolves a scrape source with
+Brave Search using the ERP warehouse product name plus manufacturer, MPN,
+barcode, and category metadata when present. Resolver behavior is configured by
+`config/product_factory_source_resolution.json`, or by
+`PRODUCT_FACTORY_SOURCE_RESOLUTION_CONFIG_PATH` when set. The config owns
+`minimum_confidence`, `suggestion_confidence`, `max_suggestions`,
+`pending_choice_ttl_minutes`, preferred source weights, domains, aliases, and
+product URL patterns. Invalid config fails safely and no Product Factory job is
+started.
+
+High-confidence resolution sends a Telegram message with model, product name,
+selected source, Brave page title, selected URL, and raw confidence before
+enqueueing. Lower-confidence candidates are sent as numbered Telegram inline
+buttons (`Use 1`, `Use 2`, up to the configured max, plus `Cancel`) and do not
+enqueue until the operator selects a candidate. Callback data contains only a
+short choice ID and candidate index, never full URLs. Pending choices are stored
+server-side and expire after 15 minutes by default. Expired or cancelled choices
+do not enqueue.
 
 ### Vendor Sources
 

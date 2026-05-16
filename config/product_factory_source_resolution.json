@@ -1,0 +1,29 @@
+{
+  "minimum_confidence": 70,
+  "suggestion_confidence": 40,
+  "max_suggestions": 5,
+  "pending_choice_ttl_minutes": 15,
+  "preferred_sources": [
+    {
+      "source_name": "electronet",
+      "weight": 100,
+      "domains": ["electronet.gr", "www.electronet.gr"],
+      "aliases": ["electronet"],
+      "product_url_patterns": ["/"]
+    },
+    {
+      "source_name": "skroutz",
+      "weight": 70,
+      "domains": ["skroutz.gr", "www.skroutz.gr"],
+      "aliases": ["skroutz"],
+      "product_url_patterns": ["/s/"]
+    },
+    {
+      "source_name": "bestprice",
+      "weight": 50,
+      "domains": ["bestprice.gr", "www.bestprice.gr"],
+      "aliases": ["bestprice"],
+      "product_url_patterns": ["/"]
+    }
+  ]
+}

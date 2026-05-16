@@ -56,13 +56,16 @@ class TelegramBotClient:
         self._bot_token = bot_token
         self._timeout = timeout
 
-    def send_message(self, chat_id: str, text: str) -> None:
+    def send_message(self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None) -> None:
         if not self._bot_token:
             raise TelegramDeliveryError("Telegram bot token is not configured.")
+        payload: dict[str, Any] = {"chat_id": chat_id, "text": text}
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
         try:
             response = httpx.post(
                 f"https://api.telegram.org/bot{self._bot_token}/sendMessage",
-                json={"chat_id": chat_id, "text": text},
+                json=payload,
                 timeout=self._timeout,
             )
         except httpx.RequestError as exc:

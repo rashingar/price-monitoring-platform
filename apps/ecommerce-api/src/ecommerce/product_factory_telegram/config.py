@@ -18,6 +18,7 @@ class ProductFactoryTelegramConfig:
     warehouse_catalog_name_column: str = "name"
     warehouse_catalog_encoding: str = "utf-8-sig"
     product_factory_api_base_url: str = "http://127.0.0.1:8000"
+    source_resolution_config_path: str = ""
 
 
 def product_factory_telegram_config_from_env() -> ProductFactoryTelegramConfig:
@@ -32,6 +33,7 @@ def product_factory_telegram_config_from_env() -> ProductFactoryTelegramConfig:
         warehouse_catalog_name_column=_env_text("PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN") or "name",
         warehouse_catalog_encoding=_env_text("PRODUCT_FACTORY_WAREHOUSE_CATALOG_ENCODING") or "utf-8-sig",
         product_factory_api_base_url=_env_text("PRODUCT_FACTORY_API_BASE_URL") or "http://127.0.0.1:8000",
+        source_resolution_config_path=_env_text("PRODUCT_FACTORY_SOURCE_RESOLUTION_CONFIG_PATH"),
     )
 
 

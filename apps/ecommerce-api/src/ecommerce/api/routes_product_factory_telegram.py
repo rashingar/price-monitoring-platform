@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from ecommerce.product_factory_telegram.client import ProductFactoryClient, TelegramBotClient, TelegramDeliveryError
 from ecommerce.product_factory_telegram.config import ProductFactoryTelegramConfig, product_factory_telegram_config_from_env
 from ecommerce.product_factory_telegram.service import (
+    DEFAULT_PENDING_SOURCE_CHOICES,
     extract_telegram_identity,
     is_authorized_telegram_identity,
     process_telegram_product_factory_update,
@@ -39,6 +40,7 @@ def product_factory_telegram_webhook(
             config=config,
             telegram_client=_telegram_client(config),
             product_factory_client=_product_factory_client(config),
+            pending_choices=DEFAULT_PENDING_SOURCE_CHOICES,
         )
     except TelegramDeliveryError as exc:
         raise HTTPException(

@@ -121,14 +121,36 @@ are preserved. `B` before `S` enables BestPrice, `S` enables Skroutz, and a
 trailing `B` after marketplace flags enables BoxNow. URLs are manual scrape
 overrides and must be absolute `http` or `https`.
 
-Automatic Brave/source resolution is intentionally not implemented in this
-intake yet. Without a manual URL, no Product Factory job is started. With a
-manual URL, Ecommerce API looks up the product name from the CSV file at
+Marketplace/listing flags are independent from scrape-source selection.
+`bestprice_enabled` and `skroutz_enabled` only affect Product Factory product
+configuration.
+
+With a manual URL, Ecommerce API looks up the product name from the CSV file at
 `PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH` using
 `PRODUCT_FACTORY_WAREHOUSE_CATALOG_MODEL_COLUMN` and
 `PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN`, then calls Product Factory API
 `POST /api/jobs/full-pipeline`. The Ecommerce database is not used for this
-product-name lookup.
+product-name lookup. Manual URLs bypass Brave/source resolution and set
+`source_resolution.method=manual_url`.
+
+Without a manual URL, Ecommerce API resolves a scrape source with Brave Search.
+Search queries use the ERP warehouse product name and available metadata:
+manufacturer, MPN, barcode, and category. Ranking is configured by
+`config/product_factory_source_resolution.json` or the
+`PRODUCT_FACTORY_SOURCE_RESOLUTION_CONFIG_PATH` override. The config contains
+confidence thresholds, max suggestions, the pending-choice TTL, and preferred
+source definitions with weights, domains, aliases, and product URL patterns.
+The default config uses `minimum_confidence=70`, `suggestion_confidence=40`,
+`max_suggestions=5`, and `pending_choice_ttl_minutes=15`.
+
+High-confidence resolution echoes the selected source, Brave page title, URL,
+and raw confidence before enqueueing the Product Factory job. If only
+suggestion-confidence candidates exist, Telegram sends numbered inline buttons
+for the candidates plus `Cancel`; no job is enqueued until the operator chooses
+a candidate. Pending choices are stored server-side with the command flags,
+warehouse identity, candidates, creation time, and expiry time. They expire
+after 15 minutes by default. Expired or cancelled choices are deleted and never
+enqueue.
 
 Verify readiness from the repo root:
 

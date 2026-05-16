@@ -121,11 +121,30 @@ $env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_MODEL_COLUMN = "model"
 $env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN = "name"
 $env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_ENCODING = "utf-8-sig"
 $env:PRODUCT_FACTORY_API_BASE_URL = "http://127.0.0.1:8000"
+$env:PRODUCT_FACTORY_SOURCE_RESOLUTION_CONFIG_PATH = "C:\path\to\product_factory_source_resolution.json"
 ```
 
 The Telegram intake looks up the Product Factory product name only from the ERP
 warehouse CSV at `PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH`. It does not use the
 Ecommerce database for this product-name lookup.
+
+When a command omits a manual URL, the intake resolves the scrape source with
+Brave Search using ERP warehouse identity fields: product name, manufacturer,
+MPN, barcode, and category. The default resolver config is
+`config/product_factory_source_resolution.json`; override it with
+`PRODUCT_FACTORY_SOURCE_RESOLUTION_CONFIG_PATH`. The config owns source weights,
+domains, aliases, product URL patterns, confidence thresholds, max suggestions,
+and the pending-choice TTL. BestPrice and Skroutz command flags only affect the
+Product Factory product configuration; they do not choose the scrape source.
+
+If the best candidate reaches `minimum_confidence`, Telegram receives the
+resolved model, product name, source, Brave page title, URL, and raw confidence
+before the Product Factory job is enqueued. If no candidate reaches that
+threshold but at least one reaches `suggestion_confidence`, the bot sends
+numbered inline buttons for the candidates and does not enqueue until the
+operator selects one. Pending choices expire after 15 minutes by default.
+Manual URLs bypass Brave resolution and are sent as `manual_url` source
+resolution metadata.
 
 Dashboard `Update DB` also requires OpenCart export settings. Keep these only
 in private `.env` or OS environment variables:
