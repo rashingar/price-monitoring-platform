@@ -116,6 +116,7 @@ $env:PRODUCT_FACTORY_TELEGRAM_BOT_TOKEN = "your-telegram-bot-token"
 $env:PRODUCT_FACTORY_TELEGRAM_WEBHOOK_SECRET = "your-shared-webhook-secret"
 $env:PRODUCT_FACTORY_TELEGRAM_ALLOWED_CHAT_IDS = "-1001234567890"
 $env:PRODUCT_FACTORY_TELEGRAM_ALLOWED_USER_IDS = "123456789"
+$env:PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH = "output/product_factory_telegram/audit.jsonl"
 $env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH = "\\ERPSERVER\Share\warehouse.csv"
 $env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_MODEL_COLUMN = "model"
 $env:PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN = "name"
@@ -145,6 +146,28 @@ numbered inline buttons for the candidates and does not enqueue until the
 operator selects one. Pending choices expire after 15 minutes by default.
 Manual URLs bypass Brave resolution and are sent as `manual_url` source
 resolution metadata.
+
+Telegram Product Factory intake decisions are written to an append-only JSONL
+audit log at `PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH`, defaulting to
+`output/product_factory_telegram/audit.jsonl`. The log records non-sensitive
+intake decisions and job enqueue/status events; it does not store bot tokens,
+webhook secrets, API keys, or full Telegram updates. There is no rotation,
+cleanup, or retention policy yet.
+
+Lightweight status commands are also supported:
+
+```text
+/pfstatus <job_id>
+/pfstatus job_id: <job_id>
+/pfstatus job: <job_id>
+status 012345
+```
+
+`/pfstatus` fetches that exact Product Factory job. `status <model>` first uses
+the audit log to find the latest Telegram-started job for the 6-digit model,
+then falls back to Product Factory jobs by model. Status replies show only job
+status/message fields and never include logs, scrape-source URL, source title,
+or confidence.
 
 Dashboard `Update DB` also requires OpenCart export settings. Keep these only
 in private `.env` or OS environment variables:

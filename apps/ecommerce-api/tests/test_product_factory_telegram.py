@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from ecommerce.api import routes_product_factory_telegram
 from ecommerce.api.app import create_app
+from ecommerce.product_factory_telegram import audit
 from ecommerce.product_factory_telegram.client import ProductFactoryClient, ProductFactoryClientError, ProductFactoryJob
 from ecommerce.product_factory_telegram.parser import ProductFactoryCommandParseError, parse_product_factory_command
 from ecommerce.product_factory_telegram.service import (
@@ -146,6 +147,62 @@ def test_warehouse_lookup_empty_product_name_fails(tmp_path: Path) -> None:
     assert exc_info.value.code == "warehouse_catalog_empty_product_name"
 
 
+def test_audit_logger_writes_jsonl_with_expected_fields(tmp_path: Path) -> None:
+    path = tmp_path / "audit.jsonl"
+
+    event = audit.append_event(
+        path=path,
+        event_type="telegram_command_received",
+        chat_id="-100",
+        user_id="42",
+        model="012345",
+        product_name="Warehouse Product",
+        bestprice_enabled=True,
+        status="received",
+    )
+
+    rows = list(audit.iter_events(path))
+    assert len(rows) == 1
+    assert rows[0]["event_id"] == event["event_id"]
+    assert rows[0]["event_type"] == "telegram_command_received"
+    assert rows[0]["created_at"].endswith("+00:00")
+    assert rows[0]["chat_id"] == "-100"
+    assert rows[0]["model"] == "012345"
+    assert rows[0]["bestprice_enabled"] is True
+
+
+def test_audit_logger_creates_parent_directory(tmp_path: Path) -> None:
+    path = tmp_path / "nested" / "audit.jsonl"
+
+    audit.append_event(path=path, event_type="telegram_command_received")
+
+    assert path.exists()
+
+
+def test_audit_logger_write_failure_is_non_fatal(tmp_path: Path) -> None:
+    audit.append_event(path=tmp_path, event_type="telegram_command_received")
+
+
+def test_latest_enqueued_job_for_model_returns_latest_matching_job_id(tmp_path: Path) -> None:
+    path = tmp_path / "audit.jsonl"
+    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", model="012345", job_id="job-old")
+    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", model="999999", job_id="job-other")
+    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", model="012345", job_id="job-new")
+
+    assert audit.latest_enqueued_job_for_model(path, "012345") == "job-new"
+
+
+def test_latest_enqueued_job_for_model_ignores_malformed_jsonl_lines(tmp_path: Path) -> None:
+    path = tmp_path / "audit.jsonl"
+    path.write_text(
+        "{bad json}\n"
+        '{"event_type":"product_factory_enqueue_succeeded","model":"012345","job_id":"job-1"}\n',
+        encoding="utf-8",
+    )
+
+    assert audit.latest_enqueued_job_for_model(path, "012345") == "job-1"
+
+
 def test_webhook_rejects_disabled_state(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _configure_env(monkeypatch, tmp_path, enabled=False)
 
@@ -239,6 +296,8 @@ def test_webhook_without_manual_url_does_not_enqueue(
     assert fake_product_factory.payloads == []
     assert "No confident scrape source was found" in fake_telegram.messages[0]["text"]
     assert "Send the command again with a manual URL override" in fake_telegram.messages[0]["text"]
+    events = list(audit.iter_events(tmp_path / "audit" / "audit.jsonl"))
+    assert "source_resolution_no_usable_source" in [event["event_type"] for event in events]
 
 
 def test_source_resolution_config_loads_defaults() -> None:
@@ -389,6 +448,8 @@ def test_high_confidence_result_echoes_source_before_enqueue(monkeypatch: pytest
     assert "confidence: 91" in fake_telegram.messages[0]["text"]
     assert fake_product_factory.payloads[0]["source_resolution"]["method"] == "brave_weighted"
     assert fake_product_factory.payloads[0]["source_resolution"]["selected_source"] == "electronet"
+    assert "source_auto_selected" in _audit_event_types(config)
+    assert "product_factory_enqueue_succeeded" in _audit_event_types(config)
 
 
 def test_low_confidence_candidates_create_pending_suggestions_and_do_not_enqueue(
@@ -418,6 +479,7 @@ def test_low_confidence_candidates_create_pending_suggestions_and_do_not_enqueue
     assert callback_data.startswith("pfsrc:")
     assert "https://" not in callback_data
     assert "Cancel" == markup["inline_keyboard"][1][0]["text"]
+    assert "source_suggestions_sent" in _audit_event_types(config)
 
 
 def test_selecting_pending_suggestion_enqueues_with_selected_candidate(
@@ -450,6 +512,8 @@ def test_selecting_pending_suggestion_enqueues_with_selected_candidate(
     assert fake_product_factory.payloads[0]["source_url"] == "https://www.electronet.gr/a/b/c/brand-mpn-1"
     assert fake_product_factory.payloads[0]["skroutz_enabled"] is True
     assert fake_product_factory.payloads[0]["source_resolution"]["selected_title"] == "Brand MPN-1 Alpha Mixer"
+    assert "source_suggestion_selected" in _audit_event_types(config)
+    assert "product_factory_enqueue_succeeded" in _audit_event_types(config)
 
 
 def test_expired_pending_suggestion_does_not_enqueue(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -481,6 +545,7 @@ def test_expired_pending_suggestion_does_not_enqueue(monkeypatch: pytest.MonkeyP
     assert result.status == "source_choice_expired"
     assert fake_product_factory.payloads == []
     assert store.get(choice_id) is None
+    assert "source_choice_expired" in _audit_event_types(config)
 
 
 def test_cancel_pending_suggestion_deletes_choice_and_does_not_enqueue(
@@ -513,6 +578,7 @@ def test_cancel_pending_suggestion_deletes_choice_and_does_not_enqueue(
     assert result.status == "source_choice_cancelled"
     assert fake_product_factory.payloads == []
     assert store.get(choice_id) is None
+    assert "source_suggestion_cancelled" in _audit_event_types(config)
 
 
 def test_manual_url_bypasses_brave_and_suggestions(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -537,6 +603,8 @@ def test_manual_url_bypasses_brave_and_suggestions(monkeypatch: pytest.MonkeyPat
         "URL: https://example.com/product\n"
         "Confidence: manual override"
     )
+    assert "manual_url_selected" in _audit_event_types(config)
+    assert "product_factory_enqueue_succeeded" in _audit_event_types(config)
 
 
 def test_listing_flags_do_not_affect_selected_scraping_source(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -571,6 +639,46 @@ def test_product_factory_client_unavailable_has_clear_error(monkeypatch: pytest.
     assert str(exc_info.value) == "Product Factory API is unavailable; no job was started."
 
 
+def test_product_factory_client_get_job_maps_status_fields(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_get(*_args: Any, **_kwargs: Any) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "job_id": "job-123",
+                "job_type": "full_pipeline",
+                "status": "running",
+                "model": "012345",
+                "message": "Running.",
+                "error": None,
+                "error_code": None,
+                "created_at": "created",
+                "updated_at": "updated",
+                "started_at": "started",
+                "finished_at": None,
+            },
+        )
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+
+    job = ProductFactoryClient("http://127.0.0.1:8000").get_job("job-123")
+
+    assert job.job_id == "job-123"
+    assert job.job_type == "full_pipeline"
+    assert job.status == "running"
+    assert job.model == "012345"
+    assert job.message == "Running."
+    assert job.updated_at == "updated"
+
+
+def test_product_factory_client_status_errors_are_clear(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(httpx, "get", lambda *_args, **_kwargs: httpx.Response(404, json={"detail": "Job not found."}))
+
+    with pytest.raises(ProductFactoryClientError) as exc_info:
+        ProductFactoryClient("http://127.0.0.1:8000").get_job("missing")
+
+    assert str(exc_info.value) == "Product Factory job missing was not found."
+
+
 def test_webhook_reports_product_factory_unavailable_to_telegram(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -590,6 +698,214 @@ def test_webhook_reports_product_factory_unavailable_to_telegram(
     assert response.json()["status"] == "product_factory_error"
     assert fake_telegram.messages[0]["text"].startswith("Selected scrape source: Manual URL")
     assert fake_telegram.messages[1]["text"] == "Product Factory error: Product Factory API is unavailable; no job was started."
+    events = list(audit.iter_events(tmp_path / "audit" / "audit.jsonl"))
+    assert "product_factory_enqueue_failed" in [event["event_type"] for event in events]
+    assert not any(event.get("job_id") for event in events if event["event_type"] == "product_factory_enqueue_failed")
+
+
+def test_pfstatus_fetches_job_and_sends_status_fields_only(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    fake_telegram = FakeTelegramClient()
+    fake_product_factory = FakeProductFactoryClient()
+    config = _telegram_config(tmp_path, monkeypatch)
+
+    result = process_telegram_product_factory_update(
+        _telegram_update("/pfstatus job-123"),
+        config=config,
+        telegram_client=fake_telegram,
+        product_factory_client=fake_product_factory,
+        pending_choices=PendingSourceChoiceStore(),
+    )
+
+    assert result.status == "status_reported"
+    assert fake_product_factory.get_job_calls == ["job-123"]
+    assert fake_product_factory.log_fetches == 0
+    text = fake_telegram.messages[0]["text"]
+    assert text == (
+        "Product Factory status\n"
+        "job_id: job-123\n"
+        "type: full_pipeline\n"
+        "model: 012345\n"
+        "status: queued\n"
+        "message: Queued.\n"
+        "error: -\n"
+        "updated_at: 2026-05-16T10:00:00+00:00"
+    )
+    assert "https://" not in text
+    assert "confidence" not in text
+    assert "log line" not in text
+    assert "product_factory_status_requested" in _audit_event_types(config)
+
+
+@pytest.mark.parametrize("text", ["/pfstatus job_id: job-123", "/pfstatus job: job-123"])
+def test_pfstatus_accepts_copied_job_id_forms(
+    text: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    fake_telegram = FakeTelegramClient()
+    fake_product_factory = FakeProductFactoryClient()
+    config = _telegram_config(tmp_path, monkeypatch)
+
+    result = process_telegram_product_factory_update(
+        _telegram_update(text),
+        config=config,
+        telegram_client=fake_telegram,
+        product_factory_client=fake_product_factory,
+        pending_choices=PendingSourceChoiceStore(),
+    )
+
+    assert result.status == "status_reported"
+    assert fake_product_factory.get_job_calls == ["job-123"]
+
+
+@pytest.mark.parametrize("text", ["/pfstatus", "/pfstatus job-123 extra", "/pfstatus job_id: job-123 extra"])
+def test_invalid_pfstatus_returns_usage_examples(
+    text: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    fake_telegram = FakeTelegramClient()
+    fake_product_factory = FakeProductFactoryClient()
+    config = _telegram_config(tmp_path, monkeypatch)
+
+    result = process_telegram_product_factory_update(
+        _telegram_update(text),
+        config=config,
+        telegram_client=fake_telegram,
+        product_factory_client=fake_product_factory,
+        pending_choices=PendingSourceChoiceStore(),
+    )
+
+    assert result.status == "status_command_error"
+    assert "/pfstatus <job_id>" in fake_telegram.messages[0]["text"]
+    assert "/pfstatus job_id: <job_id>" in fake_telegram.messages[0]["text"]
+    assert "/pfstatus job: <job_id>" in fake_telegram.messages[0]["text"]
+
+
+def test_status_model_uses_latest_audit_job_id_when_available(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    fake_telegram = FakeTelegramClient()
+    fake_product_factory = FakeProductFactoryClient()
+    fake_product_factory.jobs["job-new"] = ProductFactoryJob(
+        job_id="job-new",
+        status="running",
+        raw={"job_id": "job-new"},
+        job_type="full_pipeline",
+        model="012345",
+        message="Running.",
+        updated_at="2026-05-16T11:00:00+00:00",
+    )
+    config = _telegram_config(tmp_path, monkeypatch)
+    audit.append_event(path=config.audit_log_path, event_type="product_factory_enqueue_succeeded", model="012345", job_id="job-old")
+    audit.append_event(path=config.audit_log_path, event_type="product_factory_enqueue_succeeded", model="012345", job_id="job-new")
+
+    result = process_telegram_product_factory_update(
+        _telegram_update("status 012345"),
+        config=config,
+        telegram_client=fake_telegram,
+        product_factory_client=fake_product_factory,
+        pending_choices=PendingSourceChoiceStore(),
+    )
+
+    assert result.job_id == "job-new"
+    assert fake_product_factory.get_job_calls == ["job-new"]
+    assert fake_product_factory.by_model_calls == []
+    assert "job_id: job-new" in fake_telegram.messages[0]["text"]
+
+
+def test_status_model_falls_back_to_jobs_by_model_when_audit_has_no_match(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    fake_telegram = FakeTelegramClient()
+    fake_product_factory = FakeProductFactoryClient()
+    fake_product_factory.jobs_by_model["012345"] = [
+        ProductFactoryJob(
+            job_id="job-latest",
+            status="succeeded",
+            raw={"job_id": "job-latest"},
+            job_type="render",
+            model="012345",
+            message="Done.",
+        ),
+        ProductFactoryJob(job_id="job-old", status="failed", raw={"job_id": "job-old"}, job_type="prepare", model="012345"),
+    ]
+    config = _telegram_config(tmp_path, monkeypatch)
+
+    result = process_telegram_product_factory_update(
+        _telegram_update("status 012345"),
+        config=config,
+        telegram_client=fake_telegram,
+        product_factory_client=fake_product_factory,
+        pending_choices=PendingSourceChoiceStore(),
+    )
+
+    assert result.job_id == "job-latest"
+    assert fake_product_factory.by_model_calls == ["012345"]
+    assert "job_id: job-latest" in fake_telegram.messages[0]["text"]
+    assert "job-old" not in fake_telegram.messages[0]["text"]
+
+
+def test_status_model_read_failure_falls_back_to_jobs_by_model(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    fake_telegram = FakeTelegramClient()
+    fake_product_factory = FakeProductFactoryClient()
+    fake_product_factory.jobs_by_model["012345"] = [
+        ProductFactoryJob(job_id="job-any", status="queued", raw={"job_id": "job-any"}, job_type="publish", model="012345")
+    ]
+    config = replace(_telegram_config(tmp_path, monkeypatch), audit_log_path=str(tmp_path))
+
+    result = process_telegram_product_factory_update(
+        _telegram_update("status 012345"),
+        config=config,
+        telegram_client=fake_telegram,
+        product_factory_client=fake_product_factory,
+        pending_choices=PendingSourceChoiceStore(),
+    )
+
+    assert result.job_id == "job-any"
+    assert fake_product_factory.by_model_calls == ["012345"]
+
+
+def test_status_model_preserves_leading_zeros_and_reports_no_job(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    fake_telegram = FakeTelegramClient()
+    fake_product_factory = FakeProductFactoryClient()
+    config = _telegram_config(tmp_path, monkeypatch)
+
+    result = process_telegram_product_factory_update(
+        _telegram_update("status 000123"),
+        config=config,
+        telegram_client=fake_telegram,
+        product_factory_client=fake_product_factory,
+        pending_choices=PendingSourceChoiceStore(),
+    )
+
+    assert result.status == "status_not_found"
+    assert fake_product_factory.by_model_calls == ["000123"]
+    assert fake_telegram.messages[0]["text"] == "No Product Factory job found for model 000123."
+
+
+@pytest.mark.parametrize("text", ["status", "status 12345", "status 012345 extra"])
+def test_invalid_status_model_returns_usage_example(
+    text: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    fake_telegram = FakeTelegramClient()
+    fake_product_factory = FakeProductFactoryClient()
+    config = _telegram_config(tmp_path, monkeypatch)
+
+    result = process_telegram_product_factory_update(
+        _telegram_update(text),
+        config=config,
+        telegram_client=fake_telegram,
+        product_factory_client=fake_product_factory,
+        pending_choices=PendingSourceChoiceStore(),
+    )
+
+    assert result.status == "status_command_error"
+    assert "status 012345" in fake_telegram.messages[0]["text"]
 
 
 class FakeTelegramClient:
@@ -603,16 +919,55 @@ class FakeTelegramClient:
 class FakeProductFactoryClient:
     def __init__(self) -> None:
         self.payloads: list[dict[str, Any]] = []
+        self.jobs: dict[str, ProductFactoryJob] = {
+            "job-123": ProductFactoryJob(
+                job_id="job-123",
+                status="queued",
+                raw={"job_id": "job-123"},
+                job_type="full_pipeline",
+                model="012345",
+                message="Queued.",
+                updated_at="2026-05-16T10:00:00+00:00",
+            )
+        }
+        self.jobs_by_model: dict[str, list[ProductFactoryJob]] = {}
+        self.get_job_calls: list[str] = []
+        self.by_model_calls: list[str] = []
+        self.log_fetches = 0
 
     def start_full_pipeline(self, payload: dict[str, Any]) -> ProductFactoryJob:
         self.payloads.append(json.loads(json.dumps(payload)))
-        return ProductFactoryJob(job_id="job-123", status="queued", raw={"job_id": "job-123"})
+        return self.jobs["job-123"]
+
+    def get_job(self, job_id: str) -> ProductFactoryJob:
+        self.get_job_calls.append(job_id)
+        try:
+            return self.jobs[job_id]
+        except KeyError as exc:
+            raise ProductFactoryClientError(f"Product Factory job {job_id} was not found.") from exc
+
+    def list_jobs_by_model(self, model: str) -> list[ProductFactoryJob]:
+        self.by_model_calls.append(model)
+        return self.jobs_by_model.get(model, [])
+
+    def get_job_logs(self, job_id: str) -> list[str]:
+        del job_id
+        self.log_fetches += 1
+        return ["unexpected log line"]
 
 
 class FailingProductFactoryClient:
     def start_full_pipeline(self, payload: dict[str, Any]) -> ProductFactoryJob:
         del payload
         raise ProductFactoryClientError("Product Factory API is unavailable; no job was started.")
+
+    def get_job(self, job_id: str) -> ProductFactoryJob:
+        del job_id
+        raise ProductFactoryClientError("Product Factory API is unavailable; job status could not be fetched.")
+
+    def list_jobs_by_model(self, model: str) -> list[ProductFactoryJob]:
+        del model
+        raise ProductFactoryClientError("Product Factory API is unavailable; jobs by model could not be fetched.")
 
 
 class StaticFetcher:
@@ -657,6 +1012,7 @@ def _configure_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, enabled: 
     monkeypatch.setenv("PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN", "name")
     monkeypatch.setenv("PRODUCT_FACTORY_WAREHOUSE_CATALOG_ENCODING", "utf-8-sig")
     monkeypatch.setenv("PRODUCT_FACTORY_API_BASE_URL", "http://127.0.0.1:8000")
+    monkeypatch.setenv("PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH", str(tmp_path / "audit" / "audit.jsonl"))
 
 
 def _telegram_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
@@ -664,6 +1020,14 @@ def _telegram_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     from ecommerce.product_factory_telegram.config import product_factory_telegram_config_from_env
 
     return product_factory_telegram_config_from_env()
+
+
+def _audit_events(config: Any) -> list[dict[str, Any]]:
+    return list(audit.iter_events(config.audit_log_path))
+
+
+def _audit_event_types(config: Any) -> list[str]:
+    return [event["event_type"] for event in _audit_events(config)]
 
 
 def _telegram_update(text: str, *, chat_id: str = "-100", user_id: str = "42") -> dict[str, Any]:

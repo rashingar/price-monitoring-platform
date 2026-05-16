@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import re
 import secrets
 import threading
 from typing import Any, Protocol
 
+from .audit import append_event, latest_enqueued_job_for_model
 from .client import ProductFactoryClientError, ProductFactoryJob
 from .config import ProductFactoryTelegramConfig
 from .parser import ProductFactoryCommand, ProductFactoryCommandParseError, parse_product_factory_command
@@ -31,6 +33,8 @@ class TelegramMessenger(Protocol):
 
 class ProductFactoryStarter(Protocol):
     def start_full_pipeline(self, payload: dict[str, Any]) -> ProductFactoryJob: ...
+    def get_job(self, job_id: str) -> ProductFactoryJob: ...
+    def list_jobs_by_model(self, model: str) -> list[ProductFactoryJob]: ...
 
 
 class SourceResolver(Protocol):
@@ -111,6 +115,20 @@ class PendingSourceChoiceStore:
 
 
 DEFAULT_PENDING_SOURCE_CHOICES = PendingSourceChoiceStore()
+_MODEL_RE = re.compile(r"^\d{6}$")
+_PFSTATUS_USAGE = "Usage examples:\n/pfstatus <job_id>\n/pfstatus job_id: <job_id>\n/pfstatus job: <job_id>"
+_STATUS_MODEL_USAGE = "Usage example:\nstatus 012345"
+
+
+@dataclass(frozen=True)
+class StatusCommand:
+    kind: str
+    job_id: str | None = None
+    model: str | None = None
+
+
+class StatusCommandParseError(ValueError):
+    pass
 
 
 def extract_telegram_identity(update: dict[str, Any]) -> TelegramIdentity:
@@ -150,6 +168,7 @@ def process_telegram_product_factory_update(
     if callback:
         return _process_source_choice_callback(
             callback,
+            audit_log_path=config.audit_log_path,
             telegram_client=telegram_client,
             product_factory_client=product_factory_client,
             pending_choices=pending_choices,
@@ -169,11 +188,52 @@ def process_telegram_product_factory_update(
         sent_messages.append(text_value)
 
     try:
+        status_command = _parse_status_command(text)
+    except StatusCommandParseError as exc:
+        reply = str(exc)
+        send(reply)
+        _audit_event(
+            config.audit_log_path,
+            event_type="product_factory_status_failed",
+            chat_id=chat_id,
+            user_id=user_id,
+            status="invalid_command",
+            message=reply,
+        )
+        return TelegramIntakeResult(status="status_command_error", message=reply, sent_messages=sent_messages)
+    if status_command is not None:
+        _audit_event(
+            config.audit_log_path,
+            event_type="telegram_command_received",
+            chat_id=chat_id,
+            user_id=user_id,
+            model=status_command.model,
+            job_id=status_command.job_id,
+            status="received",
+            metadata={"command": status_command.kind},
+        )
+        return _process_status_command(
+            status_command,
+            chat_id=chat_id,
+            user_id=user_id,
+            audit_log_path=config.audit_log_path,
+            product_factory_client=product_factory_client,
+            send=send,
+            sent_messages=sent_messages,
+        )
+
+    try:
         command = parse_product_factory_command(text)
     except ProductFactoryCommandParseError as exc:
         reply = f"Product Factory command error: {exc}"
         send(reply)
         return TelegramIntakeResult(status="command_error", message=reply, sent_messages=sent_messages)
+    _audit_command_received(
+        audit_log_path=config.audit_log_path,
+        chat_id=chat_id,
+        user_id=user_id,
+        command=command,
+    )
 
     try:
         product = lookup_warehouse_product(
@@ -186,7 +246,25 @@ def process_telegram_product_factory_update(
     except WarehouseCatalogError as exc:
         reply = f"ERP warehouse catalog error: {exc.message}"
         send(reply)
+        _audit_event(
+            config.audit_log_path,
+            event_type="warehouse_lookup_failed",
+            chat_id=chat_id,
+            user_id=user_id,
+            model=command.model,
+            status=exc.code,
+            message=exc.message,
+        )
         return TelegramIntakeResult(status=exc.code, message=reply, sent_messages=sent_messages)
+    _audit_product_event(
+        config.audit_log_path,
+        event_type="warehouse_lookup_succeeded",
+        chat_id=chat_id,
+        user_id=user_id,
+        command=command,
+        product=product,
+        status="succeeded",
+    )
 
     if command.manual_url is None:
         resolver = source_resolver
@@ -196,12 +274,32 @@ def process_telegram_product_factory_update(
             except SourceResolutionConfigError as exc:
                 reply = f"Source resolution config error: {exc}"
                 send(reply)
+                _audit_product_event(
+                    config.audit_log_path,
+                    event_type="source_resolution_failed",
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    command=command,
+                    product=product,
+                    status="source_resolution_config_error",
+                    message=str(exc),
+                )
                 return TelegramIntakeResult(status="source_resolution_config_error", message=reply, sent_messages=sent_messages)
         try:
             resolution = resolver.resolve(product=product)
         except (SourceResolutionConfigError, SourceResolutionError) as exc:
             reply = f"Source resolution error: {exc}"
             send(reply)
+            _audit_product_event(
+                config.audit_log_path,
+                event_type="source_resolution_failed",
+                chat_id=chat_id,
+                user_id=user_id,
+                command=command,
+                product=product,
+                status="source_resolution_error",
+                message=str(exc),
+            )
             return TelegramIntakeResult(status="source_resolution_error", message=reply, sent_messages=sent_messages)
 
         if resolution.selected is not None and resolution.selected.confidence >= resolution.config.minimum_confidence:
@@ -212,6 +310,17 @@ def process_telegram_product_factory_update(
                 candidate=selected,
             )
             send(source_reply)
+            _audit_candidate_event(
+                config.audit_log_path,
+                event_type="source_auto_selected",
+                chat_id=chat_id,
+                user_id=user_id,
+                command=command,
+                product=product,
+                candidate=selected,
+                selection_method=resolution.method,
+                status="selected",
+            )
             payload = _product_factory_payload(
                 command_model=command.model,
                 product=product,
@@ -229,6 +338,14 @@ def process_telegram_product_factory_update(
                 product_factory_client=product_factory_client,
                 send=send,
                 sent_messages=sent_messages,
+                audit_log_path=config.audit_log_path,
+                chat_id=chat_id,
+                user_id=user_id,
+                selected_source=selected.source_name,
+                selected_url=selected.url,
+                selected_title=selected.title,
+                confidence=selected.confidence,
+                selection_method=resolution.method,
             )
 
         if resolution.candidates:
@@ -242,6 +359,22 @@ def process_telegram_product_factory_update(
             )
             reply = _suggestions_message(command.model, product, choice.candidates)
             send(reply, reply_markup=_source_choice_reply_markup(choice))
+            _audit_product_event(
+                config.audit_log_path,
+                event_type="source_suggestions_sent",
+                chat_id=chat_id,
+                user_id=user_id,
+                command=command,
+                product=product,
+                status="suggestions_sent",
+                selection_method=resolution.method,
+                metadata={
+                    "choice_id": choice.choice_id,
+                    "candidate_count": len(choice.candidates),
+                    "candidates": [_candidate_metadata(candidate) for candidate in choice.candidates],
+                    "expires_at": choice.expires_at.isoformat(),
+                },
+            )
             return TelegramIntakeResult(status="source_resolution_suggestions", message=reply, sent_messages=sent_messages)
 
         reply = (
@@ -251,10 +384,34 @@ def process_telegram_product_factory_update(
             "Send the command again with a manual URL override."
         )
         send(reply)
+        _audit_product_event(
+            config.audit_log_path,
+            event_type="source_resolution_no_usable_source",
+            chat_id=chat_id,
+            user_id=user_id,
+            command=command,
+            product=product,
+            status="source_resolution_no_usable_source",
+            message="No confident scrape source was found.",
+            selection_method=resolution.method,
+        )
         return TelegramIntakeResult(status="source_resolution_no_usable_source", message=reply, sent_messages=sent_messages)
 
     source_reply = _manual_source_message(command.manual_url)
     send(source_reply)
+    _audit_product_event(
+        config.audit_log_path,
+        event_type="manual_url_selected",
+        chat_id=chat_id,
+        user_id=user_id,
+        command=command,
+        product=product,
+        selected_source="Manual URL",
+        selected_url=command.manual_url,
+        confidence="manual override",
+        selection_method="manual_url",
+        status="selected",
+    )
 
     payload = _product_factory_payload(
         command_model=command.model,
@@ -273,12 +430,20 @@ def process_telegram_product_factory_update(
         product_factory_client=product_factory_client,
         send=send,
         sent_messages=sent_messages,
+        audit_log_path=config.audit_log_path,
+        chat_id=chat_id,
+        user_id=user_id,
+        selected_source="Manual URL",
+        selected_url=command.manual_url,
+        confidence="manual override",
+        selection_method="manual_url",
     )
 
 
 def _process_source_choice_callback(
     callback: dict[str, Any],
     *,
+    audit_log_path: str,
     telegram_client: TelegramMessenger,
     product_factory_client: ProductFactoryStarter,
     pending_choices: PendingSourceChoiceStore,
@@ -304,6 +469,15 @@ def _process_source_choice_callback(
     if choice is None:
         reply = "Source choice expired or is no longer available. Send the command again."
         send(reply)
+        _audit_event(
+            audit_log_path,
+            event_type="source_choice_expired",
+            chat_id=chat_id,
+            user_id=user_id,
+            status="source_choice_expired",
+            message=reply,
+            metadata={"choice_id": choice_id},
+        )
         return TelegramIntakeResult(status="source_choice_expired", message=reply, sent_messages=sent_messages)
     if choice.chat_id != chat_id or choice.user_id != (user_id or ""):
         reply = "This source choice belongs to another chat or user."
@@ -313,11 +487,33 @@ def _process_source_choice_callback(
         pending_choices.delete(choice_id)
         reply = "Source choice expired. Send the command again."
         send(reply)
+        _audit_product_event(
+            audit_log_path,
+            event_type="source_choice_expired",
+            chat_id=chat_id,
+            user_id=user_id,
+            command=choice.command,
+            product=choice.product,
+            status="source_choice_expired",
+            message=reply,
+            metadata={"choice_id": choice_id},
+        )
         return TelegramIntakeResult(status="source_choice_expired", message=reply, sent_messages=sent_messages)
     if action == "cancel":
         pending_choices.delete(choice_id)
         reply = "Source selection cancelled."
         send(reply)
+        _audit_product_event(
+            audit_log_path,
+            event_type="source_suggestion_cancelled",
+            chat_id=chat_id,
+            user_id=user_id,
+            command=choice.command,
+            product=choice.product,
+            status="source_choice_cancelled",
+            message=reply,
+            metadata={"choice_id": choice_id},
+        )
         return TelegramIntakeResult(status="source_choice_cancelled", message=reply, sent_messages=sent_messages)
 
     try:
@@ -328,6 +524,18 @@ def _process_source_choice_callback(
         return TelegramIntakeResult(status="source_choice_invalid", message=reply, sent_messages=sent_messages)
 
     send(_selected_choice_message(selected))
+    _audit_candidate_event(
+        audit_log_path,
+        event_type="source_suggestion_selected",
+        chat_id=chat_id,
+        user_id=user_id,
+        command=choice.command,
+        product=choice.product,
+        candidate=selected,
+        selection_method="telegram_callback",
+        status="selected",
+        metadata={"choice_id": choice_id, "candidate_index": int(action)},
+    )
     payload = _product_factory_payload(
         command_model=choice.command.model,
         product=choice.product,
@@ -349,6 +557,14 @@ def _process_source_choice_callback(
         product_factory_client=product_factory_client,
         send=send,
         sent_messages=sent_messages,
+        audit_log_path=audit_log_path,
+        chat_id=chat_id,
+        user_id=user_id,
+        selected_source=selected.source_name,
+        selected_url=selected.url,
+        selected_title=selected.title,
+        confidence=selected.confidence,
+        selection_method="telegram_callback",
     )
     if result.status == "queued":
         pending_choices.delete(choice_id)
@@ -363,12 +579,35 @@ def _enqueue_and_report(
     product_factory_client: ProductFactoryStarter,
     send: Any,
     sent_messages: list[str],
+    audit_log_path: str,
+    chat_id: str,
+    user_id: str | None,
+    selected_source: str | None = None,
+    selected_url: str | None = None,
+    selected_title: str | None = None,
+    confidence: int | str | None = None,
+    selection_method: str | None = None,
 ) -> TelegramIntakeResult:
     try:
         job = product_factory_client.start_full_pipeline(payload)
     except ProductFactoryClientError as exc:
         reply = f"Product Factory error: {exc}"
         send(reply)
+        _audit_product_event(
+            audit_log_path,
+            event_type="product_factory_enqueue_failed",
+            chat_id=chat_id,
+            user_id=user_id,
+            command=command,
+            product=product,
+            selected_source=selected_source,
+            selected_url=selected_url,
+            selected_title=selected_title,
+            confidence=confidence,
+            selection_method=selection_method,
+            status="failed",
+            message=str(exc),
+        )
         return TelegramIntakeResult(
             status="product_factory_error",
             message=reply,
@@ -378,6 +617,22 @@ def _enqueue_and_report(
 
     summary_reply = _job_started_message(command=command, product=product, job=job)
     send(summary_reply)
+    _audit_product_event(
+        audit_log_path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id=chat_id,
+        user_id=user_id,
+        command=command,
+        product=product,
+        selected_source=selected_source,
+        selected_url=selected_url,
+        selected_title=selected_title,
+        confidence=confidence,
+        selection_method=selection_method,
+        job_id=job.job_id,
+        status=job.status or "queued",
+        message=job.message,
+    )
     return TelegramIntakeResult(
         status="queued",
         message=summary_reply,
@@ -385,6 +640,245 @@ def _enqueue_and_report(
         product_factory_payload=payload,
         sent_messages=sent_messages,
     )
+
+
+def _process_status_command(
+    command: StatusCommand,
+    *,
+    chat_id: str,
+    user_id: str,
+    audit_log_path: str,
+    product_factory_client: ProductFactoryStarter,
+    send: Any,
+    sent_messages: list[str],
+) -> TelegramIntakeResult:
+    try:
+        if command.kind == "pfstatus":
+            job_id = command.job_id or ""
+            job = product_factory_client.get_job(job_id)
+            reply = _job_status_message(job)
+            send(reply)
+            _audit_event(
+                audit_log_path,
+                event_type="product_factory_status_requested",
+                chat_id=chat_id,
+                user_id=user_id,
+                model=job.model or None,
+                job_id=job.job_id,
+                status=job.status,
+                message=job.message,
+                metadata={"command": "pfstatus"},
+            )
+            return TelegramIntakeResult(
+                status="status_reported",
+                message=reply,
+                job_id=job.job_id,
+                sent_messages=sent_messages,
+            )
+
+        model = command.model or ""
+        audit_job_id = latest_enqueued_job_for_model(audit_log_path, model)
+        if audit_job_id:
+            job = product_factory_client.get_job(audit_job_id)
+        else:
+            jobs = product_factory_client.list_jobs_by_model(model)
+            if not jobs:
+                reply = f"No Product Factory job found for model {model}."
+                send(reply)
+                _audit_event(
+                    audit_log_path,
+                    event_type="product_factory_status_requested",
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    model=model,
+                    status="not_found",
+                    message=reply,
+                    metadata={"command": "status"},
+                )
+                return TelegramIntakeResult(status="status_not_found", message=reply, sent_messages=sent_messages)
+            job = jobs[0]
+
+        reply = _job_status_message(job)
+        send(reply)
+        _audit_event(
+            audit_log_path,
+            event_type="product_factory_status_requested",
+            chat_id=chat_id,
+            user_id=user_id,
+            model=model,
+            job_id=job.job_id,
+            status=job.status,
+            message=job.message,
+            metadata={"command": "status", "source": "audit" if audit_job_id else "by_model"},
+        )
+        return TelegramIntakeResult(
+            status="status_reported",
+            message=reply,
+            job_id=job.job_id,
+            sent_messages=sent_messages,
+        )
+    except ProductFactoryClientError as exc:
+        reply = f"Product Factory status error: {exc}"
+        send(reply)
+        _audit_event(
+            audit_log_path,
+            event_type="product_factory_status_failed",
+            chat_id=chat_id,
+            user_id=user_id,
+            model=command.model,
+            job_id=command.job_id,
+            status="failed",
+            message=str(exc),
+            metadata={"command": command.kind},
+        )
+        return TelegramIntakeResult(status="status_error", message=reply, sent_messages=sent_messages)
+
+
+def _parse_status_command(text: str) -> StatusCommand | None:
+    tokens = str(text or "").split(maxsplit=1)
+    if not tokens:
+        return None
+    command = tokens[0].casefold()
+    rest = tokens[1].strip() if len(tokens) > 1 else ""
+    if command == "/pfstatus" or command.startswith("/pfstatus@"):
+        job_id = _parse_pfstatus_job_id(rest)
+        if job_id is None:
+            raise StatusCommandParseError(f"Invalid /pfstatus command.\n{_PFSTATUS_USAGE}")
+        return StatusCommand(kind="pfstatus", job_id=job_id)
+    if command == "status":
+        model_tokens = rest.split()
+        if len(model_tokens) != 1 or not _MODEL_RE.fullmatch(model_tokens[0]):
+            raise StatusCommandParseError(f"Invalid status command.\n{_STATUS_MODEL_USAGE}")
+        return StatusCommand(kind="status", model=model_tokens[0])
+    return None
+
+
+def _parse_pfstatus_job_id(rest: str) -> str | None:
+    if not rest:
+        return None
+    raw_tokens = rest.split()
+    if len(raw_tokens) == 1 and ":" not in raw_tokens[0]:
+        return raw_tokens[0]
+    match = re.fullmatch(r"(?i)job(?:_id)?\s*:\s*(\S+)", rest)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _job_status_message(job: ProductFactoryJob) -> str:
+    return "\n".join(
+        [
+            "Product Factory status",
+            f"job_id: {job.job_id}",
+            f"type: {job.job_type or '-'}",
+            f"model: {job.model or '-'}",
+            f"status: {job.status or '-'}",
+            f"message: {job.message or '-'}",
+            f"error: {job.error or '-'}",
+            f"updated_at: {job.updated_at or '-'}",
+        ]
+    )
+
+
+def _audit_command_received(
+    *,
+    audit_log_path: str,
+    chat_id: str,
+    user_id: str,
+    command: ProductFactoryCommand,
+) -> None:
+    _audit_product_event(
+        audit_log_path,
+        event_type="telegram_command_received",
+        chat_id=chat_id,
+        user_id=user_id,
+        command=command,
+        product=None,
+        status="received",
+    )
+
+
+def _audit_product_event(
+    audit_log_path: str,
+    *,
+    event_type: str,
+    chat_id: str | None,
+    user_id: str | None,
+    command: ProductFactoryCommand,
+    product: WarehouseProduct | None,
+    selected_source: str | None = None,
+    selected_url: str | None = None,
+    selected_title: str | None = None,
+    confidence: int | str | None = None,
+    selection_method: str | None = None,
+    job_id: str | None = None,
+    status: str | None = None,
+    message: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    _audit_event(
+        audit_log_path,
+        event_type=event_type,
+        chat_id=chat_id,
+        user_id=user_id,
+        model=command.model,
+        product_name=product.name if product else None,
+        bestprice_enabled=command.bestprice_enabled,
+        skroutz_enabled=command.skroutz_enabled,
+        boxnow_enabled=command.boxnow_enabled,
+        selected_source=selected_source,
+        selected_url=selected_url,
+        selected_title=selected_title,
+        confidence=confidence,
+        selection_method=selection_method,
+        job_id=job_id,
+        status=status,
+        message=message,
+        metadata=metadata,
+    )
+
+
+def _audit_candidate_event(
+    audit_log_path: str,
+    *,
+    event_type: str,
+    chat_id: str | None,
+    user_id: str | None,
+    command: ProductFactoryCommand,
+    product: WarehouseProduct,
+    candidate: SourceResolutionCandidate,
+    selection_method: str,
+    status: str,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    _audit_product_event(
+        audit_log_path,
+        event_type=event_type,
+        chat_id=chat_id,
+        user_id=user_id,
+        command=command,
+        product=product,
+        selected_source=candidate.source_name,
+        selected_url=candidate.url,
+        selected_title=candidate.title,
+        confidence=candidate.confidence,
+        selection_method=selection_method,
+        status=status,
+        metadata=metadata,
+    )
+
+
+def _audit_event(audit_log_path: str, **kwargs: Any) -> None:
+    append_event(path=audit_log_path, **kwargs)
+
+
+def _candidate_metadata(candidate: SourceResolutionCandidate) -> dict[str, Any]:
+    return {
+        "source_name": candidate.source_name,
+        "url": candidate.url,
+        "title": candidate.title,
+        "confidence": candidate.confidence,
+    }
 
 
 def _product_factory_payload(

@@ -271,6 +271,29 @@ short choice ID and candidate index, never full URLs. Pending choices are stored
 server-side and expire after 15 minutes by default. Expired or cancelled choices
 do not enqueue.
 
+Telegram Product Factory intake writes an append-only JSONL audit log at
+`PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH`, defaulting to
+`output/product_factory_telegram/audit.jsonl`. It records non-sensitive command,
+warehouse, source-selection, enqueue, and status events. It does not store bot
+tokens, webhook secrets, API keys, or full Telegram updates. There is no log
+rotation, cleanup, or retention in the current implementation.
+
+Status commands supported through the same authorized webhook:
+
+```text
+/pfstatus <job_id>
+/pfstatus job_id: <job_id>
+/pfstatus job: <job_id>
+status 012345
+```
+
+`/pfstatus` requires exactly one job ID. `status <model>` requires one 6-digit
+model and preserves leading zeros. It checks the JSONL audit log for the latest
+Telegram-started enqueue for that model, then falls back to Product Factory
+`GET /api/jobs/by-model/{model}` when no audit match is available. Status
+responses contain only Product Factory job status/message fields and do not
+fetch or include logs, scrape-source URLs, source titles, or confidence scores.
+
 ### Vendor Sources
 
 ```text

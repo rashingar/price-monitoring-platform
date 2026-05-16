@@ -152,6 +152,28 @@ warehouse identity, candidates, creation time, and expiry time. They expire
 after 15 minutes by default. Expired or cancelled choices are deleted and never
 enqueue.
 
+Telegram Product Factory events are also written to an append-only JSONL audit
+log configured by `PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH`, defaulting to
+`output/product_factory_telegram/audit.jsonl`. It records non-sensitive intake
+decisions, source selection outcomes, enqueue outcomes, and status requests.
+It does not include bot tokens, webhook secrets, API keys, or full Telegram
+updates. Rotation, cleanup, and retention are not implemented yet.
+
+Status commands:
+
+```text
+/pfstatus <job_id>
+/pfstatus job_id: <job_id>
+/pfstatus job: <job_id>
+status 012345
+```
+
+`/pfstatus` resolves one exact job ID. `status <model>` preserves leading zeros,
+uses the audit log to find the latest Telegram-started job for that model, and
+falls back to Product Factory jobs by model when no audit match is available.
+Status replies are intentionally limited to job status/message fields and do
+not include logs, scrape-source URLs, source titles, or confidence values.
+
 Verify readiness from the repo root:
 
 ```powershell
