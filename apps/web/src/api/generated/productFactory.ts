@@ -119,6 +119,10 @@ export interface paths {
     /** List Jobs By Model */
     get: operations["list_jobs_by_model_api_jobs_by_model__model__get"];
   };
+  "/api/jobs/full-pipeline": {
+    /** Full Pipeline Job */
+    post: operations["full_pipeline_job_api_jobs_full_pipeline_post"];
+  };
   "/api/jobs/prepare": {
     /** Prepare Job */
     post: operations["prepare_job_api_jobs_prepare_post"];
@@ -580,6 +584,48 @@ export interface components {
       /** Value Id */
       value_id: string;
     };
+    /** FullPipelineJobRequest */
+    FullPipelineJobRequest: {
+      /**
+       * Bestprice Enabled
+       * @default false
+       */
+      bestprice_enabled?: boolean;
+      /**
+       * Boxnow Enabled
+       * @default false
+       */
+      boxnow_enabled?: boolean;
+      /** Model */
+      model: string;
+      /**
+       * Photos
+       * @default 20
+       */
+      photos?: number;
+      /** Product Name */
+      product_name?: string | null;
+      /**
+       * Sections
+       * @default 20
+       */
+      sections?: number;
+      /**
+       * Skroutz Enabled
+       * @default false
+       */
+      skroutz_enabled?: boolean;
+      /** Source Resolution */
+      source_resolution?: {
+        [key: string]: unknown;
+      } | null;
+      /** Source Url */
+      source_url: string;
+      /** Telegram Chat Id */
+      telegram_chat_id?: string | null;
+      /** Trigger Source */
+      trigger_source?: string | null;
+    };
     /** HealthResponse */
     HealthResponse: {
       /**
@@ -657,7 +703,7 @@ export interface components {
      * JobType
      * @enum {string}
      */
-    JobType: "prepare" | "authoring_intro" | "authoring_seo" | "render" | "publish";
+    JobType: "prepare" | "authoring_intro" | "authoring_seo" | "render" | "publish" | "full_pipeline";
     /** PrepareJobRequest */
     PrepareJobRequest: {
       /**
@@ -1721,6 +1767,28 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["JobListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Full Pipeline Job */
+  full_pipeline_job_api_jobs_full_pipeline_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FullPipelineJobRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        content: {
+          "application/json": components["schemas"]["JobResponse"];
         };
       };
       /** @description Validation Error */
