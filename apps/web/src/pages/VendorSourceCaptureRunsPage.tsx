@@ -11,7 +11,7 @@ import { ArtifactList } from "../components/ArtifactList";
 import { EmptyState, ErrorState, LoadingState } from "../components/layout/StateBlocks";
 
 const DEFAULT_CAPTURE_REQUEST: VendorSourceCaptureRunRequest = {
-  source_filter: "",
+  source_name: "",
   limit: 50,
   include_not_due: false,
   refresh_after_minutes: 1440,
@@ -150,27 +150,22 @@ function dedupeCapabilities(sources: VendorSourceCapability[]): VendorSourceCapa
   });
 }
 
-function parseCatalogProductIds(value: string): Array<number | string> {
+function parseCatalogProductIds(value: string): number[] {
   return value
     .split(",")
     .map((item) => item.trim())
     .filter((item) => item.length > 0)
-    .map((item) => {
-      const parsed = Number(item);
-      return Number.isFinite(parsed) ? parsed : item;
-    });
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
 }
 
 function makeRunRequest(form: VendorSourceCaptureRunRequest, catalogProductIdsText: string): VendorSourceCaptureRunRequest {
-  const sourceFilter = typeof form.source_filter === "string" ? form.source_filter.trim() : "";
+  const sourceName = typeof form.source_name === "string" ? form.source_name.trim() : "";
   return {
-    source_filter: sourceFilter,
-    limit: form.limit === null ? null : Math.max(1, Number(form.limit) || 50),
+    source_name: sourceName,
+    limit: Math.max(1, Number(form.limit) || 50),
     include_not_due: form.include_not_due === true,
-    refresh_after_minutes:
-      form.refresh_after_minutes === null
-        ? null
-        : Math.max(0, Number(form.refresh_after_minutes) || 0),
+    refresh_after_minutes: Math.max(0, Number(form.refresh_after_minutes) || 0),
     catalog_product_ids: parseCatalogProductIds(catalogProductIdsText),
   };
 }
@@ -294,7 +289,7 @@ export function VendorSourceCaptureRunsPage() {
   };
 
   const launchRun = async () => {
-    if (typeof form.source_filter !== "string" || form.source_filter.trim().length === 0) {
+    if (typeof form.source_name !== "string" || form.source_name.trim().length === 0) {
       setNotice("Choose one source/vendor to capture.");
       return;
     }
@@ -359,7 +354,7 @@ export function VendorSourceCaptureRunsPage() {
   };
 
   const artifacts = artifactResponse?.items ?? [];
-  const sourceRequired = typeof form.source_filter !== "string" || form.source_filter.trim().length === 0;
+  const sourceRequired = typeof form.source_name !== "string" || form.source_name.trim().length === 0;
 
   return (
     <div className="page-stack vendor-source-captures-page">
@@ -409,8 +404,8 @@ export function VendorSourceCaptureRunsPage() {
             <label title="Choose one capture-ready Vendor Sources source/vendor.">
               Source/vendor
               <select
-                value={String(form.source_filter)}
-                onChange={(event) => updateForm("source_filter", event.target.value)}
+                value={String(form.source_name)}
+                onChange={(event) => updateForm("source_name", event.target.value)}
               >
                 <option value="">Choose one source/vendor</option>
                 {captureSourceOptions.map((source) => (

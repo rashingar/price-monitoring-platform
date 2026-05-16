@@ -1247,7 +1247,7 @@ describe("platform mocked page smoke tests", () => {
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&
-          request.body.source_filter === "electronet" &&
+          request.body.source_name === "electronet" &&
           request.body.limit === 50,
       ),
     ).toBe(true);
@@ -1304,7 +1304,7 @@ describe("platform mocked page smoke tests", () => {
           typeof request.body === "object" &&
           request.body !== null &&
           !Array.isArray(request.body) &&
-          request.body.handoff_path === "work/005606/integrations/ecommerce_source_handoff.json" &&
+          request.body.file_path === "work/005606/integrations/ecommerce_source_handoff.json" &&
           request.body.persist_initial_capture === false,
       ),
     ).toBe(true);

@@ -2429,7 +2429,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
     method: "POST",
     path: "/commerce-api/vendor-sources/captures/runs",
     requestExample: {
-      source_filter: "electronet",
+      source_name: "electronet",
       limit: 50,
       include_not_due: false,
       refresh_after_minutes: 1440,
@@ -2557,7 +2557,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
     method: "POST",
     path: "/commerce-api/catalog/source-urls/import/product-factory/preview",
     requestExample: {
-      handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
+      file_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
       limit: null,
@@ -2569,7 +2569,7 @@ export const commerceFixtureRoutes: MockRoute[] = [
     method: "POST",
     path: "/commerce-api/catalog/source-urls/import/product-factory/apply",
     requestExample: {
-      handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
+      file_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
       limit: null,

@@ -223,10 +223,11 @@ def test_vendor_source_capture_api_response_snapshot(fixtures_root: Path, tmp_pa
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     monkeypatch.setattr(routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None)
-    monkeypatch.setattr(
-        routes_vendor_sources,
-        "run_vendor_source_capture",
-        lambda *_args, **_kwargs: SourceUrlCaptureRunResult(
+    capture_kwargs: dict[str, object] = {}
+
+    def fake_run_vendor_source_capture(*_args: object, **kwargs: object) -> SourceUrlCaptureRunResult:
+        capture_kwargs.update(kwargs)
+        return SourceUrlCaptureRunResult(
             status="completed",
             used_source_urls=True,
             source="electronet",
@@ -243,15 +244,22 @@ def test_vendor_source_capture_api_response_snapshot(fixtures_root: Path, tmp_pa
             items=[{"product_source_id": 1, "vendor": "electronet", "status": "success"}],
             source_urls=[{"id": 1, "source_name": "electronet", "status": "active"}],
             result_path=None,
-        ),
+        )
+
+    monkeypatch.setattr(
+        routes_vendor_sources,
+        "run_vendor_source_capture",
+        fake_run_vendor_source_capture,
     )
 
     response = TestClient(create_app()).post(
         "/api/vendor-sources/captures/runs",
-        json={"vendor_slug": "electronet", "limit": 1, "include_not_due": True},
+        json={"source_name": "electronet", "limit": 1, "include_not_due": True},
     )
 
     assert response.status_code == 200
+    assert capture_kwargs["source_name"] == "electronet"
+    assert capture_kwargs["vendor_slug"] is None
     payload = response.json()
     actual = {
         key: payload[key]

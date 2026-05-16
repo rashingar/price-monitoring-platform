@@ -35,6 +35,8 @@ export type EcommerceContractSourceUrlImportRequest =
   EcommerceSchema<"SourceUrlImportRequest">;
 export type EcommerceContractProductFactoryHandoffImportRequest =
   EcommerceSchema<"ProductFactoryHandoffImportRequest">;
+export type EcommerceContractVendorSourceCaptureRunRequest =
+  EcommerceSchema<"VendorSourceCaptureRunApiRequest">;
 export type EcommerceContractStockSyncRunRequest =
   EcommerceSchema<"StockSyncRunRequest">;
 export type EcommerceContractStockSyncLatestResponse =
@@ -243,7 +245,8 @@ export interface SourceUrlImportRequest {
 }
 
 export interface ProductFactoryHandoffImportRequest {
-  handoff_path: string;
+  file_path: string;
+  file?: string | null;
   catalog_source?: string | null;
   persist_initial_capture: boolean;
   limit?: number | null;
@@ -587,11 +590,16 @@ export interface PlatformHealthResponse {
 }
 
 export interface VendorSourceCaptureRunRequest {
-  source_filter?: SourceName | string | null;
-  limit?: number | null;
+  source_name?: SourceName | string;
+  vendor_slug?: string;
+  catalog_source?: string;
+  limit?: number;
   include_not_due?: boolean;
-  refresh_after_minutes?: number | null;
-  catalog_product_ids?: Array<number | string>;
+  refresh_after_minutes?: number;
+  catalog_product_ids?: number[];
+  product_source_ids?: number[];
+  dry_run?: boolean;
+  admin_all_sources?: boolean;
   [key: string]: unknown;
 }
 
@@ -1532,6 +1540,8 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<ReadCsvFileBody, EcommerceContractCsvReadRequest>,
   AssertAssignable<SaveCsvFileBody, EcommerceContractCsvSaveRequest>,
   AssertAssignable<SaveCsvCopyBody, EcommerceContractCsvSaveCopyRequest>,
+  AssertAssignable<ProductFactoryHandoffImportRequest, EcommerceContractProductFactoryHandoffImportRequest>,
+  AssertAssignable<VendorSourceCaptureRunRequest, EcommerceContractVendorSourceCaptureRunRequest>,
   AssertAssignable<StockSyncRunRequest, EcommerceContractStockSyncRunRequest>,
   AssertAssignable<StockSyncLatestResponse, EcommerceContractStockSyncLatestResponse>,
   AssertAssignable<StockSyncReadinessResponse, EcommerceContractStockSyncReadinessResponse>,

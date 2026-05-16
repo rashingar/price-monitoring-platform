@@ -247,7 +247,7 @@ describe("commerce API client contract fixtures", () => {
   });
 
   it("loads source URL summary and import preview/apply reports", async () => {
-    installMockFetch(commerceFixtureRoutes);
+    const mockFetch = installMockFetch(commerceFixtureRoutes);
 
     await expect(commerceClient.getSourceUrlSummary()).resolves.toMatchObject({
       total_count: sourceUrlSummary.total_count,
@@ -306,7 +306,7 @@ describe("commerce API client contract fixtures", () => {
     });
 
     const handoffBody = {
-      handoff_path: "work/005606/integrations/ecommerce_source_handoff.json",
+      file_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
       report_items_limit: 200,
@@ -336,6 +336,31 @@ describe("commerce API client contract fixtures", () => {
       changed_source_urls: expect.arrayContaining([
         expect.objectContaining({ action: "created" }),
       ]),
+    });
+
+    expect(
+      mockFetch.requests.find(
+        (request) =>
+          request.method === "POST" &&
+          request.pathname === "/commerce-api/catalog/source-urls/import/product-factory/preview",
+      )?.body,
+    ).toEqual({
+      file_path: "work/005606/integrations/ecommerce_source_handoff.json",
+      catalog_source: "sourceCata",
+      persist_initial_capture: true,
+      report_items_limit: 200,
+    });
+    expect(
+      mockFetch.requests.find(
+        (request) =>
+          request.method === "POST" &&
+          request.pathname === "/commerce-api/catalog/source-urls/import/product-factory/apply",
+      )?.body,
+    ).toEqual({
+      file_path: "work/005606/integrations/ecommerce_source_handoff.json",
+      catalog_source: "sourceCata",
+      persist_initial_capture: true,
+      report_items_limit: 200,
     });
   });
 
@@ -503,7 +528,7 @@ describe("commerce API client contract fixtures", () => {
 
     await expect(
       commerceClient.createVendorSourceCaptureRun({
-        source_filter: "electronet",
+        source_name: "electronet",
         limit: 50,
         include_not_due: false,
         refresh_after_minutes: 1440,
@@ -514,6 +539,20 @@ describe("commerce API client contract fixtures", () => {
       status: "queued",
       source_filter: "electronet",
       observation_batch_id: "batch-capture-002",
+    });
+
+    expect(
+      mockFetch.requests.find(
+        (request) =>
+          request.method === "POST" &&
+          request.pathname === "/commerce-api/vendor-sources/captures/runs",
+      )?.body,
+    ).toEqual({
+      source_name: "electronet",
+      limit: 50,
+      include_not_due: false,
+      refresh_after_minutes: 1440,
+      catalog_product_ids: [],
     });
 
     await expect(commerceClient.getVendorSourceCaptureRun("capture-run-001")).resolves.toMatchObject({

@@ -225,8 +225,8 @@ def test_product_factory_handoff_preview_and_apply(tmp_path: Path, monkeypatch) 
             encoding="utf-8",
         )
 
-    preview = client.post("/api/catalog/source-urls/import/product-factory/preview", json={"file": str(handoff_path)})
-    apply = client.post("/api/catalog/source-urls/import/product-factory/apply", json={"file": str(handoff_path)})
+    preview = client.post("/api/catalog/source-urls/import/product-factory/preview", json={"file_path": str(handoff_path)})
+    apply = client.post("/api/catalog/source-urls/import/product-factory/apply", json={"file_path": str(handoff_path)})
 
     assert preview.status_code == 200
     assert apply.status_code == 200

@@ -192,7 +192,7 @@ export function VendorSourceImportsPage() {
     const parsedLimit = limit.trim().length > 0 ? Number(limit) : null;
     const parsedReportLimit = reportItemsLimit.trim().length > 0 ? Number(reportItemsLimit) : null;
     return {
-      handoff_path: handoffPath.trim(),
+      file_path: handoffPath.trim(),
       catalog_source: catalogSource.trim() || "sourceCata",
       persist_initial_capture: persistInitialCapture,
       limit: Number.isFinite(parsedLimit) ? parsedLimit : null,
@@ -335,7 +335,7 @@ export function VendorSourceImportsPage() {
             <button
               className="button secondary"
               type="submit"
-              disabled={isPreviewLoading || isApplyLoading || requestBody.handoff_path.length === 0}
+              disabled={isPreviewLoading || isApplyLoading || requestBody.file_path.length === 0}
             >
               {isPreviewLoading ? "Previewing..." : "Preview"}
             </button>
