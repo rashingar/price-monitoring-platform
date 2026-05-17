@@ -388,6 +388,8 @@ describe("commerce API client contract fixtures", () => {
     });
     expect(handoffPreviewBody).not.toHaveProperty("file");
     expect(handoffApplyBody).not.toHaveProperty("file");
+    expect(handoffPreviewBody).not.toHaveProperty("handoff_path");
+    expect(handoffApplyBody).not.toHaveProperty("handoff_path");
   });
 
   it("constructs Source URL Agent run URLs and normalizes run artifacts", async () => {
@@ -581,6 +583,7 @@ describe("commerce API client contract fixtures", () => {
     });
     expect(captureRunBody).not.toHaveProperty("source");
     expect(captureRunBody).not.toHaveProperty("source_filter");
+    expect(captureRunBody).not.toHaveProperty("vendor");
 
     await expect(commerceClient.getVendorSourceCaptureRun("capture-run-001")).resolves.toMatchObject({
       run_id: "capture-run-001",

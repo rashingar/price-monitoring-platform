@@ -3,6 +3,12 @@ import { ApiError, apiClient } from "../../api/client";
 import type {
   PrepareJobRequest,
   ProductFactoryContractPrepareJobRequest,
+  ProductFactoryContractPublishJobRequest,
+  ProductFactoryContractRenderJobRequest,
+  ProductFactoryContractStopJobRequest,
+  PublishJobRequest,
+  RenderJobRequest,
+  StopJobRequest,
 } from "../../api/types";
 import { installMockFetch } from "../mockFetch";
 import {
@@ -298,6 +304,44 @@ describe("Product Factory API client contract fixtures", () => {
 
     expect(mock.requests[0]?.body).toEqual(payload);
     expect(mock.requests[0]?.body).not.toMatchObject({ price: null });
+  });
+
+  it("sends generated Product Factory job request payloads unchanged", async () => {
+    const mock = installMockFetch([
+      {
+        method: "POST",
+        path: "/api/jobs/render",
+        response: { job: { job_id: "render-1", job_type: "render", status: "queued" } },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/publish",
+        response: { job: { job_id: "publish-1", job_type: "publish", status: "queued" } },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/job-succeeded-1/stop",
+        response: { job: { job_id: "job-succeeded-1", status: "cancelled" } },
+      },
+    ]);
+
+    const renderPayload = { model: "005606" } satisfies RenderJobRequest;
+    const generatedRenderPayload: ProductFactoryContractRenderJobRequest = renderPayload;
+    const publishPayload = {
+      model: "005606",
+      current_job_product_file: "apps/product-factory-api/products/005606.csv",
+    } satisfies PublishJobRequest;
+    const generatedPublishPayload: ProductFactoryContractPublishJobRequest = publishPayload;
+    const stopPayload = { reason: "operator requested" } satisfies StopJobRequest;
+    const generatedStopPayload: ProductFactoryContractStopJobRequest = stopPayload;
+
+    await apiClient.createRenderJob(generatedRenderPayload);
+    await apiClient.createPublishJob(generatedPublishPayload);
+    await apiClient.stopJob("job-succeeded-1", generatedStopPayload.reason ?? undefined);
+
+    expect(mock.requests[0]?.body).toEqual(renderPayload);
+    expect(mock.requests[1]?.body).toEqual(publishPayload);
+    expect(mock.requests[2]?.body).toEqual(stopPayload);
   });
 
   it("exposes useful API error messages for 409 and 422 responses", async () => {

@@ -45,20 +45,16 @@ export type ProductFactoryStageName =
 
 export type PrepareJobRequest = ProductFactoryContractPrepareJobRequest;
 
-export interface ModelJobRequest {
-  model: string;
-}
+export type ModelJobRequest = Pick<ProductFactoryContractRenderJobRequest, "model">;
 
 export type AuthoringIntroJobRequest = ProductFactoryContractAuthoringIntroJobRequest;
 export type AuthoringSeoJobRequest = ProductFactoryContractAuthoringSeoJobRequest;
 
-export type RenderJobRequest = ModelJobRequest;
+export type RenderJobRequest = ProductFactoryContractRenderJobRequest;
 
-export type PublishJobRequest = ModelJobRequest;
+export type PublishJobRequest = ProductFactoryContractPublishJobRequest;
 
-export interface StopJobRequest {
-  reason?: string | null;
-}
+export type StopJobRequest = ProductFactoryContractStopJobRequest;
 
 export interface HealthResponse {
   status?: string;
