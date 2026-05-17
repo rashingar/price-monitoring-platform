@@ -18,4 +18,9 @@ if ($env:PYTHONPATH) {
 
 Set-Location $appRoot
 & $python -m pytest -vv -ra -m postgres_required
-exit $LASTEXITCODE
+$exitCode = $LASTEXITCODE
+if ($exitCode -eq 5) {
+    Write-Host "No postgres_required tests selected; skipping PostgreSQL profile."
+    exit 0
+}
+exit $exitCode

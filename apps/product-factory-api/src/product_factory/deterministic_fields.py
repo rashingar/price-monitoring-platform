@@ -1040,15 +1040,17 @@ def iter_specs(key_specs: list[SpecItem], spec_sections: list[SpecSection], *, k
 
 
 def normalize_value(spec_lookup: dict[str, str], labels: list[str]) -> str:
-    normalized_labels = {
+    exact_labels = {normalize_for_match(label) for label in labels if normalize_for_match(label)}
+    alias_labels = {
         normalized
         for label in labels
         for normalized in (candidate_label_keys(label) or {normalize_whitespace(label)})
-        if normalized
+        if normalized and normalized not in exact_labels
     }
-    for label, value in spec_lookup.items():
-        if label in normalized_labels and value:
-            return normalize_whitespace(value)
+    for accepted_labels in (exact_labels, alias_labels):
+        for label, value in spec_lookup.items():
+            if label in accepted_labels and value:
+                return normalize_whitespace(value)
     return ""
 
 

@@ -367,6 +367,20 @@ def test_apply_source_specific_gallery_rules_skroutz_source_url_skips_last_image
     assert metadata["skipped_url"] == "https://cdn.example/3.jpg"
 
 
+def test_apply_source_specific_gallery_rules_skroutz_single_image_keeps_image() -> None:
+    images = [GalleryImage(url="https://cdn.example/1.jpg", position=1)]
+
+    filtered, metadata = apply_source_specific_gallery_rules(
+        images,
+        source_url="https://www.skroutz.gr/s/123456/example.html",
+    )
+
+    assert [image.url for image in filtered] == ["https://cdn.example/1.jpg"]
+    assert metadata["rule"] == "skroutz_skip_last_gallery_image"
+    assert metadata["skroutz_skip_last_applied"] is False
+    assert metadata["skipped_url"] == ""
+
+
 def test_apply_source_specific_gallery_rules_manual_skroutz_url_skips_last_image() -> None:
     images = [GalleryImage(url="https://cdn.example/1.jpg"), GalleryImage(url="https://cdn.example/2.jpg")]
 

@@ -596,11 +596,17 @@ export interface components {
        * @default false
        */
       boxnow_enabled?: boolean;
+      /**
+       * Gallery Mode
+       * @default all
+       * @constant
+       */
+      gallery_mode?: "all";
       /** Model */
       model: string;
       /**
        * Photos
-       * @default 20
+       * @default 100
        */
       photos?: number;
       /** Product Name */
@@ -713,6 +719,8 @@ export interface components {
       boxnow?: number;
       /** Characteristics Url */
       characteristics_url?: string | null;
+      /** Gallery Mode */
+      gallery_mode?: "all" | null;
       /** Gallery Url */
       gallery_url?: string | null;
       /** Model */

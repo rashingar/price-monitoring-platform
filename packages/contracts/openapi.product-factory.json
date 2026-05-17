@@ -1128,12 +1128,18 @@
             "title": "Boxnow Enabled",
             "type": "boolean"
           },
+          "gallery_mode": {
+            "const": "all",
+            "default": "all",
+            "title": "Gallery Mode",
+            "type": "string"
+          },
           "model": {
             "title": "Model",
             "type": "string"
           },
           "photos": {
-            "default": 20,
+            "default": 100,
             "minimum": 1.0,
             "title": "Photos",
             "type": "integer"
@@ -1478,6 +1484,18 @@
               }
             ],
             "title": "Characteristics Url"
+          },
+          "gallery_mode": {
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gallery Mode"
           },
           "gallery_url": {
             "anyOf": [

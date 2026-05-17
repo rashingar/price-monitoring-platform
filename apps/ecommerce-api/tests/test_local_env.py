@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 
@@ -154,10 +155,14 @@ def test_power_shell_root_env_helper_uses_root_before_app_local(tmp_path: Path) 
         "passConfigured=[bool]$env:OPENCART_ADMIN_PASS "
         "}; $payload | ConvertTo-Json -Depth 3"
     )
+    env = os.environ.copy()
+    for key in ("VITE_COMMERCE_API_PROXY_TARGET", "VITE_API_PROXY_TARGET", "OPENCART_ADMIN_PASS"):
+        env.pop(key, None)
 
     completed = subprocess.run(
         ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
         cwd=REPO_ROOT,
+        env=env,
         text=True,
         capture_output=True,
         timeout=60,

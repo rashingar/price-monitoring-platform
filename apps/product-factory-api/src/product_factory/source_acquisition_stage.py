@@ -602,6 +602,8 @@ def apply_source_specific_gallery_rules(
     metadata["rule"] = "skroutz_skip_last_gallery_image"
     if not images:
         return [], metadata
+    if len(images) == 1:
+        return list(images), metadata
 
     skipped = images[-1]
     metadata["skroutz_skip_last_applied"] = True
