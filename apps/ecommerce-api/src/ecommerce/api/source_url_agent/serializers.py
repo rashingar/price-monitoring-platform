@@ -12,7 +12,7 @@ from ecommerce.artifacts import artifact_link_payload
 from ecommerce.db.models.source_urls import SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
 from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.db.repositories.source_urls import source_url_to_dict
-from ecommerce.source_url_agent.agent import SourceUrlAgentResult
+from ecommerce.source_url_agent.options import SourceUrlAgentResult
 from ecommerce.source_url_agent.review_service import SourceUrlCandidatePromotionResult
 from ecommerce.source_url_agent.sources import SourceDefinition
 

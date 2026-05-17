@@ -332,8 +332,8 @@ def test_seo_authoring_retry_rewrites_only_seo(isolated_repo: Path) -> None:
 def test_authoring_api_routes_are_included_and_queue_jobs(isolated_repo: Path) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
-    from product_factory.api.job_runner import SequentialJobRunner
-    from product_factory.api.job_store import JobStore
+    from product_factory.jobs.runner import SequentialJobRunner
+    from product_factory.jobs.store import JobStore
 
     _write_prepared_authoring_artifacts(isolated_repo)
     store = JobStore(isolated_repo / "jobs")

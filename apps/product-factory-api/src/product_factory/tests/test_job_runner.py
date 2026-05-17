@@ -5,10 +5,10 @@ import threading
 import time
 from pathlib import Path
 
-from product_factory.api import job_runner
-from product_factory.api.job_models import JobRecord, JobStatus, JobType
-from product_factory.api.job_runner import LogCallback, SequentialJobRunner, run_full_pipeline_job
-from product_factory.api.job_store import JobStore
+from product_factory.jobs import runner as job_runner
+from product_factory.jobs.models import JobRecord, JobStatus, JobType
+from product_factory.jobs.runner import LogCallback, SequentialJobRunner, run_full_pipeline_job
+from product_factory.jobs.store import JobStore
 from product_factory.services.authoring_service import AuthoringStatus, IntroTextTaskStatus, SeoMetaTaskStatus
 from product_factory.services import (
     PrepareRequest,
@@ -569,7 +569,7 @@ def test_subprocess_runner_launches_child_and_records_process_metadata(tmp_path:
     store = JobStore(tmp_path / "jobs")
     code = (
         "import sys;"
-        "from product_factory.api.job_store import JobStore;"
+        "from product_factory.jobs.store import JobStore;"
         "s=JobStore(sys.argv[2]);"
         "s.append_log(sys.argv[1], 'child ran');"
         "s.update_artifacts(sys.argv[1], {'metadata_path': sys.argv[3]});"
@@ -626,7 +626,7 @@ def test_parent_preserves_terminal_status_written_by_child_on_nonzero_exit(tmp_p
     store = JobStore(tmp_path / "jobs")
     code = (
         "import sys;"
-        "from product_factory.api.job_store import JobStore;"
+        "from product_factory.jobs.store import JobStore;"
         "s=JobStore(sys.argv[2]);"
         "s.mark_succeeded(sys.argv[1], message='child already done');"
         "sys.exit(9)"
@@ -748,7 +748,7 @@ def test_same_model_jobs_do_not_run_concurrently_with_multiple_workers(tmp_path:
         "from pathlib import Path;"
         "Path(sys.argv[1]).write_text('started', encoding='utf-8');"
         "time.sleep(0.4);"
-        "from product_factory.api.job_store import JobStore;"
+        "from product_factory.jobs.store import JobStore;"
         "JobStore(sys.argv[3]).mark_succeeded(sys.argv[2], message='done')"
     )
 

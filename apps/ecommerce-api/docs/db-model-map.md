@@ -42,8 +42,10 @@ from ecommerce.db.models import Base
 target_metadata = Base.metadata
 ```
 
-Direct imports from `ecommerce.db.models.base` are only for model modules that
-need the shared declarative base without triggering package registration.
+Direct imports from `ecommerce.db.models.base` are for model modules that need
+the shared declarative base without triggering package registration, and for
+tests that explicitly import the model submodules required by their schema
+setup. Use the package loader when a caller needs full metadata registration.
 
 ## Ownership Rules
 

@@ -5,7 +5,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.alerts import AlertRule  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402

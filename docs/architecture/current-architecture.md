@@ -150,6 +150,6 @@ run until `.\scripts\setup\web.ps1` or `npm ci` has been run in `apps/web`.
 ## Architecture Debt
 
 Remaining boundary debt is tracked in
-[Architecture Debt Register](../architecture-debt-register.md). New work should
+[Architecture Debt Register](architecture-debt-register.md). New work should
 either preserve those guardrails or update the register with an explicit
 decision, risk, and follow-up action.

@@ -7,6 +7,7 @@ PACKAGE_ROOT = PROJECT_ROOT / "product_factory"
 REPO_ROOT = PROJECT_ROOT.parents[2]
 
 API_JOB_COMPAT_MODULES = {
+    "product_factory.api.job_models",
     "product_factory.api.job_runner",
     "product_factory.api.job_store",
 }

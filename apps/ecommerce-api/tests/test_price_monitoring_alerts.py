@@ -21,7 +21,7 @@ from ecommerce.db.repositories.alerts import (  # noqa: E402
     list_alert_events,
     resolve_alert_event,
 )
-from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.products import Product  # noqa: E402
 from ecommerce.db.models.price_monitoring import MonitoringRun, PriceObservation  # noqa: E402

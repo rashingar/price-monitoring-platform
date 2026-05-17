@@ -20,15 +20,6 @@ ALLOWED_NON_API_IMPORTS_FROM_API = {
     ("ecommerce/source_url_agent/candidate_history_service.py", "ecommerce.api.source_url_agent.serializers"),
 }
 
-ALLOWED_SOURCE_URL_AGENT_AGENT_IMPORTS = {
-    "ecommerce/api/source_url_agent/runs.py",
-    "ecommerce/api/source_url_agent/serializers.py",
-    "ecommerce/api/source_url_agent/state.py",
-    "ecommerce/jobs/source_url_agent.py",
-    "ecommerce/source_url_agent/__init__.py",
-    "ecommerce/source_url_agent/job_handler.py",
-}
-
 DEPRECATED_DB_WRAPPER_MODULES = {
     "ecommerce.db.alerts",
     "ecommerce.db.capture_persistence",
@@ -150,13 +141,12 @@ def test_domain_and_service_code_do_not_import_api_route_modules() -> None:
     assert violations == []
 
 
-def test_source_url_agent_agent_compat_imports_are_known_only() -> None:
+def test_application_code_does_not_import_source_url_agent_agent_facade() -> None:
     violations = []
     for path in _python_files(SRC_ROOT):
         relative = _src_relative(path)
         if "ecommerce.source_url_agent.agent" in _module_imports(path):
-            if relative not in ALLOWED_SOURCE_URL_AGENT_AGENT_IMPORTS:
-                violations.append(f"{relative} imports ecommerce.source_url_agent.agent")
+            violations.append(f"{relative} imports ecommerce.source_url_agent.agent")
 
     assert violations == []
 

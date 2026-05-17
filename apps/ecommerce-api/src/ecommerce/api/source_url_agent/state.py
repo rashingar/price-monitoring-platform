@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ecommerce.source_url_agent.agent import Resolver
+from ecommerce.source_url_agent.options import Resolver
 
 SOURCE_URL_AGENT_API_RESOLVER: Resolver | None = None
 

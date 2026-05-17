@@ -7,7 +7,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.catalog_update import CATALOG_UPDATE_JOB_TYPE  # noqa: E402
 from ecommerce.catalog_update import service as catalog_update_service  # noqa: E402
-from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, mark_running, record_progress, request_cancel  # noqa: E402

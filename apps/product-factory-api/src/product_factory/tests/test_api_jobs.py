@@ -5,14 +5,14 @@ from pathlib import Path
 import pytest
 
 from product_factory.api.artifact_resolver import resolve_job_artifacts
-from product_factory.api.job_models import JobRecord, JobStatus, JobType
-from product_factory.api.job_runner import (
+from product_factory.jobs.models import JobRecord, JobStatus, JobType
+from product_factory.jobs.runner import (
     LogCallback,
     SequentialJobRunner,
     run_authoring_intro_job,
     run_authoring_seo_job,
 )
-from product_factory.api.job_store import JobStore
+from product_factory.jobs.store import JobStore
 from product_factory.services.authoring_service import (
     AuthoringStatus,
     IntroTextTaskStatus,

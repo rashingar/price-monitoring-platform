@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from product_factory import repo_paths
 from product_factory.api.app import create_app
 from product_factory.api.artifact_resolver import resolve_job_artifacts
-from product_factory.api.job_models import JobRecord, JobStatus, JobType
+from product_factory.jobs.models import JobRecord, JobStatus, JobType
 from product_factory.models import SourceProductData, SpecItem, TaxonomyResolution
 from product_factory.services import metadata as metadata_module
 from product_factory.services.filter_review_service import get_filter_review_state

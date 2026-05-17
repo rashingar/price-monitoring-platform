@@ -18,7 +18,7 @@ from ecommerce.catalog_db import ingest_source_catalog  # noqa: E402
 from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import sanitize_database_error  # noqa: E402
 from ecommerce.db.diagnostics import get_alembic_head_revision  # noqa: E402
-from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.models.products import Product, SourceCaptureSnapshot  # noqa: E402

@@ -6,7 +6,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.session import create_session_factory, get_engine, session_scope  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, heartbeat, list_jobs, mark_running, mark_succeeded, record_progress, request_cancel  # noqa: E402

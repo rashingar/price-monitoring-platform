@@ -15,7 +15,6 @@ from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.config import is_database_configured, sanitize_database_error
 from ecommerce.db.session import session_scope
 from ecommerce.env import load_local_env_if_present
-from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent
 from ecommerce.source_url_agent.analysis import analyze_run_artifacts
 from ecommerce.source_url_agent.candidate_transfer import (
     export_source_url_candidates,
@@ -23,8 +22,10 @@ from ecommerce.source_url_agent.candidate_transfer import (
     import_source_url_candidates,
     import_source_url_transfer,
 )
+from ecommerce.source_url_agent.options import SourceUrlAgentOptions
 from ecommerce.source_url_agent.products import read_products_from_catalog, read_products_from_csv
 from ecommerce.source_url_agent.review import apply_review_csv
+from ecommerce.source_url_agent.runner import run_source_url_agent
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES
 
 

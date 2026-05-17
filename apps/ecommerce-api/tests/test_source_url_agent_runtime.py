@@ -16,7 +16,7 @@ from ecommerce.api.source_url_agent import runs as source_url_agent_run_routes  
 from ecommerce.api.source_url_agent import state as source_url_agent_api_state  # noqa: E402
 from ecommerce.api.source_url_agent import validation as source_url_agent_api_validation  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base  # noqa: E402
+from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import (  # noqa: E402
@@ -30,7 +30,6 @@ from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs import source_url_agent as source_url_agent_job  # noqa: E402
 from ecommerce.jobs.execution_policy import API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR  # noqa: E402
 from ecommerce.jobs.worker import build_default_registry, run_worker_iteration  # noqa: E402
-from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent  # noqa: E402
 from ecommerce.source_url_agent.artifacts import write_run_artifacts  # noqa: E402
 from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
 from ecommerce.source_url_agent.evidence import PageEvidence, error_evidence, extract_page_evidence  # noqa: E402
@@ -39,6 +38,7 @@ from ecommerce.source_url_agent.enqueue_service import (  # noqa: E402
     SourceUrlAgentEnqueueCommand,
     enqueue_source_url_agent_run_setup,
 )
+from ecommerce.source_url_agent.options import SourceUrlAgentOptions  # noqa: E402
 from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
 from ecommerce.source_url_agent.progress import (  # noqa: E402
     SOURCE_URL_AGENT_JOB_TYPE,
@@ -47,6 +47,7 @@ from ecommerce.source_url_agent.progress import (  # noqa: E402
     SOURCE_URL_AGENT_PROGRESS_STEP_LABELS,
     SourceUrlAgentProgressReporter,
 )
+from ecommerce.source_url_agent.runner import run_source_url_agent  # noqa: E402
 from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
 from ecommerce.source_url_agent.search import SourceSearchResult  # noqa: E402
 from ecommerce.source_url_agent.search_providers import SearchProviderDefinition  # noqa: E402

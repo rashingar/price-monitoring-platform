@@ -16,10 +16,11 @@ from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.db.repositories.jobs import get_job_by_id
 from ecommerce.db.session import session_scope
 from ecommerce.jobs.durable import execute_job
-from ecommerce.source_url_agent.agent import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult, run_source_url_agent
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate
+from ecommerce.source_url_agent.options import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult
 from ecommerce.source_url_agent.products import AgentProduct, read_products_from_catalog, read_products_from_csv
 from ecommerce.source_url_agent.progress import SourceUrlAgentProgressReporter
+from ecommerce.source_url_agent.runner import run_source_url_agent
 from ecommerce.source_url_agent.sources import SourceDefinition
 
 DEFAULT_API_MAX_PRODUCTS_PER_BATCH = 25

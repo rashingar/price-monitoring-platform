@@ -13,13 +13,14 @@ from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.source_urls import SourceUrlDiscoveryRun
 from ecommerce.db.session import session_scope
 from ecommerce.jobs.execution_policy import api_execute_durable_jobs_inline_enabled
-from ecommerce.source_url_agent.agent import SourceUrlAgentOptions, run_source_url_agent
 from ecommerce.source_url_agent.enqueue_service import (
     SourceUrlAgentEnqueueCommand,
     enqueue_source_url_agent_run_setup,
 )
 from ecommerce.source_url_agent.job_handler import execute_source_url_agent_job
+from ecommerce.source_url_agent.options import SourceUrlAgentOptions
 from ecommerce.source_url_agent.products import SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
+from ecommerce.source_url_agent.runner import run_source_url_agent
 from ecommerce.source_url_agent.sources import load_source_registry
 
 from .artifacts import source_url_agent_artifact_items, source_url_agent_artifact_listing

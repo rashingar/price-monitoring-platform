@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from product_factory.api.job_models import JobStatus, JobType
-from product_factory.api.job_runner import JobRunResult
-from product_factory.api.job_store import JobStore
+from product_factory.jobs.models import JobStatus, JobType
+from product_factory.jobs.runner import JobRunResult
+from product_factory.jobs.store import JobStore
 from product_factory.jobs import run_product_factory_job
 
 

@@ -33,7 +33,9 @@ from ecommerce.catalog_update.types import (  # noqa: E402
     ExcludedModels,
 )
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.models import Base, CatalogProductRow, SourceUrl  # noqa: E402
+from ecommerce.db.models.base import Base  # noqa: E402
+from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
+from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs.execution_policy import API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR  # noqa: E402
