@@ -48,7 +48,7 @@ The default durable worker registry currently owns:
 
 - `catalog_update_from_opencart`: Dashboard catalog update from OpenCart export
   through `/api/catalog/update-db`.
-- `source_url_agent`: Find Source queued runs through
+- `source_url_agent_run`: Find Source queued runs through
   `/api/source-url-agent/runs`.
 
 Synchronous endpoints and non-durable workflows are not changed by the inline
@@ -80,6 +80,34 @@ worker-only mode, queued jobs remain queued until a worker starts.
 - Worker logs should be captured separately from API logs.
 - The API platform health details report whether API inline durable execution is
   currently enabled or disabled.
+- The API platform health details also report the durable job backlog:
+  queued count, queued count by job type, oldest queued timestamp/age when a
+  queue exists, running count, running count by job type, and stale-running
+  candidate count by job type.
+
+## Platform Health Backlog Signal
+
+`/api/platform/health` includes the durable execution policy and backlog details
+in the existing `ecommerce_api` group. This is a backend-only observability
+signal; it does not change job endpoint payloads or frontend behavior.
+
+Interpretation:
+
+- `queued=0` with worker-only mode is healthy from a backlog perspective.
+- `queued>0` while `ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE=false` produces a
+  warning because worker-only mode requires a running durable worker to make
+  progress.
+- The oldest queued timestamp and age show how long the backlog has been
+  waiting. A growing age usually means no worker is leasing jobs or the worker
+  is not covering that job type.
+- `running>0` is normal while jobs are active.
+- `stale_running_candidates>0` produces a warning. These are running jobs whose
+  latest heartbeat, start time, update time, or creation time is older than the
+  configured stale-running threshold for that job type.
+
+The platform health signal does not detect whether an OS process named
+`ecommerce.jobs.worker` exists. It intentionally infers operational risk only
+from durable job table state: queued backlog and stale-running candidates.
 
 ## Failure Modes When Worker Is Not Running
 
@@ -90,6 +118,8 @@ make enqueue endpoints fail. Instead:
 - Catalog update and Find Source work does not progress.
 - The UI can show queued jobs but no results until a worker executes them.
 - `/api/jobs` continues to show queued/running job state.
+- `/api/platform/health` warns when queued jobs exist in worker-only mode and
+  reports the oldest queued durable job timestamp/age.
 - Starting the worker later should pick up queued jobs without changing request
   payloads or endpoint response shapes.
 
@@ -121,8 +151,9 @@ Operator smoke:
 ```
 
 The current smoke check verifies the durable jobs API responds. Before flipping
-the local default, it should also detect a missing worker or growing queued
-backlog in the intended deployment mode.
+the local default, it should also consume the platform health backlog signal in
+the intended deployment mode. Process supervision should still verify that the
+worker service exists and is running.
 
 ## Stale-Running Thresholds
 
@@ -158,5 +189,6 @@ needs database connectivity, filesystem/artifact access required by the job
 types it runs, and the same secret/config environment as the API.
 
 Do not flip the repository default until deployment automation starts the
-worker, smoke checks detect missing workers or queued backlog, and enqueue-only
-mode remains covered by tests.
+worker, smoke checks consume queued-backlog/stale-running health, process
+supervision detects missing worker services, and enqueue-only mode remains
+covered by tests.

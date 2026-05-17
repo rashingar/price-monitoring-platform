@@ -1,5 +1,6 @@
 import sys
 import inspect
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -24,6 +25,7 @@ def _install_ready_collectors(monkeypatch) -> None:
     monkeypatch.setattr(platform_health_collectors, "get_source_url_agent_readiness", lambda: _source_ready())
     monkeypatch.setattr(platform_health_collectors, "_latest_catalog_update_job", lambda: None)
     monkeypatch.setattr(platform_health_collectors, "_active_skroutz_source_url_count", lambda: 0)
+    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: None)
 
 
 def _set_opencart_config(monkeypatch, *, secret: str = "opencart-secret-value") -> None:
@@ -115,6 +117,27 @@ def _groups(payload: dict) -> dict[str, dict]:
     return {group["id"]: group for group in payload["groups"]}
 
 
+def _backlog_summary(*, queued_total: int = 0, stale_total: int = 0) -> dict:
+    queued_by_job_type = (
+        {
+            "catalog_update_from_opencart": 1,
+            "source_url_agent_run": max(0, queued_total - 1),
+        }
+        if queued_total
+        else {}
+    )
+    return {
+        "queued_total": queued_total,
+        "queued_by_job_type": queued_by_job_type,
+        "oldest_queued_at": datetime(2026, 5, 17, 10, 0, tzinfo=timezone.utc) if queued_total else None,
+        "oldest_queued_age_seconds": 3661 if queued_total else None,
+        "running_total": 1,
+        "running_by_job_type": {"source_url_agent_run": 1},
+        "stale_running_candidates_total": stale_total,
+        "stale_running_candidates_by_job_type": {"source_url_agent_run": stale_total} if stale_total else {},
+    }
+
+
 def test_platform_health_returns_ecommerce_api_group(monkeypatch) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
@@ -139,6 +162,68 @@ def test_platform_health_reports_durable_execution_policy(monkeypatch) -> None:
         "API inline durable execution fallback: disabled "
         "(ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE=false)."
     ) in group["details"]
+
+
+def test_platform_health_inline_enabled_reports_backlog_without_worker_only_warning(monkeypatch) -> None:
+    monkeypatch.setenv("ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE", "true")
+    _set_opencart_config(monkeypatch)
+    _clear_product_factory_config(monkeypatch)
+    client = _client(monkeypatch)
+    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: _backlog_summary(queued_total=2))
+
+    response = client.get("/api/platform/health")
+
+    group = _groups(response.json())["ecommerce_api"]
+    assert "Durable job backlog: queued=2, running=1, stale_running_candidates=0." in group["details"]
+    assert "Durable queued by job type: catalog_update_from_opencart=1, source_url_agent_run=1." in group["details"]
+    assert not any("worker-only mode requires a running durable worker" in warning for warning in group["warnings"])
+
+
+def test_platform_health_inline_disabled_without_queue_has_no_backlog_warning(monkeypatch) -> None:
+    monkeypatch.setenv("ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE", "false")
+    _set_opencart_config(monkeypatch)
+    _clear_product_factory_config(monkeypatch)
+    client = _client(monkeypatch)
+    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: _backlog_summary(queued_total=0))
+
+    response = client.get("/api/platform/health")
+
+    group = _groups(response.json())["ecommerce_api"]
+    assert (
+        "API inline durable execution fallback: disabled "
+        "(ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE=false)."
+    ) in group["details"]
+    assert not any("worker-only mode requires a running durable worker" in warning for warning in group["warnings"])
+
+
+def test_platform_health_inline_disabled_with_queue_warns_about_worker_only_mode(monkeypatch) -> None:
+    monkeypatch.setenv("ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE", "false")
+    _set_opencart_config(monkeypatch)
+    _clear_product_factory_config(monkeypatch)
+    client = _client(monkeypatch)
+    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: _backlog_summary(queued_total=1))
+
+    response = client.get("/api/platform/health")
+
+    group = _groups(response.json())["ecommerce_api"]
+    assert group["status"] == "warning"
+    assert any("worker-only mode requires a running durable worker" in warning for warning in group["warnings"])
+    assert any(detail.startswith("Oldest queued durable job: 2026-05-17T10:00:00+00:00") for detail in group["details"])
+
+
+def test_platform_health_stale_running_candidates_warn(monkeypatch) -> None:
+    monkeypatch.setenv("ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE", "true")
+    _set_opencart_config(monkeypatch)
+    _clear_product_factory_config(monkeypatch)
+    client = _client(monkeypatch)
+    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: _backlog_summary(stale_total=1))
+
+    response = client.get("/api/platform/health")
+
+    group = _groups(response.json())["ecommerce_api"]
+    assert group["status"] == "warning"
+    assert "Durable running jobs include 1 stale-running candidate." in group["warnings"]
+    assert "Durable stale-running candidates by job type: source_url_agent_run=1." in group["details"]
 
 
 def test_platform_health_collectors_do_not_import_api_readiness_modules() -> None:

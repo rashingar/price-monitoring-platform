@@ -135,6 +135,41 @@ def list_stale_running_jobs(
     return list(session.execute(statement).scalars())
 
 
+def durable_job_backlog_summary(
+    session: Session,
+    *,
+    stale_running_after_minutes: int = 60,
+    stale_running_after_minutes_by_job_type: dict[str, int] | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    timestamp = now or _now()
+    queued_by_job_type = _count_by_job_type(session, status="queued")
+    running_by_job_type = _count_by_job_type(session, status="running")
+    oldest_queued_at = session.execute(
+        select(func.min(EcommerceJob.created_at)).where(EcommerceJob.status == "queued")
+    ).scalar_one_or_none()
+    stale_by_job_type = _stale_running_count_by_job_type(
+        session,
+        default_minutes=stale_running_after_minutes,
+        thresholds_by_job_type=stale_running_after_minutes_by_job_type or {},
+        now=timestamp,
+    )
+    oldest_age_seconds = None
+    if oldest_queued_at is not None:
+        oldest_age_seconds = max(0, int((timestamp - _aware_datetime(oldest_queued_at)).total_seconds()))
+
+    return {
+        "queued_total": sum(queued_by_job_type.values()),
+        "queued_by_job_type": queued_by_job_type,
+        "oldest_queued_at": oldest_queued_at,
+        "oldest_queued_age_seconds": oldest_age_seconds,
+        "running_total": sum(running_by_job_type.values()),
+        "running_by_job_type": running_by_job_type,
+        "stale_running_candidates_total": sum(stale_by_job_type.values()),
+        "stale_running_candidates_by_job_type": stale_by_job_type,
+    }
+
+
 def fail_stale_running_jobs(
     session: Session,
     *,
@@ -312,6 +347,12 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _aware_datetime(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
 def _safe_error_message(message: str) -> str:
     return str(message or "").strip()[:1000]
 
@@ -334,3 +375,56 @@ def _filter_job_type(
             return statement.where(False)
         return statement.where(EcommerceJob.job_type.in_(values))
     return statement
+
+
+def _count_by_job_type(session: Session, *, status: JobStatus) -> dict[str, int]:
+    rows = session.execute(
+        select(EcommerceJob.job_type, func.count(EcommerceJob.id))
+        .where(EcommerceJob.status == status)
+        .group_by(EcommerceJob.job_type)
+        .order_by(EcommerceJob.job_type.asc())
+    ).all()
+    return {str(job_type): int(count) for job_type, count in rows}
+
+
+def _stale_running_count_by_job_type(
+    session: Session,
+    *,
+    default_minutes: int,
+    thresholds_by_job_type: dict[str, int],
+    now: datetime,
+) -> dict[str, int]:
+    thresholds = {str(key): max(1, int(value)) for key, value in thresholds_by_job_type.items()}
+    counts: dict[str, int] = {}
+    if thresholds:
+        default_cutoff = now - timedelta(minutes=max(1, int(default_minutes)))
+        statement = _stale_running_counts_statement(default_cutoff).where(
+            EcommerceJob.job_type.not_in(tuple(thresholds))
+        )
+        counts.update(_rows_to_counts(session.execute(statement).all()))
+
+    if not thresholds:
+        statement = _stale_running_counts_statement(now - timedelta(minutes=max(1, int(default_minutes))))
+        counts.update(_rows_to_counts(session.execute(statement).all()))
+        return counts
+
+    for job_type, minutes in thresholds.items():
+        statement = _stale_running_counts_statement(now - timedelta(minutes=minutes)).where(
+            EcommerceJob.job_type == job_type
+        )
+        counts.update(_rows_to_counts(session.execute(statement).all()))
+    return counts
+
+
+def _stale_running_counts_statement(cutoff: datetime) -> Select[tuple[str, int]]:
+    last_activity = func.coalesce(EcommerceJob.heartbeat_at, EcommerceJob.started_at, EcommerceJob.updated_at, EcommerceJob.created_at)
+    return (
+        select(EcommerceJob.job_type, func.count(EcommerceJob.id))
+        .where(EcommerceJob.status == "running", last_activity <= cutoff)
+        .group_by(EcommerceJob.job_type)
+        .order_by(EcommerceJob.job_type.asc())
+    )
+
+
+def _rows_to_counts(rows: Sequence[tuple[str, int]]) -> dict[str, int]:
+    return {str(job_type): int(count) for job_type, count in rows if int(count) > 0}

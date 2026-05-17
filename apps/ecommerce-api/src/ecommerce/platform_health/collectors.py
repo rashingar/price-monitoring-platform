@@ -15,12 +15,13 @@ from ecommerce.db.policy import (
     collect_catalog_database_readiness,
     collect_price_monitoring_database_readiness,
 )
-from ecommerce.db.repositories.jobs import job_to_dict, list_jobs
+from ecommerce.db.repositories.jobs import durable_job_backlog_summary, job_to_dict, list_jobs
 from ecommerce.db.session import session_scope
 from ecommerce.jobs.execution_policy import (
     API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR,
     api_execute_durable_jobs_inline_enabled,
 )
+from ecommerce.jobs.worker import default_stale_running_thresholds
 from ecommerce.platform_health.models import PlatformHealthGroup
 from ecommerce.platform_health.sanitization import (
     flag_detail,
@@ -44,18 +45,39 @@ OPENCART_REQUIRED_KEYS = (
 
 def collect_ecommerce_api_health() -> PlatformHealthGroup:
     inline_enabled = api_execute_durable_jobs_inline_enabled()
+    details = [
+        "Durable job executor: worker is canonical.",
+        (
+            f"API inline durable execution fallback: {'enabled' if inline_enabled else 'disabled'} "
+            f"({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR}={'true' if inline_enabled else 'false'})."
+        ),
+    ]
+    warnings: list[str] = []
+    backlog = _durable_job_backlog_summary()
+    if backlog is None:
+        details.append("Durable job backlog: unavailable.")
+    else:
+        details.extend(_durable_job_backlog_details(backlog))
+        queued_total = int(backlog.get("queued_total") or 0)
+        stale_total = int(backlog.get("stale_running_candidates_total") or 0)
+        if not inline_enabled and queued_total > 0:
+            warnings.append(
+                "Durable jobs are queued while API inline execution is disabled; "
+                "worker-only mode requires a running durable worker."
+            )
+        if stale_total > 0:
+            warnings.append(
+                f"Durable running jobs include {stale_total} stale-running candidate"
+                f"{'' if stale_total == 1 else 's'}."
+            )
+
     return group(
         "ecommerce_api",
         "Ecommerce API",
-        "ready",
+        "warning" if warnings else "ready",
         "Ecommerce API is responding.",
-        details=[
-            "Durable job executor: worker is canonical.",
-            (
-                f"API inline durable execution fallback: {'enabled' if inline_enabled else 'disabled'} "
-                f"({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR}={'true' if inline_enabled else 'false'})."
-            ),
-        ],
+        details=details,
+        warnings=warnings,
     )
 
 
@@ -396,6 +418,71 @@ def _latest_catalog_update_job() -> dict | None:
         "status": payload.get("status"),
         "updated_at": payload.get("updated_at"),
     }
+
+
+def _durable_job_backlog_summary() -> dict | None:
+    try:
+        with session_scope() as session:
+            return durable_job_backlog_summary(
+                session,
+                stale_running_after_minutes=60,
+                stale_running_after_minutes_by_job_type=default_stale_running_thresholds(60),
+            )
+    except Exception:
+        return None
+
+
+def _durable_job_backlog_details(backlog: dict) -> list[str]:
+    details = [
+        "Durable job backlog: "
+        f"queued={int(backlog.get('queued_total') or 0)}, "
+        f"running={int(backlog.get('running_total') or 0)}, "
+        f"stale_running_candidates={int(backlog.get('stale_running_candidates_total') or 0)}.",
+        "Durable queued by job type: " + _job_type_counts(backlog.get("queued_by_job_type")) + ".",
+        "Durable running by job type: " + _job_type_counts(backlog.get("running_by_job_type")) + ".",
+        "Durable stale-running candidates by job type: "
+        + _job_type_counts(backlog.get("stale_running_candidates_by_job_type"))
+        + ".",
+    ]
+    oldest_queued_at = backlog.get("oldest_queued_at")
+    oldest_age_seconds = backlog.get("oldest_queued_age_seconds")
+    if oldest_queued_at is not None:
+        details.append(
+            "Oldest queued durable job: "
+            f"{_isoformat_datetime(oldest_queued_at)}"
+            f" (age {_format_age(oldest_age_seconds)})."
+        )
+    return details
+
+
+def _job_type_counts(value: object) -> str:
+    if not isinstance(value, dict) or not value:
+        return "none"
+    items = [(safe_text(key), count) for key, count in value.items()]
+    formatted = [f"{key}={int(count)}" for key, count in items if key]
+    return ", ".join(formatted) if formatted else "none"
+
+
+def _isoformat_datetime(value: object) -> str:
+    if hasattr(value, "isoformat"):
+        return str(value.isoformat())
+    return safe_text(value) or "unknown"
+
+
+def _format_age(value: object) -> str:
+    seconds = int_or_none(value)
+    if seconds is None:
+        return "unknown"
+    minutes, remaining_seconds = divmod(max(0, seconds), 60)
+    hours, remaining_minutes = divmod(minutes, 60)
+    days, remaining_hours = divmod(hours, 24)
+    if days:
+        return f"{days}d {remaining_hours}h"
+    if hours:
+        return f"{hours}h {remaining_minutes}m"
+    if minutes:
+        return f"{minutes}m {remaining_seconds}s"
+    return f"{remaining_seconds}s"
 
 
 def _source_url_coverage_summary() -> dict[str, int] | None:

@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.session import create_session_factory, get_engine, session_scope  # noqa: E402
-from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, heartbeat, list_jobs, mark_running, mark_succeeded, record_progress, request_cancel  # noqa: E402
+from ecommerce.db.repositories.jobs import create_queued_job, durable_job_backlog_summary, get_job_by_id, heartbeat, list_jobs, mark_running, mark_succeeded, record_progress, request_cancel  # noqa: E402
 from ecommerce.jobs.durable import execute_job  # noqa: E402
 from ecommerce.jobs.execution_policy import (  # noqa: E402
     API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR,
@@ -50,6 +51,51 @@ def test_create_get_and_list_jobs_with_filters(tmp_path: Path) -> None:
         assert get_job_by_id(session, "job-1") is not None
         assert [job.job_id for job in list_jobs(session, job_type="vendor_capture")] == ["job-1"]
         assert [job.job_id for job in list_jobs(session, status="queued")] == ["job-2", "job-1"]
+
+
+def test_durable_job_backlog_summary_groups_counts_by_job_type(tmp_path: Path) -> None:
+    database_url = _database_url(tmp_path)
+    _create_schema(database_url)
+    now = datetime.now(timezone.utc)
+    with session_scope(database_url) as session:
+        create_queued_job(
+            session,
+            job_type="catalog_update_from_opencart",
+            payload={},
+            job_id="job-catalog",
+            created_at=now - timedelta(minutes=10),
+        )
+        create_queued_job(
+            session,
+            job_type="source_url_agent_run",
+            payload={},
+            job_id="job-source",
+            created_at=now - timedelta(minutes=5),
+        )
+        create_queued_job(session, job_type="source_url_agent_run", payload={}, job_id="job-source-running")
+        mark_running(session, "job-source-running", started_at=now - timedelta(minutes=200))
+
+        summary = durable_job_backlog_summary(
+            session,
+            stale_running_after_minutes=60,
+            stale_running_after_minutes_by_job_type={
+                "source_url_agent_run": 180,
+                "catalog_update_from_opencart": 240,
+            },
+            now=now,
+        )
+
+    assert summary["queued_total"] == 2
+    assert summary["queued_by_job_type"] == {
+        "catalog_update_from_opencart": 1,
+        "source_url_agent_run": 1,
+    }
+    assert summary["oldest_queued_at"] is not None
+    assert summary["oldest_queued_age_seconds"] >= 600
+    assert summary["running_total"] == 1
+    assert summary["running_by_job_type"] == {"source_url_agent_run": 1}
+    assert summary["stale_running_candidates_total"] == 1
+    assert summary["stale_running_candidates_by_job_type"] == {"source_url_agent_run": 1}
 
 
 def test_mark_running_heartbeat_and_success(tmp_path: Path) -> None:
