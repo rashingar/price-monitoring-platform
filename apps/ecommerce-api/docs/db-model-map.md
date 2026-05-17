@@ -26,18 +26,20 @@ from ecommerce.db.models.jobs import EcommerceJob
 from ecommerce.db.models.price_monitoring import MonitoringRun, PriceObservation
 ```
 
-`ecommerce.db.models.__init__` keeps compatibility re-exports, but those are for
-older callers and metadata registration. Do not add new application imports from
-`ecommerce.db.models` for model classes.
+`ecommerce.db.models.__init__` exists only to register all model modules for
+metadata consumers. It does not re-export `Base`, `JSON_DOCUMENT`, or model
+classes. Do not add application imports from `ecommerce.db.models` for model
+classes.
 
 ## Alembic Metadata Loading
 
-Alembic should import `Base` through `ecommerce.db.models`. Importing that
-package loads every workflow-owned model module before `Base.metadata` is read,
-so autogeneration and migration checks see all declared tables:
+Alembic should import `Base` from `ecommerce.db.models.base` and import
+`ecommerce.db.models` for side-effect registration before `Base.metadata` is
+read, so autogeneration and migration checks see all declared tables:
 
 ```python
-from ecommerce.db.models import Base
+import ecommerce.db.models as _model_registration  # noqa: F401
+from ecommerce.db.models.base import Base
 
 target_metadata = Base.metadata
 ```

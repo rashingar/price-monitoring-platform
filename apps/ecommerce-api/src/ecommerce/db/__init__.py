@@ -8,7 +8,8 @@ from ecommerce.db.config import (
     sanitize_database_error,
     sanitize_database_url,
 )
-from ecommerce.db.models import Base
+import ecommerce.db.models as _model_registration  # noqa: F401
+from ecommerce.db.models.base import Base
 from ecommerce.db.session import check_database_reachable, get_engine, session_scope
 
 __all__ = [

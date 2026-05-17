@@ -5,6 +5,9 @@ from pathlib import Path
 
 import pytest
 
+# Load all SQLAlchemy model modules so Base.metadata-backed test schemas are complete.
+import ecommerce.db.models as _model_registration  # noqa: F401
+
 
 @pytest.fixture(scope="session")
 def fixtures_root() -> Path:

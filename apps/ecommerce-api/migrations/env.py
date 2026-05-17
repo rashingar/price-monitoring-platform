@@ -8,7 +8,8 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from ecommerce.db.config import get_database_url
-from ecommerce.db.models import Base
+import ecommerce.db.models as _model_registration  # noqa: F401
+from ecommerce.db.models.base import Base
 from ecommerce.env import load_local_env_if_present
 
 load_local_env_if_present()
@@ -18,8 +19,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Importing ecommerce.db.models loads every workflow-owned model module before
-# Alembic reads Base.metadata.
+# Importing ecommerce.db.models above loads every workflow-owned model module
+# before Alembic reads Base.metadata.
 target_metadata = Base.metadata
 
 

@@ -12,9 +12,9 @@ from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
 from ecommerce.db.models.price_monitoring import MonitoringRun  # noqa: E402
 from ecommerce.db.models.products import ProductSource  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
-from ecommerce.db.repositories import json_safe_value as compatibility_json_safe_value  # noqa: E402
 from ecommerce.db.repositories.alerts import create_alert_rule  # noqa: E402
 from ecommerce.db.repositories.capture_persistence import persist_capture_result  # noqa: E402,F401
+from ecommerce.db.repositories.common import json_safe_value  # noqa: E402
 from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id  # noqa: E402
 from ecommerce.db.repositories.price_monitoring import get_monitoring_run, monitoring_run_to_dict  # noqa: E402
 from ecommerce.db.repositories.products import product_source_to_dict  # noqa: E402
@@ -102,4 +102,21 @@ def test_repository_domain_imports_and_representative_behavior(tmp_path: Path) -
         )
         assert vendor_source_capture_run_to_dict(run_row)["run_id"] == "capture-1"
 
-    assert compatibility_json_safe_value({"at": now}) == {"at": now.isoformat()}
+    assert json_safe_value({"at": now}) == {"at": now.isoformat()}
+
+
+def test_repository_package_does_not_reexport_helpers() -> None:
+    import ecommerce.db.repositories as repository_package  # noqa: E402
+
+    removed_exports = {
+        "ObservationReplacementResult",
+        "ProductFromSourceResult",
+        "get_monitoring_run",
+        "json_safe_value",
+        "list_jobs",
+        "product_source_to_dict",
+        "source_url_to_dict",
+    }
+
+    assert repository_package.__all__ == []
+    assert [name for name in sorted(removed_exports) if hasattr(repository_package, name)] == []

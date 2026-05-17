@@ -12,6 +12,12 @@ API_JOB_COMPAT_MODULES = {
     "product_factory.api.job_store",
 }
 
+REMOVED_API_JOB_COMPAT_FILES = {
+    "product_factory/api/job_models.py",
+    "product_factory/api/job_runner.py",
+    "product_factory/api/job_store.py",
+}
+
 
 def _python_files(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
@@ -64,12 +70,16 @@ def _obvious_unreachable_locations(path: Path) -> list[str]:
     return locations
 
 
-def test_non_api_runtime_code_does_not_import_api_job_compat_shims() -> None:
+def test_api_job_compat_shim_files_are_not_recreated() -> None:
+    existing = [relative for relative in sorted(REMOVED_API_JOB_COMPAT_FILES) if (PROJECT_ROOT / relative).exists()]
+
+    assert existing == []
+
+
+def test_code_does_not_import_removed_api_job_compat_shims() -> None:
     violations = []
     for path in _python_files(PACKAGE_ROOT):
         relative = _src_relative(path)
-        if relative.startswith(("product_factory/api/", "product_factory/tests/")):
-            continue
         for imported in _module_imports(path):
             if imported in API_JOB_COMPAT_MODULES:
                 violations.append(f"{relative} imports {imported}")

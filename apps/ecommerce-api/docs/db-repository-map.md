@@ -20,7 +20,7 @@ ownership rules as the DB model package.
 
 ## Import Policy
 
-New code should import from the workflow-owned module:
+Code must import from the workflow-owned module:
 
 ```python
 from ecommerce.db.repositories.source_urls import get_source_url
@@ -28,9 +28,8 @@ from ecommerce.db.repositories.price_monitoring import get_monitoring_run
 from ecommerce.db.repositories.jobs import create_queued_job
 ```
 
-`ecommerce.db.repositories` remains a compatibility barrel for older imports.
-Do not add new application imports from the barrel unless a compatibility path
-is explicitly needed.
+`ecommerce.db.repositories` is only a package marker and does not re-export
+repository helpers. Do not import helpers from the package barrel.
 
 ## Layering Rules
 

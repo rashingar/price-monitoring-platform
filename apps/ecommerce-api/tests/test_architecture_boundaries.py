@@ -30,6 +30,23 @@ DEPRECATED_DB_WRAPPER_MODULES = {
     "ecommerce.db.source_url_repository",
 }
 
+REMOVED_COMPAT_MODULE_FILES = {
+    "src/ecommerce/source_url_agent/agent.py",
+    "src/ecommerce/db/alerts.py",
+    "src/ecommerce/db/capture_persistence.py",
+    "src/ecommerce/db/observation_persistence.py",
+    "src/ecommerce/db/product_source_repository.py",
+    "src/ecommerce/db/source_convergence.py",
+    "src/ecommerce/db/source_health.py",
+    "src/ecommerce/db/source_url_repository.py",
+    "src/ecommerce/vendor_sources/run_repository.py",
+}
+
+REMOVED_COMPAT_IMPORTS = DEPRECATED_DB_WRAPPER_MODULES | {
+    "ecommerce.source_url_agent.agent",
+    "ecommerce.vendor_sources.run_repository",
+}
+
 
 def _python_files(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
@@ -80,6 +97,10 @@ def _repo_relative(path: Path) -> str:
 
 def _src_relative(path: Path) -> str:
     return path.relative_to(PROJECT_ROOT / "src").as_posix()
+
+
+def _project_relative(path: Path) -> str:
+    return path.relative_to(PROJECT_ROOT).as_posix()
 
 
 def _is_allowed_import(relative: str, imported: str, allowed_imports: set[tuple[str, str]]) -> bool:
@@ -141,12 +162,20 @@ def test_domain_and_service_code_do_not_import_api_route_modules() -> None:
     assert violations == []
 
 
-def test_application_code_does_not_import_source_url_agent_agent_facade() -> None:
+def test_removed_compatibility_module_files_are_not_recreated() -> None:
+    existing = [relative for relative in sorted(REMOVED_COMPAT_MODULE_FILES) if (PROJECT_ROOT / relative).exists()]
+
+    assert existing == []
+
+
+def test_source_and_tests_do_not_import_removed_compatibility_paths() -> None:
     violations = []
-    for path in _python_files(SRC_ROOT):
-        relative = _src_relative(path)
-        if "ecommerce.source_url_agent.agent" in _module_imports(path):
-            violations.append(f"{relative} imports ecommerce.source_url_agent.agent")
+    for root in (SRC_ROOT, PROJECT_ROOT / "tests"):
+        for path in _python_files(root):
+            relative = _project_relative(path)
+            imports = _module_imports(path)
+            for imported in sorted(imports & REMOVED_COMPAT_IMPORTS):
+                violations.append(f"{relative} imports {imported}")
 
     assert violations == []
 

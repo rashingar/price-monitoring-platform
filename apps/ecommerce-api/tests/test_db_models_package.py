@@ -6,7 +6,7 @@ from sqlalchemy.orm import configure_mappers
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-import ecommerce.db.models as model_package  # noqa: E402
+import ecommerce.db.models as model_registration  # noqa: E402,F401
 from ecommerce.db.models.base import Base as BaseFromBase  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
@@ -46,12 +46,10 @@ EXPECTED_TABLE_NAMES = [
 
 
 def test_model_package_metadata_contains_all_current_tables() -> None:
-    assert sorted(model_package.Base.metadata.tables) == EXPECTED_TABLE_NAMES
+    assert sorted(BaseFromBase.metadata.tables) == EXPECTED_TABLE_NAMES
 
 
 def test_domain_model_imports_share_one_metadata_registry() -> None:
-    assert model_package.Base is BaseFromBase
-
     representative_models = [
         AlertEvent,
         AlertRule,
@@ -73,11 +71,40 @@ def test_domain_model_imports_share_one_metadata_registry() -> None:
         VendorSourceCaptureRun,
     ]
 
-    assert {model.__table__.metadata for model in representative_models} == {model_package.Base.metadata}
+    assert {model.__table__.metadata for model in representative_models} == {BaseFromBase.metadata}
 
 
 def test_metadata_loader_path_supports_alembic_table_discovery() -> None:
     configure_mappers()
 
-    assert model_package.Base.metadata is BaseFromBase.metadata
-    assert sorted(table.name for table in model_package.Base.metadata.sorted_tables) == EXPECTED_TABLE_NAMES
+    assert sorted(table.name for table in BaseFromBase.metadata.sorted_tables) == EXPECTED_TABLE_NAMES
+
+
+def test_model_package_does_not_reexport_model_classes_or_base() -> None:
+    import ecommerce.db.models as model_package  # noqa: E402
+
+    removed_exports = {
+        "AlertEvent",
+        "AlertRule",
+        "Base",
+        "CatalogProductRow",
+        "CatalogSnapshot",
+        "EcommerceJob",
+        "JSON_DOCUMENT",
+        "MonitoringRun",
+        "OfferObservation",
+        "PriceObservation",
+        "PriceObservationListing",
+        "Product",
+        "ProductSource",
+        "SourceCaptureSnapshot",
+        "SourceUrl",
+        "SourceUrlCandidate",
+        "SourceUrlDiscoveryRun",
+        "SourceUrlDiscoveryTask",
+        "Vendor",
+        "VendorSourceCaptureRun",
+    }
+
+    assert model_package.__all__ == []
+    assert [name for name in sorted(removed_exports) if hasattr(model_package, name)] == []
