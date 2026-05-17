@@ -2,6 +2,7 @@ import type { components as EcommerceOpenApi } from "./generated/ecommerce";
 
 type EcommerceSchema<Name extends keyof EcommerceOpenApi["schemas"]> =
   EcommerceOpenApi["schemas"][Name];
+type WithRequiredFields<Base, Keys extends keyof Base> = Base & Required<Pick<Base, Keys>>;
 type AssertAssignable<Actual extends Expected, Expected> = true;
 
 export type EcommerceContractAlertRuleCreateRequest =
@@ -47,6 +48,8 @@ export type EcommerceContractStockSyncLatestResponse =
   EcommerceSchema<"StockSyncLatestResponse">;
 export type EcommerceContractStockSyncReadinessResponse =
   EcommerceSchema<"StockSyncReadinessResponse">;
+export type EcommerceContractStockSyncRunResponse =
+  EcommerceSchema<"StockSyncRunResponse">;
 
 export type MarketplaceFilter = "all" | "bestprice" | "skroutz" | "both" | "none";
 
@@ -522,51 +525,40 @@ export interface SourceUrlAgentRunArtifactsResponse extends ArtifactListResponse
   items: ArtifactItem[];
 }
 
-export type SourceUrlAgentReadinessStatus = "ready" | "warning" | "blocked";
+export type SourceUrlAgentReadinessStatus =
+  EcommerceSchema<"SourceUrlAgentReadinessResponse">["status"];
 
-export interface SourceUrlAgentProviderReadiness {
-  provider_name: string;
-  provider_type: string;
-  enabled: boolean;
-  configured: boolean;
-  required_env_keys: string[];
-  missing_env_keys: string[];
-  allow_high_confidence_auto_apply: boolean;
-  notes: string;
-}
+export type SourceUrlAgentProviderReadiness = WithRequiredFields<
+  EcommerceSchema<"SourceUrlAgentProviderReadiness">,
+  "required_env_keys" | "missing_env_keys" | "notes"
+>;
 
-export interface SourceUrlAgentReadiness {
-  status: SourceUrlAgentReadinessStatus;
+type SourceUrlAgentReadinessRuntimeDefaults = {
   providers: SourceUrlAgentProviderReadiness[];
   default_provider_order: string[];
   source_cascades: Record<string, string[]>;
-  warnings: string[];
-  blocking_reasons: string[];
-}
-
-export type PlatformHealthStatus = "ready" | "warning" | "blocked" | "unknown";
-
-export interface PlatformHealthLink {
-  label: string;
-  url: string;
-}
-
-export interface PlatformHealthGroup {
-  id: string;
-  label: string;
-  status: PlatformHealthStatus;
-  summary: string;
-  details: string[];
   blocking_reasons: string[];
   warnings: string[];
-  links: PlatformHealthLink[];
-}
+};
 
-export interface PlatformHealthResponse {
-  status: PlatformHealthStatus;
+export type SourceUrlAgentReadiness =
+  EcommerceSchema<"SourceUrlAgentReadinessResponse"> & SourceUrlAgentReadinessRuntimeDefaults;
+
+export type PlatformHealthStatus = EcommerceSchema<"PlatformHealthResponse">["status"];
+
+export type PlatformHealthLink = EcommerceSchema<"PlatformHealthLink">;
+
+export type PlatformHealthGroup = WithRequiredFields<
+  EcommerceSchema<"PlatformHealthGroup">,
+  "details" | "blocking_reasons" | "warnings" | "links"
+>;
+
+type PlatformHealthRuntimeDefaults = {
   groups: PlatformHealthGroup[];
-  updated_at: string;
-}
+};
+
+export type PlatformHealthResponse =
+  EcommerceSchema<"PlatformHealthResponse"> & PlatformHealthRuntimeDefaults;
 
 export type VendorSourceCaptureRunRequest =
   EcommerceSchema<"VendorSourceCaptureRunApiRequest">;
@@ -1452,44 +1444,14 @@ export type StockSyncMode = "review" | "dry_run" | "import";
 
 export type StockSyncRunRequest = EcommerceContractStockSyncRunRequest;
 
-export interface StockSyncRunResponse {
-  mode: StockSyncMode | string;
-  task_name: string;
-  server: string;
-  triggered_at: string;
-  stdout?: string | null;
-  stderr?: string | null;
-  message: string;
-  [key: string]: unknown;
-}
+export type StockSyncRunResponse = EcommerceContractStockSyncRunResponse;
 
-export interface StockSyncLatestResponse {
-  available: boolean;
-  message?: string | null;
-  status?: string | null;
-  ok_to_upload?: boolean | null;
-  run_id?: string | null;
-  run_dir?: string | null;
-  created_at?: string | null;
-  counts: Record<string, unknown>;
-  warnings: unknown[];
-  hard_failures: unknown[];
-  safety?: Record<string, unknown> | null;
-  orchestrator?: Record<string, unknown> | null;
-  [key: string]: unknown;
-}
+export type StockSyncLatestResponse = WithRequiredFields<
+  EcommerceContractStockSyncLatestResponse,
+  "counts" | "warnings" | "hard_failures"
+>;
 
-export interface StockSyncReadinessResponse {
-  enabled: boolean;
-  server: string;
-  tasks: Record<StockSyncMode | string, string>;
-  latest_review_path: string;
-  latest_review_exists: boolean;
-  latest_review_readable: boolean;
-  latest_review_error?: string | null;
-  schtasks_available: boolean;
-  [key: string]: unknown;
-}
+export type StockSyncReadinessResponse = EcommerceContractStockSyncReadinessResponse;
 
 type _EcommerceGeneratedContractChecks = [
   AssertAssignable<SourceUrlCreateBody, EcommerceContractSourceUrlCreateRequest>,
@@ -1516,4 +1478,5 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<StockSyncRunRequest, EcommerceContractStockSyncRunRequest>,
   AssertAssignable<StockSyncLatestResponse, EcommerceContractStockSyncLatestResponse>,
   AssertAssignable<StockSyncReadinessResponse, EcommerceContractStockSyncReadinessResponse>,
+  AssertAssignable<StockSyncRunResponse, EcommerceContractStockSyncRunResponse>,
 ];

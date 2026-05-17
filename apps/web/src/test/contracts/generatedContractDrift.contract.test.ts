@@ -8,6 +8,20 @@ const commerceTypesSource = readFileSync(
   "utf8",
 );
 
+function expectAliasGeneratedSchemaDerived(aliasName: string, schemaName: string) {
+  const alias = new RegExp(`export\\s+type\\s+${aliasName}\\s*=([\\s\\S]*?);`, "m").exec(
+    commerceTypesSource,
+  );
+  expect(alias, `${aliasName} should be exported as a type alias`).not.toBeNull();
+
+  const aliasBody = alias?.[1] ?? "";
+  expect(
+    aliasBody.includes(`EcommerceSchema<"${schemaName}">`) ||
+      aliasBody.includes(`EcommerceContract${aliasName}`),
+    `${aliasName} should remain generated-schema-derived from ${schemaName}`,
+  ).toBe(true);
+}
+
 describe("generated API contract drift guardrails", () => {
   it("keeps Commerce request types generated-schema-derived instead of handwritten", () => {
     const handwrittenRequestInterfaces = Array.from(
@@ -46,6 +60,25 @@ describe("generated API contract drift guardrails", () => {
         directSchemaAlias.test(commerceTypesSource) || contractAlias.test(commerceTypesSource),
         `${aliasName} should remain generated-schema-derived`,
       ).toBe(true);
+    }
+  });
+
+  it("keeps selected high-risk Commerce response aliases generated-schema-derived", () => {
+    const generatedResponseAliases = [
+      ["PlatformHealthStatus", "PlatformHealthResponse"],
+      ["PlatformHealthLink", "PlatformHealthLink"],
+      ["PlatformHealthGroup", "PlatformHealthGroup"],
+      ["PlatformHealthResponse", "PlatformHealthResponse"],
+      ["SourceUrlAgentReadinessStatus", "SourceUrlAgentReadinessResponse"],
+      ["SourceUrlAgentProviderReadiness", "SourceUrlAgentProviderReadiness"],
+      ["SourceUrlAgentReadiness", "SourceUrlAgentReadinessResponse"],
+      ["StockSyncRunResponse", "StockSyncRunResponse"],
+      ["StockSyncLatestResponse", "StockSyncLatestResponse"],
+      ["StockSyncReadinessResponse", "StockSyncReadinessResponse"],
+    ];
+
+    for (const [aliasName, schemaName] of generatedResponseAliases) {
+      expectAliasGeneratedSchemaDerived(aliasName, schemaName);
     }
   });
 });
