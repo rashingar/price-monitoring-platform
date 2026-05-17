@@ -33,6 +33,12 @@ export function buildRunRequestFromHandoff(searchParams: URLSearchParams): Sourc
   };
 }
 
+function normalizeMode(
+  mode: SourceUrlAgentRunRequest["mode"] | string | null | undefined,
+): SourceUrlAgentRunRequest["mode"] {
+  return mode === "csv" ? "csv" : "catalog";
+}
+
 export function makeRunRequest(form: SourceUrlAgentRunRequest): SourceUrlAgentRunRequest {
   const selectedModels = Array.isArray(form.selected_models)
     ? parseSelectedModelsParam(form.selected_models.join(","))
@@ -41,7 +47,7 @@ export function makeRunRequest(form: SourceUrlAgentRunRequest): SourceUrlAgentRu
 
   return {
     ...form,
-    mode: String(form.mode || "catalog"),
+    mode: normalizeMode(form.mode),
     source: String(form.source || "all"),
     selected_models: selectedModels,
     limit:

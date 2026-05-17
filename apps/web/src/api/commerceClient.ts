@@ -90,6 +90,7 @@ import type {
   StockSyncRunRequest,
   StockSyncRunResponse,
   SkroutzNetworkCapturedEndpoint,
+  SkroutzNetworkDiagnosticRequest,
   SkroutzNetworkDiagnosticReport,
   SkroutzNetworkDiagnosticSummary,
   SourceUrlListResponse,
@@ -2950,7 +2951,7 @@ export const commerceClient = {
 
   async runSkroutzNetworkDiagnostic(
     sourceUrlId: string | number,
-    body: { headed?: boolean; timeout_seconds?: number } = {},
+    body: SkroutzNetworkDiagnosticRequest = {},
     signal?: AbortSignal,
   ): Promise<SkroutzNetworkDiagnosticSummary> {
     return normalizeSkroutzNetworkDiagnosticSummary(

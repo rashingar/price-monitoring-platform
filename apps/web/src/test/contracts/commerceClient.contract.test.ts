@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CommerceApiError, commerceClient } from "../../api/commerceClient";
 import type {
   ProductFactoryHandoffImportRequest,
+  SkroutzNetworkDiagnosticRequest,
   SourceUrlImportRequest,
   VendorSourceCaptureRunRequest,
 } from "../../api/commerceTypes";
@@ -635,10 +636,32 @@ describe("commerce API client contract fixtures", () => {
       capture_run_id: "capture-run-rec-001",
     });
 
+    const diagnosticBody: SkroutzNetworkDiagnosticRequest = {
+      headed: false,
+      timeout_seconds: 60,
+    };
+    await expect(commerceClient.runSkroutzNetworkDiagnostic(101, diagnosticBody)).resolves.toMatchObject({
+      source_url_id: 101,
+      vendor_slug: "skroutz",
+    });
+
+    const diagnosticRequestBody = mockFetch.requests.find(
+      (request) =>
+        request.method === "POST" &&
+        request.pathname === "/commerce-api/vendor-sources/source-urls/101/diagnostics/skroutz-network",
+    )?.body;
+    expect(diagnosticRequestBody).toEqual({
+      headed: false,
+      timeout_seconds: 60,
+    });
+    expect(diagnosticRequestBody).not.toHaveProperty("timeoutSeconds");
+    expect(diagnosticRequestBody).not.toHaveProperty("source_filter");
+
     expect(mockFetch.requests.map((request) => `${request.method} ${request.pathname}`)).toEqual(
       expect.arrayContaining([
         "GET /commerce-api/vendor-sources/source-health",
         "POST /commerce-api/vendor-sources/source-health/1001/recapture",
+        "POST /commerce-api/vendor-sources/source-urls/101/diagnostics/skroutz-network",
       ]),
     );
   });

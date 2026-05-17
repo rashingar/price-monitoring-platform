@@ -38,7 +38,7 @@ describe("source URL agent runs handoff helpers", () => {
   });
 
   it("normalizes manual launch requests without shrinking selected model batches", () => {
-    const request: SourceUrlAgentRunRequest = {
+    const request = {
       mode: "",
       source: "",
       selected_models: ["005606", " 005606 ", "123456"],
@@ -48,7 +48,7 @@ describe("source URL agent runs handoff helpers", () => {
       apply_high_confidence: false,
       limit: 1,
       rate_limit_seconds: -1,
-    };
+    } as SourceUrlAgentRunRequest;
 
     expect(makeRunRequest(request)).toMatchObject({
       mode: "catalog",

@@ -27,6 +27,8 @@ export type EcommerceContractSourceUrlUpdateRequest =
   EcommerceSchema<"SourceUrlUpdateRequest">;
 export type EcommerceContractSourceUrlCandidateReviewRequest =
   EcommerceSchema<"SourceUrlCandidateReviewRequest">;
+export type EcommerceContractSourceUrlAgentRunRequest =
+  EcommerceSchema<"SourceUrlAgentRunRequest">;
 export type EcommerceContractSourceUrlAgentReadinessResponse =
   EcommerceSchema<"SourceUrlAgentReadinessResponse">;
 export type EcommerceContractPlatformHealthResponse =
@@ -37,6 +39,8 @@ export type EcommerceContractProductFactoryHandoffImportRequest =
   EcommerceSchema<"ProductFactoryHandoffImportRequest">;
 export type EcommerceContractVendorSourceCaptureRunRequest =
   EcommerceSchema<"VendorSourceCaptureRunApiRequest">;
+export type EcommerceContractSkroutzNetworkDiagnosticRequest =
+  EcommerceSchema<"SkroutzNetworkDiagnosticApiRequest">;
 export type EcommerceContractStockSyncRunRequest =
   EcommerceSchema<"StockSyncRunRequest">;
 export type EcommerceContractStockSyncLatestResponse =
@@ -450,18 +454,8 @@ export interface ProductSourceUrlCandidateHistoryResponse {
   [key: string]: unknown;
 }
 
-export interface SourceUrlAgentRunRequest {
-  mode: "catalog" | string;
-  source: "all" | SourceName | string;
-  selected_models?: string[];
-  missing_only: boolean;
-  active_only: boolean;
-  dry_run: boolean;
-  apply_high_confidence: boolean;
-  limit: number | null;
-  rate_limit_seconds: number | null;
-  [key: string]: unknown;
-}
+export type SourceUrlAgentRunRequest =
+  EcommerceSchema<"SourceUrlAgentRunRequest">;
 
 export interface SourceUrlAgentRunSummary {
   selected_count?: number;
@@ -576,6 +570,9 @@ export interface PlatformHealthResponse {
 
 export type VendorSourceCaptureRunRequest =
   EcommerceSchema<"VendorSourceCaptureRunApiRequest">;
+
+export type SkroutzNetworkDiagnosticRequest =
+  EcommerceSchema<"SkroutzNetworkDiagnosticApiRequest">;
 
 export interface VendorSourceCaptureRunSummary {
   selected_source_url_count?: number;
@@ -1501,6 +1498,7 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<SourceUrlCreateBody, EcommerceContractSourceUrlCreateRequest>,
   AssertAssignable<SourceUrlUpdateBody, EcommerceContractSourceUrlUpdateRequest>,
   AssertAssignable<SourceUrlCandidateReviewBody, EcommerceContractSourceUrlCandidateReviewRequest>,
+  AssertAssignable<SourceUrlAgentRunRequest, EcommerceContractSourceUrlAgentRunRequest>,
   AssertAssignable<SourceUrlAgentReadiness, EcommerceContractSourceUrlAgentReadinessResponse>,
   AssertAssignable<PlatformHealthResponse, EcommerceContractPlatformHealthResponse>,
   AssertAssignable<PriceMonitoringSelectionBody, EcommerceContractPriceMonitoringSelectionRequest>,
@@ -1517,6 +1515,7 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<SourceUrlImportRequest, EcommerceContractSourceUrlImportRequest>,
   AssertAssignable<ProductFactoryHandoffImportRequest, EcommerceContractProductFactoryHandoffImportRequest>,
   AssertAssignable<VendorSourceCaptureRunRequest, EcommerceContractVendorSourceCaptureRunRequest>,
+  AssertAssignable<SkroutzNetworkDiagnosticRequest, EcommerceContractSkroutzNetworkDiagnosticRequest>,
   AssertAssignable<StockSyncRunRequest, EcommerceContractStockSyncRunRequest>,
   AssertAssignable<StockSyncLatestResponse, EcommerceContractStockSyncLatestResponse>,
   AssertAssignable<StockSyncReadinessResponse, EcommerceContractStockSyncReadinessResponse>,
