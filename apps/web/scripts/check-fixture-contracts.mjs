@@ -221,6 +221,53 @@ function assertSchemaProperties(label, schema, fields) {
   });
 }
 
+const commerceForbiddenRequestFields = [
+  {
+    method: "POST",
+    path: "/api/catalog/source-urls/import/product-factory/preview",
+    fields: ["handoff_path", "file"],
+  },
+  {
+    method: "POST",
+    path: "/api/catalog/source-urls/import/product-factory/apply",
+    fields: ["handoff_path", "file"],
+  },
+  {
+    method: "POST",
+    path: "/api/vendor-sources/captures/runs",
+    fields: ["source_filter", "source", "vendor"],
+  },
+  {
+    method: "POST",
+    path: "/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network",
+    fields: ["source_filter"],
+  },
+];
+
+function assertForbiddenRequestFields({ backend, routes, checks }) {
+  checks.forEach((check) => {
+    const method = check.method.toUpperCase();
+    const matchingRoutes = routes.filter((route) => {
+      if (String(route.method ?? "").toUpperCase() !== method) {
+        return false;
+      }
+      return compileTemplate(check.path).test(normalizeFixturePath(backend, contractPathFor(route)));
+    });
+
+    matchingRoutes.forEach((route) => {
+      const requestExample = getFixtureRequestExample(route);
+      if (!isRecord(requestExample)) {
+        return;
+      }
+      check.fields.forEach((field) => {
+        if (hasOwn(requestExample, field)) {
+          fail(`${backend}: ${routeKey(route)} requestExample must not use stale field "${field}".`);
+        }
+      });
+    });
+  });
+}
+
 const productFactoryCritical = [
   { method: "GET", path: "/api/health", fields: ["status"] },
   {
@@ -660,6 +707,11 @@ if (commerceOpenapi && productFactoryOpenapi) {
     openapi: commerceOpenapi,
     routes: commerceRoutes,
     critical: commerceCritical,
+  });
+  assertForbiddenRequestFields({
+    backend: "commerce",
+    routes: commerceRoutes,
+    checks: commerceForbiddenRequestFields,
   });
   compareRoutes({
     backend: "commerce",

@@ -1450,10 +1450,7 @@ export interface CatalogUpdateJob {
 
 export type StockSyncMode = "review" | "dry_run" | "import";
 
-export interface StockSyncRunRequest {
-  mode: StockSyncMode;
-  confirmation?: string | null;
-}
+export type StockSyncRunRequest = EcommerceContractStockSyncRunRequest;
 
 export interface StockSyncRunResponse {
   mode: StockSyncMode | string;

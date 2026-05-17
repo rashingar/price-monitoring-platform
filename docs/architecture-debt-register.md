@@ -35,6 +35,7 @@ do while the debt remains.
 | Vendor Source request type drift | web client / generated contracts | Vendor Source capture/import request types are generated-schema-derived aliases. | Low | Continue endpoint group by endpoint group. | Do not duplicate generated request shapes in handwritten frontend types. |
 | Product Factory job runtime ownership | Product Factory API / jobs runtime | Job models, store, and runner live under `product_factory.jobs`; API import paths are compatibility shims. | Low | Migrate remaining tests and scripts to preferred `product_factory.jobs.*` imports over time. | Do not place new job execution internals under `product_factory.api`. |
 | Source URL Agent route private wrappers | API routes / compatibility seams | Delegate-only private wrappers in Source URL Agent route modules were removed; tests patch public helper seams. | Low | Patch service/repository/helper seams in future tests. | Do not add route-private wrappers solely for monkeypatching. |
+| Frontend Stock Sync request type drift | web client / generated contracts | `StockSyncRunRequest` now aliases the generated OpenAPI schema instead of a handwritten interface. | Low | Keep new request bodies generated-schema-derived as endpoint groups are touched. | Do not add handwritten `*Request` interfaces in `commerceTypes.ts` when a generated schema exists. |
 
 ## Remaining Deferred Items
 
@@ -48,11 +49,27 @@ do while the debt remains.
 | Durable jobs still default to local API inline fallback | durable jobs / local operator behavior | Worker-owned execution is the long-term target, but the local default still preserves API inline execution. | Medium | Decide and document a future default flip only after operator startup and worker expectations are stable. | Do not silently change the default or job status semantics. |
 | Frontend handwritten ecommerce types remain | web client / generated contracts | `commerceClient.ts` and `commerceTypes.ts` remain transitional facades with some generated-derived aliases. | Medium | Continue replacing request groups with generated schema aliases in narrow prompts. | Do not rewrite the entire client or manually edit generated files. |
 | Product Factory API compatibility shims remain | Product Factory API / jobs runtime | `product_factory.api.job_models`, `job_runner`, and `job_store` are still used by tests and remain public compatibility shims. | Low | Migrate test imports to `product_factory.jobs.*`, then reassess shim removal separately. | Do not remove API shims until compatibility usage is proven gone. |
+| Broad unreachable-code analysis is deferred | Python critical packages | A lightweight guard now scans only recently refactored critical packages for statements immediately after `return`, `raise`, `break`, or `continue`. | Low | Expand only when there is a concrete regression class and a low-noise target. | Do not add a broad repository scanner that blocks on style or false positives. |
+
+## Known Compatibility Shims
+
+These modules remain intentionally available for now, but new application code
+should prefer the owner modules listed here.
+
+| Shim | Owner path to prefer | Why it remains | Guardrail |
+| --- | --- | --- | --- |
+| `ecommerce.source_url_agent.agent` | `ecommerce.source_url_agent.options` and `ecommerce.source_url_agent.runner` | Existing CLI/API/test imports still use the facade while Source URL Agent internals settle. | `test_source_url_agent_agent_compat_imports_are_known_only` allowlists the current import set. |
+| `ecommerce.db.repositories` barrel | Repository submodules such as `ecommerce.db.repositories.source_urls` | Lazy barrel compatibility for older imports. | `test_application_code_does_not_import_deprecated_db_barrels` blocks new app imports. |
+| `ecommerce.db.models` package barrel | Model submodules, except metadata registration through `ecommerce.db.__init__` | The package barrel registers SQLAlchemy metadata and is still needed by DB setup. | `test_application_code_does_not_import_deprecated_db_barrels` allows only documented infrastructure. |
+| Old `ecommerce.db.*` repository wrappers | `ecommerce.db.repositories.*` | Operator/scripts compatibility during repository split migration. | `test_application_code_does_not_import_old_db_wrapper_modules` blocks application imports. |
+| `product_factory.api.job_runner` and `product_factory.api.job_store` | `product_factory.jobs.runner` and `product_factory.jobs.store` | API-level import compatibility while tests/scripts migrate. | Product Factory architecture tests block non-API runtime imports from these shims. |
+| `product_factory.api.job_models` | `product_factory.jobs.models` | Public compatibility for existing tests/scripts. | Documented debt; not removed until compatibility usage is retired. |
 
 ## Guardrails
 
 The lightweight Python import-boundary guardrails live in
-`apps/ecommerce-api/tests/test_architecture_boundaries.py`.
+`apps/ecommerce-api/tests/test_architecture_boundaries.py` and
+`apps/product-factory-api/src/product_factory/tests/test_architecture_boundaries.py`.
 
 They protect against:
 
@@ -60,9 +77,28 @@ They protect against:
 - new application imports from deprecated `ecommerce.db.models` and
   `ecommerce.db.repositories` barrels;
 - new non-API imports from `ecommerce.api.*` beyond the known allowlist;
+- domain/service modules importing Ecommerce route modules such as
+  `ecommerce.api.routes_*` or `ecommerce.api.source_url_agent.*`;
 - new application imports from the `ecommerce.source_url_agent.agent`
   compatibility facade beyond the known allowlist;
 - new application imports from old `ecommerce.db.*` repository wrapper modules.
+- Product Factory non-API runtime modules importing API job compatibility shims;
+- obvious unreachable blocks in the currently critical Python packages:
+  `ecommerce.platform_health`, `ecommerce.source_url_agent`,
+  `ecommerce.db.repositories`, and `product_factory.jobs`.
+
+Frontend contract guardrails live in
+`apps/web/src/test/contracts/generatedContractDrift.contract.test.ts` and
+`apps/web/scripts/check-fixture-contracts.mjs`.
+
+They protect against:
+
+- handwritten `*Request` interfaces or object request types being reintroduced
+  in `commerceTypes.ts` when generated schemas should be used;
+- high-risk Commerce request aliases drifting away from generated OpenAPI
+  schemas;
+- fixture request examples using stale fields such as `handoff_path`, `file`,
+  or Vendor Source capture `source_filter`.
 
 If a guard fails, either move the code to the correct owner or update this
 register with a deliberate, reviewed allowlist entry and a follow-up action.
