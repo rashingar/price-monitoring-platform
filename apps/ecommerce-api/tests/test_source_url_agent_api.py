@@ -12,7 +12,12 @@ from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
-from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate  # noqa: E402
+from ecommerce.db.models.source_urls import (  # noqa: E402
+    SourceUrl,
+    SourceUrlCandidate,
+    SourceUrlDiscoveryRun,
+    SourceUrlDiscoveryTask,
+)
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.source_url_agent import readiness as readiness_module  # noqa: E402
 from ecommerce.source_url_agent.brave_search import BRAVE_SEARCH_API_KEY_ENV_VAR  # noqa: E402
@@ -121,6 +126,62 @@ def _source_url(session, product: CatalogProductRow, *, url: str) -> SourceUrl:
     return row
 
 
+def _discovery_run(
+    session,
+    *,
+    run_id: str,
+    source_name: str = "bestprice",
+    status: str = "completed",
+    created_at: datetime = NOW,
+    filters_json: dict | None = None,
+) -> SourceUrlDiscoveryRun:
+    row = SourceUrlDiscoveryRun(
+        run_id=run_id,
+        source_name=source_name,
+        mode="catalog",
+        status=status,
+        input_path=None,
+        filters_json=filters_json,
+        selected_count=2,
+        candidate_count=3,
+        matched_count=1,
+        needs_review_count=1,
+        not_found_count=0,
+        error_count=1,
+        started_at=created_at,
+        completed_at=created_at,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def _discovery_task(
+    session,
+    *,
+    run_id: str,
+    model: str,
+    status: str,
+    match_status: str | None = None,
+) -> SourceUrlDiscoveryTask:
+    row = SourceUrlDiscoveryTask(
+        run_id=run_id,
+        catalog_product_id=None,
+        model=model,
+        source_name="bestprice",
+        status=status,
+        match_status=match_status,
+        candidate_count=1,
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
 def test_vendor_sources_api_returns_discovery_and_capture_capabilities() -> None:
     response = TestClient(create_app()).get("/api/vendor-sources/sources")
 
@@ -180,6 +241,100 @@ def test_source_url_agent_canonical_namespace_returns_candidates_and_sources(tmp
     assert candidates_response.json()["items"][0]["id"] == candidate.id
     assert sources_response.status_code == 200
     assert {item["source_name"] for item in sources_response.json()["items"]} >= {"bestprice", "skroutz", "electronet"}
+
+
+def test_source_url_agent_runs_list_preserves_payload_shape_and_order(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "ecommerce.api.source_url_agent.runs.require_source_url_agent_run_database_ready",
+        lambda: None,
+    )
+    client, database_url = _client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        _discovery_run(
+            session,
+            run_id="older-run",
+            created_at=datetime(2026, 5, 1, 10, tzinfo=timezone.utc),
+        )
+        newer = _discovery_run(
+            session,
+            run_id="newer-run",
+            source_name="skroutz",
+            created_at=datetime(2026, 5, 2, 10, tzinfo=timezone.utc),
+            filters_json={"dry_run": False, "apply_high_confidence": True, "limit": 25, "rate_limit_seconds": 0.5},
+        )
+        _discovery_task(session, run_id="newer-run", model="005606", status="completed", match_status="matched")
+        _discovery_task(session, run_id="newer-run", model="005607", status="queued")
+
+    response = client.get("/api/source-url-agent/runs", params={"limit": 1, "offset": 0})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 2
+    assert payload["limit"] == 1
+    assert payload["offset"] == 0
+    assert len(payload["items"]) == 1
+    item = payload["items"][0]
+    assert item["id"] == newer.id
+    assert item["run_id"] == "newer-run"
+    assert item["source"] == "skroutz"
+    assert item["source_name"] == "skroutz"
+    assert item["dry_run"] is False
+    assert item["apply_high_confidence"] is True
+    assert item["limit"] == 25
+    assert item["rate_limit_seconds"] == 0.5
+    assert item["task_counts"] == {"completed": 1, "queued": 1}
+    assert item["task_total_count"] == 2
+    assert item["task_finished_count"] == 1
+    assert item["summary"]["candidate_count"] == 3
+    assert "tasks" not in item
+
+
+def test_source_url_agent_run_detail_preserves_tasks_and_artifacts_shape(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "ecommerce.api.source_url_agent.runs.require_source_url_agent_run_database_ready",
+        lambda: None,
+    )
+    client, database_url = _client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        _discovery_run(session, run_id="detail-run")
+        task = _discovery_task(
+            session,
+            run_id="detail-run",
+            model="005606",
+            status="failed",
+            match_status="error",
+        )
+
+    response = client.get("/api/source-url-agent/runs/detail-run")
+    missing = client.get("/api/source-url-agent/runs/missing-run")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_id"] == "detail-run"
+    assert payload["task_counts"] == {"failed": 1}
+    assert payload["task_total_count"] == 1
+    assert payload["task_finished_count"] == 1
+    assert payload["tasks"] == [
+        {
+            "id": task.id,
+            "run_id": "detail-run",
+            "catalog_product_id": None,
+            "model": "005606",
+            "source_name": "bestprice",
+            "status": "failed",
+            "match_status": "error",
+            "candidate_count": 1,
+            "error_message": None,
+            "started_at": None,
+            "completed_at": None,
+            "created_at": "2026-05-03T12:00:00+00:00",
+            "updated_at": "2026-05-03T12:00:00+00:00",
+        }
+    ]
+    assert payload["artifacts"] == []
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "Source URL Agent run not found."
 
 
 def test_source_url_agent_readiness_blocks_when_brave_api_key_is_missing(monkeypatch) -> None:

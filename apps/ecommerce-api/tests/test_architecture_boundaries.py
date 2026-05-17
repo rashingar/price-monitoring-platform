@@ -16,8 +16,6 @@ ALLOWED_DB_BARREL_IMPORTS = {
 ALLOWED_NON_API_IMPORTS_FROM_API = {
     # Contract tooling needs the assembled FastAPI app to export OpenAPI.
     ("ecommerce/jobs/export_openapi_snapshot.py", "ecommerce.api.app"),
-    # Deferred debt: move shared candidate/run payload serialization out of API.
-    ("ecommerce/source_url_agent/candidate_history_service.py", "ecommerce.api.source_url_agent.serializers"),
 }
 
 DEPRECATED_DB_WRAPPER_MODULES = {
@@ -144,6 +142,15 @@ def test_non_api_imports_from_api_are_known_debt_only() -> None:
                     violations.append(f"{relative} imports {imported}")
 
     assert violations == []
+
+
+def test_source_url_agent_candidate_history_service_does_not_import_api_modules() -> None:
+    imports = _module_imports(SRC_ROOT / "source_url_agent" / "candidate_history_service.py")
+    api_imports = sorted(
+        imported for imported in imports if imported == "ecommerce.api" or imported.startswith("ecommerce.api.")
+    )
+
+    assert api_imports == []
 
 
 def test_domain_and_service_code_do_not_import_api_route_modules() -> None:

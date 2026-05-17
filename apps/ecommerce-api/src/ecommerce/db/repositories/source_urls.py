@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.products import Product, ProductSource
-from ecommerce.db.models.source_urls import SourceUrl
+from ecommerce.db.models.source_urls import SourceUrl, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
 from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
 from ecommerce.source_urls import (
@@ -32,6 +32,14 @@ class ImportedSourceUrlUpsertResult:
     action: str
     source_url_id: int | None
     changed_fields: list[str]
+
+
+@dataclass(frozen=True)
+class SourceUrlDiscoveryRunPage:
+    items: list[SourceUrlDiscoveryRun]
+    total: int
+    limit: int
+    offset: int
 
 
 def get_active_catalog_product(session: Session, catalog_product_id: int) -> CatalogProductRow | None:
@@ -76,6 +84,63 @@ def list_active_source_urls_for_catalog_products(
     )
     if source_name:
         statement = statement.where(SourceUrl.source_name == source_name)
+    return list(session.execute(statement).scalars().all())
+
+
+def count_source_url_discovery_runs(session: Session) -> int:
+    return int(session.execute(select(func.count(SourceUrlDiscoveryRun.id))).scalar_one())
+
+
+def list_source_url_discovery_runs(
+    session: Session,
+    *,
+    limit: int,
+    offset: int,
+) -> list[SourceUrlDiscoveryRun]:
+    statement = (
+        select(SourceUrlDiscoveryRun)
+        .order_by(SourceUrlDiscoveryRun.created_at.desc(), SourceUrlDiscoveryRun.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(session.execute(statement).scalars().all())
+
+
+def list_source_url_discovery_run_page(
+    session: Session,
+    *,
+    limit: int,
+    offset: int,
+) -> SourceUrlDiscoveryRunPage:
+    return SourceUrlDiscoveryRunPage(
+        items=list_source_url_discovery_runs(session, limit=limit, offset=offset),
+        total=count_source_url_discovery_runs(session),
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_source_url_discovery_run(session: Session, run_id: str) -> SourceUrlDiscoveryRun | None:
+    return session.execute(
+        select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)
+    ).scalar_one_or_none()
+
+
+def source_url_discovery_task_counts(session: Session, run_id: str) -> dict[str, int]:
+    rows = session.execute(
+        select(SourceUrlDiscoveryTask.status, func.count(SourceUrlDiscoveryTask.id))
+        .where(SourceUrlDiscoveryTask.run_id == run_id)
+        .group_by(SourceUrlDiscoveryTask.status)
+    ).all()
+    return {str(status): int(count) for status, count in rows}
+
+
+def list_source_url_discovery_tasks(session: Session, run_id: str) -> list[SourceUrlDiscoveryTask]:
+    statement = (
+        select(SourceUrlDiscoveryTask)
+        .where(SourceUrlDiscoveryTask.run_id == run_id)
+        .order_by(SourceUrlDiscoveryTask.id.asc())
+    )
     return list(session.execute(statement).scalars().all())
 
 

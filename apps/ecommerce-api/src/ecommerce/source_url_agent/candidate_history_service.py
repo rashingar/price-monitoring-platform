@@ -7,12 +7,12 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ecommerce.api.source_url_agent.serializers import candidate_to_dict, discovery_run_to_dict
 from ecommerce.db.repositories.source_url_candidates import (
     ProductSourceUrlCandidateHistory,
     get_product_source_url_candidate_history,
     minimal_discovery_run_payload,
 )
+from ecommerce.source_url_agent.payloads import candidate_to_dict, discovery_run_to_dict
 
 
 @dataclass(frozen=True)

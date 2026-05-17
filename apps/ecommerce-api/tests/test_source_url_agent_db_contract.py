@@ -8,7 +8,18 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
-from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.models.source_urls import (  # noqa: E402
+    SourceUrl,
+    SourceUrlCandidate,
+    SourceUrlDiscoveryRun,
+    SourceUrlDiscoveryTask,
+)
+from ecommerce.db.repositories.source_urls import (  # noqa: E402
+    get_source_url_discovery_run,
+    list_source_url_discovery_run_page,
+    list_source_url_discovery_tasks,
+    source_url_discovery_task_counts,
+)
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.source_url_agent.candidate_transfer import (  # noqa: E402
     export_source_url_candidates,
@@ -404,3 +415,69 @@ def test_source_url_transfer_exports_sources_and_candidates(tmp_path: Path) -> N
     assert applied_result.counters["created_candidate_count"] == 1
     assert second_apply.counters["updated_source_url_count"] == 1
     assert second_apply.counters["updated_candidate_count"] == 1
+
+
+def test_source_url_discovery_run_history_helpers_count_order_and_get(tmp_path: Path) -> None:
+    database_url = _sqlite_url(tmp_path)
+    _create_schema(database_url)
+    with session_scope(database_url) as session:
+        older = _discovery_run("older-run", created_at=datetime(2026, 5, 1, 10, tzinfo=timezone.utc))
+        same_time_first = _discovery_run("same-time-first", created_at=NOW)
+        same_time_second = _discovery_run("same-time-second", created_at=NOW)
+        session.add_all([older, same_time_first, same_time_second])
+        session.flush()
+        session.add_all(
+            [
+                _discovery_task("same-time-second", model="A", status="completed"),
+                _discovery_task("same-time-second", model="B", status="failed"),
+                _discovery_task("same-time-second", model="C", status="queued"),
+            ]
+        )
+        session.flush()
+
+        page = list_source_url_discovery_run_page(session, limit=2, offset=0)
+        second_page = list_source_url_discovery_run_page(session, limit=2, offset=2)
+        fetched = get_source_url_discovery_run(session, "same-time-second")
+        task_counts = source_url_discovery_task_counts(session, "same-time-second")
+        task_models = [task.model for task in list_source_url_discovery_tasks(session, "same-time-second")]
+
+    assert page.total == 3
+    assert page.limit == 2
+    assert page.offset == 0
+    assert [item.run_id for item in page.items] == ["same-time-second", "same-time-first"]
+    assert [item.run_id for item in second_page.items] == ["older-run"]
+    assert fetched is not None
+    assert fetched.run_id == "same-time-second"
+    assert task_counts == {"completed": 1, "failed": 1, "queued": 1}
+    assert task_models == ["A", "B", "C"]
+
+
+def _discovery_run(run_id: str, *, created_at: datetime) -> SourceUrlDiscoveryRun:
+    return SourceUrlDiscoveryRun(
+        run_id=run_id,
+        source_name="skroutz",
+        mode="catalog",
+        status="completed",
+        selected_count=1,
+        candidate_count=1,
+        matched_count=0,
+        needs_review_count=1,
+        not_found_count=0,
+        error_count=0,
+        created_at=created_at,
+        updated_at=created_at,
+    )
+
+
+def _discovery_task(run_id: str, *, model: str, status: str) -> SourceUrlDiscoveryTask:
+    return SourceUrlDiscoveryTask(
+        run_id=run_id,
+        catalog_product_id=None,
+        model=model,
+        source_name="skroutz",
+        status=status,
+        match_status=None,
+        candidate_count=0,
+        created_at=NOW,
+        updated_at=NOW,
+    )

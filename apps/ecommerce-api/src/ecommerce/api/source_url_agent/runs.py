@@ -6,11 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
-from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models.source_urls import SourceUrlDiscoveryRun
+from ecommerce.db.repositories.source_urls import get_source_url_discovery_run, list_source_url_discovery_run_page
 from ecommerce.db.session import session_scope
 from ecommerce.jobs.execution_policy import api_execute_durable_jobs_inline_enabled
 from ecommerce.source_url_agent.enqueue_service import (
@@ -169,17 +168,11 @@ def list_source_url_agent_runs(
     require_source_url_agent_run_database_ready()
     try:
         with session_scope() as session:
-            total = int(session.execute(select(func.count(SourceUrlDiscoveryRun.id))).scalar_one())
-            statement = (
-                select(SourceUrlDiscoveryRun)
-                .order_by(SourceUrlDiscoveryRun.created_at.desc(), SourceUrlDiscoveryRun.id.desc())
-                .limit(limit)
-                .offset(offset)
-            )
-            items = [discovery_run_to_dict(row, session=session) for row in session.execute(statement).scalars().all()]
+            page = list_source_url_discovery_run_page(session, limit=limit, offset=offset)
+            items = [discovery_run_to_dict(row, session=session) for row in page.items]
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=500, detail=f"Source URL Agent run history query failed: {safe_db_error(exc)}") from exc
-    return {"items": items, "total": total, "limit": limit, "offset": offset}
+    return {"items": items, "total": page.total, "limit": page.limit, "offset": page.offset}
 
 
 @router.get("/runs/{run_id}")
@@ -187,7 +180,7 @@ def get_source_url_agent_run(run_id: str) -> dict[str, Any]:
     require_source_url_agent_run_database_ready()
     try:
         with session_scope() as session:
-            row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
+            row = get_source_url_discovery_run(session, run_id)
             if row is None:
                 raise HTTPException(status_code=404, detail="Source URL Agent run not found.")
             payload = discovery_run_to_dict(row, session=session, include_tasks=True)
