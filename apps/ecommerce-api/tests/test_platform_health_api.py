@@ -126,6 +126,21 @@ def test_platform_health_returns_ecommerce_api_group(monkeypatch) -> None:
     assert group["summary"] == "Ecommerce API is responding."
 
 
+def test_platform_health_reports_durable_execution_policy(monkeypatch) -> None:
+    monkeypatch.setenv("ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE", "false")
+    _set_opencart_config(monkeypatch)
+    _clear_product_factory_config(monkeypatch)
+
+    response = _client(monkeypatch).get("/api/platform/health")
+
+    group = _groups(response.json())["ecommerce_api"]
+    assert "Durable job executor: worker is canonical." in group["details"]
+    assert (
+        "API inline durable execution fallback: disabled "
+        "(ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE=false)."
+    ) in group["details"]
+
+
 def test_platform_health_collectors_do_not_import_api_readiness_modules() -> None:
     source = inspect.getsource(platform_health_collectors)
 

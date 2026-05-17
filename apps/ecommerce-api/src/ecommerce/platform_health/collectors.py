@@ -17,6 +17,10 @@ from ecommerce.db.policy import (
 )
 from ecommerce.db.repositories.jobs import job_to_dict, list_jobs
 from ecommerce.db.session import session_scope
+from ecommerce.jobs.execution_policy import (
+    API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR,
+    api_execute_durable_jobs_inline_enabled,
+)
 from ecommerce.platform_health.models import PlatformHealthGroup
 from ecommerce.platform_health.sanitization import (
     flag_detail,
@@ -39,11 +43,19 @@ OPENCART_REQUIRED_KEYS = (
 
 
 def collect_ecommerce_api_health() -> PlatformHealthGroup:
+    inline_enabled = api_execute_durable_jobs_inline_enabled()
     return group(
         "ecommerce_api",
         "Ecommerce API",
         "ready",
         "Ecommerce API is responding.",
+        details=[
+            "Durable job executor: worker is canonical.",
+            (
+                f"API inline durable execution fallback: {'enabled' if inline_enabled else 'disabled'} "
+                f"({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR}={'true' if inline_enabled else 'false'})."
+            ),
+        ],
     )
 
 

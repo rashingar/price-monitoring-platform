@@ -132,6 +132,9 @@ local operator behavior: the Ecommerce API enqueues durable jobs and immediately
 starts local FastAPI background execution. Set it to `false` when the API should
 enqueue only and this worker terminal must execute queued jobs.
 
+For server/self-hosted deployment readiness, use worker-only mode and the
+checks in [Durable Worker Deployment Readiness](durable-worker-deployment-readiness.md).
+
 Terminal 4:
 
 ```powershell
