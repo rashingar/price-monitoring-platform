@@ -7,6 +7,7 @@ from product_factory.models import FetchResult, GalleryImage, ParsedProduct, Sou
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import (
+    _repair_source_product_text,
     apply_second_opencart_image_index,
     apply_source_specific_gallery_rules,
     execute_source_acquisition_stage,
@@ -53,6 +54,62 @@ class RecordingFetcher:
         if self.gallery_error is not None:
             raise self.gallery_error
         return self.gallery_result
+
+
+def _make_cp1253_utf8_mojibake(text: str) -> str:
+    chars: list[str] = []
+    for byte in text.encode("utf-8"):
+        try:
+            chars.append(bytes([byte]).decode("cp1253"))
+        except UnicodeDecodeError:
+            chars.append(chr(byte))
+    return "".join(chars)
+
+
+def test_repair_source_product_text_repairs_fields_and_nested_source_data() -> None:
+    broken_power = _make_cp1253_utf8_mojibake("Ισχύς")
+    broken_max_power = _make_cp1253_utf8_mojibake("Μέγιστη Ισχύς")
+    broken_section = _make_cp1253_utf8_mojibake("Χαρακτηριστικά")
+    source = SourceProductData(
+        source_name="electronet",
+        page_type="product",
+        url="https://www.electronet.gr/example",
+        canonical_url="https://www.electronet.gr/example",
+        breadcrumbs=[broken_section, broken_power],
+        brand=broken_power,
+        name=broken_max_power,
+        hero_summary=broken_section,
+        gallery_images=[GalleryImage(url="https://cdn.example/main.jpg", alt=broken_power, position=1)],
+        besco_images=[GalleryImage(url="https://cdn.example/besco.jpg", alt=broken_max_power, position=1)],
+        key_specs=[SpecItem(label=broken_power, value=broken_max_power)],
+        spec_sections=[
+            SpecSection(section=broken_section, items=[SpecItem(label=broken_power, value=broken_max_power)])
+        ],
+        manufacturer_spec_sections=[
+            SpecSection(section=broken_section, items=[SpecItem(label=broken_power, value=broken_max_power)])
+        ],
+        presentation_source_text=broken_max_power,
+        mpn=broken_power,
+    )
+
+    _repair_source_product_text(source)
+
+    assert source.breadcrumbs == ["Χαρακτηριστικά", "Ισχύς"]
+    assert source.brand == "Ισχύς"
+    assert source.name == "Μέγιστη Ισχύς"
+    assert source.hero_summary == "Χαρακτηριστικά"
+    assert source.presentation_source_text == "Μέγιστη Ισχύς"
+    assert source.mpn == "Ισχύς"
+    assert source.gallery_images[0].alt == "Ισχύς"
+    assert source.besco_images[0].alt == "Μέγιστη Ισχύς"
+    assert source.key_specs[0].label == "Ισχύς"
+    assert source.key_specs[0].value == "Μέγιστη Ισχύς"
+    assert source.spec_sections[0].section == "Χαρακτηριστικά"
+    assert source.spec_sections[0].items[0].label == "Ισχύς"
+    assert source.spec_sections[0].items[0].value == "Μέγιστη Ισχύς"
+    assert source.manufacturer_spec_sections[0].section == "Χαρακτηριστικά"
+    assert source.manufacturer_spec_sections[0].items[0].label == "Ισχύς"
+    assert source.manufacturer_spec_sections[0].items[0].value == "Μέγιστη Ισχύς"
 
 
 def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(tmp_path: Path) -> None:

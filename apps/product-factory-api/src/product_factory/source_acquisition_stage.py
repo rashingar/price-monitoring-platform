@@ -667,6 +667,22 @@ def _repair_source_product_text(source: SourceProductData) -> None:
         "presentation_source_text",
         "mpn",
     )
+    for field_name in text_fields:
+        value = getattr(source, field_name)
+        if isinstance(value, str):
+            setattr(source, field_name, repair_mojibake_text(value))
+        elif isinstance(value, list):
+            setattr(
+                source,
+                field_name,
+                [repair_mojibake_text(item) if isinstance(item, str) else item for item in value],
+            )
+
+    _repair_gallery_images(source.gallery_images)
+    _repair_gallery_images(source.besco_images)
+    _repair_spec_items(source.key_specs)
+    _repair_spec_sections(source.spec_sections)
+    _repair_spec_sections(source.manufacturer_spec_sections)
 
 
 def _resolve_provider_for_acquisition_url(
@@ -726,17 +742,6 @@ def _resolve_provider_for_acquisition_url(
         source_capture_warnings,
         capture_sync,
     )
-    for field_name in text_fields:
-        value = getattr(source, field_name)
-        if isinstance(value, str):
-            setattr(source, field_name, repair_mojibake_text(value))
-        elif isinstance(value, list):
-            setattr(source, field_name, [repair_mojibake_text(item) if isinstance(item, str) else item for item in value])
-    _repair_gallery_images(source.gallery_images)
-    _repair_gallery_images(source.besco_images)
-    _repair_spec_items(source.key_specs)
-    _repair_spec_sections(source.spec_sections)
-    _repair_spec_sections(source.manufacturer_spec_sections)
 
 
 def _repair_gallery_images(images: list[GalleryImage]) -> None:
