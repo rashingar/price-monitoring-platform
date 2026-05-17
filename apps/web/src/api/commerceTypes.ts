@@ -234,10 +234,10 @@ export interface SourceUrlSummaryResponse {
   [key: string]: unknown;
 }
 
-export type SourceUrlImportRequest = EcommerceContractSourceUrlImportRequest;
+export type SourceUrlImportRequest = EcommerceSchema<"SourceUrlImportRequest">;
 
 export type ProductFactoryHandoffImportRequest =
-  EcommerceContractProductFactoryHandoffImportRequest;
+  EcommerceSchema<"ProductFactoryHandoffImportRequest">;
 
 export interface SourceUrlImportSummary {
   candidates_found: number;
@@ -575,7 +575,7 @@ export interface PlatformHealthResponse {
 }
 
 export type VendorSourceCaptureRunRequest =
-  EcommerceContractVendorSourceCaptureRunRequest;
+  EcommerceSchema<"VendorSourceCaptureRunApiRequest">;
 
 export interface VendorSourceCaptureRunSummary {
   selected_source_url_count?: number;
@@ -1514,6 +1514,7 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<ReadCsvFileBody, EcommerceContractCsvReadRequest>,
   AssertAssignable<SaveCsvFileBody, EcommerceContractCsvSaveRequest>,
   AssertAssignable<SaveCsvCopyBody, EcommerceContractCsvSaveCopyRequest>,
+  AssertAssignable<SourceUrlImportRequest, EcommerceContractSourceUrlImportRequest>,
   AssertAssignable<ProductFactoryHandoffImportRequest, EcommerceContractProductFactoryHandoffImportRequest>,
   AssertAssignable<VendorSourceCaptureRunRequest, EcommerceContractVendorSourceCaptureRunRequest>,
   AssertAssignable<StockSyncRunRequest, EcommerceContractStockSyncRunRequest>,

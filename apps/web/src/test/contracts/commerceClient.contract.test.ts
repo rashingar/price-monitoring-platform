@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { CommerceApiError, commerceClient } from "../../api/commerceClient";
+import type {
+  ProductFactoryHandoffImportRequest,
+  SourceUrlImportRequest,
+  VendorSourceCaptureRunRequest,
+} from "../../api/commerceTypes";
 import {
   catalogDbImportRequiredFixtureRoutes,
   catalogProductDetail,
@@ -274,7 +279,7 @@ describe("commerce API client contract fixtures", () => {
       ],
     });
 
-    const body = {
+    const body: SourceUrlImportRequest = {
       catalog_source: "sourceCata",
       include_observations: true,
       include_artifacts: true,
@@ -323,8 +328,9 @@ describe("commerce API client contract fixtures", () => {
     });
     expect(sourceImportApplyBody).toEqual(sourceImportPreviewBody);
     expect(sourceImportPreviewBody).not.toHaveProperty("report_item_limit");
+    expect(sourceImportPreviewBody).not.toHaveProperty("source_name");
 
-    const handoffBody = {
+    const handoffBody: ProductFactoryHandoffImportRequest = {
       file_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
@@ -357,30 +363,30 @@ describe("commerce API client contract fixtures", () => {
       ]),
     });
 
-    expect(
-      mockFetch.requests.find(
-        (request) =>
-          request.method === "POST" &&
-          request.pathname === "/commerce-api/catalog/source-urls/import/product-factory/preview",
-      )?.body,
-    ).toEqual({
+    const handoffPreviewBody = mockFetch.requests.find(
+      (request) =>
+        request.method === "POST" &&
+        request.pathname === "/commerce-api/catalog/source-urls/import/product-factory/preview",
+    )?.body;
+    const handoffApplyBody = mockFetch.requests.find(
+      (request) =>
+        request.method === "POST" &&
+        request.pathname === "/commerce-api/catalog/source-urls/import/product-factory/apply",
+    )?.body;
+    expect(handoffPreviewBody).toEqual({
       file_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
       report_items_limit: 200,
     });
-    expect(
-      mockFetch.requests.find(
-        (request) =>
-          request.method === "POST" &&
-          request.pathname === "/commerce-api/catalog/source-urls/import/product-factory/apply",
-      )?.body,
-    ).toEqual({
+    expect(handoffApplyBody).toEqual({
       file_path: "work/005606/integrations/ecommerce_source_handoff.json",
       catalog_source: "sourceCata",
       persist_initial_capture: true,
       report_items_limit: 200,
     });
+    expect(handoffPreviewBody).not.toHaveProperty("file");
+    expect(handoffApplyBody).not.toHaveProperty("file");
   });
 
   it("constructs Source URL Agent run URLs and normalizes run artifacts", async () => {
@@ -545,34 +551,35 @@ describe("commerce API client contract fixtures", () => {
       }),
     ]);
 
-    await expect(
-      commerceClient.createVendorSourceCaptureRun({
-        source_name: "electronet",
-        limit: 50,
-        include_not_due: false,
-        refresh_after_minutes: 1440,
-        catalog_product_ids: [],
-      }),
-    ).resolves.toMatchObject({
+    const createCaptureRunBody: VendorSourceCaptureRunRequest = {
+      source_name: "electronet",
+      limit: 50,
+      include_not_due: false,
+      refresh_after_minutes: 1440,
+      catalog_product_ids: [],
+    };
+
+    await expect(commerceClient.createVendorSourceCaptureRun(createCaptureRunBody)).resolves.toMatchObject({
       run_id: "capture-run-002",
       status: "queued",
       source_filter: "electronet",
       observation_batch_id: "batch-capture-002",
     });
 
-    expect(
-      mockFetch.requests.find(
-        (request) =>
-          request.method === "POST" &&
-          request.pathname === "/commerce-api/vendor-sources/captures/runs",
-      )?.body,
-    ).toEqual({
+    const captureRunBody = mockFetch.requests.find(
+      (request) =>
+        request.method === "POST" &&
+        request.pathname === "/commerce-api/vendor-sources/captures/runs",
+    )?.body;
+    expect(captureRunBody).toEqual({
       source_name: "electronet",
       limit: 50,
       include_not_due: false,
       refresh_after_minutes: 1440,
       catalog_product_ids: [],
     });
+    expect(captureRunBody).not.toHaveProperty("source");
+    expect(captureRunBody).not.toHaveProperty("source_filter");
 
     await expect(commerceClient.getVendorSourceCaptureRun("capture-run-001")).resolves.toMatchObject({
       run_id: "capture-run-001",
