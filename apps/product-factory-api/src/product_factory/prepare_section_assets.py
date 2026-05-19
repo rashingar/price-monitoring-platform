@@ -72,6 +72,30 @@ def _select_skroutz_image_backed_sections(
     return selected_blocks, selected_rendered_sections
 
 
+def _select_static_image_backed_sections(
+    all_sections: list[dict[str, Any]],
+    requested_sections: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    selected_blocks: list[dict[str, Any]] = []
+    selected_rendered_sections: list[dict[str, Any]] = []
+    effective_limit = min(requested_sections, len(all_sections))
+    for block in all_sections:
+        resolved_image_url = str(block.get("image_url", "")).strip()
+        if not resolved_image_url:
+            continue
+        selected_blocks.append(block)
+        selected_rendered_sections.append(
+            {
+                "title": block.get("title", ""),
+                "resolved_image_url": resolved_image_url,
+            }
+        )
+        if len(selected_blocks) == effective_limit:
+            return selected_blocks, selected_rendered_sections
+
+    return selected_blocks, selected_rendered_sections
+
+
 def _section_image_candidates_for_block(block: dict[str, Any]) -> list[str]:
     if "image_candidates" in block:
         return list(block.get("image_candidates", []))
@@ -183,10 +207,11 @@ def resolve_skroutz_section_assets(
         section_warnings = list(extracted_window.get("warnings", []))
         section_extraction_window = dict(extracted_window.get("window", section_extraction_window))
         all_sections = list(extracted_window.get("sections", []))
+        rendered_section_data: dict[str, Any] = {"window": {}, "sections": []}
         try:
             rendered_section_data = fetcher.extract_skroutz_section_image_records(final_url)
         except FetchError as exc:
-            raise RuntimeError(f"Skroutz rendered section extraction failed: {exc}") from exc
+            section_warnings.append(f"skroutz_rendered_section_extraction_failed:{exc}")
         rendered_sections = list(rendered_section_data.get("sections", []))
         rendered_window = rendered_section_data.get("window", {})
         if rendered_window:
@@ -202,16 +227,17 @@ def resolve_skroutz_section_assets(
                     int(rendered_window.get("duplicate_signatures_skipped", 0) or 0),
                 ),
             }
-        if not rendered_sections and requested_sections > 0:
-            raise RuntimeError(
-                "Skroutz rendered section extraction failed: "
-                f"expected {requested_sections} image records, found {len(rendered_sections)}"
+        if rendered_sections:
+            selected_presentation_blocks, rendered_sections = _select_skroutz_image_backed_sections(
+                all_sections=all_sections,
+                rendered_sections=rendered_sections,
+                requested_sections=requested_sections,
             )
-        selected_presentation_blocks, rendered_sections = _select_skroutz_image_backed_sections(
-            all_sections=all_sections,
-            rendered_sections=rendered_sections,
-            requested_sections=requested_sections,
-        )
+        else:
+            selected_presentation_blocks, rendered_sections = _select_static_image_backed_sections(
+                all_sections=all_sections,
+                requested_sections=requested_sections,
+            )
         if len(all_sections) < requested_sections:
             section_warnings.append(f"skroutz_sections_clamped:{len(all_sections)}/{requested_sections}")
         if len(rendered_sections) < requested_sections:

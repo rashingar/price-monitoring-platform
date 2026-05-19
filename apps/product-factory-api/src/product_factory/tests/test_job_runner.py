@@ -556,13 +556,14 @@ def test_full_pipeline_render_failure_stops_publish() -> None:
     assert calls == ["prepare", "intro", "seo", "render"]
 
 
-def test_full_pipeline_publish_failure_marks_job_failed() -> None:
-    result, calls, _logs = _run_full_pipeline_with_failure("publish")
+def test_full_pipeline_publish_failure_preserves_render_success() -> None:
+    result, calls, logs = _run_full_pipeline_with_failure("publish")
 
-    assert result.status == JobStatus.FAILED
-    assert result.message == "Full pipeline failed during publish."
+    assert result.status == JobStatus.SUCCEEDED
+    assert result.message == "Full pipeline job succeeded with publish warning."
     assert calls == ["prepare", "intro", "seo", "render", "publish"]
     assert result.error_code == ServiceErrorCode.PUBLISH_FAILURE.value
+    assert "Full pipeline publish warning: publish failed" in logs
 
 
 def test_subprocess_runner_launches_child_and_records_process_metadata(tmp_path: Path) -> None:

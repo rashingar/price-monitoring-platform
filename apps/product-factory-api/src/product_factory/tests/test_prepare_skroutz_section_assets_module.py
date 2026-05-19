@@ -475,6 +475,105 @@ def test_resolve_skroutz_section_assets_clamps_when_rendered_sections_are_insuff
     assert len(fetcher.download_calls) == 1
 
 
+def test_resolve_skroutz_section_assets_falls_back_to_static_section_images_when_rendered_extraction_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    downloaded = GalleryImage(
+        url="https://cdn.example/alpha.jpg",
+        alt="Alpha",
+        position=1,
+        local_filename="alpha.jpg",
+        local_path=str(tmp_path / "bescos" / "alpha.jpg"),
+        downloaded=True,
+    )
+    fetcher = RecordingFetcher(
+        download_result=([downloaded], [], [str(tmp_path / "bescos" / "alpha.jpg")]),
+        rendered_error=FetchError("skroutz_section_containers_not_found"),
+    )
+
+    monkeypatch.setattr(
+        section_assets_module,
+        "extract_skroutz_section_window",
+        lambda *_args, **_kwargs: {
+            "warnings": [],
+            "window": {},
+            "sections": [
+                {
+                    "title": "Alpha",
+                    "paragraph": "Alpha body",
+                    "image_url": "https://cdn.example/alpha.jpg",
+                    "image_candidates": ["https://cdn.example/alpha.jpg"],
+                },
+                {"title": "Beta", "paragraph": "Beta body", "image_candidates": []},
+            ],
+        },
+    )
+
+    result = resolve_skroutz_section_assets(
+        requested_sections=2,
+        fetch_html="<html></html>",
+        final_url="https://www.skroutz.gr/s/200003/example.html",
+        canonical_url="https://www.skroutz.gr/s/200003/example.html",
+        url="https://www.skroutz.gr/s/200003/example.html",
+        presentation_source_html="",
+        presentation_source_text="",
+        manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
+        fetcher=fetcher,
+        output_dir=tmp_path,
+    )
+
+    assert [block["title"] for block in result.selected_presentation_blocks] == ["Alpha"]
+    assert result.downloaded_besco == [downloaded]
+    assert result.section_warnings == [
+        "skroutz_rendered_section_extraction_failed:skroutz_section_containers_not_found",
+        "skroutz_rendered_sections_clamped:1/2",
+        "skroutz_image_backed_sections_clamped:1/2",
+    ]
+    assert len(fetcher.download_calls) == 1
+
+
+def test_resolve_skroutz_section_assets_allows_no_available_sections(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fetcher = RecordingFetcher(rendered_error=FetchError("skroutz_section_containers_not_found"))
+
+    monkeypatch.setattr(
+        section_assets_module,
+        "extract_skroutz_section_window",
+        lambda *_args, **_kwargs: {
+            "warnings": ["skroutz_section_window_not_found"],
+            "window": {},
+            "sections": [],
+        },
+    )
+
+    result = resolve_skroutz_section_assets(
+        requested_sections=20,
+        fetch_html="<html></html>",
+        final_url="https://www.skroutz.gr/s/200004/example.html",
+        canonical_url="https://www.skroutz.gr/s/200004/example.html",
+        url="https://www.skroutz.gr/s/200004/example.html",
+        presentation_source_html="",
+        presentation_source_text="",
+        manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
+        fetcher=fetcher,
+        output_dir=tmp_path,
+    )
+
+    assert result.selected_presentation_blocks == []
+    assert result.downloaded_besco == []
+    assert result.section_warnings == [
+        "skroutz_section_window_not_found",
+        "skroutz_rendered_section_extraction_failed:skroutz_section_containers_not_found",
+        "skroutz_sections_clamped:0/20",
+        "skroutz_rendered_sections_clamped:0/20",
+        "skroutz_image_backed_sections_clamped:0/20",
+    ]
+    assert fetcher.download_calls == []
+
+
 def test_resolve_skroutz_section_assets_fails_on_title_order_mismatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

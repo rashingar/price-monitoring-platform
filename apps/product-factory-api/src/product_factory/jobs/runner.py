@@ -262,7 +262,14 @@ def run_full_pipeline_job(
     )
     _merge_stage_artifacts(artifacts, "publish", publish_result.artifacts)
     if publish_result.status == JobStatus.FAILED:
-        return _full_pipeline_failed_result("publish", publish_result, artifacts)
+        log(f"Full pipeline publish warning: {publish_result.error or publish_result.message or 'publish failed'}")
+        return JobRunResult(
+            status=JobStatus.SUCCEEDED,
+            message="Full pipeline job succeeded with publish warning.",
+            error=publish_result.error,
+            error_code=publish_result.error_code,
+            artifacts=artifacts,
+        )
 
     return JobRunResult(
         status=JobStatus.SUCCEEDED,
