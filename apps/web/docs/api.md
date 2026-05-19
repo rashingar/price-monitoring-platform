@@ -236,9 +236,11 @@ does not expose delete actions for filter groups or values.
 Product Factory Batch Intake is a dedicated compact operator UI under
 `/product-factory/batch-intake`. It uploads CSV files with required
 `model`, `brand`, and `name` columns, calls the ecommerce-api batch endpoints,
-resolves source URLs for Skroutz, BestPrice, and Electronet, and supports
-candidate/manual source selection plus row skipping. This phase is resolve-only;
-Product Factory job enqueue actions are intentionally left for a later phase.
+resolves source URLs for the selected subset of Skroutz, BestPrice, and
+Electronet, and supports candidate/manual source selection plus row skipping.
+Resolution is live-polled while the backend background worker updates rows one
+at a time. This phase is resolve-only; Product Factory job enqueue actions are
+intentionally left for a later phase.
 
 ## Commerce API
 

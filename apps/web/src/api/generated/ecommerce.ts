@@ -770,6 +770,11 @@ export interface components {
       /** Items */
       items: components["schemas"]["ProductFactoryBatchResponse"][];
     };
+    /** ProductFactoryBatchResolveRequest */
+    ProductFactoryBatchResolveRequest: {
+      /** Source Names */
+      source_names?: string[] | null;
+    };
     /** ProductFactoryBatchResolveResponse */
     ProductFactoryBatchResolveResponse: {
       /** Auto Selected Count */
@@ -3119,6 +3124,11 @@ export interface operations {
     parameters: {
       path: {
         batch_id: number;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ProductFactoryBatchResolveRequest"] | null;
       };
     };
     responses: {

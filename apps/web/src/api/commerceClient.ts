@@ -46,6 +46,7 @@ import type {
   PlatformHealthResponse,
   ProductFactoryBatchListResponse,
   ProductFactoryBatchResponse,
+  ProductFactoryBatchResolveRequest,
   ProductFactoryBatchResolveResponse,
   ProductFactoryBatchRowsResponse,
   ProductFactoryBatchRowResponse,
@@ -3273,6 +3274,7 @@ export const commerceClient = {
 
   async resolveProductFactoryBatch(
     batchId: string | number,
+    body?: ProductFactoryBatchResolveRequest,
     signal?: AbortSignal,
   ): Promise<ProductFactoryBatchResolveResponse> {
     return normalizeProductFactoryBatchResolve(
@@ -3280,6 +3282,7 @@ export const commerceClient = {
         `/product-factory-batches/${encodeURIComponent(String(batchId))}/resolve`,
         {
           method: "POST",
+          body,
           signal,
         },
       ),

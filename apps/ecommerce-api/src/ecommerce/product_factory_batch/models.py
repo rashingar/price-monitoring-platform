@@ -11,12 +11,21 @@ from pydantic import BaseModel
 
 BATCH_ROW_STATUSES = {
     "pending",
+    "resolving_source",
     "auto_selected",
     "manually_selected",
     "needs_review",
     "no_usable_source",
     "resolution_failed",
     "skipped",
+}
+
+BATCH_STATUSES = {
+    "uploaded",
+    "resolving",
+    "resolved",
+    "partially_resolved",
+    "failed",
 }
 
 
@@ -86,6 +95,10 @@ class ProductFactoryBatchRowsResponse(BaseModel):
 class SelectSourceRequest(BaseModel):
     candidate_url: str | None = None
     manual_url: str | None = None
+
+
+class ProductFactoryBatchResolveRequest(BaseModel):
+    source_names: list[str] | None = None
 
 
 class ProductFactoryBatchResolveResponse(ProductFactoryBatchResponse):

@@ -51,6 +51,8 @@ export type EcommerceContractProductFactoryBatchRowResponse =
   EcommerceSchema<"ProductFactoryBatchRowResponse">;
 export type EcommerceContractProductFactoryBatchUploadResponse =
   EcommerceSchema<"ProductFactoryBatchUploadResponse">;
+export type EcommerceContractProductFactoryBatchResolveRequest =
+  EcommerceSchema<"ProductFactoryBatchResolveRequest">;
 export type EcommerceContractProductFactoryBatchResolveResponse =
   EcommerceSchema<"ProductFactoryBatchResolveResponse">;
 export type EcommerceContractProductFactoryBatchSelectSourceRequest =
@@ -273,6 +275,8 @@ export type ProductFactoryBatchRowResponse =
   EcommerceContractProductFactoryBatchRowResponse;
 export type ProductFactoryBatchUploadResponse =
   EcommerceContractProductFactoryBatchUploadResponse;
+export type ProductFactoryBatchResolveRequest =
+  EcommerceContractProductFactoryBatchResolveRequest;
 export type ProductFactoryBatchResolveResponse =
   EcommerceContractProductFactoryBatchResolveResponse;
 export type ProductFactoryBatchSelectSourceRequest =
@@ -1520,6 +1524,7 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<ProductFactoryBatchRowsResponse, EcommerceContractProductFactoryBatchRowsResponse>,
   AssertAssignable<ProductFactoryBatchRowResponse, EcommerceContractProductFactoryBatchRowResponse>,
   AssertAssignable<ProductFactoryBatchUploadResponse, EcommerceContractProductFactoryBatchUploadResponse>,
+  AssertAssignable<ProductFactoryBatchResolveRequest, EcommerceContractProductFactoryBatchResolveRequest>,
   AssertAssignable<ProductFactoryBatchResolveResponse, EcommerceContractProductFactoryBatchResolveResponse>,
   AssertAssignable<ProductFactoryBatchSelectSourceRequest, EcommerceContractProductFactoryBatchSelectSourceRequest>,
   AssertAssignable<VendorSourceCaptureRunRequest, EcommerceContractVendorSourceCaptureRunRequest>,

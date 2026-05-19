@@ -40,6 +40,20 @@ const STATUS_TONES: Record<string, string> = {
   skipped: "neutral",
 };
 
+const BATCH_SOURCE_OPTIONS = [
+  { name: "skroutz", label: "Skroutz" },
+  { name: "bestprice", label: "BestPrice" },
+  { name: "electronet", label: "Electronet" },
+] as const;
+
+type BatchSourceName = (typeof BATCH_SOURCE_OPTIONS)[number]["name"];
+
+const DEFAULT_BATCH_SOURCE_NAMES = BATCH_SOURCE_OPTIONS.map((source) => source.name);
+
+function isBatchSourceName(value: string): value is BatchSourceName {
+  return BATCH_SOURCE_OPTIONS.some((source) => source.name === value);
+}
+
 function asCandidate(value: unknown): ProductFactoryBatchCandidate {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as ProductFactoryBatchCandidate
@@ -108,6 +122,34 @@ function sameUrl(left: string | null | undefined, right: string | null | undefin
   return String(left ?? "").trim() === String(right ?? "").trim();
 }
 
+function batchMetadataSourceNames(batch: ProductFactoryBatchResponse | null): BatchSourceName[] {
+  const raw = batch?.metadata && Array.isArray(batch.metadata.selected_source_names)
+    ? batch.metadata.selected_source_names
+    : null;
+  if (!raw) {
+    return [...DEFAULT_BATCH_SOURCE_NAMES];
+  }
+  const normalized = raw
+    .map((value) => String(value ?? "").trim().toLowerCase())
+    .filter(isBatchSourceName);
+  return normalized.length > 0 ? Array.from(new Set(normalized)) : [...DEFAULT_BATCH_SOURCE_NAMES];
+}
+
+function sourceNamesLabel(sourceNames: readonly string[]): string {
+  const labels: string[] = [];
+  for (const name of sourceNames) {
+    const label = BATCH_SOURCE_OPTIONS.find((source) => source.name === name)?.label;
+    if (label) {
+      labels.push(label);
+    }
+  }
+  return labels.length > 0 ? labels.join(", ") : "-";
+}
+
+function isResolutionActive(batch: ProductFactoryBatchResponse | null, rows: ProductFactoryBatchRowResponse[]): boolean {
+  return batch?.status === "resolving" || rows.some((row) => row.status === "resolving_source");
+}
+
 function MetricGrid({ batch }: { batch: ProductFactoryBatchResponse }) {
   return (
     <dl className="summary-grid product-factory-batch-summary-grid">
@@ -118,6 +160,39 @@ function MetricGrid({ batch }: { batch: ProductFactoryBatchResponse }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+function SourceSelectionControls({
+  selectedSourceNames,
+  disabled,
+  error,
+  onToggle,
+}: {
+  selectedSourceNames: BatchSourceName[];
+  disabled: boolean;
+  error: string | null;
+  onToggle: (sourceName: BatchSourceName) => void;
+}) {
+  return (
+    <fieldset className="batch-source-selection">
+      <legend>Search sources</legend>
+      <div className="batch-source-options">
+        {BATCH_SOURCE_OPTIONS.map((source) => (
+          <label className="checkbox-row compact-checkbox" key={source.name}>
+            <input
+              type="checkbox"
+              checked={selectedSourceNames.includes(source.name)}
+              disabled={disabled}
+              onChange={() => onToggle(source.name)}
+            />
+            {source.label}
+          </label>
+        ))}
+      </div>
+      <p className="muted">Search only selected supported sources.</p>
+      {error ? <p className="form-error">{error}</p> : null}
+    </fieldset>
   );
 }
 
@@ -336,7 +411,9 @@ export function ProductFactoryBatchIntakePage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [sourceSelectionError, setSourceSelectionError] = useState<string | null>(null);
   const [manualError, setManualError] = useState<string | null>(null);
+  const [selectedSourceNames, setSelectedSourceNames] = useState<BatchSourceName[]>(() => [...DEFAULT_BATCH_SOURCE_NAMES]);
   const [isUploading, setIsUploading] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
@@ -346,6 +423,7 @@ export function ProductFactoryBatchIntakePage() {
     () => rows.find((row) => row.id === reviewRowId) ?? null,
     [reviewRowId, rows],
   );
+  const resolutionActive = isResolutionActive(activeBatch, rows);
 
   const loadRecentBatches = useCallback(async () => {
     try {
@@ -356,8 +434,15 @@ export function ProductFactoryBatchIntakePage() {
     }
   }, []);
 
-  const refreshBatch = useCallback(async (batchId: number) => {
-    setIsLoadingRows(true);
+  const refreshBatch = useCallback(async (
+    batchId: number,
+    options: { showLoading?: boolean; refreshRecent?: boolean } = {},
+  ) => {
+    const showLoading = options.showLoading ?? true;
+    const refreshRecent = options.refreshRecent ?? true;
+    if (showLoading) {
+      setIsLoadingRows(true);
+    }
     try {
       const [batch, rowsResponse] = await Promise.all([
         commerceClient.getProductFactoryBatch(batchId),
@@ -365,15 +450,36 @@ export function ProductFactoryBatchIntakePage() {
       ]);
       setActiveBatch(batch);
       setRows(rowsResponse.items);
-      await loadRecentBatches();
+      if (refreshRecent) {
+        await loadRecentBatches();
+      }
     } finally {
-      setIsLoadingRows(false);
+      if (showLoading) {
+        setIsLoadingRows(false);
+      }
     }
   }, [loadRecentBatches]);
 
   useEffect(() => {
     void loadRecentBatches();
   }, [loadRecentBatches]);
+
+  useEffect(() => {
+    setSelectedSourceNames(batchMetadataSourceNames(activeBatch));
+    setSourceSelectionError(null);
+  }, [activeBatch?.id]);
+
+  useEffect(() => {
+    if (!activeBatch || !resolutionActive) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void refreshBatch(activeBatch.id, { showLoading: false, refreshRecent: false });
+    }, 1750);
+
+    return () => window.clearInterval(intervalId);
+  }, [activeBatch?.id, refreshBatch, resolutionActive]);
 
   useEffect(() => {
     if (reviewRow) {
@@ -400,6 +506,7 @@ export function ProductFactoryBatchIntakePage() {
     try {
       const upload = await commerceClient.uploadProductFactoryBatchCsv(selectedFile);
       setActiveBatch(upload);
+      setSelectedSourceNames(batchMetadataSourceNames(upload));
       setRows(upload.preview_rows ?? []);
       setReviewRowId(null);
       await refreshBatch(upload.id);
@@ -416,8 +523,10 @@ export function ProductFactoryBatchIntakePage() {
     setRows([]);
     setReviewRowId(null);
     setManualUrl("");
+    setSelectedSourceNames([...DEFAULT_BATCH_SOURCE_NAMES]);
     setUploadError(null);
     setResolveError(null);
+    setSourceSelectionError(null);
     setManualError(null);
   }
 
@@ -432,16 +541,33 @@ export function ProductFactoryBatchIntakePage() {
     }
   }
 
+  function handleToggleSource(sourceName: BatchSourceName) {
+    setSourceSelectionError(null);
+    setSelectedSourceNames((current) => (
+      current.includes(sourceName)
+        ? current.filter((item) => item !== sourceName)
+        : [...current, sourceName]
+    ));
+  }
+
   async function handleResolve() {
     if (!activeBatch) {
+      return;
+    }
+    if (selectedSourceNames.length === 0) {
+      setSourceSelectionError("Select at least one search source.");
       return;
     }
 
     setIsResolving(true);
     setResolveError(null);
+    setSourceSelectionError(null);
     try {
-      const resolved = await commerceClient.resolveProductFactoryBatch(activeBatch.id);
+      const resolved = await commerceClient.resolveProductFactoryBatch(activeBatch.id, {
+        source_names: selectedSourceNames,
+      });
       setActiveBatch(resolved);
+      setSelectedSourceNames(batchMetadataSourceNames(resolved));
       setRows(resolved.rows);
       await loadRecentBatches();
     } catch (error) {
@@ -582,14 +708,24 @@ export function ProductFactoryBatchIntakePage() {
                 <p className="eyebrow">Active batch</p>
                 <h3>{activeBatch.filename ?? `Batch #${activeBatch.id}`}</h3>
                 <p className="muted">Batch id #{activeBatch.id} · status {activeBatch.status}</p>
+                <p className="muted">Search sources: {sourceNamesLabel(selectedSourceNames)}</p>
               </div>
               <div className="button-row">
-                <button className="button primary" type="button" disabled={isResolving} onClick={() => void handleResolve()}>
+                <button className="button primary" type="button" disabled={isResolving || resolutionActive} onClick={() => void handleResolve()}>
                   {isResolving ? "Resolving..." : "Resolve URLs"}
                 </button>
               </div>
             </div>
             <p className="state-block">Resolve URLs searches supported source pages only. It does not start Product Factory jobs.</p>
+            <SourceSelectionControls
+              selectedSourceNames={selectedSourceNames}
+              disabled={isResolving || resolutionActive}
+              error={sourceSelectionError}
+              onToggle={handleToggleSource}
+            />
+            {resolutionActive ? (
+              <p className="state-block">Resolving rows... table refreshes automatically.</p>
+            ) : null}
             <MetricGrid batch={activeBatch} />
             {resolveError ? <ErrorState message={resolveError} onRetry={() => void handleResolve()} /> : null}
           </section>

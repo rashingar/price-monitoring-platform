@@ -51,6 +51,20 @@ const rows = [
   row(77, 8, "000007", "skipped"),
 ];
 
+const resolvingRows = [
+  row(71, 2, "000001", "resolving_source"),
+  ...rows.slice(1),
+];
+
+const resolvedRows = [
+  row(71, 2, "000001", "auto_selected", {
+    selected_source: "skroutz",
+    selected_url: "https://www.skroutz.gr/s/123/brand-alpha.html",
+    confidence: 91,
+  }),
+  ...rows.slice(1),
+];
+
 function row(
   id: number,
   rowNumber: number,
@@ -82,10 +96,10 @@ function row(
 
 function baseRoutes(extra: MockRoute[] = []): MockRoute[] {
   return [
+    ...extra,
     { method: "GET", path: "/commerce-api/product-factory-batches", response: { items: [batch] } },
     { method: "GET", path: "/commerce-api/product-factory-batches/7", response: batch },
     { method: "GET", path: "/commerce-api/product-factory-batches/7/rows", response: { items: rows } },
-    ...extra,
   ];
 }
 
@@ -99,6 +113,12 @@ describe("Product Factory Batch Intake", () => {
     expect(screen.getByRole("link", { name: "Batch Intake" })).toBeInTheDocument();
     expect(screen.getByText("Required columns: model, brand, name. Supports comma or semicolon delimiter.")).toBeInTheDocument();
     await expect(screen.findByText("Batch #7")).resolves.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Batch #7/ }));
+    await screen.findByRole("checkbox", { name: "Skroutz" });
+    expect(screen.getByRole("checkbox", { name: "Skroutz" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "BestPrice" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Electronet" })).toBeChecked();
+    expect(screen.getByText("Search only selected supported sources.")).toBeInTheDocument();
   });
 
   it("uploads CSV, displays summary metrics, and shows preview/refreshed rows", async () => {
@@ -130,23 +150,98 @@ describe("Product Factory Batch Intake", () => {
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname.endsWith("/upload"))).toBe(true);
   });
 
+  it("opens a recent batch with saved source settings restored", async () => {
+    const skroutzBatch = {
+      ...batch,
+      metadata: { delimiter: ";", selected_source_names: ["skroutz"], selected_source_labels: ["Skroutz"] },
+    };
+    installMockFetch([
+      { method: "GET", path: "/commerce-api/product-factory-batches", response: { items: [skroutzBatch] } },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7", response: skroutzBatch },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7/rows", response: { items: rows } },
+    ]);
+    renderWithRouter("/product-factory/batch-intake");
+
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+
+    await screen.findByRole("checkbox", { name: "Skroutz" });
+    expect(screen.getByRole("checkbox", { name: "Skroutz" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "BestPrice" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Electronet" })).not.toBeChecked();
+    expect(screen.getByText("Search sources: Skroutz")).toBeInTheDocument();
+  });
+
+  it("blocks resolving when no source is selected", async () => {
+    const mockFetch = installMockFetch(baseRoutes());
+    renderWithRouter("/product-factory/batch-intake");
+
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+    await screen.findByRole("checkbox", { name: "Skroutz" });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Skroutz" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "BestPrice" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Electronet" }));
+    fireEvent.click(screen.getByRole("button", { name: "Resolve URLs" }));
+
+    expect(screen.getByText("Select at least one search source.")).toBeInTheDocument();
+    expect(mockFetch.requests.some((request) => request.pathname.endsWith("/resolve"))).toBe(false);
+  });
+
   it("opens a recent batch, resolves URLs, refreshes rows, and renders all row states", async () => {
-    const resolvedBatch = { ...batch, status: "resolved", pending_count: 0 };
+    const resolvingBatch = {
+      ...batch,
+      status: "resolving",
+      metadata: { selected_source_names: ["skroutz"], selected_source_labels: ["Skroutz"] },
+    };
+    const resolvedBatch = { ...resolvingBatch, status: "resolved", pending_count: 0, auto_selected_count: 2 };
+    let resolveStarted = false;
+    let pollCount = 0;
     const mockFetch = installMockFetch(baseRoutes([
+      {
+        method: "GET",
+        path: "/commerce-api/product-factory-batches/7",
+        response: () => (resolveStarted && pollCount > 0 ? resolvedBatch : batch),
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/product-factory-batches/7/rows",
+        response: () => {
+          if (!resolveStarted) {
+            return { items: rows };
+          }
+          pollCount += 1;
+          return { items: pollCount === 1 ? resolvingRows : resolvedRows };
+        },
+      },
       {
         method: "POST",
         path: "/commerce-api/product-factory-batches/7/resolve",
-        response: { ...resolvedBatch, rows },
+        response: (request) => {
+          expect(request.body).toEqual({ source_names: ["skroutz"] });
+          resolveStarted = true;
+          return { ...resolvingBatch, rows: resolvingRows };
+        },
       },
     ]));
     renderWithRouter("/product-factory/batch-intake");
 
     fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
     await expect(screen.findByRole("cell", { name: "000004" })).resolves.toBeInTheDocument();
+    expect(screen.getByText("pending")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "BestPrice" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Electronet" }));
+    expect(screen.getByRole("checkbox", { name: "Skroutz" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "BestPrice" })).not.toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "Resolve URLs" }));
 
     await waitFor(() => expect(mockFetch.requests.some((request) => request.pathname === "/commerce-api/product-factory-batches/7/resolve")).toBe(true));
-    for (const label of ["pending", "auto selected", "manual", "needs review", "no usable source", "failed", "skipped"]) {
+    expect(screen.getByText("Search sources: Skroutz")).toBeInTheDocument();
+    expect(screen.getByText("Resolving rows... table refreshes automatically.")).toBeInTheDocument();
+    expect(screen.getByText("resolving")).toBeInTheDocument();
+    await waitFor(
+      () => expect(screen.getAllByRole("cell", { name: "skroutz" }).length).toBeGreaterThan(0),
+      { timeout: 3500 },
+    );
+    for (const label of ["auto selected", "manual", "needs review", "no usable source", "failed", "skipped"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(screen.getByText("source_resolution_error: Brave unavailable")).toBeInTheDocument();

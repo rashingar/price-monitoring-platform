@@ -102,10 +102,15 @@ def refresh_batch_counts(session: Session, batch: ProductFactoryBatch) -> Produc
     batch.no_usable_source_count = counts.get("no_usable_source", 0)
     batch.resolution_failed_count = counts.get("resolution_failed", 0)
     batch.skipped_count = counts.get("skipped", 0)
-    if batch.pending_count:
-        batch.status = "resolving" if any(counts.get(status, 0) for status in counts if status != "pending") else "uploaded"
+    resolving_count = counts.get("resolving_source", 0)
+    if batch.status == "failed":
+        pass
+    elif resolving_count or (batch.status == "resolving" and batch.pending_count):
+        batch.status = "resolving"
     elif batch.resolution_failed_count:
-        batch.status = "resolved_with_errors"
+        batch.status = "partially_resolved"
+    elif batch.pending_count:
+        batch.status = "uploaded"
     else:
         batch.status = "resolved"
     batch.updated_at = _now()

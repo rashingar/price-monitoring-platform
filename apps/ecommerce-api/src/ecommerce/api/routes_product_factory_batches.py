@@ -6,7 +6,7 @@ from email.parser import BytesParser
 from email.policy import default as email_policy
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
 from sqlalchemy.exc import SQLAlchemyError
 
 from ecommerce.db.config import DatabaseNotConfiguredError, sanitize_database_error
@@ -15,6 +15,7 @@ from ecommerce.product_factory_batch import repository
 from ecommerce.product_factory_batch.csv_parser import ProductFactoryBatchCsvError
 from ecommerce.product_factory_batch.models import (
     ProductFactoryBatchListResponse,
+    ProductFactoryBatchResolveRequest,
     ProductFactoryBatchResolveResponse,
     ProductFactoryBatchResponse,
     ProductFactoryBatchRowsResponse,
@@ -25,7 +26,8 @@ from ecommerce.product_factory_batch.models import (
 from ecommerce.product_factory_batch.service import (
     ProductFactoryBatchError,
     create_batch_from_csv,
-    resolve_batch,
+    prepare_batch_resolution,
+    run_batch_resolution_background,
     select_source_for_row,
     skip_row,
 )
@@ -111,15 +113,29 @@ def get_product_factory_batch_rows(batch_id: int) -> dict[str, Any]:
 
 
 @router.post("/{batch_id}/resolve", response_model=ProductFactoryBatchResolveResponse)
-def resolve_product_factory_batch(batch_id: int) -> dict[str, Any]:
+def resolve_product_factory_batch(
+    batch_id: int,
+    background_tasks: BackgroundTasks,
+    request: ProductFactoryBatchResolveRequest | None = None,
+) -> dict[str, Any]:
+    should_start = False
+    source_names: tuple[str, ...] = ()
     try:
         with session_scope() as session:
             batch = repository.get_batch(session, batch_id)
             if batch is None:
                 raise HTTPException(status_code=404, detail="Batch not found.")
-            batch = resolve_batch(session, batch=batch)
+            start = prepare_batch_resolution(session, batch=batch, source_names=request.source_names if request else None)
+            batch = start.batch
+            source_names = start.source_names
+            should_start = start.should_start
             rows = repository.list_batch_rows(session, batch.id)
-            return {**repository.batch_to_dict(batch), "rows": [repository.row_to_dict(row) for row in rows]}
+            payload = {**repository.batch_to_dict(batch), "rows": [repository.row_to_dict(row) for row in rows]}
+        if should_start:
+            _schedule_batch_resolution(background_tasks, batch_id=batch_id, source_names=source_names)
+        return payload
+    except ProductFactoryBatchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": exc.message}) from exc
     except SourceResolutionConfigError as exc:
         raise HTTPException(status_code=500, detail={"code": "source_resolution_config_error", "message": str(exc)}) from exc
     except DatabaseNotConfiguredError as exc:
@@ -200,3 +216,12 @@ async def _multipart_csv_upload(request: Request) -> tuple[bytes, str | None]:
             break
         return payload, part.get_filename()
     raise HTTPException(status_code=400, detail={"code": "missing_csv_file", "message": "Multipart upload must include a file field."})
+
+
+def _schedule_batch_resolution(
+    background_tasks: BackgroundTasks,
+    *,
+    batch_id: int,
+    source_names: tuple[str, ...],
+) -> None:
+    background_tasks.add_task(run_batch_resolution_background, batch_id=batch_id, source_names=source_names)

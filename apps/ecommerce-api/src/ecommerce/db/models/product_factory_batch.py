@@ -15,7 +15,7 @@ class ProductFactoryBatch(Base):
     __tablename__ = "product_factory_batches"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('uploaded', 'resolving', 'resolved', 'resolved_with_errors')",
+            "status IN ('uploaded', 'resolving', 'resolved', 'partially_resolved', 'failed')",
             name="ck_product_factory_batches_status",
         ),
         Index("ix_product_factory_batches_status", "status"),
@@ -48,7 +48,7 @@ class ProductFactoryBatchRow(Base):
     __tablename__ = "product_factory_batch_rows"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending', 'auto_selected', 'manually_selected', 'needs_review', 'no_usable_source', 'resolution_failed', 'skipped')",
+            "status IN ('pending', 'resolving_source', 'auto_selected', 'manually_selected', 'needs_review', 'no_usable_source', 'resolution_failed', 'skipped')",
             name="ck_product_factory_batch_rows_status",
         ),
         Index("ix_product_factory_batch_rows_batch_id", "batch_id"),

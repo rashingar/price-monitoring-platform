@@ -44,6 +44,7 @@ describe("generated API contract drift guardrails", () => {
       ["VendorSourceCaptureRunRequest", "VendorSourceCaptureRunApiRequest"],
       ["SkroutzNetworkDiagnosticRequest", "SkroutzNetworkDiagnosticApiRequest"],
       ["StockSyncRunRequest", "StockSyncRunRequest"],
+      ["ProductFactoryBatchResolveRequest", "ProductFactoryBatchResolveRequest"],
       ["ProductFactoryBatchSelectSourceRequest", "SelectSourceRequest"],
     ];
 

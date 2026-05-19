@@ -1122,6 +1122,26 @@
         "title": "ProductFactoryBatchListResponse",
         "type": "object"
       },
+      "ProductFactoryBatchResolveRequest": {
+        "properties": {
+          "source_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Names"
+          }
+        },
+        "title": "ProductFactoryBatchResolveRequest",
+        "type": "object"
+      },
       "ProductFactoryBatchResolveResponse": {
         "properties": {
           "auto_selected_count": {
@@ -6669,6 +6689,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ProductFactoryBatchResolveRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
