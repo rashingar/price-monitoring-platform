@@ -44,6 +44,7 @@ describe("generated API contract drift guardrails", () => {
       ["VendorSourceCaptureRunRequest", "VendorSourceCaptureRunApiRequest"],
       ["SkroutzNetworkDiagnosticRequest", "SkroutzNetworkDiagnosticApiRequest"],
       ["StockSyncRunRequest", "StockSyncRunRequest"],
+      ["ProductFactoryBatchSelectSourceRequest", "SelectSourceRequest"],
     ];
 
     for (const [aliasName, schemaName] of generatedRequestAliases) {
@@ -75,6 +76,12 @@ describe("generated API contract drift guardrails", () => {
       ["StockSyncRunResponse", "StockSyncRunResponse"],
       ["StockSyncLatestResponse", "StockSyncLatestResponse"],
       ["StockSyncReadinessResponse", "StockSyncReadinessResponse"],
+      ["ProductFactoryBatchListResponse", "ProductFactoryBatchListResponse"],
+      ["ProductFactoryBatchResponse", "ProductFactoryBatchResponse"],
+      ["ProductFactoryBatchRowsResponse", "ProductFactoryBatchRowsResponse"],
+      ["ProductFactoryBatchRowResponse", "ProductFactoryBatchRowResponse"],
+      ["ProductFactoryBatchUploadResponse", "ProductFactoryBatchUploadResponse"],
+      ["ProductFactoryBatchResolveResponse", "ProductFactoryBatchResolveResponse"],
     ];
 
     for (const [aliasName, schemaName] of generatedResponseAliases) {

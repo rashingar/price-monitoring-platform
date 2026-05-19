@@ -30,6 +30,7 @@ const findSourceNavItems = [
 
 const productFactoryNavItems = [
   { to: "/product-factory", label: "Pipeline" },
+  { to: "/product-factory/batch-intake", label: "Batch Intake" },
   { to: "/product-factory/filters", label: "Filters Manager" },
   { to: "/prepare", label: "Prepare" },
   { to: "/render", label: "Render" },
@@ -39,6 +40,7 @@ const productFactoryNavItems = [
 
 const productFactoryPaths = new Set([
   "/product-factory",
+  "/product-factory/batch-intake",
   "/product-factory/filters",
   "/pipeline",
   "/prepare",

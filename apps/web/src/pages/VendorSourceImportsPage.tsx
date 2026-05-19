@@ -196,7 +196,8 @@ export function VendorSourceImportsPage() {
       catalog_source: catalogSource.trim() || "sourceCata",
       persist_initial_capture: persistInitialCapture,
       limit: Number.isFinite(parsedLimit) ? parsedLimit : null,
-      report_items_limit: Number.isFinite(parsedReportLimit) ? parsedReportLimit : 200,
+      report_items_limit:
+        parsedReportLimit !== null && Number.isFinite(parsedReportLimit) ? parsedReportLimit : 200,
     };
   }, [catalogSource, handoffPath, limit, persistInitialCapture, reportItemsLimit]);
 
@@ -335,7 +336,7 @@ export function VendorSourceImportsPage() {
             <button
               className="button secondary"
               type="submit"
-              disabled={isPreviewLoading || isApplyLoading || requestBody.file_path.length === 0}
+              disabled={isPreviewLoading || isApplyLoading || (requestBody.file_path ?? "").length === 0}
             >
               {isPreviewLoading ? "Previewing..." : "Preview"}
             </button>

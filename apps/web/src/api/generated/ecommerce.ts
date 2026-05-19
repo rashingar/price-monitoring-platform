@@ -274,6 +274,34 @@ export interface paths {
      */
     post: operations["preview_selection_api_price_monitoring_selection_preview_post"];
   };
+  "/api/product-factory-batches": {
+    /** List Product Factory Batches */
+    get: operations["list_product_factory_batches_api_product_factory_batches_get"];
+  };
+  "/api/product-factory-batches/{batch_id}": {
+    /** Get Product Factory Batch */
+    get: operations["get_product_factory_batch_api_product_factory_batches__batch_id__get"];
+  };
+  "/api/product-factory-batches/{batch_id}/resolve": {
+    /** Resolve Product Factory Batch */
+    post: operations["resolve_product_factory_batch_api_product_factory_batches__batch_id__resolve_post"];
+  };
+  "/api/product-factory-batches/{batch_id}/rows": {
+    /** Get Product Factory Batch Rows */
+    get: operations["get_product_factory_batch_rows_api_product_factory_batches__batch_id__rows_get"];
+  };
+  "/api/product-factory-batches/{batch_id}/rows/{row_id}/select-source": {
+    /** Select Product Factory Batch Row Source */
+    post: operations["select_product_factory_batch_row_source_api_product_factory_batches__batch_id__rows__row_id__select_source_post"];
+  };
+  "/api/product-factory-batches/{batch_id}/rows/{row_id}/skip": {
+    /** Skip Product Factory Batch Row */
+    post: operations["skip_product_factory_batch_row_api_product_factory_batches__batch_id__rows__row_id__skip_post"];
+  };
+  "/api/product-factory-batches/upload": {
+    /** Upload Product Factory Batch */
+    post: operations["upload_product_factory_batch_api_product_factory_batches_upload_post"];
+  };
   "/api/product-factory/telegram/webhook": {
     /** Product Factory Telegram Webhook */
     post: operations["product_factory_telegram_webhook_api_product_factory_telegram_webhook_post"];
@@ -737,6 +765,190 @@ export interface components {
       /** Review Csv Path */
       review_csv_path?: string | null;
     };
+    /** ProductFactoryBatchListResponse */
+    ProductFactoryBatchListResponse: {
+      /** Items */
+      items: components["schemas"]["ProductFactoryBatchResponse"][];
+    };
+    /** ProductFactoryBatchResolveResponse */
+    ProductFactoryBatchResolveResponse: {
+      /** Auto Selected Count */
+      auto_selected_count: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Filename */
+      filename?: string | null;
+      /** Id */
+      id: number;
+      /** Manually Selected Count */
+      manually_selected_count: number;
+      /** Metadata */
+      metadata?: {
+        [key: string]: unknown;
+      } | null;
+      /** Needs Review Count */
+      needs_review_count: number;
+      /** No Usable Source Count */
+      no_usable_source_count: number;
+      /** Pending Count */
+      pending_count: number;
+      /** Resolution Failed Count */
+      resolution_failed_count: number;
+      /** Rows */
+      rows: components["schemas"]["ProductFactoryBatchRowResponse"][];
+      /** Skipped Count */
+      skipped_count: number;
+      /** Status */
+      status: string;
+      /** Total Rows */
+      total_rows: number;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** ProductFactoryBatchResponse */
+    ProductFactoryBatchResponse: {
+      /** Auto Selected Count */
+      auto_selected_count: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Filename */
+      filename?: string | null;
+      /** Id */
+      id: number;
+      /** Manually Selected Count */
+      manually_selected_count: number;
+      /** Metadata */
+      metadata?: {
+        [key: string]: unknown;
+      } | null;
+      /** Needs Review Count */
+      needs_review_count: number;
+      /** No Usable Source Count */
+      no_usable_source_count: number;
+      /** Pending Count */
+      pending_count: number;
+      /** Resolution Failed Count */
+      resolution_failed_count: number;
+      /** Skipped Count */
+      skipped_count: number;
+      /** Status */
+      status: string;
+      /** Total Rows */
+      total_rows: number;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** ProductFactoryBatchRowResponse */
+    ProductFactoryBatchRowResponse: {
+      /** Batch Id */
+      batch_id: number;
+      /** Brand */
+      brand: string;
+      /**
+       * Candidates
+       * @default []
+       */
+      candidates?: {
+          [key: string]: unknown;
+        }[];
+      /** Confidence */
+      confidence?: number | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Error Code */
+      error_code?: string | null;
+      /** Error Message */
+      error_message?: string | null;
+      /** Id */
+      id: number;
+      /** Model */
+      model: string;
+      /** Name */
+      name: string;
+      /**
+       * Queries
+       * @default []
+       */
+      queries?: string[];
+      /** Row Number */
+      row_number: number;
+      /** Selected Source */
+      selected_source?: string | null;
+      /** Selected Url */
+      selected_url?: string | null;
+      /** Selection Metadata */
+      selection_metadata?: {
+        [key: string]: unknown;
+      } | null;
+      /** Status */
+      status: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
+    /** ProductFactoryBatchRowsResponse */
+    ProductFactoryBatchRowsResponse: {
+      /** Items */
+      items: components["schemas"]["ProductFactoryBatchRowResponse"][];
+    };
+    /** ProductFactoryBatchUploadResponse */
+    ProductFactoryBatchUploadResponse: {
+      /** Auto Selected Count */
+      auto_selected_count: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Filename */
+      filename?: string | null;
+      /** Id */
+      id: number;
+      /** Manually Selected Count */
+      manually_selected_count: number;
+      /** Metadata */
+      metadata?: {
+        [key: string]: unknown;
+      } | null;
+      /** Needs Review Count */
+      needs_review_count: number;
+      /** No Usable Source Count */
+      no_usable_source_count: number;
+      /** Pending Count */
+      pending_count: number;
+      /** Preview Rows */
+      preview_rows: components["schemas"]["ProductFactoryBatchRowResponse"][];
+      /** Resolution Failed Count */
+      resolution_failed_count: number;
+      /** Skipped Count */
+      skipped_count: number;
+      /** Status */
+      status: string;
+      /** Total Rows */
+      total_rows: number;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
     /** ProductFactoryHandoffImportRequest */
     ProductFactoryHandoffImportRequest: {
       /**
@@ -781,6 +993,13 @@ export interface components {
       model: string;
       /** Source Urls */
       source_urls: string[];
+    };
+    /** SelectSourceRequest */
+    SelectSourceRequest: {
+      /** Candidate Url */
+      candidate_url?: string | null;
+      /** Manual Url */
+      manual_url?: string | null;
     };
     /** SkroutzNetworkDiagnosticApiRequest */
     SkroutzNetworkDiagnosticApiRequest: {
@@ -2846,6 +3065,165 @@ export interface operations {
       422: {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** List Product Factory Batches */
+  list_product_factory_batches_api_product_factory_batches_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Product Factory Batch */
+  get_product_factory_batch_api_product_factory_batches__batch_id__get: {
+    parameters: {
+      path: {
+        batch_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Resolve Product Factory Batch */
+  resolve_product_factory_batch_api_product_factory_batches__batch_id__resolve_post: {
+    parameters: {
+      path: {
+        batch_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchResolveResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Product Factory Batch Rows */
+  get_product_factory_batch_rows_api_product_factory_batches__batch_id__rows_get: {
+    parameters: {
+      path: {
+        batch_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchRowsResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Select Product Factory Batch Row Source */
+  select_product_factory_batch_row_source_api_product_factory_batches__batch_id__rows__row_id__select_source_post: {
+    parameters: {
+      path: {
+        batch_id: number;
+        row_id: number;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SelectSourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchRowResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Skip Product Factory Batch Row */
+  skip_product_factory_batch_row_api_product_factory_batches__batch_id__rows__row_id__skip_post: {
+    parameters: {
+      path: {
+        batch_id: number;
+        row_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchRowResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Upload Product Factory Batch */
+  upload_product_factory_batch_api_product_factory_batches_upload_post: {
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchUploadResponse"];
         };
       };
     };

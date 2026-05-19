@@ -60,7 +60,7 @@ export function SourceUrlAgentLaunchPanel({
             Mode
             <select
               value={String(form.mode)}
-              onChange={(event) => updateForm("mode", event.target.value)}
+              onChange={(event) => updateForm("mode", event.target.value as SourceUrlAgentRunRequest["mode"])}
             >
               <option value={DEFAULT_RUN_REQUEST.mode}>catalog</option>
             </select>

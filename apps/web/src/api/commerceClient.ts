@@ -44,6 +44,13 @@ import type {
   PlatformHealthGroup,
   PlatformHealthLink,
   PlatformHealthResponse,
+  ProductFactoryBatchListResponse,
+  ProductFactoryBatchResponse,
+  ProductFactoryBatchResolveResponse,
+  ProductFactoryBatchRowsResponse,
+  ProductFactoryBatchRowResponse,
+  ProductFactoryBatchSelectSourceRequest,
+  ProductFactoryBatchUploadResponse,
   ProductFactoryHandoffImportRequest,
   ProductSourceUrlCandidateHistoryResponse,
   ProductSourceUrlCandidateRunGroup,
@@ -155,6 +162,13 @@ function getPayloadMessage(payload: unknown): string | null {
     const value = payload[key];
     if (typeof value === "string" && value.trim().length > 0) {
       return value;
+    }
+
+    if (isRecord(value)) {
+      const nested = getPayloadMessage(value);
+      if (nested) {
+        return nested;
+      }
     }
 
     if (Array.isArray(value) && value.length > 0) {
@@ -2358,6 +2372,175 @@ async function request<T>(path: string, options: CommerceRequestOptions = {}): P
   return payload as T;
 }
 
+async function requestFormData<T>(path: string, formData: FormData, signal?: AbortSignal): Promise<T> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${commerceApiBaseUrl}${path}`, {
+      method: "POST",
+      body: formData,
+      signal,
+    });
+  } catch (error) {
+    const rawMessage = error instanceof Error ? error.message : String(error);
+    throw new CommerceApiError(
+      `Commerce API unreachable at ${path}. Start ecommerce-api on 127.0.0.1:8001.`,
+      0,
+      rawMessage,
+      path,
+    );
+  }
+
+  const payload = await parseResponse(response);
+
+  if (!response.ok) {
+    const backendMessage = getPayloadMessage(payload) ?? response.statusText;
+    throw new CommerceApiError(
+      `Commerce API ${response.status} at ${path}: ${backendMessage}`,
+      response.status,
+      payload,
+      path,
+    );
+  }
+
+  return payload as T;
+}
+
+function normalizeProductFactoryBatchRow(payload: unknown): ProductFactoryBatchRowResponse | null {
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  const id = normalizeOptionalNumber(payload.id);
+  const batchId = normalizeOptionalNumber(payload.batch_id);
+  const rowNumber = normalizeOptionalNumber(payload.row_number);
+  if (id === null || batchId === null || rowNumber === null) {
+    return null;
+  }
+
+  return {
+    ...payload,
+    id,
+    batch_id: batchId,
+    row_number: rowNumber,
+    model: normalizeNullableString(payload.model) ?? "",
+    brand: normalizeNullableString(payload.brand) ?? "",
+    name: normalizeNullableString(payload.name) ?? "",
+    queries: normalizeStringArray(payload.queries),
+    status: normalizeNullableString(payload.status) ?? "pending",
+    selected_source: normalizeNullableString(payload.selected_source),
+    selected_url: normalizeNullableString(payload.selected_url),
+    confidence: normalizeOptionalNumber(payload.confidence),
+    candidates: getArrayPayload(payload.candidates, ["items", "candidates", "data", "results"]).filter(isRecord),
+    error_code: normalizeNullableString(payload.error_code),
+    error_message: normalizeNullableString(payload.error_message),
+    selection_metadata: isRecord(payload.selection_metadata) ? payload.selection_metadata : null,
+    created_at: normalizeNullableString(payload.created_at) ?? "",
+    updated_at: normalizeNullableString(payload.updated_at) ?? "",
+  };
+}
+
+function normalizeProductFactoryBatch(payload: unknown): ProductFactoryBatchResponse | null {
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  const id = normalizeOptionalNumber(payload.id);
+  if (id === null) {
+    return null;
+  }
+
+  return {
+    ...payload,
+    id,
+    filename: normalizeNullableString(payload.filename),
+    status: normalizeNullableString(payload.status) ?? "uploaded",
+    total_rows: normalizeCounter(payload.total_rows),
+    pending_count: normalizeCounter(payload.pending_count),
+    auto_selected_count: normalizeCounter(payload.auto_selected_count),
+    manually_selected_count: normalizeCounter(payload.manually_selected_count),
+    needs_review_count: normalizeCounter(payload.needs_review_count),
+    no_usable_source_count: normalizeCounter(payload.no_usable_source_count),
+    resolution_failed_count: normalizeCounter(payload.resolution_failed_count),
+    skipped_count: normalizeCounter(payload.skipped_count),
+    metadata: isRecord(payload.metadata) ? payload.metadata : null,
+    created_at: normalizeNullableString(payload.created_at) ?? "",
+    updated_at: normalizeNullableString(payload.updated_at) ?? "",
+  };
+}
+
+function normalizeProductFactoryBatchList(payload: unknown): ProductFactoryBatchListResponse {
+  return {
+    items: getArrayPayload(payload, ["items", "batches", "data", "results"])
+      .map(normalizeProductFactoryBatch)
+      .filter((item): item is ProductFactoryBatchResponse => item !== null),
+  };
+}
+
+function normalizeProductFactoryBatchRows(payload: unknown): ProductFactoryBatchRowsResponse {
+  return {
+    items: getArrayPayload(payload, ["items", "rows", "data", "results"])
+      .map(normalizeProductFactoryBatchRow)
+      .filter((item): item is ProductFactoryBatchRowResponse => item !== null),
+  };
+}
+
+function normalizeProductFactoryBatchUpload(payload: unknown): ProductFactoryBatchUploadResponse {
+  const batch = normalizeProductFactoryBatch(payload);
+  const previewRows = isRecord(payload)
+    ? getArrayPayload(payload.preview_rows, ["items", "rows", "data", "results"])
+      .map(normalizeProductFactoryBatchRow)
+      .filter((item): item is ProductFactoryBatchRowResponse => item !== null)
+    : [];
+  return {
+    ...(batch ?? {
+      id: 0,
+      filename: null,
+      status: "uploaded",
+      total_rows: previewRows.length,
+      pending_count: previewRows.length,
+      auto_selected_count: 0,
+      manually_selected_count: 0,
+      needs_review_count: 0,
+      no_usable_source_count: 0,
+      resolution_failed_count: 0,
+      skipped_count: 0,
+      metadata: null,
+      created_at: "",
+      updated_at: "",
+    }),
+    preview_rows: previewRows,
+  };
+}
+
+function normalizeProductFactoryBatchResolve(payload: unknown): ProductFactoryBatchResolveResponse {
+  const batch = normalizeProductFactoryBatch(payload);
+  const rows = isRecord(payload)
+    ? getArrayPayload(payload.rows, ["items", "rows", "data", "results"])
+      .map(normalizeProductFactoryBatchRow)
+      .filter((item): item is ProductFactoryBatchRowResponse => item !== null)
+    : [];
+  return {
+    ...(batch ?? {
+      id: 0,
+      filename: null,
+      status: "resolved",
+      total_rows: rows.length,
+      pending_count: 0,
+      auto_selected_count: 0,
+      manually_selected_count: 0,
+      needs_review_count: 0,
+      no_usable_source_count: 0,
+      resolution_failed_count: 0,
+      skipped_count: 0,
+      metadata: null,
+      created_at: "",
+      updated_at: "",
+    }),
+    rows,
+  };
+}
+
 function normalizeCatalogCategoryOptions(payload: unknown): CatalogCategoryOption[] {
   const list = getArrayPayload(payload, ["items", "categories", "data", "results"]);
 
@@ -3027,6 +3210,141 @@ export const commerceClient = {
         body,
         signal,
       }),
+    );
+  },
+
+  async uploadProductFactoryBatchCsv(
+    file: File,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchUploadResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return normalizeProductFactoryBatchUpload(
+      await requestFormData<unknown>("/product-factory-batches/upload", formData, signal),
+    );
+  },
+
+  async listProductFactoryBatches(signal?: AbortSignal): Promise<ProductFactoryBatchListResponse> {
+    return normalizeProductFactoryBatchList(
+      await request<unknown>("/product-factory-batches", { signal }),
+    );
+  },
+
+  async getProductFactoryBatch(
+    batchId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchResponse> {
+    return (
+      normalizeProductFactoryBatch(
+        await request<unknown>(
+          `/product-factory-batches/${encodeURIComponent(String(batchId))}`,
+          { signal },
+        ),
+      ) ?? {
+        id: Number(batchId),
+        filename: null,
+        status: "unknown",
+        total_rows: 0,
+        pending_count: 0,
+        auto_selected_count: 0,
+        manually_selected_count: 0,
+        needs_review_count: 0,
+        no_usable_source_count: 0,
+        resolution_failed_count: 0,
+        skipped_count: 0,
+        metadata: null,
+        created_at: "",
+        updated_at: "",
+      }
+    );
+  },
+
+  async getProductFactoryBatchRows(
+    batchId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchRowsResponse> {
+    return normalizeProductFactoryBatchRows(
+      await request<unknown>(
+        `/product-factory-batches/${encodeURIComponent(String(batchId))}/rows`,
+        { signal },
+      ),
+    );
+  },
+
+  async resolveProductFactoryBatch(
+    batchId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchResolveResponse> {
+    return normalizeProductFactoryBatchResolve(
+      await request<unknown>(
+        `/product-factory-batches/${encodeURIComponent(String(batchId))}/resolve`,
+        {
+          method: "POST",
+          signal,
+        },
+      ),
+    );
+  },
+
+  async selectProductFactoryBatchRowSource(
+    batchId: string | number,
+    rowId: string | number,
+    body: ProductFactoryBatchSelectSourceRequest,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchRowResponse> {
+    return (
+      normalizeProductFactoryBatchRow(
+        await request<unknown>(
+          `/product-factory-batches/${encodeURIComponent(String(batchId))}/rows/${encodeURIComponent(String(rowId))}/select-source`,
+          {
+            method: "POST",
+            body,
+            signal,
+          },
+        ),
+      ) ?? {
+        id: Number(rowId),
+        batch_id: Number(batchId),
+        row_number: 0,
+        model: "",
+        brand: "",
+        name: "",
+        queries: [],
+        status: "needs_review",
+        candidates: [],
+        created_at: "",
+        updated_at: "",
+      }
+    );
+  },
+
+  async skipProductFactoryBatchRow(
+    batchId: string | number,
+    rowId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchRowResponse> {
+    return (
+      normalizeProductFactoryBatchRow(
+        await request<unknown>(
+          `/product-factory-batches/${encodeURIComponent(String(batchId))}/rows/${encodeURIComponent(String(rowId))}/skip`,
+          {
+            method: "POST",
+            signal,
+          },
+        ),
+      ) ?? {
+        id: Number(rowId),
+        batch_id: Number(batchId),
+        row_number: 0,
+        model: "",
+        brand: "",
+        name: "",
+        queries: [],
+        status: "skipped",
+        candidates: [],
+        created_at: "",
+        updated_at: "",
+      }
     );
   },
 

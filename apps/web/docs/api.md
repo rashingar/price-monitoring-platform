@@ -233,6 +233,13 @@ The revision is the concurrency token for group and value changes.
 Filter groups and values support the statuses `active`, `inactive`, and `deprecated`. The UI
 does not expose delete actions for filter groups or values.
 
+Product Factory Batch Intake is a dedicated compact operator UI under
+`/product-factory/batch-intake`. It uploads CSV files with required
+`model`, `brand`, and `name` columns, calls the ecommerce-api batch endpoints,
+resolves source URLs for Skroutz, BestPrice, and Electronet, and supports
+candidate/manual source selection plus row skipping. This phase is resolve-only;
+Product Factory job enqueue actions are intentionally left for a later phase.
+
 ## Commerce API
 
 Current browser-facing endpoints:
@@ -267,6 +274,14 @@ GET    /commerce-api/source-url-agent/candidates/{candidate_id}
 PATCH  /commerce-api/source-url-agent/candidates/{candidate_id}/review
 POST   /commerce-api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network
 GET    /commerce-api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network/latest
+
+POST   /commerce-api/product-factory-batches/upload
+GET    /commerce-api/product-factory-batches
+GET    /commerce-api/product-factory-batches/{batch_id}
+GET    /commerce-api/product-factory-batches/{batch_id}/rows
+POST   /commerce-api/product-factory-batches/{batch_id}/resolve
+POST   /commerce-api/product-factory-batches/{batch_id}/rows/{row_id}/select-source
+POST   /commerce-api/product-factory-batches/{batch_id}/rows/{row_id}/skip
 
 GET    /commerce-api/paths/roots
 GET    /commerce-api/artifacts/roots

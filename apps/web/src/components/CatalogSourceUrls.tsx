@@ -319,7 +319,8 @@ export function SourceUrlImportPanel({
       include_observations: includeObservations,
       include_artifacts: includeArtifacts,
       limit: Number.isFinite(parsedLimit) ? parsedLimit : null,
-      report_items_limit: Number.isFinite(parsedReportLimit) ? parsedReportLimit : 200,
+      report_items_limit:
+        parsedReportLimit !== null && Number.isFinite(parsedReportLimit) ? parsedReportLimit : 200,
     };
   }, [catalogSource, includeArtifacts, includeObservations, limit, reportItemLimit]);
 

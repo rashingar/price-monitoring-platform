@@ -57,6 +57,11 @@ const ProductFactoryWorkflowPage = lazy(() =>
     default: ProductFactoryWorkflowPage,
   })),
 );
+const ProductFactoryBatchIntakePage = lazy(() =>
+  import("../pages/ProductFactoryBatchIntakePage").then(({ ProductFactoryBatchIntakePage }) => ({
+    default: ProductFactoryBatchIntakePage,
+  })),
+);
 const FiltersManagerPage = lazy(() =>
   import("../pages/FiltersManagerPage").then(({ FiltersManagerPage }) => ({ default: FiltersManagerPage })),
 );
@@ -113,6 +118,7 @@ export const router = createBrowserRouter([
       { path: "vendor-sources/captures", element: withPageSuspense(VendorSourceCaptureRunsPage) },
       { path: "vendor-sources/imports", element: withPageSuspense(VendorSourceImportsPage) },
       { path: "product-factory", element: withPageSuspense(ProductFactoryWorkflowPage) },
+      { path: "product-factory/batch-intake", element: withPageSuspense(ProductFactoryBatchIntakePage) },
       { path: "product-factory/filters", element: withPageSuspense(FiltersManagerPage) },
       { path: "product-factory/:model", element: withPageSuspense(ProductFactoryWorkflowPage) },
       { path: "pipeline", element: withPageSuspense(ProductFactoryWorkflowPage) },

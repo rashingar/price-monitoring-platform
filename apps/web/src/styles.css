@@ -2406,6 +2406,146 @@ textarea {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.product-factory-batch-page {
+  display: grid;
+  gap: 18px;
+}
+
+.product-factory-batch-top-grid {
+  align-items: start;
+}
+
+.product-factory-batch-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.product-factory-batch-summary-grid div {
+  padding: 10px;
+}
+
+.product-factory-batch-table-wrap table {
+  min-width: 1080px;
+  font-size: 0.92rem;
+}
+
+.product-factory-batch-table-wrap th,
+.product-factory-batch-table-wrap td {
+  padding: 9px 8px;
+}
+
+.product-factory-batch-table-wrap tr.selected-row {
+  background: var(--active-subtle-bg);
+}
+
+.product-factory-batch-actions {
+  gap: 6px;
+}
+
+.batch-row-error {
+  display: block;
+  margin-top: 4px;
+  color: var(--danger-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.batch-recent-list {
+  display: grid;
+  gap: 8px;
+}
+
+.batch-recent-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-subtle);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.batch-recent-item:hover,
+.batch-recent-item.active {
+  border-color: var(--accent);
+  background: var(--active-subtle-bg);
+}
+
+.batch-recent-item span {
+  font-weight: 800;
+}
+
+.batch-recent-item small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+
+.product-factory-batch-review-panel {
+  border-top: 3px solid var(--accent);
+}
+
+.batch-query-details summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.batch-query-details ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+.batch-candidate-list {
+  display: grid;
+  gap: 10px;
+}
+
+.batch-candidate-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-subtle);
+}
+
+.batch-candidate-card.selected {
+  border-color: var(--accent);
+  background: var(--active-subtle-bg);
+}
+
+.batch-candidate-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-candidate-card p {
+  margin: 6px 0;
+}
+
+.batch-candidate-card details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.batch-manual-url-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+
 .source-url-import-controls label.checkbox-row {
   align-items: center;
   padding-top: 28px;
@@ -3174,6 +3314,7 @@ code {
   .workflow-tabs,
   .summary-grid,
   .catalog-summary-grid,
+  .product-factory-batch-summary-grid,
   .source-url-summary-grid,
   .source-url-import-summary-grid,
   .source-url-agent-top-row,
@@ -3209,6 +3350,11 @@ code {
   .browser-layout,
   .save-grid,
   .split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-candidate-card,
+  .batch-recent-item {
     grid-template-columns: 1fr;
   }
 

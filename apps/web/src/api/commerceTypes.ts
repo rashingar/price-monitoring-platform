@@ -2,7 +2,10 @@ import type { components as EcommerceOpenApi } from "./generated/ecommerce";
 
 type EcommerceSchema<Name extends keyof EcommerceOpenApi["schemas"]> =
   EcommerceOpenApi["schemas"][Name];
-type WithRequiredFields<Base, Keys extends keyof Base> = Base & Required<Pick<Base, Keys>>;
+type WithRequiredFields<Base, Keys extends keyof Base> = Omit<Base, Keys> & {
+  [Key in Keys]-?: NonNullable<Base[Key]>;
+};
+type WithRuntimeDefaults<Base, Defaults> = Omit<Base, keyof Defaults> & Defaults;
 type AssertAssignable<Actual extends Expected, Expected> = true;
 
 export type EcommerceContractAlertRuleCreateRequest =
@@ -38,6 +41,20 @@ export type EcommerceContractSourceUrlImportRequest =
   EcommerceSchema<"SourceUrlImportRequest">;
 export type EcommerceContractProductFactoryHandoffImportRequest =
   EcommerceSchema<"ProductFactoryHandoffImportRequest">;
+export type EcommerceContractProductFactoryBatchListResponse =
+  EcommerceSchema<"ProductFactoryBatchListResponse">;
+export type EcommerceContractProductFactoryBatchResponse =
+  EcommerceSchema<"ProductFactoryBatchResponse">;
+export type EcommerceContractProductFactoryBatchRowsResponse =
+  EcommerceSchema<"ProductFactoryBatchRowsResponse">;
+export type EcommerceContractProductFactoryBatchRowResponse =
+  EcommerceSchema<"ProductFactoryBatchRowResponse">;
+export type EcommerceContractProductFactoryBatchUploadResponse =
+  EcommerceSchema<"ProductFactoryBatchUploadResponse">;
+export type EcommerceContractProductFactoryBatchResolveResponse =
+  EcommerceSchema<"ProductFactoryBatchResolveResponse">;
+export type EcommerceContractProductFactoryBatchSelectSourceRequest =
+  EcommerceSchema<"SelectSourceRequest">;
 export type EcommerceContractVendorSourceCaptureRunRequest =
   EcommerceSchema<"VendorSourceCaptureRunApiRequest">;
 export type EcommerceContractSkroutzNetworkDiagnosticRequest =
@@ -245,6 +262,31 @@ export type SourceUrlImportRequest = EcommerceSchema<"SourceUrlImportRequest">;
 
 export type ProductFactoryHandoffImportRequest =
   EcommerceSchema<"ProductFactoryHandoffImportRequest">;
+
+export type ProductFactoryBatchListResponse =
+  EcommerceContractProductFactoryBatchListResponse;
+export type ProductFactoryBatchResponse =
+  EcommerceContractProductFactoryBatchResponse;
+export type ProductFactoryBatchRowsResponse =
+  EcommerceContractProductFactoryBatchRowsResponse;
+export type ProductFactoryBatchRowResponse =
+  EcommerceContractProductFactoryBatchRowResponse;
+export type ProductFactoryBatchUploadResponse =
+  EcommerceContractProductFactoryBatchUploadResponse;
+export type ProductFactoryBatchResolveResponse =
+  EcommerceContractProductFactoryBatchResolveResponse;
+export type ProductFactoryBatchSelectSourceRequest =
+  EcommerceContractProductFactoryBatchSelectSourceRequest;
+
+export interface ProductFactoryBatchCandidate {
+  source_name?: SourceName | string | null;
+  url?: string | null;
+  title?: string | null;
+  description?: string | null;
+  confidence?: number | string | null;
+  result_rank?: number | string | null;
+  [key: string]: unknown;
+}
 
 export interface SourceUrlImportSummary {
   candidates_found: number;
@@ -542,7 +584,7 @@ type SourceUrlAgentReadinessRuntimeDefaults = {
 };
 
 export type SourceUrlAgentReadiness =
-  EcommerceSchema<"SourceUrlAgentReadinessResponse"> & SourceUrlAgentReadinessRuntimeDefaults;
+  WithRuntimeDefaults<EcommerceSchema<"SourceUrlAgentReadinessResponse">, SourceUrlAgentReadinessRuntimeDefaults>;
 
 export type PlatformHealthStatus = EcommerceSchema<"PlatformHealthResponse">["status"];
 
@@ -558,7 +600,7 @@ type PlatformHealthRuntimeDefaults = {
 };
 
 export type PlatformHealthResponse =
-  EcommerceSchema<"PlatformHealthResponse"> & PlatformHealthRuntimeDefaults;
+  WithRuntimeDefaults<EcommerceSchema<"PlatformHealthResponse">, PlatformHealthRuntimeDefaults>;
 
 export type VendorSourceCaptureRunRequest =
   EcommerceSchema<"VendorSourceCaptureRunApiRequest">;
@@ -1473,6 +1515,13 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<SaveCsvCopyBody, EcommerceContractCsvSaveCopyRequest>,
   AssertAssignable<SourceUrlImportRequest, EcommerceContractSourceUrlImportRequest>,
   AssertAssignable<ProductFactoryHandoffImportRequest, EcommerceContractProductFactoryHandoffImportRequest>,
+  AssertAssignable<ProductFactoryBatchListResponse, EcommerceContractProductFactoryBatchListResponse>,
+  AssertAssignable<ProductFactoryBatchResponse, EcommerceContractProductFactoryBatchResponse>,
+  AssertAssignable<ProductFactoryBatchRowsResponse, EcommerceContractProductFactoryBatchRowsResponse>,
+  AssertAssignable<ProductFactoryBatchRowResponse, EcommerceContractProductFactoryBatchRowResponse>,
+  AssertAssignable<ProductFactoryBatchUploadResponse, EcommerceContractProductFactoryBatchUploadResponse>,
+  AssertAssignable<ProductFactoryBatchResolveResponse, EcommerceContractProductFactoryBatchResolveResponse>,
+  AssertAssignable<ProductFactoryBatchSelectSourceRequest, EcommerceContractProductFactoryBatchSelectSourceRequest>,
   AssertAssignable<VendorSourceCaptureRunRequest, EcommerceContractVendorSourceCaptureRunRequest>,
   AssertAssignable<SkroutzNetworkDiagnosticRequest, EcommerceContractSkroutzNetworkDiagnosticRequest>,
   AssertAssignable<StockSyncRunRequest, EcommerceContractStockSyncRunRequest>,

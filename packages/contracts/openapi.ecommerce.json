@@ -1106,6 +1106,472 @@
         "title": "PriceUpdateExportApiRequest",
         "type": "object"
       },
+      "ProductFactoryBatchListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductFactoryBatchResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ProductFactoryBatchListResponse",
+        "type": "object"
+      },
+      "ProductFactoryBatchResolveResponse": {
+        "properties": {
+          "auto_selected_count": {
+            "title": "Auto Selected Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "manually_selected_count": {
+            "title": "Manually Selected Count",
+            "type": "integer"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "needs_review_count": {
+            "title": "Needs Review Count",
+            "type": "integer"
+          },
+          "no_usable_source_count": {
+            "title": "No Usable Source Count",
+            "type": "integer"
+          },
+          "pending_count": {
+            "title": "Pending Count",
+            "type": "integer"
+          },
+          "resolution_failed_count": {
+            "title": "Resolution Failed Count",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "total_rows",
+          "pending_count",
+          "auto_selected_count",
+          "manually_selected_count",
+          "needs_review_count",
+          "no_usable_source_count",
+          "resolution_failed_count",
+          "skipped_count",
+          "created_at",
+          "updated_at",
+          "rows"
+        ],
+        "title": "ProductFactoryBatchResolveResponse",
+        "type": "object"
+      },
+      "ProductFactoryBatchResponse": {
+        "properties": {
+          "auto_selected_count": {
+            "title": "Auto Selected Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "manually_selected_count": {
+            "title": "Manually Selected Count",
+            "type": "integer"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "needs_review_count": {
+            "title": "Needs Review Count",
+            "type": "integer"
+          },
+          "no_usable_source_count": {
+            "title": "No Usable Source Count",
+            "type": "integer"
+          },
+          "pending_count": {
+            "title": "Pending Count",
+            "type": "integer"
+          },
+          "resolution_failed_count": {
+            "title": "Resolution Failed Count",
+            "type": "integer"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "total_rows",
+          "pending_count",
+          "auto_selected_count",
+          "manually_selected_count",
+          "needs_review_count",
+          "no_usable_source_count",
+          "resolution_failed_count",
+          "skipped_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProductFactoryBatchResponse",
+        "type": "object"
+      },
+      "ProductFactoryBatchRowResponse": {
+        "properties": {
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "integer"
+          },
+          "brand": {
+            "title": "Brand",
+            "type": "string"
+          },
+          "candidates": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "queries": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Queries",
+            "type": "array"
+          },
+          "row_number": {
+            "title": "Row Number",
+            "type": "integer"
+          },
+          "selected_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Source"
+          },
+          "selected_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Url"
+          },
+          "selection_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selection Metadata"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "batch_id",
+          "row_number",
+          "model",
+          "brand",
+          "name",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProductFactoryBatchRowResponse",
+        "type": "object"
+      },
+      "ProductFactoryBatchRowsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ProductFactoryBatchRowsResponse",
+        "type": "object"
+      },
+      "ProductFactoryBatchUploadResponse": {
+        "properties": {
+          "auto_selected_count": {
+            "title": "Auto Selected Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "manually_selected_count": {
+            "title": "Manually Selected Count",
+            "type": "integer"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "needs_review_count": {
+            "title": "Needs Review Count",
+            "type": "integer"
+          },
+          "no_usable_source_count": {
+            "title": "No Usable Source Count",
+            "type": "integer"
+          },
+          "pending_count": {
+            "title": "Pending Count",
+            "type": "integer"
+          },
+          "preview_rows": {
+            "items": {
+              "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+            },
+            "title": "Preview Rows",
+            "type": "array"
+          },
+          "resolution_failed_count": {
+            "title": "Resolution Failed Count",
+            "type": "integer"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "total_rows",
+          "pending_count",
+          "auto_selected_count",
+          "manually_selected_count",
+          "needs_review_count",
+          "no_usable_source_count",
+          "resolution_failed_count",
+          "skipped_count",
+          "created_at",
+          "updated_at",
+          "preview_rows"
+        ],
+        "title": "ProductFactoryBatchUploadResponse",
+        "type": "object"
+      },
       "ProductFactoryHandoffImportRequest": {
         "properties": {
           "catalog_source": {
@@ -1213,6 +1679,34 @@
           "source_urls"
         ],
         "title": "ProductFromSourceRequest",
+        "type": "object"
+      },
+      "SelectSourceRequest": {
+        "properties": {
+          "candidate_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Url"
+          },
+          "manual_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Url"
+          }
+        },
+        "title": "SelectSourceRequest",
         "type": "object"
       },
       "SkroutzNetworkDiagnosticApiRequest": {
@@ -6020,6 +6514,340 @@
         "summary": "Preview Selection",
         "tags": [
           "price-monitoring"
+        ]
+      }
+    },
+    "/api/product-factory-batches": {
+      "get": {
+        "operationId": "list_product_factory_batches_api_product_factory_batches_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Product Factory Batches",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/upload": {
+      "post": {
+        "operationId": "upload_product_factory_batch_api_product_factory_batches_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchUploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Upload Product Factory Batch",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/{batch_id}": {
+      "get": {
+        "operationId": "get_product_factory_batch_api_product_factory_batches__batch_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Product Factory Batch",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/{batch_id}/resolve": {
+      "post": {
+        "operationId": "resolve_product_factory_batch_api_product_factory_batches__batch_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchResolveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Product Factory Batch",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/{batch_id}/rows": {
+      "get": {
+        "operationId": "get_product_factory_batch_rows_api_product_factory_batches__batch_id__rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchRowsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Product Factory Batch Rows",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/{batch_id}/rows/{row_id}/select-source": {
+      "post": {
+        "operationId": "select_product_factory_batch_row_source_api_product_factory_batches__batch_id__rows__row_id__select_source_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "row_id",
+            "required": true,
+            "schema": {
+              "title": "Row Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Select Product Factory Batch Row Source",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/{batch_id}/rows/{row_id}/skip": {
+      "post": {
+        "operationId": "skip_product_factory_batch_row_api_product_factory_batches__batch_id__rows__row_id__skip_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "row_id",
+            "required": true,
+            "schema": {
+              "title": "Row Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Skip Product Factory Batch Row",
+        "tags": [
+          "product-factory-batches"
         ]
       }
     },
