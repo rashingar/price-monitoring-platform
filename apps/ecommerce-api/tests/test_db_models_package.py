@@ -10,6 +10,7 @@ import ecommerce.db.models as model_registration  # noqa: E402,F401
 from ecommerce.db.models.base import Base as BaseFromBase  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
+from ecommerce.db.models.product_factory_batch import ProductFactoryBatch, ProductFactoryBatchRow  # noqa: E402
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask  # noqa: E402
 from ecommerce.db.models.vendor_sources import Vendor, VendorSourceCaptureRun  # noqa: E402
@@ -33,6 +34,8 @@ EXPECTED_TABLE_NAMES = [
     "offer_observations",
     "price_observation_listings",
     "price_observations",
+    "product_factory_batch_rows",
+    "product_factory_batches",
     "product_sources",
     "products",
     "source_capture_snapshots",
@@ -60,6 +63,8 @@ def test_domain_model_imports_share_one_metadata_registry() -> None:
         OfferObservation,
         PriceObservation,
         PriceObservationListing,
+        ProductFactoryBatch,
+        ProductFactoryBatchRow,
         Product,
         ProductSource,
         SourceCaptureSnapshot,

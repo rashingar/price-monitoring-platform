@@ -11,6 +11,7 @@ from . import alerts as alerts
 from . import catalog as catalog
 from . import jobs as jobs
 from . import price_monitoring as price_monitoring
+from . import product_factory_batch as product_factory_batch
 from . import products as products
 from . import source_urls as source_urls
 from . import vendor_sources as vendor_sources
