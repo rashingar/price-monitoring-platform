@@ -269,16 +269,44 @@ describe("Product Factory Batch Intake", () => {
 
     const rowEl = (await screen.findByRole("cell", { name: "000004" })).closest("tr");
     expect(rowEl).not.toBeNull();
-    fireEvent.click(within(rowEl as HTMLElement).getByRole("button", { name: "Review" }));
+    fireEvent.click(within(rowEl as HTMLElement).getByRole("button", { name: "Review URL" }));
 
     await expect(screen.findByRole("heading", { name: "Row 5: 000004" })).resolves.toBeInTheDocument();
-    expect(screen.getByText("Brand Gamma Toaster")).toBeInTheDocument();
-    expect(screen.getByText("Queries used (1)")).toBeInTheDocument();
-    const candidateCard = screen.getByText("Brand Gamma Toaster").closest("article");
+    const detailRow = (rowEl as HTMLElement).nextElementSibling as HTMLElement;
+    expect(detailRow).toHaveClass("product-factory-batch-detail-row");
+    expect(within(detailRow).getByRole("heading", { name: "Row 5: 000004" })).toBeInTheDocument();
+    expect(within(detailRow).getByText("Brand Gamma Toaster")).toBeInTheDocument();
+    expect(within(detailRow).getByText("Queries used (1)")).toBeInTheDocument();
+    expect(within(detailRow).getByRole("button", { name: "Skip row" })).toBeInTheDocument();
+    expect(detailRow).not.toHaveTextContent("source_name");
+    expect(detailRow).not.toHaveTextContent("result_rank");
+    const candidateCard = within(detailRow).getByText("Brand Gamma Toaster").closest("article");
     expect(candidateCard).not.toBeNull();
     fireEvent.click(within(candidateCard as HTMLElement).getByRole("button", { name: "Select" }));
 
     await waitFor(() => expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname.endsWith("/select-source"))).toBe(true));
+  });
+
+  it("opens one inline review row at a time and shows selected URL details", async () => {
+    installMockFetch(baseRoutes());
+    renderWithRouter("/product-factory/batch-intake");
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+
+    const needsReviewRow = (await screen.findByRole("cell", { name: "000004" })).closest("tr") as HTMLElement;
+    fireEvent.click(within(needsReviewRow).getByRole("button", { name: "Review URL" }));
+    expect(needsReviewRow.nextElementSibling).toHaveClass("product-factory-batch-detail-row");
+    expect(screen.getByRole("heading", { name: "Row 5: 000004" })).toBeInTheDocument();
+
+    const autoSelectedRow = (await screen.findByRole("cell", { name: "000002" })).closest("tr") as HTMLElement;
+    fireEvent.click(within(autoSelectedRow).getByRole("button", { name: "Review URL" }));
+    expect(screen.queryByRole("heading", { name: "Row 5: 000004" })).not.toBeInTheDocument();
+    const detailRow = autoSelectedRow.nextElementSibling as HTMLElement;
+    expect(detailRow).toHaveClass("product-factory-batch-detail-row");
+    expect(within(detailRow).getByRole("heading", { name: "Row 3: 000002" })).toBeInTheDocument();
+    expect(within(detailRow).getByText("Auto-selected source URL")).toBeInTheDocument();
+    expect(within(detailRow).getByText("www.electronet.gr/a/b/c/brand-alpha")).toBeInTheDocument();
+    expect(within(detailRow).getByText("electronet")).toBeInTheDocument();
+    expect(within(detailRow).getByText("92")).toBeInTheDocument();
   });
 
   it("saves manual URLs, displays backend validation errors, and skips rows", async () => {
@@ -317,9 +345,11 @@ describe("Product Factory Batch Intake", () => {
     renderWithRouter("/product-factory/batch-intake");
     fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
     const reviewRow = (await screen.findByRole("cell", { name: "000004" })).closest("tr") as HTMLElement;
-    fireEvent.click(within(reviewRow).getByRole("button", { name: "Review" }));
+    fireEvent.click(within(reviewRow).getByRole("button", { name: "Review URL" }));
 
     const manualInput = await screen.findByLabelText("Manual URL");
+    expect(screen.getByRole("button", { name: "Save manual URL" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Skip row" })).toBeInTheDocument();
     fireEvent.change(manualInput, { target: { value: "https://example.com/not-supported" } });
     fireEvent.click(screen.getByRole("button", { name: "Save manual URL" }));
     await expect(screen.findByText(/Manual URL is not supported/)).resolves.toBeInTheDocument();

@@ -2466,6 +2466,11 @@ textarea {
   background: var(--active-subtle-bg);
 }
 
+.product-factory-batch-table-wrap tr.product-factory-batch-detail-row > td {
+  padding: 0 8px 12px;
+  background: var(--active-subtle-bg);
+}
+
 .product-factory-batch-actions {
   gap: 6px;
 }
@@ -2513,7 +2518,38 @@ textarea {
 }
 
 .product-factory-batch-review-panel {
+  display: grid;
+  gap: 10px;
   border-top: 3px solid var(--accent);
+  padding: 12px;
+  background: var(--surface);
+}
+
+.batch-review-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-subtle);
+}
+
+.batch-review-identity {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(320px, 2fr);
+  gap: 10px;
+}
+
+.compact-detail-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.compact-detail-grid div {
+  padding: 8px;
+}
+
+.batch-review-identity .batch-query-details {
+  grid-column: 1 / -1;
 }
 
 .batch-query-details summary {
@@ -2572,6 +2608,11 @@ textarea {
   flex-wrap: wrap;
   align-items: end;
   gap: 10px;
+}
+
+.batch-manual-url-form.prominent {
+  border-color: var(--accent);
+  background: var(--active-subtle-bg);
 }
 
 .source-url-import-controls label.checkbox-row {
@@ -3362,6 +3403,8 @@ code {
   .candidate-product-summary,
   .candidate-detail-list,
   .candidate-evidence-grid,
+  .batch-review-identity,
+  .compact-detail-grid,
   .csv-metadata-grid,
   .diagnostics-summary-grid,
   .job-progress-grid,

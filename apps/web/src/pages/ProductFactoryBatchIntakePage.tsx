@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { commerceClient, getCommerceApiErrorMessage } from "../api/commerceClient";
 import type {
   ProductFactoryBatchCandidate,
@@ -122,6 +122,34 @@ function sameUrl(left: string | null | undefined, right: string | null | undefin
   return String(left ?? "").trim() === String(right ?? "").trim();
 }
 
+function reviewStatusMessage(row: ProductFactoryBatchRowResponse, candidateCount: number): string {
+  switch ((row.status ?? "pending").trim().toLowerCase()) {
+    case "pending":
+      return candidateCount > 0 ? "Awaiting operator review." : "Not resolved yet";
+    case "resolving_source":
+      return "Resolving...";
+    case "auto_selected":
+      return "Auto-selected source URL";
+    case "needs_review":
+      return "Review candidates";
+    case "no_usable_source":
+      return "No usable source found. Enter a manual URL.";
+    case "resolution_failed":
+      return "Resolution failed. Enter a manual URL.";
+    case "manually_selected":
+      return "Manual selected URL";
+    case "skipped":
+      return "Skipped row";
+    default:
+      return formatStatus(row.status);
+  }
+}
+
+function candidateControlsDisabled(row: ProductFactoryBatchRowResponse, candidateCount: number): boolean {
+  const status = (row.status ?? "pending").trim().toLowerCase();
+  return candidateCount === 0 || status === "resolving_source" || status === "skipped";
+}
+
 function batchMetadataSourceNames(batch: ProductFactoryBatchResponse | null): BatchSourceName[] {
   const raw = batch?.metadata && Array.isArray(batch.metadata.selected_source_names)
     ? batch.metadata.selected_source_names
@@ -199,15 +227,27 @@ function SourceSelectionControls({
 function BatchRowsTable({
   rows,
   activeReviewRowId,
+  manualUrl,
+  manualError,
   rowActionKey,
   onReview,
   onSkip,
+  onManualUrlChange,
+  onSelectCandidate,
+  onSaveManualUrl,
+  onCloseReview,
 }: {
   rows: ProductFactoryBatchRowResponse[];
   activeReviewRowId: number | null;
+  manualUrl: string;
+  manualError: string | null;
   rowActionKey: string | null;
   onReview: (row: ProductFactoryBatchRowResponse) => void;
   onSkip: (row: ProductFactoryBatchRowResponse) => void;
+  onManualUrlChange: (value: string) => void;
+  onSelectCandidate: (row: ProductFactoryBatchRowResponse, candidateUrl: string) => void;
+  onSaveManualUrl: (row: ProductFactoryBatchRowResponse) => void;
+  onCloseReview: () => void;
 }) {
   if (rows.length === 0) {
     return <EmptyState title="No rows loaded" message="Upload a CSV or open a recent batch to review rows." />;
@@ -229,45 +269,67 @@ function BatchRowsTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.id} className={activeReviewRowId === row.id ? "selected-row" : undefined}>
-              <td>{row.row_number}</td>
-              <td>{row.model}</td>
-              <td>{row.brand || "-"}</td>
-              <td>
-                <strong>{row.name}</strong>
-                {row.error_code || row.error_message ? (
-                  <span className="batch-row-error">
-                    {row.error_code ? `${row.error_code}: ` : ""}
-                    {row.error_message}
-                  </span>
+          {rows.map((row) => {
+            const expanded = activeReviewRowId === row.id;
+            return (
+              <Fragment key={row.id}>
+                <tr className={expanded ? "selected-row" : undefined}>
+                  <td>{row.row_number}</td>
+                  <td>{row.model}</td>
+                  <td>{row.brand || "-"}</td>
+                  <td>
+                    <strong>{row.name}</strong>
+                    {row.error_code || row.error_message ? (
+                      <span className="batch-row-error">
+                        {row.error_code ? `${row.error_code}: ` : ""}
+                        {row.error_message}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td><StatusBadge status={row.status} /></td>
+                  <td>{row.selected_source ?? "-"}</td>
+                  <td>{row.confidence ?? "-"}</td>
+                  <td>
+                    <div className="button-row product-factory-batch-actions">
+                      <button className="button secondary compact-button" type="button" onClick={() => onReview(row)}>
+                        Review URL
+                      </button>
+                      {row.selected_url ? (
+                        <a className="button secondary compact-button" href={row.selected_url} target="_blank" rel="noreferrer">
+                          Open selected URL
+                        </a>
+                      ) : null}
+                      <button
+                        className="button secondary compact-button"
+                        type="button"
+                        disabled={rowActionKey === `skip:${row.id}`}
+                        onClick={() => onSkip(row)}
+                      >
+                        {rowActionKey === `skip:${row.id}` ? "Skipping..." : "Skip"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {expanded ? (
+                  <tr className="product-factory-batch-detail-row">
+                    <td colSpan={8}>
+                      <ReviewPanel
+                        row={row}
+                        manualUrl={manualUrl}
+                        manualError={manualError}
+                        rowActionKey={rowActionKey}
+                        onManualUrlChange={onManualUrlChange}
+                        onSelectCandidate={onSelectCandidate}
+                        onSaveManualUrl={onSaveManualUrl}
+                        onSkip={onSkip}
+                        onClose={onCloseReview}
+                      />
+                    </td>
+                  </tr>
                 ) : null}
-              </td>
-              <td><StatusBadge status={row.status} /></td>
-              <td>{row.selected_source ?? "-"}</td>
-              <td>{row.confidence ?? "-"}</td>
-              <td>
-                <div className="button-row product-factory-batch-actions">
-                  <button className="button secondary compact-button" type="button" onClick={() => onReview(row)}>
-                    Review
-                  </button>
-                  {row.selected_url ? (
-                    <a className="button secondary compact-button" href={row.selected_url} target="_blank" rel="noreferrer">
-                      Open selected URL
-                    </a>
-                  ) : null}
-                  <button
-                    className="button secondary compact-button"
-                    type="button"
-                    disabled={rowActionKey === `skip:${row.id}`}
-                    onClick={() => onSkip(row)}
-                  >
-                    {rowActionKey === `skip:${row.id}` ? "Skipping..." : "Skip"}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -282,6 +344,7 @@ function ReviewPanel({
   onManualUrlChange,
   onSelectCandidate,
   onSaveManualUrl,
+  onSkip,
   onClose,
 }: {
   row: ProductFactoryBatchRowResponse;
@@ -291,11 +354,15 @@ function ReviewPanel({
   onManualUrlChange: (value: string) => void;
   onSelectCandidate: (row: ProductFactoryBatchRowResponse, candidateUrl: string) => void;
   onSaveManualUrl: (row: ProductFactoryBatchRowResponse) => void;
+  onSkip: (row: ProductFactoryBatchRowResponse) => void;
   onClose: () => void;
 }) {
   const candidates = (row.candidates ?? []).map(asCandidate);
+  const statusMessage = reviewStatusMessage(row, candidates.length);
+  const controlsDisabled = candidateControlsDisabled(row, candidates.length);
+  const manualProminent = ["no_usable_source", "resolution_failed"].includes((row.status ?? "").trim().toLowerCase());
   return (
-    <section className="panel product-factory-batch-review-panel" aria-label="Batch row review">
+    <section className="product-factory-batch-review-panel" aria-label="Batch row review">
       <div className="section-heading">
         <div>
           <p className="eyebrow">Row review</p>
@@ -304,41 +371,54 @@ function ReviewPanel({
         </div>
         <div className="button-row">
           <StatusBadge status={row.status} />
+          <button
+            className="button secondary compact-button"
+            type="button"
+            disabled={rowActionKey === `skip:${row.id}`}
+            onClick={() => onSkip(row)}
+          >
+            {rowActionKey === `skip:${row.id}` ? "Skipping..." : "Skip row"}
+          </button>
           <button className="button secondary compact-button" type="button" onClick={onClose}>Close</button>
         </div>
       </div>
 
-      <dl className="price-review-detail-grid">
+      <div className="batch-review-section batch-review-identity">
         <div>
-          <dt>Selected URL</dt>
-          <dd title={row.selected_url ?? ""}>{row.selected_url ? shortUrl(row.selected_url) : "-"}</dd>
+          <p className="eyebrow">Current selection</p>
+          <strong>{statusMessage}</strong>
+          <p className="muted" title={row.selected_url ?? ""}>
+            {row.selected_url ? shortUrl(row.selected_url) : "No selected URL"}
+          </p>
         </div>
-        <div>
-          <dt>Selected source</dt>
-          <dd>{row.selected_source ?? "-"}</dd>
-        </div>
-        <div>
-          <dt>Confidence</dt>
-          <dd>{row.confidence ?? "-"}</dd>
-        </div>
-        <div>
-          <dt>Error</dt>
-          <dd>{row.error_message || row.error_code || "-"}</dd>
-        </div>
-      </dl>
+        <dl className="price-review-detail-grid compact-detail-grid">
+          <div>
+            <dt>Selected source</dt>
+            <dd>{row.selected_source ?? "-"}</dd>
+          </div>
+          <div>
+            <dt>Confidence</dt>
+            <dd>{row.confidence ?? "-"}</dd>
+          </div>
+          <div>
+            <dt>Error</dt>
+            <dd>{row.error_message || row.error_code || "-"}</dd>
+          </div>
+        </dl>
 
-      <details className="batch-query-details">
-        <summary>Queries used ({row.queries?.length ?? 0})</summary>
-        {row.queries && row.queries.length > 0 ? (
-          <ul>
-            {row.queries.map((query) => <li key={query}>{query}</li>)}
-          </ul>
-        ) : (
-          <p className="muted">No queries recorded yet.</p>
-        )}
-      </details>
+        <details className="batch-query-details">
+          <summary>Queries used ({row.queries?.length ?? 0})</summary>
+          {row.queries && row.queries.length > 0 ? (
+            <ul>
+              {row.queries.map((query) => <li key={query}>{query}</li>)}
+            </ul>
+          ) : (
+            <p className="muted">No queries recorded yet.</p>
+          )}
+        </details>
+      </div>
 
-      <div className="batch-candidate-list">
+      <div className="batch-review-section batch-candidate-list">
         <div className="section-heading">
           <div>
             <h4>Candidates</h4>
@@ -370,7 +450,7 @@ function ReviewPanel({
                 <button
                   className="button primary compact-button"
                   type="button"
-                  disabled={!url || rowActionKey === `candidate:${row.id}:${url}`}
+                  disabled={!url || controlsDisabled || rowActionKey === `candidate:${row.id}:${url}`}
                   onClick={() => onSelectCandidate(row, url)}
                 >
                   {rowActionKey === `candidate:${row.id}:${url}` ? "Selecting..." : "Select"}
@@ -379,11 +459,14 @@ function ReviewPanel({
             </article>
           );
         }) : (
-          <EmptyState title="No candidates" message="This row has no supported source URL candidates yet." />
+          <EmptyState title="No candidates" message={row.status === "pending" ? "Not resolved yet." : "This row has no supported source URL candidates."} />
         )}
       </div>
 
-      <form className="batch-manual-url-form" onSubmit={(event) => { event.preventDefault(); onSaveManualUrl(row); }}>
+      <form
+        className={manualProminent ? "batch-review-section batch-manual-url-form prominent" : "batch-review-section batch-manual-url-form"}
+        onSubmit={(event) => { event.preventDefault(); onSaveManualUrl(row); }}
+      >
         <label className="inline-field wide">
           <span>Manual URL</span>
           <input
@@ -744,25 +827,18 @@ export function ProductFactoryBatchIntakePage() {
               <BatchRowsTable
                 rows={rows}
                 activeReviewRowId={reviewRowId}
+                manualUrl={manualUrl}
+                manualError={manualError}
                 rowActionKey={rowActionKey}
                 onReview={(row) => setReviewRowId(row.id)}
                 onSkip={(row) => void handleSkip(row)}
+                onManualUrlChange={setManualUrl}
+                onSelectCandidate={(row, url) => void handleSelectCandidate(row, url)}
+                onSaveManualUrl={(row) => void handleSaveManualUrl(row)}
+                onCloseReview={() => setReviewRowId(null)}
               />
             )}
           </section>
-
-          {reviewRow ? (
-            <ReviewPanel
-              row={reviewRow}
-              manualUrl={manualUrl}
-              manualError={manualError}
-              rowActionKey={rowActionKey}
-              onManualUrlChange={setManualUrl}
-              onSelectCandidate={(row, url) => void handleSelectCandidate(row, url)}
-              onSaveManualUrl={(row) => void handleSaveManualUrl(row)}
-              onClose={() => setReviewRowId(null)}
-            />
-          ) : null}
         </>
       ) : (
         <EmptyState
