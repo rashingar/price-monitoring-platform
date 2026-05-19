@@ -2455,7 +2455,7 @@ textarea {
 }
 
 .product-factory-batch-table-wrap table {
-  min-width: 1080px;
+  min-width: 1240px;
   font-size: 0.92rem;
 }
 
@@ -2475,6 +2475,16 @@ textarea {
 
 .product-factory-batch-actions {
   gap: 6px;
+}
+
+.product-factory-batch-table-wrap th:nth-child(8),
+.product-factory-batch-table-wrap td:nth-child(8),
+.product-factory-batch-table-wrap th:nth-child(9),
+.product-factory-batch-table-wrap td:nth-child(9),
+.product-factory-batch-table-wrap th:nth-child(10),
+.product-factory-batch-table-wrap td:nth-child(10) {
+  max-width: 120px;
+  white-space: nowrap;
 }
 
 .batch-row-error {

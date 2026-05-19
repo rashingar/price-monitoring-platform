@@ -37,7 +37,62 @@ def _identity_score(product: SourceResolutionProduct, haystack: str) -> float:
     model = _alnum(product.model)
     if model and model in normalized:
         score += 5.0
-    return min(score, 25.0)
+    score += _name_identifier_score(product.name, haystack)
+    return min(score, 35.0)
+
+
+def _name_identifier_score(name: str, haystack: str) -> float:
+    identifier = _leading_identifier(name)
+    if not identifier:
+        return 0.0
+    normalized_identifier = _alnum(identifier)
+    if not normalized_identifier or not _has_alpha_and_digit(normalized_identifier):
+        return 0.0
+
+    normalized_haystack = _alnum(haystack)
+    haystack_tokens = _token_set(haystack, minimum_length=2)
+    if normalized_identifier in normalized_haystack:
+        return 24.0
+
+    chunks = [_alnum(chunk) for chunk in re.split(r"[^0-9a-zA-Z]+", identifier) if _alnum(chunk)]
+    score = 0.0
+    matched_chunks = 0
+    for chunk in chunks:
+        if _has_alpha_and_digit(chunk) and len(chunk) >= 4 and chunk in normalized_haystack:
+            score += 10.0
+            matched_chunks += 1
+            continue
+        capacity = _capacity_token(chunk)
+        if capacity and capacity in haystack_tokens:
+            score += 4.0
+            matched_chunks += 1
+            continue
+        if chunk.isalpha() and len(chunk) >= 4 and chunk in haystack_tokens:
+            score += 6.0
+            matched_chunks += 1
+    if matched_chunks >= 2:
+        score += 4.0
+    if _variant_sensitive_identifier(normalized_identifier):
+        score = min(score, 7.0)
+    return min(score, 22.0)
+
+
+def _leading_identifier(name: str) -> str:
+    match = re.match(r"\s*([0-9a-zA-Z]+(?:[-/][0-9a-zA-Z]+)*)", name)
+    return match.group(1) if match else ""
+
+
+def _has_alpha_and_digit(value: str) -> bool:
+    return any(char.isalpha() for char in value) and any(char.isdigit() for char in value)
+
+
+def _capacity_token(value: str) -> str:
+    match = re.search(r"(?:^|[^0-9])([0-9]{2})(?:[^0-9]|$)", value)
+    return match.group(1) if match else ""
+
+
+def _variant_sensitive_identifier(value: str) -> bool:
+    return value.endswith(("wfc", "wfib"))
 
 
 def _manufacturer_score(product: SourceResolutionProduct, haystack: str) -> float:
@@ -64,8 +119,8 @@ def _title_description_score(name: str, title: str, description: str) -> float:
     return title_score + description_score
 
 
-def _token_set(value: str) -> set[str]:
-    return {token for token in re.findall(r"[\w]+", value.casefold()) if len(token) >= 3}
+def _token_set(value: str, *, minimum_length: int = 3) -> set[str]:
+    return {token for token in re.findall(r"[\w]+", value.casefold()) if len(token) >= minimum_length}
 
 
 def _alnum(value: str) -> str:

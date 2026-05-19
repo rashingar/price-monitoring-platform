@@ -49,6 +49,7 @@ const BATCH_SOURCE_OPTIONS = [
 type BatchSourceName = (typeof BATCH_SOURCE_OPTIONS)[number]["name"];
 
 const DEFAULT_BATCH_SOURCE_NAMES = BATCH_SOURCE_OPTIONS.map((source) => source.name);
+const DEFAULT_AUTO_ENQUEUE_CONFIDENCE_THRESHOLD = 85;
 
 function isBatchSourceName(value: string): value is BatchSourceName {
   return BATCH_SOURCE_OPTIONS.some((source) => source.name === value);
@@ -120,6 +121,38 @@ function shortUrl(value: string | null | undefined): string {
 
 function sameUrl(left: string | null | undefined, right: string | null | undefined): boolean {
   return String(left ?? "").trim() === String(right ?? "").trim();
+}
+
+function confidenceValue(row: ProductFactoryBatchRowResponse): number {
+  return Number(row.confidence ?? 0);
+}
+
+function rowHasProductFactoryJob(row: ProductFactoryBatchRowResponse): boolean {
+  return String(row.product_factory_job_id ?? "").trim().length > 0;
+}
+
+function rowIsLowConfidenceAutoSelected(row: ProductFactoryBatchRowResponse): boolean {
+  return row.status === "auto_selected"
+    && Boolean(row.selected_url)
+    && confidenceValue(row) < DEFAULT_AUTO_ENQUEUE_CONFIDENCE_THRESHOLD;
+}
+
+function rowIsFrontendEnqueueEligible(row: ProductFactoryBatchRowResponse): boolean {
+  if (!row.selected_url || rowHasProductFactoryJob(row)) {
+    return false;
+  }
+  if (row.status === "manually_selected") {
+    return true;
+  }
+  return row.status === "auto_selected" && confidenceValue(row) >= DEFAULT_AUTO_ENQUEUE_CONFIDENCE_THRESHOLD;
+}
+
+function shortJobId(value: string | null | undefined): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "-";
+  }
+  return raw.length > 12 ? `${raw.slice(0, 8)}...` : raw;
 }
 
 function reviewStatusMessage(row: ProductFactoryBatchRowResponse, candidateCount: number): string {
@@ -282,6 +315,7 @@ function BatchRowsTable({
   rowActionKey,
   onReview,
   onSkip,
+  onEnqueue,
   onManualUrlChange,
   onSelectCandidate,
   onSaveManualUrl,
@@ -294,6 +328,7 @@ function BatchRowsTable({
   rowActionKey: string | null;
   onReview: (row: ProductFactoryBatchRowResponse) => void;
   onSkip: (row: ProductFactoryBatchRowResponse) => void;
+  onEnqueue: (row: ProductFactoryBatchRowResponse) => void;
   onManualUrlChange: (value: string) => void;
   onSelectCandidate: (row: ProductFactoryBatchRowResponse, candidateUrl: string) => void;
   onSaveManualUrl: (row: ProductFactoryBatchRowResponse) => void;
@@ -315,6 +350,9 @@ function BatchRowsTable({
             <th>Status</th>
             <th>Selected source</th>
             <th>Confidence</th>
+            <th>PF job</th>
+            <th>PF status</th>
+            <th>PF error</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -338,9 +376,31 @@ function BatchRowsTable({
                   </td>
                   <td><StatusBadge status={row.status} /></td>
                   <td>{row.selected_source ?? "-"}</td>
-                  <td>{row.confidence ?? "-"}</td>
+                  <td>
+                    {row.confidence ?? "-"}
+                    {rowIsLowConfidenceAutoSelected(row) ? <span className="batch-row-error">review before enqueue</span> : null}
+                  </td>
+                  <td title={row.product_factory_job_id ?? ""}>{shortJobId(row.product_factory_job_id)}</td>
+                  <td>
+                    {row.product_factory_job_status ? (
+                      <span className="status-badge neutral">{row.product_factory_job_status}</span>
+                    ) : "-"}
+                  </td>
+                  <td title={row.product_factory_error_message ?? ""}>
+                    {row.product_factory_error_message ? shortUrl(row.product_factory_error_message) : "-"}
+                  </td>
                   <td>
                     <div className="button-row product-factory-batch-actions">
+                      {rowIsFrontendEnqueueEligible(row) ? (
+                        <button
+                          className="button primary compact-button"
+                          type="button"
+                          disabled={rowActionKey === `enqueue:${row.id}`}
+                          onClick={() => onEnqueue(row)}
+                        >
+                          {rowActionKey === `enqueue:${row.id}` ? "Enqueueing..." : "Enqueue"}
+                        </button>
+                      ) : null}
                       <button className="button secondary compact-button" type="button" onClick={() => onReview(row)}>
                         Review URL
                       </button>
@@ -362,7 +422,7 @@ function BatchRowsTable({
                 </tr>
                 {expanded ? (
                   <tr className="product-factory-batch-detail-row">
-                    <td colSpan={8}>
+                    <td colSpan={11}>
                       <ReviewPanel
                         row={row}
                         manualUrl={manualUrl}
@@ -544,11 +604,15 @@ export function ProductFactoryBatchIntakePage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [enqueueError, setEnqueueError] = useState<string | null>(null);
+  const [enqueueSummary, setEnqueueSummary] = useState<string | null>(null);
   const [sourceSelectionError, setSourceSelectionError] = useState<string | null>(null);
   const [manualError, setManualError] = useState<string | null>(null);
   const [selectedSourceNames, setSelectedSourceNames] = useState<BatchSourceName[]>(() => [...DEFAULT_BATCH_SOURCE_NAMES]);
   const [isUploading, setIsUploading] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
+  const [isBatchEnqueuing, setIsBatchEnqueuing] = useState(false);
+  const [isRefreshingJobs, setIsRefreshingJobs] = useState(false);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [rowActionKey, setRowActionKey] = useState<string | null>(null);
 
@@ -558,6 +622,8 @@ export function ProductFactoryBatchIntakePage() {
   );
   const resolutionActive = isResolutionActive(activeBatch, rows);
   const shouldPollResolution = Boolean(activeBatch) && !isBatchResolutionTerminal(activeBatch, rows, isResolving);
+  const eligibleUnenqueuedRows = useMemo(() => rows.filter(rowIsFrontendEnqueueEligible), [rows]);
+  const hasProductFactoryJobs = useMemo(() => rows.some(rowHasProductFactoryJob), [rows]);
 
   const loadRecentBatches = useCallback(async () => {
     try {
@@ -647,6 +713,8 @@ export function ProductFactoryBatchIntakePage() {
     setIsUploading(true);
     setUploadError(null);
     setResolveError(null);
+    setEnqueueError(null);
+    setEnqueueSummary(null);
     try {
       const upload = await commerceClient.uploadProductFactoryBatchCsv(selectedFile);
       setActiveBatch(upload);
@@ -670,6 +738,8 @@ export function ProductFactoryBatchIntakePage() {
     setSelectedSourceNames([...DEFAULT_BATCH_SOURCE_NAMES]);
     setUploadError(null);
     setResolveError(null);
+    setEnqueueError(null);
+    setEnqueueSummary(null);
     setSourceSelectionError(null);
     setManualError(null);
   }
@@ -677,6 +747,8 @@ export function ProductFactoryBatchIntakePage() {
   async function handleOpenBatch(batchId: number) {
     setLoadError(null);
     setResolveError(null);
+    setEnqueueError(null);
+    setEnqueueSummary(null);
     setReviewRowId(null);
     try {
       await refreshBatch(batchId);
@@ -778,12 +850,71 @@ export function ProductFactoryBatchIntakePage() {
     }
   }
 
+  async function handleEnqueueSelected() {
+    if (!activeBatch) {
+      return;
+    }
+    setIsBatchEnqueuing(true);
+    setEnqueueError(null);
+    setEnqueueSummary(null);
+    try {
+      const response = await commerceClient.enqueueProductFactoryBatchSelected(activeBatch.id);
+      setRows(response.rows);
+      setEnqueueSummary(
+        `Enqueued ${response.enqueued_count}; forced review ${response.forced_needs_review_count}; failed ${response.failed_count}.`,
+      );
+      await refreshBatch(activeBatch.id);
+    } catch (error) {
+      setEnqueueError(getCommerceApiErrorMessage(error));
+      await refreshBatch(activeBatch.id, { showLoading: false, refreshRecent: false }).catch(() => undefined);
+    } finally {
+      setIsBatchEnqueuing(false);
+    }
+  }
+
+  async function handleRowEnqueue(row: ProductFactoryBatchRowResponse) {
+    if (!activeBatch) {
+      return;
+    }
+    setRowActionKey(`enqueue:${row.id}`);
+    setEnqueueError(null);
+    setEnqueueSummary(null);
+    try {
+      await commerceClient.enqueueProductFactoryBatchRow(activeBatch.id, row.id);
+      setEnqueueSummary(`Row ${row.row_number} enqueued.`);
+      await refreshBatch(activeBatch.id);
+    } catch (error) {
+      setEnqueueError(getCommerceApiErrorMessage(error));
+      await refreshBatch(activeBatch.id, { showLoading: false, refreshRecent: false }).catch(() => undefined);
+    } finally {
+      setRowActionKey(null);
+    }
+  }
+
+  async function handleRefreshJobStatuses() {
+    if (!activeBatch) {
+      return;
+    }
+    setIsRefreshingJobs(true);
+    setEnqueueError(null);
+    try {
+      const response = await commerceClient.refreshProductFactoryBatchJobStatuses(activeBatch.id);
+      setRows(response.rows);
+      setEnqueueSummary(`Refreshed ${response.refreshed_count}; failed ${response.failed_count}.`);
+      await refreshBatch(activeBatch.id);
+    } catch (error) {
+      setEnqueueError(getCommerceApiErrorMessage(error));
+    } finally {
+      setIsRefreshingJobs(false);
+    }
+  }
+
   return (
     <div className="page product-factory-batch-page">
       <header className="page-header">
         <p className="eyebrow">Product Factory</p>
         <h2>Batch Intake</h2>
-        <p>Upload product CSVs, resolve supported source URLs, and review low-confidence rows. This version only resolves source URLs.</p>
+        <p>Upload product CSVs, resolve supported source URLs, review low-confidence rows, and manually enqueue selected rows.</p>
       </header>
 
       <div className="split-grid product-factory-batch-top-grid">
@@ -859,9 +990,25 @@ export function ProductFactoryBatchIntakePage() {
                 <button className="button primary" type="button" disabled={isResolving || resolutionActive} onClick={() => void handleResolve()}>
                   {isResolving ? "Resolving..." : "Resolve URLs"}
                 </button>
+                <button
+                  className="button secondary"
+                  type="button"
+                  disabled={isResolving || resolutionActive || isBatchEnqueuing || eligibleUnenqueuedRows.length === 0}
+                  onClick={() => void handleEnqueueSelected()}
+                >
+                  {isBatchEnqueuing ? "Enqueueing..." : "Enqueue selected"}
+                </button>
+                <button
+                  className="button secondary"
+                  type="button"
+                  disabled={!hasProductFactoryJobs || isRefreshingJobs}
+                  onClick={() => void handleRefreshJobStatuses()}
+                >
+                  {isRefreshingJobs ? "Refreshing PF statuses..." : "Refresh PF statuses"}
+                </button>
               </div>
             </div>
-            <p className="state-block">Resolve URLs searches supported source pages only. It does not start Product Factory jobs.</p>
+            <p className="state-block">Resolve URLs searches supported source pages only. Product Factory enqueue remains manual.</p>
             <SourceSelectionControls
               selectedSourceNames={selectedSourceNames}
               disabled={isResolving || resolutionActive}
@@ -873,6 +1020,8 @@ export function ProductFactoryBatchIntakePage() {
             ) : null}
             <MetricGrid batch={activeBatch} rows={rows} />
             {resolveError ? <ErrorState message={resolveError} onRetry={() => void handleResolve()} /> : null}
+            {enqueueSummary ? <p className="state-block">{enqueueSummary}</p> : null}
+            {enqueueError ? <ErrorState message={enqueueError} /> : null}
           </section>
 
           <section className="panel">
@@ -894,6 +1043,7 @@ export function ProductFactoryBatchIntakePage() {
                 rowActionKey={rowActionKey}
                 onReview={(row) => setReviewRowId(row.id)}
                 onSkip={(row) => void handleSkip(row)}
+                onEnqueue={(row) => void handleRowEnqueue(row)}
                 onManualUrlChange={setManualUrl}
                 onSelectCandidate={(row, url) => void handleSelectCandidate(row, url)}
                 onSaveManualUrl={(row) => void handleSaveManualUrl(row)}

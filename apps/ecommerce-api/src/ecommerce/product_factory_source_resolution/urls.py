@@ -47,6 +47,7 @@ def looks_like_product_path(path: str) -> bool:
         "/blog",
         "/compare",
         "/wishlist",
+        "/discussion",
     )
     return not any(item in normalized for item in blocked)
 

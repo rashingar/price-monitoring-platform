@@ -154,6 +154,13 @@ def row_to_dict(row: ProductFactoryBatchRow) -> dict[str, Any]:
         "error_code": row.error_code,
         "error_message": row.error_message,
         "selection_metadata": row.selection_metadata_json,
+        "product_factory_job_id": row.product_factory_job_id,
+        "product_factory_job_status": row.product_factory_job_status,
+        "product_factory_job_message": row.product_factory_job_message,
+        "product_factory_error_code": row.product_factory_error_code,
+        "product_factory_error_message": row.product_factory_error_message,
+        "enqueued_at": row.enqueued_at,
+        "job_status_refreshed_at": row.job_status_refreshed_at,
         "created_at": row.created_at,
         "updated_at": row.updated_at,
     }

@@ -14,6 +14,8 @@ from ecommerce.db.session import session_scope
 from ecommerce.product_factory_batch import repository
 from ecommerce.product_factory_batch.csv_parser import ProductFactoryBatchCsvError
 from ecommerce.product_factory_batch.models import (
+    ProductFactoryBatchEnqueueResponse,
+    ProductFactoryBatchJobStatusRefreshResponse,
     ProductFactoryBatchListResponse,
     ProductFactoryBatchResolveRequest,
     ProductFactoryBatchResolveResponse,
@@ -22,6 +24,12 @@ from ecommerce.product_factory_batch.models import (
     ProductFactoryBatchRowResponse,
     ProductFactoryBatchUploadResponse,
     SelectSourceRequest,
+)
+from ecommerce.product_factory_batch.enqueue import (
+    enqueue_batch_row,
+    enqueue_batch_selected,
+    product_factory_client_from_env,
+    refresh_batch_job_statuses,
 )
 from ecommerce.product_factory_batch.service import (
     ProductFactoryBatchError,
@@ -189,6 +197,72 @@ def skip_product_factory_batch_row(batch_id: int, row_id: int) -> dict[str, Any]
         raise _database_unavailable(exc) from exc
 
 
+@router.post("/{batch_id}/enqueue-selected", response_model=ProductFactoryBatchEnqueueResponse)
+def enqueue_selected_product_factory_batch_rows(batch_id: int) -> dict[str, Any]:
+    try:
+        with session_scope() as session:
+            batch = repository.get_batch(session, batch_id)
+            if batch is None:
+                raise HTTPException(status_code=404, detail="Batch not found.")
+            result = enqueue_batch_selected(session, batch=batch, product_factory_client=_product_factory_client())
+            return {
+                "batch_id": result.batch_id,
+                "threshold": result.threshold,
+                "enqueued_count": result.enqueued_count,
+                "skipped_count": result.skipped_count,
+                "forced_needs_review_count": result.forced_needs_review_count,
+                "failed_count": result.failed_count,
+                "rows": result.rows,
+                "warnings": result.warnings,
+                "errors": result.errors,
+            }
+    except DatabaseNotConfiguredError as exc:
+        raise _database_unavailable(exc) from exc
+    except SQLAlchemyError as exc:
+        raise _database_unavailable(exc) from exc
+
+
+@router.post("/{batch_id}/rows/{row_id}/enqueue", response_model=ProductFactoryBatchRowResponse)
+def enqueue_product_factory_batch_row(batch_id: int, row_id: int) -> dict[str, Any]:
+    try:
+        with session_scope() as session:
+            batch = repository.get_batch(session, batch_id)
+            if batch is None:
+                raise HTTPException(status_code=404, detail="Batch not found.")
+            row = repository.get_batch_row(session, batch_id=batch_id, row_id=row_id)
+            if row is None:
+                raise HTTPException(status_code=404, detail="Batch row not found.")
+            row = enqueue_batch_row(session, batch=batch, row=row, product_factory_client=_product_factory_client())
+            return repository.row_to_dict(row)
+    except ProductFactoryBatchError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": exc.message}) from exc
+    except DatabaseNotConfiguredError as exc:
+        raise _database_unavailable(exc) from exc
+    except SQLAlchemyError as exc:
+        raise _database_unavailable(exc) from exc
+
+
+@router.post("/{batch_id}/refresh-job-statuses", response_model=ProductFactoryBatchJobStatusRefreshResponse)
+def refresh_product_factory_batch_job_statuses(batch_id: int) -> dict[str, Any]:
+    try:
+        with session_scope() as session:
+            batch = repository.get_batch(session, batch_id)
+            if batch is None:
+                raise HTTPException(status_code=404, detail="Batch not found.")
+            result = refresh_batch_job_statuses(session, batch=batch, product_factory_client=_product_factory_client())
+            return {
+                "batch_id": result.batch_id,
+                "refreshed_count": result.refreshed_count,
+                "failed_count": result.failed_count,
+                "rows": result.rows,
+                "errors": result.errors,
+            }
+    except DatabaseNotConfiguredError as exc:
+        raise _database_unavailable(exc) from exc
+    except SQLAlchemyError as exc:
+        raise _database_unavailable(exc) from exc
+
+
 def _database_unavailable(exc: Exception) -> HTTPException:
     detail = {
         "message": "Product Factory batch intake requires the Ecommerce database.",
@@ -225,3 +299,7 @@ def _schedule_batch_resolution(
     source_names: tuple[str, ...],
 ) -> None:
     background_tasks.add_task(run_batch_resolution_background, batch_id=batch_id, source_names=source_names)
+
+
+def _product_factory_client():
+    return product_factory_client_from_env()

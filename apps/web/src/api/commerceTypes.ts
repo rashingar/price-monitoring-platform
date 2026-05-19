@@ -57,6 +57,10 @@ export type EcommerceContractProductFactoryBatchResolveResponse =
   EcommerceSchema<"ProductFactoryBatchResolveResponse">;
 export type EcommerceContractProductFactoryBatchSelectSourceRequest =
   EcommerceSchema<"SelectSourceRequest">;
+export type EcommerceContractProductFactoryBatchEnqueueResponse =
+  EcommerceSchema<"ProductFactoryBatchEnqueueResponse">;
+export type EcommerceContractProductFactoryBatchJobStatusRefreshResponse =
+  EcommerceSchema<"ProductFactoryBatchJobStatusRefreshResponse">;
 export type EcommerceContractVendorSourceCaptureRunRequest =
   EcommerceSchema<"VendorSourceCaptureRunApiRequest">;
 export type EcommerceContractSkroutzNetworkDiagnosticRequest =
@@ -281,6 +285,10 @@ export type ProductFactoryBatchResolveResponse =
   EcommerceContractProductFactoryBatchResolveResponse;
 export type ProductFactoryBatchSelectSourceRequest =
   EcommerceContractProductFactoryBatchSelectSourceRequest;
+export type ProductFactoryBatchEnqueueResponse =
+  EcommerceContractProductFactoryBatchEnqueueResponse;
+export type ProductFactoryBatchJobStatusRefreshResponse =
+  EcommerceContractProductFactoryBatchJobStatusRefreshResponse;
 
 export interface ProductFactoryBatchCandidate {
   source_name?: SourceName | string | null;

@@ -59,6 +59,13 @@ class ProductFactoryBatchRowResponse(BaseModel):
     error_code: str | None = None
     error_message: str | None = None
     selection_metadata: dict[str, Any] | None = None
+    product_factory_job_id: str | None = None
+    product_factory_job_status: str | None = None
+    product_factory_job_message: str | None = None
+    product_factory_error_code: str | None = None
+    product_factory_error_message: str | None = None
+    enqueued_at: datetime | None = None
+    job_status_refreshed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -103,3 +110,23 @@ class ProductFactoryBatchResolveRequest(BaseModel):
 
 class ProductFactoryBatchResolveResponse(ProductFactoryBatchResponse):
     rows: list[ProductFactoryBatchRowResponse]
+
+
+class ProductFactoryBatchEnqueueResponse(BaseModel):
+    batch_id: int
+    threshold: int
+    enqueued_count: int
+    skipped_count: int
+    forced_needs_review_count: int
+    failed_count: int
+    rows: list[ProductFactoryBatchRowResponse]
+    warnings: list[str] = []
+    errors: list[dict[str, Any]] = []
+
+
+class ProductFactoryBatchJobStatusRefreshResponse(BaseModel):
+    batch_id: int
+    refreshed_count: int
+    failed_count: int
+    rows: list[ProductFactoryBatchRowResponse]
+    errors: list[dict[str, Any]] = []

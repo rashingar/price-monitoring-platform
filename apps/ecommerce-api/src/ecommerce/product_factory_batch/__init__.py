@@ -1,2 +1,1 @@
-"""Resolve-only Product Factory CSV batch intake."""
-
+"""Product Factory CSV batch intake."""

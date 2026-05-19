@@ -1106,6 +1106,109 @@
         "title": "PriceUpdateExportApiRequest",
         "type": "object"
       },
+      "ProductFactoryBatchEnqueueResponse": {
+        "properties": {
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "integer"
+          },
+          "enqueued_count": {
+            "title": "Enqueued Count",
+            "type": "integer"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "failed_count": {
+            "title": "Failed Count",
+            "type": "integer"
+          },
+          "forced_needs_review_count": {
+            "title": "Forced Needs Review Count",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "integer"
+          },
+          "warnings": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch_id",
+          "threshold",
+          "enqueued_count",
+          "skipped_count",
+          "forced_needs_review_count",
+          "failed_count",
+          "rows"
+        ],
+        "title": "ProductFactoryBatchEnqueueResponse",
+        "type": "object"
+      },
+      "ProductFactoryBatchJobStatusRefreshResponse": {
+        "properties": {
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "integer"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "failed_count": {
+            "title": "Failed Count",
+            "type": "integer"
+          },
+          "refreshed_count": {
+            "title": "Refreshed Count",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch_id",
+          "refreshed_count",
+          "failed_count",
+          "rows"
+        ],
+        "title": "ProductFactoryBatchJobStatusRefreshResponse",
+        "type": "object"
+      },
       "ProductFactoryBatchListResponse": {
         "properties": {
           "items": {
@@ -1371,6 +1474,18 @@
             "title": "Created At",
             "type": "string"
           },
+          "enqueued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enqueued At"
+          },
           "error_code": {
             "anyOf": [
               {
@@ -1397,6 +1512,18 @@
             "title": "Id",
             "type": "integer"
           },
+          "job_status_refreshed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Status Refreshed At"
+          },
           "model": {
             "title": "Model",
             "type": "string"
@@ -1404,6 +1531,61 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "product_factory_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Factory Error Code"
+          },
+          "product_factory_error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Factory Error Message"
+          },
+          "product_factory_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Factory Job Id"
+          },
+          "product_factory_job_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Factory Job Message"
+          },
+          "product_factory_job_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Factory Job Status"
           },
           "queries": {
             "default": [],
@@ -6675,6 +6857,90 @@
         ]
       }
     },
+    "/api/product-factory-batches/{batch_id}/enqueue-selected": {
+      "post": {
+        "operationId": "enqueue_selected_product_factory_batch_rows_api_product_factory_batches__batch_id__enqueue_selected_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchEnqueueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Enqueue Selected Product Factory Batch Rows",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/{batch_id}/refresh-job-statuses": {
+      "post": {
+        "operationId": "refresh_product_factory_batch_job_statuses_api_product_factory_batches__batch_id__refresh_job_statuses_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchJobStatusRefreshResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh Product Factory Batch Job Statuses",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
     "/api/product-factory-batches/{batch_id}/resolve": {
       "post": {
         "operationId": "resolve_product_factory_batch_api_product_factory_batches__batch_id__resolve_post",
@@ -6771,6 +7037,57 @@
           }
         },
         "summary": "Get Product Factory Batch Rows",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/{batch_id}/rows/{row_id}/enqueue": {
+      "post": {
+        "operationId": "enqueue_product_factory_batch_row_api_product_factory_batches__batch_id__rows__row_id__enqueue_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "row_id",
+            "required": true,
+            "schema": {
+              "title": "Row Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Enqueue Product Factory Batch Row",
         "tags": [
           "product-factory-batches"
         ]

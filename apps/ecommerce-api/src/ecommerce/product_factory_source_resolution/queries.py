@@ -29,8 +29,6 @@ def build_source_scoped_queries(product: SourceResolutionProduct, config: Source
     raw_queries: list[str] = []
     for source in config.preferred_sources:
         raw_queries.append(collapse_internal_spaces(f"{identity} site:{source.primary_domain}"))
-    if identity:
-        raw_queries.append(identity)
     return _unique_queries(raw_queries)
 
 

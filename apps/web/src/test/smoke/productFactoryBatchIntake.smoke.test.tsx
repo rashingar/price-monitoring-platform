@@ -99,6 +99,13 @@ function row(
     error_code: null,
     error_message: null,
     selection_metadata: null,
+    product_factory_job_id: null,
+    product_factory_job_status: null,
+    product_factory_job_message: null,
+    product_factory_error_code: null,
+    product_factory_error_message: null,
+    enqueued_at: null,
+    job_status_refreshed_at: null,
     created_at: "2026-05-19T10:00:00Z",
     updated_at: "2026-05-19T10:00:00Z",
     ...overrides,
@@ -511,5 +518,143 @@ describe("Product Factory Batch Intake", () => {
     fireEvent.click(within(screen.getByRole("cell", { name: "000001" }).closest("tr") as HTMLElement).getByRole("button", { name: "Skip" }));
     await waitFor(() => expect(mockFetch.requests.some((request) => request.pathname === "/commerce-api/product-factory-batches/7/rows/71/skip")).toBe(true));
     expect(confirmSpy).toHaveBeenCalled();
+  });
+
+  it("renders enqueue controls only for eligible rows and enqueues a single row", async () => {
+    const mutableRows = [
+      rows[0],
+      rows[1],
+      rows[2],
+      row(78, 9, "000008", "auto_selected", {
+        selected_source: "skroutz",
+        selected_url: "https://www.skroutz.gr/s/888/low.html",
+        confidence: 70,
+      }),
+      row(79, 10, "000009", "manually_selected", {
+        selected_source: "skroutz",
+        selected_url: "https://www.skroutz.gr/s/999/enqueued.html",
+        confidence: 100,
+        product_factory_job_id: "job-existing-123456",
+        product_factory_job_status: "queued",
+      }),
+    ];
+    const mockFetch = installMockFetch([
+      { method: "GET", path: "/commerce-api/product-factory-batches", response: { items: [batch] } },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7", response: batch },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7/rows", response: () => ({ items: mutableRows }) },
+      {
+        method: "POST",
+        path: "/commerce-api/product-factory-batches/7/rows/73/enqueue",
+        response: () => {
+          mutableRows[2] = {
+            ...mutableRows[2],
+            product_factory_job_id: "job-manual-1",
+            product_factory_job_status: "queued",
+          };
+          return mutableRows[2];
+        },
+      },
+    ]);
+    renderWithRouter("/product-factory/batch-intake");
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+
+    const manualRow = (await screen.findByRole("cell", { name: "000003" })).closest("tr") as HTMLElement;
+    const highAutoRow = (await screen.findByRole("cell", { name: "000002" })).closest("tr") as HTMLElement;
+    const lowAutoRow = (await screen.findByRole("cell", { name: "000008" })).closest("tr") as HTMLElement;
+    const alreadyEnqueuedRow = (await screen.findByRole("cell", { name: "000009" })).closest("tr") as HTMLElement;
+
+    expect(within(manualRow).getByRole("button", { name: "Enqueue" })).toBeInTheDocument();
+    expect(within(highAutoRow).getByRole("button", { name: "Enqueue" })).toBeInTheDocument();
+    expect(within(lowAutoRow).queryByRole("button", { name: "Enqueue" })).not.toBeInTheDocument();
+    expect(within(lowAutoRow).getByText("review before enqueue")).toBeInTheDocument();
+    expect(within(alreadyEnqueuedRow).queryByRole("button", { name: "Enqueue" })).not.toBeInTheDocument();
+    expect(within(alreadyEnqueuedRow).getByText("queued")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enqueue selected" })).toBeEnabled();
+
+    fireEvent.click(within(manualRow).getByRole("button", { name: "Enqueue" }));
+
+    await waitFor(() => expect(mockFetch.requests.some((request) => request.pathname === "/commerce-api/product-factory-batches/7/rows/73/enqueue")).toBe(true));
+    await expect(screen.findByText("Row 4 enqueued.")).resolves.toBeInTheDocument();
+    expect(await screen.findByText("job-manual-1")).toBeInTheDocument();
+  });
+
+  it("enqueues selected rows, refreshes rows, and displays the enqueue summary", async () => {
+    const mutableRows = [...rows];
+    const mockFetch = installMockFetch([
+      { method: "GET", path: "/commerce-api/product-factory-batches", response: { items: [batch] } },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7", response: batch },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7/rows", response: () => ({ items: mutableRows }) },
+      {
+        method: "POST",
+        path: "/commerce-api/product-factory-batches/7/enqueue-selected",
+        response: () => {
+          mutableRows[1] = { ...mutableRows[1], product_factory_job_id: "job-auto", product_factory_job_status: "queued" };
+          mutableRows[2] = { ...mutableRows[2], product_factory_job_id: "job-manual", product_factory_job_status: "queued" };
+          return {
+            batch_id: 7,
+            threshold: 85,
+            enqueued_count: 2,
+            skipped_count: 5,
+            forced_needs_review_count: 1,
+            failed_count: 0,
+            rows: mutableRows,
+            warnings: [],
+            errors: [],
+          };
+        },
+      },
+    ]);
+    renderWithRouter("/product-factory/batch-intake");
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Enqueue selected" }));
+
+    await waitFor(() => expect(mockFetch.requests.some((request) => request.pathname === "/commerce-api/product-factory-batches/7/enqueue-selected")).toBe(true));
+    await expect(screen.findByText("Enqueued 2; forced review 1; failed 0.")).resolves.toBeInTheDocument();
+    expect(screen.getAllByText("queued").length).toBeGreaterThan(0);
+  });
+
+  it("refreshes Product Factory job statuses", async () => {
+    const mutableRows = [
+      rows[0],
+      {
+        ...rows[2],
+        product_factory_job_id: "job-refresh-123456",
+        product_factory_job_status: "queued",
+      },
+    ];
+    const mockFetch = installMockFetch([
+      { method: "GET", path: "/commerce-api/product-factory-batches", response: { items: [batch] } },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7", response: batch },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7/rows", response: () => ({ items: mutableRows }) },
+      {
+        method: "POST",
+        path: "/commerce-api/product-factory-batches/7/refresh-job-statuses",
+        response: () => {
+          mutableRows[1] = {
+            ...mutableRows[1],
+            product_factory_job_status: "succeeded",
+            product_factory_job_message: "Done",
+          };
+          return {
+            batch_id: 7,
+            refreshed_count: 1,
+            failed_count: 0,
+            rows: mutableRows,
+            errors: [],
+          };
+        },
+      },
+    ]);
+    renderWithRouter("/product-factory/batch-intake");
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+
+    const refreshButton = await screen.findByRole("button", { name: "Refresh PF statuses" });
+    expect(refreshButton).toBeEnabled();
+    fireEvent.click(refreshButton);
+
+    await waitFor(() => expect(mockFetch.requests.some((request) => request.pathname === "/commerce-api/product-factory-batches/7/refresh-job-statuses")).toBe(true));
+    await expect(screen.findByText("Refreshed 1; failed 0.")).resolves.toBeInTheDocument();
+    expect(screen.getByText("succeeded")).toBeInTheDocument();
   });
 });

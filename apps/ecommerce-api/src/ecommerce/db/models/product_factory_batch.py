@@ -72,6 +72,13 @@ class ProductFactoryBatchRow(Base):
     error_code: Mapped[str | None] = mapped_column(String, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     selection_metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON_DOCUMENT, nullable=True)
+    product_factory_job_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    product_factory_job_status: Mapped[str | None] = mapped_column(String, nullable=True)
+    product_factory_job_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    product_factory_error_code: Mapped[str | None] = mapped_column(String, nullable=True)
+    product_factory_error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    enqueued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    job_status_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

@@ -45,6 +45,8 @@ import type {
   PlatformHealthLink,
   PlatformHealthResponse,
   ProductFactoryBatchListResponse,
+  ProductFactoryBatchEnqueueResponse,
+  ProductFactoryBatchJobStatusRefreshResponse,
   ProductFactoryBatchResponse,
   ProductFactoryBatchResolveRequest,
   ProductFactoryBatchResolveResponse,
@@ -2436,6 +2438,13 @@ function normalizeProductFactoryBatchRow(payload: unknown): ProductFactoryBatchR
     error_code: normalizeNullableString(payload.error_code),
     error_message: normalizeNullableString(payload.error_message),
     selection_metadata: isRecord(payload.selection_metadata) ? payload.selection_metadata : null,
+    product_factory_job_id: normalizeNullableString(payload.product_factory_job_id),
+    product_factory_job_status: normalizeNullableString(payload.product_factory_job_status),
+    product_factory_job_message: normalizeNullableString(payload.product_factory_job_message),
+    product_factory_error_code: normalizeNullableString(payload.product_factory_error_code),
+    product_factory_error_message: normalizeNullableString(payload.product_factory_error_message),
+    enqueued_at: normalizeNullableString(payload.enqueued_at),
+    job_status_refreshed_at: normalizeNullableString(payload.job_status_refreshed_at),
     created_at: normalizeNullableString(payload.created_at) ?? "",
     updated_at: normalizeNullableString(payload.updated_at) ?? "",
   };
@@ -2539,6 +2548,36 @@ function normalizeProductFactoryBatchResolve(payload: unknown): ProductFactoryBa
       updated_at: "",
     }),
     rows,
+  };
+}
+
+function normalizeProductFactoryBatchEnqueue(payload: unknown): ProductFactoryBatchEnqueueResponse {
+  const source = isRecord(payload) ? payload : {};
+  return {
+    batch_id: normalizeCounter(source.batch_id),
+    threshold: normalizeCounter(source.threshold),
+    enqueued_count: normalizeCounter(source.enqueued_count),
+    skipped_count: normalizeCounter(source.skipped_count),
+    forced_needs_review_count: normalizeCounter(source.forced_needs_review_count),
+    failed_count: normalizeCounter(source.failed_count),
+    rows: getArrayPayload(source.rows, ["items", "rows", "data", "results"])
+      .map(normalizeProductFactoryBatchRow)
+      .filter((item): item is ProductFactoryBatchRowResponse => item !== null),
+    warnings: normalizeStringArray(source.warnings),
+    errors: getArrayPayload(source.errors, ["items", "errors", "data", "results"]).filter(isRecord),
+  };
+}
+
+function normalizeProductFactoryBatchJobStatusRefresh(payload: unknown): ProductFactoryBatchJobStatusRefreshResponse {
+  const source = isRecord(payload) ? payload : {};
+  return {
+    batch_id: normalizeCounter(source.batch_id),
+    refreshed_count: normalizeCounter(source.refreshed_count),
+    failed_count: normalizeCounter(source.failed_count),
+    rows: getArrayPayload(source.rows, ["items", "rows", "data", "results"])
+      .map(normalizeProductFactoryBatchRow)
+      .filter((item): item is ProductFactoryBatchRowResponse => item !== null),
+    errors: getArrayPayload(source.errors, ["items", "errors", "data", "results"]).filter(isRecord),
   };
 }
 
@@ -3348,6 +3387,66 @@ export const commerceClient = {
         created_at: "",
         updated_at: "",
       }
+    );
+  },
+
+  async enqueueProductFactoryBatchSelected(
+    batchId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchEnqueueResponse> {
+    return normalizeProductFactoryBatchEnqueue(
+      await request<unknown>(
+        `/product-factory-batches/${encodeURIComponent(String(batchId))}/enqueue-selected`,
+        {
+          method: "POST",
+          signal,
+        },
+      ),
+    );
+  },
+
+  async enqueueProductFactoryBatchRow(
+    batchId: string | number,
+    rowId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchRowResponse> {
+    return (
+      normalizeProductFactoryBatchRow(
+        await request<unknown>(
+          `/product-factory-batches/${encodeURIComponent(String(batchId))}/rows/${encodeURIComponent(String(rowId))}/enqueue`,
+          {
+            method: "POST",
+            signal,
+          },
+        ),
+      ) ?? {
+        id: Number(rowId),
+        batch_id: Number(batchId),
+        row_number: 0,
+        model: "",
+        brand: "",
+        name: "",
+        queries: [],
+        status: "manually_selected",
+        candidates: [],
+        created_at: "",
+        updated_at: "",
+      }
+    );
+  },
+
+  async refreshProductFactoryBatchJobStatuses(
+    batchId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchJobStatusRefreshResponse> {
+    return normalizeProductFactoryBatchJobStatusRefresh(
+      await request<unknown>(
+        `/product-factory-batches/${encodeURIComponent(String(batchId))}/refresh-job-statuses`,
+        {
+          method: "POST",
+          signal,
+        },
+      ),
     );
   },
 

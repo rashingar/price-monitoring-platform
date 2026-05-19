@@ -282,6 +282,14 @@ export interface paths {
     /** Get Product Factory Batch */
     get: operations["get_product_factory_batch_api_product_factory_batches__batch_id__get"];
   };
+  "/api/product-factory-batches/{batch_id}/enqueue-selected": {
+    /** Enqueue Selected Product Factory Batch Rows */
+    post: operations["enqueue_selected_product_factory_batch_rows_api_product_factory_batches__batch_id__enqueue_selected_post"];
+  };
+  "/api/product-factory-batches/{batch_id}/refresh-job-statuses": {
+    /** Refresh Product Factory Batch Job Statuses */
+    post: operations["refresh_product_factory_batch_job_statuses_api_product_factory_batches__batch_id__refresh_job_statuses_post"];
+  };
   "/api/product-factory-batches/{batch_id}/resolve": {
     /** Resolve Product Factory Batch */
     post: operations["resolve_product_factory_batch_api_product_factory_batches__batch_id__resolve_post"];
@@ -289,6 +297,10 @@ export interface paths {
   "/api/product-factory-batches/{batch_id}/rows": {
     /** Get Product Factory Batch Rows */
     get: operations["get_product_factory_batch_rows_api_product_factory_batches__batch_id__rows_get"];
+  };
+  "/api/product-factory-batches/{batch_id}/rows/{row_id}/enqueue": {
+    /** Enqueue Product Factory Batch Row */
+    post: operations["enqueue_product_factory_batch_row_api_product_factory_batches__batch_id__rows__row_id__enqueue_post"];
   };
   "/api/product-factory-batches/{batch_id}/rows/{row_id}/select-source": {
     /** Select Product Factory Batch Row Source */
@@ -765,6 +777,53 @@ export interface components {
       /** Review Csv Path */
       review_csv_path?: string | null;
     };
+    /** ProductFactoryBatchEnqueueResponse */
+    ProductFactoryBatchEnqueueResponse: {
+      /** Batch Id */
+      batch_id: number;
+      /** Enqueued Count */
+      enqueued_count: number;
+      /**
+       * Errors
+       * @default []
+       */
+      errors?: {
+          [key: string]: unknown;
+        }[];
+      /** Failed Count */
+      failed_count: number;
+      /** Forced Needs Review Count */
+      forced_needs_review_count: number;
+      /** Rows */
+      rows: components["schemas"]["ProductFactoryBatchRowResponse"][];
+      /** Skipped Count */
+      skipped_count: number;
+      /** Threshold */
+      threshold: number;
+      /**
+       * Warnings
+       * @default []
+       */
+      warnings?: string[];
+    };
+    /** ProductFactoryBatchJobStatusRefreshResponse */
+    ProductFactoryBatchJobStatusRefreshResponse: {
+      /** Batch Id */
+      batch_id: number;
+      /**
+       * Errors
+       * @default []
+       */
+      errors?: {
+          [key: string]: unknown;
+        }[];
+      /** Failed Count */
+      failed_count: number;
+      /** Refreshed Count */
+      refreshed_count: number;
+      /** Rows */
+      rows: components["schemas"]["ProductFactoryBatchRowResponse"][];
+    };
     /** ProductFactoryBatchListResponse */
     ProductFactoryBatchListResponse: {
       /** Items */
@@ -875,16 +934,30 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
+      /** Enqueued At */
+      enqueued_at?: string | null;
       /** Error Code */
       error_code?: string | null;
       /** Error Message */
       error_message?: string | null;
       /** Id */
       id: number;
+      /** Job Status Refreshed At */
+      job_status_refreshed_at?: string | null;
       /** Model */
       model: string;
       /** Name */
       name: string;
+      /** Product Factory Error Code */
+      product_factory_error_code?: string | null;
+      /** Product Factory Error Message */
+      product_factory_error_message?: string | null;
+      /** Product Factory Job Id */
+      product_factory_job_id?: string | null;
+      /** Product Factory Job Message */
+      product_factory_job_message?: string | null;
+      /** Product Factory Job Status */
+      product_factory_job_status?: string | null;
       /**
        * Queries
        * @default []
@@ -3119,6 +3192,50 @@ export interface operations {
       };
     };
   };
+  /** Enqueue Selected Product Factory Batch Rows */
+  enqueue_selected_product_factory_batch_rows_api_product_factory_batches__batch_id__enqueue_selected_post: {
+    parameters: {
+      path: {
+        batch_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchEnqueueResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Refresh Product Factory Batch Job Statuses */
+  refresh_product_factory_batch_job_statuses_api_product_factory_batches__batch_id__refresh_job_statuses_post: {
+    parameters: {
+      path: {
+        batch_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchJobStatusRefreshResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   /** Resolve Product Factory Batch */
   resolve_product_factory_batch_api_product_factory_batches__batch_id__resolve_post: {
     parameters: {
@@ -3158,6 +3275,29 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["ProductFactoryBatchRowsResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Enqueue Product Factory Batch Row */
+  enqueue_product_factory_batch_row_api_product_factory_batches__batch_id__rows__row_id__enqueue_post: {
+    parameters: {
+      path: {
+        batch_id: number;
+        row_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchRowResponse"];
         };
       };
       /** @description Validation Error */

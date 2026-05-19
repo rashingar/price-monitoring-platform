@@ -83,6 +83,8 @@ describe("generated API contract drift guardrails", () => {
       ["ProductFactoryBatchRowResponse", "ProductFactoryBatchRowResponse"],
       ["ProductFactoryBatchUploadResponse", "ProductFactoryBatchUploadResponse"],
       ["ProductFactoryBatchResolveResponse", "ProductFactoryBatchResolveResponse"],
+      ["ProductFactoryBatchEnqueueResponse", "ProductFactoryBatchEnqueueResponse"],
+      ["ProductFactoryBatchJobStatusRefreshResponse", "ProductFactoryBatchJobStatusRefreshResponse"],
     ];
 
     for (const [aliasName, schemaName] of generatedResponseAliases) {
