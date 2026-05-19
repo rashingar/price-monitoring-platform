@@ -472,6 +472,34 @@ def test_execute_render_workflow_retries_short_intro_before_candidate_build(tmp_
     assert (llm_dir / "intro_text.output.txt").read_text(encoding="utf-8") == build_intro(valid_words)
 
 
+def test_render_rehydrates_characteristics_source_from_prepare_normalized() -> None:
+    from product_factory.services.render_execution import _load_characteristics_source_from_normalized
+
+    main_source = SourceProductData(
+        source_name="electronet",
+        name="A/C Inventor Neo Plus NPVI-24WFI/NPVO24 24000Btu",
+        spec_sections=[],
+    )
+    characteristics_source = SourceProductData(
+        source_name="bestprice",
+        name="Inventor Neo Plus",
+        spec_sections=[
+            SpecSection(
+                section="Χαρακτηριστικά",
+                items=[SpecItem(label="Ονομαστική Απόδοση", value="24000 BTU")],
+            )
+        ],
+    )
+
+    loaded = _load_characteristics_source_from_normalized(
+        {"characteristics_source": characteristics_source.to_dict()},
+        fallback=main_source,
+    )
+
+    assert loaded.source_name == "bestprice"
+    assert loaded.spec_sections[0].items[0].value == "24000 BTU"
+
+
 def test_execute_render_workflow_stops_before_candidate_build_when_intro_retries_exhaust(tmp_path: Path, monkeypatch) -> None:
     from product_factory.services import render_execution
     from product_factory.services.settings_service import get_intro_text_policy

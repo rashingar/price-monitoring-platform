@@ -553,16 +553,167 @@ def _extract_raw_text(raw_html: str) -> str:
     return normalize_whitespace(soup.get_text(" ", strip=True))
 
 
+_AIR_CONDITIONER_SECTION_KEYS = {
+    normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+    normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"),
+    normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+    normalize_for_match("Διαστάσεις και Βάρος"),
+    normalize_for_match("Γενικά Χαρακτηριστικά"),
+}
+
+_AIR_CONDITIONER_FIELD_ALIAS_MAP = {
+    normalize_for_match("Ονομαστική Απόδοση (Btu/h)"): ("Απόδοση BTU", "Απόδοση (BTU)"),
+    normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"): ("Ψυκτική Απόδοση", "Ισχύς Ψύξης"),
+    normalize_for_match("Θερμική Απόδοση ( Btu/h )"): ("Θερμική Απόδοση", "Ισχύς Θέρμανσης"),
+    normalize_for_match("Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"): (
+        "Βαθμός Απόδοσης SEER",
+        "Βαθμός Απόδοσης Ψύξης (SEER)",
+    ),
+    normalize_for_match("Ενεργειακή Κλάση Ψύξης"): ("Ενεργειακή Κλάση Ψύξης", "Ψύξης"),
+    normalize_for_match("Βαθμός Εποχιακής Απόδοσης Θέρμανσης Μέσης Εποχής - SCOP"): (
+        "Βαθμός Θερμικής Απόδοσης (SCOP)",
+        "Βαθμός Απόδοσης Θέρμανσης (SCOP)",
+    ),
+    normalize_for_match("Ενεργειακή Κλάση Θέρμανσης Μέσης Εποχής"): (
+        "Ενεργειακή Κλάση Θέρμανσης",
+        "Θέρμανσης (Μέση Ζώνη)",
+    ),
+    normalize_for_match("Τεχνολογία Κλιματιστικού"): ("Inverter",),
+    normalize_for_match("Ψυκτικό Υγρό"): (
+        "Οικολογικό Ψυκτικό Υγρό R32",
+        "Οικολογικό Ψυκτικό Υγρό (R32)",
+        "Οικολογικό Ψυκτικό Υγρό",
+    ),
+    normalize_for_match("Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A) - Hi"): (
+        "Θόρυβος Εσωτερικής Μονάδας",
+        "Εσωτερικής Μονάδας",
+    ),
+    normalize_for_match("Ηχητική Ισχύς Εξωτερικής Μονάδας dB(A) - Hi"): (
+        "Θόρυβος Εξωτερικής Μονάδας",
+        "Εξωτερικής Μονάδας",
+    ),
+    normalize_for_match("Αφύγρανση"): ("Αφύγρανση",),
+    normalize_for_match("Ιονιστής"): ("Ιονιστής",),
+    normalize_for_match("Φίλτρα"): ("Φίλτρα Καθαρισμού Αέρα",),
+    normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"): (
+        "Wifi Ready",
+        "WiFi Ready",
+        "Wi-Fi Ready",
+    ),
+    normalize_for_match("Βάρος Εσωτερικής Μονάδας ( Kg )"): ("Βάρος Εσωτερικής Μονάδας",),
+    normalize_for_match("Βάρος Εξωτερικής Μονάδας ( Kg )"): ("Βάρος Εξωτερικής Μονάδας",),
+    normalize_for_match("Ύψος Εσωτερικής Μονάδας ( mm )"): (
+        "Ύψος Εσωτερικής Μονάδας",
+        "Ύψος Εσωτερικής Μονάδα",
+    ),
+    normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"): (
+        "Μήκος Εσωτερικής Μονάδας",
+        "Μήκος Εσωτερικής Μονάδα",
+    ),
+    normalize_for_match("Βάθος Εσωτερικής Μονάδας ( mm )"): (
+        "Βάθος Εσωτερικής Μονάδας",
+        "Βάθος Εσωτερικής Μονάδα",
+    ),
+    normalize_for_match("Ύψος Εξωτερικής Μονάδας ( mm )"): (
+        "Ύψος Εξωτερικής Μονάδας",
+        "Ύψος Εξωτερικής Μονάδα",
+    ),
+    normalize_for_match("Πλάτος Εξωτερικής Μονάδας ( mm )"): (
+        "Μήκος Εξωτερικής Μονάδας",
+        "Μήκος Εξωτερικής Μονάδα",
+    ),
+    normalize_for_match("Βάθος Εξωτερικής Μονάδας ( mm )"): (
+        "Βάθος Εξωτερικής Μονάδας",
+        "Βάθος Εξωτερικής Μονάδα",
+    ),
+    normalize_for_match("Χρώμα"): ("Χρώμα",),
+}
+
+_AIR_CONDITIONER_DIMENSION_FIELD_KEYS = {
+    normalize_for_match("Ύψος Εσωτερικής Μονάδας ( mm )"),
+    normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"),
+    normalize_for_match("Βάθος Εσωτερικής Μονάδας ( mm )"),
+    normalize_for_match("Ύψος Εξωτερικής Μονάδας ( mm )"),
+    normalize_for_match("Πλάτος Εξωτερικής Μονάδας ( mm )"),
+    normalize_for_match("Βάθος Εξωτερικής Μονάδας ( mm )"),
+}
+
+_AIR_CONDITIONER_YES_NO_FIELD_KEYS = {
+    normalize_for_match("Αφύγρανση"),
+    normalize_for_match("Ιονιστής"),
+}
+
+
+def _aliases_for_template_field(field: dict[str, Any]) -> list[str]:
+    aliases = list(field.get("aliases", [])) or [str(field.get("label", "")).strip()]
+    section_key = normalize_for_match(str(field.get("section_title", "")))
+    label_key = normalize_for_match(str(field.get("label", "")))
+    if section_key in _AIR_CONDITIONER_SECTION_KEYS:
+        aliases.extend(_AIR_CONDITIONER_FIELD_ALIAS_MAP.get(label_key, ()))
+    return dedupe_strings(alias for alias in aliases if alias)
+
+
+def _format_value_for_template_field(field: dict[str, Any], value: str) -> str:
+    section_key = normalize_for_match(str(field.get("section_title", "")))
+    label_key = normalize_for_match(str(field.get("label", "")))
+    if section_key not in _AIR_CONDITIONER_SECTION_KEYS:
+        return value
+    if label_key in _AIR_CONDITIONER_DIMENSION_FIELD_KEYS:
+        return _format_air_conditioner_dimension_mm(value) or normalize_whitespace(value)
+    normalized_yes_no = _normalize_yes_no(value)
+    if label_key == normalize_for_match("Τεχνολογία Κλιματιστικού"):
+        return "Inverter" if normalized_yes_no == "Ναι" else normalize_whitespace(value)
+    if label_key == normalize_for_match("Ψυκτικό Υγρό"):
+        match = re.search(r"\b(R[0-9A-Z]+)\b", value, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).upper()
+        return "R32" if normalized_yes_no == "Ναι" else normalize_whitespace(value)
+    if label_key in _AIR_CONDITIONER_YES_NO_FIELD_KEYS and normalized_yes_no:
+        return normalized_yes_no
+    if label_key == normalize_for_match("Φίλτρα"):
+        return "Φίλτρα Καθαρισμού Αέρα" if normalized_yes_no == "Ναι" else normalize_whitespace(value)
+    if label_key == normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"):
+        return "WiFi" if normalized_yes_no == "Ναι" else normalize_whitespace(value)
+    return value
+
+
+def _fallback_value_for_template_field(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+    section_key = normalize_for_match(str(field.get("section_title", "")))
+    label_key = normalize_for_match(str(field.get("label", "")))
+    if section_key not in _AIR_CONDITIONER_SECTION_KEYS:
+        return "", "unresolved"
+    combined = " ".join([context.source.name, context.source.hero_summary, context.source.presentation_source_text, context.combined_text])
+    if label_key == normalize_for_match("Τεχνολογία Κλιματιστικού") and _contains_any(combined, "inverter"):
+        return "Inverter", "combined_text:technology"
+    if label_key == normalize_for_match("Ψυκτικό Υγρό"):
+        match = re.search(r"\b(R[0-9A-Z]+)\b", combined, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).upper(), "combined_text:refrigerant"
+    if label_key == normalize_for_match("Αφύγρανση") and _contains_any(combined, "αφύγρανση", "αφυγρανση"):
+        return "Ναι", "combined_text:dehumidification"
+    if label_key == normalize_for_match("Ιονιστής") and _contains_any(combined, "ιονιστ"):
+        return "Ναι", "combined_text:ionizer"
+    if label_key == normalize_for_match("Φίλτρα") and _contains_any(combined, "φιλτρα καθαρισμου αερα", "φίλτρα καθαρισμού αέρα"):
+        return "Φίλτρα Καθαρισμού Αέρα", "combined_text:filters"
+    if label_key == normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού") and _contains_any(combined, "wifi", "wi-fi"):
+        return "WiFi", "combined_text:wifi"
+    return "", "unresolved"
+
+
 def _resolve_template_field(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
     resolver_name = str(field.get("resolver", "")).strip()
     resolver = _RESOLVERS.get(resolver_name)
     if resolver is None:
-        aliases = list(field.get("aliases", [])) or [str(field.get("label", "")).strip()]
+        aliases = _aliases_for_template_field(field)
         value, source = _first_value_from_aliases(
             context,
             aliases,
             section_name=str(field.get("section_title", "")).strip(),
         )
+        if value:
+            value = _format_value_for_template_field(field, value)
+        else:
+            value, source = _fallback_value_for_template_field(context, field)
         return value, source or "unresolved"
     return resolver(context, field)
 
@@ -776,6 +927,11 @@ def _exact_value_from_aliases(context: _ResolutionContext, aliases: list[str]) -
 
 
 def _normalize_yes_no_value(value: str) -> str:
+    raw = normalize_whitespace(value).casefold()
+    if raw in {"✓", "✔", "✅", "true"} or any(token in raw for token in ("check", "tick")):
+        return "yes"
+    if raw in {"✕", "✖", "✗", "×", "x", "false"}:
+        return "no"
     normalized = normalize_for_match(value)
     if any(token in normalized for token in ("ναι", "yes", "υποστηριζεται", "supported")):
         return "yes"
@@ -1192,6 +1348,11 @@ def _format_dimension_parts_cm(values: list[str], *, unit_hint: str = "") -> lis
 
 
 def _normalize_yes_no(value: str) -> str:
+    raw = normalize_whitespace(value).casefold()
+    if raw in {"✓", "✔", "✅", "true"} or any(token in raw for token in ("check", "tick")):
+        return "Ναι"
+    if raw in {"✕", "✖", "✗", "×", "x", "false"}:
+        return "Όχι"
     normalized = normalize_for_match(value)
     if not normalized:
         return ""
@@ -2086,10 +2247,15 @@ def _resolve_air_conditioner_extra_features(context: _ResolutionContext, _field:
 
 
 def _format_air_conditioner_dimension_mm(value: str) -> str:
+    normalized = normalize_for_match(value)
+    match = re.search(r"\d+(?:[.,]\d+)?", value or "")
     number = _extract_first_number(value)
     if number is None:
         return ""
-    normalized = normalize_for_match(value)
+    if match and ("mm" in normalized or "χιλιοστ" in normalized):
+        number_text = match.group(0)
+        if re.fullmatch(r"\d{1,3}(?:\.\d{3})+", number_text):
+            number = float(number_text.replace(".", ""))
     if "cm" in normalized or "εκατοστ" in normalized:
         number *= 10
     elif "mm" in normalized or "χιλιοστ" in normalized:
@@ -2100,7 +2266,7 @@ def _format_air_conditioner_dimension_mm(value: str) -> str:
 
 
 def _resolve_air_conditioner_dimension_mm(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, field.get("aliases", []))
+    value, source = _first_value_from_aliases(context, _aliases_for_template_field(field))
     formatted = _format_air_conditioner_dimension_mm(value)
     return (formatted, source) if formatted else ("", "unresolved")
 

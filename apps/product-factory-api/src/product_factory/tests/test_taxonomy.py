@@ -217,3 +217,26 @@ def test_taxonomy_resolution_maps_electronet_frapieres_combined_breadcrumb() -> 
     assert "electronet_frapieres_url" in resolution.reason
     assert candidates[0]["sub_category"] == "Φραπιέρες"
 
+
+def test_taxonomy_resolution_maps_electronet_combined_air_conditioner_wall_breadcrumb() -> None:
+    resolver = TaxonomyResolver()
+    resolution, candidates = resolver.resolve(
+        breadcrumbs=[
+            "Αρχική",
+            "Κλιματισμός - Θέρμανση",
+            "Κλιματιστικά",
+            "Κλιματιστικά Τοίχου",
+        ],
+        url="https://www.electronet.gr/klimatismos-thermansi/klimatistika/klimatistika-toihoy/ac-inventor-neo-plus-npvi-24wfinpvo24-24000btu",
+        name="A/C Inventor Neo Plus NPVI-24WFI/NPVO24 24000Btu",
+        key_specs=[],
+        spec_sections=[],
+    )
+
+    assert resolution.parent_category == "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ"
+    assert resolution.leaf_category == "Κλιματιστικά"
+    assert resolution.sub_category == "Τοίχου"
+    assert resolution.cta_url == "https://www.etranoulis.gr/klimatismos-thermansi/klimatistika/toixou"
+    assert "sub_breadcrumb" in resolution.reason
+    assert candidates[0]["sub_category"] == "Τοίχου"
+

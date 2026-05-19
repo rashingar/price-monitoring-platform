@@ -132,6 +132,9 @@ class TaxonomyResolver:
                 if sub_norm and sub_norm in crumb_norms:
                     score += 5.0
                     reasons.append("sub_breadcrumb")
+                elif sub_norm and any(set(sub_norm.split()).issubset(set(crumb.split())) for crumb in crumb_norms):
+                    score += 5.0
+                    reasons.append("sub_breadcrumb")
                 if len(crumb_norms) >= 3:
                     path_guess = normalize_for_match(" > ".join(mapped_crumbs[1:4]))
                     if path_guess and path_guess == candidate_path_norm:

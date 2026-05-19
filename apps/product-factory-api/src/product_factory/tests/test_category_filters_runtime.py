@@ -241,6 +241,48 @@ def test_normalized_spec_label_resolves_filter_value() -> None:
     assert ram.resolved_from == "normalized_source"
 
 
+def test_air_conditioner_filters_derive_btu_and_wifi_from_product_text() -> None:
+    category = {
+        "category_id": "cat_wall_ac",
+        "key": "Τοίχου",
+        "path": "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Κλιματιστικά > Τοίχου",
+        "filter_groups": [
+            {
+                "group_id": "fg_capacity",
+                "name": "Ονομαστική Απόδοση",
+                "required": True,
+                "status": "active",
+                "values": [{"value_id": "fv_24000", "value": "24000 BTU", "status": "active"}],
+            },
+            {
+                "group_id": "fg_wifi",
+                "name": "Wifi",
+                "required": True,
+                "status": "active",
+                "values": [{"value_id": "fv_wifi", "value": "Υποστηρίζεται", "status": "active"}],
+            },
+        ],
+    }
+    source = SourceProductData(
+        name="A/C Inventor Neo Plus NPVI-24WFI/NPVO24 24000Btu",
+        hero_summary="Κλιματιστικό Neo+, WiFi Standard με Φωνητικές Εντολές.",
+    )
+    taxonomy = TaxonomyResolution(
+        category_id="cat_wall_ac",
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Τοίχου",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Κλιματιστικά > Τοίχου",
+    )
+
+    result = resolve_category_filter_values(source, taxonomy, category)
+
+    assert result.warnings == []
+    resolved = {group.group_name: group.resolved_value for group in result.groups}
+    assert resolved["Ονομαστική Απόδοση"] == "24000 BTU"
+    assert resolved["Wifi"] == "Υποστηρίζεται"
+
+
 def test_watt_filter_group_resolves_from_power_source_label() -> None:
     category = {
         "category_id": "cat_soundbar",

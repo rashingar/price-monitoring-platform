@@ -38,7 +38,7 @@ class BestPriceProductParser:
         breadcrumbs = clean_breadcrumbs(
             taxonomy_hint.breadcrumbs if taxonomy_hint and not taxonomy_hint.ambiguous else source_breadcrumbs
         )
-        spec_items = self._extract_specs(product_json, brand)
+        spec_items = self._extract_specs(soup, product_json, brand)
         spec_sections = [SpecSection(section="Χαρακτηριστικά", items=spec_items)] if spec_items else []
         key_specs = spec_items[:8]
         gallery_images = self._extract_gallery_images(soup, product_json, canonical_url, title)
@@ -210,24 +210,51 @@ class BestPriceProductParser:
                 href = make_absolute_url(raw_href, base_url)
         return (crumbs[-1] if len(crumbs) > 1 else "", href, clean_breadcrumbs(crumbs))
 
-    def _extract_specs(self, product_json: dict[str, Any], brand: str) -> list[SpecItem]:
+    def _extract_specs(self, soup: BeautifulSoup, product_json: dict[str, Any], brand: str) -> list[SpecItem]:
         items: list[SpecItem] = []
         if brand:
             items.append(SpecItem(label="Κατασκευαστής", value=brand))
         seen = {normalize_for_match("Κατασκευαστής")} if brand else set()
         raw_properties = product_json.get("additionalProperty")
-        if not isinstance(raw_properties, list):
-            return items
-        for prop in raw_properties:
-            if not isinstance(prop, dict):
-                continue
-            label = normalize_whitespace(str(prop.get("name") or ""))
-            value = normalize_whitespace(str(prop.get("value") or ""))
+        if isinstance(raw_properties, list):
+            for prop in raw_properties:
+                if not isinstance(prop, dict):
+                    continue
+                label = normalize_whitespace(str(prop.get("name") or ""))
+                value = normalize_whitespace(str(prop.get("value") or ""))
+                key = normalize_for_match(label)
+                if not label or not value or key in seen:
+                    continue
+                seen.add(key)
+                items.append(SpecItem(label=label, value=value))
+        for item in self._extract_visible_specs(soup):
+            label = item.label
+            value = item.value
             key = normalize_for_match(label)
             if not label or not value or key in seen:
                 continue
             seen.add(key)
             items.append(SpecItem(label=label, value=value))
+        return items
+
+    def _extract_visible_specs(self, soup: BeautifulSoup) -> list[SpecItem]:
+        items: list[SpecItem] = []
+        for node in soup.select(".item-header__specs-list li div"):
+            text = safe_text(node)
+            if ":" not in text:
+                continue
+            label, value = text.split(":", 1)
+            label = normalize_whitespace(label)
+            value = normalize_whitespace(value)
+            if label and value:
+                items.append(SpecItem(label=label, value=value))
+        for node in soup.select("#item-specs dl"):
+            label_node = node.select_one("dt")
+            value_node = node.select_one("dd")
+            label = safe_text(label_node) if label_node is not None else ""
+            value = safe_text(value_node) if value_node is not None else ""
+            if label and value:
+                items.append(SpecItem(label=label, value=value))
         return items
 
     def _extract_gallery_images(self, soup: BeautifulSoup, product_json: dict[str, Any], base_url: str, title: str) -> list[GalleryImage]:

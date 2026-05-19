@@ -237,7 +237,16 @@ def test_bestprice_parser_normalizes_jsonld_product() -> None:
            ]}
         </script>
       </head>
-      <body><h1 class="item-title">fallback</h1><div class="item-description">Αυτή η TCL έχει Mini LED.</div></body>
+      <body>
+        <h1 class="item-title">fallback</h1>
+        <ul class="item-header__specs-list">
+          <li><div>Αφύγρανση: Ναι</div></li>
+        </ul>
+        <section id="item-specs">
+          <dl><dt>Wifi Ready</dt><dd>Ναι</dd></dl>
+        </section>
+        <div class="item-description">Αυτή η TCL έχει Mini LED.</div>
+      </body>
     </html>
     """
 
@@ -251,6 +260,8 @@ def test_bestprice_parser_normalizes_jsonld_product() -> None:
     assert parsed.source.taxonomy_tv_inches == 65
     assert parsed.source.gallery_images[0].url == "https://cdn.example/product.jpg"
     assert [item.label for item in parsed.source.spec_sections[0].items[:2]] == ["Κατασκευαστής", "Μέγεθος Οθόνης"]
+    assert {item.label: item.value for item in parsed.source.spec_sections[0].items}["Αφύγρανση"] == "Ναι"
+    assert {item.label: item.value for item in parsed.source.spec_sections[0].items}["Wifi Ready"] == "Ναι"
     assert parsed.critical_missing == []
 
 

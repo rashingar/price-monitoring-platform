@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import Any, Mapping
 
 from ..csv_writer import write_csv_row
 from ..html_builders import extract_presentation_blocks
@@ -70,6 +71,10 @@ def execute_render_workflow(
         source = prepared_context.source_product
         if source is None:
             raise ValueError("Prepared product context is missing source product data")
+        characteristics_source = _load_characteristics_source_from_normalized(
+            prepared_context.normalized_payload,
+            fallback=source,
+        )
         cli = prepared_context.build_render_cli(candidate_out=candidate_dir)
         taxonomy = prepared_context.require_taxonomy()
         schema_match = prepared_context.require_schema_match()
@@ -119,6 +124,7 @@ def execute_render_workflow(
             llm_intro_text=split_llm_result.intro_text,
             deterministic_presentation_sections=render_sections,
             model_root=model_root,
+            characteristics_source=characteristics_source,
         )
         headers, ordered_row = write_csv_row(row, candidate_csv_path)
         candidate_normalized["csv_headers"] = headers
@@ -247,6 +253,21 @@ def execute_render_workflow(
 
 def load_source_product(path: str | Path) -> SourceProductData:
     payload = read_json(path)
+    return _source_product_from_payload(payload)
+
+
+def _load_characteristics_source_from_normalized(
+    normalized_payload: Mapping[str, Any],
+    *,
+    fallback: SourceProductData,
+) -> SourceProductData:
+    payload = normalized_payload.get("characteristics_source")
+    if not isinstance(payload, Mapping):
+        return fallback
+    return _source_product_from_payload(payload)
+
+
+def _source_product_from_payload(payload: Mapping[str, Any]) -> SourceProductData:
     return SourceProductData(
         source_name=payload.get("source_name", ""),
         page_type=payload.get("page_type", "product"),

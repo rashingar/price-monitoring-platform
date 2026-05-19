@@ -343,15 +343,28 @@ def _add_source_derived_filter_hints(
     normalized: dict[str, tuple[str, str]],
 ) -> None:
     title_key = normalize_label_key(source.name)
+    source_text = " ".join(
+        part
+        for part in (
+            source.name,
+            source.hero_summary,
+            source.presentation_source_text,
+        )
+        if part
+    )
+    source_text_key = normalize_label_key(source_text)
     spec_lookup = {normalize_label_key(label): value for label, value in exact.items()}
 
     if "smart" in title_key or any(key in spec_lookup for key in ("λογισμικο", "υποστηριζομενες εφαρμογες")):
         _add_exact_and_normalized(exact, normalized, SpecItem("Smart Tv", "Υποστηρίζεται"), "derived")
-    if "wifi" in title_key or "wi fi" in title_key:
+    if "wifi" in source_text_key or "wi fi" in source_text_key:
         _add_exact_and_normalized(exact, normalized, SpecItem("Wifi", "Υποστηρίζεται"), "derived")
     wifi_value = spec_lookup.get("wi fi") or spec_lookup.get("wifi")
     if wifi_value and _normalize_filter_yes_no(wifi_value) != "Όχι":
         _add_exact_and_normalized(exact, normalized, SpecItem("Wifi", "Υποστηρίζεται"), "derived")
+    btu_capacity = _extract_btu_capacity_hint(source_text)
+    if btu_capacity:
+        _add_exact_and_normalized(exact, normalized, SpecItem("Ονομαστική Απόδοση", btu_capacity), "derived")
     if "grill" in title_key or "γκριλ" in title_key:
         _add_exact_and_normalized(exact, normalized, SpecItem("Με Grill", "Ναι"), "derived")
     grill_value = spec_lookup.get("λειτουργια grill")
@@ -614,6 +627,14 @@ def _latin_energy_class(value: str) -> str:
 def _extract_energy_class_hint(text: str) -> str:
     match = re.search(r"\b([A-GΑ-Η](?:\+{1,3})?)(?:\s*/\s*[A-GΑ-Η](?:\+{1,3})?)?\b", str(text or ""), flags=re.IGNORECASE)
     return match.group(1).upper() if match else ""
+
+
+def _extract_btu_capacity_hint(text: str) -> str:
+    match = re.search(r"\b(\d{1,2}(?:[.\s]?\d{3})|\d{4,5})\s*btu\b", str(text or ""), flags=re.IGNORECASE)
+    if not match:
+        return ""
+    value = re.sub(r"\D", "", match.group(1))
+    return f"{value} BTU" if value else ""
 
 
 def _normalize_filter_yes_no(value: str) -> str:

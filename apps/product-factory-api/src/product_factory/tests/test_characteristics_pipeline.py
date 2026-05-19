@@ -315,6 +315,114 @@ def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() ->
     ] == "10"
 
 
+def test_bestprice_wall_air_conditioner_aliases_fill_electronet_template() -> None:
+    source = SourceProductData(
+        source_name="bestprice",
+        url="https://www.bestprice.gr/item/2160501610/inventor-neo-plus-npvi-24wfi-npvo24-klimatistiko-inverter-24000-btu-a-plus-plus-a-plus-plus-plus-me-ionisti-kai-wi-fi.html",
+        name="Inventor Neo Plus NPVI-24WFI/NPVO24 Κλιματιστικό Inverter 24000 BTU",
+        brand="Inventor",
+        spec_sections=[
+            SpecSection(
+                section="Χαρακτηριστικά",
+                items=[
+                    SpecItem(label="Κατασκευαστής", value="Inventor"),
+                    SpecItem(label="Θερμική Απόδοση", value="24.000BTU"),
+                    SpecItem(label="Ψυκτική Απόδοση", value="24.000BTU"),
+                    SpecItem(label="Χώρος Κάλυψης (Κατά Προσέγγιση)", value="50τμ"),
+                    SpecItem(label="Απόδοση BTU", value="24000 BTU"),
+                    SpecItem(label="Βαθμός Θερμικής Απόδοσης (SCOP)", value="5,1W/W"),
+                    SpecItem(label="Ενεργειακή Κλάση Ψύξης", value="A++"),
+                    SpecItem(label="Ενεργειακή Κλάση Θέρμανσης", value="A+++"),
+                    SpecItem(label="Βαθμός Απόδοσης SEER", value="6,4"),
+                    SpecItem(label="Βάρος Εσωτερικής Μονάδας", value="13,6kg"),
+                    SpecItem(label="Βάρος Εξωτερικής Μονάδας", value="43,9kg"),
+                    SpecItem(label="Ύψος Εξωτερικής Μονάδα", value="673mm"),
+                    SpecItem(label="Μήκος Εξωτερικής Μονάδα", value="955mm"),
+                    SpecItem(label="Βάθος Εξωτερικής Μονάδα", value="342mm"),
+                    SpecItem(label="Ύψος Εσωτερικής Μονάδας", value="336mm"),
+                    SpecItem(label="Μήκος Εσωτερικής Μονάδας", value="1.083mm"),
+                    SpecItem(label="Βάθος Εσωτερικής Μονάδας", value="244mm"),
+                    SpecItem(label="Θόρυβος Εξωτερικής Μονάδας", value="62dB"),
+                    SpecItem(label="Θόρυβος Εσωτερικής Μονάδας", value="47dB"),
+                    SpecItem(label="Inverter", value="✓"),
+                    SpecItem(label="Υγραντήρας", value="✕"),
+                    SpecItem(label="Ιονιστής", value="✓"),
+                    SpecItem(label="Αφύγρανση", value="✓"),
+                    SpecItem(label="Wifi Ready", value="✓"),
+                    SpecItem(label="Οικολογικό Ψυκτικό Υγρό R32", value="✓"),
+                    SpecItem(label="Φίλτρα Καθαρισμού Αέρα", value="✓"),
+                    SpecItem(label="Χρώμα", value="Άσπρο"),
+                ],
+            )
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Τοίχου",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Κλιματιστικά > Τοίχου",
+    )
+
+    _html, diagnostics, warnings = build_characteristics_for_product(
+        source,
+        taxonomy,
+        schema_match=SchemaMatchResult(matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95),
+    )
+
+    values = {
+        (normalize_for_match(field["section"]), normalize_for_match(field["label"])): field["value"]
+        for field in diagnostics["fields"]
+    }
+
+    assert diagnostics["template_source"] == "schema_library"
+    assert f"characteristics_template_used:schema:{AIR_CONDITIONER_SCHEMA_ID}" in warnings
+    assert values[(normalize_for_match("Ψυκτική / Θερμική Απόδοση"), normalize_for_match("Ονομαστική Απόδοση (Btu/h)"))] == "24000 BTU"
+    assert values[(normalize_for_match("Ψυκτική / Θερμική Απόδοση"), normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"))] == "24.000BTU"
+    assert values[(normalize_for_match("Ψυκτική / Θερμική Απόδοση"), normalize_for_match("Θερμική Απόδοση ( Btu/h )"))] == "24.000BTU"
+    assert values[(normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"), normalize_for_match("Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"))] == "6,4"
+    assert values[(normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"), normalize_for_match("Βαθμός Εποχιακής Απόδοσης Θέρμανσης Μέσης Εποχής - SCOP"))] == "5,1W/W"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Τεχνολογία Κλιματιστικού"))] == "Inverter"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ψυκτικό Υγρό"))] == "R32"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A) - Hi"))] == "47dB"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ηχητική Ισχύς Εξωτερικής Μονάδας dB(A) - Hi"))] == "62dB"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Αφύγρανση"))] == "Ναι"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ιονιστής"))] == "Ναι"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Φίλτρα"))] == "Φίλτρα Καθαρισμού Αέρα"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"))] == "WiFi"
+    assert values[(normalize_for_match("Διαστάσεις και Βάρος"), normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"))] == "1083"
+    assert values[(normalize_for_match("Διαστάσεις και Βάρος"), normalize_for_match("Πλάτος Εξωτερικής Μονάδας ( mm )"))] == "955"
+    assert values[(normalize_for_match("Γενικά Χαρακτηριστικά"), normalize_for_match("Χρώμα"))] == "Άσπρο"
+
+
+def test_bestprice_wall_air_conditioner_summary_fills_feature_fallbacks() -> None:
+    source = SourceProductData(
+        source_name="bestprice",
+        name="Inventor Neo Plus Κλιματιστικό Inverter με Ιονιστή και Wi-Fi",
+        hero_summary="Διαθέτει ιονιστή για καθαρότερο αέρα και λειτουργία Wi-Fi.",
+        spec_sections=[],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Τοίχου",
+    )
+
+    _html, diagnostics, _warnings = build_characteristics_for_product(
+        source,
+        taxonomy,
+        schema_match=SchemaMatchResult(matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95),
+    )
+
+    values = {
+        (normalize_for_match(field["section"]), normalize_for_match(field["label"])): field["value"]
+        for field in diagnostics["fields"]
+    }
+
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Τεχνολογία Κλιματιστικού"))] == "Inverter"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ιονιστής"))] == "Ναι"
+    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"))] == "WiFi"
+
+
 def test_electronet_without_specs_uses_blank_template_for_specific_category_from_url() -> None:
     source = SourceProductData(
         source_name="electronet",
