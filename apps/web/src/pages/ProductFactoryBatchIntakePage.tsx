@@ -178,9 +178,59 @@ function isResolutionActive(batch: ProductFactoryBatchResponse | null, rows: Pro
   return batch?.status === "resolving" || rows.some((row) => row.status === "resolving_source");
 }
 
-function MetricGrid({ batch }: { batch: ProductFactoryBatchResponse }) {
+function isBatchResolutionTerminal(
+  batch: ProductFactoryBatchResponse | null,
+  rows: ProductFactoryBatchRowResponse[],
+  resolvingRequestActive = false,
+): boolean {
+  return !resolvingRequestActive && !isResolutionActive(batch, rows);
+}
+
+function rowResolutionProgressRank(row: ProductFactoryBatchRowResponse): number {
+  const status = String(row.status ?? "pending").trim().toLowerCase();
+  if (status === "pending") {
+    return 0;
+  }
+  if (status === "resolving_source") {
+    return 1;
+  }
+  return 2;
+}
+
+function mergeResolveResponseRows(
+  currentRows: ProductFactoryBatchRowResponse[],
+  responseRows: ProductFactoryBatchRowResponse[],
+): ProductFactoryBatchRowResponse[] {
+  if (responseRows.length === 0) {
+    return currentRows;
+  }
+  const currentById = new Map(currentRows.map((row) => [row.id, row]));
+  return responseRows.map((responseRow) => {
+    const currentRow = currentById.get(responseRow.id);
+    return currentRow && rowResolutionProgressRank(currentRow) > rowResolutionProgressRank(responseRow)
+      ? currentRow
+      : responseRow;
+  });
+}
+
+function resolvedProgress(batch: ProductFactoryBatchResponse, rows: ProductFactoryBatchRowResponse[]): { resolved: number; total: number } {
+  const total = Number(batch.total_rows ?? rows.length ?? 0);
+  const pendingCount = Number(batch.pending_count ?? rows.filter((row) => row.status === "pending").length);
+  const resolvingCount = rows.filter((row) => row.status === "resolving_source").length;
+  return {
+    resolved: Math.max(0, total - pendingCount - resolvingCount),
+    total,
+  };
+}
+
+function MetricGrid({ batch, rows }: { batch: ProductFactoryBatchResponse; rows: ProductFactoryBatchRowResponse[] }) {
+  const progress = resolvedProgress(batch, rows);
   return (
     <dl className="summary-grid product-factory-batch-summary-grid">
+      <div>
+        <dt>Resolved</dt>
+        <dd>{progress.resolved} / {progress.total}</dd>
+      </div>
       {COUNT_FIELDS.map((field) => (
         <div key={field.key}>
           <dt>{field.label}</dt>
@@ -507,6 +557,7 @@ export function ProductFactoryBatchIntakePage() {
     [reviewRowId, rows],
   );
   const resolutionActive = isResolutionActive(activeBatch, rows);
+  const shouldPollResolution = Boolean(activeBatch) && !isBatchResolutionTerminal(activeBatch, rows, isResolving);
 
   const loadRecentBatches = useCallback(async () => {
     try {
@@ -520,7 +571,7 @@ export function ProductFactoryBatchIntakePage() {
   const refreshBatch = useCallback(async (
     batchId: number,
     options: { showLoading?: boolean; refreshRecent?: boolean } = {},
-  ) => {
+  ): Promise<{ batch: ProductFactoryBatchResponse; rows: ProductFactoryBatchRowResponse[] }> => {
     const showLoading = options.showLoading ?? true;
     const refreshRecent = options.refreshRecent ?? true;
     if (showLoading) {
@@ -536,6 +587,7 @@ export function ProductFactoryBatchIntakePage() {
       if (refreshRecent) {
         await loadRecentBatches();
       }
+      return { batch, rows: rowsResponse.items };
     } finally {
       if (showLoading) {
         setIsLoadingRows(false);
@@ -553,16 +605,25 @@ export function ProductFactoryBatchIntakePage() {
   }, [activeBatch?.id]);
 
   useEffect(() => {
-    if (!activeBatch || !resolutionActive) {
+    if (!activeBatch || !shouldPollResolution) {
       return undefined;
     }
 
     const intervalId = window.setInterval(() => {
-      void refreshBatch(activeBatch.id, { showLoading: false, refreshRecent: false });
-    }, 1750);
+      void refreshBatch(activeBatch.id, { showLoading: false, refreshRecent: false })
+        .then(({ batch, rows: refreshedRows }) => {
+          setResolveError(null);
+          if (isBatchResolutionTerminal(batch, refreshedRows, isResolving)) {
+            setIsResolving(false);
+          }
+        })
+        .catch((error) => {
+          setResolveError(getCommerceApiErrorMessage(error));
+        });
+    }, 2000);
 
     return () => window.clearInterval(intervalId);
-  }, [activeBatch?.id, refreshBatch, resolutionActive]);
+  }, [activeBatch?.id, refreshBatch, isResolving, shouldPollResolution]);
 
   useEffect(() => {
     if (reviewRow) {
@@ -645,13 +706,14 @@ export function ProductFactoryBatchIntakePage() {
     setIsResolving(true);
     setResolveError(null);
     setSourceSelectionError(null);
+    setActiveBatch((current) => current ? { ...current, status: "resolving" } : current);
     try {
       const resolved = await commerceClient.resolveProductFactoryBatch(activeBatch.id, {
         source_names: selectedSourceNames,
       });
       setActiveBatch(resolved);
       setSelectedSourceNames(batchMetadataSourceNames(resolved));
-      setRows(resolved.rows);
+      setRows((currentRows) => mergeResolveResponseRows(currentRows, resolved.rows));
       await loadRecentBatches();
     } catch (error) {
       setResolveError(getCommerceApiErrorMessage(error));
@@ -809,7 +871,7 @@ export function ProductFactoryBatchIntakePage() {
             {resolutionActive ? (
               <p className="state-block">Resolving rows... table refreshes automatically.</p>
             ) : null}
-            <MetricGrid batch={activeBatch} />
+            <MetricGrid batch={activeBatch} rows={rows} />
             {resolveError ? <ErrorState message={resolveError} onRetry={() => void handleResolve()} /> : null}
           </section>
 

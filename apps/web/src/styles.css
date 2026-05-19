@@ -2416,12 +2416,14 @@ textarea {
 }
 
 .product-factory-batch-summary-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
+  justify-content: start;
+  gap: 8px;
 }
 
 .product-factory-batch-summary-grid div {
-  padding: 10px;
+  min-height: 74px;
+  padding: 8px 10px;
 }
 
 .batch-source-selection {

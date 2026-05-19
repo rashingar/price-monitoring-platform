@@ -1,7 +1,10 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithRouter } from "../renderWithRouter";
 import { installMockFetch, jsonResponse, type MockRoute } from "../mockFetch";
+
+const stylesCss = readFileSync("src/styles.css", "utf8");
 
 const batch = {
   id: 7,
@@ -65,6 +68,14 @@ const resolvedRows = [
   ...rows.slice(1),
 ];
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolver) => {
+    resolve = resolver;
+  });
+  return { promise, resolve };
+}
+
 function row(
   id: number,
   rowNumber: number,
@@ -104,6 +115,10 @@ function baseRoutes(extra: MockRoute[] = []): MockRoute[] {
 }
 
 describe("Product Factory Batch Intake", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders the route, Product Factory nav entry, upload guidance, and recent batches", async () => {
     installMockFetch(baseRoutes());
 
@@ -145,9 +160,20 @@ describe("Product Factory Batch Intake", () => {
     fireEvent.click(screen.getByRole("button", { name: "Upload" }));
 
     await expect(screen.findByText("Total rows")).resolves.toBeInTheDocument();
+    expect(screen.getByText("Resolved").closest("div")).toHaveTextContent("6 / 7");
     expect(screen.getByText("Auto-selected").closest("div")).toHaveTextContent("1");
     expect(screen.getByRole("cell", { name: "000001" })).toBeInTheDocument();
     expect(mockFetch.requests.some((request) => request.method === "POST" && request.pathname.endsWith("/upload"))).toBe(true);
+  });
+
+  it("uses the compact Batch Intake metric card layout", async () => {
+    installMockFetch(baseRoutes());
+    renderWithRouter("/product-factory/batch-intake");
+
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+
+    expect((await screen.findByText("Resolved")).closest("dl")).toHaveClass("product-factory-batch-summary-grid");
+    expect(stylesCss).toContain("repeat(auto-fit, minmax(140px, 180px))");
   });
 
   it("opens a recent batch with saved source settings restored", async () => {
@@ -245,6 +271,130 @@ describe("Product Factory Batch Intake", () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(screen.getByText("source_resolution_error: Brave unavailable")).toBeInTheDocument();
+  });
+
+  it("polls rows every 2 seconds while the resolve request is still pending and stops at terminal state", async () => {
+    const resolveStart = deferred<unknown>();
+    let resolveStarted = false;
+    let pollCount = 0;
+    const resolvingBatch = {
+      ...batch,
+      status: "resolving",
+      pending_count: 0,
+      metadata: { selected_source_names: ["skroutz"], selected_source_labels: ["Skroutz"] },
+    };
+    const resolvedBatch = { ...resolvingBatch, status: "resolved", auto_selected_count: 2 };
+    const liveRows = [
+      row(71, 2, "000001", "resolving_source"),
+      row(72, 3, "000002", "auto_selected", {
+        selected_source: "skroutz",
+        selected_url: "https://www.skroutz.gr/s/123/live-alpha.html",
+        confidence: 88,
+      }),
+      ...rows.slice(2),
+    ];
+    const terminalRows = [
+      row(71, 2, "000001", "auto_selected", {
+        selected_source: "skroutz",
+        selected_url: "https://www.skroutz.gr/s/123/final-alpha.html",
+        confidence: 91,
+      }),
+      ...liveRows.slice(1),
+    ];
+    const mockFetch = installMockFetch(baseRoutes([
+      {
+        method: "GET",
+        path: "/commerce-api/product-factory-batches/7",
+        response: () => {
+          if (!resolveStarted) {
+            return batch;
+          }
+          return pollCount >= 1 ? resolvedBatch : resolvingBatch;
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/product-factory-batches/7/rows",
+        response: () => {
+          if (!resolveStarted) {
+            return { items: rows };
+          }
+          pollCount += 1;
+          return { items: pollCount >= 2 ? terminalRows : liveRows };
+        },
+      },
+      {
+        method: "POST",
+        path: "/commerce-api/product-factory-batches/7/resolve",
+        response: () => {
+          resolveStarted = true;
+          return resolveStart.promise;
+        },
+      },
+    ]));
+    renderWithRouter("/product-factory/batch-intake");
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+    await screen.findByRole("cell", { name: "000004" });
+    vi.useFakeTimers();
+
+    const initialRowGetCount = mockFetch.requests.filter((request) => request.method === "GET" && request.pathname.endsWith("/rows")).length;
+    fireEvent.click(screen.getByRole("button", { name: "Resolve URLs" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole("button", { name: "Resolving..." })).toBeDisabled();
+    expect(screen.getByText("Resolving rows... table refreshes automatically.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Resolving..." }));
+    expect(mockFetch.requests.filter((request) => request.method === "POST" && request.pathname.endsWith("/resolve")).length).toBe(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1999);
+      await Promise.resolve();
+    });
+    expect(mockFetch.requests.filter((request) => request.method === "GET" && request.pathname.endsWith("/rows")).length).toBe(initialRowGetCount);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mockFetch.requests.filter((request) => request.method === "GET" && request.pathname.endsWith("/rows")).length).toBe(initialRowGetCount + 1);
+    expect(screen.getByText("resolving")).toBeInTheDocument();
+    expect(screen.getAllByRole("cell", { name: "skroutz" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("cell", { name: "88" })).toBeInTheDocument();
+    expect(screen.getByText("Resolved").closest("div")).toHaveTextContent("6 / 7");
+    expect(screen.getAllByRole("cell", { name: /^00000/ }).map((cell) => cell.textContent)).toEqual([
+      "000001",
+      "000002",
+      "000003",
+      "000004",
+      "000005",
+      "000006",
+      "000007",
+    ]);
+
+    await act(async () => {
+      resolveStart.resolve({ ...resolvingBatch, rows: liveRows });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("button", { name: "Resolve URLs" })).toBeDisabled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("cell", { name: "91" })).toBeInTheDocument();
+    expect(screen.getByText("Resolved").closest("div")).toHaveTextContent("7 / 7");
+
+    const terminalRowGetCount = mockFetch.requests.filter((request) => request.method === "GET" && request.pathname.endsWith("/rows")).length;
+    await act(async () => {
+      vi.advanceTimersByTime(4000);
+      await Promise.resolve();
+    });
+    expect(mockFetch.requests.filter((request) => request.method === "GET" && request.pathname.endsWith("/rows")).length).toBe(terminalRowGetCount);
   });
 
   it("shows candidate review details and selects an existing candidate URL", async () => {
