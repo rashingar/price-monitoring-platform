@@ -129,3 +129,9 @@ class ProductFactoryBatchJobStatusRefreshResponse(BaseModel):
     failed_count: int
     rows: list[ProductFactoryBatchRowResponse]
     errors: list[dict[str, Any]] = []
+
+
+class ProductFactoryBatchJobResetResponse(BaseModel):
+    batch_id: int
+    reset_count: int
+    rows: list[ProductFactoryBatchRowResponse]

@@ -290,6 +290,10 @@ export interface paths {
     /** Refresh Product Factory Batch Job Statuses */
     post: operations["refresh_product_factory_batch_job_statuses_api_product_factory_batches__batch_id__refresh_job_statuses_post"];
   };
+  "/api/product-factory-batches/{batch_id}/reset-pf-jobs": {
+    /** Reset Product Factory Batch Jobs */
+    post: operations["reset_product_factory_batch_jobs_api_product_factory_batches__batch_id__reset_pf_jobs_post"];
+  };
   "/api/product-factory-batches/{batch_id}/resolve": {
     /** Resolve Product Factory Batch */
     post: operations["resolve_product_factory_batch_api_product_factory_batches__batch_id__resolve_post"];
@@ -805,6 +809,15 @@ export interface components {
        * @default []
        */
       warnings?: string[];
+    };
+    /** ProductFactoryBatchJobResetResponse */
+    ProductFactoryBatchJobResetResponse: {
+      /** Batch Id */
+      batch_id: number;
+      /** Reset Count */
+      reset_count: number;
+      /** Rows */
+      rows: components["schemas"]["ProductFactoryBatchRowResponse"][];
     };
     /** ProductFactoryBatchJobStatusRefreshResponse */
     ProductFactoryBatchJobStatusRefreshResponse: {
@@ -3226,6 +3239,28 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["ProductFactoryBatchJobStatusRefreshResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Reset Product Factory Batch Jobs */
+  reset_product_factory_batch_jobs_api_product_factory_batches__batch_id__reset_pf_jobs_post: {
+    parameters: {
+      path: {
+        batch_id: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProductFactoryBatchJobResetResponse"];
         };
       };
       /** @description Validation Error */

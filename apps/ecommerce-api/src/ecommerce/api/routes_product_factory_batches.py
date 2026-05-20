@@ -15,6 +15,7 @@ from ecommerce.product_factory_batch import repository
 from ecommerce.product_factory_batch.csv_parser import ProductFactoryBatchCsvError
 from ecommerce.product_factory_batch.models import (
     ProductFactoryBatchEnqueueResponse,
+    ProductFactoryBatchJobResetResponse,
     ProductFactoryBatchJobStatusRefreshResponse,
     ProductFactoryBatchListResponse,
     ProductFactoryBatchResolveRequest,
@@ -30,6 +31,7 @@ from ecommerce.product_factory_batch.enqueue import (
     enqueue_batch_selected,
     product_factory_client_from_env,
     refresh_batch_job_statuses,
+    reset_batch_product_factory_jobs,
 )
 from ecommerce.product_factory_batch.service import (
     ProductFactoryBatchError,
@@ -259,6 +261,27 @@ def enqueue_selected_product_factory_batch_rows(batch_id: int) -> dict[str, Any]
                 "rows": result.rows,
                 "warnings": result.warnings,
                 "errors": result.errors,
+            }
+    except DatabaseNotConfiguredError as exc:
+        raise _database_unavailable(exc) from exc
+    except SQLAlchemyError as exc:
+        raise _database_unavailable(exc) from exc
+
+
+@router.post(
+    "/{batch_id}/reset-pf-jobs", response_model=ProductFactoryBatchJobResetResponse
+)
+def reset_product_factory_batch_jobs(batch_id: int) -> dict[str, Any]:
+    try:
+        with session_scope() as session:
+            batch = repository.get_batch(session, batch_id)
+            if batch is None:
+                raise HTTPException(status_code=404, detail="Batch not found.")
+            result = reset_batch_product_factory_jobs(session, batch=batch)
+            return {
+                "batch_id": result.batch_id,
+                "reset_count": result.reset_count,
+                "rows": result.rows,
             }
     except DatabaseNotConfiguredError as exc:
         raise _database_unavailable(exc) from exc

@@ -58,6 +58,13 @@ class JobStatusRefreshResult:
     errors: list[dict[str, Any]] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class BatchJobResetResult:
+    batch_id: int
+    reset_count: int
+    rows: list[dict[str, Any]]
+
+
 def batch_auto_enqueue_confidence_threshold() -> int:
     try:
         threshold = int(os.getenv(AUTO_ENQUEUE_CONFIDENCE_THRESHOLD_ENV, "").strip())
@@ -288,6 +295,29 @@ def refresh_batch_job_statuses(
     )
 
 
+def reset_batch_product_factory_jobs(
+    session: Session,
+    *,
+    batch: ProductFactoryBatch,
+) -> BatchJobResetResult:
+    rows = repository.list_batch_rows(session, batch.id)
+    reset_count = 0
+    for row in rows:
+        if not _row_has_product_factory_tracking(row):
+            continue
+        _clear_product_factory_tracking(row)
+        reset_count += 1
+    session.flush()
+    return BatchJobResetResult(
+        batch_id=batch.id,
+        reset_count=reset_count,
+        rows=[
+            repository.row_to_dict(row)
+            for row in repository.list_batch_rows(session, batch.id)
+        ],
+    )
+
+
 def _force_low_confidence_auto_selected_rows(
     session: Session,
     *,
@@ -356,3 +386,29 @@ def _store_enqueue_error(
     row.product_factory_error_code = code
     row.product_factory_error_message = message
     row.updated_at = now
+
+
+def _row_has_product_factory_tracking(row: ProductFactoryBatchRow) -> bool:
+    return any(
+        value is not None
+        for value in (
+            row.product_factory_job_id,
+            row.product_factory_job_status,
+            row.product_factory_job_message,
+            row.product_factory_error_code,
+            row.product_factory_error_message,
+            row.enqueued_at,
+            row.job_status_refreshed_at,
+        )
+    )
+
+
+def _clear_product_factory_tracking(row: ProductFactoryBatchRow) -> None:
+    row.product_factory_job_id = None
+    row.product_factory_job_status = None
+    row.product_factory_job_message = None
+    row.product_factory_error_code = None
+    row.product_factory_error_message = None
+    row.enqueued_at = None
+    row.job_status_refreshed_at = None
+    row.updated_at = _now()

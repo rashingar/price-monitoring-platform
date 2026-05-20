@@ -84,6 +84,7 @@ describe("generated API contract drift guardrails", () => {
       ["ProductFactoryBatchUploadResponse", "ProductFactoryBatchUploadResponse"],
       ["ProductFactoryBatchResolveResponse", "ProductFactoryBatchResolveResponse"],
       ["ProductFactoryBatchEnqueueResponse", "ProductFactoryBatchEnqueueResponse"],
+      ["ProductFactoryBatchJobResetResponse", "ProductFactoryBatchJobResetResponse"],
       ["ProductFactoryBatchJobStatusRefreshResponse", "ProductFactoryBatchJobStatusRefreshResponse"],
     ];
 

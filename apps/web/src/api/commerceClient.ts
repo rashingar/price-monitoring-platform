@@ -46,6 +46,7 @@ import type {
   PlatformHealthResponse,
   ProductFactoryBatchListResponse,
   ProductFactoryBatchEnqueueResponse,
+  ProductFactoryBatchJobResetResponse,
   ProductFactoryBatchJobStatusRefreshResponse,
   ProductFactoryBatchResponse,
   ProductFactoryBatchResolveRequest,
@@ -2581,6 +2582,17 @@ function normalizeProductFactoryBatchJobStatusRefresh(payload: unknown): Product
   };
 }
 
+function normalizeProductFactoryBatchJobReset(payload: unknown): ProductFactoryBatchJobResetResponse {
+  const source = isRecord(payload) ? payload : {};
+  return {
+    batch_id: normalizeCounter(source.batch_id),
+    reset_count: normalizeCounter(source.reset_count),
+    rows: getArrayPayload(source.rows, ["items", "rows", "data", "results"])
+      .map(normalizeProductFactoryBatchRow)
+      .filter((item): item is ProductFactoryBatchRowResponse => item !== null),
+  };
+}
+
 function normalizeCatalogCategoryOptions(payload: unknown): CatalogCategoryOption[] {
   const list = getArrayPayload(payload, ["items", "categories", "data", "results"]);
 
@@ -3442,6 +3454,21 @@ export const commerceClient = {
     return normalizeProductFactoryBatchJobStatusRefresh(
       await request<unknown>(
         `/product-factory-batches/${encodeURIComponent(String(batchId))}/refresh-job-statuses`,
+        {
+          method: "POST",
+          signal,
+        },
+      ),
+    );
+  },
+
+  async resetProductFactoryBatchJobs(
+    batchId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductFactoryBatchJobResetResponse> {
+    return normalizeProductFactoryBatchJobReset(
+      await request<unknown>(
+        `/product-factory-batches/${encodeURIComponent(String(batchId))}/reset-pf-jobs`,
         {
           method: "POST",
           signal,

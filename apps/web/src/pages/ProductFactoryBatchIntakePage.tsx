@@ -131,6 +131,18 @@ function rowHasProductFactoryJob(row: ProductFactoryBatchRowResponse): boolean {
   return String(row.product_factory_job_id ?? "").trim().length > 0;
 }
 
+function rowHasProductFactoryJobTracking(row: ProductFactoryBatchRowResponse): boolean {
+  return [
+    row.product_factory_job_id,
+    row.product_factory_job_status,
+    row.product_factory_job_message,
+    row.product_factory_error_code,
+    row.product_factory_error_message,
+    row.enqueued_at,
+    row.job_status_refreshed_at,
+  ].some((value) => String(value ?? "").trim().length > 0);
+}
+
 function rowIsLowConfidenceAutoSelected(row: ProductFactoryBatchRowResponse): boolean {
   return row.status === "auto_selected"
     && Boolean(row.selected_url)
@@ -613,6 +625,7 @@ export function ProductFactoryBatchIntakePage() {
   const [isResolving, setIsResolving] = useState(false);
   const [isBatchEnqueuing, setIsBatchEnqueuing] = useState(false);
   const [isRefreshingJobs, setIsRefreshingJobs] = useState(false);
+  const [isResettingJobs, setIsResettingJobs] = useState(false);
   const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [rowActionKey, setRowActionKey] = useState<string | null>(null);
 
@@ -624,6 +637,7 @@ export function ProductFactoryBatchIntakePage() {
   const shouldPollResolution = Boolean(activeBatch) && !isBatchResolutionTerminal(activeBatch, rows, isResolving);
   const eligibleUnenqueuedRows = useMemo(() => rows.filter(rowIsFrontendEnqueueEligible), [rows]);
   const hasProductFactoryJobs = useMemo(() => rows.some(rowHasProductFactoryJob), [rows]);
+  const hasProductFactoryJobTracking = useMemo(() => rows.some(rowHasProductFactoryJobTracking), [rows]);
 
   const loadRecentBatches = useCallback(async () => {
     try {
@@ -909,6 +923,29 @@ export function ProductFactoryBatchIntakePage() {
     }
   }
 
+  async function handleResetProductFactoryJobs() {
+    if (!activeBatch) {
+      return;
+    }
+    if (!window.confirm("Clear Product Factory job IDs/statuses for this batch so selected rows can be enqueued again? This will not cancel jobs in Product Factory.")) {
+      return;
+    }
+    setIsResettingJobs(true);
+    setEnqueueError(null);
+    setEnqueueSummary(null);
+    try {
+      const response = await commerceClient.resetProductFactoryBatchJobs(activeBatch.id);
+      setRows(response.rows);
+      setEnqueueSummary(`Reset PF jobs for ${response.reset_count} row(s).`);
+      await refreshBatch(activeBatch.id);
+    } catch (error) {
+      setEnqueueError(getCommerceApiErrorMessage(error));
+      await refreshBatch(activeBatch.id, { showLoading: false, refreshRecent: false }).catch(() => undefined);
+    } finally {
+      setIsResettingJobs(false);
+    }
+  }
+
   return (
     <div className="page product-factory-batch-page">
       <header className="page-header">
@@ -987,13 +1024,13 @@ export function ProductFactoryBatchIntakePage() {
                 <p className="muted">Search sources: {sourceNamesLabel(selectedSourceNames)}</p>
               </div>
               <div className="button-row">
-                <button className="button primary" type="button" disabled={isResolving || resolutionActive} onClick={() => void handleResolve()}>
+                <button className="button primary" type="button" disabled={isResolving || resolutionActive || isBatchEnqueuing || isRefreshingJobs || isResettingJobs} onClick={() => void handleResolve()}>
                   {isResolving ? "Resolving..." : "Resolve URLs"}
                 </button>
                 <button
                   className="button secondary"
                   type="button"
-                  disabled={isResolving || resolutionActive || isBatchEnqueuing || eligibleUnenqueuedRows.length === 0}
+                  disabled={isResolving || resolutionActive || isBatchEnqueuing || isRefreshingJobs || isResettingJobs || eligibleUnenqueuedRows.length === 0}
                   onClick={() => void handleEnqueueSelected()}
                 >
                   {isBatchEnqueuing ? "Enqueueing..." : "Enqueue selected"}
@@ -1001,10 +1038,18 @@ export function ProductFactoryBatchIntakePage() {
                 <button
                   className="button secondary"
                   type="button"
-                  disabled={!hasProductFactoryJobs || isRefreshingJobs}
+                  disabled={!hasProductFactoryJobs || isResolving || resolutionActive || isBatchEnqueuing || isRefreshingJobs || isResettingJobs}
                   onClick={() => void handleRefreshJobStatuses()}
                 >
                   {isRefreshingJobs ? "Refreshing PF statuses..." : "Refresh PF statuses"}
+                </button>
+                <button
+                  className="button secondary"
+                  type="button"
+                  disabled={!hasProductFactoryJobTracking || isResolving || resolutionActive || isBatchEnqueuing || isRefreshingJobs || isResettingJobs}
+                  onClick={() => void handleResetProductFactoryJobs()}
+                >
+                  {isResettingJobs ? "Resetting PF jobs..." : "Reset PF jobs"}
                 </button>
               </div>
             </div>

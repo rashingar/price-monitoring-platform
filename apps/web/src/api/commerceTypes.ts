@@ -59,6 +59,8 @@ export type EcommerceContractProductFactoryBatchSelectSourceRequest =
   EcommerceSchema<"SelectSourceRequest">;
 export type EcommerceContractProductFactoryBatchEnqueueResponse =
   EcommerceSchema<"ProductFactoryBatchEnqueueResponse">;
+export type EcommerceContractProductFactoryBatchJobResetResponse =
+  EcommerceSchema<"ProductFactoryBatchJobResetResponse">;
 export type EcommerceContractProductFactoryBatchJobStatusRefreshResponse =
   EcommerceSchema<"ProductFactoryBatchJobStatusRefreshResponse">;
 export type EcommerceContractVendorSourceCaptureRunRequest =
@@ -287,6 +289,8 @@ export type ProductFactoryBatchSelectSourceRequest =
   EcommerceContractProductFactoryBatchSelectSourceRequest;
 export type ProductFactoryBatchEnqueueResponse =
   EcommerceContractProductFactoryBatchEnqueueResponse;
+export type ProductFactoryBatchJobResetResponse =
+  EcommerceContractProductFactoryBatchJobResetResponse;
 export type ProductFactoryBatchJobStatusRefreshResponse =
   EcommerceContractProductFactoryBatchJobStatusRefreshResponse;
 
@@ -1535,6 +1539,9 @@ type _EcommerceGeneratedContractChecks = [
   AssertAssignable<ProductFactoryBatchResolveRequest, EcommerceContractProductFactoryBatchResolveRequest>,
   AssertAssignable<ProductFactoryBatchResolveResponse, EcommerceContractProductFactoryBatchResolveResponse>,
   AssertAssignable<ProductFactoryBatchSelectSourceRequest, EcommerceContractProductFactoryBatchSelectSourceRequest>,
+  AssertAssignable<ProductFactoryBatchEnqueueResponse, EcommerceContractProductFactoryBatchEnqueueResponse>,
+  AssertAssignable<ProductFactoryBatchJobResetResponse, EcommerceContractProductFactoryBatchJobResetResponse>,
+  AssertAssignable<ProductFactoryBatchJobStatusRefreshResponse, EcommerceContractProductFactoryBatchJobStatusRefreshResponse>,
   AssertAssignable<VendorSourceCaptureRunRequest, EcommerceContractVendorSourceCaptureRunRequest>,
   AssertAssignable<SkroutzNetworkDiagnosticRequest, EcommerceContractSkroutzNetworkDiagnosticRequest>,
   AssertAssignable<StockSyncRunRequest, EcommerceContractStockSyncRunRequest>,

@@ -657,4 +657,63 @@ describe("Product Factory Batch Intake", () => {
     await expect(screen.findByText("Refreshed 1; failed 0.")).resolves.toBeInTheDocument();
     expect(screen.getByText("succeeded")).toBeInTheDocument();
   });
+
+  it("resets local Product Factory job tracking so selected rows can be enqueued again", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const mutableRows = [
+      rows[0],
+      {
+        ...rows[2],
+        product_factory_job_id: "job-reset-123456",
+        product_factory_job_status: "queued",
+        product_factory_job_message: "Queued",
+        product_factory_error_code: "external_cancel",
+        product_factory_error_message: "Cancelled externally",
+        enqueued_at: "2026-05-19T10:01:00Z",
+        job_status_refreshed_at: "2026-05-19T10:02:00Z",
+      },
+    ];
+    const mockFetch = installMockFetch([
+      { method: "GET", path: "/commerce-api/product-factory-batches", response: { items: [batch] } },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7", response: batch },
+      { method: "GET", path: "/commerce-api/product-factory-batches/7/rows", response: () => ({ items: mutableRows }) },
+      {
+        method: "POST",
+        path: "/commerce-api/product-factory-batches/7/reset-pf-jobs",
+        response: () => {
+          mutableRows[1] = {
+            ...mutableRows[1],
+            product_factory_job_id: null,
+            product_factory_job_status: null,
+            product_factory_job_message: null,
+            product_factory_error_code: null,
+            product_factory_error_message: null,
+            enqueued_at: null,
+            job_status_refreshed_at: null,
+          };
+          return {
+            batch_id: 7,
+            reset_count: 1,
+            rows: mutableRows,
+          };
+        },
+      },
+    ]);
+    renderWithRouter("/product-factory/batch-intake");
+    fireEvent.click(await screen.findByRole("button", { name: /Batch #7/ }));
+
+    expect(await screen.findByText("queued")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enqueue selected" })).toBeDisabled();
+    const resetButton = screen.getByRole("button", { name: "Reset PF jobs" });
+    expect(resetButton).toBeEnabled();
+
+    fireEvent.click(resetButton);
+
+    await waitFor(() => expect(mockFetch.requests.some((request) => request.pathname === "/commerce-api/product-factory-batches/7/reset-pf-jobs")).toBe(true));
+    expect(confirmSpy).toHaveBeenCalledWith("Clear Product Factory job IDs/statuses for this batch so selected rows can be enqueued again? This will not cancel jobs in Product Factory.");
+    await expect(screen.findByText("Reset PF jobs for 1 row(s).")).resolves.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("queued")).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Enqueue selected" })).toBeEnabled();
+    confirmSpy.mockRestore();
+  });
 });

@@ -595,6 +595,115 @@ def test_refresh_job_statuses_updates_rows_and_continues_after_failure(
     assert fake_product_factory.get_job_calls == ["job-good", "job-fail"]
 
 
+def test_reset_pf_jobs_clears_tracking_preserves_resolution_and_allows_reenqueue(
+    tmp_path: Path, monkeypatch
+) -> None:
+    client = _client(tmp_path, monkeypatch)
+    fake_product_factory = FakeProductFactoryClient()
+    monkeypatch.setattr(
+        routes_product_factory_batches,
+        "_product_factory_client",
+        lambda: fake_product_factory,
+    )
+    batch_id = _upload_batch(
+        client,
+        "model,brand,name\n000001,Brand,Manual Product\n000002,Brand,Skipped Product\n000003,Brand,Error Only\n",
+    )
+    with session_scope() as session:
+        batch = repository.get_batch(session, batch_id)
+        assert batch is not None
+        rows = repository.list_batch_rows(session, batch_id)
+        _select_row(
+            rows[0],
+            status="manually_selected",
+            confidence=100,
+            url="https://www.skroutz.gr/s/1/manual.html",
+        )
+        rows[0].queries_json = ["Brand Manual Product site:skroutz.gr"]
+        rows[0].product_factory_job_id = "job-existing"
+        rows[0].product_factory_job_status = "cancelled"
+        rows[0].product_factory_job_message = "Cancelled externally"
+        rows[0].product_factory_error_code = "external_cancel"
+        rows[0].product_factory_error_message = "Cancelled in Product Factory"
+        rows[0].enqueued_at = rows[0].created_at
+        rows[0].job_status_refreshed_at = rows[0].created_at
+
+        _select_row(
+            rows[1],
+            status="manually_selected",
+            confidence=100,
+            url="https://www.skroutz.gr/s/2/skipped.html",
+        )
+        rows[1].status = "skipped"
+        rows[1].selection_metadata_json = {"selection_method": "skipped"}
+        rows[1].product_factory_job_id = "job-skipped"
+        rows[1].product_factory_job_status = "queued"
+        rows[1].enqueued_at = rows[1].created_at
+
+        _select_row(
+            rows[2],
+            status="manually_selected",
+            confidence=100,
+            url="https://www.skroutz.gr/s/3/error-only.html",
+        )
+        rows[2].product_factory_error_code = "product_factory_enqueue_failed"
+        rows[2].product_factory_error_message = "Transient API failure"
+
+        repository.refresh_batch_counts(session, batch)
+
+    response = client.post(f"/api/product-factory-batches/{batch_id}/reset-pf-jobs")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["batch_id"] == batch_id
+    assert payload["reset_count"] == 3
+    assert fake_product_factory.start_payloads == []
+    by_model = {row["model"]: row for row in payload["rows"]}
+    for model in ("000001", "000002", "000003"):
+        assert by_model[model]["product_factory_job_id"] is None
+        assert by_model[model]["product_factory_job_status"] is None
+        assert by_model[model]["product_factory_job_message"] is None
+        assert by_model[model]["product_factory_error_code"] is None
+        assert by_model[model]["product_factory_error_message"] is None
+        assert by_model[model]["enqueued_at"] is None
+        assert by_model[model]["job_status_refreshed_at"] is None
+    assert by_model["000001"]["status"] == "manually_selected"
+    assert (
+        by_model["000001"]["selected_url"]
+        == "https://www.skroutz.gr/s/1/manual.html"
+    )
+    assert by_model["000001"]["selected_source"] == "skroutz"
+    assert by_model["000001"]["confidence"] == 100
+    assert (
+        by_model["000001"]["candidates"][0]["url"]
+        == "https://www.skroutz.gr/s/1/manual.html"
+    )
+    assert by_model["000001"]["queries"] == ["Brand Manual Product site:skroutz.gr"]
+    assert (
+        by_model["000001"]["selection_metadata"]["selection_method"]
+        == "manually_selected"
+    )
+    assert by_model["000002"]["status"] == "skipped"
+    assert (
+        by_model["000002"]["selected_url"]
+        == "https://www.skroutz.gr/s/2/skipped.html"
+    )
+    assert by_model["000002"]["selection_metadata"]["selection_method"] == "skipped"
+
+    enqueue = client.post(f"/api/product-factory-batches/{batch_id}/enqueue-selected")
+
+    assert enqueue.status_code == 200
+    enqueue_payload = enqueue.json()
+    assert enqueue_payload["enqueued_count"] == 2
+    assert {payload["model"] for payload in fake_product_factory.start_payloads} == {
+        "000001",
+        "000003",
+    }
+    assert all(
+        payload["model"] != "000002" for payload in fake_product_factory.start_payloads
+    )
+
+
 def test_enqueue_eligibility_threshold_env(monkeypatch) -> None:
     monkeypatch.setenv(
         "PRODUCT_FACTORY_BATCH_AUTO_ENQUEUE_CONFIDENCE_THRESHOLD", "not-an-int"

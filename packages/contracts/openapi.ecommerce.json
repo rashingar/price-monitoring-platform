@@ -1169,6 +1169,32 @@
         "title": "ProductFactoryBatchEnqueueResponse",
         "type": "object"
       },
+      "ProductFactoryBatchJobResetResponse": {
+        "properties": {
+          "batch_id": {
+            "title": "Batch Id",
+            "type": "integer"
+          },
+          "reset_count": {
+            "title": "Reset Count",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ProductFactoryBatchRowResponse"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch_id",
+          "reset_count",
+          "rows"
+        ],
+        "title": "ProductFactoryBatchJobResetResponse",
+        "type": "object"
+      },
       "ProductFactoryBatchJobStatusRefreshResponse": {
         "properties": {
           "batch_id": {
@@ -6936,6 +6962,48 @@
           }
         },
         "summary": "Refresh Product Factory Batch Job Statuses",
+        "tags": [
+          "product-factory-batches"
+        ]
+      }
+    },
+    "/api/product-factory-batches/{batch_id}/reset-pf-jobs": {
+      "post": {
+        "operationId": "reset_product_factory_batch_jobs_api_product_factory_batches__batch_id__reset_pf_jobs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFactoryBatchJobResetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reset Product Factory Batch Jobs",
         "tags": [
           "product-factory-batches"
         ]
