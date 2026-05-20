@@ -176,6 +176,31 @@ def test_skroutz_air_conditioner_omits_ionizer_when_not_supported() -> None:
     assert fields["seo_keyword"] == "toyotomi-gtn-gtg-18cmw-klimatistiko-18000-btu-a-a"
 
 
+def test_air_conditioner_energy_detection_ignores_ac_abbreviation() -> None:
+    source = SourceProductData(
+        source_name="electronet",
+        brand="Inventor",
+        mpn="L4VI32-18WIFIR/L4VO32-18",
+        name="A/C Inventor Life Pro WiFi L4VI32-18WiFiR/L4VO32-18 18000Btu",
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΞΞ›Ξ™ΞΞ‘Ξ¤Ξ™Ξ£ΞΞΞ£ ΞΞ•Ξ΅ΞΞ‘ΞΞ£Ξ—",
+        leaf_category="ΞΞ»ΞΉΞΌΞ±Ο„ΞΉΟƒΟ„ΞΉΞΊΞ¬",
+        sub_category="Ξ¤ΞΏΞ―Ο‡ΞΏΟ…",
+    )
+
+    fields = build_deterministic_product_fields(
+        source, taxonomy, "409968", derive_seo_keyword
+    )
+
+    assert "18000 BTU" in fields["name"]
+    assert "18000BTU" not in fields["name"]
+    assert "A/C" not in fields["name"]
+    assert "A/C" not in fields["meta_title"]
+    assert "18000 BTU" in fields["meta_title"]
+    assert fields["seo_keyword"] == "inventor-l4vi32-18wifir-l4vo32-18-klimatistiko-18000-btu"
+
+
 def test_compose_name_collapses_category_prefixed_first_differentiator() -> None:
     name = compose_name("Bosch", "HBA514BS3", "Φούρνος", ["Φούρνος ηλεκτρικός", "71Lt"])
 

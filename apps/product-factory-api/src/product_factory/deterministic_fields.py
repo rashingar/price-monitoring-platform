@@ -1718,6 +1718,8 @@ def extract_measurement_from_text(text: str, aliases: list[str]) -> str:
         patterns.append(r"\b\d+(?:[.,]\d+)?\s*(?:volt|v)\b")
     if "watt" in alias_keys or any("ΞΉΟƒΟ‡Ο…" in alias for alias in alias_keys):
         patterns.append(r"\b\d+(?:[.,]\d+)?\s*(?:watt(?:s)?|w)\b")
+    if "btu" in alias_keys:
+        patterns.append(r"\b\d{4,6}\s*btu\b")
     if "lt" in alias_keys or any(
         "Ξ»ΞΉΟ„Ο" in alias or "Ο‡Ο‰ΟΞ·Ο„ΞΉΞΊΟΟ„" in alias for alias in alias_keys
     ):
@@ -1931,6 +1933,9 @@ def normalize_name_rule_value(
         return ""
     if _is_memory_alias_keys(alias_keys):
         return normalize_memory_value(normalized)
+    if "btu" in alias_keys:
+        numeric = re.search(r"(?<!\d)(\d{4,6})(?!\d)", normalized)
+        return f"{numeric.group(1)} BTU" if numeric else normalized.upper()
     if _is_color_alias_keys(alias_keys):
         if _value_matches_category_context(normalized, category_phrase, taxonomy):
             return ""
@@ -2456,9 +2461,26 @@ def _extract_air_conditioner_energy_token(value: str) -> str:
     if not normalized:
         return ""
     match = re.search(
-        r"(?<![A-Z])([A-G](?:\+{1,3})?)(?![A-Z])", normalized, flags=re.IGNORECASE
+        r"(?<![A-Z/])([A-G](?:\+{1,3})?)(?![A-Z/])",
+        normalized,
+        flags=re.IGNORECASE,
     )
     return match.group(1).upper() if match else ""
+
+
+def _extract_air_conditioner_energy_pair(value: str) -> str:
+    for match in re.finditer(
+        r"(?<![A-Z])([A-G](?:\+{1,3})?)\s*/\s*([A-G](?:\+{1,3})?)(?![A-Z])",
+        value,
+        flags=re.IGNORECASE,
+    ):
+        left = match.group(1).upper()
+        right = match.group(2).upper()
+        compact = re.sub(r"\s+", "", match.group(0)).upper()
+        if left == "A" and right == "C" and compact == "A/C":
+            continue
+        return f"{left}/{right}"
+    return ""
 
 
 def _format_air_conditioner_energy_class(
@@ -2484,24 +2506,16 @@ def _format_air_conditioner_energy_class(
         spec_lookup, ["Ενεργειακή Κλάση", "Ενεργειακή Κλάση Ψύξης/Θέρμανσης"]
     )
     if combined:
-        pair_match = re.search(
-            r"(?<![A-Z])([A-G](?:\+{1,3})?)\s*/\s*([A-G](?:\+{1,3})?)(?![A-Z])",
-            combined,
-            flags=re.IGNORECASE,
-        )
-        if pair_match:
-            return f"{pair_match.group(1).upper()}/{pair_match.group(2).upper()}"
+        pair = _extract_air_conditioner_energy_pair(combined)
+        if pair:
+            return pair
         token = _extract_air_conditioner_energy_token(combined)
         if token:
             return token
 
-    title_match = re.search(
-        r"(?<![A-Z])([A-G](?:\+{1,3})?)\s*/\s*([A-G](?:\+{1,3})?)(?![A-Z])",
-        raw_title or "",
-        flags=re.IGNORECASE,
-    )
-    if title_match:
-        return f"{title_match.group(1).upper()}/{title_match.group(2).upper()}"
+    title_pair = _extract_air_conditioner_energy_pair(raw_title or "")
+    if title_pair:
+        return title_pair
     return ""
 
 
