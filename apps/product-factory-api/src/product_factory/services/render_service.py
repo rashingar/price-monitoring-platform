@@ -15,12 +15,16 @@ def _existing_path(path: Path | None) -> Path | None:
     return path if path.exists() else None
 
 
-def _missing_artifact_message(operation: str, missing_artifacts: dict[str, Path]) -> str:
+def _missing_artifact_message(
+    operation: str, missing_artifacts: dict[str, Path]
+) -> str:
     joined = ", ".join(f"{name}={path}" for name, path in missing_artifacts.items())
     return f"{operation.capitalize()} completed but required artifacts are missing: {joined}"
 
 
-def _service_error_from_render_metadata_failure(error: MetadataWriteError) -> ServiceError:
+def _service_error_from_render_metadata_failure(
+    error: MetadataWriteError,
+) -> ServiceError:
     payload = error.payload
     code = payload.run.error_code or ServiceErrorCode.UNEXPECTED_FAILURE.value
     message = payload.run.error_detail or str(error)
@@ -80,17 +84,33 @@ def _degraded_render_result_from_metadata_error(
             candidate_dir=_existing_path(payload.artifacts.candidate_dir),
             llm_dir=_existing_path(payload.artifacts.llm_dir),
             source_json_path=_existing_path(payload.artifacts.source_json_path),
-            scrape_normalized_json_path=_existing_path(payload.artifacts.scrape_normalized_json_path),
-            llm_task_manifest_path=_existing_path(payload.artifacts.llm_task_manifest_path),
-            intro_text_output_path=_existing_path(payload.artifacts.intro_text_output_path),
+            scrape_normalized_json_path=_existing_path(
+                payload.artifacts.scrape_normalized_json_path
+            ),
+            llm_task_manifest_path=_existing_path(
+                payload.artifacts.llm_task_manifest_path
+            ),
+            intro_text_output_path=_existing_path(
+                payload.artifacts.intro_text_output_path
+            ),
             seo_meta_output_path=_existing_path(payload.artifacts.seo_meta_output_path),
             candidate_csv_path=_existing_path(payload.artifacts.candidate_csv_path),
             published_csv_path=_existing_path(payload.artifacts.published_csv_path),
-            candidate_normalized_json_path=_existing_path(payload.artifacts.candidate_normalized_json_path),
-            validation_report_path=_existing_path(payload.artifacts.validation_report_path),
-            description_html_path=_existing_path(payload.artifacts.description_html_path),
-            characteristics_html_path=_existing_path(payload.artifacts.characteristics_html_path),
-            category_filter_review_path=_existing_path(payload.artifacts.category_filter_review_path),
+            candidate_normalized_json_path=_existing_path(
+                payload.artifacts.candidate_normalized_json_path
+            ),
+            validation_report_path=_existing_path(
+                payload.artifacts.validation_report_path
+            ),
+            description_html_path=_existing_path(
+                payload.artifacts.description_html_path
+            ),
+            characteristics_html_path=_existing_path(
+                payload.artifacts.characteristics_html_path
+            ),
+            category_filter_review_path=_existing_path(
+                payload.artifacts.category_filter_review_path
+            ),
             metadata_path=None,
         ),
         details={
@@ -104,7 +124,10 @@ def render_product(request: RenderRequest) -> ServiceResult:
     try:
         result = execute_render_workflow(request.model)
     except MetadataWriteError as exc:
-        if exc.payload.run.status.value == "completed" or exc.payload.run.error_code == ServiceErrorCode.VALIDATION_FAILURE.value:
+        if (
+            exc.payload.run.status.value == "completed"
+            or exc.payload.run.error_code == ServiceErrorCode.VALIDATION_FAILURE.value
+        ):
             return _degraded_render_result_from_metadata_error(request, exc)
         raise _service_error_from_render_metadata_failure(exc) from exc
     except Exception as exc:
@@ -124,7 +147,9 @@ def render_product(request: RenderRequest) -> ServiceResult:
     intro_text_output_path = result.llm_dir / "intro_text.output.txt"
     seo_meta_output_path = result.llm_dir / "seo_meta.output.json"
     candidate_normalized_json_path = candidate_dir / f"{request.model}.normalized.json"
-    review_path = category_filter_review_path(request.model, repo_root=model_root.parent.parent)
+    review_path = category_filter_review_path(
+        request.model, repo_root=model_root.parent.parent
+    )
     required_artifacts = {
         "candidate_dir": candidate_dir,
         "candidate_csv_path": result.candidate_csv_path,
@@ -135,20 +160,24 @@ def render_product(request: RenderRequest) -> ServiceResult:
     if validation_ok and result.published_csv_path is not None:
         required_artifacts["published_csv_path"] = result.published_csv_path
     missing_required_artifacts = {
-        name: path
-        for name, path in required_artifacts.items()
-        if not path.exists()
+        name: path for name, path in required_artifacts.items() if not path.exists()
     }
     if missing_required_artifacts:
         raise ServiceError(
             ServiceErrorCode.MISSING_ARTIFACT.value,
             _missing_artifact_message("render", missing_required_artifacts),
-            details={"missing_artifacts": {name: str(path) for name, path in missing_required_artifacts.items()}},
+            details={
+                "missing_artifacts": {
+                    name: str(path) for name, path in missing_required_artifacts.items()
+                }
+            },
         )
 
     metadata_path = _existing_path(result.metadata_path)
     if metadata_path is None:
-        metadata_warning = f"Render metadata artifact is missing: {result.metadata_path}"
+        metadata_warning = (
+            f"Render metadata artifact is missing: {result.metadata_path}"
+        )
         run_warnings.append(metadata_warning)
         if error_code is None:
             error_code = ServiceErrorCode.MISSING_ARTIFACT.value
@@ -172,7 +201,9 @@ def render_product(request: RenderRequest) -> ServiceResult:
             seo_meta_output_path=_existing_path(seo_meta_output_path),
             candidate_csv_path=_existing_path(result.candidate_csv_path),
             published_csv_path=_existing_path(result.published_csv_path),
-            candidate_normalized_json_path=_existing_path(candidate_normalized_json_path),
+            candidate_normalized_json_path=_existing_path(
+                candidate_normalized_json_path
+            ),
             validation_report_path=_existing_path(result.validation_report_path),
             description_html_path=_existing_path(result.description_path),
             characteristics_html_path=_existing_path(result.characteristics_path),
@@ -184,4 +215,3 @@ def render_product(request: RenderRequest) -> ServiceResult:
             "published": _existing_path(result.published_csv_path) is not None,
         },
     )
-

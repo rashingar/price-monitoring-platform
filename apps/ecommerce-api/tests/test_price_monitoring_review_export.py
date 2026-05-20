@@ -15,7 +15,10 @@ from ecommerce.api import routes_price_monitoring  # noqa: E402
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.artifacts import ARTIFACT_ROOTS_ENV_VAR  # noqa: E402
 from ecommerce.file_editor import FILE_ROOTS_ENV_VAR  # noqa: E402
-from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR, load_ignored_products  # noqa: E402
+from ecommerce.ignore.product_ignore import (
+    PRICE_IGNORE_ENV_VAR,
+    load_ignored_products,
+)  # noqa: E402
 from ecommerce.price_monitoring.export import export_price_update_csv  # noqa: E402
 from ecommerce.price_monitoring.review import (  # noqa: E402
     REVIEW_COLUMNS,
@@ -30,7 +33,11 @@ from ecommerce.price_monitoring.review import (  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def _allow_monitoring_api_without_real_db(monkeypatch):
-    monkeypatch.setattr(routes_price_monitoring, "require_database_ready_for_price_monitoring", lambda: None)
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "require_database_ready_for_price_monitoring",
+        lambda: None,
+    )
 
 
 def _write_run(run_dir: Path, *, source: str = "skroutz") -> Path:
@@ -47,7 +54,9 @@ def _write_run(run_dir: Path, *, source: str = "skroutz") -> Path:
         "111111,MPN-4,No Competitor,50.00\n",
         encoding="utf-8",
     )
-    enriched = run_dir / ("bestprice_enriched.csv" if source == "bestprice" else "skroutz_enriched.csv")
+    enriched = run_dir / (
+        "bestprice_enriched.csv" if source == "bestprice" else "skroutz_enriched.csv"
+    )
     if source == "bestprice":
         enriched.write_text(
             "model,mpn,bestprice_price,bestprice_url,bestprice_best_store,bestprice_best_store_price\n"
@@ -113,7 +122,9 @@ def _db_observations() -> list[dict[str, object]]:
     ]
 
 
-def _install_db_observation_fallback(monkeypatch, observations: list[dict[str, object]]) -> None:
+def _install_db_observation_fallback(
+    monkeypatch, observations: list[dict[str, object]]
+) -> None:
     @contextmanager
     def fake_session_scope(*_args, **_kwargs):
         yield object()
@@ -122,16 +133,25 @@ def _install_db_observation_fallback(monkeypatch, observations: list[dict[str, o
         return observations, len(observations)
 
     monkeypatch.setattr(routes_price_monitoring, "session_scope", fake_session_scope)
-    monkeypatch.setattr(routes_price_monitoring, "list_price_observations", fake_list_price_observations)
+    monkeypatch.setattr(
+        routes_price_monitoring, "list_price_observations", fake_list_price_observations
+    )
 
 
-def test_loading_review_rows_preserves_models_and_computes_deltas(tmp_path: Path) -> None:
+def test_loading_review_rows_preserves_models_and_computes_deltas(
+    tmp_path: Path,
+) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir)
 
     rows = load_price_review_rows(run_dir, enriched)
 
-    assert [row.model for row in rows] == ["005606", "123456", "233374-233203", "111111"]
+    assert [row.model for row in rows] == [
+        "005606",
+        "123456",
+        "233374-233203",
+        "111111",
+    ]
     assert rows[0].competitor_price == Decimal("119.90")
     assert rows[0].price_delta == Decimal("3.55")
     assert rows[0].price_delta_percent.quantize(Decimal("0.01")) == Decimal("2.88")
@@ -153,7 +173,9 @@ def test_bestprice_mapper_uses_existing_store_and_price_fields(tmp_path: Path) -
     assert rows[0].competitor_price == Decimal("119.90")
 
 
-def test_loading_review_rows_from_db_observations_preserves_price_review_behavior(tmp_path: Path) -> None:
+def test_loading_review_rows_from_db_observations_preserves_price_review_behavior(
+    tmp_path: Path,
+) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir)
     enriched.unlink()
@@ -170,7 +192,9 @@ def test_loading_review_rows_from_db_observations_preserves_price_review_behavio
     assert rows[1].recommended_action == "ignore"
 
 
-def test_db_observations_build_top_three_listings_and_next_store_delta(tmp_path: Path) -> None:
+def test_db_observations_build_top_three_listings_and_next_store_delta(
+    tmp_path: Path,
+) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir)
     enriched.unlink()
@@ -238,7 +262,9 @@ def test_db_observations_build_top_three_listings_and_next_store_delta(tmp_path:
     assert rows[0].listings_incomplete is False
 
 
-def test_db_review_uses_persisted_listing_rows_before_primary_observations(tmp_path: Path) -> None:
+def test_db_review_uses_persisted_listing_rows_before_primary_observations(
+    tmp_path: Path,
+) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir)
     enriched.unlink()
@@ -264,7 +290,10 @@ def test_db_review_uses_persisted_listing_rows_before_primary_observations(tmp_p
                     "shipping_cost": "3.00",
                     "seller_url": "https://store.test/b",
                     "source": "skroutz",
-                    "raw_listing": {"landed_price": "184.00", "landed_price_source": "computed"},
+                    "raw_listing": {
+                        "landed_price": "184.00",
+                        "landed_price_source": "computed",
+                    },
                 },
                 {
                     "id": 2,
@@ -274,7 +303,10 @@ def test_db_review_uses_persisted_listing_rows_before_primary_observations(tmp_p
                     "shipping_cost": "2.90",
                     "seller_url": "https://store.test/a",
                     "source": "skroutz",
-                    "raw_listing": {"landed_price": "183.80", "landed_price_source": "computed"},
+                    "raw_listing": {
+                        "landed_price": "183.80",
+                        "landed_price_source": "computed",
+                    },
                 },
                 {
                     "id": 3,
@@ -284,7 +316,10 @@ def test_db_review_uses_persisted_listing_rows_before_primary_observations(tmp_p
                     "shipping_cost": "0.00",
                     "seller_url": "https://store.test/c",
                     "source": "skroutz",
-                    "raw_listing": {"landed_price": "181.50", "landed_price_source": "explicit"},
+                    "raw_listing": {
+                        "landed_price": "181.50",
+                        "landed_price_source": "explicit",
+                    },
                 },
                 {
                     "id": 4,
@@ -299,9 +334,15 @@ def test_db_review_uses_persisted_listing_rows_before_primary_observations(tmp_p
         }
     ]
 
-    rows = load_price_review_rows_from_observations(run_dir, observations, include_all_listings=True)
+    rows = load_price_review_rows_from_observations(
+        run_dir, observations, include_all_listings=True
+    )
 
-    assert [listing.store for listing in rows[0].top_listings or []] == ["Store A", "Store B", "Store C"]
+    assert [listing.store for listing in rows[0].top_listings or []] == [
+        "Store A",
+        "Store B",
+        "Store C",
+    ]
     assert rows[0].competitor_store == "Store A"
     assert rows[0].next_competitor_store == "Store B"
     assert rows[0].price_delta == Decimal("-0.10")
@@ -373,8 +414,16 @@ def test_skroutz_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
             "product_url": "https://skroutz.test/top",
             "raw_observation": {
                 "product_cards": [
-                    {"shop_name": "Top Store", "final_price": "94.90", "shop_url": "https://skroutz.test/top"},
-                    {"seller_name": "Raw Next", "price": "99.90", "seller_url": "https://skroutz.test/raw-next"},
+                    {
+                        "shop_name": "Top Store",
+                        "final_price": "94.90",
+                        "shop_url": "https://skroutz.test/top",
+                    },
+                    {
+                        "seller_name": "Raw Next",
+                        "price": "99.90",
+                        "seller_url": "https://skroutz.test/raw-next",
+                    },
                 ]
             },
         }
@@ -382,7 +431,10 @@ def test_skroutz_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
 
     rows = load_price_review_rows_from_observations(run_dir, observations)
 
-    assert [listing.store for listing in rows[0].top_listings or []] == ["Top Store", "Raw Next"]
+    assert [listing.store for listing in rows[0].top_listings or []] == [
+        "Top Store",
+        "Raw Next",
+    ]
     assert rows[0].price_delta == Decimal("-5.00")
     assert rows[0].delta_basis == "next_store"
 
@@ -403,16 +455,35 @@ def test_offer_observation_listing_fallback_adds_listings(tmp_path: Path) -> Non
             "product_url": "https://skroutz.test/product",
             "raw_observation": {},
             "offer_observation_listings": [
-                {"seller_name": "Offer A", "price": "118.50", "seller_url": "https://offer.test/a", "source": "skroutz"},
-                {"seller_name": "Offer B", "price": "119.90", "seller_url": "https://offer.test/b", "source": "skroutz"},
-                {"seller_name": "Offer C", "price": "120.00", "seller_url": "https://offer.test/c", "source": "skroutz"},
+                {
+                    "seller_name": "Offer A",
+                    "price": "118.50",
+                    "seller_url": "https://offer.test/a",
+                    "source": "skroutz",
+                },
+                {
+                    "seller_name": "Offer B",
+                    "price": "119.90",
+                    "seller_url": "https://offer.test/b",
+                    "source": "skroutz",
+                },
+                {
+                    "seller_name": "Offer C",
+                    "price": "120.00",
+                    "seller_url": "https://offer.test/c",
+                    "source": "skroutz",
+                },
             ],
         }
     ]
 
     rows = load_price_review_rows_from_observations(run_dir, observations)
 
-    assert [listing.store for listing in rows[0].top_listings or []] == ["Offer A", "Offer B", "Offer C"]
+    assert [listing.store for listing in rows[0].top_listings or []] == [
+        "Offer A",
+        "Offer B",
+        "Offer C",
+    ]
     assert rows[0].competitor_price == Decimal("118.50")
 
 
@@ -438,7 +509,11 @@ def test_bestprice_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
                 "bestprice_next_store_price": "99.90",
                 "bestprice_next_store_url": "https://bestprice.test/next",
                 "stores": [
-                    {"storeName": "Third Best", "finalPrice": "101.00", "url": "https://bestprice.test/third"},
+                    {
+                        "storeName": "Third Best",
+                        "finalPrice": "101.00",
+                        "url": "https://bestprice.test/third",
+                    },
                 ],
             },
         }
@@ -446,11 +521,17 @@ def test_bestprice_raw_payload_extraction_adds_listings(tmp_path: Path) -> None:
 
     rows = load_price_review_rows_from_observations(run_dir, observations)
 
-    assert [listing.store for listing in rows[0].top_listings or []] == ["Best Store", "Next Best", "Third Best"]
+    assert [listing.store for listing in rows[0].top_listings or []] == [
+        "Best Store",
+        "Next Best",
+        "Third Best",
+    ]
     assert rows[0].next_competitor_store == "Next Best"
 
 
-def test_bestprice_raw_numbered_payload_extraction_adds_top_three(tmp_path: Path) -> None:
+def test_bestprice_raw_numbered_payload_extraction_adds_top_three(
+    tmp_path: Path,
+) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir, source="bestprice")
     enriched.unlink()
@@ -480,7 +561,11 @@ def test_bestprice_raw_numbered_payload_extraction_adds_top_three(tmp_path: Path
 
     rows = load_price_review_rows_from_observations(run_dir, observations)
 
-    assert [listing.store for listing in rows[0].top_listings or []] == ["Best Store", "Second Store", "Third Store"]
+    assert [listing.store for listing in rows[0].top_listings or []] == [
+        "Best Store",
+        "Second Store",
+        "Third Store",
+    ]
 
 
 def test_generic_raw_payload_extraction_handles_unknown_shapes(tmp_path: Path) -> None:
@@ -499,8 +584,16 @@ def test_generic_raw_payload_extraction_handles_unknown_shapes(tmp_path: Path) -
             "product_url": "https://market.test/known",
             "raw_observation": {
                 "results": [
-                    {"merchant": "Known Store", "price": "94.90", "url": "https://market.test/known"},
-                    {"merchant": "Generic Next", "sale_price": "99.90", "href": "https://market.test/next"},
+                    {
+                        "merchant": "Known Store",
+                        "price": "94.90",
+                        "url": "https://market.test/known",
+                    },
+                    {
+                        "merchant": "Generic Next",
+                        "sale_price": "99.90",
+                        "href": "https://market.test/next",
+                    },
                 ]
             },
         }
@@ -508,7 +601,10 @@ def test_generic_raw_payload_extraction_handles_unknown_shapes(tmp_path: Path) -
 
     rows = load_price_review_rows_from_observations(run_dir, observations)
 
-    assert [listing.store for listing in rows[0].top_listings or []] == ["Known Store", "Generic Next"]
+    assert [listing.store for listing in rows[0].top_listings or []] == [
+        "Known Store",
+        "Generic Next",
+    ]
 
 
 def test_malformed_raw_payloads_do_not_fail_review_loading(tmp_path: Path) -> None:
@@ -561,7 +657,9 @@ def test_top_three_listings_do_not_add_synthetic_current_row(tmp_path: Path) -> 
     assert rows[0].listings_incomplete is True
 
 
-def test_loading_bestprice_db_observation_uses_source_url_for_review_row(tmp_path: Path) -> None:
+def test_loading_bestprice_db_observation_uses_source_url_for_review_row(
+    tmp_path: Path,
+) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir, source="bestprice")
     enriched.unlink()
@@ -585,12 +683,19 @@ def test_loading_bestprice_db_observation_uses_source_url_for_review_row(tmp_pat
     rows = load_price_review_rows_from_observations(run_dir, observations)
 
     assert rows[0].competitor_store == "eTranoulis"
-    assert rows[0].competitor_url == "https://www.bestprice.gr/to/160584639/product.html"
+    assert (
+        rows[0].competitor_url == "https://www.bestprice.gr/to/160584639/product.html"
+    )
     assert rows[0].source_url == "https://www.bestprice.gr/item/2159389060/product.html"
-    assert rows[0].to_api_dict()["source_url"] == "https://www.bestprice.gr/item/2159389060/product.html"
+    assert (
+        rows[0].to_api_dict()["source_url"]
+        == "https://www.bestprice.gr/item/2159389060/product.html"
+    )
 
 
-def test_loading_review_rows_from_db_observations_does_not_match_by_position(tmp_path: Path) -> None:
+def test_loading_review_rows_from_db_observations_does_not_match_by_position(
+    tmp_path: Path,
+) -> None:
     run_dir = tmp_path / "run-1"
     enriched = _write_run(run_dir)
     enriched.unlink()
@@ -615,7 +720,9 @@ def test_loading_review_rows_from_db_observations_does_not_match_by_position(tmp
     assert "missing_or_invalid_competitor_price" in rows[0].warnings
 
 
-def test_match_price_action_writes_review_artifacts(tmp_path: Path, monkeypatch) -> None:
+def test_match_price_action_writes_review_artifacts(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
@@ -646,7 +753,13 @@ def test_undercut_action_computes_target_price(tmp_path: Path, monkeypatch) -> N
 
     result = apply_price_actions(
         run_dir,
-        [PriceActionInput(model="005606", selected_action="undercut", undercut_amount=Decimal("1.00"))],
+        [
+            PriceActionInput(
+                model="005606",
+                selected_action="undercut",
+                undercut_amount=Decimal("1.00"),
+            )
+        ],
     )
 
     assert result.rows[0].target_price == Decimal("118.90")
@@ -660,11 +773,19 @@ def test_undercut_requires_positive_amount(tmp_path: Path, monkeypatch) -> None:
     with pytest.raises(PriceReviewError, match="greater than 0"):
         apply_price_actions(
             run_dir,
-            [PriceActionInput(model="005606", selected_action="undercut", undercut_amount=Decimal("0"))],
+            [
+                PriceActionInput(
+                    model="005606",
+                    selected_action="undercut",
+                    undercut_amount=Decimal("0"),
+                )
+            ],
         )
 
 
-def test_ignore_action_updates_ignore_list_and_export_excludes_ignored(tmp_path: Path, monkeypatch) -> None:
+def test_ignore_action_updates_ignore_list_and_export_excludes_ignored(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)
     ignore_path = tmp_path / "price_ignore.csv"
@@ -673,7 +794,11 @@ def test_ignore_action_updates_ignore_list_and_export_excludes_ignored(tmp_path:
     result = apply_price_actions(
         run_dir,
         [
-            PriceActionInput(model="005606", selected_action="ignore", reason="manual ignore from price review"),
+            PriceActionInput(
+                model="005606",
+                selected_action="ignore",
+                reason="manual ignore from price review",
+            ),
             PriceActionInput(model="123456", selected_action="match_price"),
         ],
     )
@@ -700,16 +825,22 @@ def test_composite_model_action_is_rejected(tmp_path: Path, monkeypatch) -> None
         )
 
 
-def test_row_without_competitor_price_rejects_price_action(tmp_path: Path, monkeypatch) -> None:
+def test_row_without_competitor_price_rejects_price_action(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
 
     with pytest.raises(PriceReviewError, match="without valid competitor price"):
-        apply_price_actions(run_dir, [PriceActionInput(model="111111", selected_action="match_price")])
+        apply_price_actions(
+            run_dir, [PriceActionInput(model="111111", selected_action="match_price")]
+        )
 
 
-def test_opencart_export_contains_only_model_and_price(tmp_path: Path, monkeypatch) -> None:
+def test_opencart_export_contains_only_model_and_price(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
@@ -717,7 +848,11 @@ def test_opencart_export_contains_only_model_and_price(tmp_path: Path, monkeypat
         run_dir,
         [
             PriceActionInput(model="005606", selected_action="match_price"),
-            PriceActionInput(model="123456", selected_action="undercut", undercut_amount=Decimal("1.00")),
+            PriceActionInput(
+                model="123456",
+                selected_action="undercut",
+                undercut_amount=Decimal("1.00"),
+            ),
         ],
     )
 
@@ -727,7 +862,10 @@ def test_opencart_export_contains_only_model_and_price(tmp_path: Path, monkeypat
         reader = csv.DictReader(f)
         rows = list(reader)
     assert reader.fieldnames == ["model", "price"]
-    assert rows == [{"model": "005606", "price": "119.90"}, {"model": "123456", "price": "119.00"}]
+    assert rows == [
+        {"model": "005606", "price": "119.90"},
+        {"model": "123456", "price": "119.00"},
+    ]
 
 
 def test_export_endpoint_uses_review_csv(tmp_path: Path, monkeypatch) -> None:
@@ -735,7 +873,9 @@ def test_export_endpoint_uses_review_csv(tmp_path: Path, monkeypatch) -> None:
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
-    apply_price_actions(run_dir, [PriceActionInput(model="005606", selected_action="match_price")])
+    apply_price_actions(
+        run_dir, [PriceActionInput(model="005606", selected_action="match_price")]
+    )
 
     response = TestClient(create_app()).post(
         "/api/price-monitoring/runs/run-1/export-price-update",
@@ -748,15 +888,21 @@ def test_export_endpoint_uses_review_csv(tmp_path: Path, monkeypatch) -> None:
     assert payload["rows_exported"] == 1
     assert payload["columns"] == ["model", "price"]
     assert payload["artifact"]["is_allowed"] is True
-    assert payload["artifact"]["download_url"].startswith("/api/artifacts/download?path=")
+    assert payload["artifact"]["download_url"].startswith(
+        "/api/artifacts/download?path="
+    )
 
 
-def test_export_endpoint_rejects_unsafe_explicit_output_path(tmp_path: Path, monkeypatch) -> None:
+def test_export_endpoint_rejects_unsafe_explicit_output_path(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
-    apply_price_actions(run_dir, [PriceActionInput(model="005606", selected_action="match_price")])
+    apply_price_actions(
+        run_dir, [PriceActionInput(model="005606", selected_action="match_price")]
+    )
     unsafe_output = tmp_path / "custom" / "opencart_price_update.csv"
 
     response = TestClient(create_app()).post(
@@ -769,32 +915,46 @@ def test_export_endpoint_rejects_unsafe_explicit_output_path(tmp_path: Path, mon
     assert not unsafe_output.exists()
 
 
-def test_export_endpoint_rejects_output_path_that_is_only_file_root(tmp_path: Path, monkeypatch) -> None:
+def test_export_endpoint_rejects_output_path_that_is_only_file_root(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     custom_root = tmp_path / "custom"
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
     monkeypatch.setenv(FILE_ROOTS_ENV_VAR, str(custom_root))
-    apply_price_actions(run_dir, [PriceActionInput(model="005606", selected_action="match_price")])
+    apply_price_actions(
+        run_dir, [PriceActionInput(model="005606", selected_action="match_price")]
+    )
 
     response = TestClient(create_app()).post(
         "/api/price-monitoring/runs/run-1/export-price-update",
-        json={"review_csv_path": None, "output_path": str(custom_root / "opencart_price_update.csv")},
+        json={
+            "review_csv_path": None,
+            "output_path": str(custom_root / "opencart_price_update.csv"),
+        },
     )
 
     assert response.status_code == 403
     assert "outside allowed artifact roots" in response.json()["detail"]
 
 
-def test_export_endpoint_allows_custom_output_when_artifact_root_configured(tmp_path: Path, monkeypatch) -> None:
+def test_export_endpoint_allows_custom_output_when_artifact_root_configured(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     custom_root = tmp_path / "custom"
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(tmp_path / "price_ignore.csv"))
-    monkeypatch.setenv(ARTIFACT_ROOTS_ENV_VAR, f"{tmp_path / 'output' / 'ecommerce' / 'monitoring' / 'runs'};{custom_root}")
-    apply_price_actions(run_dir, [PriceActionInput(model="005606", selected_action="match_price")])
+    monkeypatch.setenv(
+        ARTIFACT_ROOTS_ENV_VAR,
+        f"{tmp_path / 'output' / 'ecommerce' / 'monitoring' / 'runs'};{custom_root}",
+    )
+    apply_price_actions(
+        run_dir, [PriceActionInput(model="005606", selected_action="match_price")]
+    )
     custom_output = custom_root / "opencart_price_update.csv"
 
     response = TestClient(create_app()).post(
@@ -809,13 +969,17 @@ def test_export_endpoint_allows_custom_output_when_artifact_root_configured(tmp_
     assert custom_output.exists()
 
 
-def test_get_review_rejects_unsafe_explicit_enriched_csv_path(tmp_path: Path, monkeypatch) -> None:
+def test_get_review_rejects_unsafe_explicit_enriched_csv_path(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
     unsafe_enriched = tmp_path / "custom" / "skroutz_enriched.csv"
     unsafe_enriched.parent.mkdir()
-    unsafe_enriched.write_text("model,mpn,skroutz_price,skroutz_url,match_status\n", encoding="utf-8")
+    unsafe_enriched.write_text(
+        "model,mpn,skroutz_price,skroutz_url,match_status\n", encoding="utf-8"
+    )
 
     response = TestClient(create_app()).get(
         "/api/price-monitoring/runs/run-1/review",
@@ -826,14 +990,26 @@ def test_get_review_rejects_unsafe_explicit_enriched_csv_path(tmp_path: Path, mo
     assert "outside allowed read roots" in response.json()["detail"]
 
 
-def test_get_review_rejects_path_traversal_in_explicit_enriched_csv_path(tmp_path: Path, monkeypatch) -> None:
+def test_get_review_rejects_path_traversal_in_explicit_enriched_csv_path(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     response = TestClient(create_app()).get(
         "/api/price-monitoring/runs/run-1/review",
-        params={"enriched_csv_path": str(Path("output") / "ecommerce" / "monitoring" / "runs" / "run-1" / ".." / "x.csv")},
+        params={
+            "enriched_csv_path": str(
+                Path("output")
+                / "ecommerce"
+                / "monitoring"
+                / "runs"
+                / "run-1"
+                / ".."
+                / "x.csv"
+            )
+        },
     )
 
     assert response.status_code == 400
@@ -852,13 +1028,23 @@ def test_api_get_review_and_post_actions(tmp_path: Path, monkeypatch) -> None:
     get_payload = get_response.json()
     assert get_payload["items"][0]["model"] == "005606"
     assert get_payload["items"][0]["price_delta"] == 3.55
-    assert get_payload["summary"] == {"total": 4, "review_required": 3, "not_exportable": 1}
+    assert get_payload["summary"] == {
+        "total": 4,
+        "review_required": 3,
+        "not_exportable": 1,
+    }
 
     post_response = client.post(
         "/api/price-monitoring/runs/run-1/review/actions",
         json={
             "enriched_csv_path": None,
-            "actions": [{"model": "005606", "selected_action": "undercut", "undercut_amount": 1.0}],
+            "actions": [
+                {
+                    "model": "005606",
+                    "selected_action": "undercut",
+                    "undercut_amount": 1.0,
+                }
+            ],
         },
     )
 
@@ -868,8 +1054,12 @@ def test_api_get_review_and_post_actions(tmp_path: Path, monkeypatch) -> None:
     assert post_payload["summary"]["actions_count"] == 1
     assert Path(post_payload["review_csv_path"]).exists()
     assert post_payload["artifacts"][0]["is_allowed"] is True
-    assert post_payload["artifacts"][0]["read_url"].startswith("/api/artifacts/read?path=")
-    assert load_review_csv(Path(post_payload["review_csv_path"]))[0].target_price == Decimal("118.90")
+    assert post_payload["artifacts"][0]["read_url"].startswith(
+        "/api/artifacts/read?path="
+    )
+    assert load_review_csv(Path(post_payload["review_csv_path"]))[
+        0
+    ].target_price == Decimal("118.90")
 
 
 def test_api_get_review_falls_back_to_db_observations_when_enriched_csv_is_missing(
@@ -920,7 +1110,9 @@ def test_api_get_review_does_not_backfill_listings_as_side_effect(
     ]
 
     class FakeSession:
-        def execute(self):  # pragma: no cover - only used for hasattr in the route helper
+        def execute(
+            self,
+        ):  # pragma: no cover - only used for hasattr in the route helper
             raise AssertionError("execute should not be called by this test")
 
     @contextmanager
@@ -931,9 +1123,19 @@ def test_api_get_review_does_not_backfill_listings_as_side_effect(
         raise AssertionError("GET review must not backfill listing rows")
 
     monkeypatch.setattr(routes_price_monitoring, "session_scope", fake_session_scope)
-    monkeypatch.setattr(routes_price_monitoring, "list_price_observations", lambda *_args, **_kwargs: (observations, 1))
-    monkeypatch.setattr(routes_price_monitoring, "list_price_observation_listings", lambda *_args, **_kwargs: [])
-    monkeypatch.setattr(routes_price_monitoring, "backfill_run_listing_evidence", fail_backfill)
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "list_price_observations",
+        lambda *_args, **_kwargs: (observations, 1),
+    )
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "list_price_observation_listings",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        routes_price_monitoring, "backfill_run_listing_evidence", fail_backfill
+    )
 
     response = TestClient(create_app()).get("/api/price-monitoring/runs/run-1/review")
 
@@ -965,4 +1167,6 @@ def test_api_post_review_actions_falls_back_to_db_observations_when_enriched_csv
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "review_actions_applied"
-    assert load_review_csv(Path(payload["review_csv_path"]))[0].target_price == Decimal("118.50")
+    assert load_review_csv(Path(payload["review_csv_path"]))[0].target_price == Decimal(
+        "118.50"
+    )

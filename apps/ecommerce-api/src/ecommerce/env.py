@@ -34,7 +34,9 @@ def load_local_env_if_present() -> LocalEnvLoadStatus:
     """
 
     repo_root = _find_repo_root()
-    root_env_path = repo_root / ENV_FILENAME if repo_root is not None else _find_local_env()
+    root_env_path = (
+        repo_root / ENV_FILENAME if repo_root is not None else _find_local_env()
+    )
     if root_env_path is not None and not root_env_path.is_file():
         root_env_path = None
     deprecated_app_env_path = _find_deprecated_app_env(repo_root, root_env_path)
@@ -46,7 +48,9 @@ def load_local_env_if_present() -> LocalEnvLoadStatus:
             else None
         ),
         "root_path": str(root_env_path) if root_env_path else None,
-        "deprecated_app_path": str(deprecated_app_env_path) if deprecated_app_env_path else None,
+        "deprecated_app_path": (
+            str(deprecated_app_env_path) if deprecated_app_env_path else None
+        ),
         "deprecated_app_env_detected": deprecated_app_env_path is not None,
         "keys_loaded": [],
         "keys_loaded_from_root": [],
@@ -113,7 +117,9 @@ def _find_repo_root() -> Path | None:
     return env_path.parent if env_path is not None else None
 
 
-def _find_deprecated_app_env(repo_root: Path | None, root_env_path: Path | None) -> Path | None:
+def _find_deprecated_app_env(
+    repo_root: Path | None, root_env_path: Path | None
+) -> Path | None:
     current = Path.cwd().resolve(strict=False)
     for directory in (current, *current.parents):
         if repo_root is not None and directory == repo_root:

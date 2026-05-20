@@ -73,7 +73,9 @@ class ElectronetProvider(ProductProvider):
 
         return self._snapshot_from_fetch(identity, fetch)
 
-    def normalize(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+    def normalize(
+        self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity
+    ) -> ProviderResult:
         try:
             parsed = self._parse_snapshot(snapshot)
         except Exception as exc:
@@ -118,12 +120,18 @@ class ElectronetProvider(ProductProvider):
             missing_fields=list(parsed.missing_fields),
             critical_missing=list(parsed.critical_missing),
             metadata={
-                "fetch_method": str(effective_snapshot.metadata.get("fetch_method", "")),
-                "fallback_used": bool(effective_snapshot.metadata.get("fallback_used", False)),
+                "fetch_method": str(
+                    effective_snapshot.metadata.get("fetch_method", "")
+                ),
+                "fallback_used": bool(
+                    effective_snapshot.metadata.get("fallback_used", False)
+                ),
             },
         )
 
-    def _snapshot_from_fetch(self, identity: ProviderInputIdentity, fetch) -> ProviderSnapshot:
+    def _snapshot_from_fetch(
+        self, identity: ProviderInputIdentity, fetch
+    ) -> ProviderSnapshot:
         return ProviderSnapshot(
             provider_id=self.provider_id,
             identity=identity,

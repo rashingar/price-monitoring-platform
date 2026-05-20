@@ -27,7 +27,6 @@ from ecommerce.source_url_agent.search_providers import (
 from ecommerce.source_url_agent.sources import SourceDefinition
 from ecommerce.utils.text import collapse_internal_spaces
 
-
 BRAVE_SEARCH_PROVIDER_NAME = "brave_search"
 BRAVE_DISCOVERY_METHOD = "brave_web_search"
 DEFAULT_BRAVE_SEARCH_ENDPOINT_URL = "https://api.search.brave.com/res/v1/web/search"
@@ -74,12 +73,15 @@ class BraveSearchProductResult:
 
 
 class BraveSearchHttpClient(Protocol):
-    def search(self, *, definition: SearchProviderDefinition, query: str, api_key: str) -> Any:
-        ...
+    def search(
+        self, *, definition: SearchProviderDefinition, query: str, api_key: str
+    ) -> Any: ...
 
 
 class HttpxBraveSearchClient:
-    def search(self, *, definition: SearchProviderDefinition, query: str, api_key: str) -> Any:
+    def search(
+        self, *, definition: SearchProviderDefinition, query: str, api_key: str
+    ) -> Any:
         params = _brave_query_params(definition, query)
         headers = {
             "X-Subscription-Token": api_key,
@@ -88,13 +90,24 @@ class HttpxBraveSearchClient:
         }
         timeout = httpx.Timeout(definition.timeout_seconds)
         with httpx.Client(timeout=timeout) as client:
-            return client.get(definition.endpoint_url or DEFAULT_BRAVE_SEARCH_ENDPOINT_URL, params=params, headers=headers)
+            return client.get(
+                definition.endpoint_url or DEFAULT_BRAVE_SEARCH_ENDPOINT_URL,
+                params=params,
+                headers=headers,
+            )
 
 
 class BraveSearchProvider:
-    def __init__(self, definition: SearchProviderDefinition, *, client: BraveSearchHttpClient | None = None) -> None:
+    def __init__(
+        self,
+        definition: SearchProviderDefinition,
+        *,
+        client: BraveSearchHttpClient | None = None,
+    ) -> None:
         if definition.provider_name != BRAVE_SEARCH_PROVIDER_NAME:
-            raise ValueError(f"Brave Search provider requires provider_name={BRAVE_SEARCH_PROVIDER_NAME}.")
+            raise ValueError(
+                f"Brave Search provider requires provider_name={BRAVE_SEARCH_PROVIDER_NAME}."
+            )
         if definition.provider_type != "brave":
             raise ValueError("Brave Search provider requires provider_type=brave.")
         self.definition = definition
@@ -113,7 +126,9 @@ class BraveSearchProvider:
         rate_limit_seconds: float | None,
     ) -> SearchProviderResult:
         del browser, queries, max_searches, rate_limit_seconds
-        result = self.discover_product(product=product, sources=[source], max_candidates_per_source=max_candidates)
+        result = self.discover_product(
+            product=product, sources=[source], max_candidates_per_source=max_candidates
+        )
         return SearchProviderResult(
             candidates=result.candidates,
             searched_queries=[result.query] if result.query else [],
@@ -133,7 +148,9 @@ class BraveSearchProvider:
         query_source = sources[0] if len(sources) == 1 else None
         queries = build_brave_product_queries(product, source=query_source)
         if not queries:
-            return BraveSearchProductResult(query="", status="no_query", candidates=[], searched_urls=[])
+            return BraveSearchProductResult(
+                query="", status="no_query", candidates=[], searched_urls=[]
+            )
         query = queries[0]
         request_url = self.request_url(query)
         api_key = str(os.environ.get(BRAVE_SEARCH_API_KEY_ENV_VAR) or "").strip()
@@ -146,9 +163,16 @@ class BraveSearchProvider:
             )
 
         try:
-            response = self.client.search(definition=self.definition, query=query, api_key=api_key)
+            response = self.client.search(
+                definition=self.definition, query=query, api_key=api_key
+            )
         except httpx.TimeoutException:
-            return self._error_result(query=query, request_url=request_url, status="timeout", message="Brave Search API request timed out.")
+            return self._error_result(
+                query=query,
+                request_url=request_url,
+                status="timeout",
+                message="Brave Search API request timed out.",
+            )
         except Exception as exc:
             return self._error_result(
                 query=query,
@@ -236,7 +260,11 @@ class BraveSearchProvider:
                 discarded_count += 1
                 continue
             source_count = kept_by_source.get(source.source_name, 0)
-            source_limit = max_candidates_per_source if max_candidates_per_source is not None else source.max_candidates_per_product
+            source_limit = (
+                max_candidates_per_source
+                if max_candidates_per_source is not None
+                else source.max_candidates_per_product
+            )
             if source_count >= source_limit:
                 discarded_count += 1
                 continue
@@ -264,7 +292,15 @@ class BraveSearchProvider:
                     provider_fetch_metadata=item.fetch_metadata,
                 )
             )
-        status = "found_candidates" if candidates else ("no_results" if not result_items else "no_known_source_product_candidates")
+        status = (
+            "found_candidates"
+            if candidates
+            else (
+                "no_results"
+                if not result_items
+                else "no_known_source_product_candidates"
+            )
+        )
         return BraveSearchProductResult(
             query=query,
             status=status,
@@ -273,7 +309,9 @@ class BraveSearchProvider:
             discarded_count=discarded_count,
         )
 
-    def _error_result(self, *, query: str, request_url: str, status: str, message: str) -> BraveSearchProductResult:
+    def _error_result(
+        self, *, query: str, request_url: str, status: str, message: str
+    ) -> BraveSearchProductResult:
         error = SearchProviderError(
             provider_name=self.definition.provider_name,
             requested_url=request_url,
@@ -303,9 +341,13 @@ class BraveSearchProvider:
         )
 
 
-def build_brave_product_queries(product: AgentProduct, *, source: SourceDefinition | None = None) -> list[str]:
+def build_brave_product_queries(
+    product: AgentProduct, *, source: SourceDefinition | None = None
+) -> list[str]:
     brand = collapse_internal_spaces(product.manufacturer)
-    identifier = collapse_internal_spaces(product.mpn) or collapse_internal_spaces(product.model)
+    identifier = collapse_internal_spaces(product.mpn) or collapse_internal_spaces(
+        product.model
+    )
     if not identifier and brand:
         name = collapse_internal_spaces(product.name)
         if _name_is_precise_enough(name):
@@ -322,7 +364,9 @@ def build_brave_product_queries(product: AgentProduct, *, source: SourceDefiniti
     return [query] if query else []
 
 
-def brave_web_results(payload: object, *, max_results: int = 10) -> list[BraveSearchResultItem]:
+def brave_web_results(
+    payload: object, *, max_results: int = 10
+) -> list[BraveSearchResultItem]:
     if not isinstance(payload, dict):
         return []
     web = payload.get("web")
@@ -342,8 +386,12 @@ def brave_web_results(payload: object, *, max_results: int = 10) -> list[BraveSe
             BraveSearchResultItem(
                 url=url,
                 title=_clean_result_text(raw.get("title")),
-                description=_clean_result_text(raw.get("description") or raw.get("snippet")),
-                extra_snippets=tuple(_clean_result_text(item) for item in _raw_extra_snippets(raw)),
+                description=_clean_result_text(
+                    raw.get("description") or raw.get("snippet")
+                ),
+                extra_snippets=tuple(
+                    _clean_result_text(item) for item in _raw_extra_snippets(raw)
+                ),
                 profile=_compact_mapping(raw.get("profile")),
                 fetch_metadata=_fetch_metadata(raw),
                 rank=len(items) + 1,
@@ -354,7 +402,9 @@ def brave_web_results(payload: object, *, max_results: int = 10) -> list[BraveSe
     return items
 
 
-def _brave_query_params(definition: SearchProviderDefinition, query: str) -> dict[str, str | int]:
+def _brave_query_params(
+    definition: SearchProviderDefinition, query: str
+) -> dict[str, str | int]:
     params: dict[str, str | int] = {
         "q": query,
         "country": definition.country,

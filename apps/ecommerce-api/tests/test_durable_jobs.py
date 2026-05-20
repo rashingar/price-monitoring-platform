@@ -9,8 +9,22 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
-from ecommerce.db.session import create_session_factory, get_engine, session_scope  # noqa: E402
-from ecommerce.db.repositories.jobs import create_queued_job, durable_job_backlog_summary, get_job_by_id, heartbeat, list_jobs, mark_running, mark_succeeded, record_progress, request_cancel  # noqa: E402
+from ecommerce.db.session import (
+    create_session_factory,
+    get_engine,
+    session_scope,
+)  # noqa: E402
+from ecommerce.db.repositories.jobs import (
+    create_queued_job,
+    durable_job_backlog_summary,
+    get_job_by_id,
+    heartbeat,
+    list_jobs,
+    mark_running,
+    mark_succeeded,
+    record_progress,
+    request_cancel,
+)  # noqa: E402
 from ecommerce.jobs.durable import execute_job  # noqa: E402
 from ecommerce.jobs.execution_policy import (  # noqa: E402
     API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR,
@@ -28,29 +42,89 @@ def _create_schema(database_url: str) -> None:
 
 def test_api_execute_durable_jobs_inline_policy_parses_env_values() -> None:
     assert api_execute_durable_jobs_inline_enabled({}) is True
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "1"}) is True
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "true"}) is True
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "yes"}) is True
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "on"}) is True
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "0"}) is False
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "false"}) is False
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "no"}) is False
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "off"}) is False
-    assert api_execute_durable_jobs_inline_enabled({API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "invalid"}) is True
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "1"}
+        )
+        is True
+    )
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "true"}
+        )
+        is True
+    )
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "yes"}
+        )
+        is True
+    )
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "on"}
+        )
+        is True
+    )
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "0"}
+        )
+        is False
+    )
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "false"}
+        )
+        is False
+    )
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "no"}
+        )
+        is False
+    )
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "off"}
+        )
+        is False
+    )
+    assert (
+        api_execute_durable_jobs_inline_enabled(
+            {API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR: "invalid"}
+        )
+        is True
+    )
 
 
 def test_create_get_and_list_jobs_with_filters(tmp_path: Path) -> None:
     database_url = _database_url(tmp_path)
     _create_schema(database_url)
     with session_scope(database_url) as session:
-        first = create_queued_job(session, job_type="vendor_capture", payload={"source": "skroutz"}, job_id="job-1")
-        create_queued_job(session, job_type="url_validation", payload={"url": "https://example.test"}, job_id="job-2")
+        first = create_queued_job(
+            session,
+            job_type="vendor_capture",
+            payload={"source": "skroutz"},
+            job_id="job-1",
+        )
+        create_queued_job(
+            session,
+            job_type="url_validation",
+            payload={"url": "https://example.test"},
+            job_id="job-2",
+        )
 
         assert first.status == "queued"
         assert first.payload_json == {"source": "skroutz"}
         assert get_job_by_id(session, "job-1") is not None
-        assert [job.job_id for job in list_jobs(session, job_type="vendor_capture")] == ["job-1"]
-        assert [job.job_id for job in list_jobs(session, status="queued")] == ["job-2", "job-1"]
+        assert [
+            job.job_id for job in list_jobs(session, job_type="vendor_capture")
+        ] == ["job-1"]
+        assert [job.job_id for job in list_jobs(session, status="queued")] == [
+            "job-2",
+            "job-1",
+        ]
 
 
 def test_durable_job_backlog_summary_groups_counts_by_job_type(tmp_path: Path) -> None:
@@ -72,8 +146,15 @@ def test_durable_job_backlog_summary_groups_counts_by_job_type(tmp_path: Path) -
             job_id="job-source",
             created_at=now - timedelta(minutes=5),
         )
-        create_queued_job(session, job_type="source_url_agent_run", payload={}, job_id="job-source-running")
-        mark_running(session, "job-source-running", started_at=now - timedelta(minutes=200))
+        create_queued_job(
+            session,
+            job_type="source_url_agent_run",
+            payload={},
+            job_id="job-source-running",
+        )
+        mark_running(
+            session, "job-source-running", started_at=now - timedelta(minutes=200)
+        )
 
         summary = durable_job_backlog_summary(
             session,
@@ -95,7 +176,9 @@ def test_durable_job_backlog_summary_groups_counts_by_job_type(tmp_path: Path) -
     assert summary["running_total"] == 1
     assert summary["running_by_job_type"] == {"source_url_agent_run": 1}
     assert summary["stale_running_candidates_total"] == 1
-    assert summary["stale_running_candidates_by_job_type"] == {"source_url_agent_run": 1}
+    assert summary["stale_running_candidates_by_job_type"] == {
+        "source_url_agent_run": 1
+    }
 
 
 def test_mark_running_heartbeat_and_success(tmp_path: Path) -> None:
@@ -117,7 +200,9 @@ def test_mark_running_heartbeat_and_success(tmp_path: Path) -> None:
         assert succeeded.completed_at is not None
 
 
-def test_execute_job_marks_cancelled_before_start_and_skips_handler(tmp_path: Path) -> None:
+def test_execute_job_marks_cancelled_before_start_and_skips_handler(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
     _create_schema(database_url)
     called = False
@@ -146,7 +231,9 @@ def test_execute_job_persists_failure_even_when_handler_raises(tmp_path: Path) -
     database_url = _database_url(tmp_path)
     _create_schema(database_url)
     with session_scope(database_url) as session:
-        create_queued_job(session, job_type="diagnostic", payload={"id": 1}, job_id="job-1")
+        create_queued_job(
+            session, job_type="diagnostic", payload={"id": 1}, job_id="job-1"
+        )
 
     def fail(_payload):
         raise RuntimeError("diagnostic failed")

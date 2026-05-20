@@ -11,12 +11,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TEMPLATE_ROOT = REPO_ROOT / "resources" / "templates" / "electronet"
 DEFAULT_TAXONOMY_PATH = REPO_ROOT / "resources" / "mappings" / "catalog_taxonomy.json"
-DEFAULT_SCHEMA_POLICY_RULES_PATH = REPO_ROOT / "resources" / "mappings" / "schema_policy_rules.json"
-DEFAULT_OUTPUT_PATH = REPO_ROOT / "resources" / "schemas" / "electronet_schema_library.json"
+DEFAULT_SCHEMA_POLICY_RULES_PATH = (
+    REPO_ROOT / "resources" / "mappings" / "schema_policy_rules.json"
+)
+DEFAULT_OUTPUT_PATH = (
+    REPO_ROOT / "resources" / "schemas" / "electronet_schema_library.json"
+)
 CURRENT_LIBRARY_PATH = DEFAULT_OUTPUT_PATH
 LIBRARY_VERSION = "2026-04-01"
 SUBCATEGORY_MATCH_POLICY_EXACT = "exact_subcategory"
@@ -120,14 +123,19 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def _load_schema_policy_rules(path: Path) -> dict[str, str]:
     payload = load_json(path)
-    default_policy = normalize_whitespace(payload.get("default_policy")) or SUBCATEGORY_MATCH_POLICY_EXACT
+    default_policy = (
+        normalize_whitespace(payload.get("default_policy"))
+        or SUBCATEGORY_MATCH_POLICY_EXACT
+    )
     allowed = {
         SUBCATEGORY_MATCH_POLICY_EXACT,
         SUBCATEGORY_MATCH_POLICY_LEAF_FAMILY,
         SUBCATEGORY_MATCH_POLICY_MIXED_FAMILY,
     }
     if default_policy != SUBCATEGORY_MATCH_POLICY_EXACT:
-        raise ValueError(f"schema policy default_policy must be {SUBCATEGORY_MATCH_POLICY_EXACT!r}")
+        raise ValueError(
+            f"schema policy default_policy must be {SUBCATEGORY_MATCH_POLICY_EXACT!r}"
+        )
     overrides_payload = payload.get("overrides")
     if not isinstance(overrides_payload, dict):
         raise ValueError("schema policy overrides must be an object")
@@ -136,9 +144,13 @@ def _load_schema_policy_rules(path: Path) -> dict[str, str]:
         normalized_template_id = normalize_whitespace(template_id)
         normalized_policy = normalize_whitespace(raw_policy)
         if not normalized_template_id:
-            raise ValueError("schema policy override keys must be non-empty template ids")
+            raise ValueError(
+                "schema policy override keys must be non-empty template ids"
+            )
         if normalized_policy not in allowed:
-            raise ValueError(f"Unsupported schema policy {raw_policy!r} for template {template_id!r}")
+            raise ValueError(
+                f"Unsupported schema policy {raw_policy!r} for template {template_id!r}"
+            )
         overrides[normalized_template_id] = normalized_policy
     return overrides
 
@@ -182,11 +194,17 @@ def _discover_template_paths(template_root: Path) -> list[Path]:
     return sorted(path for path in template_root.glob("*.json") if path.is_file())
 
 
-def _normalize_authored_sections(raw_sections: list[dict[str, Any]]) -> list[AuthoredSection]:
+def _normalize_authored_sections(
+    raw_sections: list[dict[str, Any]],
+) -> list[AuthoredSection]:
     sections: list[AuthoredSection] = []
     for section in raw_sections:
         name = normalize_whitespace(section.get("section") or section.get("name"))
-        labels = [normalize_whitespace(label) for label in section.get("labels", []) if normalize_whitespace(label)]
+        labels = [
+            normalize_whitespace(label)
+            for label in section.get("labels", [])
+            if normalize_whitespace(label)
+        ]
         if not name or not labels:
             continue
         sections.append(AuthoredSection(name=name, labels=labels))
@@ -197,13 +215,16 @@ def _derive_template_status(authored_sections: list[AuthoredSection]) -> str:
     if (
         len(authored_sections) == 1
         and normalize_key(authored_sections[0].name) == "todo"
-        and [normalize_key(label) for label in authored_sections[0].labels] == ["needs_manual_labels"]
+        and [normalize_key(label) for label in authored_sections[0].labels]
+        == ["needs_manual_labels"]
     ):
         return "manual_only"
     return "active"
 
 
-def _derive_fingerprint(payload: dict[str, Any], authored_sections: list[AuthoredSection]) -> str:
+def _derive_fingerprint(
+    payload: dict[str, Any], authored_sections: list[AuthoredSection]
+) -> str:
     fingerprint = normalize_whitespace(payload.get("fingerprint"))
     if fingerprint:
         return fingerprint
@@ -213,8 +234,12 @@ def _derive_fingerprint(payload: dict[str, Any], authored_sections: list[Authore
     ]
     return _sha256_hex(
         {
-            "template_id": normalize_whitespace(payload.get("id") or payload.get("template_id")),
-            "category_label": normalize_whitespace(payload.get("category_gr") or payload.get("category")),
+            "template_id": normalize_whitespace(
+                payload.get("id") or payload.get("template_id")
+            ),
+            "category_label": normalize_whitespace(
+                payload.get("category_gr") or payload.get("category")
+            ),
             "cta_map_key": normalize_whitespace(payload.get("cta_map_key")),
             "cta_url": normalize_whitespace(payload.get("cta_url")),
             "sections": canonical_sections,
@@ -226,13 +251,19 @@ def _load_templates(template_root: Path) -> list[TemplateRecord]:
     records: list[TemplateRecord] = []
     for path in _discover_template_paths(template_root):
         payload = load_json(path)
-        authored_sections = _normalize_authored_sections(list(payload.get("sections", [])))
+        authored_sections = _normalize_authored_sections(
+            list(payload.get("sections", []))
+        )
         if not authored_sections:
             raise ValueError(f"Template {path} has no compilable sections.")
-        authored_template_id = normalize_whitespace(payload.get("id") or payload.get("template_id"))
+        authored_template_id = normalize_whitespace(
+            payload.get("id") or payload.get("template_id")
+        )
         if not authored_template_id:
             raise ValueError(f"Template {path} is missing an id/template_id.")
-        category_label = normalize_whitespace(payload.get("category_gr") or payload.get("category"))
+        category_label = normalize_whitespace(
+            payload.get("category_gr") or payload.get("category")
+        )
         if not category_label:
             raise ValueError(f"Template {path} is missing category_gr/category.")
         cta_map_key = normalize_whitespace(payload.get("cta_map_key")) or category_label
@@ -265,13 +296,16 @@ def _load_templates(template_root: Path) -> list[TemplateRecord]:
     return records
 
 
-def _resolve_taxonomy_binding(template: TemplateRecord, taxonomy_paths: list[dict[str, Any]]) -> TaxonomyBinding:
+def _resolve_taxonomy_binding(
+    template: TemplateRecord, taxonomy_paths: list[dict[str, Any]]
+) -> TaxonomyBinding:
     normalized_cta_url = normalize_whitespace(template.cta_url)
     if normalized_cta_url:
         cta_matches = [
             path
             for path in taxonomy_paths
-            if normalize_whitespace(path.get("cta_url") or path.get("url")) == normalized_cta_url
+            if normalize_whitespace(path.get("cta_url") or path.get("url"))
+            == normalized_cta_url
         ]
         if len(cta_matches) == 1:
             matched = cta_matches[0]
@@ -280,21 +314,32 @@ def _resolve_taxonomy_binding(template: TemplateRecord, taxonomy_paths: list[dic
                 leaf_category=normalize_whitespace(matched.get("leaf_category")),
                 sub_category=normalize_whitespace(matched.get("sub_category")) or None,
                 category_path=normalize_whitespace(matched.get("path")),
-                cta_url=normalize_whitespace(matched.get("cta_url") or matched.get("url")),
+                cta_url=normalize_whitespace(
+                    matched.get("cta_url") or matched.get("url")
+                ),
             )
         if len(cta_matches) > 1:
             matched = _pick_best_candidate_from_multiple(template, cta_matches)
             if matched is not None:
                 return TaxonomyBinding(
-                    parent_category=normalize_whitespace(matched.get("parent_category")),
+                    parent_category=normalize_whitespace(
+                        matched.get("parent_category")
+                    ),
                     leaf_category=normalize_whitespace(matched.get("leaf_category")),
-                    sub_category=normalize_whitespace(matched.get("sub_category")) or None,
+                    sub_category=normalize_whitespace(matched.get("sub_category"))
+                    or None,
                     category_path=normalize_whitespace(matched.get("path")),
-                    cta_url=normalize_whitespace(matched.get("cta_url") or matched.get("url")),
+                    cta_url=normalize_whitespace(
+                        matched.get("cta_url") or matched.get("url")
+                    ),
                 )
-            raise ValueError(f"Template {template.source_template_file} has ambiguous taxonomy binding for cta_url={template.cta_url!r}.")
+            raise ValueError(
+                f"Template {template.source_template_file} has ambiguous taxonomy binding for cta_url={template.cta_url!r}."
+            )
 
-    lookup_labels = _preserve_order_unique([template.category_label, template.cta_map_key])
+    lookup_labels = _preserve_order_unique(
+        [template.category_label, template.cta_map_key]
+    )
     for label in lookup_labels:
         key = normalize_key(label)
         if not key:
@@ -311,22 +356,30 @@ def _resolve_taxonomy_binding(template: TemplateRecord, taxonomy_paths: list[dic
                 leaf_category=normalize_whitespace(matched.get("leaf_category")),
                 sub_category=normalize_whitespace(matched.get("sub_category")) or None,
                 category_path=normalize_whitespace(matched.get("path")),
-                cta_url=normalize_whitespace(matched.get("cta_url") or matched.get("url")),
+                cta_url=normalize_whitespace(
+                    matched.get("cta_url") or matched.get("url")
+                ),
             )
         if len(sub_matches) > 1:
             matched = _pick_best_candidate_from_multiple(template, sub_matches)
             if matched is not None:
                 return TaxonomyBinding(
-                    parent_category=normalize_whitespace(matched.get("parent_category")),
+                    parent_category=normalize_whitespace(
+                        matched.get("parent_category")
+                    ),
                     leaf_category=normalize_whitespace(matched.get("leaf_category")),
-                    sub_category=normalize_whitespace(matched.get("sub_category")) or None,
+                    sub_category=normalize_whitespace(matched.get("sub_category"))
+                    or None,
                     category_path=normalize_whitespace(matched.get("path")),
-                    cta_url=normalize_whitespace(matched.get("cta_url") or matched.get("url")),
+                    cta_url=normalize_whitespace(
+                        matched.get("cta_url") or matched.get("url")
+                    ),
                 )
         leaf_matches = [
             path
             for path in taxonomy_paths
-            if normalize_key(path.get("leaf_category")) == key and not normalize_whitespace(path.get("sub_category"))
+            if normalize_key(path.get("leaf_category")) == key
+            and not normalize_whitespace(path.get("sub_category"))
         ]
         if len(leaf_matches) == 1:
             matched = leaf_matches[0]
@@ -335,17 +388,23 @@ def _resolve_taxonomy_binding(template: TemplateRecord, taxonomy_paths: list[dic
                 leaf_category=normalize_whitespace(matched.get("leaf_category")),
                 sub_category=None,
                 category_path=normalize_whitespace(matched.get("path")),
-                cta_url=normalize_whitespace(matched.get("cta_url") or matched.get("url")),
+                cta_url=normalize_whitespace(
+                    matched.get("cta_url") or matched.get("url")
+                ),
             )
         if len(leaf_matches) > 1:
             matched = _pick_best_candidate_from_multiple(template, leaf_matches)
             if matched is not None:
                 return TaxonomyBinding(
-                    parent_category=normalize_whitespace(matched.get("parent_category")),
+                    parent_category=normalize_whitespace(
+                        matched.get("parent_category")
+                    ),
                     leaf_category=normalize_whitespace(matched.get("leaf_category")),
                     sub_category=None,
                     category_path=normalize_whitespace(matched.get("path")),
-                    cta_url=normalize_whitespace(matched.get("cta_url") or matched.get("url")),
+                    cta_url=normalize_whitespace(
+                        matched.get("cta_url") or matched.get("url")
+                    ),
                 )
 
     raise ValueError(
@@ -354,11 +413,19 @@ def _resolve_taxonomy_binding(template: TemplateRecord, taxonomy_paths: list[dic
     )
 
 
-def _candidate_url_overlap_score(binding_hint_url: str, candidate: dict[str, Any]) -> int:
+def _candidate_url_overlap_score(
+    binding_hint_url: str, candidate: dict[str, Any]
+) -> int:
     if not binding_hint_url:
         return 0
     hint_tokens = set(normalize_key(urlparse(binding_hint_url).path).split())
-    candidate_tokens = set(normalize_key(urlparse(normalize_whitespace(candidate.get("cta_url") or candidate.get("url"))).path).split())
+    candidate_tokens = set(
+        normalize_key(
+            urlparse(
+                normalize_whitespace(candidate.get("cta_url") or candidate.get("url"))
+            ).path
+        ).split()
+    )
     if not hint_tokens or not candidate_tokens:
         return 0
     return len(hint_tokens & candidate_tokens)
@@ -384,17 +451,27 @@ def _pick_best_candidate_from_multiple(
     template_is_built_in = "entoixiz" in template_identity_key
     scored = [
         (
-            1
-            if ("entoixiz" in normalize_key(" ".join(
-                [
-                    normalize_whitespace(candidate.get("parent_category")),
-                    normalize_whitespace(candidate.get("leaf_category")),
-                    normalize_whitespace(candidate.get("sub_category")),
-                    normalize_whitespace(candidate.get("path")),
-                    normalize_whitespace(candidate.get("cta_url") or candidate.get("url")),
-                ]
-            ))) == template_is_built_in
-            else 0,
+            (
+                1
+                if (
+                    "entoixiz"
+                    in normalize_key(
+                        " ".join(
+                            [
+                                normalize_whitespace(candidate.get("parent_category")),
+                                normalize_whitespace(candidate.get("leaf_category")),
+                                normalize_whitespace(candidate.get("sub_category")),
+                                normalize_whitespace(candidate.get("path")),
+                                normalize_whitespace(
+                                    candidate.get("cta_url") or candidate.get("url")
+                                ),
+                            ]
+                        )
+                    )
+                )
+                == template_is_built_in
+                else 0
+            ),
             _candidate_url_overlap_score(template.binding_hint_url, candidate),
             len(
                 template_identity_tokens
@@ -420,7 +497,11 @@ def _pick_best_candidate_from_multiple(
     best_signature = scored[0][:3]
     if best_signature == (0, 0, 0):
         return None
-    best_candidates = [candidate for score_a, score_b, score_c, _, candidate in scored if (score_a, score_b, score_c) == best_signature]
+    best_candidates = [
+        candidate
+        for score_a, score_b, score_c, _, candidate in scored
+        if (score_a, score_b, score_c) == best_signature
+    ]
     return best_candidates[0] if len(best_candidates) == 1 else None
 
 
@@ -434,7 +515,9 @@ def _compiled_sections_from_authored(template: TemplateRecord) -> list[dict[str,
     ]
 
 
-def _subcategory_match_policy(template: TemplateRecord, policy_overrides: dict[str, str]) -> str:
+def _subcategory_match_policy(
+    template: TemplateRecord, policy_overrides: dict[str, str]
+) -> str:
     return policy_overrides.get(template.template_id, SUBCATEGORY_MATCH_POLICY_EXACT)
 
 
@@ -465,7 +548,11 @@ def _sentinel_for_sections(sections: list[dict[str, Any]]) -> dict[str, str]:
     if not sections:
         return {"last_section": "", "last_label": ""}
     last_section = sections[-1]
-    labels = [normalize_whitespace(label) for label in last_section.get("labels", []) if normalize_whitespace(label)]
+    labels = [
+        normalize_whitespace(label)
+        for label in last_section.get("labels", [])
+        if normalize_whitespace(label)
+    ]
     return {
         "last_section": normalize_whitespace(last_section.get("title")),
         "last_label": labels[-1] if labels else "",
@@ -480,7 +567,9 @@ def _ordered_exact_labels(template: TemplateRecord) -> list[str]:
 
 
 def _ordered_normalized_labels(template: TemplateRecord) -> list[str]:
-    return _preserve_order_unique([normalize_safe_text(label) for label in _ordered_exact_labels(template)])
+    return _preserve_order_unique(
+        [normalize_safe_text(label) for label in _ordered_exact_labels(template)]
+    )
 
 
 def _ordered_section_names_exact(template: TemplateRecord) -> list[str]:
@@ -488,7 +577,9 @@ def _ordered_section_names_exact(template: TemplateRecord) -> list[str]:
 
 
 def _ordered_section_names_normalized(template: TemplateRecord) -> list[str]:
-    return _preserve_order_unique([normalize_safe_text(section.name) for section in template.authored_sections])
+    return _preserve_order_unique(
+        [normalize_safe_text(section.name) for section in template.authored_sections]
+    )
 
 
 def _ordered_section_label_pairs_normalized(template: TemplateRecord) -> list[str]:
@@ -505,13 +596,21 @@ def _compute_match_metadata(entries: list[dict[str, Any]]) -> None:
     for entry in entries:
         if entry["template_status"] != "active":
             continue
-        active_entries_by_category_path.setdefault(entry["category_path"], []).append(entry)
+        active_entries_by_category_path.setdefault(entry["category_path"], []).append(
+            entry
+        )
 
     for category_entries in active_entries_by_category_path.values():
         ordered_entries = sorted(category_entries, key=lambda item: item["template_id"])
         for entry in ordered_entries:
-            siblings = [candidate for candidate in ordered_entries if candidate["template_id"] != entry["template_id"]]
-            entry["sibling_template_ids"] = [candidate["template_id"] for candidate in siblings]
+            siblings = [
+                candidate
+                for candidate in ordered_entries
+                if candidate["template_id"] != entry["template_id"]
+            ]
+            entry["sibling_template_ids"] = [
+                candidate["template_id"] for candidate in siblings
+            ]
             entry["match_mode"] = "direct_single" if not siblings else "category_pool"
 
             own_labels = list(entry["label_set_normalized"])
@@ -522,19 +621,25 @@ def _compute_match_metadata(entries: list[dict[str, Any]]) -> None:
                     for label in sibling["label_set_normalized"]
                 ]
             )
-            unique_labels = [label for label in own_labels if label and label not in sibling_labels]
+            unique_labels = [
+                label for label in own_labels if label and label not in sibling_labels
+            ]
             sibling_unique_labels = [
-                label
-                for label in sibling_labels
-                if label and label not in own_labels
+                label for label in sibling_labels if label and label not in own_labels
             ]
 
             entry["discriminator_labels"] = unique_labels
-            entry["required_labels_any"] = unique_labels[:3] if unique_labels else own_labels[:3]
+            entry["required_labels_any"] = (
+                unique_labels[:3] if unique_labels else own_labels[:3]
+            )
             entry["required_labels_all"] = unique_labels[:1] if unique_labels else []
             entry["forbidden_labels"] = sibling_unique_labels
-            entry["min_section_overlap"] = min(3, max(1, math.ceil(len(entry["section_names_exact"]) * 0.5)))
-            entry["min_label_overlap"] = min(8, max(1, math.ceil(len(own_labels) * 0.2)))
+            entry["min_section_overlap"] = min(
+                3, max(1, math.ceil(len(entry["section_names_exact"]) * 0.5))
+            )
+            entry["min_label_overlap"] = min(
+                8, max(1, math.ceil(len(own_labels) * 0.2))
+            )
 
     for entry in entries:
         if entry["template_status"] == "active":
@@ -566,8 +671,12 @@ def build_library_payload(
     for template in templates:
         taxonomy_binding = _resolve_taxonomy_binding(template, taxonomy_paths)
         compiled_sections = _compiled_sections_from_authored(template)
-        subcategory_match_policy = _subcategory_match_policy(template, schema_policy_overrides)
-        n_rows_total = sum(len(section.get("labels", [])) for section in compiled_sections)
+        subcategory_match_policy = _subcategory_match_policy(
+            template, schema_policy_overrides
+        )
+        n_rows_total = sum(
+            len(section.get("labels", [])) for section in compiled_sections
+        )
         schema_id = _derive_schema_id(template, taxonomy_binding, compiled_sections)
 
         compiled_entries.append(
@@ -590,7 +699,9 @@ def build_library_payload(
                 "section_names_normalized": _ordered_section_names_normalized(template),
                 "label_set_exact": _ordered_exact_labels(template),
                 "label_set_normalized": _ordered_normalized_labels(template),
-                "section_label_pairs_normalized": _ordered_section_label_pairs_normalized(template),
+                "section_label_pairs_normalized": _ordered_section_label_pairs_normalized(
+                    template
+                ),
                 "discriminator_labels": [],
                 "required_labels_any": [],
                 "required_labels_all": [],
@@ -642,10 +753,14 @@ def build_library_payload(
     }
 
 
-def write_library_payload(payload: dict[str, Any], output_path: Path = DEFAULT_OUTPUT_PATH) -> None:
+def write_library_payload(
+    payload: dict[str, Any], output_path: Path = DEFAULT_OUTPUT_PATH
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     rendered = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
-    with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=output_path.parent, suffix=".tmp") as handle:
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", delete=False, dir=output_path.parent, suffix=".tmp"
+    ) as handle:
         handle.write(rendered)
         temp_path = Path(handle.name)
     temp_path.replace(output_path)

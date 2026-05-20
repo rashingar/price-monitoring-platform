@@ -22,7 +22,9 @@ def resolve_prepare_taxonomy_enrichment(
     fetcher: Any,
     model_dir: Path,
     taxonomy_resolver_factory: Callable[[], TaxonomyResolver] = TaxonomyResolver,
-    enrich_source_from_manufacturer_docs_fn: Callable[..., dict[str, Any]] | None = None,
+    enrich_source_from_manufacturer_docs_fn: (
+        Callable[..., dict[str, Any]] | None
+    ) = None,
 ) -> PrepareTaxonomyEnrichmentResult:
     del fetcher, model_dir, enrich_source_from_manufacturer_docs_fn
     taxonomy_resolver = taxonomy_resolver_factory()

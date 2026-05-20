@@ -23,7 +23,10 @@ from ecommerce.source_url_agent.candidate_transfer import (
     import_source_url_transfer,
 )
 from ecommerce.source_url_agent.options import SourceUrlAgentOptions
-from ecommerce.source_url_agent.products import read_products_from_catalog, read_products_from_csv
+from ecommerce.source_url_agent.products import (
+    read_products_from_catalog,
+    read_products_from_csv,
+)
 from ecommerce.source_url_agent.review import apply_review_csv
 from ecommerce.source_url_agent.runner import run_source_url_agent
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES
@@ -38,38 +41,89 @@ def main(argv: Sequence[str] | None = None) -> int:
     run_parser.add_argument("--input", type=Path, required=True)
     _add_common_run_options(run_parser)
 
-    catalog_parser = subparsers.add_parser("from-catalog", help="Run from DB-backed catalog_products.")
+    catalog_parser = subparsers.add_parser(
+        "from-catalog", help="Run from DB-backed catalog_products."
+    )
     _add_common_run_options(catalog_parser)
 
-    review_parser = subparsers.add_parser("apply-review", help="Apply a reviewed needs_review CSV.")
+    review_parser = subparsers.add_parser(
+        "apply-review", help="Apply a reviewed needs_review CSV."
+    )
     review_parser.add_argument("--review-file", type=Path, required=True)
-    review_parser.add_argument("--dry-run", action="store_true", help="Preview review actions without DB writes.")
-    review_parser.add_argument("--apply", action="store_true", help="Write accepted/replaced review URLs.")
+    review_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview review actions without DB writes.",
+    )
+    review_parser.add_argument(
+        "--apply", action="store_true", help="Write accepted/replaced review URLs."
+    )
     review_parser.add_argument("--json", action="store_true")
 
-    analyze_parser = subparsers.add_parser("analyze", help="Analyze run artifacts and write analysis_summary.json.")
+    analyze_parser = subparsers.add_parser(
+        "analyze", help="Analyze run artifacts and write analysis_summary.json."
+    )
     analyze_parser.add_argument("--run-id", required=True)
     analyze_parser.add_argument("--output-dir", type=Path, default=None)
     analyze_parser.add_argument("--json", action="store_true")
 
-    export_parser = subparsers.add_parser("export-candidates", help="Export all DB source URL candidates to one JSON file.")
-    export_parser.add_argument("--output", type=Path, default=Path("output/ecommerce/source-url-agent/source_url_candidates_export.json"))
+    export_parser = subparsers.add_parser(
+        "export-candidates",
+        help="Export all DB source URL candidates to one JSON file.",
+    )
+    export_parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(
+            "output/ecommerce/source-url-agent/source_url_candidates_export.json"
+        ),
+    )
     export_parser.add_argument("--json", action="store_true")
 
-    import_parser = subparsers.add_parser("import-candidates", help="Import a source URL candidate JSON export.")
+    import_parser = subparsers.add_parser(
+        "import-candidates", help="Import a source URL candidate JSON export."
+    )
     import_parser.add_argument("--input", type=Path, required=True)
-    import_parser.add_argument("--dry-run", action="store_true", help="Preview import actions without DB writes.")
-    import_parser.add_argument("--apply", action="store_true", help="Write imported candidates into the configured DB.")
+    import_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview import actions without DB writes.",
+    )
+    import_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write imported candidates into the configured DB.",
+    )
     import_parser.add_argument("--json", action="store_true")
 
-    export_transfer_parser = subparsers.add_parser("export-url-transfer", help="Export source_urls and source URL candidates to one portable JSON file.")
-    export_transfer_parser.add_argument("--output", type=Path, default=Path("output/ecommerce/source-url-agent/source_url_transfer_export.json"))
+    export_transfer_parser = subparsers.add_parser(
+        "export-url-transfer",
+        help="Export source_urls and source URL candidates to one portable JSON file.",
+    )
+    export_transfer_parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path(
+            "output/ecommerce/source-url-agent/source_url_transfer_export.json"
+        ),
+    )
     export_transfer_parser.add_argument("--json", action="store_true")
 
-    import_transfer_parser = subparsers.add_parser("import-url-transfer", help="Import a portable source_urls and candidate JSON export.")
+    import_transfer_parser = subparsers.add_parser(
+        "import-url-transfer",
+        help="Import a portable source_urls and candidate JSON export.",
+    )
     import_transfer_parser.add_argument("--input", type=Path, required=True)
-    import_transfer_parser.add_argument("--dry-run", action="store_true", help="Preview import actions without DB writes.")
-    import_transfer_parser.add_argument("--apply", action="store_true", help="Write imported source URLs and candidates into the configured DB.")
+    import_transfer_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview import actions without DB writes.",
+    )
+    import_transfer_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write imported source URLs and candidates into the configured DB.",
+    )
     import_transfer_parser.add_argument("--json", action="store_true")
 
     args = parser.parse_args(argv)
@@ -91,7 +145,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "import-url-transfer":
             return _import_url_transfer(args)
     except SQLAlchemyError as exc:
-        print(f"Source URL Agent DB error: {sanitize_database_error(str(exc)) or exc.__class__.__name__}", file=sys.stderr)
+        print(
+            f"Source URL Agent DB error: {sanitize_database_error(str(exc)) or exc.__class__.__name__}",
+            file=sys.stderr,
+        )
         return 1
     except (FileNotFoundError, ValueError) as exc:
         print(f"Source URL Agent failed: {exc}", file=sys.stderr)
@@ -104,7 +161,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def _run_from_csv(args: argparse.Namespace) -> int:
     if not is_database_configured():
-        print("Source URL Agent requires ECOMMERCE_DATABASE_URL so runs and candidates are written to PostgreSQL.", file=sys.stderr)
+        print(
+            "Source URL Agent requires ECOMMERCE_DATABASE_URL so runs and candidates are written to PostgreSQL.",
+            file=sys.stderr,
+        )
         return 1
     active_only = _bool_arg(args.active_only)
     products = read_products_from_csv(
@@ -118,7 +178,9 @@ def _run_from_csv(args: argparse.Namespace) -> int:
     with session_scope() as session:
         result = run_source_url_agent(
             products=products,
-            options=_options(args, mode="csv", input_path=args.input, active_only=active_only),
+            options=_options(
+                args, mode="csv", input_path=args.input, active_only=active_only
+            ),
             session=session,
         )
     _print_run_result(result, json_output=args.json)
@@ -142,7 +204,9 @@ def _run_from_catalog(args: argparse.Namespace) -> int:
         )
         result = run_source_url_agent(
             products=products,
-            options=_options(args, mode="catalog", input_path=None, active_only=active_only),
+            options=_options(
+                args, mode="catalog", input_path=None, active_only=active_only
+            ),
             session=session,
         )
     _print_run_result(result, json_output=args.json)
@@ -178,7 +242,9 @@ def _analyze(args: argparse.Namespace) -> int:
         print(f"candidate_count: {payload['candidate_count']}")
         print(f"by_status: {payload['by_status']}")
         for recommendation in payload["recommendations"]:
-            print(f"recommendation: {recommendation['type']} - {recommendation['message']}")
+            print(
+                f"recommendation: {recommendation['type']} - {recommendation['message']}"
+            )
     return 0
 
 
@@ -236,8 +302,16 @@ def _add_common_run_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--model", default=None)
     parser.add_argument("--missing-only", action="store_true")
     parser.add_argument("--active-only", nargs="?", const="true", default="true")
-    parser.add_argument("--dry-run", action="store_true", help="Do not write source_urls. Default unless --apply-high-confidence is used.")
-    parser.add_argument("--apply-high-confidence", action="store_true", help="Write high-confidence matches to source_urls.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do not write source_urls. Default unless --apply-high-confidence is used.",
+    )
+    parser.add_argument(
+        "--apply-high-confidence",
+        action="store_true",
+        help="Write high-confidence matches to source_urls.",
+    )
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--max-products-per-batch", type=int, default=None)
     parser.add_argument("--max-searches-per-product-source", type=int, default=None)
@@ -282,8 +356,17 @@ def _print_run_result(result, *, json_output: bool) -> None:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
     print(f"run_id: {result.run_id}")
-    print(f"mode: {'apply-high-confidence' if payload['apply_high_confidence'] else 'dry-run'}")
-    for key in ("selected_count", "candidate_count", "matched_count", "needs_review_count", "not_found_count", "error_count"):
+    print(
+        f"mode: {'apply-high-confidence' if payload['apply_high_confidence'] else 'dry-run'}"
+    )
+    for key in (
+        "selected_count",
+        "candidate_count",
+        "matched_count",
+        "needs_review_count",
+        "not_found_count",
+        "error_count",
+    ):
         print(f"{key}: {payload[key]}")
     print(f"run_dir: {result.artifacts.run_dir}")
     for warning in result.warnings:

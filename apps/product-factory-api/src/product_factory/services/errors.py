@@ -46,11 +46,16 @@ def _walk_exception_chain(exc: BaseException) -> list[BaseException]:
 
 
 def _is_parse_failure_message(message: str) -> bool:
-    return message in {
-        "Total parse failure",
-        "Missing presentation source sections for requested render sections",
-        "No usable deterministic presentation sections for requested render sections",
-    } or message.startswith("Unsupported ") or message.startswith("Too many missing deterministic presentation sections:")
+    return (
+        message
+        in {
+            "Total parse failure",
+            "Missing presentation source sections for requested render sections",
+            "No usable deterministic presentation sections for requested render sections",
+        }
+        or message.startswith("Unsupported ")
+        or message.startswith("Too many missing deterministic presentation sections:")
+    )
 
 
 def service_error_from_exception(exc: BaseException, *, operation: str) -> ServiceError:
@@ -59,7 +64,9 @@ def service_error_from_exception(exc: BaseException, *, operation: str) -> Servi
 
     chain = _walk_exception_chain(exc)
 
-    provider_error = next((item for item in chain if isinstance(item, ProviderError)), None)
+    provider_error = next(
+        (item for item in chain if isinstance(item, ProviderError)), None
+    )
     if provider_error is not None:
         code = (
             ServiceErrorCode.PARSE_FAILURE
@@ -79,7 +86,9 @@ def service_error_from_exception(exc: BaseException, *, operation: str) -> Servi
             },
         )
 
-    metadata_error = next((item for item in chain if isinstance(item, MetadataWriteError)), None)
+    metadata_error = next(
+        (item for item in chain if isinstance(item, MetadataWriteError)), None
+    )
     if metadata_error is not None:
         return ServiceError(
             ServiceErrorCode.UNEXPECTED_FAILURE.value,
@@ -94,7 +103,9 @@ def service_error_from_exception(exc: BaseException, *, operation: str) -> Servi
             },
         )
 
-    file_error = next((item for item in chain if isinstance(item, FileNotFoundError)), None)
+    file_error = next(
+        (item for item in chain if isinstance(item, FileNotFoundError)), None
+    )
     if file_error is not None:
         details: dict[str, object] = {}
         filename = getattr(file_error, "filename", None)
@@ -111,7 +122,8 @@ def service_error_from_exception(exc: BaseException, *, operation: str) -> Servi
         return ServiceError(ServiceErrorCode.PARSE_FAILURE.value, str(exc), cause=exc)
 
     if operation == "render" and isinstance(exc, OSError):
-        return ServiceError(ServiceErrorCode.PUBLISH_FAILURE.value, str(exc), cause=exc, retryable=True)
+        return ServiceError(
+            ServiceErrorCode.PUBLISH_FAILURE.value, str(exc), cause=exc, retryable=True
+        )
 
     return ServiceError(ServiceErrorCode.UNEXPECTED_FAILURE.value, str(exc), cause=exc)
-

@@ -22,11 +22,19 @@ def load_openai_llm_config(
     env_file: Path | None = None,
 ) -> OpenAILLMConfig:
     source_env = os.environ if env is None else env
-    file_values = _read_env_file(env_file) if env_file is not None else _read_default_env_files()
-    api_key = str(source_env.get("OPENAI_API_KEY") or file_values.get("OPENAI_API_KEY") or "").strip()
-    model = str(source_env.get("OPENAI_MODEL") or file_values.get("OPENAI_MODEL") or "").strip()
+    file_values = (
+        _read_env_file(env_file) if env_file is not None else _read_default_env_files()
+    )
+    api_key = str(
+        source_env.get("OPENAI_API_KEY") or file_values.get("OPENAI_API_KEY") or ""
+    ).strip()
+    model = str(
+        source_env.get("OPENAI_MODEL") or file_values.get("OPENAI_MODEL") or ""
+    ).strip()
     reasoning_effort = _normalize_reasoning_effort(
-        source_env.get("OPENAI_REASONING_EFFORT") or file_values.get("OPENAI_REASONING_EFFORT") or ""
+        source_env.get("OPENAI_REASONING_EFFORT")
+        or file_values.get("OPENAI_REASONING_EFFORT")
+        or ""
     )
     if not api_key:
         raise ServiceError(

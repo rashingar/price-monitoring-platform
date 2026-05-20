@@ -30,7 +30,9 @@ class MissingIgnoreColumnsError(ValueError):
 
     def __init__(self, missing_columns: list[str]) -> None:
         self.missing_columns = missing_columns
-        super().__init__(f"price_ignore.csv missing required columns: {', '.join(missing_columns)}")
+        super().__init__(
+            f"price_ignore.csv missing required columns: {', '.join(missing_columns)}"
+        )
 
 
 class InvalidIgnoredModelError(ValueError):
@@ -80,8 +82,12 @@ def load_ignored_products(path: Path | None = None) -> list[IgnoredProduct]:
     with ignore_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames or []
-        header_map = {header.strip(): header for header in fieldnames if header is not None}
-        missing = [column for column in IGNORE_REQUIRED_COLUMNS if column not in header_map]
+        header_map = {
+            header.strip(): header for header in fieldnames if header is not None
+        }
+        missing = [
+            column for column in IGNORE_REQUIRED_COLUMNS if column not in header_map
+        ]
         if missing:
             raise MissingIgnoreColumnsError(missing)
 
@@ -101,10 +107,14 @@ def is_product_ignored(model: str, path: Path | None = None) -> bool:
     normalized_model = _normalize_model(model)
     if not normalized_model:
         return False
-    return any(product.model == normalized_model for product in load_ignored_products(path))
+    return any(
+        product.model == normalized_model for product in load_ignored_products(path)
+    )
 
 
-def upsert_ignored_product(entry: IgnoredProductInput, path: Path | None = None) -> IgnoredProduct:
+def upsert_ignored_product(
+    entry: IgnoredProductInput, path: Path | None = None
+) -> IgnoredProduct:
     product = _input_to_ignored_product(entry)
     ignore_path = resolve_price_ignore_path(path)
     existing_products = load_ignored_products(ignore_path)
@@ -135,7 +145,9 @@ def remove_ignored_product(model: str, path: Path | None = None) -> bool:
         return False
 
     existing_products = load_ignored_products(ignore_path)
-    next_products = [product for product in existing_products if product.model != normalized_model]
+    next_products = [
+        product for product in existing_products if product.model != normalized_model
+    ]
     removed = len(next_products) != len(existing_products)
     if removed:
         _write_ignored_products(ignore_path, next_products)
@@ -161,7 +173,9 @@ def _input_to_ignored_product(entry: IgnoredProductInput) -> IgnoredProduct:
     )
 
 
-def _row_to_ignored_product(row: dict[str, str], header_map: dict[str, str]) -> IgnoredProduct:
+def _row_to_ignored_product(
+    row: dict[str, str], header_map: dict[str, str]
+) -> IgnoredProduct:
     return IgnoredProduct(
         model=_normalize_model(row.get(header_map["model"], "")),
         name=_text(row.get(header_map["name"], "")),

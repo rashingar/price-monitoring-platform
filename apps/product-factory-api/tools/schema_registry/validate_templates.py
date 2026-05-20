@@ -15,9 +15,15 @@ from tools.schema_registry.build_electronet_schema_library import (
     normalize_whitespace,
 )
 
-
-DEFAULT_SCHEMA_PATH = REPO_ROOT / "resources" / "templates" / "schema_template.schema.json"
-SUPPORTED_EXAMPLE_HOSTS = {"www.electronet.gr", "electronet.gr", "www.etranoulis.gr", "etranoulis.gr"}
+DEFAULT_SCHEMA_PATH = (
+    REPO_ROOT / "resources" / "templates" / "schema_template.schema.json"
+)
+SUPPORTED_EXAMPLE_HOSTS = {
+    "www.electronet.gr",
+    "electronet.gr",
+    "www.etranoulis.gr",
+    "etranoulis.gr",
+}
 
 
 @dataclass(frozen=True)
@@ -87,13 +93,20 @@ def _matches_type(value: Any, expected_type: str) -> bool:
     return True
 
 
-def _validate_schema_node(value: Any, schema_node: dict[str, Any], path: str) -> list[ValidationIssue]:
+def _validate_schema_node(
+    value: Any, schema_node: dict[str, Any], path: str
+) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
 
     if "oneOf" in schema_node:
-        branch_results = [_validate_schema_node(value, branch, path) for branch in schema_node["oneOf"]]
+        branch_results = [
+            _validate_schema_node(value, branch, path)
+            for branch in schema_node["oneOf"]
+        ]
         if not any(not branch for branch in branch_results):
-            issues.append(_issue(path, "does not match any supported template schema shape"))
+            issues.append(
+                _issue(path, "does not match any supported template schema shape")
+            )
         return issues
 
     expected_type = schema_node.get("type")
@@ -109,7 +122,11 @@ def _validate_schema_node(value: Any, schema_node: dict[str, Any], path: str) ->
                 issues.append(_issue(path, f"missing required key {key!r}"))
         for key, child_schema in properties.items():
             if key in value:
-                issues.extend(_validate_schema_node(value[key], child_schema, f"{path}.{key}" if path else key))
+                issues.extend(
+                    _validate_schema_node(
+                        value[key], child_schema, f"{path}.{key}" if path else key
+                    )
+                )
         return issues
 
     if expected_type == "array":
@@ -120,18 +137,30 @@ def _validate_schema_node(value: Any, schema_node: dict[str, Any], path: str) ->
         item_schema = schema_node.get("items")
         if isinstance(item_schema, dict):
             for index, item in enumerate(value):
-                issues.extend(_validate_schema_node(item, item_schema, f"{path}[{index}]"))
+                issues.extend(
+                    _validate_schema_node(item, item_schema, f"{path}[{index}]")
+                )
         return issues
 
     return issues
 
 
-def validate_json_schema(payload: dict[str, Any], schema: dict[str, Any]) -> list[ValidationIssue]:
+def validate_json_schema(
+    payload: dict[str, Any], schema: dict[str, Any]
+) -> list[ValidationIssue]:
     return _validate_schema_node(payload, schema, "")
 
 
 def _schema_normalized_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    if "id" in payload or "category_gr" in payload or any("section" in item for item in payload.get("sections", []) if isinstance(item, dict)):
+    if (
+        "id" in payload
+        or "category_gr" in payload
+        or any(
+            "section" in item
+            for item in payload.get("sections", [])
+            if isinstance(item, dict)
+        )
+    ):
         normalized_sections = []
         for section in payload.get("sections", []):
             if not isinstance(section, dict):
@@ -145,7 +174,9 @@ def _schema_normalized_payload(payload: dict[str, Any]) -> dict[str, Any]:
             )
         return {
             **payload,
-            "cta_map_key": payload.get("cta_map_key", payload.get("category_gr", payload.get("category", ""))),
+            "cta_map_key": payload.get(
+                "cta_map_key", payload.get("category_gr", payload.get("category", ""))
+            ),
             "cta_url": payload.get("cta_url", ""),
             "electronet_examples": payload.get("electronet_examples", []),
             "sections": normalized_sections,
@@ -162,7 +193,9 @@ def _logical_category(payload: dict[str, Any]) -> str:
 
 
 def _logical_cta_map_key(payload: dict[str, Any]) -> str:
-    return normalize_whitespace(payload.get("cta_map_key") or _logical_category(payload))
+    return normalize_whitespace(
+        payload.get("cta_map_key") or _logical_category(payload)
+    )
 
 
 def _iter_examples(payload: dict[str, Any]) -> tuple[str, ...]:
@@ -170,7 +203,11 @@ def _iter_examples(payload: dict[str, Any]) -> tuple[str, ...]:
         raw_examples = payload.get("electronet_examples") or []
         if not isinstance(raw_examples, list):
             return ()
-        return tuple(normalize_whitespace(item) for item in raw_examples if normalize_whitespace(item))
+        return tuple(
+            normalize_whitespace(item)
+            for item in raw_examples
+            if normalize_whitespace(item)
+        )
 
     source = payload.get("source")
     if isinstance(source, dict):
@@ -228,7 +265,9 @@ def _labels_for_section(section: dict[str, Any]) -> list[str]:
     return [str(label) for label in raw_labels]
 
 
-def validate_repo_invariants(context: TemplateContext, payload: dict[str, Any]) -> list[ValidationIssue]:
+def validate_repo_invariants(
+    context: TemplateContext, payload: dict[str, Any]
+) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
 
     if not context.authored_id:
@@ -262,13 +301,22 @@ def validate_repo_invariants(context: TemplateContext, payload: dict[str, Any]) 
         if not section_name:
             issues.append(_issue(f"{section_path}.section", "section name is blank"))
         elif normalize_key(section_name) in seen_sections:
-            issues.append(_issue(f"{section_path}.section", f"duplicate section name {section_name!r}"))
+            issues.append(
+                _issue(
+                    f"{section_path}.section",
+                    f"duplicate section name {section_name!r}",
+                )
+            )
         else:
             seen_sections.add(normalize_key(section_name))
 
         labels = _labels_for_section(section)
         if not labels:
-            issues.append(_issue(f"{section_path}.labels", "section must contain at least one label"))
+            issues.append(
+                _issue(
+                    f"{section_path}.labels", "section must contain at least one label"
+                )
+            )
             continue
 
         seen_labels: set[str] = set()
@@ -282,11 +330,18 @@ def validate_repo_invariants(context: TemplateContext, payload: dict[str, Any]) 
             non_empty_labels += 1
             normalized_label = normalize_key(trimmed)
             if normalized_label in seen_labels:
-                issues.append(_issue(label_path, f"duplicate label {trimmed!r} within section"))
+                issues.append(
+                    _issue(label_path, f"duplicate label {trimmed!r} within section")
+                )
             else:
                 seen_labels.add(normalized_label)
         if non_empty_labels == 0:
-            issues.append(_issue(f"{section_path}.labels", "section must contain at least one non-empty label"))
+            issues.append(
+                _issue(
+                    f"{section_path}.labels",
+                    "section must contain at least one non-empty label",
+                )
+            )
 
     seen_examples: set[str] = set()
     for index, example in enumerate(context.examples):
@@ -301,11 +356,21 @@ def validate_repo_invariants(context: TemplateContext, payload: dict[str, Any]) 
     return issues
 
 
-def validate_template_file(path: Path, schema: dict[str, Any]) -> tuple[TemplateContext, list[ValidationIssue]]:
+def validate_template_file(
+    path: Path, schema: dict[str, Any]
+) -> tuple[TemplateContext, list[ValidationIssue]]:
     payload = load_json(path)
     if not isinstance(payload, dict):
         return (
-            TemplateContext(path=path, stem=path.stem, authored_id="", logical_category="", logical_cta_map_key="", examples=(), sections=()),
+            TemplateContext(
+                path=path,
+                stem=path.stem,
+                authored_id="",
+                logical_category="",
+                logical_cta_map_key="",
+                examples=(),
+                sections=(),
+            ),
             [_issue("", "template root must be a JSON object")],
         )
 
@@ -352,7 +417,9 @@ def render_report(
     for context, issues in results:
         status = "ERROR" if issues else "OK"
         label = context.authored_id or "-"
-        lines.append(f"[{status}] {_display_path(context.path)} | template_id={label} | category={context.logical_category or '-'}")
+        lines.append(
+            f"[{status}] {_display_path(context.path)} | template_id={label} | category={context.logical_category or '-'}"
+        )
         for issue in issues:
             prefix = issue.path or "$"
             lines.append(f"  - {prefix}: {issue.message}")

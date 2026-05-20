@@ -7,7 +7,11 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.file_editor.csv_editor import read_csv_file, write_csv_copy, write_csv_file  # noqa: E402
+from ecommerce.file_editor.csv_editor import (
+    read_csv_file,
+    write_csv_copy,
+    write_csv_file,
+)  # noqa: E402
 from ecommerce.file_editor.safe_paths import (  # noqa: E402
     FILE_ROOTS_ENV_VAR,
     UnsafePathError,
@@ -37,7 +41,9 @@ def test_rejecting_paths_outside_safe_roots(tmp_path: Path, monkeypatch) -> None
         resolve_safe_path(outside)
 
 
-def test_rejecting_path_traversal_outside_safe_root(tmp_path: Path, monkeypatch) -> None:
+def test_rejecting_path_traversal_outside_safe_root(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = tmp_path / "safe"
     root.mkdir()
     traversal = root / ".." / "outside.csv"
@@ -47,9 +53,13 @@ def test_rejecting_path_traversal_outside_safe_root(tmp_path: Path, monkeypatch)
         resolve_safe_path(traversal)
 
 
-def test_read_comma_csv_preserves_strings_leading_zeroes_and_missing_cells(tmp_path: Path) -> None:
+def test_read_comma_csv_preserves_strings_leading_zeroes_and_missing_cells(
+    tmp_path: Path,
+) -> None:
     csv_path = tmp_path / "input.csv"
-    csv_path.write_text("model,mpn,name\n005606,ABC123,Product\n123456,,\n", encoding="utf-8-sig")
+    csv_path.write_text(
+        "model,mpn,name\n005606,ABC123,Product\n123456,,\n", encoding="utf-8-sig"
+    )
 
     result = read_csv_file(csv_path)
 

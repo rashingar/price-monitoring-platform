@@ -6,8 +6,24 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
-from .models import FieldDiagnostic, GalleryImage, ParsedProduct, SelectorTraceEntry, SourceProductData, SpecItem, SpecSection
-from .normalize import clean_breadcrumbs, dedupe_urls_preserve_order, make_absolute_url, normalize_for_match, normalize_whitespace, parse_euro_price, safe_text
+from .models import (
+    FieldDiagnostic,
+    GalleryImage,
+    ParsedProduct,
+    SelectorTraceEntry,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+)
+from .normalize import (
+    clean_breadcrumbs,
+    dedupe_urls_preserve_order,
+    make_absolute_url,
+    normalize_for_match,
+    normalize_whitespace,
+    parse_euro_price,
+    safe_text,
+)
 from .skroutz_taxonomy import classify_skroutz_taxonomy, normalize_category_href_slug
 from .utils import utcnow_iso
 
@@ -27,7 +43,9 @@ class BestPriceProductParser:
         product_code = self._extract_product_code(product_json, canonical_url)
         hero_summary = self._extract_summary(soup)
         price_text, price_value = self._extract_price(product_json)
-        category_text, category_href, source_breadcrumbs = self._extract_category(breadcrumb_json, canonical_url)
+        category_text, category_href, source_breadcrumbs = self._extract_category(
+            breadcrumb_json, canonical_url
+        )
         taxonomy_hint = classify_skroutz_taxonomy(
             category_tag_text=category_text,
             category_tag_href=category_href,
@@ -36,12 +54,20 @@ class BestPriceProductParser:
             brand=brand,
         )
         breadcrumbs = clean_breadcrumbs(
-            taxonomy_hint.breadcrumbs if taxonomy_hint and not taxonomy_hint.ambiguous else source_breadcrumbs
+            taxonomy_hint.breadcrumbs
+            if taxonomy_hint and not taxonomy_hint.ambiguous
+            else source_breadcrumbs
         )
         spec_items = self._extract_specs(soup, product_json, brand)
-        spec_sections = [SpecSection(section="Χαρακτηριστικά", items=spec_items)] if spec_items else []
+        spec_sections = (
+            [SpecSection(section="Χαρακτηριστικά", items=spec_items)]
+            if spec_items
+            else []
+        )
         key_specs = spec_items[:8]
-        gallery_images = self._extract_gallery_images(soup, product_json, canonical_url, title)
+        gallery_images = self._extract_gallery_images(
+            soup, product_json, canonical_url, title
+        )
 
         source = SourceProductData(
             source_name="bestprice",
@@ -49,15 +75,25 @@ class BestPriceProductParser:
             url=url,
             canonical_url=canonical_url,
             breadcrumbs=breadcrumbs,
-            skroutz_family=(taxonomy_hint.matched_rule_id.split(":", 1)[0] if taxonomy_hint and taxonomy_hint.matched_rule_id else ""),
+            skroutz_family=(
+                taxonomy_hint.matched_rule_id.split(":", 1)[0]
+                if taxonomy_hint and taxonomy_hint.matched_rule_id
+                else ""
+            ),
             category_tag_text=category_text,
             category_tag_href=category_href,
             category_tag_slug=normalize_category_href_slug(category_href),
-            taxonomy_source_category=taxonomy_hint.source_category if taxonomy_hint else "",
+            taxonomy_source_category=(
+                taxonomy_hint.source_category if taxonomy_hint else ""
+            ),
             taxonomy_match_type=taxonomy_hint.match_type if taxonomy_hint else "",
             taxonomy_rule_id=taxonomy_hint.matched_rule_id if taxonomy_hint else "",
-            taxonomy_ambiguity=bool(taxonomy_hint.ambiguous) if taxonomy_hint else False,
-            taxonomy_escalation_reason=taxonomy_hint.escalation_reason if taxonomy_hint else "",
+            taxonomy_ambiguity=(
+                bool(taxonomy_hint.ambiguous) if taxonomy_hint else False
+            ),
+            taxonomy_escalation_reason=(
+                taxonomy_hint.escalation_reason if taxonomy_hint else ""
+            ),
             taxonomy_tv_inches=taxonomy_hint.tv_inches if taxonomy_hint else None,
             product_code=product_code,
             brand=brand,
@@ -77,10 +113,20 @@ class BestPriceProductParser:
         provenance = {
             "name": title_source,
             "brand": "jsonld.brand" if brand else "missing",
-            "breadcrumbs": "taxonomy_hint" if taxonomy_hint and taxonomy_hint.breadcrumbs else "jsonld.breadcrumb",
-            "gallery_images": "jsonld.image/meta.og:image" if gallery_images else "missing",
-            "spec_sections": "jsonld.additionalProperty" if spec_sections else "missing",
-            "hero_summary": "meta.description/.item-description" if hero_summary else "missing",
+            "breadcrumbs": (
+                "taxonomy_hint"
+                if taxonomy_hint and taxonomy_hint.breadcrumbs
+                else "jsonld.breadcrumb"
+            ),
+            "gallery_images": (
+                "jsonld.image/meta.og:image" if gallery_images else "missing"
+            ),
+            "spec_sections": (
+                "jsonld.additionalProperty" if spec_sections else "missing"
+            ),
+            "hero_summary": (
+                "meta.description/.item-description" if hero_summary else "missing"
+            ),
         }
         diagnostics = {
             key: self._make_diagnostic(getattr(source, field), strategy)
@@ -93,7 +139,11 @@ class BestPriceProductParser:
                 ("hero_summary", "hero_summary", provenance["hero_summary"]),
             ]
         }
-        warnings = ["bestprice_taxonomy_ambiguous:" + taxonomy_hint.escalation_reason] if taxonomy_hint and taxonomy_hint.ambiguous else []
+        warnings = (
+            ["bestprice_taxonomy_ambiguous:" + taxonomy_hint.escalation_reason]
+            if taxonomy_hint and taxonomy_hint.ambiguous
+            else []
+        )
         if source_breadcrumbs and taxonomy_hint and taxonomy_hint.breadcrumbs:
             warnings.append("bestprice_source_breadcrumbs_mapped")
 
@@ -133,21 +183,29 @@ class BestPriceProductParser:
             out.extend(item for item in graph if isinstance(item, dict))
         return out
 
-    def _find_jsonld_type(self, items: list[dict[str, Any]], type_name: str) -> dict[str, Any]:
+    def _find_jsonld_type(
+        self, items: list[dict[str, Any]], type_name: str
+    ) -> dict[str, Any]:
         for item in items:
             raw_type = item.get("@type")
-            if raw_type == type_name or (isinstance(raw_type, list) and type_name in raw_type):
+            if raw_type == type_name or (
+                isinstance(raw_type, list) and type_name in raw_type
+            ):
                 return item
         return {}
 
-    def _extract_canonical_url(self, soup: BeautifulSoup, product_json: dict[str, Any], fallback_url: str) -> str:
+    def _extract_canonical_url(
+        self, soup: BeautifulSoup, product_json: dict[str, Any], fallback_url: str
+    ) -> str:
         canonical = normalize_whitespace(str(product_json.get("url") or ""))
         if not canonical:
             node = soup.select_one("link[rel='canonical']")
             canonical = normalize_whitespace(node.get("href", "") if node else "")
         return make_absolute_url(canonical or fallback_url, fallback_url)
 
-    def _extract_title(self, soup: BeautifulSoup, product_json: dict[str, Any]) -> tuple[str, str]:
+    def _extract_title(
+        self, soup: BeautifulSoup, product_json: dict[str, Any]
+    ) -> tuple[str, str]:
         title = normalize_whitespace(str(product_json.get("name") or ""))
         if title:
             return title, "jsonld.name"
@@ -189,28 +247,40 @@ class BestPriceProductParser:
         offers = product_json.get("offers")
         price = ""
         if isinstance(offers, dict):
-            price = normalize_whitespace(str(offers.get("lowPrice") or offers.get("price") or ""))
+            price = normalize_whitespace(
+                str(offers.get("lowPrice") or offers.get("price") or "")
+            )
         if not price:
             return "", None
         price_text = f"{price} €"
         return price_text, parse_euro_price(price_text)
 
-    def _extract_category(self, breadcrumb_json: dict[str, Any], base_url: str) -> tuple[str, str, list[str]]:
+    def _extract_category(
+        self, breadcrumb_json: dict[str, Any], base_url: str
+    ) -> tuple[str, str, list[str]]:
         crumbs: list[str] = ["Αρχική"]
         href = ""
-        for entry in breadcrumb_json.get("itemListElement", []) if isinstance(breadcrumb_json.get("itemListElement"), list) else []:
+        for entry in (
+            breadcrumb_json.get("itemListElement", [])
+            if isinstance(breadcrumb_json.get("itemListElement"), list)
+            else []
+        ):
             item = entry.get("item") if isinstance(entry, dict) else None
             if not isinstance(item, dict):
                 continue
             name = normalize_whitespace(str(item.get("name") or ""))
             if name:
                 crumbs.append(name)
-            raw_href = normalize_whitespace(str(item.get("@id") or item.get("url") or ""))
+            raw_href = normalize_whitespace(
+                str(item.get("@id") or item.get("url") or "")
+            )
             if raw_href:
                 href = make_absolute_url(raw_href, base_url)
         return (crumbs[-1] if len(crumbs) > 1 else "", href, clean_breadcrumbs(crumbs))
 
-    def _extract_specs(self, soup: BeautifulSoup, product_json: dict[str, Any], brand: str) -> list[SpecItem]:
+    def _extract_specs(
+        self, soup: BeautifulSoup, product_json: dict[str, Any], brand: str
+    ) -> list[SpecItem]:
         items: list[SpecItem] = []
         if brand:
             items.append(SpecItem(label="Κατασκευαστής", value=brand))
@@ -257,7 +327,13 @@ class BestPriceProductParser:
                 items.append(SpecItem(label=label, value=value))
         return items
 
-    def _extract_gallery_images(self, soup: BeautifulSoup, product_json: dict[str, Any], base_url: str, title: str) -> list[GalleryImage]:
+    def _extract_gallery_images(
+        self,
+        soup: BeautifulSoup,
+        product_json: dict[str, Any],
+        base_url: str,
+        title: str,
+    ) -> list[GalleryImage]:
         urls: list[str] = []
         raw_images = product_json.get("image")
         if isinstance(raw_images, str):
@@ -267,8 +343,13 @@ class BestPriceProductParser:
         meta = soup.select_one("meta[property='og:image']")
         if meta is not None:
             urls.append(str(meta.get("content") or ""))
-        image_urls = dedupe_urls_preserve_order([make_absolute_url(url, base_url) for url in urls])
-        return [GalleryImage(url=image_url, alt=title, position=index) for index, image_url in enumerate(image_urls, start=1)]
+        image_urls = dedupe_urls_preserve_order(
+            [make_absolute_url(url, base_url) for url in urls]
+        )
+        return [
+            GalleryImage(url=image_url, alt=title, position=index)
+            for index, image_url in enumerate(image_urls, start=1)
+        ]
 
     def _collect_missing_fields(self, source: SourceProductData) -> list[str]:
         missing: list[str] = []
@@ -287,7 +368,17 @@ class BestPriceProductParser:
         return missing
 
     def _collect_critical_missing(self, source: SourceProductData) -> list[str]:
-        critical = [field for field in ["name", "brand", "breadcrumbs", "gallery_images", "spec_sections"] if field in self._collect_missing_fields(source)]
+        critical = [
+            field
+            for field in [
+                "name",
+                "brand",
+                "breadcrumbs",
+                "gallery_images",
+                "spec_sections",
+            ]
+            if field in self._collect_missing_fields(source)
+        ]
         if source.taxonomy_ambiguity:
             critical.append("supported_family")
         return sorted(set(critical))
@@ -304,5 +395,7 @@ class BestPriceProductParser:
             selected_strategy=selected_strategy,
             value_present=present,
             value_preview=normalize_whitespace(preview),
-            selector_trace=[SelectorTraceEntry(strategy=selected_strategy, success=present)],
+            selector_trace=[
+                SelectorTraceEntry(strategy=selected_strategy, success=present)
+            ],
         )

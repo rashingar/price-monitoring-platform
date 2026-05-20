@@ -29,7 +29,9 @@ def export_openapi_snapshot(output_path: Path = DEFAULT_OUTPUT_PATH) -> Path:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Export the Ecommerce OpenAPI contract snapshot.")
+    parser = argparse.ArgumentParser(
+        description="Export the Ecommerce OpenAPI contract snapshot."
+    )
     parser.add_argument(
         "--output",
         type=Path,

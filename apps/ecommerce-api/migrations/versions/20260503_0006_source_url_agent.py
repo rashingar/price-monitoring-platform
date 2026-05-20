@@ -11,7 +11,6 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-
 revision = "20260503_0006"
 down_revision = "20260503_0005"
 branch_labels = None
@@ -31,7 +30,9 @@ def upgrade() -> None:
         sa.Column("selected_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("candidate_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("matched_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("needs_review_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "needs_review_count", sa.Integer(), nullable=False, server_default="0"
+        ),
         sa.Column("not_found_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("error_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
@@ -39,10 +40,25 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("uq_source_url_discovery_runs_run_id", "source_url_discovery_runs", ["run_id"], unique=True)
-    op.create_index("ix_source_url_discovery_runs_source_name", "source_url_discovery_runs", ["source_name"])
-    op.create_index("ix_source_url_discovery_runs_status", "source_url_discovery_runs", ["status"])
-    op.create_index("ix_source_url_discovery_runs_created_at", "source_url_discovery_runs", ["created_at"])
+    op.create_index(
+        "uq_source_url_discovery_runs_run_id",
+        "source_url_discovery_runs",
+        ["run_id"],
+        unique=True,
+    )
+    op.create_index(
+        "ix_source_url_discovery_runs_source_name",
+        "source_url_discovery_runs",
+        ["source_name"],
+    )
+    op.create_index(
+        "ix_source_url_discovery_runs_status", "source_url_discovery_runs", ["status"]
+    )
+    op.create_index(
+        "ix_source_url_discovery_runs_created_at",
+        "source_url_discovery_runs",
+        ["created_at"],
+    )
 
     op.create_table(
         "source_url_candidates",
@@ -68,7 +84,12 @@ def upgrade() -> None:
         sa.Column("confidence_score", sa.Numeric(5, 4), nullable=True),
         sa.Column("match_method", sa.String(), nullable=False, server_default=""),
         sa.Column("evidence_json", _json_type(), nullable=True),
-        sa.Column("competing_candidates_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "competing_candidates_count",
+            sa.Integer(),
+            nullable=False,
+            server_default="0",
+        ),
         sa.Column("searched_queries_json", _json_type(), nullable=True),
         sa.Column("status", sa.String(), nullable=False, server_default="pending"),
         sa.Column("reviewed_by", sa.String(), nullable=True),
@@ -80,28 +101,65 @@ def upgrade() -> None:
             "status IN ('pending', 'accepted', 'rejected', 'needs_review', 'not_found', 'error')",
             name="ck_source_url_candidates_status",
         ),
-        sa.ForeignKeyConstraint(["catalog_product_id"], ["catalog_products.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["catalog_product_id"], ["catalog_products.id"], ondelete="SET NULL"
+        ),
     )
-    op.create_index("ix_source_url_candidates_run_id", "source_url_candidates", ["run_id"])
-    op.create_index("ix_source_url_candidates_catalog_product_id", "source_url_candidates", ["catalog_product_id"])
-    op.create_index("ix_source_url_candidates_source_name", "source_url_candidates", ["source_name"])
-    op.create_index("ix_source_url_candidates_match_status", "source_url_candidates", ["match_status"])
-    op.create_index("ix_source_url_candidates_status", "source_url_candidates", ["status"])
-    op.create_index("ix_source_url_candidates_created_at", "source_url_candidates", ["created_at"])
+    op.create_index(
+        "ix_source_url_candidates_run_id", "source_url_candidates", ["run_id"]
+    )
+    op.create_index(
+        "ix_source_url_candidates_catalog_product_id",
+        "source_url_candidates",
+        ["catalog_product_id"],
+    )
+    op.create_index(
+        "ix_source_url_candidates_source_name", "source_url_candidates", ["source_name"]
+    )
+    op.create_index(
+        "ix_source_url_candidates_match_status",
+        "source_url_candidates",
+        ["match_status"],
+    )
+    op.create_index(
+        "ix_source_url_candidates_status", "source_url_candidates", ["status"]
+    )
+    op.create_index(
+        "ix_source_url_candidates_created_at", "source_url_candidates", ["created_at"]
+    )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_source_url_candidates_created_at", table_name="source_url_candidates")
+    op.drop_index(
+        "ix_source_url_candidates_created_at", table_name="source_url_candidates"
+    )
     op.drop_index("ix_source_url_candidates_status", table_name="source_url_candidates")
-    op.drop_index("ix_source_url_candidates_match_status", table_name="source_url_candidates")
-    op.drop_index("ix_source_url_candidates_source_name", table_name="source_url_candidates")
-    op.drop_index("ix_source_url_candidates_catalog_product_id", table_name="source_url_candidates")
+    op.drop_index(
+        "ix_source_url_candidates_match_status", table_name="source_url_candidates"
+    )
+    op.drop_index(
+        "ix_source_url_candidates_source_name", table_name="source_url_candidates"
+    )
+    op.drop_index(
+        "ix_source_url_candidates_catalog_product_id",
+        table_name="source_url_candidates",
+    )
     op.drop_index("ix_source_url_candidates_run_id", table_name="source_url_candidates")
     op.drop_table("source_url_candidates")
-    op.drop_index("ix_source_url_discovery_runs_created_at", table_name="source_url_discovery_runs")
-    op.drop_index("ix_source_url_discovery_runs_status", table_name="source_url_discovery_runs")
-    op.drop_index("ix_source_url_discovery_runs_source_name", table_name="source_url_discovery_runs")
-    op.drop_index("uq_source_url_discovery_runs_run_id", table_name="source_url_discovery_runs")
+    op.drop_index(
+        "ix_source_url_discovery_runs_created_at",
+        table_name="source_url_discovery_runs",
+    )
+    op.drop_index(
+        "ix_source_url_discovery_runs_status", table_name="source_url_discovery_runs"
+    )
+    op.drop_index(
+        "ix_source_url_discovery_runs_source_name",
+        table_name="source_url_discovery_runs",
+    )
+    op.drop_index(
+        "uq_source_url_discovery_runs_run_id", table_name="source_url_discovery_runs"
+    )
     op.drop_table("source_url_discovery_runs")
 
 

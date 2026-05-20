@@ -30,11 +30,17 @@ def resolve_required_headers(
             raise ValueError(f"missing required column: {canonical}")
         if len(matches) > 1:
             joined = ", ".join(matches)
-            raise ValueError(f"multiple columns matched required field '{canonical}': {joined}")
+            raise ValueError(
+                f"multiple columns matched required field '{canonical}': {joined}"
+            )
         canonical_to_actual[canonical] = matches[0]
 
-    required_actual_headers = {canonical_to_actual[column] for column in required_columns}
-    extra_headers = [header for header in headers if header not in required_actual_headers]
+    required_actual_headers = {
+        canonical_to_actual[column] for column in required_columns
+    }
+    extra_headers = [
+        header for header in headers if header not in required_actual_headers
+    ]
     return HeaderResolution(
         canonical_to_actual=canonical_to_actual,
         extra_headers=extra_headers,

@@ -21,17 +21,24 @@ def detect_source(url: str) -> str:
         return "skroutz"
     if host in BESTPRICE_DOMAINS:
         return "bestprice"
-    raise ValueError("Input URL must be an Electronet, Skroutz, or BestPrice product URL")
+    raise ValueError(
+        "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+    )
 
 
 def is_skroutz_product_url(url: str) -> bool:
     parsed = urlparse(url)
-    return parsed.netloc.strip().lower() in SKROUTZ_DOMAINS and parsed.path.startswith(SKROUTZ_PRODUCT_PATH_PREFIX)
+    return parsed.netloc.strip().lower() in SKROUTZ_DOMAINS and parsed.path.startswith(
+        SKROUTZ_PRODUCT_PATH_PREFIX
+    )
 
 
 def is_bestprice_product_url(url: str) -> bool:
     parsed = urlparse(url)
-    return parsed.netloc.strip().lower() in BESTPRICE_DOMAINS and parsed.path.startswith(BESTPRICE_PRODUCT_PATH_PREFIX)
+    return (
+        parsed.netloc.strip().lower() in BESTPRICE_DOMAINS
+        and parsed.path.startswith(BESTPRICE_PRODUCT_PATH_PREFIX)
+    )
 
 
 def validate_url_scope(url: str) -> tuple[str, bool, str]:

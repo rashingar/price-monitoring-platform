@@ -43,10 +43,16 @@ def discover_repo_root(explicit_repo_root: str | None) -> Path:
         if candidate in seen:
             continue
         seen.add(candidate)
-        if (candidate / ".git").exists() or (candidate / "products").is_dir() or (candidate / "work").is_dir():
+        if (
+            (candidate / ".git").exists()
+            or (candidate / "products").is_dir()
+            or (candidate / "work").is_dir()
+        ):
             return candidate
 
-    raise ImportErrorRuntime("Could not auto-detect repo root. Pass --repo-root or set OPENCART_PIPELINE_REPO_ROOT.")
+    raise ImportErrorRuntime(
+        "Could not auto-detect repo root. Pass --repo-root or set OPENCART_PIPELINE_REPO_ROOT."
+    )
 
 
 def resolve_csv_path(repo_root: Path, model: str, explicit_csv: str | None) -> Path:
@@ -79,7 +85,9 @@ def build_admin_index(store_base: str, admin_path: str) -> str:
     return f"{store_base.rstrip('/')}/{normalized_admin_path.lstrip('/')}"
 
 
-def csv_contract_check(csv_path: Path, model: str, *, allow_partial_csv: bool = False) -> dict[str, Any]:
+def csv_contract_check(
+    csv_path: Path, model: str, *, allow_partial_csv: bool = False
+) -> dict[str, Any]:
     with csv_path.open("r", encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
         rows = list(reader)
@@ -88,7 +96,9 @@ def csv_contract_check(csv_path: Path, model: str, *, allow_partial_csv: bool = 
     if not rows:
         raise ImportErrorRuntime(f"CSV has no data rows: {csv_path}")
 
-    required = ["model"] if allow_partial_csv else ["model", "image", "additional_image"]
+    required = (
+        ["model"] if allow_partial_csv else ["model", "image", "additional_image"]
+    )
     missing = [h for h in required if h not in headers]
     if missing:
         raise ImportErrorRuntime(f"CSV missing required columns: {missing}")
@@ -116,28 +126,46 @@ def csv_contract_check(csv_path: Path, model: str, *, allow_partial_csv: bool = 
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Automate Karapuz CSV Product Import via Playwright.")
+    parser = argparse.ArgumentParser(
+        description="Automate Karapuz CSV Product Import via Playwright."
+    )
     parser.add_argument("--model", required=True, help="6-digit product model")
     parser.add_argument("--repo-root", default=None, help="Optional repo root")
-    parser.add_argument("--csv-file", default=None, help="Optional explicit CSV file path")
+    parser.add_argument(
+        "--csv-file", default=None, help="Optional explicit CSV file path"
+    )
     parser.add_argument("--store-base", default=None)
     parser.add_argument("--admin-path", default=None)
     parser.add_argument("--username", default=None)
     parser.add_argument("--password", default=None)
     parser.add_argument("--profile", default=None)
-    parser.add_argument("--headless", dest="headless", action="store_true", default=DEFAULT_HEADLESS)
+    parser.add_argument(
+        "--headless", dest="headless", action="store_true", default=DEFAULT_HEADLESS
+    )
     parser.add_argument("--headed", dest="headless", action="store_false")
     parser.add_argument("--slow-mo-ms", type=int, default=0)
-    parser.add_argument("--dry-run", action="store_true", help="Stop on Step 2 before final import")
-    parser.add_argument("--allow-partial-csv", action="store_true", help="Allow update CSVs that contain only model plus selected fields")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Stop on Step 2 before final import"
+    )
+    parser.add_argument(
+        "--allow-partial-csv",
+        action="store_true",
+        help="Allow update CSVs that contain only model plus selected fields",
+    )
     parser.add_argument("--timeout-ms", type=int, default=60000)
     parser.add_argument("--poll-interval-sec", type=float, default=2.0)
     parser.add_argument("--max-wait-sec", type=int, default=900)
-    parser.add_argument("--report-file", default=None, help="Optional report file. Default: work/{model}/import.opencart.json")
+    parser.add_argument(
+        "--report-file",
+        default=None,
+        help="Optional report file. Default: work/{model}/import.opencart.json",
+    )
     return parser.parse_args()
 
 
-def login(page, admin_index: str, username: str, password: str, timeout_ms: int) -> None:
+def login(
+    page, admin_index: str, username: str, password: str, timeout_ms: int
+) -> None:
     login_url = f"{admin_index}?route=common/login"
     page.goto(login_url, wait_until="domcontentloaded", timeout=timeout_ms)
 
@@ -152,7 +180,9 @@ def login(page, admin_index: str, username: str, password: str, timeout_ms: int)
     page.wait_for_load_state("networkidle", timeout=timeout_ms)
 
     if "route=common/login" in page.url:
-        raise ImportErrorRuntime("Admin login appears to have failed; still on login route.")
+        raise ImportErrorRuntime(
+            "Admin login appears to have failed; still on login route."
+        )
 
 
 def _append_session_token(target_url: str, current_url: str) -> str:
@@ -174,7 +204,9 @@ def open_import_page(page, admin_index: str, profile: str, timeout_ms: int) -> N
     page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
     page.wait_for_load_state("networkidle", timeout=timeout_ms)
 
-    page.locator('select[name="profile_id"]').wait_for(state="visible", timeout=timeout_ms)
+    page.locator('select[name="profile_id"]').wait_for(
+        state="visible", timeout=timeout_ms
+    )
     page.locator('select[name="profile_id"]').select_option(label=profile)
     page.locator('input[value="Load"], button:has-text("Load")').first.click()
     page.wait_for_load_state("networkidle", timeout=timeout_ms)
@@ -186,30 +218,36 @@ def open_import_page(page, admin_index: str, profile: str, timeout_ms: int) -> N
         pass
 
 
-
 def step1_upload_and_next(page, csv_path: Path, timeout_ms: int) -> None:
-    page.locator('#input_file, input[type="file"][name="file"]').set_input_files(str(csv_path))
+    page.locator('#input_file, input[type="file"][name="file"]').set_input_files(
+        str(csv_path)
+    )
 
     # ensure Local computer is selected if radio exists
-    local_radio = page.locator('input[type="radio"][value="local"], input[type="radio"][value="local computer"]')
+    local_radio = page.locator(
+        'input[type="radio"][value="local"], input[type="radio"][value="local computer"]'
+    )
     if local_radio.count() > 0:
         local_radio.first.check(force=True)
 
-    next_button = page.locator('button[form="form-step1"]:has-text("Next"), button[type="submit"][form="form-step1"]')
+    next_button = page.locator(
+        'button[form="form-step1"]:has-text("Next"), button[type="submit"][form="form-step1"]'
+    )
     next_button.first.click()
     page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
     page.wait_for_load_state("networkidle", timeout=timeout_ms)
 
     if "step2" not in page.url:
-        raise ImportErrorRuntime(f"Expected to reach Step 2, but current URL is: {page.url}")
-
+        raise ImportErrorRuntime(
+            f"Expected to reach Step 2, but current URL is: {page.url}"
+        )
 
 
 def assert_step2_mapping(page, profile: str, timeout_ms: int) -> dict[str, Any]:
-    page.locator('#form-step2').wait_for(state="visible", timeout=timeout_ms)
+    page.locator("#form-step2").wait_for(state="visible", timeout=timeout_ms)
     model_select = page.locator('select[name="fields[model]"]')
     model_select.wait_for(state="visible", timeout=timeout_ms)
-    selected_text = model_select.locator('option:checked').inner_text().strip()
+    selected_text = model_select.locator("option:checked").inner_text().strip()
 
     profile_name = page.locator('input[name="profile_name"]').input_value().strip()
 
@@ -221,20 +259,24 @@ def assert_step2_mapping(page, profile: str, timeout_ms: int) -> dict[str, Any]:
     }
 
 
-
 def step2_next(page, timeout_ms: int) -> None:
-    next_button = page.locator('button[form="form-step2"]:has-text("Next"), button[type="submit"][form="form-step2"]')
+    next_button = page.locator(
+        'button[form="form-step2"]:has-text("Next"), button[type="submit"][form="form-step2"]'
+    )
     next_button.first.click()
     page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
     page.wait_for_load_state("networkidle", timeout=timeout_ms)
 
     if "step3" not in page.url:
-        raise ImportErrorRuntime(f"Expected to reach Step 3, but current URL is: {page.url}")
+        raise ImportErrorRuntime(
+            f"Expected to reach Step 3, but current URL is: {page.url}"
+        )
 
 
-
-def step3_monitor(page, timeout_ms: int, poll_interval_sec: float, max_wait_sec: int) -> dict[str, Any]:
-    page.locator('#import_status').wait_for(state='visible', timeout=timeout_ms)
+def step3_monitor(
+    page, timeout_ms: int, poll_interval_sec: float, max_wait_sec: int
+) -> dict[str, Any]:
+    page.locator("#import_status").wait_for(state="visible", timeout=timeout_ms)
 
     started_at = time.time()
     final_status = None
@@ -245,60 +287,74 @@ def step3_monitor(page, timeout_ms: int, poll_interval_sec: float, max_wait_sec:
     while True:
         elapsed = time.time() - started_at
         if elapsed > max_wait_sec:
-            raise ImportErrorRuntime(f"Timed out waiting for import completion after {max_wait_sec}s")
+            raise ImportErrorRuntime(
+                f"Timed out waiting for import completion after {max_wait_sec}s"
+            )
 
-        status_text = page.locator('#import_status').inner_text().strip()
+        status_text = page.locator("#import_status").inner_text().strip()
         try:
-            messages_html = page.locator('#scroll').inner_html()
+            messages_html = page.locator("#scroll").inner_html()
         except Exception:
             messages_html = ""
 
         # collect visible counters from left column table, if present
         labels = [
-            'Completion at', 'Time Passed', 'Lines Processed', 'Products Created', 'Products Updated',
-            'Products Deleted', 'Products Disabled', 'Categories Created'
+            "Completion at",
+            "Time Passed",
+            "Lines Processed",
+            "Products Created",
+            "Products Updated",
+            "Products Deleted",
+            "Products Disabled",
+            "Categories Created",
         ]
         for label in labels:
             cell = page.locator(f'text="{label}"').first
             if cell.count() > 0:
                 try:
-                    row = cell.locator('xpath=ancestor::tr[1]')
-                    tds = row.locator('td').all_inner_texts()
+                    row = cell.locator("xpath=ancestor::tr[1]")
+                    tds = row.locator("td").all_inner_texts()
                     if len(tds) >= 2:
                         counters[label] = tds[1].strip()
                 except Exception:
                     pass
 
         # derive status from buttons/displayed text
-        if page.locator('#buttons_completed:visible').count() > 0 or 'complete' in status_text.lower():
-            final_status = 'completed'
+        if (
+            page.locator("#buttons_completed:visible").count() > 0
+            or "complete" in status_text.lower()
+        ):
+            final_status = "completed"
             break
-        if page.locator('#buttons_stopped:visible').count() > 0 or 'stopped' in status_text.lower():
-            final_status = 'stopped'
+        if (
+            page.locator("#buttons_stopped:visible").count() > 0
+            or "stopped" in status_text.lower()
+        ):
+            final_status = "stopped"
             break
-        if 'server script error' in status_text.lower():
-            final_status = 'fatal_error'
+        if "server script error" in status_text.lower():
+            final_status = "fatal_error"
             break
-        if 'fatal import error' in status_text.lower():
-            final_status = 'error'
+        if "fatal import error" in status_text.lower():
+            final_status = "error"
             break
 
         time.sleep(poll_interval_sec)
 
     return {
-        'final_status': final_status,
-        'status_text': status_text,
-        'elapsed_sec': round(time.time() - started_at, 2),
-        'messages_html': messages_html or '',
-        'counters': counters,
+        "final_status": final_status,
+        "status_text": status_text,
+        "elapsed_sec": round(time.time() - started_at, 2),
+        "messages_html": messages_html or "",
+        "counters": counters,
     }
-
 
 
 def write_report(report_path: Path, payload: dict[str, Any]) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
+    report_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def main() -> int:
@@ -317,8 +373,12 @@ def main() -> int:
             "Missing admin credentials. Pass --username/--password or set OPENCART_ADMIN_USER and OPENCART_ADMIN_PASS."
         )
     csv_path = resolve_csv_path(repo_root, args.model, args.csv_file)
-    contract = csv_contract_check(csv_path, args.model, allow_partial_csv=args.allow_partial_csv)
-    admin_index = build_admin_index(resolved_config["store_base"], resolved_config["admin_path"])
+    contract = csv_contract_check(
+        csv_path, args.model, allow_partial_csv=args.allow_partial_csv
+    )
+    admin_index = build_admin_index(
+        resolved_config["store_base"], resolved_config["admin_path"]
+    )
     report_path = (
         Path(args.report_file).expanduser().resolve()
         if args.report_file
@@ -326,22 +386,28 @@ def main() -> int:
     )
 
     result: dict[str, Any] = {
-        'ok': False,
-        'dry_run': bool(args.dry_run),
-        'admin_index': admin_index,
-        'profile': resolved_config["profile"],
-        'csv_file': str(csv_path),
-        'csv_contract': contract,
-        'model': args.model,
+        "ok": False,
+        "dry_run": bool(args.dry_run),
+        "admin_index": admin_index,
+        "profile": resolved_config["profile"],
+        "csv_file": str(csv_path),
+        "csv_contract": contract,
+        "model": args.model,
     }
 
-    print(json.dumps({
-        'model': args.model,
-        'csv_file': str(csv_path),
-        'profile': resolved_config["profile"],
-        'admin_index': admin_index,
-        'dry_run': args.dry_run,
-    }, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "model": args.model,
+                "csv_file": str(csv_path),
+                "profile": resolved_config["profile"],
+                "admin_index": admin_index,
+                "dry_run": args.dry_run,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=args.headless, slow_mo=args.slow_mo_ms)
@@ -349,38 +415,54 @@ def main() -> int:
         page = context.new_page()
 
         try:
-            login(page, admin_index, resolved_config["username"], resolved_config["password"], args.timeout_ms)
-            result['login'] = {'ok': True, 'url_after_login': page.url}
+            login(
+                page,
+                admin_index,
+                resolved_config["username"],
+                resolved_config["password"],
+                args.timeout_ms,
+            )
+            result["login"] = {"ok": True, "url_after_login": page.url}
 
-            open_import_page(page, admin_index, resolved_config["profile"], args.timeout_ms)
-            result['step1_opened'] = {'ok': True, 'url': page.url}
+            open_import_page(
+                page, admin_index, resolved_config["profile"], args.timeout_ms
+            )
+            result["step1_opened"] = {"ok": True, "url": page.url}
 
             step1_upload_and_next(page, csv_path, args.timeout_ms)
-            step2_info = assert_step2_mapping(page, resolved_config["profile"], args.timeout_ms)
-            result['step2'] = step2_info
+            step2_info = assert_step2_mapping(
+                page, resolved_config["profile"], args.timeout_ms
+            )
+            result["step2"] = step2_info
 
-            if not step2_info['mapping_ok']:
+            if not step2_info["mapping_ok"]:
                 raise ImportErrorRuntime(
                     f"Unexpected Step 2 mapping/profile state: {json.dumps(step2_info, ensure_ascii=False)}"
                 )
 
             if args.dry_run:
-                result['ok'] = True
-                result['message'] = 'Dry run passed. Stopped on Step 2 before final import trigger.'
+                result["ok"] = True
+                result["message"] = (
+                    "Dry run passed. Stopped on Step 2 before final import trigger."
+                )
                 write_report(report_path, result)
                 print(f"Dry run OK. Report written to: {report_path}")
                 return 0
 
             step2_next(page, args.timeout_ms)
-            result['step3_opened'] = {'ok': True, 'url': page.url}
+            result["step3_opened"] = {"ok": True, "url": page.url}
 
-            monitor = step3_monitor(page, args.timeout_ms, args.poll_interval_sec, args.max_wait_sec)
-            result['step3'] = monitor
+            monitor = step3_monitor(
+                page, args.timeout_ms, args.poll_interval_sec, args.max_wait_sec
+            )
+            result["step3"] = monitor
 
-            if monitor['final_status'] != 'completed':
-                raise ImportErrorRuntime(f"Import did not complete successfully: {monitor['final_status']}")
+            if monitor["final_status"] != "completed":
+                raise ImportErrorRuntime(
+                    f"Import did not complete successfully: {monitor['final_status']}"
+                )
 
-            result['ok'] = True
+            result["ok"] = True
             write_report(report_path, result)
             print(f"Import OK. Report written to: {report_path}")
             return 0
@@ -389,7 +471,7 @@ def main() -> int:
             browser.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except ImportErrorRuntime as exc:

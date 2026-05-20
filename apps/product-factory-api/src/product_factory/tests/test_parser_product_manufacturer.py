@@ -79,7 +79,10 @@ def test_manufacturer_product_parser_extracts_tefal_product_data() -> None:
     )
     flattened = {
         normalize_for_match(item.label): item.value
-        for section in [*parsed.source.spec_sections, *parsed.source.manufacturer_spec_sections]
+        for section in [
+            *parsed.source.spec_sections,
+            *parsed.source.manufacturer_spec_sections,
+        ]
         for item in section.items
     }
 
@@ -97,4 +100,3 @@ def test_manufacturer_product_parser_extracts_tefal_product_data() -> None:
     assert flattened[normalize_for_match("Διατροφικές Επιλογές")] == "Vegan"
     assert flattened[normalize_for_match("Τάση")] == "220-240 V"
     assert parsed.critical_missing == []
-

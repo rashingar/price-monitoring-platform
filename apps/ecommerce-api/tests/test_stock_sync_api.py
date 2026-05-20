@@ -13,15 +13,29 @@ from ecommerce.api.app import create_app
 def _client(monkeypatch, tmp_path: Path, *, enabled: bool = False) -> TestClient:
     monkeypatch.setenv("ECOMMERCE_STOCK_SYNC_ENABLED", "true" if enabled else "false")
     monkeypatch.setenv("ECOMMERCE_STOCK_SYNC_SERVER", "ERPSERVER")
-    monkeypatch.setenv("ECOMMERCE_STOCK_SYNC_TASK_REVIEW", "OpenCartStockSync-ReviewOnly")
-    monkeypatch.setenv("ECOMMERCE_STOCK_SYNC_TASK_DRY_RUN", "OpenCartStockSync-DryRunImport")
-    monkeypatch.setenv("ECOMMERCE_STOCK_SYNC_TASK_IMPORT", "OpenCartStockSync-RunImport")
-    monkeypatch.setenv("ECOMMERCE_STOCK_SYNC_LATEST_REVIEW_PATH", str(tmp_path / "missing-review.json"))
-    monkeypatch.setattr(routes_stock_sync.shutil, "which", lambda name: "schtasks.exe" if name == "schtasks" else None)
+    monkeypatch.setenv(
+        "ECOMMERCE_STOCK_SYNC_TASK_REVIEW", "OpenCartStockSync-ReviewOnly"
+    )
+    monkeypatch.setenv(
+        "ECOMMERCE_STOCK_SYNC_TASK_DRY_RUN", "OpenCartStockSync-DryRunImport"
+    )
+    monkeypatch.setenv(
+        "ECOMMERCE_STOCK_SYNC_TASK_IMPORT", "OpenCartStockSync-RunImport"
+    )
+    monkeypatch.setenv(
+        "ECOMMERCE_STOCK_SYNC_LATEST_REVIEW_PATH", str(tmp_path / "missing-review.json")
+    )
+    monkeypatch.setattr(
+        routes_stock_sync.shutil,
+        "which",
+        lambda name: "schtasks.exe" if name == "schtasks" else None,
+    )
     return TestClient(create_app())
 
 
-def test_readiness_reports_disabled_without_touching_schtasks(monkeypatch, tmp_path: Path) -> None:
+def test_readiness_reports_disabled_without_touching_schtasks(
+    monkeypatch, tmp_path: Path
+) -> None:
     client = _client(monkeypatch, tmp_path, enabled=False)
 
     response = client.get("/api/stock-sync/readiness")
@@ -54,7 +68,9 @@ def test_review_mode_maps_to_review_task(monkeypatch, tmp_path: Path) -> None:
 
     def fake_run(args, **kwargs):  # noqa: ANN001, ANN003
         calls.append(list(args))
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="SUCCESS", stderr="")
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="SUCCESS", stderr=""
+        )
 
     monkeypatch.setattr(routes_stock_sync.subprocess, "run", fake_run)
     client = _client(monkeypatch, tmp_path, enabled=True)
@@ -62,9 +78,14 @@ def test_review_mode_maps_to_review_task(monkeypatch, tmp_path: Path) -> None:
     response = client.post("/api/stock-sync/runs", json={"mode": "review"})
 
     assert response.status_code == 200
-    assert calls == [["schtasks", "/Run", "/S", "ERPSERVER", "/TN", "OpenCartStockSync-ReviewOnly"]]
+    assert calls == [
+        ["schtasks", "/Run", "/S", "ERPSERVER", "/TN", "OpenCartStockSync-ReviewOnly"]
+    ]
     assert response.json()["task_name"] == "OpenCartStockSync-ReviewOnly"
-    assert response.json()["message"] == "Scheduled task triggered. Check email for the final report."
+    assert (
+        response.json()["message"]
+        == "Scheduled task triggered. Check email for the final report."
+    )
 
 
 def test_dry_run_mode_maps_to_dry_run_task(monkeypatch, tmp_path: Path) -> None:
@@ -72,7 +93,9 @@ def test_dry_run_mode_maps_to_dry_run_task(monkeypatch, tmp_path: Path) -> None:
 
     def fake_run(args, **kwargs):  # noqa: ANN001, ANN003
         calls.append(list(args))
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
 
     monkeypatch.setattr(routes_stock_sync.subprocess, "run", fake_run)
     client = _client(monkeypatch, tmp_path, enabled=True)
@@ -80,7 +103,9 @@ def test_dry_run_mode_maps_to_dry_run_task(monkeypatch, tmp_path: Path) -> None:
     response = client.post("/api/stock-sync/runs", json={"mode": "dry_run"})
 
     assert response.status_code == 200
-    assert calls == [["schtasks", "/Run", "/S", "ERPSERVER", "/TN", "OpenCartStockSync-DryRunImport"]]
+    assert calls == [
+        ["schtasks", "/Run", "/S", "ERPSERVER", "/TN", "OpenCartStockSync-DryRunImport"]
+    ]
     assert response.json()["task_name"] == "OpenCartStockSync-DryRunImport"
 
 
@@ -90,13 +115,17 @@ def test_import_mode_requires_confirmation(monkeypatch, tmp_path: Path) -> None:
     rejected = client.post("/api/stock-sync/runs", json={"mode": "import"})
 
     assert rejected.status_code == 400
-    assert rejected.json()["detail"]["code"] == "stock_sync_import_confirmation_required"
+    assert (
+        rejected.json()["detail"]["code"] == "stock_sync_import_confirmation_required"
+    )
 
     calls: list[list[str]] = []
 
     def fake_run(args, **kwargs):  # noqa: ANN001, ANN003
         calls.append(list(args))
-        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(
+            args=args, returncode=0, stdout="", stderr=""
+        )
 
     monkeypatch.setattr(routes_stock_sync.subprocess, "run", fake_run)
 
@@ -106,7 +135,9 @@ def test_import_mode_requires_confirmation(monkeypatch, tmp_path: Path) -> None:
     )
 
     assert accepted.status_code == 200
-    assert calls == [["schtasks", "/Run", "/S", "ERPSERVER", "/TN", "OpenCartStockSync-RunImport"]]
+    assert calls == [
+        ["schtasks", "/Run", "/S", "ERPSERVER", "/TN", "OpenCartStockSync-RunImport"]
+    ]
 
 
 def test_unknown_mode_is_rejected(monkeypatch, tmp_path: Path) -> None:
@@ -125,7 +156,9 @@ def test_latest_handles_missing_review(monkeypatch, tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert response.json()["available"] is False
-    assert response.json()["message"] == "Latest stock sync review is not available yet."
+    assert (
+        response.json()["message"] == "Latest stock sync review is not available yet."
+    )
 
 
 def test_latest_parses_valid_review(monkeypatch, tmp_path: Path) -> None:

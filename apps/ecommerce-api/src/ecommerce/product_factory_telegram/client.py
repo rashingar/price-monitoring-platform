@@ -38,7 +38,9 @@ class ProductFactoryClient:
         try:
             response = httpx.post(url, json=payload, timeout=self._timeout)
         except httpx.RequestError as exc:
-            raise ProductFactoryClientError("Product Factory API is unavailable; no job was started.") from exc
+            raise ProductFactoryClientError(
+                "Product Factory API is unavailable; no job was started."
+            ) from exc
 
         if response.status_code >= 400:
             raise ProductFactoryClientError(_product_factory_error_message(response))
@@ -46,9 +48,13 @@ class ProductFactoryClient:
         try:
             data = response.json()
         except ValueError as exc:
-            raise ProductFactoryClientError("Product Factory API returned an invalid response; no job was started.") from exc
+            raise ProductFactoryClientError(
+                "Product Factory API returned an invalid response; no job was started."
+            ) from exc
         if not isinstance(data, dict) or not data.get("job_id"):
-            raise ProductFactoryClientError("Product Factory API response did not include a job_id; no job was started.")
+            raise ProductFactoryClientError(
+                "Product Factory API response did not include a job_id; no job was started."
+            )
         return _job_from_mapping(data)
 
     def get_job(self, job_id: str) -> ProductFactoryJob:
@@ -56,18 +62,28 @@ class ProductFactoryClient:
         try:
             response = httpx.get(url, timeout=self._timeout)
         except httpx.RequestError as exc:
-            raise ProductFactoryClientError("Product Factory API is unavailable; job status could not be fetched.") from exc
+            raise ProductFactoryClientError(
+                "Product Factory API is unavailable; job status could not be fetched."
+            ) from exc
         if response.status_code == 404:
-            raise ProductFactoryClientError(f"Product Factory job {job_id} was not found.")
+            raise ProductFactoryClientError(
+                f"Product Factory job {job_id} was not found."
+            )
         if response.status_code >= 400:
-            raise ProductFactoryClientError(_product_factory_status_error_message(response))
+            raise ProductFactoryClientError(
+                _product_factory_status_error_message(response)
+            )
 
         try:
             data = response.json()
         except ValueError as exc:
-            raise ProductFactoryClientError("Product Factory API returned an invalid job status response.") from exc
+            raise ProductFactoryClientError(
+                "Product Factory API returned an invalid job status response."
+            ) from exc
         if not isinstance(data, dict) or not data.get("job_id"):
-            raise ProductFactoryClientError("Product Factory API returned an invalid job status response.")
+            raise ProductFactoryClientError(
+                "Product Factory API returned an invalid job status response."
+            )
         return _job_from_mapping(data)
 
     def list_jobs_by_model(self, model: str) -> list[ProductFactoryJob]:
@@ -75,19 +91,33 @@ class ProductFactoryClient:
         try:
             response = httpx.get(url, timeout=self._timeout)
         except httpx.RequestError as exc:
-            raise ProductFactoryClientError("Product Factory API is unavailable; jobs by model could not be fetched.") from exc
+            raise ProductFactoryClientError(
+                "Product Factory API is unavailable; jobs by model could not be fetched."
+            ) from exc
         if response.status_code == 404:
-            raise ProductFactoryClientError(f"Product Factory jobs for model {model} were not found.")
+            raise ProductFactoryClientError(
+                f"Product Factory jobs for model {model} were not found."
+            )
         if response.status_code >= 400:
-            raise ProductFactoryClientError(_product_factory_status_error_message(response))
+            raise ProductFactoryClientError(
+                _product_factory_status_error_message(response)
+            )
 
         try:
             data = response.json()
         except ValueError as exc:
-            raise ProductFactoryClientError("Product Factory API returned an invalid jobs-by-model response.") from exc
+            raise ProductFactoryClientError(
+                "Product Factory API returned an invalid jobs-by-model response."
+            ) from exc
         if not isinstance(data, dict) or not isinstance(data.get("jobs"), list):
-            raise ProductFactoryClientError("Product Factory API returned an invalid jobs-by-model response.")
-        return [_job_from_mapping(item) for item in data["jobs"] if isinstance(item, dict) and item.get("job_id")]
+            raise ProductFactoryClientError(
+                "Product Factory API returned an invalid jobs-by-model response."
+            )
+        return [
+            _job_from_mapping(item)
+            for item in data["jobs"]
+            if isinstance(item, dict) and item.get("job_id")
+        ]
 
 
 class TelegramDeliveryError(RuntimeError):
@@ -99,7 +129,9 @@ class TelegramBotClient:
         self._bot_token = bot_token
         self._timeout = timeout
 
-    def send_message(self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None) -> None:
+    def send_message(
+        self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None
+    ) -> None:
         if not self._bot_token:
             raise TelegramDeliveryError("Telegram bot token is not configured.")
         payload: dict[str, Any] = {"chat_id": chat_id, "text": text}

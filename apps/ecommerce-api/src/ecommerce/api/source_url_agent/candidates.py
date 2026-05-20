@@ -24,7 +24,11 @@ from ecommerce.source_url_agent.review_service import (
 
 from .errors import safe_db_error
 from .schemas import SourceUrlCandidateReviewRequest
-from .serializers import candidate_review_panel_payload, candidate_to_dict, source_url_promotion_to_dict
+from .serializers import (
+    candidate_review_panel_payload,
+    candidate_to_dict,
+    source_url_promotion_to_dict,
+)
 from .validation import require_catalog_database_ready
 
 router = APIRouter()
@@ -65,8 +69,16 @@ def list_source_url_agent_candidates(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate query failed: {safe_db_error(exc)}") from exc
-    return {"items": items, "total": page.total, "limit": page.limit, "offset": page.offset}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source URL candidate query failed: {safe_db_error(exc)}",
+        ) from exc
+    return {
+        "items": items,
+        "total": page.total,
+        "limit": page.limit,
+        "offset": page.offset,
+    }
 
 
 @router.get("/candidates/{candidate_id}")
@@ -76,19 +88,28 @@ def get_source_url_agent_candidate(candidate_id: int) -> dict[str, Any]:
         with session_scope() as session:
             candidate = get_candidate(session, candidate_id)
             if candidate is None:
-                raise HTTPException(status_code=404, detail="Source URL candidate not found.")
+                raise HTTPException(
+                    status_code=404, detail="Source URL candidate not found."
+                )
             payload = candidate_to_dict(candidate)
-            payload["source_url_id"] = matching_source_url_id_for_candidate(session, candidate)
+            payload["source_url_id"] = matching_source_url_id_for_candidate(
+                session, candidate
+            )
             payload["review_panel"] = candidate_review_panel_payload(candidate)
             return payload
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate query failed: {safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source URL candidate query failed: {safe_db_error(exc)}",
+        ) from exc
 
 
 @router.patch("/candidates/{candidate_id}/review")
-def review_source_url_agent_candidate(candidate_id: int, request: SourceUrlCandidateReviewRequest) -> dict[str, Any]:
+def review_source_url_agent_candidate(
+    candidate_id: int, request: SourceUrlCandidateReviewRequest
+) -> dict[str, Any]:
     require_catalog_database_ready()
     try:
         with session_scope() as session:
@@ -103,13 +124,23 @@ def review_source_url_agent_candidate(candidate_id: int, request: SourceUrlCandi
                 ),
             )
             payload = candidate_to_dict(result.candidate)
-            payload["source_url"] = source_url_promotion_to_dict(result.source_url_promotion)
+            payload["source_url"] = source_url_promotion_to_dict(
+                result.source_url_promotion
+            )
             return payload
     except HTTPException:
         raise
     except SourceUrlCandidateNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except (InvalidSourceUrlCandidateReviewError, SourceUrlCandidatePromotionError, LookupError, ValueError) as exc:
+    except (
+        InvalidSourceUrlCandidateReviewError,
+        SourceUrlCandidatePromotionError,
+        LookupError,
+        ValueError,
+    ) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL candidate review failed: {safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source URL candidate review failed: {safe_db_error(exc)}",
+        ) from exc

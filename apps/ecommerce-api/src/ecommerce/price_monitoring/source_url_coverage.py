@@ -48,7 +48,9 @@ def compute_source_url_coverage(
         }
     )
     urls_by_product_id: dict[int, list[SourceUrl]] = defaultdict(list)
-    product_source_urls_by_catalog_product_id: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    product_source_urls_by_catalog_product_id: dict[int, list[dict[str, Any]]] = (
+        defaultdict(list)
+    )
     if catalog_product_ids:
         statement = (
             select(SourceUrl)
@@ -56,13 +58,17 @@ def compute_source_url_coverage(
             .order_by(SourceUrl.catalog_product_id.asc(), SourceUrl.id.asc())
         )
         if source_filter:
-            statement = statement.where(func.lower(SourceUrl.source_name) == source_filter)
+            statement = statement.where(
+                func.lower(SourceUrl.source_name) == source_filter
+            )
         for row in session.execute(statement).scalars().all():
             urls_by_product_id[int(row.catalog_product_id)].append(row)
-        product_source_urls_by_catalog_product_id = _product_sources_by_catalog_product_id(
-            session,
-            catalog_product_ids,
-            source_filter,
+        product_source_urls_by_catalog_product_id = (
+            _product_sources_by_catalog_product_id(
+                session,
+                catalog_product_ids,
+                source_filter,
+            )
         )
 
     item_coverage: list[SourceUrlProductCoverage] = []
@@ -77,7 +83,9 @@ def compute_source_url_coverage(
             item,
             urls_by_product_id.get(int(item.catalog_product_id or 0), []),
             source_label,
-            product_source_urls_by_catalog_product_id.get(int(item.catalog_product_id or 0), []),
+            product_source_urls_by_catalog_product_id.get(
+                int(item.catalog_product_id or 0), []
+            ),
         )
         item_coverage.append(coverage)
         if item.catalog_product_id is not None:
@@ -92,7 +100,11 @@ def compute_source_url_coverage(
 
     selected_count = len(items)
     products_without_active = selected_count - products_with_active
-    coverage_percent = round((products_with_active / selected_count) * 100, 2) if selected_count else 0.0
+    coverage_percent = (
+        round((products_with_active / selected_count) * 100, 2)
+        if selected_count
+        else 0.0
+    )
     summary = SourceUrlCoverageSummary(
         source=source_label,
         source_filter=source_filter,
@@ -122,9 +134,13 @@ def attach_source_url_coverage(
 ) -> PriceMonitoringSelectionResult:
     items = [
         replace(item, source_url_coverage=coverage)
-        for item, coverage in zip(selection_result.items, coverage_result.item_coverage, strict=True)
+        for item, coverage in zip(
+            selection_result.items, coverage_result.item_coverage, strict=True
+        )
     ]
-    return replace(selection_result, items=items, source_url_coverage=coverage_result.summary)
+    return replace(
+        selection_result, items=items, source_url_coverage=coverage_result.summary
+    )
 
 
 def require_active_source_url_coverage(
@@ -133,7 +149,9 @@ def require_active_source_url_coverage(
 ) -> PriceMonitoringSelectionResult:
     items: list[SelectedPriceMonitoringProduct] = []
     skipped = list(selection_result.skipped)
-    for item, coverage in zip(selection_result.items, coverage_result.item_coverage, strict=True):
+    for item, coverage in zip(
+        selection_result.items, coverage_result.item_coverage, strict=True
+    ):
         item_with_coverage = replace(item, source_url_coverage=coverage)
         if coverage.has_active_source_url:
             items.append(item_with_coverage)
@@ -144,7 +162,12 @@ def require_active_source_url_coverage(
                 reasons=["missing_active_source_url"],
             )
         )
-    return replace(selection_result, items=items, skipped=skipped, source_url_coverage=coverage_result.summary)
+    return replace(
+        selection_result,
+        items=items,
+        skipped=skipped,
+        source_url_coverage=coverage_result.summary,
+    )
 
 
 def _product_coverage(
@@ -209,14 +232,24 @@ def _product_sources_by_catalog_product_id(
     catalog_product_ids: list[int],
     source_filter: str | None,
 ) -> dict[int, list[dict[str, Any]]]:
-    catalog_rows = session.execute(
-        select(CatalogProductRow).where(CatalogProductRow.id.in_(catalog_product_ids))
-    ).scalars().all()
+    catalog_rows = (
+        session.execute(
+            select(CatalogProductRow).where(
+                CatalogProductRow.id.in_(catalog_product_ids)
+            )
+        )
+        .scalars()
+        .all()
+    )
     product_ids_by_catalog_id: dict[int, set[int]] = defaultdict(set)
     for catalog_row in catalog_rows:
-        product_statement = select(Product.id).where(Product.catalog_source == catalog_row.catalog_source)
+        product_statement = select(Product.id).where(
+            Product.catalog_source == catalog_row.catalog_source
+        )
         if catalog_row.model:
-            product_statement = product_statement.where(Product.model == catalog_row.model)
+            product_statement = product_statement.where(
+                Product.model == catalog_row.model
+            )
         elif catalog_row.mpn:
             product_statement = product_statement.where(Product.mpn == catalog_row.mpn)
         else:
@@ -224,16 +257,25 @@ def _product_sources_by_catalog_product_id(
         for product_id in session.execute(product_statement).scalars().all():
             product_ids_by_catalog_id[int(catalog_row.id)].add(int(product_id))
 
-    product_ids = sorted({product_id for ids in product_ids_by_catalog_id.values() for product_id in ids})
+    product_ids = sorted(
+        {product_id for ids in product_ids_by_catalog_id.values() for product_id in ids}
+    )
     if not product_ids:
         return {}
 
     sources_by_product_id: dict[int, list[ProductSource]] = defaultdict(list)
-    rows = session.execute(
-        select(ProductSource)
-        .where(ProductSource.product_id.in_(product_ids), ProductSource.active.is_(True))
-        .order_by(ProductSource.product_id.asc(), ProductSource.id.asc())
-    ).scalars().all()
+    rows = (
+        session.execute(
+            select(ProductSource)
+            .where(
+                ProductSource.product_id.in_(product_ids),
+                ProductSource.active.is_(True),
+            )
+            .order_by(ProductSource.product_id.asc(), ProductSource.id.asc())
+        )
+        .scalars()
+        .all()
+    )
     for row in rows:
         if source_filter and _product_source_name(session, row) != source_filter:
             continue
@@ -242,11 +284,16 @@ def _product_sources_by_catalog_product_id(
     result: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for catalog_product_id, ids in product_ids_by_catalog_id.items():
         for product_id in ids:
-            result[catalog_product_id].extend(_product_source_payload(row, catalog_product_id) for row in sources_by_product_id[product_id])
+            result[catalog_product_id].extend(
+                _product_source_payload(row, catalog_product_id)
+                for row in sources_by_product_id[product_id]
+            )
     return result
 
 
-def _product_source_payload(row: ProductSource, catalog_product_id: int) -> dict[str, Any]:
+def _product_source_payload(
+    row: ProductSource, catalog_product_id: int
+) -> dict[str, Any]:
     url = row.canonical_url or row.source_url
     source_domain = extract_source_domain(url)
     return {
@@ -272,7 +319,9 @@ def _product_source_name(session: Session, row: ProductSource) -> str:
     return detect_vendor_slug(url) or infer_source_name(extract_source_domain(url))
 
 
-def _summary_warning(products_without_active: int, source_filter: str | None) -> str | None:
+def _summary_warning(
+    products_without_active: int, source_filter: str | None
+) -> str | None:
     if products_without_active <= 0:
         return None
     suffix = "product" if products_without_active == 1 else "products"

@@ -102,7 +102,9 @@ def parse_euro_price(text: str | None) -> float | None:
     if not text:
         return None
     cleaned_text = strip_nbsp(text)
-    candidates = re.findall(r"(?:\d{1,3}(?:[.\s]\d{3})*|\d+)(?:,\d{1,2})?\s*(?:€|β‚¬)?", cleaned_text)
+    candidates = re.findall(
+        r"(?:\d{1,3}(?:[.\s]\d{3})*|\d+)(?:,\d{1,2})?\s*(?:€|β‚¬)?", cleaned_text
+    )
     if not candidates:
         return None
     for candidate in reversed(candidates):
@@ -133,7 +135,11 @@ def _strip_accents(text: str) -> str:
 
 
 def strip_greek_accents(value: object) -> str:
-    return _strip_accents(unicodedata.normalize("NFC", normalize_whitespace("" if value is None else str(value))))
+    return _strip_accents(
+        unicodedata.normalize(
+            "NFC", normalize_whitespace("" if value is None else str(value))
+        )
+    )
 
 
 def repair_mojibake_text(value: object) -> str:
@@ -167,7 +173,7 @@ def _normalize_match_key(text: str | None) -> str:
     text = _strip_accents(text).lower()
     text = text.replace("&", " και ")
     text = re.sub(r"\bwatts\b", "watt", text, flags=re.IGNORECASE)
-    text = re.sub(fr"[^a-z0-9{GREEK_MATCH_RANGES}\s]+", " ", text, flags=re.IGNORECASE)
+    text = re.sub(rf"[^a-z0-9{GREEK_MATCH_RANGES}\s]+", " ", text, flags=re.IGNORECASE)
     return normalize_whitespace(text)
 
 
@@ -243,7 +249,9 @@ def _repair_cp1253_utf8_mojibake(text: str) -> str | None:
 def _looks_like_greek_mojibake(text: str) -> bool:
     if not text:
         return False
-    marker_count = sum(1 for ch in text if ch in _MOJIBAKE_MARKERS or 0x80 <= ord(ch) <= 0x9F)
+    marker_count = sum(
+        1 for ch in text if ch in _MOJIBAKE_MARKERS or 0x80 <= ord(ch) <= 0x9F
+    )
     if marker_count < 2:
         return False
     greek_lower_count = sum(1 for ch in text if "α" <= ch <= "ω")
@@ -251,15 +259,21 @@ def _looks_like_greek_mojibake(text: str) -> bool:
 
 
 def _repair_score(text: str) -> int:
-    greek_letters = sum(1 for ch in text if "\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff")
+    greek_letters = sum(
+        1 for ch in text if "\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff"
+    )
     controls = sum(1 for ch in text if 0x80 <= ord(ch) <= 0x9F)
-    mojibake_markers = sum(1 for ch in text if ch in {"Ξ", "Ο", "™", "ƒ", "‡", "‚", "…", "„"})
+    mojibake_markers = sum(
+        1 for ch in text if ch in {"Ξ", "Ο", "™", "ƒ", "‡", "‚", "…", "„"}
+    )
     replacement = text.count("\ufffd")
     return greek_letters * 4 - controls * 8 - mojibake_markers * 2 - replacement * 10
 
 
 @lru_cache(maxsize=1)
-def load_label_alias_registry(path: str | Path = _LABEL_ALIAS_REGISTRY_PATH) -> dict[str, object]:
+def load_label_alias_registry(
+    path: str | Path = _LABEL_ALIAS_REGISTRY_PATH,
+) -> dict[str, object]:
     registry_path = Path(path)
     if not registry_path.exists():
         return {"schema_version": 1, "families": []}
@@ -269,7 +283,9 @@ def load_label_alias_registry(path: str | Path = _LABEL_ALIAS_REGISTRY_PATH) -> 
         raise ValueError(f"Label alias registry must be a JSON object: {registry_path}")
     families = payload.get("families", [])
     if not isinstance(families, list):
-        raise ValueError(f"Label alias registry families must be a list: {registry_path}")
+        raise ValueError(
+            f"Label alias registry families must be a list: {registry_path}"
+        )
     return payload
 
 
@@ -284,8 +300,16 @@ def _label_alias_index() -> dict[str, str]:
             continue
         values = [
             family.get("canonical_label", ""),
-            *list(family.get("aliases", []) if isinstance(family.get("aliases"), list) else []),
-            *list(family.get("mojibake_examples", []) if isinstance(family.get("mojibake_examples"), list) else []),
+            *list(
+                family.get("aliases", [])
+                if isinstance(family.get("aliases"), list)
+                else []
+            ),
+            *list(
+                family.get("mojibake_examples", [])
+                if isinstance(family.get("mojibake_examples"), list)
+                else []
+            ),
         ]
         for value in values:
             key = _base_label_key(value)
@@ -308,8 +332,16 @@ def _label_alias_families() -> dict[str, tuple[str, ...]]:
             continue
         values = [
             family.get("canonical_label", ""),
-            *list(family.get("aliases", []) if isinstance(family.get("aliases"), list) else []),
-            *list(family.get("mojibake_examples", []) if isinstance(family.get("mojibake_examples"), list) else []),
+            *list(
+                family.get("aliases", [])
+                if isinstance(family.get("aliases"), list)
+                else []
+            ),
+            *list(
+                family.get("mojibake_examples", [])
+                if isinstance(family.get("mojibake_examples"), list)
+                else []
+            ),
         ]
         aliases: list[str] = []
         for value in values:

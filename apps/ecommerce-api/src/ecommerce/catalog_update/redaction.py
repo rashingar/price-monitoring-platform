@@ -35,7 +35,9 @@ SENSITIVE_QUERY_KEYS = {
 }
 
 
-def redact_opencart_url(value: object, config: CatalogUpdateConfig | None = None) -> str:
+def redact_opencart_url(
+    value: object, config: CatalogUpdateConfig | None = None
+) -> str:
     text = str(value or "")
     if not text:
         return ""
@@ -47,13 +49,24 @@ def redact_opencart_url(value: object, config: CatalogUpdateConfig | None = None
         return redact_opencart_sensitive_data(text, config)
 
     query_items = [
-        (key, REDACTED_VALUE if is_sensitive_query_key(key) else redact_opencart_sensitive_data(value, config))
+        (
+            key,
+            (
+                REDACTED_VALUE
+                if is_sensitive_query_key(key)
+                else redact_opencart_sensitive_data(value, config)
+            ),
+        )
         for key, value in parse_qsl(parsed.query, keep_blank_values=True)
     ]
-    return redact_opencart_sensitive_data(urlunparse(parsed._replace(query=urlencode(query_items))), config)
+    return redact_opencart_sensitive_data(
+        urlunparse(parsed._replace(query=urlencode(query_items))), config
+    )
 
 
-def redact_opencart_sensitive_data(value: object, config: CatalogUpdateConfig | None = None) -> str:
+def redact_opencart_sensitive_data(
+    value: object, config: CatalogUpdateConfig | None = None
+) -> str:
     text = str(value or "")
     if not text:
         return ""
@@ -63,7 +76,9 @@ def redact_opencart_sensitive_data(value: object, config: CatalogUpdateConfig | 
     }
     if config is not None:
         sensitive_values.update({config.admin_pass, config.admin_user})
-    for secret in sorted((item for item in sensitive_values if item), key=len, reverse=True):
+    for secret in sorted(
+        (item for item in sensitive_values if item), key=len, reverse=True
+    ):
         text = text.replace(secret, REDACTED_VALUE)
     text = re.sub(
         r"(?i)\b(user_token|access_token|refresh_token|token|password|passwd|pwd|pass|cookie|secret|authorization)=([^&\s]+)",
@@ -91,7 +106,11 @@ def sanitize_progress_value(value: Any) -> Any:
     if value is None or isinstance(value, (bool, int, float)):
         return value
     if isinstance(value, str):
-        return redact_opencart_url(value) if "://" in value else redact_opencart_sensitive_data(value)
+        return (
+            redact_opencart_url(value)
+            if "://" in value
+            else redact_opencart_sensitive_data(value)
+        )
     if isinstance(value, Path):
         return display_path(value)
     if isinstance(value, dict):
@@ -112,4 +131,6 @@ def sanitize_output(value: object, database_url: str | None) -> str:
 
 def is_sensitive_query_key(key: str) -> bool:
     normalized = key.strip().casefold()
-    return normalized in SENSITIVE_QUERY_KEYS or any(part in normalized for part in ("token", "password", "cookie", "secret"))
+    return normalized in SENSITIVE_QUERY_KEYS or any(
+        part in normalized for part in ("token", "password", "cookie", "secret")
+    )

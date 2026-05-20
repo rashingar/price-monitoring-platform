@@ -8,7 +8,11 @@ from typing import Any
 
 from ecommerce.source_url_agent.browser import SourceUrlBrowserSession
 from ecommerce.source_url_agent.brave_search import BraveSearchProvider
-from ecommerce.source_url_agent.evidence import error_evidence, extract_page_evidence, provider_search_result_evidence
+from ecommerce.source_url_agent.evidence import (
+    error_evidence,
+    extract_page_evidence,
+    provider_search_result_evidence,
+)
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.search_providers import (
     SearchProviderRegistry,
@@ -17,7 +21,6 @@ from ecommerce.source_url_agent.search_providers import (
 )
 from ecommerce.source_url_agent.sources import SourceDefinition
 from ecommerce.utils.text import collapse_internal_spaces, normalize_product_text
-
 
 TEMPLATE_FIELD_RE = re.compile(r"{([A-Za-z_][A-Za-z0-9_]*)}")
 
@@ -37,7 +40,9 @@ class SourceSearchResult:
     provider_summary: dict[str, Any] | None = None
 
 
-def generate_search_queries(product: AgentProduct, source: SourceDefinition) -> list[str]:
+def generate_search_queries(
+    product: AgentProduct, source: SourceDefinition
+) -> list[str]:
     strategy = SourceQueryStrategy(source)
     return strategy.generate(product)
 
@@ -57,7 +62,9 @@ class SourceQueryStrategy:
         queries: list[str] = []
         for template in self.source.query_templates:
             required_fields = TEMPLATE_FIELD_RE.findall(template)
-            if not required_fields or any(not fields.get(field) for field in required_fields):
+            if not required_fields or any(
+                not fields.get(field) for field in required_fields
+            ):
                 continue
             queries.append(template.format_map(fields))
         return queries
@@ -74,8 +81,14 @@ def discover_source_evidence(
     provider_registry: SearchProviderRegistry | None = None,
 ) -> SourceSearchResult:
     queries = generate_search_queries(product, source)
-    search_limit = max_searches if max_searches is not None else source.max_searches_per_product
-    candidate_limit = max_candidates if max_candidates is not None else source.max_candidates_per_product
+    search_limit = (
+        max_searches if max_searches is not None else source.max_searches_per_product
+    )
+    candidate_limit = (
+        max_candidates
+        if max_candidates is not None
+        else source.max_candidates_per_product
+    )
     registry = provider_registry or load_search_provider_registry()
     provider_result = discover_with_provider_cascade(
         product=product,
@@ -110,7 +123,10 @@ def discover_source_evidence(
     evidence_items: list[object] = []
     for candidate in provider_result.candidates[:candidate_limit]:
         candidate_url = candidate.candidate_url
-        snapshot = browser.fetch_snapshot(candidate_url, rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds)
+        snapshot = browser.fetch_snapshot(
+            candidate_url,
+            rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds,
+        )
         provider_provenance = _candidate_provider_provenance(candidate)
         if snapshot.status == "error":
             if candidate.has_provider_text:
@@ -199,7 +215,10 @@ def discover_product_level_search_evidence(
                         body_text=item.body_text,
                         error_code=item.error_code,
                         error_message=item.error_message,
-                        provider_provenance={**item.provenance.to_json(), "source_name": source.source_name},
+                        provider_provenance={
+                            **item.provenance.to_json(),
+                            "source_name": source.source_name,
+                        },
                     )
                     for item in product_result.provider_errors
                 ],
@@ -215,7 +234,10 @@ def discover_product_level_search_evidence(
         source = source_by_name.get(candidate.provenance.source_name)
         if source is None:
             continue
-        snapshot = browser.fetch_snapshot(candidate.candidate_url, rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds)
+        snapshot = browser.fetch_snapshot(
+            candidate.candidate_url,
+            rate_limit_seconds=rate_limit_seconds or source.rate_limit_seconds,
+        )
         if snapshot.status == "error":
             if candidate.has_provider_text:
                 evidence = _provider_fallback_evidence(

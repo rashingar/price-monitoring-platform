@@ -43,7 +43,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     if _print_existing_ecommerce_api_status(args.host, args.port):
         return
 
-    uvicorn.run("ecommerce.api.app:app", host=args.host, port=args.port, reload=args.reload)
+    uvicorn.run(
+        "ecommerce.api.app:app", host=args.host, port=args.port, reload=args.reload
+    )
 
 
 def _print_existing_ecommerce_api_status(host: str, port: int) -> bool:
@@ -87,8 +89,12 @@ def _read_json_url(url: str) -> dict[str, object]:
 
 def _print_db_setup_hints() -> None:
     if not is_database_configured():
-        print(f"{DATABASE_URL_ENV_VAR} is not set; PostgreSQL persistence is optional for local file-backed workflows.")
-        print("Set ECOMMERCE_DATABASE_URL and run alembic upgrade head to enable Price Monitoring DB persistence.")
+        print(
+            f"{DATABASE_URL_ENV_VAR} is not set; PostgreSQL persistence is optional for local file-backed workflows."
+        )
+        print(
+            "Set ECOMMERCE_DATABASE_URL and run alembic upgrade head to enable Price Monitoring DB persistence."
+        )
         return
     status = collect_database_status()
     if status.get("reachable") and status.get("required_tables_present"):

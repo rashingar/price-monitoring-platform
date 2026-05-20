@@ -34,14 +34,22 @@ class CsvWriteResult:
     written_rows: int
 
 
-def read_csv_file(path: Path, delimiter: str | None = None, max_rows: int | None = None) -> CsvReadResult:
-    used_delimiter = _normalize_delimiter(delimiter) if delimiter is not None else _detect_delimiter(path)
+def read_csv_file(
+    path: Path, delimiter: str | None = None, max_rows: int | None = None
+) -> CsvReadResult:
+    used_delimiter = (
+        _normalize_delimiter(delimiter)
+        if delimiter is not None
+        else _detect_delimiter(path)
+    )
     with path.open("r", encoding=READ_ENCODING, newline="") as f:
         reader = csv.DictReader(f, delimiter=used_delimiter, restval="")
         columns = list(reader.fieldnames or [])
         all_rows: list[dict[str, str]] = []
         for row in reader:
-            all_rows.append({column: _cell_to_string(row.get(column, "")) for column in columns})
+            all_rows.append(
+                {column: _cell_to_string(row.get(column, "")) for column in columns}
+            )
 
     returned_rows = all_rows if max_rows is None else all_rows[: max(0, max_rows)]
     return CsvReadResult(
@@ -64,11 +72,17 @@ def write_csv_file(
     used_delimiter = _normalize_delimiter(delimiter)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding=WRITE_ENCODING, newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=columns, delimiter=used_delimiter, extrasaction="ignore")
+        writer = csv.DictWriter(
+            f, fieldnames=columns, delimiter=used_delimiter, extrasaction="ignore"
+        )
         writer.writeheader()
         for row in rows:
-            writer.writerow({column: _cell_to_string(row.get(column, "")) for column in columns})
-    return CsvWriteResult(path=path, delimiter=used_delimiter, columns=columns, written_rows=len(rows))
+            writer.writerow(
+                {column: _cell_to_string(row.get(column, "")) for column in columns}
+            )
+    return CsvWriteResult(
+        path=path, delimiter=used_delimiter, columns=columns, written_rows=len(rows)
+    )
 
 
 def write_csv_copy(
@@ -97,7 +111,9 @@ def _detect_delimiter(path: Path) -> str:
 def _normalize_delimiter(delimiter: str) -> str:
     value = "\t" if delimiter == "\\t" else delimiter
     if value not in SUPPORTED_DELIMITERS:
-        raise InvalidCsvDelimiterError("Delimiter must be one of: comma, semicolon, tab")
+        raise InvalidCsvDelimiterError(
+            "Delimiter must be one of: comma, semicolon, tab"
+        )
     return value
 
 

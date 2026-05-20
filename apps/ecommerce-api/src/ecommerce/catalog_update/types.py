@@ -12,7 +12,9 @@ from ecommerce.catalog_update.paths import display_path
 DEFAULT_EXPORT_PROFILE = DEFAULT_CATALOG_SOURCE
 DEFAULT_EXPORT_TIMEOUT_SECONDS = 900
 EXCLUDED_MODELS_ENV_VAR = "CATALOG_UPDATE_EXCLUDED_MODELS_PATH"
-DEFAULT_EXCLUDED_MODELS_RELATIVE_PATH = Path("config") / "catalog" / "codes_not_in_entersoft.csv"
+DEFAULT_EXCLUDED_MODELS_RELATIVE_PATH = (
+    Path("config") / "catalog" / "codes_not_in_entersoft.csv"
+)
 
 
 class CatalogUpdateError(RuntimeError):

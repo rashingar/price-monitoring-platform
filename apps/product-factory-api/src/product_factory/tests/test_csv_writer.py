@@ -11,7 +11,6 @@ from product_factory.mapping import _cta_label_for_taxonomy, _cta_text_for_taxon
 from product_factory.models import SpecItem, SpecSection, TaxonomyResolution
 
 
-
 def test_csv_header_order_preserved_from_template(tmp_path: Path) -> None:
     template = tmp_path / "template.csv"
     template.write_text("b,a,c\n", encoding="utf-8")
@@ -20,7 +19,6 @@ def test_csv_header_order_preserved_from_template(tmp_path: Path) -> None:
     assert headers == ["b", "a", "c"]
     assert ordered == {"b": "2", "a": "1", "c": "3"}
     assert out.read_text(encoding="utf-8").splitlines()[0] == "b,a,c"
-
 
 
 def test_characteristics_html_and_safe_blank_description() -> None:
@@ -32,16 +30,22 @@ def test_characteristics_html_and_safe_blank_description() -> None:
                     SpecItem("Χρώμα", "Κόκκινο"),
                     SpecItem("Διαστάσεις", "179.00 x 91.30 x 73.50"),
                     SpecItem("Πλάτος Συσκευής σε Εκατοστά", "91,3"),
-                    SpecItem("Επιπλέον Χαρακτηριστικά", "χειρολαβή με εσοχή,σύστημα διάγνωσης βλαβών"),
+                    SpecItem(
+                        "Επιπλέον Χαρακτηριστικά",
+                        "χειρολαβή με εσοχή,σύστημα διάγνωσης βλαβών",
+                    ),
                     SpecItem("Επιπλέον", None),
                 ],
             )
         ]
     )
     assert '<table class="table table-bordered">' in html
-    assert "<td colspan=\"2\"><strong>Γενικά Χαρακτηριστικά</strong></td>" in html
+    assert '<td colspan="2"><strong>Γενικά Χαρακτηριστικά</strong></td>' in html
     assert '<td style="text-align:right;"><strong>Κόκκινο</strong></td>' in html
-    assert '<td style="text-align:right;"><strong>179.00 × 91.30 × 73.50</strong></td>' in html
+    assert (
+        '<td style="text-align:right;"><strong>179.00 × 91.30 × 73.50</strong></td>'
+        in html
+    )
     assert '<td style="text-align:right;"><strong>91.30</strong></td>' in html
     assert html.count('<td style="text-align:right;"><strong>-</strong></td>') >= 2
     description, warnings = build_description_html(
@@ -58,7 +62,9 @@ def test_characteristics_html_and_safe_blank_description() -> None:
     assert "description_not_built_from_source" in warnings
 
 
-def test_presentation_blocks_extract_images_and_description_uses_downloaded_bescos() -> None:
+def test_presentation_blocks_extract_images_and_description_uses_downloaded_bescos() -> (
+    None
+):
     presentation_html = """
     <h3>Section One</h3>
     <p>Paragraph one.</p>
@@ -73,7 +79,10 @@ def test_presentation_blocks_extract_images_and_description_uses_downloaded_besc
         base_url="https://www.electronet.gr/product/example",
     )
 
-    assert blocks[0]["image_url"] == "https://www.electronet.gr/image/catalog/products/343700/section-one.webp"
+    assert (
+        blocks[0]["image_url"]
+        == "https://www.electronet.gr/image/catalog/products/343700/section-one.webp"
+    )
 
     description, warnings = build_description_html(
         product_name="Example Product",
@@ -137,7 +146,10 @@ def test_microwave_taxonomy_uses_leaf_cta_text() -> None:
         )
 
         assert _cta_label_for_taxonomy(taxonomy) == "Φούρνοι Μικροκυμάτων"
-        assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερους Φούρνους Μικροκυμάτων εδώ"
+        assert (
+            _cta_text_for_taxonomy(taxonomy)
+            == "Δείτε περισσότερους Φούρνους Μικροκυμάτων εδώ"
+        )
 
 
 def test_stand_fan_taxonomy_uses_combined_fan_cta_text() -> None:
@@ -151,7 +163,10 @@ def test_stand_fan_taxonomy_uses_combined_fan_cta_text() -> None:
         plural_label="Ορθοστάτες",
     )
 
-    assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερους Ανεμιστήρες Ορθοστάτες εδώ"
+    assert (
+        _cta_text_for_taxonomy(taxonomy)
+        == "Δείτε περισσότερους Ανεμιστήρες Ορθοστάτες εδώ"
+    )
 
 
 def test_ceiling_fan_taxonomy_uses_combined_fan_cta_text() -> None:
@@ -165,10 +180,14 @@ def test_ceiling_fan_taxonomy_uses_combined_fan_cta_text() -> None:
         plural_label="Οροφής",
     )
 
-    assert _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερους Ανεμιστήρες Οροφής εδώ"
+    assert (
+        _cta_text_for_taxonomy(taxonomy) == "Δείτε περισσότερους Ανεμιστήρες Οροφής εδώ"
+    )
 
 
-def test_presentation_blocks_extract_images_from_left_and_right_banner_layouts() -> None:
+def test_presentation_blocks_extract_images_from_left_and_right_banner_layouts() -> (
+    None
+):
     presentation_html = """
     <div class="ck-text inline">
       <div class="middle-align">
@@ -256,7 +275,10 @@ def test_presentation_blocks_extract_list_based_electronet_sections() -> None:
     assert blocks[1]["title"] == "Section Two"
     assert blocks[1]["paragraph"] == "Bullet one. Bullet two."
     assert blocks[1]["image_url"] == "https://www.electronet.gr/media/two.jpg"
-    assert blocks[1]["body_html"] == "<ul>\n<li>Bullet one.</li>\n<li>Bullet two.</li>\n</ul>"
+    assert (
+        blocks[1]["body_html"]
+        == "<ul>\n<li>Bullet one.</li>\n<li>Bullet two.</li>\n</ul>"
+    )
     assert blocks[3]["title"] == "Section Four"
     assert blocks[3]["paragraph"] == "Bullet five. Bullet six."
     assert blocks[3]["image_url"] == "https://www.electronet.gr/media/four.jpg"
@@ -334,7 +356,9 @@ def test_split_description_renders_inline_embed_as_section_media() -> None:
         cta_url="https://www.etranoulis.gr/example",
         cta_text="More",
         intro_text="Intro text",
-        sections=[{"title": "Video Section", "body_text": "Paragraph one.", "source_index": 1}],
+        sections=[
+            {"title": "Video Section", "body_text": "Paragraph one.", "source_index": 1}
+        ],
         besco_filenames_by_section={},
         presentation_source_html=presentation_html,
         presentation_source_text="",
@@ -346,8 +370,8 @@ def test_split_description_renders_inline_embed_as_section_media() -> None:
     assert blocks[0]["media_html"].startswith("<iframe")
     assert 'class="etr-img"' in description
     assert 'class="etr-media"' in description
-    assert 'width:750px' in description
-    assert 'border-radius:12px' in description
+    assert "width:750px" in description
+    assert "border-radius:12px" in description
     assert 'width="750"' in description
     assert 'height="510"' in description
     assert 'src="https://www.electronet.gr/embed/demo"' in description
@@ -406,7 +430,9 @@ def test_split_description_preserves_safe_intro_strong_markup() -> None:
             "Το <strong>Acme AX100</strong> είναι <strong>γενική συσκευή</strong> με A & B και "
             "ουδέτερη περιγραφή που κρατά τις επιβεβαιωμένες πληροφορίες ευανάγνωστες για τον χρήστη."
         ),
-        sections=[{"title": "Section One", "body_text": "Paragraph one.", "source_index": 1}],
+        sections=[
+            {"title": "Section One", "body_text": "Paragraph one.", "source_index": 1}
+        ],
         besco_filenames_by_section={},
         presentation_source_html="<h2>Section One</h2><p>Paragraph one.</p>",
         presentation_source_text="",
@@ -425,7 +451,9 @@ def test_split_description_sanitizes_unsafe_intro_markup() -> None:
         cta_url="https://www.etranoulis.gr/example",
         cta_text="More",
         intro_text='Το <span onclick="bad()">Acme</span> <script>alert(1)</script> μένει κείμενο.',
-        sections=[{"title": "Section One", "body_text": "Paragraph one.", "source_index": 1}],
+        sections=[
+            {"title": "Section One", "body_text": "Paragraph one.", "source_index": 1}
+        ],
         besco_filenames_by_section={},
         presentation_source_html="<h2>Section One</h2><p>Paragraph one.</p>",
         presentation_source_text="",
@@ -462,7 +490,13 @@ def test_split_description_preserves_small_footnotes_and_regulation_appendix() -
         cta_url="https://www.etranoulis.gr/example",
         cta_text="Δείτε περισσότερα εδώ",
         intro_text="Intro text",
-        sections=[{"title": "Section One", "body_text": "Main paragraph. * Exact note text.", "source_index": 1}],
+        sections=[
+            {
+                "title": "Section One",
+                "body_text": "Main paragraph. * Exact note text.",
+                "source_index": 1,
+            }
+        ],
         besco_filenames_by_section={1: "besco1.jpg"},
         presentation_source_html=presentation_html,
         presentation_source_text="",
@@ -476,4 +510,3 @@ def test_split_description_preserves_small_footnotes_and_regulation_appendix() -
     assert "Κανονισμός (ΕΕ) 2023/2854" not in description
     assert "Κανονισμός για τα Δεδομένα" not in description
     assert 'src="https://www.electronet.gr/media/qr.jpg"' not in description
-

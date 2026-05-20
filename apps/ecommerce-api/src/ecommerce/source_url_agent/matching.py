@@ -23,7 +23,9 @@ class NameEvidence:
     sequence_ratio: float
 
 
-def extract_mpn_evidence(mpn: str, title: str, body_text: str, html: str = "") -> MpnEvidence | None:
+def extract_mpn_evidence(
+    mpn: str, title: str, body_text: str, html: str = ""
+) -> MpnEvidence | None:
     needle = mpn.strip()
     haystacks = (
         ("title", title),

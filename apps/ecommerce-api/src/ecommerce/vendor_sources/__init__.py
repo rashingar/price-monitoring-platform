@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
-
 MARKETPLACE_VENDOR_TYPES = {"marketplace", "marketplace_or_aggregator"}
 
 
@@ -33,7 +32,9 @@ def list_vendor_source_capabilities() -> list[dict]:
     from ecommerce.source_url_agent.sources import load_source_registry
 
     registry = load_source_registry()
-    return [_source_capability(source).to_dict() for source in registry.sources.values()]
+    return [
+        _source_capability(source).to_dict() for source in registry.sources.values()
+    ]
 
 
 def _source_capability(source: Any) -> VendorSourceCapability:
@@ -43,7 +44,9 @@ def _source_capability(source: Any) -> VendorSourceCapability:
     vendor = VENDORS_BY_SLUG.get(source.source_name)
     capture_implemented = source.source_name in CAPTURE_IMPLEMENTED_VENDOR_SLUGS
     capture_enabled = bool(vendor and vendor.active and capture_implemented)
-    source_type = _normalized_source_type(source.source_type, vendor.vendor_type if vendor else None)
+    source_type = _normalized_source_type(
+        source.source_type, vendor.vendor_type if vendor else None
+    )
     notes = _capability_notes(
         source.notes,
         source_name=source.source_name,
@@ -57,9 +60,13 @@ def _source_capability(source: Any) -> VendorSourceCapability:
         discovery_enabled=bool(source.enabled),
         capture_enabled=capture_enabled,
         capture_implemented=capture_implemented,
-        supports_search=bool(source.public_search_url_templates) or bool(vendor and vendor.supports_search),
-        supports_direct_product_url=bool(source.product_url_patterns) or bool(vendor and vendor.supports_direct_product_url),
-        supports_xhr_capture=bool(vendor and vendor.supports_xhr_capture and capture_implemented),
+        supports_search=bool(source.public_search_url_templates)
+        or bool(vendor and vendor.supports_search),
+        supports_direct_product_url=bool(source.product_url_patterns)
+        or bool(vendor and vendor.supports_direct_product_url),
+        supports_xhr_capture=bool(
+            vendor and vendor.supports_xhr_capture and capture_implemented
+        ),
         expected_listing_field=source.expected_listing_field,
         rate_limit_seconds=float(source.rate_limit_seconds),
         notes=notes,
@@ -84,7 +91,11 @@ def _capability_notes(
     notes = [source_notes.strip()] if source_notes.strip() else []
     if not capture_implemented:
         if vendor_active:
-            notes.append(f"{source_name} source capture is registered but not implemented.")
+            notes.append(
+                f"{source_name} source capture is registered but not implemented."
+            )
         else:
-            notes.append(f"{source_name} is discovery-only; source capture is not enabled or implemented.")
+            notes.append(
+                f"{source_name} is discovery-only; source capture is not enabled or implemented."
+            )
     return " ".join(notes)

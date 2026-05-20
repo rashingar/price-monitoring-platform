@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
-from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate, candidate_from_evidence, keep_candidate, synthetic_candidate
+from ecommerce.source_url_agent.candidates import (
+    SourceUrlAgentCandidate,
+    candidate_from_evidence,
+    keep_candidate,
+    synthetic_candidate,
+)
 from ecommerce.source_url_agent.evidence import PageEvidence
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.scoring import score_candidate
-from ecommerce.source_url_agent.search import SourceSearchResult, generate_search_queries
+from ecommerce.source_url_agent.search import (
+    SourceSearchResult,
+    generate_search_queries,
+)
 from ecommerce.source_url_agent.sources import SourceDefinition
 
 
@@ -18,7 +26,9 @@ def candidates_from_search_result(
     expected_listing: str,
     result: SourceSearchResult,
 ) -> list[SourceUrlAgentCandidate]:
-    evidence_items = [item for item in result.evidence if isinstance(item, PageEvidence)]
+    evidence_items = [
+        item for item in result.evidence if isinstance(item, PageEvidence)
+    ]
     if not evidence_items:
         queries = result.searched_queries or generate_search_queries(product, source)
         if result.errors:
@@ -33,7 +43,11 @@ def candidates_from_search_result(
                     match_method="search_error",
                     searched_queries=queries,
                     notes="; ".join(result.errors),
-                    extra_evidence_json={"provider_summary": result.provider_summary} if result.provider_summary else None,
+                    extra_evidence_json=(
+                        {"provider_summary": result.provider_summary}
+                        if result.provider_summary
+                        else None
+                    ),
                 )
             ]
         return [
@@ -47,18 +61,36 @@ def candidates_from_search_result(
                 match_method="no_candidate_urls",
                 searched_queries=queries,
                 notes="No credible product page found.",
-                extra_evidence_json={"provider_summary": result.provider_summary} if result.provider_summary else None,
+                extra_evidence_json=(
+                    {"provider_summary": result.provider_summary}
+                    if result.provider_summary
+                    else None
+                ),
             )
         ]
 
     first_scores = [
-        score_candidate(product=product, source=source, evidence=evidence, competing_candidates_count=0)
+        score_candidate(
+            product=product,
+            source=source,
+            evidence=evidence,
+            competing_candidates_count=0,
+        )
         for evidence in evidence_items
     ]
-    plausible_count = sum(1 for score in first_scores if score.confidence_score >= 0.50 and score.match_status != "error")
+    plausible_count = sum(
+        1
+        for score in first_scores
+        if score.confidence_score >= 0.50 and score.match_status != "error"
+    )
     candidates: list[SourceUrlAgentCandidate] = []
     for evidence in evidence_items:
-        score = score_candidate(product=product, source=source, evidence=evidence, competing_candidates_count=plausible_count)
+        score = score_candidate(
+            product=product,
+            source=source,
+            evidence=evidence,
+            competing_candidates_count=plausible_count,
+        )
         candidates.append(
             candidate_from_evidence(
                 run_id=run_id,

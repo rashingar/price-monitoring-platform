@@ -122,7 +122,9 @@ class SelectedPriceMonitoringProduct:
     def to_dict(self) -> dict:
         payload = asdict(self)
         payload["source_url_coverage"] = (
-            self.source_url_coverage.to_dict() if self.source_url_coverage is not None else None
+            self.source_url_coverage.to_dict()
+            if self.source_url_coverage is not None
+            else None
         )
         return payload
 
@@ -159,7 +161,9 @@ class PriceMonitoringSelectionResult:
         counts: Counter[str] = Counter()
         for skipped_product in self.skipped:
             counts.update(skipped_product.reasons)
-        return {reason: counts[reason] for reason in SKIPPED_REASON_KEYS if counts[reason]}
+        return {
+            reason: counts[reason] for reason in SKIPPED_REASON_KEYS if counts[reason]
+        }
 
 
 def select_price_monitoring_products(
@@ -169,19 +173,37 @@ def select_price_monitoring_products(
 ) -> PriceMonitoringSelectionResult:
     source_filter = _source_filter_from_request(request)
     source = source_filter
-    products = catalog_products if catalog_products is not None else load_active_catalog_products()
-    ignored = ignored_models if ignored_models is not None else {product.model for product in load_ignored_products()}
-    products_by_model = {_normalize_model(product.model): product for product in products}
-    excluded_models = {_normalize_model(model) for model in request.excluded_models if _normalize_model(model)}
+    products = (
+        catalog_products
+        if catalog_products is not None
+        else load_active_catalog_products()
+    )
+    ignored = (
+        ignored_models
+        if ignored_models is not None
+        else {product.model for product in load_ignored_products()}
+    )
+    products_by_model = {
+        _normalize_model(product.model): product for product in products
+    }
+    excluded_models = {
+        _normalize_model(model)
+        for model in request.excluded_models
+        if _normalize_model(model)
+    }
 
     candidates = _candidate_products(request, products, products_by_model)
     selected_items: list[SelectedPriceMonitoringProduct] = []
     skipped_items: list[SkippedPriceMonitoringProduct] = []
 
     for product in candidates:
-        reasons = _skip_reasons(product, ignored, excluded_models, request.include_ignored)
+        reasons = _skip_reasons(
+            product, ignored, excluded_models, request.include_ignored
+        )
         if reasons:
-            skipped_items.append(SkippedPriceMonitoringProduct(model=product.model, reasons=reasons))
+            skipped_items.append(
+                SkippedPriceMonitoringProduct(model=product.model, reasons=reasons)
+            )
             continue
         selected_items.append(
             SelectedPriceMonitoringProduct(
@@ -213,7 +235,12 @@ def select_price_monitoring_products(
 
 def _source_filter_from_request(request: PriceMonitoringSelectionRequest) -> str | None:
     resolved: set[str] = set()
-    for value in (request.source_filter, request.source_name, request.vendor_slug, request.source):
+    for value in (
+        request.source_filter,
+        request.source_name,
+        request.vendor_slug,
+        request.source,
+    ):
         text = str(value or "").strip().lower()
         if text == "all":
             raise ValueError(SOURCE_REQUIRED_MESSAGE)
@@ -223,7 +250,9 @@ def _source_filter_from_request(request: PriceMonitoringSelectionRequest) -> str
     if not resolved:
         raise ValueError(SOURCE_REQUIRED_MESSAGE)
     if len(resolved) > 1:
-        raise ValueError("Price Monitoring requires exactly one source/vendor; conflicting source values were provided.")
+        raise ValueError(
+            "Price Monitoring requires exactly one source/vendor; conflicting source values were provided."
+        )
     return next(iter(resolved))
 
 
@@ -245,7 +274,9 @@ def _candidate_products(
             if product is not None:
                 selected_products.append(product)
         return selected_products
-    return [product for product in products if _matches_filters(product, request.filters)]
+    return [
+        product for product in products if _matches_filters(product, request.filters)
+    ]
 
 
 def _matches_filters(product: CatalogProduct, filters: PriceMonitoringFilters) -> bool:
@@ -280,7 +311,9 @@ def _matches_filters(product: CatalogProduct, filters: PriceMonitoringFilters) -
     return True
 
 
-def _matches_marketplace(product: CatalogProduct, marketplace: MarketplaceFilter) -> bool:
+def _matches_marketplace(
+    product: CatalogProduct, marketplace: MarketplaceFilter
+) -> bool:
     bestprice = product.bestprice_status == 1
     skroutz = product.skroutz_status == 1
     if marketplace == "bestprice":

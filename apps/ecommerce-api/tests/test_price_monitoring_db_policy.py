@@ -32,13 +32,23 @@ def _blocked_detail(response) -> dict:
 
 def _write_run(run_dir: Path) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / "input.csv").write_text("model,mpn,name,price\n005606,MPN-1,Product,10.00\n", encoding="utf-8")
-    (run_dir / "selection_summary.json").write_text('{"run_id":"run-1","source":"skroutz"}\n', encoding="utf-8")
-    (run_dir / "review.csv").write_text("model,target_price,status\n005606,9.00,exportable\n", encoding="utf-8")
+    (run_dir / "input.csv").write_text(
+        "model,mpn,name,price\n005606,MPN-1,Product,10.00\n", encoding="utf-8"
+    )
+    (run_dir / "selection_summary.json").write_text(
+        '{"run_id":"run-1","source":"skroutz"}\n', encoding="utf-8"
+    )
+    (run_dir / "review.csv").write_text(
+        "model,target_price,status\n005606,9.00,exportable\n", encoding="utf-8"
+    )
 
 
-def test_db_status_reports_monitoring_not_ready_without_database(tmp_path: Path, monkeypatch) -> None:
-    response = _client_without_db(tmp_path, monkeypatch).get("/api/price-monitoring/db/status")
+def test_db_status_reports_monitoring_not_ready_without_database(
+    tmp_path: Path, monkeypatch
+) -> None:
+    response = _client_without_db(tmp_path, monkeypatch).get(
+        "/api/price-monitoring/db/status"
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -51,19 +61,27 @@ def test_db_status_reports_monitoring_not_ready_without_database(tmp_path: Path,
     assert "database_not_configured" in payload["blocking_reasons"]
 
 
-def test_monitoring_workflow_routes_return_structured_503_without_database(tmp_path: Path, monkeypatch) -> None:
+def test_monitoring_workflow_routes_return_structured_503_without_database(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_without_db(tmp_path, monkeypatch)
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
     responses = [
-        client.post("/api/price-monitoring/selection/preview", json={"source": "skroutz"}),
+        client.post(
+            "/api/price-monitoring/selection/preview", json={"source": "skroutz"}
+        ),
         client.get("/api/price-monitoring/runs"),
         client.get("/api/price-monitoring/runs/run-1"),
-        client.post("/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"}),
+        client.post(
+            "/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"}
+        ),
         client.get("/api/price-monitoring/runs/run-1/fetch"),
         client.get("/api/price-monitoring/runs/run-1/review"),
-        client.post("/api/price-monitoring/runs/run-1/review/actions", json={"actions": []}),
+        client.post(
+            "/api/price-monitoring/runs/run-1/review/actions", json={"actions": []}
+        ),
         client.post("/api/price-monitoring/runs/run-1/export-price-update", json={}),
         client.get("/api/price-monitoring/observations"),
         client.get("/api/price-monitoring/runs/run-1/observations"),
@@ -77,7 +95,9 @@ def test_monitoring_workflow_routes_return_structured_503_without_database(tmp_p
         _blocked_detail(response)
 
 
-def test_run_creation_is_blocked_before_creating_file_folder(tmp_path: Path, monkeypatch) -> None:
+def test_run_creation_is_blocked_before_creating_file_folder(
+    tmp_path: Path, monkeypatch
+) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
     catalog_path.write_text(
         "model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n"
@@ -87,7 +107,10 @@ def test_run_creation_is_blocked_before_creating_file_folder(tmp_path: Path, mon
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
     client = _client_without_db(tmp_path, monkeypatch)
 
-    response = client.post("/api/price-monitoring/runs", json={"source": "skroutz", "selected_models": ["005606"]})
+    response = client.post(
+        "/api/price-monitoring/runs",
+        json={"source": "skroutz", "selected_models": ["005606"]},
+    )
 
     _blocked_detail(response)
     assert not (tmp_path / "output" / "ecommerce" / "monitoring" / "runs").exists()
@@ -117,15 +140,25 @@ def test_non_monitoring_routes_are_not_db_blocked(tmp_path: Path, monkeypatch) -
     assert catalog_response.status_code == 503
     assert catalog_response.json()["detail"]["code"] == "catalog_database_required"
     assert client.get("/api/files/roots").status_code == 200
-    assert client.post("/api/files/read", json={"path": str(editable)}).status_code == 200
+    assert (
+        client.post("/api/files/read", json={"path": str(editable)}).status_code == 200
+    )
     assert client.get("/api/artifacts/price-monitoring/runs/run-1").status_code == 200
 
 
-def test_mocked_db_ready_allows_monitoring_routes_to_reach_normal_validation(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(routes_price_monitoring, "require_database_ready_for_price_monitoring", lambda: None)
+def test_mocked_db_ready_allows_monitoring_routes_to_reach_normal_validation(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "require_database_ready_for_price_monitoring",
+        lambda: None,
+    )
     client = _client_without_db(tmp_path, monkeypatch)
 
-    response = client.post("/api/price-monitoring/runs/missing/fetch", json={"source": "skroutz"})
+    response = client.post(
+        "/api/price-monitoring/runs/missing/fetch", json={"source": "skroutz"}
+    )
 
     assert response.status_code == 404
     assert "run folder not found" in response.json()["detail"]

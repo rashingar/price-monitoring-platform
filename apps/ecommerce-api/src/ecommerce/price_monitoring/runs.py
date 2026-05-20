@@ -54,8 +54,12 @@ def create_price_monitoring_run(
     selection_result = selection_result or select_price_monitoring_products(request)
     if selection_result.source_url_coverage is None:
         with session_scope() as session:
-            coverage = compute_source_url_coverage(session, selection_result.items, selection_result.source)
-        selection_result = require_active_source_url_coverage(selection_result, coverage)
+            coverage = compute_source_url_coverage(
+                session, selection_result.items, selection_result.source
+            )
+        selection_result = require_active_source_url_coverage(
+            selection_result, coverage
+        )
     if selection_result.selected_count == 0:
         raise ValueError("No eligible products selected.")
 
@@ -83,7 +87,9 @@ def create_price_monitoring_run(
     )
 
 
-def write_ecommerce_input_csv(path: Path, products: list[SelectedPriceMonitoringProduct]) -> Path:
+def write_ecommerce_input_csv(
+    path: Path, products: list[SelectedPriceMonitoringProduct]
+) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=INPUT_COLUMNS)
@@ -136,7 +142,9 @@ def run_record_to_response(record: PriceMonitoringRunRecord) -> dict:
     }
 
 
-def selection_preview_to_response(selection_result: PriceMonitoringSelectionResult) -> dict:
+def selection_preview_to_response(
+    selection_result: PriceMonitoringSelectionResult,
+) -> dict:
     selected_items = [item.to_dict() for item in selection_result.items]
     skipped_items = [item.to_dict() for item in selection_result.skipped]
     return {
@@ -159,7 +167,9 @@ def selection_preview_to_response(selection_result: PriceMonitoringSelectionResu
     }
 
 
-def list_price_monitoring_runs(runs_dir: Path = PRICE_MONITORING_RUNS_DIR) -> list[dict]:
+def list_price_monitoring_runs(
+    runs_dir: Path = PRICE_MONITORING_RUNS_DIR,
+) -> list[dict]:
     runs_dir = Path(runs_dir)
     if not runs_dir.exists():
         return []
@@ -173,11 +183,16 @@ def list_price_monitoring_runs(runs_dir: Path = PRICE_MONITORING_RUNS_DIR) -> li
         except InvalidPriceMonitoringRunIdError:
             continue
 
-    items.sort(key=lambda item: (str(item.get("created_at", "")), str(item.get("run_id", ""))), reverse=True)
+    items.sort(
+        key=lambda item: (str(item.get("created_at", "")), str(item.get("run_id", ""))),
+        reverse=True,
+    )
     return items
 
 
-def load_price_monitoring_run(run_id: str, runs_dir: Path = PRICE_MONITORING_RUNS_DIR) -> dict:
+def load_price_monitoring_run(
+    run_id: str, runs_dir: Path = PRICE_MONITORING_RUNS_DIR
+) -> dict:
     run_dir = resolve_price_monitoring_run_dir(run_id, runs_dir)
     if not run_dir.exists():
         raise FileNotFoundError(f"Price monitoring run folder not found: {run_dir}")
@@ -237,10 +252,19 @@ def price_monitoring_run_to_api_dict(
     return {
         "run_id": str(summary.get("run_id") or safe_run_id),
         "status": str(summary.get("status") or "selection_created"),
-        "source": str(summary.get("source") or (latest_fetch or {}).get("source") or ""),
-        "source_name": str(summary.get("source_name") or summary.get("source") or (latest_fetch or {}).get("source") or ""),
+        "source": str(
+            summary.get("source") or (latest_fetch or {}).get("source") or ""
+        ),
+        "source_name": str(
+            summary.get("source_name")
+            or summary.get("source")
+            or (latest_fetch or {}).get("source")
+            or ""
+        ),
         "source_filter": summary.get("source_filter"),
-        "created_at": str(summary.get("created_at") or _created_at_from_run_dir(run_dir)),
+        "created_at": str(
+            summary.get("created_at") or _created_at_from_run_dir(run_dir)
+        ),
         "output_dir": str(run_dir),
         "input_csv_path": str(summary.get("input_csv_path") or input_csv_path),
         "selection_summary_path": str(selection_summary_path),
@@ -292,26 +316,53 @@ def _latest_fetch_payload(run_dir: Path) -> dict | None:
         return {
             "execution_id": str(execution_payload.get("execution_id") or ""),
             "execution_type": str(execution_payload.get("execution_type") or "fetch"),
-            "status": _normalize_fetch_status(str(execution_payload.get("status") or "")),
+            "status": _normalize_fetch_status(
+                str(execution_payload.get("status") or "")
+            ),
             "source": str(execution_payload.get("source") or ""),
             "queued_at": str(execution_payload.get("queued_at") or ""),
             "started_at": str(execution_payload.get("started_at") or ""),
             "completed_at": str(execution_payload.get("completed_at") or ""),
             "cancelled_at": str(execution_payload.get("cancelled_at") or ""),
             "enriched_csv_path": str(execution_payload.get("enriched_csv_path") or ""),
-            "fetch_summary_path": str(execution_payload.get("fetch_summary_path") or ""),
-            "fetch_result_path": str(execution_payload.get("fetch_result_path") or run_dir / FETCH_RESULT_FILENAME),
+            "fetch_summary_path": str(
+                execution_payload.get("fetch_summary_path") or ""
+            ),
+            "fetch_result_path": str(
+                execution_payload.get("fetch_result_path")
+                or run_dir / FETCH_RESULT_FILENAME
+            ),
             "error": str(execution_payload.get("error") or ""),
-            "fetch_input_mode": str(execution_payload.get("fetch_input_mode") or "source_urls"),
-            "source_url_capture_used": bool(execution_payload.get("source_url_capture_used", False)),
-            "source_url_capture_status": str(execution_payload.get("source_url_capture_status") or "not_run"),
-            "source_url_capture_selected_count": _int_value(execution_payload.get("source_url_capture_selected_count"), 0),
-            "source_url_capture_succeeded_count": _int_value(execution_payload.get("source_url_capture_succeeded_count"), 0),
-            "source_url_capture_failed_count": _int_value(execution_payload.get("source_url_capture_failed_count"), 0),
-            "source_url_capture_result_path": str(execution_payload.get("source_url_capture_result_path") or ""),
-            "source_url_capture_warnings": _list_value(execution_payload.get("source_url_capture_warnings")),
-            "source_url_capture_run_id": str(execution_payload.get("source_url_capture_run_id") or ""),
-            "observation_batch_id": str(execution_payload.get("observation_batch_id") or ""),
+            "fetch_input_mode": str(
+                execution_payload.get("fetch_input_mode") or "source_urls"
+            ),
+            "source_url_capture_used": bool(
+                execution_payload.get("source_url_capture_used", False)
+            ),
+            "source_url_capture_status": str(
+                execution_payload.get("source_url_capture_status") or "not_run"
+            ),
+            "source_url_capture_selected_count": _int_value(
+                execution_payload.get("source_url_capture_selected_count"), 0
+            ),
+            "source_url_capture_succeeded_count": _int_value(
+                execution_payload.get("source_url_capture_succeeded_count"), 0
+            ),
+            "source_url_capture_failed_count": _int_value(
+                execution_payload.get("source_url_capture_failed_count"), 0
+            ),
+            "source_url_capture_result_path": str(
+                execution_payload.get("source_url_capture_result_path") or ""
+            ),
+            "source_url_capture_warnings": _list_value(
+                execution_payload.get("source_url_capture_warnings")
+            ),
+            "source_url_capture_run_id": str(
+                execution_payload.get("source_url_capture_run_id") or ""
+            ),
+            "observation_batch_id": str(
+                execution_payload.get("observation_batch_id") or ""
+            ),
             "worker_id": str(execution_payload.get("worker_id") or ""),
             "process_id": execution_payload.get("process_id"),
             "thread_name": str(execution_payload.get("thread_name") or ""),
@@ -341,13 +392,27 @@ def _latest_fetch_payload(run_dir: Path) -> dict | None:
         "error": str(payload.get("error") or ""),
         "fetch_input_mode": str(payload.get("fetch_input_mode") or "source_urls"),
         "source_url_capture_used": bool(payload.get("source_url_capture_used", False)),
-        "source_url_capture_status": str(payload.get("source_url_capture_status") or "not_run"),
-        "source_url_capture_selected_count": _int_value(payload.get("source_url_capture_selected_count"), 0),
-        "source_url_capture_succeeded_count": _int_value(payload.get("source_url_capture_succeeded_count"), 0),
-        "source_url_capture_failed_count": _int_value(payload.get("source_url_capture_failed_count"), 0),
-        "source_url_capture_result_path": str(payload.get("source_url_capture_result_path") or ""),
-        "source_url_capture_warnings": _list_value(payload.get("source_url_capture_warnings")),
-        "source_url_capture_run_id": str(payload.get("source_url_capture_run_id") or ""),
+        "source_url_capture_status": str(
+            payload.get("source_url_capture_status") or "not_run"
+        ),
+        "source_url_capture_selected_count": _int_value(
+            payload.get("source_url_capture_selected_count"), 0
+        ),
+        "source_url_capture_succeeded_count": _int_value(
+            payload.get("source_url_capture_succeeded_count"), 0
+        ),
+        "source_url_capture_failed_count": _int_value(
+            payload.get("source_url_capture_failed_count"), 0
+        ),
+        "source_url_capture_result_path": str(
+            payload.get("source_url_capture_result_path") or ""
+        ),
+        "source_url_capture_warnings": _list_value(
+            payload.get("source_url_capture_warnings")
+        ),
+        "source_url_capture_run_id": str(
+            payload.get("source_url_capture_run_id") or ""
+        ),
         "observation_batch_id": str(payload.get("observation_batch_id") or ""),
     }
 
@@ -381,7 +446,11 @@ def _created_at_from_run_dir(run_dir: Path) -> str:
         timestamp = run_dir.stat().st_mtime
     except OSError:
         timestamp = 0
-    return datetime.fromtimestamp(timestamp, timezone.utc).replace(microsecond=0).isoformat()
+    return (
+        datetime.fromtimestamp(timestamp, timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+    )
 
 
 def _created_at_from_run_id(run_id: str) -> str:

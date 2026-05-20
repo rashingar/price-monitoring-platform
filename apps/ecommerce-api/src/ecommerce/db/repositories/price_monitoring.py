@@ -13,9 +13,26 @@ from sqlalchemy.orm import Session, aliased
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.products import Product
-from ecommerce.db.models.price_monitoring import CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing
-from ecommerce.db.repositories.common import _decimal_or_none, _empty_to_none, _first_text, _json_safe, _now, _parse_datetime, json_safe_value
-from ecommerce.db.repositories.products import match_product_for_observation, upsert_product_from_catalog_row
+from ecommerce.db.models.price_monitoring import (
+    CatalogSnapshot,
+    MonitoringRun,
+    OfferObservation,
+    PriceObservation,
+    PriceObservationListing,
+)
+from ecommerce.db.repositories.common import (
+    _decimal_or_none,
+    _empty_to_none,
+    _first_text,
+    _json_safe,
+    _now,
+    _parse_datetime,
+    json_safe_value,
+)
+from ecommerce.db.repositories.products import (
+    match_product_for_observation,
+    upsert_product_from_catalog_row,
+)
 from ecommerce.price_monitoring.fetch_run import PriceMonitoringFetchResult
 from ecommerce.price_monitoring.observations import ParsedPriceObservation
 from ecommerce.price_monitoring.runs import PriceMonitoringRunRecord
@@ -103,12 +120,20 @@ def update_monitoring_run_from_fetch(
         monitoring_run.trigger_type = trigger_type
     monitoring_run.output_dir = str(Path(result.input_csv_path).parent)
     monitoring_run.input_csv_path = str(result.input_csv_path)
-    selection_summary_path = Path(result.input_csv_path).parent / "selection_summary.json"
+    selection_summary_path = (
+        Path(result.input_csv_path).parent / "selection_summary.json"
+    )
     if selection_summary_path.exists():
         monitoring_run.selection_summary_path = str(selection_summary_path)
     monitoring_run.fetch_result_path = str(result.fetch_result_path)
-    monitoring_run.enriched_csv_path = str(result.enriched_csv_path) if result.enriched_csv_path is not None else None
-    monitoring_run.fetch_summary_path = str(result.fetch_summary_path) if result.fetch_summary_path is not None else None
+    monitoring_run.enriched_csv_path = (
+        str(result.enriched_csv_path) if result.enriched_csv_path is not None else None
+    )
+    monitoring_run.fetch_summary_path = (
+        str(result.fetch_summary_path)
+        if result.fetch_summary_path is not None
+        else None
+    )
     monitoring_run.started_at = _parse_datetime(result.started_at)
     monitoring_run.completed_at = _parse_datetime(result.completed_at)
     monitoring_run.error_message = result.error or None
@@ -124,7 +149,11 @@ def replace_catalog_snapshots(
     catalog_source: str = DEFAULT_CATALOG_SOURCE,
     created_at: datetime | None = None,
 ) -> int:
-    session.execute(delete(CatalogSnapshot).where(CatalogSnapshot.monitoring_run_id == monitoring_run.id))
+    session.execute(
+        delete(CatalogSnapshot).where(
+            CatalogSnapshot.monitoring_run_id == monitoring_run.id
+        )
+    )
     timestamp = created_at or _now()
     inserted = 0
     seen: set[tuple[str, str, str]] = set()
@@ -134,8 +163,14 @@ def replace_catalog_snapshots(
         if key is None or key in seen:
             continue
         seen.add(key)
-        db_product = upsert_product_from_catalog_row(session, row, catalog_source=catalog_source, updated_at=timestamp)
-        session.add(_catalog_snapshot_from_row(monitoring_run, row, catalog_source, db_product, timestamp))
+        db_product = upsert_product_from_catalog_row(
+            session, row, catalog_source=catalog_source, updated_at=timestamp
+        )
+        session.add(
+            _catalog_snapshot_from_row(
+                monitoring_run, row, catalog_source, db_product, timestamp
+            )
+        )
         inserted += 1
     return inserted
 
@@ -159,8 +194,14 @@ def ensure_catalog_snapshots_from_rows(
         if key is None or key in seen:
             continue
         seen.add(key)
-        db_product = upsert_product_from_catalog_row(session, row, catalog_source=catalog_source, updated_at=timestamp)
-        session.add(_catalog_snapshot_from_row(monitoring_run, row, catalog_source, db_product, timestamp))
+        db_product = upsert_product_from_catalog_row(
+            session, row, catalog_source=catalog_source, updated_at=timestamp
+        )
+        session.add(
+            _catalog_snapshot_from_row(
+                monitoring_run, row, catalog_source, db_product, timestamp
+            )
+        )
         inserted += 1
     return inserted
 
@@ -215,27 +256,38 @@ def replace_price_observations(
 
 
 def get_monitoring_run(session: Session, run_id: str) -> MonitoringRun | None:
-    return session.execute(select(MonitoringRun).where(MonitoringRun.run_id == run_id)).scalar_one_or_none()
+    return session.execute(
+        select(MonitoringRun).where(MonitoringRun.run_id == run_id)
+    ).scalar_one_or_none()
 
 
-def list_monitoring_runs(session: Session, *, limit: int = 500, offset: int = 0) -> list[dict[str, Any]]:
+def list_monitoring_runs(
+    session: Session, *, limit: int = 500, offset: int = 0
+) -> list[dict[str, Any]]:
     statement = (
         select(MonitoringRun)
         .order_by(MonitoringRun.created_at.desc(), MonitoringRun.id.desc())
         .limit(limit)
         .offset(offset)
     )
-    return [monitoring_run_to_dict(run) for run in session.execute(statement).scalars().all()]
+    return [
+        monitoring_run_to_dict(run)
+        for run in session.execute(statement).scalars().all()
+    ]
 
 
 def count_catalog_snapshots(session: Session, monitoring_run_id: int) -> int:
-    statement = select(func.count(CatalogSnapshot.id)).where(CatalogSnapshot.monitoring_run_id == monitoring_run_id)
+    statement = select(func.count(CatalogSnapshot.id)).where(
+        CatalogSnapshot.monitoring_run_id == monitoring_run_id
+    )
     return int(session.execute(statement).scalar_one())
 
 
 def count_price_observations(session: Session, run_id: str) -> int:
     statement = _latest_run_attempt_filter(
-        select(func.count(PriceObservation.id)).where(PriceObservation.run_id == run_id),
+        select(func.count(PriceObservation.id)).where(
+            PriceObservation.run_id == run_id
+        ),
         run_id=run_id,
     )
     return int(session.execute(statement).scalar_one())
@@ -279,8 +331,17 @@ def list_price_observations(
         include_unmatched=include_unmatched,
     )
     count_statement = _latest_run_attempt_filter(count_statement, run_id=run_id)
-    statement = statement.order_by(PriceObservation.observed_at.desc(), PriceObservation.id.desc()).limit(limit).offset(offset)
-    items = [price_observation_to_dict(item) for item in session.execute(statement).scalars().all()]
+    statement = (
+        statement.order_by(
+            PriceObservation.observed_at.desc(), PriceObservation.id.desc()
+        )
+        .limit(limit)
+        .offset(offset)
+    )
+    items = [
+        price_observation_to_dict(item)
+        for item in session.execute(statement).scalars().all()
+    ]
     count = int(session.execute(count_statement).scalar_one())
     return items, count
 
@@ -299,13 +360,18 @@ def list_price_observation_listings(
     if price_observation_ids is not None:
         if not price_observation_ids:
             return []
-        statement = statement.where(PriceObservationListing.price_observation_id.in_(price_observation_ids))
+        statement = statement.where(
+            PriceObservationListing.price_observation_id.in_(price_observation_ids)
+        )
     if run_id:
         statement = statement.where(PriceObservationListing.run_id == run_id)
     if product_id is not None:
         statement = statement.where(PriceObservationListing.product_id == product_id)
     if model or mpn:
-        statement = statement.join(PriceObservation, PriceObservation.id == PriceObservationListing.price_observation_id)
+        statement = statement.join(
+            PriceObservation,
+            PriceObservation.id == PriceObservationListing.price_observation_id,
+        )
         if model:
             statement = statement.where(PriceObservation.model == model)
         if mpn:
@@ -315,7 +381,10 @@ def list_price_observation_listings(
         PriceObservationListing.rank.asc(),
         PriceObservationListing.id.asc(),
     ).limit(max(1, min(int(limit), 20_000)))
-    return [price_observation_listing_to_dict(item) for item in session.execute(statement).scalars().all()]
+    return [
+        price_observation_listing_to_dict(item)
+        for item in session.execute(statement).scalars().all()
+    ]
 
 
 def list_price_observation_listings_for_run(
@@ -347,7 +416,9 @@ def backfill_price_observation_listings_from_offer_observations(
     timestamp = created_at or _now()
     statement = select(PriceObservation).where(
         PriceObservation.source_capture_snapshot_id.is_not(None),
-        ~exists().where(PriceObservationListing.price_observation_id == PriceObservation.id),
+        ~exists().where(
+            PriceObservationListing.price_observation_id == PriceObservation.id
+        ),
     )
     if run_id:
         statement = statement.where(PriceObservation.run_id == run_id)
@@ -358,21 +429,47 @@ def backfill_price_observation_listings_from_offer_observations(
     observations = session.execute(statement).scalars().all()
     if not observations:
         return 0
-    snapshot_ids = sorted({int(observation.source_capture_snapshot_id) for observation in observations if observation.source_capture_snapshot_id is not None})
-    offer_statement = select(OfferObservation).where(OfferObservation.source_capture_snapshot_id.in_(snapshot_ids))
-    offers_by_snapshot_product: dict[tuple[int | None, int | None], list[OfferObservation]] = {}
-    for offer in session.execute(offer_statement.order_by(OfferObservation.id.asc())).scalars().all():
-        offers_by_snapshot_product.setdefault((offer.source_capture_snapshot_id, offer.product_id), []).append(offer)
+    snapshot_ids = sorted(
+        {
+            int(observation.source_capture_snapshot_id)
+            for observation in observations
+            if observation.source_capture_snapshot_id is not None
+        }
+    )
+    offer_statement = select(OfferObservation).where(
+        OfferObservation.source_capture_snapshot_id.in_(snapshot_ids)
+    )
+    offers_by_snapshot_product: dict[
+        tuple[int | None, int | None], list[OfferObservation]
+    ] = {}
+    for offer in (
+        session.execute(offer_statement.order_by(OfferObservation.id.asc()))
+        .scalars()
+        .all()
+    ):
+        offers_by_snapshot_product.setdefault(
+            (offer.source_capture_snapshot_id, offer.product_id), []
+        ).append(offer)
     inserted = 0
     for observation in observations:
         offers = [
             offer
-            for offer in offers_by_snapshot_product.get((observation.source_capture_snapshot_id, observation.product_id), [])
-            if (observation.product_source_id is None or offer.product_source_id == observation.product_source_id)
-            and (observation.vendor_id is None or offer.aggregator_vendor_id == observation.vendor_id)
+            for offer in offers_by_snapshot_product.get(
+                (observation.source_capture_snapshot_id, observation.product_id), []
+            )
+            if (
+                observation.product_source_id is None
+                or offer.product_source_id == observation.product_source_id
+            )
+            and (
+                observation.vendor_id is None
+                or offer.aggregator_vendor_id == observation.vendor_id
+            )
         ]
         for rank, offer in enumerate(_rank_offer_observations(offers), start=1):
-            listing = _listing_from_offer_observation(observation, offer, rank=rank, created_at=timestamp)
+            listing = _listing_from_offer_observation(
+                observation, offer, rank=rank, created_at=timestamp
+            )
             if listing is None:
                 continue
             session.add(listing)
@@ -382,7 +479,9 @@ def backfill_price_observation_listings_from_offer_observations(
     return inserted
 
 
-def count_run_observations_by_match_status(session: Session, run_id: str) -> tuple[int, int]:
+def count_run_observations_by_match_status(
+    session: Session, run_id: str
+) -> tuple[int, int]:
     matched = int(
         session.execute(
             _latest_run_attempt_filter(
@@ -409,15 +508,24 @@ def count_run_observations_by_match_status(session: Session, run_id: str) -> tup
 
 
 def list_catalog_snapshot(session: Session, run_id: str) -> list[dict[str, Any]]:
-    statement = select(CatalogSnapshot).where(CatalogSnapshot.run_id == run_id).order_by(
-        CatalogSnapshot.model.asc().nullslast(),
-        CatalogSnapshot.mpn.asc().nullslast(),
-        CatalogSnapshot.id.asc(),
+    statement = (
+        select(CatalogSnapshot)
+        .where(CatalogSnapshot.run_id == run_id)
+        .order_by(
+            CatalogSnapshot.model.asc().nullslast(),
+            CatalogSnapshot.mpn.asc().nullslast(),
+            CatalogSnapshot.id.asc(),
+        )
     )
-    return [catalog_snapshot_to_dict(item) for item in session.execute(statement).scalars().all()]
+    return [
+        catalog_snapshot_to_dict(item)
+        for item in session.execute(statement).scalars().all()
+    ]
 
 
-def list_product_price_history(session: Session, product_id: int, *, limit: int = 1000, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
+def list_product_price_history(
+    session: Session, product_id: int, *, limit: int = 1000, offset: int = 0
+) -> tuple[list[dict[str, Any]], int]:
     statement = (
         select(PriceObservation)
         .where(PriceObservation.product_id == product_id)
@@ -425,10 +533,13 @@ def list_product_price_history(session: Session, product_id: int, *, limit: int 
         .limit(limit)
         .offset(offset)
     )
-    count_statement = select(func.count(PriceObservation.id)).where(PriceObservation.product_id == product_id)
-    return [price_observation_to_dict(item) for item in session.execute(statement).scalars().all()], int(
-        session.execute(count_statement).scalar_one()
+    count_statement = select(func.count(PriceObservation.id)).where(
+        PriceObservation.product_id == product_id
     )
+    return [
+        price_observation_to_dict(item)
+        for item in session.execute(statement).scalars().all()
+    ], int(session.execute(count_statement).scalar_one())
 
 
 def list_model_price_history(
@@ -462,10 +573,17 @@ def list_model_price_history(
         match_status=None,
         include_unmatched=include_unmatched,
     )
-    statement = statement.order_by(PriceObservation.observed_at.desc(), PriceObservation.id.desc()).limit(limit).offset(offset)
-    return [price_observation_to_dict(item) for item in session.execute(statement).scalars().all()], int(
-        session.execute(count_statement).scalar_one()
+    statement = (
+        statement.order_by(
+            PriceObservation.observed_at.desc(), PriceObservation.id.desc()
+        )
+        .limit(limit)
+        .offset(offset)
     )
+    return [
+        price_observation_to_dict(item)
+        for item in session.execute(statement).scalars().all()
+    ], int(session.execute(count_statement).scalar_one())
 
 
 def monitoring_run_to_dict(run: MonitoringRun) -> dict[str, Any]:
@@ -546,7 +664,9 @@ def price_observation_to_dict(observation: PriceObservation) -> dict[str, Any]:
     }
 
 
-def price_observation_listing_to_dict(listing: PriceObservationListing) -> dict[str, Any]:
+def price_observation_listing_to_dict(
+    listing: PriceObservationListing,
+) -> dict[str, Any]:
     return {
         "id": listing.id,
         "price_observation_id": listing.price_observation_id,
@@ -580,8 +700,22 @@ def _rank_offer_observations(offers: list[OfferObservation]) -> list[OfferObserv
     if not valid:
         return []
     if any(_offer_raw_rank(offer) is not None for offer in valid):
-        return sorted(valid, key=lambda offer: (_offer_raw_rank(offer) or 1_000_000, offer.price or Decimal("0"), (offer.seller_name or "").casefold()))
-    return sorted(valid, key=lambda offer: (offer.price or Decimal("0"), (offer.seller_name or "").casefold(), offer.id))
+        return sorted(
+            valid,
+            key=lambda offer: (
+                _offer_raw_rank(offer) or 1_000_000,
+                offer.price or Decimal("0"),
+                (offer.seller_name or "").casefold(),
+            ),
+        )
+    return sorted(
+        valid,
+        key=lambda offer: (
+            offer.price or Decimal("0"),
+            (offer.seller_name or "").casefold(),
+            offer.id,
+        ),
+    )
 
 
 def _listing_from_offer_observation(
@@ -597,7 +731,8 @@ def _listing_from_offer_observation(
         price_observation_id=observation.id,
         monitoring_run_id=observation.monitoring_run_id,
         run_id=observation.run_id,
-        observation_batch_id=observation.observation_batch_id or offer.observation_batch_id,
+        observation_batch_id=observation.observation_batch_id
+        or offer.observation_batch_id,
         product_id=observation.product_id,
         product_source_id=observation.product_source_id,
         source_capture_snapshot_id=observation.source_capture_snapshot_id,
@@ -689,14 +824,28 @@ def _catalog_snapshot_from_row(
         run_id=monitoring_run.run_id,
         catalog_source=catalog_source,
         model=_empty_to_none(_first_text(row, ("model", "product_model", "sku"))),
-        mpn=_empty_to_none(_first_text(row, ("mpn", "manufacturer_part_number", "matched_mpn"))),
+        mpn=_empty_to_none(
+            _first_text(row, ("mpn", "manufacturer_part_number", "matched_mpn"))
+        ),
         name=_empty_to_none(_first_text(row, ("name", "product_name", "title"))),
         manufacturer=_empty_to_none(_first_text(row, ("manufacturer", "brand"))),
         family=_empty_to_none(_first_text(row, ("family",))),
         category_name=_empty_to_none(_first_text(row, ("category_name", "category"))),
         sub_category=_empty_to_none(_first_text(row, ("sub_category", "subcategory"))),
-        marketplace=_empty_to_none(_first_text(row, ("marketplace", "source"))) or monitoring_run.source,
-        own_price=_decimal_or_none(_first_text(row, ("own_price", "price", "current_price", "internal_price", "catalog_price"))),
+        marketplace=_empty_to_none(_first_text(row, ("marketplace", "source")))
+        or monitoring_run.source,
+        own_price=_decimal_or_none(
+            _first_text(
+                row,
+                (
+                    "own_price",
+                    "price",
+                    "current_price",
+                    "internal_price",
+                    "catalog_price",
+                ),
+            )
+        ),
         currency=_first_text(row, ("currency",)) or "EUR",
         raw_catalog_row=_json_safe(row),
         created_at=created_at,
@@ -746,9 +895,13 @@ def _price_observation_from_parsed(
     )
 
 
-def _snapshot_identity_key(row: dict[str, Any], catalog_source: str) -> tuple[str, str, str] | None:
+def _snapshot_identity_key(
+    row: dict[str, Any], catalog_source: str
+) -> tuple[str, str, str] | None:
     model = _empty_to_none(_first_text(row, ("model", "product_model", "sku")))
-    mpn = _empty_to_none(_first_text(row, ("mpn", "manufacturer_part_number", "matched_mpn")))
+    mpn = _empty_to_none(
+        _first_text(row, ("mpn", "manufacturer_part_number", "matched_mpn"))
+    )
     if model:
         return catalog_source, "model", model
     if mpn:

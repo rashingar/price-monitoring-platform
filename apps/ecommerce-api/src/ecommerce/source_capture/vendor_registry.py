@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from ecommerce.source_capture.types import VendorDefinition
 
-
 VENDOR_DEFINITIONS: tuple[VendorDefinition, ...] = (
     VendorDefinition(
         slug="electronet",
@@ -73,4 +72,6 @@ VENDOR_DEFINITIONS: tuple[VendorDefinition, ...] = (
 )
 
 VENDORS_BY_SLUG = {vendor.slug: vendor for vendor in VENDOR_DEFINITIONS}
-VENDOR_SLUG_BY_DOMAIN = {domain: vendor.slug for vendor in VENDOR_DEFINITIONS for domain in vendor.domains}
+VENDOR_SLUG_BY_DOMAIN = {
+    domain: vendor.slug for vendor in VENDOR_DEFINITIONS for domain in vendor.domains
+}

@@ -3,7 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from product_factory.fetcher import FetchError
-from product_factory.models import FetchResult, GalleryImage, ParsedProduct, SourceProductData, SpecItem, SpecSection
+from product_factory.models import (
+    FetchResult,
+    GalleryImage,
+    ParsedProduct,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+)
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import (
@@ -79,14 +86,28 @@ def test_repair_source_product_text_repairs_fields_and_nested_source_data() -> N
         brand=broken_power,
         name=broken_max_power,
         hero_summary=broken_section,
-        gallery_images=[GalleryImage(url="https://cdn.example/main.jpg", alt=broken_power, position=1)],
-        besco_images=[GalleryImage(url="https://cdn.example/besco.jpg", alt=broken_max_power, position=1)],
+        gallery_images=[
+            GalleryImage(
+                url="https://cdn.example/main.jpg", alt=broken_power, position=1
+            )
+        ],
+        besco_images=[
+            GalleryImage(
+                url="https://cdn.example/besco.jpg", alt=broken_max_power, position=1
+            )
+        ],
         key_specs=[SpecItem(label=broken_power, value=broken_max_power)],
         spec_sections=[
-            SpecSection(section=broken_section, items=[SpecItem(label=broken_power, value=broken_max_power)])
+            SpecSection(
+                section=broken_section,
+                items=[SpecItem(label=broken_power, value=broken_max_power)],
+            )
         ],
         manufacturer_spec_sections=[
-            SpecSection(section=broken_section, items=[SpecItem(label=broken_power, value=broken_max_power)])
+            SpecSection(
+                section=broken_section,
+                items=[SpecItem(label=broken_power, value=broken_max_power)],
+            )
         ],
         presentation_source_text=broken_max_power,
         mpn=broken_power,
@@ -112,7 +133,9 @@ def test_repair_source_product_text_repairs_fields_and_nested_source_data() -> N
     assert source.manufacturer_spec_sections[0].items[0].value == "Μέγιστη Ισχύς"
 
 
-def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
+    tmp_path: Path,
+) -> None:
     model = "233541"
     url = "https://www.electronet.gr/example"
     source = SourceProductData(
@@ -126,7 +149,9 @@ def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
         name="LG GSGV80PYLL",
         gallery_images=[
             GalleryImage(url="https://cdn.example/main.jpg", alt="main", position=1),
-            GalleryImage(url="https://cdn.example/second.jpg", alt="second", position=2),
+            GalleryImage(
+                url="https://cdn.example/second.jpg", alt="second", position=2
+            ),
         ],
         energy_label_asset_url="https://eprel.ec.europa.eu/labels/example.png",
     )
@@ -157,7 +182,9 @@ def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
             downloaded=True,
         ),
     ]
-    fetcher = RecordingFetcher(gallery_result=(downloaded_gallery, ["gallery_warning"], ["gallery/file1.jpg"]))
+    fetcher = RecordingFetcher(
+        gallery_result=(downloaded_gallery, ["gallery_warning"], ["gallery/file1.jpg"])
+    )
     provider_calls: list[tuple[object, dict[str, object]]] = []
 
     def fake_resolve_prepare_provider_input(cli, **kwargs):
@@ -178,7 +205,9 @@ def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
         validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
         fetcher_factory=lambda: fetcher,
         resolve_prepare_provider_input_fn=fake_resolve_prepare_provider_input,
-        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="skipped", message="not configured"
+        ),
     )
 
     assert provider_calls and provider_calls[0][0].model == model
@@ -199,7 +228,11 @@ def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
     assert result.parsed.source.gallery_images == downloaded_gallery
     assert len(fetcher.gallery_download_calls) == 1
     assert fetcher.gallery_download_calls[0]["requested_photos"] == 3
-    assert [item.position for item in fetcher.gallery_download_calls[0]["images"]] == [1, 2, 3]
+    assert [item.position for item in fetcher.gallery_download_calls[0]["images"]] == [
+        1,
+        2,
+        3,
+    ]
     assert [item.url for item in fetcher.gallery_download_calls[0]["images"]] == [
         "https://cdn.example/main.jpg",
         "https://eprel.ec.europa.eu/labels/example.png",
@@ -239,10 +272,14 @@ def test_execute_source_acquisition_stage_returns_acquisition_owned_fields_only(
     }
 
 
-def test_execute_source_acquisition_stage_keeps_gallery_failure_as_warning_only(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_keeps_gallery_failure_as_warning_only(
+    tmp_path: Path,
+) -> None:
     model = "233541"
     url = "https://www.electronet.gr/example"
-    original_gallery = [GalleryImage(url="https://cdn.example/main.jpg", alt="main", position=1)]
+    original_gallery = [
+        GalleryImage(url="https://cdn.example/main.jpg", alt="main", position=1)
+    ]
     parsed = ParsedProduct(
         source=SourceProductData(
             source_name="electronet",
@@ -271,7 +308,9 @@ def test_execute_source_acquisition_stage_keeps_gallery_failure_as_warning_only(
             url=cli.url,
             parsed=parsed,
         ),
-        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="skipped", message="not configured"
+        ),
     )
 
     assert result.downloaded_gallery == []
@@ -283,7 +322,9 @@ def test_execute_source_acquisition_stage_keeps_gallery_failure_as_warning_only(
     assert result.snapshot_provenance["gallery_downloaded_count"] == 0
 
 
-def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_images(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_images(
+    tmp_path: Path,
+) -> None:
     model = "233541"
     main_url = "https://www.electronet.gr/main-product"
     gallery_url = "https://www.electronet.gr/gallery-product"
@@ -297,7 +338,11 @@ def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_imag
             brand="LG",
             mpn="MAIN-MPN",
             name="Main Product",
-            gallery_images=[GalleryImage(url="https://cdn.example/main-a.jpg", alt="main", position=1)],
+            gallery_images=[
+                GalleryImage(
+                    url="https://cdn.example/main-a.jpg", alt="main", position=1
+                )
+            ],
         )
     )
     gallery_parsed = ParsedProduct(
@@ -311,8 +356,12 @@ def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_imag
             mpn="GALLERY-MPN",
             name="Gallery Product",
             gallery_images=[
-                GalleryImage(url="https://cdn.example/gallery-a.jpg", alt="gallery a", position=1),
-                GalleryImage(url="https://cdn.example/gallery-b.jpg", alt="gallery b", position=2),
+                GalleryImage(
+                    url="https://cdn.example/gallery-a.jpg", alt="gallery a", position=1
+                ),
+                GalleryImage(
+                    url="https://cdn.example/gallery-b.jpg", alt="gallery b", position=2
+                ),
             ],
         )
     )
@@ -338,7 +387,9 @@ def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_imag
         validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
         fetcher_factory=lambda: fetcher,
         resolve_prepare_provider_input_fn=fake_resolve_prepare_provider_input,
-        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="skipped", message="not configured"
+        ),
     )
 
     assert provider_urls == [main_url, gallery_url]
@@ -356,7 +407,9 @@ def test_execute_source_acquisition_stage_uses_gallery_url_only_for_gallery_imag
     assert result.snapshot_provenance["product_data_extraction_uses_main_url"] is True
 
 
-def test_execute_source_acquisition_stage_gallery_mode_all_removes_download_cap(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_gallery_mode_all_removes_download_cap(
+    tmp_path: Path,
+) -> None:
     model = "233541"
     url = "https://www.electronet.gr/example"
     parsed = ParsedProduct(
@@ -392,7 +445,9 @@ def test_execute_source_acquisition_stage_gallery_mode_all_removes_download_cap(
             url=cli.url,
             parsed=parsed,
         ),
-        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="skipped", message="not configured"
+        ),
     )
 
     assert fetcher.gallery_download_calls[0]["requested_photos"] is None
@@ -405,7 +460,9 @@ def test_execute_source_acquisition_stage_gallery_mode_all_removes_download_cap(
     assert result.snapshot_provenance["gallery_whole_mode"] is True
 
 
-def test_apply_source_specific_gallery_rules_skroutz_source_url_skips_last_image() -> None:
+def test_apply_source_specific_gallery_rules_skroutz_source_url_skips_last_image() -> (
+    None
+):
     images = [
         GalleryImage(url="https://cdn.example/1.jpg", position=1),
         GalleryImage(url="https://cdn.example/2.jpg", position=2),
@@ -417,7 +474,10 @@ def test_apply_source_specific_gallery_rules_skroutz_source_url_skips_last_image
         source_url="https://www.skroutz.gr/s/123456/example.html",
     )
 
-    assert [image.url for image in filtered] == ["https://cdn.example/1.jpg", "https://cdn.example/2.jpg"]
+    assert [image.url for image in filtered] == [
+        "https://cdn.example/1.jpg",
+        "https://cdn.example/2.jpg",
+    ]
     assert metadata["domain"] == "skroutz.gr"
     assert metadata["rule"] == "skroutz_skip_last_gallery_image"
     assert metadata["skroutz_skip_last_applied"] is True
@@ -438,8 +498,13 @@ def test_apply_source_specific_gallery_rules_skroutz_single_image_keeps_image() 
     assert metadata["skipped_url"] == ""
 
 
-def test_apply_source_specific_gallery_rules_manual_skroutz_url_skips_last_image() -> None:
-    images = [GalleryImage(url="https://cdn.example/1.jpg"), GalleryImage(url="https://cdn.example/2.jpg")]
+def test_apply_source_specific_gallery_rules_manual_skroutz_url_skips_last_image() -> (
+    None
+):
+    images = [
+        GalleryImage(url="https://cdn.example/1.jpg"),
+        GalleryImage(url="https://cdn.example/2.jpg"),
+    ]
 
     filtered, metadata = apply_source_specific_gallery_rules(
         images,
@@ -451,15 +516,23 @@ def test_apply_source_specific_gallery_rules_manual_skroutz_url_skips_last_image
     assert metadata["skroutz_skip_last_applied"] is True
 
 
-def test_apply_source_specific_gallery_rules_non_skroutz_source_does_not_skip_last_image() -> None:
-    images = [GalleryImage(url="https://cdn.example/1.jpg"), GalleryImage(url="https://cdn.example/2.jpg")]
+def test_apply_source_specific_gallery_rules_non_skroutz_source_does_not_skip_last_image() -> (
+    None
+):
+    images = [
+        GalleryImage(url="https://cdn.example/1.jpg"),
+        GalleryImage(url="https://cdn.example/2.jpg"),
+    ]
 
     filtered, metadata = apply_source_specific_gallery_rules(
         images,
         source_url="https://www.electronet.gr/example",
     )
 
-    assert [image.url for image in filtered] == ["https://cdn.example/1.jpg", "https://cdn.example/2.jpg"]
+    assert [image.url for image in filtered] == [
+        "https://cdn.example/1.jpg",
+        "https://cdn.example/2.jpg",
+    ]
     assert metadata["domain"] == "electronet.gr"
     assert metadata["rule"] == ""
     assert metadata["skroutz_skip_last_applied"] is False
@@ -501,7 +574,9 @@ def test_execute_source_acquisition_stage_skroutz_enabled_non_skroutz_url_does_n
             url=cli.url,
             parsed=parsed,
         ),
-        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="skipped", message="not configured"
+        ),
     )
 
     assert [image.url for image in fetcher.gallery_download_calls[0]["images"]] == [
@@ -509,11 +584,15 @@ def test_execute_source_acquisition_stage_skroutz_enabled_non_skroutz_url_does_n
         "https://cdn.example/2.jpg",
     ]
     assert result.snapshot_provenance["gallery_skroutz_skip_last_applied"] is False
-    assert result.snapshot_provenance["gallery_extracted_before_source_filter_count"] == 2
+    assert (
+        result.snapshot_provenance["gallery_extracted_before_source_filter_count"] == 2
+    )
     assert result.snapshot_provenance["gallery_after_source_filter_count"] == 2
 
 
-def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_specs(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_specs(
+    tmp_path: Path,
+) -> None:
     model = "233541"
     main_url = "https://www.electronet.gr/main-product"
     characteristics_url = "https://www.electronet.gr/spec-product"
@@ -529,7 +608,11 @@ def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_spec
             name="Main Product",
             price_text="199,00",
             price_value=199.0,
-            gallery_images=[GalleryImage(url="https://cdn.example/main-a.jpg", alt="main", position=1)],
+            gallery_images=[
+                GalleryImage(
+                    url="https://cdn.example/main-a.jpg", alt="main", position=1
+                )
+            ],
         )
     )
     characteristics_parsed = ParsedProduct(
@@ -544,10 +627,18 @@ def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_spec
             name="Specs Product",
             price_text="999,00",
             price_value=999.0,
-            gallery_images=[GalleryImage(url="https://cdn.example/specs-gallery.jpg", alt="specs gallery", position=1)],
+            gallery_images=[
+                GalleryImage(
+                    url="https://cdn.example/specs-gallery.jpg",
+                    alt="specs gallery",
+                    position=1,
+                )
+            ],
             key_specs=[],
             spec_sections=[
-                SpecSection(section="Specs", items=[SpecItem(label="Capacity", value="10Lt")]),
+                SpecSection(
+                    section="Specs", items=[SpecItem(label="Capacity", value="10Lt")]
+                ),
             ],
         )
     )
@@ -556,7 +647,9 @@ def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_spec
 
     def fake_resolve_prepare_provider_input(cli, **_kwargs):
         provider_urls.append(cli.url)
-        parsed = characteristics_parsed if cli.url == characteristics_url else main_parsed
+        parsed = (
+            characteristics_parsed if cli.url == characteristics_url else main_parsed
+        )
         return _build_provider_resolution_result(
             source="electronet",
             provider_id="electronet",
@@ -573,7 +666,9 @@ def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_spec
         validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_domain"),
         fetcher_factory=lambda: fetcher,
         resolve_prepare_provider_input_fn=fake_resolve_prepare_provider_input,
-        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="not configured"),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="skipped", message="not configured"
+        ),
     )
 
     assert provider_urls == [main_url, characteristics_url]
@@ -588,7 +683,10 @@ def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_spec
     assert result.characteristics_fetch.url == characteristics_url
     assert result.characteristics_source.spec_sections[0].items[0].value == "10Lt"
     assert result.snapshot_provenance["characteristics_url_used"] is True
-    assert result.snapshot_provenance["characteristics_extraction_url"] == characteristics_url
+    assert (
+        result.snapshot_provenance["characteristics_extraction_url"]
+        == characteristics_url
+    )
     assert result.snapshot_provenance["gallery_url_used"] is False
     assert result.snapshot_provenance["gallery_extraction_url"] == main_url
 
@@ -633,7 +731,9 @@ def test_apply_second_opencart_image_index_one_keeps_order_without_duplicates() 
     assert warnings == []
 
 
-def test_apply_second_opencart_image_index_out_of_range_warns_and_keeps_default_order() -> None:
+def test_apply_second_opencart_image_index_out_of_range_warns_and_keeps_default_order() -> (
+    None
+):
     images = [
         GalleryImage(url="https://cdn.example/a.jpg", position=1),
         GalleryImage(url="https://cdn.example/b.jpg", position=2),
@@ -652,7 +752,9 @@ def test_apply_second_opencart_image_index_out_of_range_warns_and_keeps_default_
     ]
 
 
-def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload_without_provider_fetch(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload_without_provider_fetch(
+    tmp_path: Path,
+) -> None:
     model = "233541"
     url = "https://www.electronet.gr/example"
     fetcher = RecordingFetcher()
@@ -661,7 +763,9 @@ def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload
     def provider_resolution(_cli, **_kwargs):
         nonlocal provider_calls
         provider_calls += 1
-        raise AssertionError("provider resolution should not run when shared capture supplies normalized data")
+        raise AssertionError(
+            "provider resolution should not run when shared capture supplies normalized data"
+        )
 
     result = execute_source_acquisition_stage(
         model=model,
@@ -698,7 +802,9 @@ def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload
                             "spec_sections": [
                                 {
                                     "section": "Χαρακτηριστικά",
-                                    "items": [{"label": "Τύπος", "value": "Ψυγειοκαταψύκτης"}],
+                                    "items": [
+                                        {"label": "Τύπος", "value": "Ψυγειοκαταψύκτης"}
+                                    ],
                                 }
                             ],
                         },
@@ -715,10 +821,15 @@ def test_execute_source_acquisition_stage_consumes_shared_source_capture_payload
     assert result.parsed.source.spec_sections[0].items[0].value == "Ψυγειοκαταψύκτης"
     assert result.snapshot_provenance["source_capture_sync_status"] == "submitted"
     assert result.snapshot_provenance["source_capture_payload_used"] is True
-    assert result.snapshot_provenance["product_factory_capture_mode"] == "shared_source_capture"
+    assert (
+        result.snapshot_provenance["product_factory_capture_mode"]
+        == "shared_source_capture"
+    )
 
 
-def test_execute_source_acquisition_stage_keeps_source_capture_sync_failure_as_warning_only(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_keeps_source_capture_sync_failure_as_warning_only(
+    tmp_path: Path,
+) -> None:
     model = "233541"
     url = "https://www.electronet.gr/example"
     parsed = ParsedProduct(
@@ -747,10 +858,15 @@ def test_execute_source_acquisition_stage_keeps_source_capture_sync_failure_as_w
             url=cli.url,
             parsed=parsed,
         ),
-        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="failed", message="connection refused"),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="failed", message="connection refused"
+        ),
     )
 
     assert result.parsed is parsed
     assert result.parsed.warnings == ["source_capture_sync_failed:connection refused"]
     assert result.snapshot_provenance["source_capture_sync_status"] == "failed"
-    assert result.snapshot_provenance["product_factory_capture_mode"] == "local_provider_fetch"
+    assert (
+        result.snapshot_provenance["product_factory_capture_mode"]
+        == "local_provider_fetch"
+    )

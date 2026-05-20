@@ -65,10 +65,14 @@ def mark_vendor_source_capture_run_failed(
     row.updated_at = now
 
 
-def update_vendor_source_capture_run(row: VendorSourceCaptureRun, result: SourceUrlCaptureRunResult) -> None:
+def update_vendor_source_capture_run(
+    row: VendorSourceCaptureRun, result: SourceUrlCaptureRunResult
+) -> None:
     now = now_utc()
     row.status = result.status
-    row.observation_batch_id = result.observation_batch_id or row.observation_batch_id or result.run_id
+    row.observation_batch_id = (
+        result.observation_batch_id or row.observation_batch_id or result.run_id
+    )
     row.source_filter = result.source_filter
     row.catalog_source = result.catalog_source
     row.selected_catalog_product_count = result.selected_catalog_product_count
@@ -79,7 +83,9 @@ def update_vendor_source_capture_run(row: VendorSourceCaptureRun, result: Source
     row.skipped_count = result.skipped_count
     row.warnings_json = list(result.warnings)
     row.artifact_refs_json = list(result.artifact_refs)
-    row.result_path = str(result.result_path) if result.result_path is not None else None
+    row.result_path = (
+        str(result.result_path) if result.result_path is not None else None
+    )
     row.completed_at = now
     row.updated_at = now
 
@@ -94,15 +100,21 @@ def list_vendor_source_capture_runs(
     safe_offset = max(0, int(offset))
     rows = session.execute(
         select(VendorSourceCaptureRun)
-        .order_by(VendorSourceCaptureRun.created_at.desc(), VendorSourceCaptureRun.id.desc())
+        .order_by(
+            VendorSourceCaptureRun.created_at.desc(), VendorSourceCaptureRun.id.desc()
+        )
         .offset(safe_offset)
         .limit(safe_limit)
     ).scalars()
     return [vendor_source_capture_run_to_dict(row) for row in rows]
 
 
-def get_vendor_source_capture_run(session: Session, run_id: str) -> VendorSourceCaptureRun | None:
-    return session.execute(select(VendorSourceCaptureRun).where(VendorSourceCaptureRun.run_id == run_id)).scalar_one_or_none()
+def get_vendor_source_capture_run(
+    session: Session, run_id: str
+) -> VendorSourceCaptureRun | None:
+    return session.execute(
+        select(VendorSourceCaptureRun).where(VendorSourceCaptureRun.run_id == run_id)
+    ).scalar_one_or_none()
 
 
 def vendor_source_capture_run_to_dict(row: VendorSourceCaptureRun) -> dict[str, Any]:

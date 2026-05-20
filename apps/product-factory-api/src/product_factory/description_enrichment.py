@@ -6,8 +6,12 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup, Tag
 
 from .models import SourceProductData, SpecItem
-from .normalize import candidate_label_keys, normalize_for_match, normalize_whitespace, safe_text
-
+from .normalize import (
+    candidate_label_keys,
+    normalize_for_match,
+    normalize_whitespace,
+    safe_text,
+)
 
 _PAIR_RE = re.compile(
     r"(?P<label>[^:]{2,90}?):\s*(?P<value>.+?)(?=(?:\s+[A-Za-zΑ-ΩΆ-Ώα-ωά-ώ][^:]{1,90}:)|$)"
@@ -41,13 +45,18 @@ def extract_description_specs(source: SourceProductData) -> list[DescriptionSpec
 
 
 def build_description_spec_items(source: SourceProductData) -> list[SpecItem]:
-    return [SpecItem(label=spec.label, value=spec.value) for spec in extract_description_specs(source)]
+    return [
+        SpecItem(label=spec.label, value=spec.value)
+        for spec in extract_description_specs(source)
+    ]
 
 
 def build_description_spec_lookup(source: SourceProductData) -> dict[str, str]:
     lookup: dict[str, str] = {}
     for spec in extract_description_specs(source):
-        for key in candidate_label_keys(spec.label) or {normalize_whitespace(spec.label)}:
+        for key in candidate_label_keys(spec.label) or {
+            normalize_whitespace(spec.label)
+        }:
             if key and spec.value and key not in lookup:
                 lookup[key] = spec.value
     return lookup

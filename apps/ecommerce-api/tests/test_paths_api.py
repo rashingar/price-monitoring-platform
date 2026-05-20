@@ -46,7 +46,9 @@ def test_paths_roots_endpoint_combines_known_roots(tmp_path: Path, monkeypatch) 
         DATABASE_URL_ENV_VAR: "not_configured",
     }
     assert "ECOMMERCE_SECRET_TOKEN" not in payload["env"]
-    database_group = next(item for item in payload["env_readiness"] if item["name"] == "Database")
+    database_group = next(
+        item for item in payload["env_readiness"] if item["name"] == "Database"
+    )
     assert database_group == {
         "name": "Database",
         "status": "missing",
@@ -57,12 +59,20 @@ def test_paths_roots_endpoint_combines_known_roots(tmp_path: Path, monkeypatch) 
 
     artifact_paths = {item["path"]: item for item in payload["artifact_roots"]}
     assert str(artifact_root.resolve(strict=False)) in artifact_paths
-    assert artifact_paths[str(artifact_root.resolve(strict=False))]["source"] == ARTIFACT_ROOTS_ENV_VAR
-    assert artifact_paths[str(artifact_root.resolve(strict=False))]["is_configured"] is True
+    assert (
+        artifact_paths[str(artifact_root.resolve(strict=False))]["source"]
+        == ARTIFACT_ROOTS_ENV_VAR
+    )
+    assert (
+        artifact_paths[str(artifact_root.resolve(strict=False))]["is_configured"]
+        is True
+    )
 
     file_paths = {item["path"]: item for item in payload["file_roots"]}
     assert str(file_root.resolve(strict=False)) in file_paths
-    assert file_paths[str(file_root.resolve(strict=False))]["source"] == FILE_ROOTS_ENV_VAR
+    assert (
+        file_paths[str(file_root.resolve(strict=False))]["source"] == FILE_ROOTS_ENV_VAR
+    )
 
     output_paths = {item["path"]: item for item in payload["output_roots"]}
     output_root = str((tmp_path / "output").resolve(strict=False))
@@ -72,10 +82,18 @@ def test_paths_roots_endpoint_combines_known_roots(tmp_path: Path, monkeypatch) 
 
     for root_group in ("artifact_roots", "file_roots", "output_roots"):
         for item in payload[root_group]:
-            assert set(item) == {"path", "source", "exists", "is_default", "is_configured"}
+            assert set(item) == {
+                "path",
+                "source",
+                "exists",
+                "is_default",
+                "is_configured",
+            }
 
 
-def test_paths_roots_endpoint_reports_unconfigured_env(tmp_path: Path, monkeypatch) -> None:
+def test_paths_roots_endpoint_reports_unconfigured_env(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(ARTIFACT_ROOTS_ENV_VAR, raising=False)
     monkeypatch.delenv(FILE_ROOTS_ENV_VAR, raising=False)

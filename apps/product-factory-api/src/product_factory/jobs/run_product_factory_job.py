@@ -20,7 +20,9 @@ from ..services import ServiceError
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python -m product_factory.jobs.run_product_factory_job")
+    parser = argparse.ArgumentParser(
+        prog="python -m product_factory.jobs.run_product_factory_job"
+    )
     parser.add_argument("--job-id", required=True)
     parser.add_argument("--job-root", default=str(DEFAULT_JOBS_DIR))
     parser.add_argument("--api-work-root", default=None)
@@ -39,7 +41,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Job not found: {args.job_id}", file=sys.stderr)
         return 2
     if record.status not in {JobStatus.QUEUED, JobStatus.RUNNING}:
-        print(f"Job {record.job_id} is not runnable in status {record.status.value}.", file=sys.stderr)
+        print(
+            f"Job {record.job_id} is not runnable in status {record.status.value}.",
+            file=sys.stderr,
+        )
         return 2
     if record.status == JobStatus.QUEUED:
         record = store.mark_running(record.job_id, message="Job started.")
@@ -80,7 +85,9 @@ def main(argv: list[str] | None = None) -> int:
         log(f"Failed {record.job_type.value} job [{exc.code}]: {exc.message}")
         if _preserve_cancelled_or_killed(store, record.job_id, log):
             return 2
-        store.mark_failed(record.job_id, exc.message, message="Job failed.", error_code=exc.code)
+        store.mark_failed(
+            record.job_id, exc.message, message="Job failed.", error_code=exc.code
+        )
         return 1
     except Exception as exc:
         log(f"Failed {record.job_type.value} job: {exc}")
@@ -107,14 +114,19 @@ def _run_record(record: JobRecord, log: LogCallback) -> JobRunResult | None:
     raise ValueError(f"Unsupported job type: {record.job_type.value}")
 
 
-def _preserve_cancelled_or_killed(store: JobStore, job_id: str, log: LogCallback) -> bool:
+def _preserve_cancelled_or_killed(
+    store: JobStore, job_id: str, log: LogCallback
+) -> bool:
     current = store.get_job(job_id)
     if current is None:
         return True
     if current.status in {JobStatus.CANCELLED, JobStatus.KILLED}:
         log(f"Worker will not overwrite terminal {current.status.value} status.")
         return True
-    return is_terminal_job_status(current.status) and current.status not in {JobStatus.RUNNING, JobStatus.QUEUED}
+    return is_terminal_job_status(current.status) and current.status not in {
+        JobStatus.RUNNING,
+        JobStatus.QUEUED,
+    }
 
 
 if __name__ == "__main__":  # pragma: no cover

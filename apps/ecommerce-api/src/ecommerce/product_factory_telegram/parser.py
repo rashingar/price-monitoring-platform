@@ -6,7 +6,6 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-
 _MODEL_RE = re.compile(r"^\d{6}$")
 _ACCEPTED_FLAG_SEQUENCES = {
     (): (False, False, False),
@@ -47,7 +46,9 @@ def parse_product_factory_command(text: str) -> ProductFactoryCommand:
         url_index = _url_token_index(remaining)
         if url_index is not None:
             if url_index != len(remaining) - 1:
-                raise ProductFactoryCommandParseError("Manual URL must be the final token.")
+                raise ProductFactoryCommandParseError(
+                    "Manual URL must be the final token."
+                )
             manual_url = _validate_manual_url(remaining[url_index])
             remaining = remaining[:url_index]
 
@@ -57,7 +58,9 @@ def parse_product_factory_command(text: str) -> ProductFactoryCommand:
     if flag_sequence not in _ACCEPTED_FLAG_SEQUENCES:
         raise ProductFactoryCommandParseError("Invalid or duplicate flag sequence.")
 
-    bestprice_enabled, skroutz_enabled, boxnow_enabled = _ACCEPTED_FLAG_SEQUENCES[flag_sequence]
+    bestprice_enabled, skroutz_enabled, boxnow_enabled = _ACCEPTED_FLAG_SEQUENCES[
+        flag_sequence
+    ]
     return ProductFactoryCommand(
         model=model,
         bestprice_enabled=bestprice_enabled,
@@ -78,5 +81,7 @@ def _url_token_index(tokens: list[str]) -> int | None:
 def _validate_manual_url(value: str) -> str:
     parts = urlsplit(value)
     if parts.scheme not in {"http", "https"} or not parts.netloc:
-        raise ProductFactoryCommandParseError("Manual URL must be an absolute http/https URL.")
+        raise ProductFactoryCommandParseError(
+            "Manual URL must be an absolute http/https URL."
+        )
     return value

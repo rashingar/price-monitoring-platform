@@ -14,7 +14,11 @@ from ..models import CLIInput
 from ..prepare_stage import execute_prepare_stage
 from ..repo_paths import INTRO_TEXT_PROMPT_PATH, REPO_ROOT, SEO_META_PROMPT_PATH
 from ..utils import ensure_directory, utcnow_iso, write_json, write_text
-from .execution_models import PreparedProductContext, PrepareExecutionResult, PrepareExecutionScrapeResult
+from .execution_models import (
+    PreparedProductContext,
+    PrepareExecutionResult,
+    PrepareExecutionScrapeResult,
+)
 from .errors import service_error_from_exception
 from .metadata import maybe_write_run_metadata
 from .models import RunArtifacts, RunStatus, RunType
@@ -34,14 +38,18 @@ def execute_prepare_workflow(
     cli: CLIInput,
     *,
     work_root: Path = WORK_ROOT,
-    execute_prepare_stage_fn: Callable[..., Mapping[str, object]] = execute_prepare_stage,
+    execute_prepare_stage_fn: Callable[
+        ..., Mapping[str, object]
+    ] = execute_prepare_stage,
 ) -> PrepareExecutionResult:
     requested_at = utcnow_iso()
     started_at = requested_at
     model_root = ensure_directory(work_root / cli.model)
     scrape_dir = ensure_directory(model_root / "scrape")
     llm_dir = ensure_directory(model_root / "llm")
-    prepared_context = PreparedProductContext.from_model(cli.model, model_root=model_root)
+    prepared_context = PreparedProductContext.from_model(
+        cli.model, model_root=model_root
+    )
     task_manifest_path = prepared_context.task_manifest_path
     intro_text_context_path = prepared_context.intro_text_context_path
     intro_text_prompt_path = prepared_context.intro_text_prompt_path
@@ -71,7 +79,9 @@ def execute_prepare_workflow(
             )
             task_manifest["prepare_mode"] = "blocked_snapshot"
             blocked_context = _build_blocked_llm_context(scrape_cli, stage_result)
-            write_json(intro_text_context_path, {**blocked_context, "task": "intro_text"})
+            write_json(
+                intro_text_context_path, {**blocked_context, "task": "intro_text"}
+            )
             write_text(intro_text_prompt_path, _blocked_prompt("intro_text"))
             write_json(seo_meta_context_path, {**blocked_context, "task": "seo_meta"})
             write_text(seo_meta_prompt_path, _blocked_prompt("seo_meta"))
@@ -87,9 +97,15 @@ def execute_prepare_workflow(
                     scrape_dir=scrape_dir,
                     llm_dir=llm_dir,
                     raw_html_path=_path_or_none(stage_result.get("raw_html_path")),
-                    source_json_path=_path_or_none(stage_result.get("source_json_path")),
-                    scrape_normalized_json_path=_path_or_none(stage_result.get("normalized_json_path")),
-                    source_report_json_path=_path_or_none(stage_result.get("report_json_path")),
+                    source_json_path=_path_or_none(
+                        stage_result.get("source_json_path")
+                    ),
+                    scrape_normalized_json_path=_path_or_none(
+                        stage_result.get("normalized_json_path")
+                    ),
+                    source_report_json_path=_path_or_none(
+                        stage_result.get("report_json_path")
+                    ),
                     llm_task_manifest_path=task_manifest_path,
                     intro_text_context_path=intro_text_context_path,
                     intro_text_prompt_path=intro_text_prompt_path,
@@ -101,7 +117,9 @@ def execute_prepare_workflow(
                 requested_at=requested_at,
                 started_at=started_at,
                 finished_at=finished_at,
-                warnings=PrepareExecutionScrapeResult.from_mapping(stage_result).report_warnings,
+                warnings=PrepareExecutionScrapeResult.from_mapping(
+                    stage_result
+                ).report_warnings,
                 details={
                     "source": str(stage_result.get("source", "")),
                     "llm_prepare_mode": "blocked_snapshot",
@@ -179,8 +197,12 @@ def execute_prepare_workflow(
                 llm_dir=llm_dir,
                 raw_html_path=_path_or_none(stage_result.get("raw_html_path")),
                 source_json_path=_path_or_none(stage_result.get("source_json_path")),
-                scrape_normalized_json_path=_path_or_none(stage_result.get("normalized_json_path")),
-                source_report_json_path=_path_or_none(stage_result.get("report_json_path")),
+                scrape_normalized_json_path=_path_or_none(
+                    stage_result.get("normalized_json_path")
+                ),
+                source_report_json_path=_path_or_none(
+                    stage_result.get("report_json_path")
+                ),
                 llm_task_manifest_path=task_manifest_path,
                 intro_text_context_path=intro_text_context_path,
                 intro_text_prompt_path=intro_text_prompt_path,
@@ -192,7 +214,9 @@ def execute_prepare_workflow(
             requested_at=requested_at,
             started_at=started_at,
             finished_at=finished_at,
-            warnings=PrepareExecutionScrapeResult.from_mapping(stage_result).report_warnings,
+            warnings=PrepareExecutionScrapeResult.from_mapping(
+                stage_result
+            ).report_warnings,
             details={
                 "source": str(stage_result.get("source", "")),
                 "llm_prepare_mode": "split_tasks",
@@ -256,7 +280,9 @@ def _blocked_reason_from_stage_result(stage_result: Mapping[str, object]) -> str
     return str(getattr(source, "page_type", "") or "")
 
 
-def _build_blocked_llm_context(cli: CLIInput, stage_result: Mapping[str, object]) -> dict[str, object]:
+def _build_blocked_llm_context(
+    cli: CLIInput, stage_result: Mapping[str, object]
+) -> dict[str, object]:
     report = stage_result.get("report")
     report_payload = report if isinstance(report, Mapping) else {}
     blocked_snapshot = report_payload.get("blocked_snapshot")
@@ -265,7 +291,11 @@ def _build_blocked_llm_context(cli: CLIInput, stage_result: Mapping[str, object]
             "model": cli.model,
             "url": cli.url,
         },
-        "blocked_snapshot": blocked_snapshot if isinstance(blocked_snapshot, Mapping) else {"reason": BLOCKED_BY_CHALLENGE},
+        "blocked_snapshot": (
+            blocked_snapshot
+            if isinstance(blocked_snapshot, Mapping)
+            else {"reason": BLOCKED_BY_CHALLENGE}
+        ),
         "writer_rules": {
             "llm_owned_fields": [],
             "blocked": True,

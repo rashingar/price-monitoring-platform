@@ -32,15 +32,29 @@ from .schemas import (
     UpdateFilterValueRequest,
 )
 
-
 router = APIRouter(prefix="/filters", tags=["filters"])
 
 _ERROR_RESPONSES = {
-    status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse, "description": "Invalid filter recovery request."},
-    status.HTTP_404_NOT_FOUND: {"model": ErrorResponse, "description": "Filter resource not found."},
-    status.HTTP_409_CONFLICT: {"model": ErrorResponse, "description": "Filter conflict."},
-    status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse, "description": "Invalid filter request."},
-    status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ErrorResponse, "description": "Filter manager failure."},
+    status.HTTP_400_BAD_REQUEST: {
+        "model": ErrorResponse,
+        "description": "Invalid filter recovery request.",
+    },
+    status.HTTP_404_NOT_FOUND: {
+        "model": ErrorResponse,
+        "description": "Filter resource not found.",
+    },
+    status.HTTP_409_CONFLICT: {
+        "model": ErrorResponse,
+        "description": "Filter conflict.",
+    },
+    status.HTTP_422_UNPROCESSABLE_ENTITY: {
+        "model": ErrorResponse,
+        "description": "Invalid filter request.",
+    },
+    status.HTTP_500_INTERNAL_SERVER_ERROR: {
+        "model": ErrorResponse,
+        "description": "Filter manager failure.",
+    },
 }
 
 
@@ -48,7 +62,9 @@ def _raise_http(exc: FilterManagerError) -> None:
     raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
-@router.get("/categories", response_model=FilterCategoriesResponse, responses=_ERROR_RESPONSES)
+@router.get(
+    "/categories", response_model=FilterCategoriesResponse, responses=_ERROR_RESPONSES
+)
 def get_filter_categories() -> FilterCategoriesResponse:
     try:
         return list_filter_categories()
@@ -56,7 +72,11 @@ def get_filter_categories() -> FilterCategoriesResponse:
         _raise_http(exc)
 
 
-@router.get("/categories/{category_id}", response_model=FilterCategoryResponse, responses=_ERROR_RESPONSES)
+@router.get(
+    "/categories/{category_id}",
+    response_model=FilterCategoryResponse,
+    responses=_ERROR_RESPONSES,
+)
 def get_filter_category_detail(category_id: str) -> FilterCategoryResponse:
     try:
         return get_filter_category(category_id)
@@ -64,15 +84,25 @@ def get_filter_category_detail(category_id: str) -> FilterCategoryResponse:
         _raise_http(exc)
 
 
-@router.put("/categories/{category_id}/groups", response_model=FilterCategoryResponse, responses=_ERROR_RESPONSES)
-def put_filter_group(category_id: str, request: AddFilterGroupRequest) -> FilterCategoryResponse:
+@router.put(
+    "/categories/{category_id}/groups",
+    response_model=FilterCategoryResponse,
+    responses=_ERROR_RESPONSES,
+)
+def put_filter_group(
+    category_id: str, request: AddFilterGroupRequest
+) -> FilterCategoryResponse:
     try:
         return add_filter_group(category_id, request)
     except FilterManagerError as exc:
         _raise_http(exc)
 
 
-@router.patch("/categories/{category_id}/groups/{group_id}", response_model=FilterCategoryResponse, responses=_ERROR_RESPONSES)
+@router.patch(
+    "/categories/{category_id}/groups/{group_id}",
+    response_model=FilterCategoryResponse,
+    responses=_ERROR_RESPONSES,
+)
 def patch_filter_group(
     category_id: str,
     group_id: str,
@@ -89,7 +119,9 @@ def patch_filter_group(
     response_model=FilterCategoryResponse,
     responses=_ERROR_RESPONSES,
 )
-def put_filter_value(category_id: str, group_id: str, request: AddFilterValueRequest) -> FilterCategoryResponse:
+def put_filter_value(
+    category_id: str, group_id: str, request: AddFilterValueRequest
+) -> FilterCategoryResponse:
     try:
         return add_filter_value(category_id, group_id, request)
     except FilterManagerError as exc:
@@ -121,7 +153,9 @@ def post_filter_sync() -> FilterSyncResponse:
         _raise_http(exc)
 
 
-@router.get("/sync-report", response_model=FilterSyncReportResponse, responses=_ERROR_RESPONSES)
+@router.get(
+    "/sync-report", response_model=FilterSyncReportResponse, responses=_ERROR_RESPONSES
+)
 def get_filter_sync_report_route() -> FilterSyncReportResponse:
     try:
         return get_filter_sync_report()
@@ -134,7 +168,9 @@ def get_filter_manager_status() -> FilterStatusResponse:
     return get_filter_status()
 
 
-@router.get("/backups", response_model=FilterBackupsResponse, responses=_ERROR_RESPONSES)
+@router.get(
+    "/backups", response_model=FilterBackupsResponse, responses=_ERROR_RESPONSES
+)
 def get_filter_backups() -> FilterBackupsResponse:
     try:
         return list_filter_override_backups()
@@ -142,8 +178,14 @@ def get_filter_backups() -> FilterBackupsResponse:
         _raise_http(exc)
 
 
-@router.post("/backups/restore", response_model=FilterBackupRestoreResponse, responses=_ERROR_RESPONSES)
-def post_filter_backup_restore(request: RestoreFilterBackupRequest) -> FilterBackupRestoreResponse:
+@router.post(
+    "/backups/restore",
+    response_model=FilterBackupRestoreResponse,
+    responses=_ERROR_RESPONSES,
+)
+def post_filter_backup_restore(
+    request: RestoreFilterBackupRequest,
+) -> FilterBackupRestoreResponse:
     try:
         return restore_filter_override_backup(request.backup_name)
     except FilterManagerError as exc:

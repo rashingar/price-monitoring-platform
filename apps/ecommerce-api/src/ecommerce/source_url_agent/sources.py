@@ -11,9 +11,18 @@ from urllib.parse import quote_plus, urlsplit
 
 from ecommerce.source_url_agent.page_rules import url_rejection_reason
 
-
-DEFAULT_SOURCE_REGISTRY_PATH = Path(__file__).resolve().parents[3] / "config" / "source_url_agent" / "sources.json"
-SOURCE_CHOICES = ("bestprice", "skroutz", "electronet", "kotsovolos", "public", "plaisio", "all")
+DEFAULT_SOURCE_REGISTRY_PATH = (
+    Path(__file__).resolve().parents[3] / "config" / "source_url_agent" / "sources.json"
+)
+SOURCE_CHOICES = (
+    "bestprice",
+    "skroutz",
+    "electronet",
+    "kotsovolos",
+    "public",
+    "plaisio",
+    "all",
+)
 
 
 @dataclass(frozen=True)
@@ -39,21 +48,37 @@ class SourceDefinition:
             source_domain=_required_text(payload.get("source_domain"), "source_domain"),
             source_type=_required_text(payload.get("source_type"), "source_type"),
             enabled=bool(payload.get("enabled", True)),
-            expected_listing_field=_optional_text(payload.get("expected_listing_field")),
-            public_search_url_templates=tuple(_string_list(payload.get("public_search_url_templates"))),
-            product_url_patterns=tuple(_string_list(payload.get("product_url_patterns"))),
-            blocked_url_patterns=tuple(_string_list(payload.get("blocked_url_patterns"))),
+            expected_listing_field=_optional_text(
+                payload.get("expected_listing_field")
+            ),
+            public_search_url_templates=tuple(
+                _string_list(payload.get("public_search_url_templates"))
+            ),
+            product_url_patterns=tuple(
+                _string_list(payload.get("product_url_patterns"))
+            ),
+            blocked_url_patterns=tuple(
+                _string_list(payload.get("blocked_url_patterns"))
+            ),
             query_templates=tuple(_string_list(payload.get("query_templates"))),
             rate_limit_seconds=float(payload.get("rate_limit_seconds", 2.0)),
-            max_candidates_per_product=max(1, int(payload.get("max_candidates_per_product", 6))),
-            max_searches_per_product=max(1, int(payload.get("max_searches_per_product", 3))),
+            max_candidates_per_product=max(
+                1, int(payload.get("max_candidates_per_product", 6))
+            ),
+            max_searches_per_product=max(
+                1, int(payload.get("max_searches_per_product", 3))
+            ),
             notes=str(payload.get("notes") or "").strip(),
         )
 
-    def build_search_urls(self, queries: list[str], *, max_searches: int | None = None) -> list[str]:
+    def build_search_urls(
+        self, queries: list[str], *, max_searches: int | None = None
+    ) -> list[str]:
         urls: list[str] = []
         seen: set[str] = set()
-        limit = max_searches if max_searches is not None else self.max_searches_per_product
+        limit = (
+            max_searches if max_searches is not None else self.max_searches_per_product
+        )
         for query in queries[:limit]:
             encoded = quote_plus(query)
             for template in self.public_search_url_templates:
@@ -72,9 +97,15 @@ class SourceDefinition:
             return False
         if url_rejection_reason(normalized):
             return False
-        if any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in self.blocked_url_patterns):
+        if any(
+            re.search(pattern, normalized, flags=re.IGNORECASE)
+            for pattern in self.blocked_url_patterns
+        ):
             return False
-        return any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in self.product_url_patterns)
+        return any(
+            re.search(pattern, normalized, flags=re.IGNORECASE)
+            for pattern in self.product_url_patterns
+        )
 
     def canonical_candidate_url(self, url: str) -> str:
         return _without_query_fragment(url)
@@ -110,7 +141,11 @@ def load_source_registry(path: Path | None = None) -> SourceRegistry:
     raw_sources = payload.get("sources")
     if not isinstance(raw_sources, list):
         raise ValueError("Source registry must contain a sources list.")
-    sources = [SourceDefinition.from_dict(item) for item in raw_sources if isinstance(item, dict)]
+    sources = [
+        SourceDefinition.from_dict(item)
+        for item in raw_sources
+        if isinstance(item, dict)
+    ]
     return SourceRegistry(sources={source.source_name: source for source in sources})
 
 

@@ -5,8 +5,17 @@ from typing import Any, Callable
 
 from .fetcher import ElectronetFetcher
 from .html_builders import extract_presentation_blocks
-from .models import CLIInput, GalleryImage, ParsedProduct, SchemaMatchResult, TaxonomyResolution
-from .prepare_provider_resolution import PrepareProviderResolutionResult, resolve_prepare_provider_resolution
+from .models import (
+    CLIInput,
+    GalleryImage,
+    ParsedProduct,
+    SchemaMatchResult,
+    TaxonomyResolution,
+)
+from .prepare_provider_resolution import (
+    PrepareProviderResolutionResult,
+    resolve_prepare_provider_resolution,
+)
 from .prepare_result_assembly import assemble_prepare_result
 from .prepare_section_assets import (
     download_section_assets,
@@ -18,7 +27,10 @@ from .prepare_scrape_persistence import (
     PrepareScrapePersistenceResult,
     persist_prepare_scrape_artifacts,
 )
-from .prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult, resolve_prepare_taxonomy_enrichment
+from .prepare_taxonomy_enrichment import (
+    PrepareTaxonomyEnrichmentResult,
+    resolve_prepare_taxonomy_enrichment,
+)
 from .ecommerce_handoff import (
     write_ecommerce_source_failure_handoff,
     write_ecommerce_source_handoff,
@@ -38,13 +50,25 @@ def execute_prepare_stage(
     model_dir: Path | None = None,
     validate_url_scope_fn: Callable[[str], tuple[str, bool, str]] = validate_url_scope,
     fetcher_factory: Callable[[], ElectronetFetcher] = ElectronetFetcher,
-    resolve_prepare_provider_input_fn: Callable[..., PrepareProviderResolutionResult] = resolve_prepare_provider_resolution,
-    execute_source_acquisition_stage_fn: Callable[..., SourceAcquisitionResult] = execute_source_acquisition_stage,
-    source_capture_sync_fn: Callable[[str, str], SourceCaptureSyncResult] = sync_initial_source_capture,
-    resolve_prepare_taxonomy_enrichment_fn: Callable[..., PrepareTaxonomyEnrichmentResult] = resolve_prepare_taxonomy_enrichment,
-    resolve_skroutz_section_assets_fn: Callable[..., PrepareSectionAssetsResult] = resolve_skroutz_section_assets,
+    resolve_prepare_provider_input_fn: Callable[
+        ..., PrepareProviderResolutionResult
+    ] = resolve_prepare_provider_resolution,
+    execute_source_acquisition_stage_fn: Callable[
+        ..., SourceAcquisitionResult
+    ] = execute_source_acquisition_stage,
+    source_capture_sync_fn: Callable[
+        [str, str], SourceCaptureSyncResult
+    ] = sync_initial_source_capture,
+    resolve_prepare_taxonomy_enrichment_fn: Callable[
+        ..., PrepareTaxonomyEnrichmentResult
+    ] = resolve_prepare_taxonomy_enrichment,
+    resolve_skroutz_section_assets_fn: Callable[
+        ..., PrepareSectionAssetsResult
+    ] = resolve_skroutz_section_assets,
     assemble_prepare_result_fn: Callable[..., Any] = assemble_prepare_result,
-    persist_prepare_scrape_artifacts_fn: Callable[[PrepareScrapePersistenceInput], PrepareScrapePersistenceResult] = persist_prepare_scrape_artifacts,
+    persist_prepare_scrape_artifacts_fn: Callable[
+        [PrepareScrapePersistenceInput], PrepareScrapePersistenceResult
+    ] = persist_prepare_scrape_artifacts,
 ) -> dict[str, Any]:
     resolved_model_dir = ensure_directory(model_dir or (Path(cli.out) / cli.model))
     acquisition_kwargs: dict[str, Any] = {
@@ -96,16 +120,24 @@ def execute_prepare_from_acquisition(
     *,
     validate_url_scope_fn: Callable[[str], tuple[str, bool, str]] = validate_url_scope,
     fetcher_factory: Callable[[], ElectronetFetcher] = ElectronetFetcher,
-    resolve_prepare_taxonomy_enrichment_fn: Callable[..., PrepareTaxonomyEnrichmentResult] = resolve_prepare_taxonomy_enrichment,
-    resolve_skroutz_section_assets_fn: Callable[..., PrepareSectionAssetsResult] = resolve_skroutz_section_assets,
+    resolve_prepare_taxonomy_enrichment_fn: Callable[
+        ..., PrepareTaxonomyEnrichmentResult
+    ] = resolve_prepare_taxonomy_enrichment,
+    resolve_skroutz_section_assets_fn: Callable[
+        ..., PrepareSectionAssetsResult
+    ] = resolve_skroutz_section_assets,
     assemble_prepare_result_fn: Callable[..., Any] = assemble_prepare_result,
-    persist_prepare_scrape_artifacts_fn: Callable[[PrepareScrapePersistenceInput], PrepareScrapePersistenceResult] = persist_prepare_scrape_artifacts,
+    persist_prepare_scrape_artifacts_fn: Callable[
+        [PrepareScrapePersistenceInput], PrepareScrapePersistenceResult
+    ] = persist_prepare_scrape_artifacts,
 ) -> dict[str, Any]:
     fetcher = fetcher_factory()
     source = acquisition.source
     fetch = acquisition.fetch
     parsed = acquisition.parsed
-    final_source, final_scope_ok, final_scope_reason = validate_url_scope_fn(fetch.final_url)
+    final_source, final_scope_ok, final_scope_reason = validate_url_scope_fn(
+        fetch.final_url
+    )
     resolved_model_dir = ensure_directory(acquisition.model_dir)
     scrape_persistence_input = PrepareScrapePersistenceInput(
         model=cli.model,
@@ -136,35 +168,74 @@ def execute_prepare_from_acquisition(
     gallery_files = list(acquisition.gallery_files)
     downloaded_gallery = list(acquisition.downloaded_gallery)
     gallery_settings = {
-        "gallery_url_used": bool(acquisition.snapshot_provenance.get("gallery_url_used", False)),
-        "gallery_extraction_url": str(acquisition.snapshot_provenance.get("gallery_extraction_url") or cli.url),
-        "product_data_extraction_url": str(acquisition.snapshot_provenance.get("product_data_extraction_url") or cli.url),
-        "product_data_extraction_uses_main_url": True,
-        "second_opencart_image_index": acquisition.snapshot_provenance.get("second_opencart_image_index"),
-        "second_opencart_image_override_applied": bool(
-            acquisition.snapshot_provenance.get("second_opencart_image_override_applied", False)
+        "gallery_url_used": bool(
+            acquisition.snapshot_provenance.get("gallery_url_used", False)
         ),
-        "second_opencart_image_warning": acquisition.snapshot_provenance.get("second_opencart_image_warning"),
-        "deduplicated_gallery_count": acquisition.snapshot_provenance.get("deduplicated_gallery_count"),
+        "gallery_extraction_url": str(
+            acquisition.snapshot_provenance.get("gallery_extraction_url") or cli.url
+        ),
+        "product_data_extraction_url": str(
+            acquisition.snapshot_provenance.get("product_data_extraction_url")
+            or cli.url
+        ),
+        "product_data_extraction_uses_main_url": True,
+        "second_opencart_image_index": acquisition.snapshot_provenance.get(
+            "second_opencart_image_index"
+        ),
+        "second_opencart_image_override_applied": bool(
+            acquisition.snapshot_provenance.get(
+                "second_opencart_image_override_applied", False
+            )
+        ),
+        "second_opencart_image_warning": acquisition.snapshot_provenance.get(
+            "second_opencart_image_warning"
+        ),
+        "deduplicated_gallery_count": acquisition.snapshot_provenance.get(
+            "deduplicated_gallery_count"
+        ),
         "gallery_mode": acquisition.snapshot_provenance.get("gallery_mode"),
-        "gallery_whole_mode": bool(acquisition.snapshot_provenance.get("gallery_whole_mode", False)),
+        "gallery_whole_mode": bool(
+            acquisition.snapshot_provenance.get("gallery_whole_mode", False)
+        ),
         "extracted_before_source_filter_count": acquisition.snapshot_provenance.get(
             "gallery_extracted_before_source_filter_count"
         ),
-        "after_source_filter_count": acquisition.snapshot_provenance.get("gallery_after_source_filter_count"),
-        "source_filter_url": acquisition.snapshot_provenance.get("gallery_source_filter_url"),
-        "source_filter_final_url": acquisition.snapshot_provenance.get("gallery_source_filter_final_url"),
-        "source_filter_domain": acquisition.snapshot_provenance.get("gallery_source_filter_domain"),
-        "source_filter_rule": acquisition.snapshot_provenance.get("gallery_source_filter_rule"),
-        "skroutz_skip_last_applied": bool(acquisition.snapshot_provenance.get("gallery_skroutz_skip_last_applied", False)),
-        "skroutz_skip_last_skipped_url": acquisition.snapshot_provenance.get("gallery_skroutz_skip_last_skipped_url"),
+        "after_source_filter_count": acquisition.snapshot_provenance.get(
+            "gallery_after_source_filter_count"
+        ),
+        "source_filter_url": acquisition.snapshot_provenance.get(
+            "gallery_source_filter_url"
+        ),
+        "source_filter_final_url": acquisition.snapshot_provenance.get(
+            "gallery_source_filter_final_url"
+        ),
+        "source_filter_domain": acquisition.snapshot_provenance.get(
+            "gallery_source_filter_domain"
+        ),
+        "source_filter_rule": acquisition.snapshot_provenance.get(
+            "gallery_source_filter_rule"
+        ),
+        "skroutz_skip_last_applied": bool(
+            acquisition.snapshot_provenance.get(
+                "gallery_skroutz_skip_last_applied", False
+            )
+        ),
+        "skroutz_skip_last_skipped_url": acquisition.snapshot_provenance.get(
+            "gallery_skroutz_skip_last_skipped_url"
+        ),
     }
     characteristics_settings = {
-        "characteristics_url_used": bool(acquisition.snapshot_provenance.get("characteristics_url_used", False)),
-        "characteristics_extraction_url": str(
-            acquisition.snapshot_provenance.get("characteristics_extraction_url") or cli.url
+        "characteristics_url_used": bool(
+            acquisition.snapshot_provenance.get("characteristics_url_used", False)
         ),
-        "product_data_extraction_url": str(acquisition.snapshot_provenance.get("product_data_extraction_url") or cli.url),
+        "characteristics_extraction_url": str(
+            acquisition.snapshot_provenance.get("characteristics_extraction_url")
+            or cli.url
+        ),
+        "product_data_extraction_url": str(
+            acquisition.snapshot_provenance.get("product_data_extraction_url")
+            or cli.url
+        ),
         "product_data_extraction_uses_main_url": True,
     }
 
@@ -189,7 +260,9 @@ def execute_prepare_from_acquisition(
             base_url=parsed.source.canonical_url or parsed.source.url,
         )[: cli.sections]
         selected_besco_images = [
-            GalleryImage(url=block["image_url"], alt=block["title"], position=section_index)
+            GalleryImage(
+                url=block["image_url"], alt=block["title"], position=section_index
+            )
             for section_index, block in enumerate(selected_presentation_blocks, start=1)
             if block.get("image_url")
         ]
@@ -206,7 +279,9 @@ def execute_prepare_from_acquisition(
             output_dir=resolved_model_dir,
             requested_sections=len(selected_presentation_blocks),
             strict=source == "skroutz" and cli.sections > 0,
-            strict_expected_count=cli.sections if source == "skroutz" and cli.sections > 0 else None,
+            strict_expected_count=(
+                cli.sections if source == "skroutz" and cli.sections > 0 else None
+            ),
         )
         downloaded_besco = section_asset_download.downloaded_besco
         besco_warnings = section_asset_download.besco_warnings
@@ -240,7 +315,9 @@ def execute_prepare_from_acquisition(
             fetcher=fetcher,
             output_dir=resolved_model_dir,
         )
-        selected_presentation_blocks = skroutz_section_assets.selected_presentation_blocks
+        selected_presentation_blocks = (
+            skroutz_section_assets.selected_presentation_blocks
+        )
         selected_besco_images = skroutz_section_assets.selected_besco_images
         downloaded_besco = skroutz_section_assets.downloaded_besco
         besco_warnings = skroutz_section_assets.besco_warnings
@@ -252,7 +329,9 @@ def execute_prepare_from_acquisition(
         section_extraction_window = skroutz_section_assets.section_extraction_window
         sections_artifact_payload = skroutz_section_assets.sections_artifact_payload
         if skroutz_section_assets.presentation_source_html_override is not None:
-            parsed.source.presentation_source_html = skroutz_section_assets.presentation_source_html_override
+            parsed.source.presentation_source_html = (
+                skroutz_section_assets.presentation_source_html_override
+            )
         parsed.source.besco_images = selected_besco_images
         if downloaded_besco:
             parsed.source.besco_images = downloaded_besco
@@ -272,7 +351,11 @@ def execute_prepare_from_acquisition(
         gallery_files=gallery_files,
         gallery_settings=gallery_settings,
         characteristics_source=acquisition.characteristics_source,
-        characteristics_raw_html=acquisition.characteristics_fetch.html if acquisition.characteristics_fetch else None,
+        characteristics_raw_html=(
+            acquisition.characteristics_fetch.html
+            if acquisition.characteristics_fetch
+            else None
+        ),
         characteristics_settings=characteristics_settings,
         selected_presentation_blocks=selected_presentation_blocks,
         section_warnings=section_warnings,
@@ -351,7 +434,9 @@ def _persist_blocked_prepare_result(
     final_scope_ok: bool,
     final_scope_reason: str,
     scrape_persistence_input: PrepareScrapePersistenceInput,
-    persist_prepare_scrape_artifacts_fn: Callable[[PrepareScrapePersistenceInput], PrepareScrapePersistenceResult],
+    persist_prepare_scrape_artifacts_fn: Callable[
+        [PrepareScrapePersistenceInput], PrepareScrapePersistenceResult
+    ],
 ) -> dict[str, Any]:
     _append_warning_once(parsed.warnings, BLOCKED_BY_CHALLENGE)
     _append_warning_once(parsed.warnings, "prepare_snapshot_blocked_by_challenge")
@@ -359,7 +444,9 @@ def _persist_blocked_prepare_result(
     parsed.source.fallback_used = fetch.fallback_used
     source_payload = parsed.source.to_dict()
     taxonomy = TaxonomyResolution(reason=BLOCKED_BY_CHALLENGE)
-    schema_match = SchemaMatchResult(fail_reason=BLOCKED_BY_CHALLENGE, warnings=[BLOCKED_BY_CHALLENGE])
+    schema_match = SchemaMatchResult(
+        fail_reason=BLOCKED_BY_CHALLENGE, warnings=[BLOCKED_BY_CHALLENGE]
+    )
     blocked_snapshot = {
         "blocked": True,
         "reason": BLOCKED_BY_CHALLENGE,

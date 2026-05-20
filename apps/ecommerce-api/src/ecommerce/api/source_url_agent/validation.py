@@ -7,10 +7,18 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-from ecommerce.db.policy import catalog_database_unavailable_detail, collect_catalog_database_readiness, require_database_ready_for_catalog
+from ecommerce.db.policy import (
+    catalog_database_unavailable_detail,
+    collect_catalog_database_readiness,
+    require_database_ready_for_catalog,
+)
 from ecommerce.source_url_agent.sources import SOURCE_CHOICES, load_source_registry
 
-from .schemas import DEFAULT_API_MAX_PRODUCTS_PER_BATCH, MAX_API_SOURCE_URL_AGENT_LIMIT, SourceUrlAgentRunRequest
+from .schemas import (
+    DEFAULT_API_MAX_PRODUCTS_PER_BATCH,
+    MAX_API_SOURCE_URL_AGENT_LIMIT,
+    SourceUrlAgentRunRequest,
+)
 
 
 def default_api_max_products_per_batch() -> int:
@@ -20,7 +28,10 @@ def default_api_max_products_per_batch() -> int:
 def validate_source_choice(value: str) -> None:
     source = value.strip().lower()
     if source not in SOURCE_CHOICES:
-        raise HTTPException(status_code=400, detail=f"source must be one of: {', '.join(SOURCE_CHOICES)}.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"source must be one of: {', '.join(SOURCE_CHOICES)}.",
+        )
     try:
         load_source_registry().selected(source)
     except ValueError as exc:
@@ -51,14 +62,21 @@ def source_url_agent_input_path(request: SourceUrlAgentRunRequest) -> Path | Non
         return None
     raw_path = optional_text(request.input_path)
     if raw_path is None:
-        raise HTTPException(status_code=400, detail="input_path is required for csv mode.")
+        raise HTTPException(
+            status_code=400, detail="input_path is required for csv mode."
+        )
     path = Path(raw_path)
     if contains_parent_reference(path):
-        raise HTTPException(status_code=400, detail="input_path must not contain path traversal.")
+        raise HTTPException(
+            status_code=400, detail="input_path must not contain path traversal."
+        )
     resolved = path.expanduser().resolve(strict=False)
     cwd = Path.cwd().resolve(strict=False)
     if not same_or_child(resolved, cwd):
-        raise HTTPException(status_code=400, detail="input_path must be inside the application working directory.")
+        raise HTTPException(
+            status_code=400,
+            detail="input_path must be inside the application working directory.",
+        )
     return resolved
 
 
@@ -90,7 +108,9 @@ def optional_decimal(value: str | None, field_name: str) -> Decimal | None:
     try:
         return Decimal(text)
     except (InvalidOperation, ValueError):
-        raise HTTPException(status_code=400, detail=f"{field_name} must be a number.") from None
+        raise HTTPException(
+            status_code=400, detail=f"{field_name} must be a number."
+        ) from None
 
 
 def optional_text(value: object) -> str | None:

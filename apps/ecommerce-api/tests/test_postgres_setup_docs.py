@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 APP_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -10,7 +9,10 @@ def test_env_example_exists_with_safe_database_placeholder() -> None:
 
     text = env_example.read_text(encoding="utf-8")
 
-    assert "ECOMMERCE_DATABASE_URL=postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce" in text
+    assert (
+        "ECOMMERCE_DATABASE_URL=postgresql+psycopg://ecommerce:ecommerce@127.0.0.1:5432/ecommerce"
+        in text
+    )
     assert "Do not commit .env" in text
     assert "super-secret" not in text
 

@@ -27,8 +27,12 @@ def run_alembic_upgrade() -> dict[str, Any]:
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        output = sanitize_output(f"{exc.stdout or ''}\n{exc.stderr or ''}", database_url)
-        raise CatalogUpdateError(f"Migration failed: alembic upgrade head timed out. {output}".strip()) from exc
+        output = sanitize_output(
+            f"{exc.stdout or ''}\n{exc.stderr or ''}", database_url
+        )
+        raise CatalogUpdateError(
+            f"Migration failed: alembic upgrade head timed out. {output}".strip()
+        ) from exc
     except Exception as exc:
         raise CatalogUpdateError(f"Migration failed: {exc.__class__.__name__}") from exc
 
@@ -43,5 +47,7 @@ def run_alembic_upgrade() -> dict[str, Any]:
         "stderr": stderr,
     }
     if completed.returncode != 0:
-        raise CatalogUpdateError(f"Migration failed: {stderr or stdout or 'alembic upgrade head failed'}")
+        raise CatalogUpdateError(
+            f"Migration failed: {stderr or stdout or 'alembic upgrade head failed'}"
+        )
     return payload

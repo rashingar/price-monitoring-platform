@@ -23,8 +23,12 @@ def ingest_catalog_file(
 ):
     readiness = collect_catalog_database_readiness()
     if not readiness.get("ready_for_catalog", False):
-        reasons = ", ".join(str(reason) for reason in readiness.get("blocking_reasons", []))
-        raise RuntimeError(f"PostgreSQL is required for Catalog and is not ready: {reasons or 'unknown'}")
+        reasons = ", ".join(
+            str(reason) for reason in readiness.get("blocking_reasons", [])
+        )
+        raise RuntimeError(
+            f"PostgreSQL is required for Catalog and is not ready: {reasons or 'unknown'}"
+        )
     with session_scope() as session:
         return ingest_source_catalog(
             session,
@@ -34,9 +38,18 @@ def ingest_catalog_file(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Import sourceCata.csv into the active database catalog.")
-    parser.add_argument("--source-cata-path", type=Path, default=None, help="Optional sourceCata.csv path.")
-    parser.add_argument("--catalog-source", default=DEFAULT_CATALOG_SOURCE, help="Catalog source name.")
+    parser = argparse.ArgumentParser(
+        description="Import sourceCata.csv into the active database catalog."
+    )
+    parser.add_argument(
+        "--source-cata-path",
+        type=Path,
+        default=None,
+        help="Optional sourceCata.csv path.",
+    )
+    parser.add_argument(
+        "--catalog-source", default=DEFAULT_CATALOG_SOURCE, help="Catalog source name."
+    )
     args = parser.parse_args(argv)
 
     readiness = collect_catalog_database_readiness()
@@ -60,7 +73,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 1
     except SQLAlchemyError as exc:
-        print(f"Catalog ingestion failed: {sanitize_database_error(str(exc)) or exc.__class__.__name__}", file=sys.stderr)
+        print(
+            f"Catalog ingestion failed: {sanitize_database_error(str(exc)) or exc.__class__.__name__}",
+            file=sys.stderr,
+        )
         return 1
     except Exception as exc:
         print(f"Catalog ingestion failed: {exc}", file=sys.stderr)

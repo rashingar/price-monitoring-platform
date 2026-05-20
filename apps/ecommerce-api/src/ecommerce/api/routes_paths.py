@@ -11,7 +11,11 @@ from ecommerce.artifacts import ARTIFACT_ROOTS_ENV_VAR, get_artifact_root_entrie
 from ecommerce.db.config import DATABASE_URL_ENV_VAR, is_database_configured
 from ecommerce.env import describe_local_env_warnings, load_local_env_if_present
 from ecommerce.file_editor import FILE_ROOTS_ENV_VAR, get_file_root_entries
-from ecommerce.io.paths import DEFAULT_OUTPUT_DIR, DEFAULT_RUNTIME_CONFIG_PATH, load_runtime_config
+from ecommerce.io.paths import (
+    DEFAULT_OUTPUT_DIR,
+    DEFAULT_RUNTIME_CONFIG_PATH,
+    load_runtime_config,
+)
 
 router = APIRouter(prefix="/api/paths", tags=["paths"])
 
@@ -26,7 +30,9 @@ def get_path_roots() -> dict:
         "env": {
             ARTIFACT_ROOTS_ENV_VAR: _env_status(ARTIFACT_ROOTS_ENV_VAR),
             FILE_ROOTS_ENV_VAR: _env_status(FILE_ROOTS_ENV_VAR),
-            DATABASE_URL_ENV_VAR: "configured" if is_database_configured() else "not_configured",
+            DATABASE_URL_ENV_VAR: (
+                "configured" if is_database_configured() else "not_configured"
+            ),
         },
         "env_readiness": _env_readiness(),
         "local_env": {
@@ -45,7 +51,11 @@ def get_path_roots() -> dict:
 
 
 def _output_root_entries() -> list[dict]:
-    entries = [_root_entry(Path(DEFAULT_OUTPUT_DIR), "default", is_default=True, is_configured=False)]
+    entries = [
+        _root_entry(
+            Path(DEFAULT_OUTPUT_DIR), "default", is_default=True, is_configured=False
+        )
+    ]
     runtime_config = load_runtime_config()
     runtime_output = Path(runtime_config.output_dir)
     if _resolve_path(runtime_output) != _resolve_path(Path(DEFAULT_OUTPUT_DIR)):
@@ -69,11 +79,19 @@ def _env_readiness() -> list[dict]:
         ("Database", [DATABASE_URL_ENV_VAR]),
         (
             "OpenCart",
-            ["OPENCART_STORE_BASE", "OPENCART_ADMIN_PATH", "OPENCART_ADMIN_USER", "OPENCART_ADMIN_PASS"],
+            [
+                "OPENCART_STORE_BASE",
+                "OPENCART_ADMIN_PATH",
+                "OPENCART_ADMIN_USER",
+                "OPENCART_ADMIN_PASS",
+            ],
         ),
         ("Brave Search", ["BRAVE_SEARCH_API_KEY"]),
         ("File roots", [ARTIFACT_ROOTS_ENV_VAR, FILE_ROOTS_ENV_VAR]),
-        ("Product Factory", ["ECOMMERCE_API_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"]),
+        (
+            "Product Factory",
+            ["ECOMMERCE_API_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"],
+        ),
     ]
     return [_env_group_status(name, keys) for name, keys in groups]
 
@@ -89,7 +107,9 @@ def _env_group_status(name: str, keys: list[str]) -> dict:
     }
 
 
-def _root_entry(path: Path, source: str, *, is_default: bool, is_configured: bool) -> dict:
+def _root_entry(
+    path: Path, source: str, *, is_default: bool, is_configured: bool
+) -> dict:
     resolved = _resolve_path(path)
     return {
         "path": str(resolved),

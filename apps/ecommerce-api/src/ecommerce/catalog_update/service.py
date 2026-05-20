@@ -16,7 +16,11 @@ from ecommerce.catalog_update.exclusions import (
 )
 from ecommerce.catalog_update.exporter import export_catalog_csv
 from ecommerce.catalog_update.migration import run_alembic_upgrade
-from ecommerce.catalog_update.paths import catalog_update_output_dir, display_path, repo_root
+from ecommerce.catalog_update.paths import (
+    catalog_update_output_dir,
+    display_path,
+    repo_root,
+)
 from ecommerce.catalog_update.progress import (
     CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS,
     CatalogUpdateJobProgressReporter,
@@ -42,7 +46,9 @@ def run_catalog_update(
     try:
         selected_config = config or load_catalog_update_config()
     except CatalogUpdateError as exc:
-        raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
+        raise CatalogUpdateError(
+            _message_with_step(str(exc), steps.current_step)
+        ) from exc
     steps.mark(
         "config_loaded",
         details={
@@ -58,20 +64,34 @@ def run_catalog_update(
     try:
         migration = run_alembic_upgrade()
     except CatalogUpdateError as exc:
-        raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
-    steps.emit_progress("alembic_upgrade_completed", details={"status": migration.get("status")})
+        raise CatalogUpdateError(
+            _message_with_step(str(exc), steps.current_step)
+        ) from exc
+    steps.emit_progress(
+        "alembic_upgrade_completed", details={"status": migration.get("status")}
+    )
 
-    export = export_catalog_csv(selected_config, output_dir, job_id=job_id, step_tracker=steps)
+    export = export_catalog_csv(
+        selected_config, output_dir, job_id=job_id, step_tracker=steps
+    )
     try:
-        normalized_csv_path = normalize_downloaded_csv(export.downloaded_path, output_dir)
+        normalized_csv_path = normalize_downloaded_csv(
+            export.downloaded_path, output_dir
+        )
     except CatalogUpdateError as exc:
-        raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
+        raise CatalogUpdateError(
+            _message_with_step(str(exc), steps.current_step)
+        ) from exc
     steps.mark("filter_exclusions", progress_step="exclusion_filtering_started")
     try:
         exclusions = load_excluded_models()
-        filter_result = filter_source_catalog_exclusions(normalized_csv_path, output_dir, exclusions)
+        filter_result = filter_source_catalog_exclusions(
+            normalized_csv_path, output_dir, exclusions
+        )
     except CatalogUpdateError as exc:
-        raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
+        raise CatalogUpdateError(
+            _message_with_step(str(exc), steps.current_step)
+        ) from exc
     steps.emit_progress(
         "exclusion_filtering_completed",
         details={
@@ -85,8 +105,12 @@ def run_catalog_update(
     try:
         ingest = run_catalog_ingest(filter_result.filtered_csv_path)
     except Exception as exc:
-        raise CatalogUpdateError(_message_with_step(str(exc) or exc.__class__.__name__, steps.current_step)) from exc
-    steps.emit_progress("ingest_completed", details={"imported": ingest.get("imported")})
+        raise CatalogUpdateError(
+            _message_with_step(str(exc) or exc.__class__.__name__, steps.current_step)
+        ) from exc
+    steps.emit_progress(
+        "ingest_completed", details={"imported": ingest.get("imported")}
+    )
     steps.mark("purge_exclusions", progress_step="exclusion_purge_started")
     try:
         cleanup = purge_excluded_catalog_state(
@@ -94,7 +118,9 @@ def run_catalog_update(
             catalog_source=str(ingest.get("catalog_source") or DEFAULT_CATALOG_SOURCE),
         )
     except CatalogUpdateError as exc:
-        raise CatalogUpdateError(_message_with_step(str(exc), steps.current_step)) from exc
+        raise CatalogUpdateError(
+            _message_with_step(str(exc), steps.current_step)
+        ) from exc
     steps.emit_progress("exclusion_purge_completed", details=cleanup.to_payload())
 
     return {
@@ -123,8 +149,12 @@ def run_catalog_update_durable_job(
     heartbeat_interval_seconds: float = CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS,
     now: Callable[[], datetime] | None = None,
 ) -> dict[str, Any]:
-    with CatalogUpdateJobProgressReporter(job_id, heartbeat_interval_seconds=heartbeat_interval_seconds, now=now) as progress:
-        return run_catalog_update(job_id, config=config, progress_callback=progress.report)
+    with CatalogUpdateJobProgressReporter(
+        job_id, heartbeat_interval_seconds=heartbeat_interval_seconds, now=now
+    ) as progress:
+        return run_catalog_update(
+            job_id, config=config, progress_callback=progress.report
+        )
 
 
 def run_catalog_ingest(source_cata_path: Path) -> dict[str, Any]:

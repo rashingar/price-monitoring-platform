@@ -25,13 +25,27 @@ from ecommerce.price_monitoring.fetch_execution import (
 )
 from ecommerce.price_monitoring.fetch_run import load_price_monitoring_fetch_result
 from ecommerce.price_monitoring.persistence import persist_run_creation_if_configured
-from ecommerce.price_monitoring.runs import run_record_to_response, selection_preview_to_response
-from ecommerce.price_monitoring.selection import PriceMonitoringSelectionRequest, PriceMonitoringSelectionResult, select_price_monitoring_products
-from ecommerce.price_monitoring.source_url_coverage import compute_source_url_coverage, require_active_source_url_coverage
+from ecommerce.price_monitoring.runs import (
+    run_record_to_response,
+    selection_preview_to_response,
+)
+from ecommerce.price_monitoring.selection import (
+    PriceMonitoringSelectionRequest,
+    PriceMonitoringSelectionResult,
+    select_price_monitoring_products,
+)
+from ecommerce.price_monitoring.source_url_coverage import (
+    compute_source_url_coverage,
+    require_active_source_url_coverage,
+)
 
 
-def preview_selection_response(selection_request: PriceMonitoringSelectionRequest, *, session_scope_fn: Callable) -> dict:
-    result = select_price_monitoring_products_with_source_url_coverage(selection_request, session_scope_fn=session_scope_fn)
+def preview_selection_response(
+    selection_request: PriceMonitoringSelectionRequest, *, session_scope_fn: Callable
+) -> dict:
+    result = select_price_monitoring_products_with_source_url_coverage(
+        selection_request, session_scope_fn=session_scope_fn
+    )
     return selection_preview_to_response(result)
 
 
@@ -47,8 +61,12 @@ def create_run_response(
     except ValueError as exc:
         if str(exc) != "No eligible products selected.":
             raise
-        preview = select_price_monitoring_products_with_source_url_coverage(selection_request, session_scope_fn=session_scope_fn)
-        raise NoEligibleProductsSelectedError(str(exc), preview=preview, selection_request=selection_request) from exc
+        preview = select_price_monitoring_products_with_source_url_coverage(
+            selection_request, session_scope_fn=session_scope_fn
+        )
+        raise NoEligibleProductsSelectedError(
+            str(exc), preview=preview, selection_request=selection_request
+        ) from exc
     persist_run_creation_fn(record, trigger_type="manual")
     return run_record_to_response(record)
 
@@ -66,8 +84,14 @@ def no_eligible_products_detail(
         "skipped_by_reason": preview.skipped_by_reason if preview is not None else {},
         "source_url_required": True,
         "source": preview.source if preview is not None else selection_request.source,
-        "source_name": preview.source if preview is not None else selection_request.source,
-        "source_filter": preview.source_filter if preview is not None else selection_request.source_filter,
+        "source_name": (
+            preview.source if preview is not None else selection_request.source
+        ),
+        "source_filter": (
+            preview.source_filter
+            if preview is not None
+            else selection_request.source_filter
+        ),
         "source_url_coverage": (
             preview.source_url_coverage.to_dict()
             if preview is not None and preview.source_url_coverage is not None
@@ -90,7 +114,9 @@ class NoEligibleProductsSelectedError(ValueError):
         self.selection_request = selection_request
 
     def detail(self) -> dict[str, object]:
-        return no_eligible_products_detail(str(self), preview=self.preview, selection_request=self.selection_request)
+        return no_eligible_products_detail(
+            str(self), preview=self.preview, selection_request=self.selection_request
+        )
 
 
 def select_price_monitoring_products_with_source_url_coverage(
@@ -110,7 +136,9 @@ def list_runs_response(
     list_monitoring_runs_fn: Callable,
 ) -> dict:
     with session_scope_fn() as session:
-        items = [db_run_to_route_response(item) for item in list_monitoring_runs_fn(session)]
+        items = [
+            db_run_to_route_response(item) for item in list_monitoring_runs_fn(session)
+        ]
     for item in items:
         item["db"] = run_db_payload(str(item.get("run_id") or ""))
     return {"items": items}
@@ -125,7 +153,9 @@ def get_run_response(
     with session_scope_fn() as session:
         run = get_monitoring_run_fn(session, run_id)
         if run is None:
-            raise FileNotFoundError(f"DB-backed price monitoring run not found: {run_id}")
+            raise FileNotFoundError(
+                f"DB-backed price monitoring run not found: {run_id}"
+            )
         db_payload = monitoring_run_to_dict(run)
     payload = db_run_to_route_response(db_payload)
     payload["db"] = run_db_payload(run_id)
@@ -139,7 +169,9 @@ def enqueue_fetch_response(
     catalog_url: str | None,
     enqueue_fetch_execution_fn: Callable = enqueue_fetch_execution,
 ) -> dict:
-    execution = enqueue_fetch_execution_fn(run_dir, source=source, catalog_url=catalog_url)
+    execution = enqueue_fetch_execution_fn(
+        run_dir, source=source, catalog_url=catalog_url
+    )
     return execution_response(execution)
 
 
@@ -164,11 +196,15 @@ def latest_fetch_logs_response(run_id: str, run_dir: Path) -> dict:
 
 
 def cancel_latest_fetch_response(run_dir: Path, *, reason: str | None) -> dict:
-    return execution_response(cancel_latest_active_fetch_execution(run_dir, reason=reason))
+    return execution_response(
+        cancel_latest_active_fetch_execution(run_dir, reason=reason)
+    )
 
 
 def list_fetch_executions_response(run_id: str, run_dir: Path) -> dict:
-    executions = [execution_response(execution) for execution in list_fetch_executions(run_dir)]
+    executions = [
+        execution_response(execution) for execution in list_fetch_executions(run_dir)
+    ]
     return {"run_id": run_id, "items": executions, "count": len(executions)}
 
 
@@ -176,10 +212,16 @@ def fetch_execution_response(run_dir: Path, execution_id: str) -> dict:
     return execution_response(load_fetch_execution(run_dir, execution_id))
 
 
-def fetch_execution_logs_response(run_id: str, run_dir: Path, execution_id: str) -> dict:
+def fetch_execution_logs_response(
+    run_id: str, run_dir: Path, execution_id: str
+) -> dict:
     lines = read_execution_log_lines(run_dir, execution_id)
     return {"run_id": run_id, "execution_id": execution_id, "lines": lines}
 
 
-def cancel_fetch_execution_response(run_dir: Path, execution_id: str, *, reason: str | None) -> dict:
-    return execution_response(cancel_fetch_execution(run_dir, execution_id, reason=reason))
+def cancel_fetch_execution_response(
+    run_dir: Path, execution_id: str, *, reason: str | None
+) -> dict:
+    return execution_response(
+        cancel_fetch_execution(run_dir, execution_id, reason=reason)
+    )

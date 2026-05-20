@@ -9,10 +9,16 @@ from ecommerce.utils.text import collapse_internal_spaces
 
 def build_queries(product: SourceResolutionProduct) -> list[str]:
     name = collapse_internal_spaces(product.name)
-    brand = collapse_internal_spaces(product.brand or product.metadata.get("manufacturer", ""))
+    brand = collapse_internal_spaces(
+        product.brand or product.metadata.get("manufacturer", "")
+    )
     mpn = collapse_internal_spaces(product.mpn or product.metadata.get("mpn", ""))
-    barcode = collapse_internal_spaces(product.barcode or product.metadata.get("barcode", ""))
-    category = collapse_internal_spaces(product.category or product.metadata.get("category", ""))
+    barcode = collapse_internal_spaces(
+        product.barcode or product.metadata.get("barcode", "")
+    )
+    category = collapse_internal_spaces(
+        product.category or product.metadata.get("category", "")
+    )
     raw_queries = [
         collapse_internal_spaces(f'"{mpn}" {brand} {name}') if mpn else "",
         collapse_internal_spaces(f'"{barcode}" {brand} {name}') if barcode else "",
@@ -22,13 +28,19 @@ def build_queries(product: SourceResolutionProduct) -> list[str]:
     return _unique_queries(raw_queries)
 
 
-def build_source_scoped_queries(product: SourceResolutionProduct, config: SourceResolutionConfig) -> list[str]:
+def build_source_scoped_queries(
+    product: SourceResolutionProduct, config: SourceResolutionConfig
+) -> list[str]:
     name = collapse_internal_spaces(product.name)
-    brand = collapse_internal_spaces(product.brand or product.metadata.get("manufacturer", ""))
+    brand = collapse_internal_spaces(
+        product.brand or product.metadata.get("manufacturer", "")
+    )
     identity = collapse_internal_spaces(f"{brand} {name}") or name
     raw_queries: list[str] = []
     for source in config.preferred_sources:
-        raw_queries.append(collapse_internal_spaces(f"{identity} site:{source.primary_domain}"))
+        raw_queries.append(
+            collapse_internal_spaces(f"{identity} site:{source.primary_domain}")
+        )
     return _unique_queries(raw_queries)
 
 

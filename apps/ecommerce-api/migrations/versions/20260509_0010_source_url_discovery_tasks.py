@@ -10,7 +10,6 @@ from __future__ import annotations
 from alembic import op
 import sqlalchemy as sa
 
-
 revision = "20260509_0010"
 down_revision = "20260505_0009"
 branch_labels = None
@@ -33,17 +32,38 @@ def upgrade() -> None:
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["catalog_product_id"], ["catalog_products.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["catalog_product_id"], ["catalog_products.id"], ondelete="SET NULL"
+        ),
     )
-    op.create_index("ix_source_url_discovery_tasks_run_id", "source_url_discovery_tasks", ["run_id"])
-    op.create_index("ix_source_url_discovery_tasks_status", "source_url_discovery_tasks", ["status"])
-    op.create_index("ix_source_url_discovery_tasks_model", "source_url_discovery_tasks", ["model"])
-    op.create_index("ix_source_url_discovery_tasks_source_name", "source_url_discovery_tasks", ["source_name"])
+    op.create_index(
+        "ix_source_url_discovery_tasks_run_id", "source_url_discovery_tasks", ["run_id"]
+    )
+    op.create_index(
+        "ix_source_url_discovery_tasks_status", "source_url_discovery_tasks", ["status"]
+    )
+    op.create_index(
+        "ix_source_url_discovery_tasks_model", "source_url_discovery_tasks", ["model"]
+    )
+    op.create_index(
+        "ix_source_url_discovery_tasks_source_name",
+        "source_url_discovery_tasks",
+        ["source_name"],
+    )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_source_url_discovery_tasks_source_name", table_name="source_url_discovery_tasks")
-    op.drop_index("ix_source_url_discovery_tasks_model", table_name="source_url_discovery_tasks")
-    op.drop_index("ix_source_url_discovery_tasks_status", table_name="source_url_discovery_tasks")
-    op.drop_index("ix_source_url_discovery_tasks_run_id", table_name="source_url_discovery_tasks")
+    op.drop_index(
+        "ix_source_url_discovery_tasks_source_name",
+        table_name="source_url_discovery_tasks",
+    )
+    op.drop_index(
+        "ix_source_url_discovery_tasks_model", table_name="source_url_discovery_tasks"
+    )
+    op.drop_index(
+        "ix_source_url_discovery_tasks_status", table_name="source_url_discovery_tasks"
+    )
+    op.drop_index(
+        "ix_source_url_discovery_tasks_run_id", table_name="source_url_discovery_tasks"
+    )
     op.drop_table("source_url_discovery_tasks")

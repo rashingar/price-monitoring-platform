@@ -15,7 +15,11 @@ from ecommerce.db.policy import (
     collect_catalog_database_readiness,
     collect_price_monitoring_database_readiness,
 )
-from ecommerce.db.repositories.jobs import durable_job_backlog_summary, job_to_dict, list_jobs
+from ecommerce.db.repositories.jobs import (
+    durable_job_backlog_summary,
+    job_to_dict,
+    list_jobs,
+)
 from ecommerce.db.session import session_scope
 from ecommerce.jobs.execution_policy import (
     API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR,
@@ -86,8 +90,12 @@ def collect_database_health(
     catalog_readiness: dict | None = None,
     price_readiness: dict | None = None,
 ) -> PlatformHealthGroup:
-    catalog_status = catalog_readiness or collect_readiness(collect_catalog_database_readiness)
-    price_status = price_readiness or collect_readiness(collect_price_monitoring_database_readiness)
+    catalog_status = catalog_readiness or collect_readiness(
+        collect_catalog_database_readiness
+    )
+    price_status = price_readiness or collect_readiness(
+        collect_price_monitoring_database_readiness
+    )
     blocking_reasons = unique_strings(
         [
             *list_strings(catalog_status.get("blocking_reasons")),
@@ -97,7 +105,9 @@ def collect_database_health(
     details = [
         flag_detail("Configured", catalog_status.get("configured")),
         flag_detail("Reachable", catalog_status.get("reachable")),
-        flag_detail("Required tables present", catalog_status.get("required_tables_present")),
+        flag_detail(
+            "Required tables present", catalog_status.get("required_tables_present")
+        ),
         flag_detail("Migration current", catalog_status.get("alembic_up_to_date")),
     ]
     active_count = catalog_status.get("active_catalog_count")
@@ -115,7 +125,10 @@ def collect_database_health(
             "Ecommerce database readiness is blocked.",
             details=details,
             blocking_reasons=blocking_reasons,
-            links=[link("Catalog", "/catalog"), link("Price Monitoring", "/price-monitoring")],
+            links=[
+                link("Catalog", "/catalog"),
+                link("Price Monitoring", "/price-monitoring"),
+            ],
         )
 
     warnings = unique_strings(
@@ -131,12 +144,19 @@ def collect_database_health(
         "Ecommerce database is ready for catalog and price monitoring workflows.",
         details=details,
         warnings=warnings,
-        links=[link("Catalog", "/catalog"), link("Price Monitoring", "/price-monitoring")],
+        links=[
+            link("Catalog", "/catalog"),
+            link("Price Monitoring", "/price-monitoring"),
+        ],
     )
 
 
-def collect_catalog_health(*, catalog_readiness: dict | None = None) -> PlatformHealthGroup:
-    readiness = catalog_readiness or collect_readiness(collect_catalog_database_readiness)
+def collect_catalog_health(
+    *, catalog_readiness: dict | None = None
+) -> PlatformHealthGroup:
+    readiness = catalog_readiness or collect_readiness(
+        collect_catalog_database_readiness
+    )
     active_count = int_or_none(readiness.get("active_catalog_count"))
     details = [
         flag_detail("Catalog DB ready", readiness.get("ready_for_catalog")),
@@ -177,7 +197,9 @@ def collect_catalog_health(*, catalog_readiness: dict | None = None) -> Platform
     )
 
 
-def collect_catalog_update_health(*, catalog_readiness: dict | None = None) -> PlatformHealthGroup:
+def collect_catalog_update_health(
+    *, catalog_readiness: dict | None = None
+) -> PlatformHealthGroup:
     del catalog_readiness
     missing_keys = [key for key in OPENCART_REQUIRED_KEYS if not env_text(key)]
     details = [
@@ -207,7 +229,9 @@ def collect_catalog_update_health(*, catalog_readiness: dict | None = None) -> P
             "blocked",
             "OpenCart catalog update configuration is missing required keys.",
             details=details,
-            blocking_reasons=[f"Missing required configuration key: {key}." for key in missing_keys],
+            blocking_reasons=[
+                f"Missing required configuration key: {key}." for key in missing_keys
+            ],
             warnings=warnings,
             links=[link("Jobs", "/jobs"), link("Catalog", "/catalog")],
         )
@@ -233,10 +257,15 @@ def collect_source_url_agent_health() -> PlatformHealthGroup:
             "blocked",
             "Source URL Agent provider readiness could not be determined.",
             blocking_reasons=["Source URL Agent readiness check failed."],
-            links=[link("Find Source", "/find-source/runs"), link("Candidates", "/find-source/candidates")],
+            links=[
+                link("Find Source", "/find-source/runs"),
+                link("Candidates", "/find-source/candidates"),
+            ],
         )
 
-    blocking_reasons = [safe_text(item) for item in readiness.blocking_reasons if safe_text(item)]
+    blocking_reasons = [
+        safe_text(item) for item in readiness.blocking_reasons if safe_text(item)
+    ]
     warnings = [safe_text(item) for item in readiness.warnings if safe_text(item)]
     details = [
         f"Provider {provider.provider_name}: "
@@ -245,7 +274,11 @@ def collect_source_url_agent_health() -> PlatformHealthGroup:
         for provider in readiness.providers
     ]
     if readiness.default_provider_order:
-        details.append("Default provider order: " + ", ".join(readiness.default_provider_order) + ".")
+        details.append(
+            "Default provider order: "
+            + ", ".join(readiness.default_provider_order)
+            + "."
+        )
 
     return group(
         "source_url_agent",
@@ -255,16 +288,25 @@ def collect_source_url_agent_health() -> PlatformHealthGroup:
         details=details,
         blocking_reasons=blocking_reasons,
         warnings=warnings,
-        links=[link("Find Source", "/find-source/runs"), link("Candidates", "/find-source/candidates")],
+        links=[
+            link("Find Source", "/find-source/runs"),
+            link("Candidates", "/find-source/candidates"),
+        ],
     )
 
 
-def collect_price_monitoring_health(*, price_readiness: dict | None = None) -> PlatformHealthGroup:
-    readiness = price_readiness or collect_readiness(collect_price_monitoring_database_readiness)
+def collect_price_monitoring_health(
+    *, price_readiness: dict | None = None
+) -> PlatformHealthGroup:
+    readiness = price_readiness or collect_readiness(
+        collect_price_monitoring_database_readiness
+    )
     blocking_reasons = list_strings(readiness.get("blocking_reasons"))
     warnings: list[str] = []
     details = [
-        flag_detail("Price monitoring DB ready", readiness.get("ready_for_price_monitoring")),
+        flag_detail(
+            "Price monitoring DB ready", readiness.get("ready_for_price_monitoring")
+        ),
         (
             "Active catalog rows: "
             f"{int_or_none(readiness.get('active_catalog_count')) if readiness.get('active_catalog_count') is not None else 'unknown'}."
@@ -273,9 +315,16 @@ def collect_price_monitoring_health(*, price_readiness: dict | None = None) -> P
     if not blocking_reasons:
         coverage = _source_url_coverage_summary()
         if coverage is not None:
-            details.append(f"Products with active source URLs: {coverage['products_with_active_source_urls']}.")
-            if int(coverage["catalog_product_count"]) > 0 and int(coverage["products_with_active_source_urls"]) == 0:
-                warnings.append("No active source URL coverage is available for Price Monitoring.")
+            details.append(
+                f"Products with active source URLs: {coverage['products_with_active_source_urls']}."
+            )
+            if (
+                int(coverage["catalog_product_count"]) > 0
+                and int(coverage["products_with_active_source_urls"]) == 0
+            ):
+                warnings.append(
+                    "No active source URL coverage is available for Price Monitoring."
+                )
     if blocking_reasons:
         return group(
             "price_monitoring",
@@ -298,13 +347,17 @@ def collect_price_monitoring_health(*, price_readiness: dict | None = None) -> P
 
 
 def collect_vendor_sources_capture_health() -> PlatformHealthGroup:
-    firecrawl_key_configured = bool(str(os.environ.get("FIRECRAWL_API_KEY") or "").strip())
+    firecrawl_key_configured = bool(
+        str(os.environ.get("FIRECRAWL_API_KEY") or "").strip()
+    )
     skroutz_count = _active_skroutz_source_url_count()
     details = [
         "Skroutz capture strategy: Firecrawl.",
         f"Firecrawl API key configured: {'yes' if firecrawl_key_configured else 'no'}.",
         "Direct JSON fallback: removed.",
-        "Supported capture vendors: " + ", ".join(sorted(CAPTURE_IMPLEMENTED_VENDOR_SLUGS)) + ".",
+        "Supported capture vendors: "
+        + ", ".join(sorted(CAPTURE_IMPLEMENTED_VENDOR_SLUGS))
+        + ".",
     ]
     if skroutz_count is not None:
         details.append(f"Active Skroutz source URLs: {skroutz_count}.")
@@ -316,7 +369,10 @@ def collect_vendor_sources_capture_health() -> PlatformHealthGroup:
             "ready",
             "Vendor Sources capture configuration is ready.",
             details=details,
-            links=[link("Source Health", "/vendor-sources/source-health"), link("Capture Runs", "/vendor-sources/captures")],
+            links=[
+                link("Source Health", "/vendor-sources/source-health"),
+                link("Capture Runs", "/vendor-sources/captures"),
+            ],
         )
 
     reason = "FIRECRAWL_API_KEY is missing for Skroutz Firecrawl capture."
@@ -328,7 +384,10 @@ def collect_vendor_sources_capture_health() -> PlatformHealthGroup:
             "Vendor Sources capture is blocked for active Skroutz source URLs.",
             details=details,
             blocking_reasons=[reason],
-            links=[link("Source Health", "/vendor-sources/source-health"), link("Capture Runs", "/vendor-sources/captures")],
+            links=[
+                link("Source Health", "/vendor-sources/source-health"),
+                link("Capture Runs", "/vendor-sources/captures"),
+            ],
         )
 
     return group(
@@ -338,7 +397,10 @@ def collect_vendor_sources_capture_health() -> PlatformHealthGroup:
         "Skroutz Firecrawl capture is not configured.",
         details=details,
         warnings=[reason],
-        links=[link("Source Health", "/vendor-sources/source-health"), link("Capture Runs", "/vendor-sources/captures")],
+        links=[
+            link("Source Health", "/vendor-sources/source-health"),
+            link("Capture Runs", "/vendor-sources/captures"),
+        ],
     )
 
 
@@ -350,8 +412,12 @@ def collect_product_factory_health() -> PlatformHealthGroup:
             "Product Factory API",
             "warning",
             "Product Factory API base URL is not configured for backend health checks.",
-            details=["Checked configuration keys: PRODUCT_FACTORY_API_BASE_URL, VITE_API_PROXY_TARGET."],
-            warnings=["Product Factory API health could not be checked because no base URL key is configured."],
+            details=[
+                "Checked configuration keys: PRODUCT_FACTORY_API_BASE_URL, VITE_API_PROXY_TARGET."
+            ],
+            warnings=[
+                "Product Factory API health could not be checked because no base URL key is configured."
+            ],
             links=[link("Product Factory", "/product-factory")],
         )
 
@@ -383,7 +449,10 @@ def collect_product_factory_health() -> PlatformHealthGroup:
         "Product Factory API",
         "warning",
         "Product Factory API health endpoint did not report ready.",
-        details=[f"Configured by key: {source_key}.", f"Health HTTP status: {response.status_code}."],
+        details=[
+            f"Configured by key: {source_key}.",
+            f"Health HTTP status: {response.status_code}.",
+        ],
         warnings=["Product Factory API health endpoint returned a non-success status."],
         links=[link("Product Factory", "/product-factory")],
     )
@@ -426,7 +495,9 @@ def _durable_job_backlog_summary() -> dict | None:
             return durable_job_backlog_summary(
                 session,
                 stale_running_after_minutes=60,
-                stale_running_after_minutes_by_job_type=default_stale_running_thresholds(60),
+                stale_running_after_minutes_by_job_type=default_stale_running_thresholds(
+                    60
+                ),
             )
     except Exception:
         return None
@@ -438,8 +509,12 @@ def _durable_job_backlog_details(backlog: dict) -> list[str]:
         f"queued={int(backlog.get('queued_total') or 0)}, "
         f"running={int(backlog.get('running_total') or 0)}, "
         f"stale_running_candidates={int(backlog.get('stale_running_candidates_total') or 0)}.",
-        "Durable queued by job type: " + _job_type_counts(backlog.get("queued_by_job_type")) + ".",
-        "Durable running by job type: " + _job_type_counts(backlog.get("running_by_job_type")) + ".",
+        "Durable queued by job type: "
+        + _job_type_counts(backlog.get("queued_by_job_type"))
+        + ".",
+        "Durable running by job type: "
+        + _job_type_counts(backlog.get("running_by_job_type"))
+        + ".",
         "Durable stale-running candidates by job type: "
         + _job_type_counts(backlog.get("stale_running_candidates_by_job_type"))
         + ".",
@@ -490,12 +565,19 @@ def _source_url_coverage_summary() -> dict[str, int] | None:
         with session_scope() as session:
             active_catalog_filter = (CatalogProductRow.active.is_(True),)
             catalog_product_count = int(
-                session.execute(select(func.count(CatalogProductRow.id)).where(*active_catalog_filter)).scalar_one()
+                session.execute(
+                    select(func.count(CatalogProductRow.id)).where(
+                        *active_catalog_filter
+                    )
+                ).scalar_one()
             )
             active_source_product_count = int(
                 session.execute(
                     select(func.count(distinct(SourceUrl.catalog_product_id)))
-                    .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
+                    .join(
+                        CatalogProductRow,
+                        SourceUrl.catalog_product_id == CatalogProductRow.id,
+                    )
                     .where(*active_catalog_filter, SourceUrl.status == "active")
                 ).scalar_one()
             )

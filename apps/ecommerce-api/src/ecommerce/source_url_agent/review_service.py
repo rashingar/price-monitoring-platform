@@ -80,7 +80,8 @@ def apply_candidate_review(
         promoted = promote_candidate_url(
             session,
             candidate,
-            reviewed_url=_optional_text(command.reviewed_url) or _optional_text(candidate.candidate_url),
+            reviewed_url=_optional_text(command.reviewed_url)
+            or _optional_text(candidate.candidate_url),
             reviewed_by=reviewed_by,
             reviewed_at=reviewed_at,
             review_notes=review_notes,
@@ -88,7 +89,9 @@ def apply_candidate_review(
     elif decision == "replace_url":
         reviewed_url = _optional_text(command.reviewed_url)
         if not reviewed_url:
-            raise InvalidSourceUrlCandidateReviewError("reviewed_url is required for replace_url.")
+            raise InvalidSourceUrlCandidateReviewError(
+                "reviewed_url is required for replace_url."
+            )
         candidate.status = "accepted"
         promoted = promote_candidate_url(
             session,
@@ -105,10 +108,18 @@ def apply_candidate_review(
 
     candidate.reviewed_by = reviewed_by
     candidate.reviewed_at = reviewed_at
-    candidate.notes = review_notes_text(candidate.notes, decision=str(decision), reviewed_by=reviewed_by, reviewed_at=reviewed_at, notes=review_notes)
+    candidate.notes = review_notes_text(
+        candidate.notes,
+        decision=str(decision),
+        reviewed_by=reviewed_by,
+        reviewed_at=reviewed_at,
+        notes=review_notes,
+    )
     candidate.updated_at = reviewed_at
     session.flush()
-    return SourceUrlCandidateReviewResult(candidate=candidate, source_url_promotion=promoted)
+    return SourceUrlCandidateReviewResult(
+        candidate=candidate, source_url_promotion=promoted
+    )
 
 
 def promote_candidate_url(
@@ -121,10 +132,19 @@ def promote_candidate_url(
     review_notes: str | None,
 ) -> SourceUrlCandidatePromotionResult:
     if candidate.catalog_product_id is None:
-        raise SourceUrlCandidatePromotionError("catalog_product_id is required to promote a source URL.")
+        raise SourceUrlCandidatePromotionError(
+            "catalog_product_id is required to promote a source URL."
+        )
     if not reviewed_url:
-        raise SourceUrlCandidatePromotionError("candidate_url is required to promote a source URL.")
-    notes = promotion_notes(candidate, reviewed_by=reviewed_by, reviewed_at=reviewed_at, review_notes=review_notes)
+        raise SourceUrlCandidatePromotionError(
+            "candidate_url is required to promote a source URL."
+        )
+    notes = promotion_notes(
+        candidate,
+        reviewed_by=reviewed_by,
+        reviewed_at=reviewed_at,
+        review_notes=review_notes,
+    )
     upsert = create_or_update_imported_source_url(
         session,
         catalog_product_id=int(candidate.catalog_product_id),

@@ -48,11 +48,19 @@ class FetchSourceContract:
 
     @property
     def fetch_monitoring_columns(self) -> tuple[str, ...]:
-        return (self.price_column, self.url_column) + COMMON_FETCH_MONITORING_COLUMNS + self.source_extra_columns
+        return (
+            (self.price_column, self.url_column)
+            + COMMON_FETCH_MONITORING_COLUMNS
+            + self.source_extra_columns
+        )
 
     @property
     def required_enriched_columns(self) -> tuple[str, ...]:
-        return INPUT_REQUIRED_COLUMNS + (self.price_column, self.url_column) + COMMON_FETCH_MONITORING_COLUMNS
+        return (
+            INPUT_REQUIRED_COLUMNS
+            + (self.price_column, self.url_column)
+            + COMMON_FETCH_MONITORING_COLUMNS
+        )
 
     @property
     def priced_output_columns(self) -> tuple[str, ...]:
@@ -93,8 +101,12 @@ FETCH_SOURCE_CONTRACTS: dict[str, FetchSourceContract] = {
     ),
 }
 
-FETCH_MONITORING_COLUMNS: tuple[str, ...] = FETCH_SOURCE_CONTRACTS["skroutz"].fetch_monitoring_columns
-PRICED_OUTPUT_COLUMNS: tuple[str, ...] = FETCH_SOURCE_CONTRACTS["skroutz"].priced_output_columns
+FETCH_MONITORING_COLUMNS: tuple[str, ...] = FETCH_SOURCE_CONTRACTS[
+    "skroutz"
+].fetch_monitoring_columns
+PRICED_OUTPUT_COLUMNS: tuple[str, ...] = FETCH_SOURCE_CONTRACTS[
+    "skroutz"
+].priced_output_columns
 
 
 def get_fetch_source_contract(source_name: str) -> FetchSourceContract:
@@ -102,7 +114,9 @@ def get_fetch_source_contract(source_name: str) -> FetchSourceContract:
         return FETCH_SOURCE_CONTRACTS[source_name]
     except KeyError as exc:
         supported = ", ".join(FETCH_SOURCE_CONTRACTS)
-        raise ValueError(f"unsupported fetch source: {source_name}. Supported: {supported}") from exc
+        raise ValueError(
+            f"unsupported fetch source: {source_name}. Supported: {supported}"
+        ) from exc
 
 
 def detect_enriched_source(headers: list[str]) -> str:
@@ -119,7 +133,13 @@ def detect_enriched_source(headers: list[str]) -> str:
 
     missing_messages: list[str] = []
     for source_name, contract in FETCH_SOURCE_CONTRACTS.items():
-        missing = [header for header in contract.required_enriched_columns if header not in available_headers]
+        missing = [
+            header
+            for header in contract.required_enriched_columns
+            if header not in available_headers
+        ]
         missing_messages.append(f"{source_name}: missing {', '.join(missing)}")
     details = "; ".join(missing_messages)
-    raise ValueError(f"input file does not match a supported enriched contract ({details})")
+    raise ValueError(
+        f"input file does not match a supported enriched contract ({details})"
+    )

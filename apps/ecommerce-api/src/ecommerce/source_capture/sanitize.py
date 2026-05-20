@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-
 SENSITIVE_HEADER_NAMES = {
     "authorization",
     "cookie",
@@ -16,13 +15,23 @@ SENSITIVE_HEADER_NAMES = {
     "sec-ch-ua-mobile",
     "sec-ch-ua-platform",
 }
-SENSITIVE_KEY_MARKERS = ("token", "cookie", "session", "csrf", "authorization", "password", "fingerprint")
+SENSITIVE_KEY_MARKERS = (
+    "token",
+    "cookie",
+    "session",
+    "csrf",
+    "authorization",
+    "password",
+    "fingerprint",
+)
 
 
 def content_hash(text: str | bytes | None) -> str | None:
     if text is None:
         return None
-    payload = text if isinstance(text, bytes) else text.encode("utf-8", errors="replace")
+    payload = (
+        text if isinstance(text, bytes) else text.encode("utf-8", errors="replace")
+    )
     return hashlib.sha256(payload).hexdigest()
 
 

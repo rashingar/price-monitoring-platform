@@ -26,7 +26,9 @@ from ecommerce.vendor_sources.skroutz_network_diagnostics import (
     run_and_persist_skroutz_network_diagnostic,
 )
 from ecommerce.vendor_sources import list_vendor_source_capabilities
-from ecommerce.source_capture.skroutz_network_diagnostic import PlaywrightUnavailableError
+from ecommerce.source_capture.skroutz_network_diagnostic import (
+    PlaywrightUnavailableError,
+)
 
 router = APIRouter(prefix="/api/vendor-sources", tags=["vendor-sources"])
 
@@ -61,7 +63,10 @@ def get_vendor_source_url_summary(source_name: str | None = None) -> dict[str, A
         with session_scope() as session:
             return source_url_summary(session, source_name=source_name)
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Vendor source URL summary failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vendor source URL summary failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.get("/source-health")
@@ -74,9 +79,18 @@ def get_vendor_source_health(
     _require_vendor_sources_database_ready()
     try:
         with session_scope() as session:
-            return source_health_items(session, vendor=vendor, health_reason=health_reason, limit=limit, offset=offset)
+            return source_health_items(
+                session,
+                vendor=vendor,
+                health_reason=health_reason,
+                limit=limit,
+                offset=offset,
+            )
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Vendor source health query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vendor source health query failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.post("/source-health/{product_source_id}/recapture")
@@ -84,20 +98,29 @@ def post_vendor_source_health_recapture(product_source_id: int) -> dict[str, Any
     _require_vendor_sources_database_ready()
     try:
         with session_scope() as session:
-            return recapture_product_source(session, product_source_id=product_source_id)
+            return recapture_product_source(
+                session, product_source_id=product_source_id
+            )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Vendor source recapture failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vendor source recapture failed: {_safe_db_error(exc)}",
+        ) from exc
     except Exception as exc:
         message = str(exc).strip() or exc.__class__.__name__
-        raise HTTPException(status_code=500, detail=f"Vendor source recapture failed: {message}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Vendor source recapture failed: {message}"
+        ) from exc
 
 
 @router.post("/source-urls/{source_url_id}/diagnostics/skroutz-network")
-def post_skroutz_network_diagnostic(source_url_id: int, request: SkroutzNetworkDiagnosticApiRequest) -> dict[str, Any]:
+def post_skroutz_network_diagnostic(
+    source_url_id: int, request: SkroutzNetworkDiagnosticApiRequest
+) -> dict[str, Any]:
     _require_vendor_sources_database_ready()
     try:
         with session_scope() as session:
@@ -115,7 +138,10 @@ def post_skroutz_network_diagnostic(source_url_id: int, request: SkroutzNetworkD
     except PlaywrightUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Skroutz network diagnostic persistence failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Skroutz network diagnostic persistence failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.get("/source-urls/{source_url_id}/diagnostics/skroutz-network/latest")
@@ -123,7 +149,9 @@ def get_latest_skroutz_network_diagnostic(source_url_id: int) -> dict[str, Any]:
     _require_vendor_sources_database_ready()
     try:
         with session_scope() as session:
-            result = latest_skroutz_network_diagnostic(session, source_url_id=source_url_id)
+            result = latest_skroutz_network_diagnostic(
+                session, source_url_id=source_url_id
+            )
             if result is None:
                 raise FileNotFoundError("Skroutz network diagnostic report not found.")
             return result.detail_response()
@@ -134,11 +162,16 @@ def get_latest_skroutz_network_diagnostic(source_url_id: int) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Skroutz network diagnostic lookup failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Skroutz network diagnostic lookup failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.post("/captures/runs")
-def post_vendor_source_capture_runs(request: VendorSourceCaptureRunApiRequest) -> dict[str, Any]:
+def post_vendor_source_capture_runs(
+    request: VendorSourceCaptureRunApiRequest,
+) -> dict[str, Any]:
     _require_vendor_sources_database_ready()
     try:
         with session_scope() as session:
@@ -158,10 +191,15 @@ def post_vendor_source_capture_runs(request: VendorSourceCaptureRunApiRequest) -
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Vendor source capture run failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vendor source capture run failed: {_safe_db_error(exc)}",
+        ) from exc
     except Exception as exc:
         message = str(exc).strip() or exc.__class__.__name__
-        raise HTTPException(status_code=500, detail=f"Vendor source capture run failed: {message}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Vendor source capture run failed: {message}"
+        ) from exc
     payload = result.to_dict()
     payload["selected_count"] = result.selected_product_source_count
     return payload
@@ -175,9 +213,18 @@ def get_vendor_source_capture_runs(
     _require_vendor_sources_database_ready()
     try:
         with session_scope() as session:
-            return {"items": list_vendor_source_capture_runs(session, limit=limit, offset=offset), "limit": limit, "offset": offset}
+            return {
+                "items": list_vendor_source_capture_runs(
+                    session, limit=limit, offset=offset
+                ),
+                "limit": limit,
+                "offset": offset,
+            }
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Vendor source capture run history failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vendor source capture run history failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.get("/captures/runs/{run_id}")
@@ -187,12 +234,17 @@ def get_vendor_source_capture_run_detail(run_id: str) -> dict[str, Any]:
         with session_scope() as session:
             row = get_vendor_source_capture_run(session, run_id)
             if row is None:
-                raise FileNotFoundError(f"Vendor source capture run not found: {run_id}")
+                raise FileNotFoundError(
+                    f"Vendor source capture run not found: {run_id}"
+                )
             return vendor_source_capture_run_to_dict(row)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Vendor source capture run lookup failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vendor source capture run lookup failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.get("/captures/runs/{run_id}/artifacts")
@@ -202,15 +254,23 @@ def get_vendor_source_capture_run_artifacts(run_id: str) -> dict[str, Any]:
         with session_scope() as session:
             row = get_vendor_source_capture_run(session, run_id)
             if row is None:
-                raise FileNotFoundError(f"Vendor source capture run not found: {run_id}")
+                raise FileNotFoundError(
+                    f"Vendor source capture run not found: {run_id}"
+                )
             artifact_paths = [str(path) for path in row.artifact_refs_json or []]
             if row.result_path and row.result_path not in artifact_paths:
                 artifact_paths.insert(0, row.result_path)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Vendor source capture artifact lookup failed: {_safe_db_error(exc)}") from exc
-    return {"run_id": run_id, "items": [artifact_link_payload(Path(path)) for path in artifact_paths]}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vendor source capture artifact lookup failed: {_safe_db_error(exc)}",
+        ) from exc
+    return {
+        "run_id": run_id,
+        "items": [artifact_link_payload(Path(path)) for path in artifact_paths],
+    }
 
 
 def _require_vendor_sources_database_ready() -> None:
@@ -218,5 +278,7 @@ def _require_vendor_sources_database_ready() -> None:
 
 
 def _safe_db_error(exc: Exception) -> str:
-    message = str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    message = (
+        str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    )
     return sanitize_database_error(message) or exc.__class__.__name__

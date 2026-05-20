@@ -1,12 +1,24 @@
 import json
 from pathlib import Path
 
-from product_factory.models import CLIInput, ParsedProduct, SchemaMatchResult, SourceProductData, TaxonomyResolution
-from product_factory.services.execution_models import PreparedProductContext, PrepareExecutionResult, RenderExecutionResult
+from product_factory.models import (
+    CLIInput,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    TaxonomyResolution,
+)
+from product_factory.services.execution_models import (
+    PreparedProductContext,
+    PrepareExecutionResult,
+    RenderExecutionResult,
+)
 from product_factory.services.models import RunStatus
 
 
-def test_prepared_product_context_derives_current_artifact_paths(tmp_path: Path) -> None:
+def test_prepared_product_context_derives_current_artifact_paths(
+    tmp_path: Path,
+) -> None:
     model_root = tmp_path / "work" / "233541"
 
     context = PreparedProductContext.from_model("233541", model_root=model_root)
@@ -15,12 +27,24 @@ def test_prepared_product_context_derives_current_artifact_paths(tmp_path: Path)
     assert context.scrape_dir == model_root / "scrape"
     assert context.llm_dir == model_root / "llm"
     assert context.source_json_path == model_root / "scrape" / "233541.source.json"
-    assert context.scrape_normalized_json_path == model_root / "scrape" / "233541.normalized.json"
-    assert context.source_report_json_path == model_root / "scrape" / "233541.report.json"
+    assert (
+        context.scrape_normalized_json_path
+        == model_root / "scrape" / "233541.normalized.json"
+    )
+    assert (
+        context.source_report_json_path == model_root / "scrape" / "233541.report.json"
+    )
     assert context.task_manifest_path == model_root / "llm" / "task_manifest.json"
-    assert context.intro_text_context_path == model_root / "llm" / "intro_text.context.json"
-    assert context.intro_text_prompt_path == model_root / "llm" / "intro_text.prompt.txt"
-    assert context.intro_text_output_path == model_root / "llm" / "intro_text.output.txt"
+    assert (
+        context.intro_text_context_path
+        == model_root / "llm" / "intro_text.context.json"
+    )
+    assert (
+        context.intro_text_prompt_path == model_root / "llm" / "intro_text.prompt.txt"
+    )
+    assert (
+        context.intro_text_output_path == model_root / "llm" / "intro_text.output.txt"
+    )
     assert context.seo_meta_context_path == model_root / "llm" / "seo_meta.context.json"
     assert context.seo_meta_prompt_path == model_root / "llm" / "seo_meta.prompt.txt"
     assert context.seo_meta_output_path == model_root / "llm" / "seo_meta.output.json"
@@ -87,7 +111,9 @@ def test_prepared_product_context_wraps_prepare_stage_payload(tmp_path: Path) ->
     assert context.payload == stage_result
 
 
-def test_prepared_product_context_loads_render_payloads_from_current_artifacts(tmp_path: Path) -> None:
+def test_prepared_product_context_loads_render_payloads_from_current_artifacts(
+    tmp_path: Path,
+) -> None:
     model_root = tmp_path / "work" / "233541"
     context = PreparedProductContext.from_model("233541", model_root=model_root)
     context.scrape_dir.mkdir(parents=True)
@@ -166,18 +192,48 @@ def test_prepared_product_context_loads_render_payloads_from_current_artifacts(t
     assert cli.out == str(model_root / "candidate")
 
 
-def test_prepare_execution_result_from_mapping_matches_current_prepare_payload(tmp_path: Path) -> None:
+def test_prepare_execution_result_from_mapping_matches_current_prepare_payload(
+    tmp_path: Path,
+) -> None:
     payload = {
         "model_root": tmp_path / "work" / "233541",
         "scrape_dir": tmp_path / "work" / "233541" / "scrape",
         "llm_dir": tmp_path / "work" / "233541" / "llm",
-        "task_manifest_path": tmp_path / "work" / "233541" / "llm" / "task_manifest.json",
-        "intro_text_context_path": tmp_path / "work" / "233541" / "llm" / "intro_text.context.json",
-        "intro_text_prompt_path": tmp_path / "work" / "233541" / "llm" / "intro_text.prompt.txt",
-        "intro_text_output_path": tmp_path / "work" / "233541" / "llm" / "intro_text.output.txt",
-        "seo_meta_context_path": tmp_path / "work" / "233541" / "llm" / "seo_meta.context.json",
-        "seo_meta_prompt_path": tmp_path / "work" / "233541" / "llm" / "seo_meta.prompt.txt",
-        "seo_meta_output_path": tmp_path / "work" / "233541" / "llm" / "seo_meta.output.json",
+        "task_manifest_path": tmp_path
+        / "work"
+        / "233541"
+        / "llm"
+        / "task_manifest.json",
+        "intro_text_context_path": tmp_path
+        / "work"
+        / "233541"
+        / "llm"
+        / "intro_text.context.json",
+        "intro_text_prompt_path": tmp_path
+        / "work"
+        / "233541"
+        / "llm"
+        / "intro_text.prompt.txt",
+        "intro_text_output_path": tmp_path
+        / "work"
+        / "233541"
+        / "llm"
+        / "intro_text.output.txt",
+        "seo_meta_context_path": tmp_path
+        / "work"
+        / "233541"
+        / "llm"
+        / "seo_meta.context.json",
+        "seo_meta_prompt_path": tmp_path
+        / "work"
+        / "233541"
+        / "llm"
+        / "seo_meta.prompt.txt",
+        "seo_meta_output_path": tmp_path
+        / "work"
+        / "233541"
+        / "llm"
+        / "seo_meta.output.json",
         "run_status": "completed",
         "metadata_path": tmp_path / "work" / "233541" / "prepare.run.json",
         "scrape_result": {
@@ -207,13 +263,34 @@ def test_prepare_execution_result_from_mapping_matches_current_prepare_payload(t
     assert result.model_root == tmp_path / "work" / "233541"
     assert result.scrape_dir == tmp_path / "work" / "233541" / "scrape"
     assert result.llm_dir == tmp_path / "work" / "233541" / "llm"
-    assert result.task_manifest_path == tmp_path / "work" / "233541" / "llm" / "task_manifest.json"
-    assert result.intro_text_context_path == tmp_path / "work" / "233541" / "llm" / "intro_text.context.json"
-    assert result.intro_text_prompt_path == tmp_path / "work" / "233541" / "llm" / "intro_text.prompt.txt"
-    assert result.intro_text_output_path == tmp_path / "work" / "233541" / "llm" / "intro_text.output.txt"
-    assert result.seo_meta_context_path == tmp_path / "work" / "233541" / "llm" / "seo_meta.context.json"
-    assert result.seo_meta_prompt_path == tmp_path / "work" / "233541" / "llm" / "seo_meta.prompt.txt"
-    assert result.seo_meta_output_path == tmp_path / "work" / "233541" / "llm" / "seo_meta.output.json"
+    assert (
+        result.task_manifest_path
+        == tmp_path / "work" / "233541" / "llm" / "task_manifest.json"
+    )
+    assert (
+        result.intro_text_context_path
+        == tmp_path / "work" / "233541" / "llm" / "intro_text.context.json"
+    )
+    assert (
+        result.intro_text_prompt_path
+        == tmp_path / "work" / "233541" / "llm" / "intro_text.prompt.txt"
+    )
+    assert (
+        result.intro_text_output_path
+        == tmp_path / "work" / "233541" / "llm" / "intro_text.output.txt"
+    )
+    assert (
+        result.seo_meta_context_path
+        == tmp_path / "work" / "233541" / "llm" / "seo_meta.context.json"
+    )
+    assert (
+        result.seo_meta_prompt_path
+        == tmp_path / "work" / "233541" / "llm" / "seo_meta.prompt.txt"
+    )
+    assert (
+        result.seo_meta_output_path
+        == tmp_path / "work" / "233541" / "llm" / "seo_meta.output.json"
+    )
     assert result.run_status == RunStatus.COMPLETED
     assert result.metadata_path == tmp_path / "work" / "233541" / "prepare.run.json"
     assert result.scrape_result.source == "electronet"
@@ -224,14 +301,28 @@ def test_prepare_execution_result_from_mapping_matches_current_prepare_payload(t
     assert result.payload == payload
 
 
-def test_render_execution_result_from_mapping_matches_current_render_payload(tmp_path: Path) -> None:
+def test_render_execution_result_from_mapping_matches_current_render_payload(
+    tmp_path: Path,
+) -> None:
     payload = {
         "candidate_dir": tmp_path / "work" / "233541" / "candidate",
         "candidate_csv_path": tmp_path / "work" / "233541" / "candidate" / "233541.csv",
         "published_csv_path": None,
-        "description_path": tmp_path / "work" / "233541" / "candidate" / "description.html",
-        "characteristics_path": tmp_path / "work" / "233541" / "candidate" / "characteristics.html",
-        "validation_report_path": tmp_path / "work" / "233541" / "candidate" / "233541.validation.json",
+        "description_path": tmp_path
+        / "work"
+        / "233541"
+        / "candidate"
+        / "description.html",
+        "characteristics_path": tmp_path
+        / "work"
+        / "233541"
+        / "candidate"
+        / "characteristics.html",
+        "validation_report_path": tmp_path
+        / "work"
+        / "233541"
+        / "candidate"
+        / "233541.validation.json",
         "run_status": "failed",
         "metadata_path": tmp_path / "work" / "233541" / "render.run.json",
         "validation_report": {
@@ -244,11 +335,23 @@ def test_render_execution_result_from_mapping_matches_current_render_payload(tmp
     result = RenderExecutionResult.from_mapping(payload)
 
     assert result.candidate_dir == tmp_path / "work" / "233541" / "candidate"
-    assert result.candidate_csv_path == tmp_path / "work" / "233541" / "candidate" / "233541.csv"
+    assert (
+        result.candidate_csv_path
+        == tmp_path / "work" / "233541" / "candidate" / "233541.csv"
+    )
     assert result.published_csv_path is None
-    assert result.description_path == tmp_path / "work" / "233541" / "candidate" / "description.html"
-    assert result.characteristics_path == tmp_path / "work" / "233541" / "candidate" / "characteristics.html"
-    assert result.validation_report_path == tmp_path / "work" / "233541" / "candidate" / "233541.validation.json"
+    assert (
+        result.description_path
+        == tmp_path / "work" / "233541" / "candidate" / "description.html"
+    )
+    assert (
+        result.characteristics_path
+        == tmp_path / "work" / "233541" / "candidate" / "characteristics.html"
+    )
+    assert (
+        result.validation_report_path
+        == tmp_path / "work" / "233541" / "candidate" / "233541.validation.json"
+    )
     assert result.run_status == RunStatus.FAILED
     assert result.metadata_path == tmp_path / "work" / "233541" / "render.run.json"
     assert result.validation_report.ok is False

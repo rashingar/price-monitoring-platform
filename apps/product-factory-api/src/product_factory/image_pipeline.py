@@ -36,7 +36,9 @@ def _prepare_for_jpg(image: Image.Image) -> Image.Image:
     return background
 
 
-def _resize_within_bounds(image: Image.Image, max_width: int, max_height: int) -> Image.Image:
+def _resize_within_bounds(
+    image: Image.Image, max_width: int, max_height: int
+) -> Image.Image:
     width, height = image.size
     if width <= 0 or height <= 0:
         return image
@@ -49,7 +51,9 @@ def _resize_within_bounds(image: Image.Image, max_width: int, max_height: int) -
     return image.resize(new_size, Image.LANCZOS)
 
 
-def convert_image_bytes_to_jpg(payload: bytes, *, resize_for_besco: bool = False) -> bytes:
+def convert_image_bytes_to_jpg(
+    payload: bytes, *, resize_for_besco: bool = False
+) -> bytes:
     try:
         with Image.open(BytesIO(payload)) as image:
             working = image.copy()

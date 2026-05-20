@@ -35,14 +35,23 @@ def capture_due_product_sources(
     monitoring_run_id: int | None = None,
     capture_fn=capture_source_url,
 ) -> ScheduledCaptureSummary:
-    threshold = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(minutes=refresh_after_minutes)
+    threshold = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(
+        minutes=refresh_after_minutes
+    )
     statement = select(ProductSource).where(ProductSource.active.is_(True))
     if product_source_ids:
-        statement = statement.where(ProductSource.id.in_([int(item) for item in product_source_ids]))
+        statement = statement.where(
+            ProductSource.id.in_([int(item) for item in product_source_ids])
+        )
     if not include_not_due:
-        statement = statement.where((ProductSource.last_success_at.is_(None)) | (ProductSource.last_success_at < threshold))
+        statement = statement.where(
+            (ProductSource.last_success_at.is_(None))
+            | (ProductSource.last_success_at < threshold)
+        )
     if vendor_slug:
-        vendor = session.execute(select(Vendor).where(Vendor.slug == vendor_slug)).scalar_one_or_none()
+        vendor = session.execute(
+            select(Vendor).where(Vendor.slug == vendor_slug)
+        ).scalar_one_or_none()
         if vendor is None:
             rows = []
         else:
@@ -85,7 +94,9 @@ def capture_due_product_sources(
                     capture_strategy=snapshot.capture_strategy,
                     error_code=snapshot.error_code or result.error_code,
                     response_status=snapshot.response_status,
-                    data_quality_flags=source.data_quality_flags or snapshot.data_quality_flags or [],
+                    data_quality_flags=source.data_quality_flags
+                    or snapshot.data_quality_flags
+                    or [],
                     error_message=snapshot.error_message or result.error_message,
                 ),
             }
@@ -101,7 +112,9 @@ def capture_due_product_sources(
 def _selected_sources(session: Session, statement, limit: int) -> list[ProductSource]:
     return list(
         session.execute(
-            statement.order_by(ProductSource.last_success_at.asc().nullsfirst(), ProductSource.id.asc()).limit(max(1, int(limit)))
+            statement.order_by(
+                ProductSource.last_success_at.asc().nullsfirst(), ProductSource.id.asc()
+            ).limit(max(1, int(limit)))
         )
         .scalars()
         .all()

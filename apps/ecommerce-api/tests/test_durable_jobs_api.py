@@ -23,8 +23,18 @@ def _client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
 def test_jobs_api_lists_and_filters_jobs(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
-        create_queued_job(session, job_type="vendor_capture", payload={"source": "skroutz"}, job_id="job-1")
-        create_queued_job(session, job_type="url_validation", payload={"url": "https://example.test"}, job_id="job-2")
+        create_queued_job(
+            session,
+            job_type="vendor_capture",
+            payload={"source": "skroutz"},
+            job_id="job-1",
+        )
+        create_queued_job(
+            session,
+            job_type="url_validation",
+            payload={"url": "https://example.test"},
+            job_id="job-2",
+        )
         mark_running(session, "job-2")
 
     response = client.get("/api/jobs", params={"status": "queued"})
@@ -39,7 +49,12 @@ def test_jobs_api_lists_and_filters_jobs(tmp_path: Path, monkeypatch) -> None:
 def test_jobs_api_gets_job_by_id(tmp_path: Path, monkeypatch) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
-        create_queued_job(session, job_type="diagnostic", payload={"source_url_id": 101}, job_id="job-1")
+        create_queued_job(
+            session,
+            job_type="diagnostic",
+            payload={"source_url_id": 101},
+            job_id="job-1",
+        )
 
     response = client.get("/api/jobs/job-1")
 
@@ -74,7 +89,9 @@ def test_jobs_api_returns_404_for_missing_job(tmp_path: Path, monkeypatch) -> No
     assert response.json()["detail"] == "Job not found."
 
 
-def test_jobs_api_returns_503_when_database_missing(tmp_path: Path, monkeypatch) -> None:
+def test_jobs_api_returns_503_when_database_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, "")
 
     response = TestClient(create_app()).get("/api/jobs")

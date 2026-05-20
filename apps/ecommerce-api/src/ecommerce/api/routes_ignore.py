@@ -44,7 +44,11 @@ def get_ignored_products(
     products = _load_ignored_or_raise()
     filtered = _filter_products(products, q)
     if sort_by:
-        filtered = sorted(filtered, key=lambda item: _sort_value(item, sort_by), reverse=sort_dir == "desc")
+        filtered = sorted(
+            filtered,
+            key=lambda item: _sort_value(item, sort_by),
+            reverse=sort_dir == "desc",
+        )
 
     start = (page - 1) * page_size
     end = start + page_size
@@ -76,7 +80,9 @@ def post_ignored_product(request: IgnoredProductRequest) -> dict:
     except MissingIgnoreColumnsError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Ignore list write failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Ignore list write failed."
+        ) from exc
     return stored.to_dict()
 
 
@@ -88,7 +94,9 @@ def delete_ignored_product(model: str) -> dict:
     except MissingIgnoreColumnsError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Ignore list write failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Ignore list write failed."
+        ) from exc
     return {"model": normalized_model, "removed": removed}
 
 
@@ -98,10 +106,14 @@ def _load_ignored_or_raise() -> list[IgnoredProduct]:
     except MissingIgnoreColumnsError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Ignore list loading failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Ignore list loading failed."
+        ) from exc
 
 
-def _filter_products(products: list[IgnoredProduct], q: str | None) -> list[IgnoredProduct]:
+def _filter_products(
+    products: list[IgnoredProduct], q: str | None
+) -> list[IgnoredProduct]:
     q_norm = q.strip().casefold() if q else ""
     if not q_norm:
         return products
@@ -109,7 +121,14 @@ def _filter_products(products: list[IgnoredProduct], q: str | None) -> list[Igno
 
 
 def _matches_query(product: IgnoredProduct, q_norm: str) -> bool:
-    values = (product.model, product.mpn, product.name, product.manufacturer, product.reason, product.notes)
+    values = (
+        product.model,
+        product.mpn,
+        product.name,
+        product.manufacturer,
+        product.reason,
+        product.notes,
+    )
     return any(q_norm in value.casefold() for value in values)
 
 

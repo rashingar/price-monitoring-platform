@@ -88,7 +88,9 @@ def _parse_row(
     resolved_source = _first_text(row, normalized, ("source", "marketplace")) or source
     source_key = _normalize_column(resolved_source or source)
     model = _first_text(row, normalized, ("model", "sku", "product_model"))
-    mpn = _first_text(row, normalized, ("mpn", "manufacturer_part_number", "matched_mpn"))
+    mpn = _first_text(
+        row, normalized, ("mpn", "manufacturer_part_number", "matched_mpn")
+    )
     if not model and not mpn:
         warnings.append(f"Row {row_number} skipped: missing model and MPN.")
         return None, warnings
@@ -144,8 +146,15 @@ def _parse_row(
     if price_delta is None and own_price is not None and competitor_price is not None:
         # Positive values mean our own catalog price is higher than the competitor/source price.
         price_delta = own_price - competitor_price
-    price_delta_percent = _parse_decimal(_first_raw(row, normalized, ("price_delta_percent", "delta_percent")))
-    if price_delta_percent is None and price_delta is not None and own_price is not None and own_price != 0:
+    price_delta_percent = _parse_decimal(
+        _first_raw(row, normalized, ("price_delta_percent", "delta_percent"))
+    )
+    if (
+        price_delta_percent is None
+        and price_delta is not None
+        and own_price is not None
+        and own_price != 0
+    ):
         price_delta_percent = (price_delta / own_price) * Decimal("100")
 
     return (
@@ -155,7 +164,9 @@ def _parse_row(
             source=(resolved_source or source).strip().lower(),
             model=_empty_to_none(model),
             mpn=_empty_to_none(mpn),
-            product_name=_empty_to_none(_first_text(row, normalized, ("name", "product_name", "title"))),
+            product_name=_empty_to_none(
+                _first_text(row, normalized, ("name", "product_name", "title"))
+            ),
             competitor_name=_empty_to_none(
                 _first_text(
                     row,
@@ -175,7 +186,9 @@ def _parse_row(
             ),
             competitor_price=competitor_price,
             currency=_first_text(row, normalized, ("currency",)) or "EUR",
-            availability=_empty_to_none(_first_text(row, normalized, ("availability", "stock_status", "status"))),
+            availability=_empty_to_none(
+                _first_text(row, normalized, ("availability", "stock_status", "status"))
+            ),
             product_url=_empty_to_none(
                 _first_text(
                     row,
@@ -196,7 +209,9 @@ def _parse_row(
             price_delta=price_delta,
             price_delta_percent=price_delta_percent,
             raw_observation=_json_safe_row(row),
-            observed_at=_parse_datetime(_first_raw(row, normalized, ("observed_at", "created_at", "timestamp")))
+            observed_at=_parse_datetime(
+                _first_raw(row, normalized, ("observed_at", "created_at", "timestamp"))
+            )
             or default_observed_at,
         ),
         warnings,
@@ -208,7 +223,10 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         sample = f.read(4096)
         f.seek(0)
         reader = csv.DictReader(f, delimiter=_detect_delimiter(sample))
-        return [{key: value if value is not None else "" for key, value in row.items()} for row in reader]
+        return [
+            {key: value if value is not None else "" for key, value in row.items()}
+            for row in reader
+        ]
 
 
 def _detect_delimiter(sample: str) -> str:
@@ -223,12 +241,16 @@ def _detect_delimiter(sample: str) -> str:
     return ","
 
 
-def _first_text(row: dict[str, str], normalized: dict[str, str], aliases: tuple[str, ...]) -> str:
+def _first_text(
+    row: dict[str, str], normalized: dict[str, str], aliases: tuple[str, ...]
+) -> str:
     value = _first_raw(row, normalized, aliases)
     return _text(value)
 
 
-def _first_raw(row: dict[str, str], normalized: dict[str, str], aliases: tuple[str, ...]) -> str:
+def _first_raw(
+    row: dict[str, str], normalized: dict[str, str], aliases: tuple[str, ...]
+) -> str:
     column = _first_column(normalized, aliases)
     if column is None:
         return ""
@@ -250,7 +272,9 @@ def _normalize_column(value: object) -> str:
 
 
 def _parse_decimal(value: object) -> Decimal | None:
-    parsed, _warning = _parse_decimal_with_warning(value, row_number=None, field_name="")
+    parsed, _warning = _parse_decimal_with_warning(
+        value, row_number=None, field_name=""
+    )
     return parsed
 
 
@@ -263,7 +287,9 @@ def _parse_decimal_with_warning(
     text = _text(value)
     if not text:
         return None, None
-    cleaned = text.replace("EUR", "").replace("€", "").replace(" ", "").replace(",", ".")
+    cleaned = (
+        text.replace("EUR", "").replace("€", "").replace(" ", "").replace(",", ".")
+    )
     try:
         return Decimal(cleaned), None
     except InvalidOperation:

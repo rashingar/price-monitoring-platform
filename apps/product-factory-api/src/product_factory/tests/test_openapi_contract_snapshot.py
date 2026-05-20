@@ -6,10 +6,11 @@ from pathlib import Path
 from product_factory.api.app import create_app
 from product_factory.jobs.export_openapi_snapshot import normalize_openapi_schema
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SNAPSHOT_PATH = REPO_ROOT / "docs" / "contracts" / "openapi.product-factory.json"
-REGENERATE_COMMAND = r"..\.venv\Scripts\python.exe -m product_factory.jobs.export_openapi_snapshot"
+REGENERATE_COMMAND = (
+    r"..\.venv\Scripts\python.exe -m product_factory.jobs.export_openapi_snapshot"
+)
 
 
 def test_openapi_snapshot_matches_current_api_contract() -> None:

@@ -14,8 +14,17 @@ from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.vendor_sources import Vendor
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.models.price_monitoring import OfferObservation, PriceObservation
-from ecommerce.db.repositories.common import _decimal_or_none, _empty_to_none, _first_text, _json_safe, json_safe_value
-from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
+from ecommerce.db.repositories.common import (
+    _decimal_or_none,
+    _empty_to_none,
+    _first_text,
+    _json_safe,
+    json_safe_value,
+)
+from ecommerce.source_capture.canonicalize_url import (
+    canonical_url_hash,
+    canonicalize_url,
+)
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_capture.runner import capture_source_url
 from ecommerce.source_capture.vendor_registry import VENDORS_BY_SLUG
@@ -29,12 +38,16 @@ def upsert_product_from_catalog_row(
     updated_at: datetime | None = None,
 ) -> Product | None:
     model = _empty_to_none(_first_text(row, ("model", "product_model", "sku")))
-    mpn = _empty_to_none(_first_text(row, ("mpn", "manufacturer_part_number", "matched_mpn")))
+    mpn = _empty_to_none(
+        _first_text(row, ("mpn", "manufacturer_part_number", "matched_mpn"))
+    )
     if not model and not mpn:
         return None
 
     timestamp = updated_at or _now()
-    product = find_product_by_identity(session, catalog_source=catalog_source, model=model, mpn=mpn)
+    product = find_product_by_identity(
+        session, catalog_source=catalog_source, model=model, mpn=mpn
+    )
     if product is None:
         product = Product(
             catalog_source=catalog_source,
@@ -52,9 +65,18 @@ def upsert_product_from_catalog_row(
     product.name = _empty_to_none(_first_text(row, ("name", "product_name", "title")))
     product.manufacturer = _empty_to_none(_first_text(row, ("manufacturer", "brand")))
     product.family = _empty_to_none(_first_text(row, ("family",)))
-    product.category_name = _empty_to_none(_first_text(row, ("category_name", "category")))
-    product.sub_category = _empty_to_none(_first_text(row, ("sub_category", "subcategory")))
-    product.current_price = _decimal_or_none(_first_text(row, ("own_price", "price", "current_price", "internal_price", "catalog_price")))
+    product.category_name = _empty_to_none(
+        _first_text(row, ("category_name", "category"))
+    )
+    product.sub_category = _empty_to_none(
+        _first_text(row, ("sub_category", "subcategory"))
+    )
+    product.current_price = _decimal_or_none(
+        _first_text(
+            row,
+            ("own_price", "price", "current_price", "internal_price", "catalog_price"),
+        )
+    )
     product.currency = _first_text(row, ("currency",)) or "EUR"
     product.active = True
     product.raw_catalog_row = _json_safe(row)
@@ -71,11 +93,15 @@ def find_product_by_identity(
 ) -> Product | None:
     if model:
         return session.execute(
-            select(Product).where(Product.catalog_source == catalog_source, Product.model == model).limit(1)
+            select(Product)
+            .where(Product.catalog_source == catalog_source, Product.model == model)
+            .limit(1)
         ).scalar_one_or_none()
     if mpn:
         return session.execute(
-            select(Product).where(Product.catalog_source == catalog_source, Product.mpn == mpn).limit(1)
+            select(Product)
+            .where(Product.catalog_source == catalog_source, Product.mpn == mpn)
+            .limit(1)
         ).scalar_one_or_none()
     return None
 
@@ -89,13 +115,17 @@ def match_product_for_observation(
 ) -> tuple[Product | None, str | None]:
     if model:
         product = session.execute(
-            select(Product).where(Product.catalog_source == catalog_source, Product.model == model).limit(1)
+            select(Product)
+            .where(Product.catalog_source == catalog_source, Product.model == model)
+            .limit(1)
         ).scalar_one_or_none()
         if product is not None:
             return product, "model"
     if mpn:
         product = session.execute(
-            select(Product).where(Product.catalog_source == catalog_source, Product.mpn == mpn).limit(1)
+            select(Product)
+            .where(Product.catalog_source == catalog_source, Product.mpn == mpn)
+            .limit(1)
         ).scalar_one_or_none()
         if product is not None:
             return product, "mpn"
@@ -130,7 +160,9 @@ class ProductFromSourceResult:
 
 def ensure_vendor_rows(session: Session) -> dict[str, Vendor]:
     now = _now()
-    existing = {row.slug: row for row in session.execute(select(Vendor)).scalars().all()}
+    existing = {
+        row.slug: row for row in session.execute(select(Vendor)).scalars().all()
+    }
     for slug, definition in VENDORS_BY_SLUG.items():
         row = existing.get(slug)
         if row is None:
@@ -172,7 +204,9 @@ def find_or_create_product_from_model(
     normalized_model = " ".join(str(model or "").split())
     if not normalized_model:
         raise ValueError("model is required.")
-    product = find_product_by_identity(session, catalog_source=catalog_source, model=normalized_model, mpn=None)
+    product = find_product_by_identity(
+        session, catalog_source=catalog_source, model=normalized_model, mpn=None
+    )
     now = _now()
     if product is None:
         product = Product(
@@ -219,7 +253,9 @@ def create_or_reuse_product_source(
         if confidence_score is not None:
             existing.confidence_score = confidence_score
         session.flush()
-        from ecommerce.db.repositories.source_convergence import sync_product_source_to_source_url
+        from ecommerce.db.repositories.source_convergence import (
+            sync_product_source_to_source_url,
+        )
 
         sync_product_source_to_source_url(session, existing)
         return existing, False
@@ -240,7 +276,9 @@ def create_or_reuse_product_source(
     )
     session.add(row)
     session.flush()
-    from ecommerce.db.repositories.source_convergence import sync_product_source_to_source_url
+    from ecommerce.db.repositories.source_convergence import (
+        sync_product_source_to_source_url,
+    )
 
     sync_product_source_to_source_url(session, row)
     return row, True
@@ -259,14 +297,24 @@ def create_product_from_source_urls(
     product = find_or_create_product_from_model(session, model=model)
     results: list[dict[str, Any]] = []
     for source_url in source_urls:
-        source, created = create_or_reuse_product_source(session, product=product, source_url=source_url)
+        source, created = create_or_reuse_product_source(
+            session, product=product, source_url=source_url
+        )
         if not capture:
-            results.append(_source_result_payload(source, "skipped", created, initial_observations=[]))
+            results.append(
+                _source_result_payload(
+                    source, "skipped", created, initial_observations=[]
+                )
+            )
             continue
-        result = capture_fn(source.canonical_url, vendor_slug=_vendor_slug(session, source.vendor_id))
+        result = capture_fn(
+            source.canonical_url, vendor_slug=_vendor_slug(session, source.vendor_id)
+        )
         from ecommerce.db.repositories.capture_persistence import persist_capture_result
 
-        snapshot = persist_capture_result(session, product=product, source=source, result=result)
+        snapshot = persist_capture_result(
+            session, product=product, source=source, result=result
+        )
         observations = _initial_observation_payload(session, snapshot)
         results.append(
             _source_result_payload(
@@ -340,12 +388,18 @@ def _source_result_payload(
     return payload
 
 
-def _initial_observation_payload(session: Session, snapshot: SourceCaptureSnapshot) -> list[dict[str, Any]]:
+def _initial_observation_payload(
+    session: Session, snapshot: SourceCaptureSnapshot
+) -> list[dict[str, Any]]:
     prices = session.execute(
-        select(PriceObservation).where(PriceObservation.source_capture_snapshot_id == snapshot.id).order_by(PriceObservation.id.asc())
+        select(PriceObservation)
+        .where(PriceObservation.source_capture_snapshot_id == snapshot.id)
+        .order_by(PriceObservation.id.asc())
     ).scalars()
     offers = session.execute(
-        select(OfferObservation).where(OfferObservation.source_capture_snapshot_id == snapshot.id).order_by(OfferObservation.id.asc())
+        select(OfferObservation)
+        .where(OfferObservation.source_capture_snapshot_id == snapshot.id)
+        .order_by(OfferObservation.id.asc())
     ).scalars()
     payload: list[dict[str, Any]] = []
     for row in prices:
@@ -379,8 +433,15 @@ def _vendor_slug(session: Session, vendor_id: int | None) -> str | None:
     return row.slug if row is not None else None
 
 
-def _apply_safe_product_enrichment(product: Product, enrichment: dict[str, Any]) -> None:
-    for source_key, target_key in (("title", "name"), ("name", "name"), ("brand", "manufacturer"), ("manufacturer", "manufacturer")):
+def _apply_safe_product_enrichment(
+    product: Product, enrichment: dict[str, Any]
+) -> None:
+    for source_key, target_key in (
+        ("title", "name"),
+        ("name", "name"),
+        ("brand", "manufacturer"),
+        ("manufacturer", "manufacturer"),
+    ):
         value = _optional_text(enrichment.get(source_key))
         if value and not getattr(product, target_key):
             setattr(product, target_key, value)

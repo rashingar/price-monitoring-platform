@@ -23,7 +23,9 @@ def _write_catalog(path: Path) -> None:
     )
 
 
-def test_load_source_catalog_reads_comma_utf8_sig_and_preserves_leading_zeroes(tmp_path: Path) -> None:
+def test_load_source_catalog_reads_comma_utf8_sig_and_preserves_leading_zeroes(
+    tmp_path: Path,
+) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
 
@@ -69,10 +71,16 @@ def test_load_source_catalog_adds_parsed_category_fields(tmp_path: Path) -> None
     assert product.family == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"
     assert product.category_name == "Σκεύη Μαγειρικής"
     assert product.sub_category == "Γάστρες"
-    assert product.category_levels == ["ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "Σκεύη Μαγειρικής", "Γάστρες"]
+    assert product.category_levels == [
+        "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        "Σκεύη Μαγειρικής",
+        "Γάστρες",
+    ]
 
 
-def test_model_whitespace_is_stripped_before_validation_and_output(tmp_path: Path) -> None:
+def test_model_whitespace_is_stripped_before_validation_and_output(
+    tmp_path: Path,
+) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
 
@@ -109,7 +117,9 @@ def test_composite_model_and_missing_mpn_warnings(tmp_path: Path) -> None:
 
 def test_missing_required_columns_are_reported(tmp_path: Path) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
-    catalog_path.write_text("model,mpn,name\n005606,MPN,Product\n", encoding="utf-8-sig")
+    catalog_path.write_text(
+        "model,mpn,name\n005606,MPN,Product\n", encoding="utf-8-sig"
+    )
 
     with pytest.raises(MissingCatalogColumnsError) as exc_info:
         load_source_catalog(catalog_path)

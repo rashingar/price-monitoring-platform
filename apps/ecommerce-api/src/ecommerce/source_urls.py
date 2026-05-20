@@ -6,7 +6,11 @@ from dataclasses import dataclass
 from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from ecommerce.source_capture.egress_policy import EgressPolicyError, EgressTimeoutConfig, safe_get
+from ecommerce.source_capture.egress_policy import (
+    EgressPolicyError,
+    EgressTimeoutConfig,
+    safe_get,
+)
 
 
 class SourceUrlValidationError(ValueError):
@@ -92,7 +96,9 @@ def validate_source_url_shape(url: str) -> None:
     normalize_source_url(url)
 
 
-def validate_source_url_reachability(url: str, *, timeout_seconds: float = 5.0) -> SourceUrlValidationResult:
+def validate_source_url_reachability(
+    url: str, *, timeout_seconds: float = 5.0
+) -> SourceUrlValidationResult:
     try:
         normalized = normalize_source_url(url)
     except SourceUrlValidationError as exc:
@@ -101,25 +107,43 @@ def validate_source_url_reachability(url: str, *, timeout_seconds: float = 5.0) 
     try:
         response = safe_get(
             normalized,
-            timeout=EgressTimeoutConfig(connect=min(timeout_seconds, 5.0), read=timeout_seconds, total=timeout_seconds),
+            timeout=EgressTimeoutConfig(
+                connect=min(timeout_seconds, 5.0),
+                read=timeout_seconds,
+                total=timeout_seconds,
+            ),
             max_response_bytes=256_000,
         )
     except EgressPolicyError as exc:
         if exc.code in {"invalid_url", "unsupported_scheme"}:
             return SourceUrlValidationResult(status="failed", message=exc.message)
         if exc.code == "timeout":
-            return SourceUrlValidationResult(status="inconclusive", message="URL validation timed out.")
+            return SourceUrlValidationResult(
+                status="inconclusive", message="URL validation timed out."
+            )
         if exc.code == "blocked_private_host":
-            return SourceUrlValidationResult(status="inconclusive", message="URL host is not eligible for reachability validation.")
+            return SourceUrlValidationResult(
+                status="inconclusive",
+                message="URL host is not eligible for reachability validation.",
+            )
         if exc.code == "response_too_large":
-            return SourceUrlValidationResult(status="inconclusive", message="URL validation response was too large.")
+            return SourceUrlValidationResult(
+                status="inconclusive", message="URL validation response was too large."
+            )
         if exc.code == "redirect_blocked":
-            return SourceUrlValidationResult(status="inconclusive", message="URL redirect target is not eligible for reachability validation.")
-        return SourceUrlValidationResult(status="inconclusive", message=_short_message(exc.message))
+            return SourceUrlValidationResult(
+                status="inconclusive",
+                message="URL redirect target is not eligible for reachability validation.",
+            )
+        return SourceUrlValidationResult(
+            status="inconclusive", message=_short_message(exc.message)
+        )
 
     status_code = response.status_code
     if 200 <= status_code < 400:
-        return SourceUrlValidationResult(status="success", message="URL is reachable.", http_status_code=status_code)
+        return SourceUrlValidationResult(
+            status="success", message="URL is reachable.", http_status_code=status_code
+        )
     if status_code in {400, 401, 403, 404, 410}:
         return SourceUrlValidationResult(
             status="failed",
@@ -147,7 +171,9 @@ def _parse_supported_url(url: str):
         raise SourceUrlValidationError("Source URL is malformed.") from exc
     scheme = parsed.scheme.lower()
     if scheme not in {"http", "https"}:
-        raise SourceUrlValidationError("Source URL must start with http:// or https://.")
+        raise SourceUrlValidationError(
+            "Source URL must start with http:// or https://."
+        )
     if not parsed.hostname:
         raise SourceUrlValidationError("Source URL must include a host.")
     if any(character.isspace() for character in parsed.hostname):

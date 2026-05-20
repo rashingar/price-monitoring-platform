@@ -9,9 +9,13 @@ from product_factory.manufacturer_enrichment import (
     _parse_neff_specsheet,
     enrich_source_from_manufacturer_docs,
 )
-from product_factory.models import SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 from product_factory.normalize import normalize_for_match
-
 
 BOSCH_SPECSHEET_SAMPLE = """
 Σειρά 2, Ελεύθερος ψυγειοκαταψύκτης, 186 x 60 cm, Metal Look, Total No Frost
@@ -107,17 +111,30 @@ def test_parse_neff_specsheet_extracts_structured_sections() -> None:
         for item in section.items
     }
 
-    assert flattened[normalize_for_match("Τύπος εγκατάστασης")] == "Εντοιχιζόμενη συσκευή"
-    assert flattened[normalize_for_match("Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα")] == "4"
+    assert (
+        flattened[normalize_for_match("Τύπος εγκατάστασης")] == "Εντοιχιζόμενη συσκευή"
+    )
+    assert (
+        flattened[
+            normalize_for_match(
+                "Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα"
+            )
+        ]
+        == "4"
+    )
     assert flattened[normalize_for_match("Καθαρό βάρος")] == "8.0 kg"
     assert flattened[normalize_for_match("Χρώμα πλαισίου")] == "Ανοξείδωτο"
-    assert flattened[normalize_for_match("Είδος ηλεκτρονικού ελέγχου")].startswith("TwistPad4")
+    assert flattened[normalize_for_match("Είδος ηλεκτρονικού ελέγχου")].startswith(
+        "TwistPad4"
+    )
     assert flattened[normalize_for_match("Μπροστά αριστερά")] == "145 mm, 1.2 ΚW"
     assert flattened[normalize_for_match("Συνολική ισχύς")] == "6.3 ΚW"
 
 
 class _DummyFetcher:
-    def __init__(self, html: str = "<html></html>", binary: bytes = b"%PDF-1.4 test") -> None:
+    def __init__(
+        self, html: str = "<html></html>", binary: bytes = b"%PDF-1.4 test"
+    ) -> None:
         self.html = html
         self.binary = binary
 
@@ -134,7 +151,9 @@ class _FakePdfAdapter(OfficialDocAdapter):
     def matches(self, source: SourceProductData) -> bool:
         return normalize_for_match(source.brand) == normalize_for_match("PdfBrand")
 
-    def discover(self, source: SourceProductData, taxonomy: TaxonomyResolution) -> list[OfficialDocumentCandidate]:
+    def discover(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution
+    ) -> list[OfficialDocumentCandidate]:
         return [
             OfficialDocumentCandidate(
                 provider_id=self.provider_id,
@@ -146,11 +165,20 @@ class _FakePdfAdapter(OfficialDocAdapter):
             )
         ]
 
-    def parse(self, candidate: OfficialDocumentCandidate, payload: bytes | str, source: SourceProductData, taxonomy: TaxonomyResolution) -> EnrichmentResult:
+    def parse(
+        self,
+        candidate: OfficialDocumentCandidate,
+        payload: bytes | str,
+        source: SourceProductData,
+        taxonomy: TaxonomyResolution,
+    ) -> EnrichmentResult:
         assert isinstance(payload, (bytes, bytearray))
         return EnrichmentResult(
             manufacturer_spec_sections=[
-                SpecSection(section="Τεχνικά στοιχεία", items=[SpecItem(label="Ισχύς", value="2200 W")]),
+                SpecSection(
+                    section="Τεχνικά στοιχεία",
+                    items=[SpecItem(label="Ισχύς", value="2200 W")],
+                ),
             ],
             manufacturer_source_text="Ισχύς: 2200 W",
         )
@@ -162,7 +190,9 @@ class _FakeHtmlAdapter(OfficialDocAdapter):
     def matches(self, source: SourceProductData) -> bool:
         return normalize_for_match(source.brand) == normalize_for_match("HtmlBrand")
 
-    def discover(self, source: SourceProductData, taxonomy: TaxonomyResolution) -> list[OfficialDocumentCandidate]:
+    def discover(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution
+    ) -> list[OfficialDocumentCandidate]:
         return [
             OfficialDocumentCandidate(
                 provider_id=self.provider_id,
@@ -174,21 +204,38 @@ class _FakeHtmlAdapter(OfficialDocAdapter):
             )
         ]
 
-    def parse(self, candidate: OfficialDocumentCandidate, payload: bytes | str, source: SourceProductData, taxonomy: TaxonomyResolution) -> EnrichmentResult:
+    def parse(
+        self,
+        candidate: OfficialDocumentCandidate,
+        payload: bytes | str,
+        source: SourceProductData,
+        taxonomy: TaxonomyResolution,
+    ) -> EnrichmentResult:
         assert isinstance(payload, str)
         assert "<dl>" in payload
         return EnrichmentResult(
             manufacturer_spec_sections=[
-                SpecSection(section="Γενικά χαρακτηριστικά", items=[SpecItem(label="Χρώμα", value="Μαύρο")]),
+                SpecSection(
+                    section="Γενικά χαρακτηριστικά",
+                    items=[SpecItem(label="Χρώμα", value="Μαύρο")],
+                ),
             ],
             manufacturer_source_text="Χρώμα: Μαύρο",
         )
 
 
-def test_enrichment_framework_supports_pdf_candidates(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(enrichment_module, "get_official_doc_adapters", lambda: [_FakePdfAdapter()])
-    source = SourceProductData(source_name="skroutz", brand="PdfBrand", mpn="PDF-1", name="PdfBrand PDF-1")
-    taxonomy = TaxonomyResolution(parent_category="A", leaf_category="B", sub_category="C")
+def test_enrichment_framework_supports_pdf_candidates(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        enrichment_module, "get_official_doc_adapters", lambda: [_FakePdfAdapter()]
+    )
+    source = SourceProductData(
+        source_name="skroutz", brand="PdfBrand", mpn="PDF-1", name="PdfBrand PDF-1"
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="A", leaf_category="B", sub_category="C"
+    )
 
     diagnostics = enrich_source_from_manufacturer_docs(
         source=source,
@@ -210,10 +257,18 @@ def test_enrichment_framework_supports_pdf_candidates(monkeypatch, tmp_path: Pat
     assert Path(source.manufacturer_documents[0]["text_path"]).suffix == ".txt"
 
 
-def test_enrichment_framework_supports_html_candidates(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(enrichment_module, "get_official_doc_adapters", lambda: [_FakeHtmlAdapter()])
-    source = SourceProductData(source_name="skroutz", brand="HtmlBrand", mpn="HTML-1", name="HtmlBrand HTML-1")
-    taxonomy = TaxonomyResolution(parent_category="A", leaf_category="B", sub_category="C")
+def test_enrichment_framework_supports_html_candidates(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        enrichment_module, "get_official_doc_adapters", lambda: [_FakeHtmlAdapter()]
+    )
+    source = SourceProductData(
+        source_name="skroutz", brand="HtmlBrand", mpn="HTML-1", name="HtmlBrand HTML-1"
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="A", leaf_category="B", sub_category="C"
+    )
     html = "<html><body><dl><dt>Χρώμα</dt><dd>Μαύρο</dd></dl></body></html>"
 
     diagnostics = enrich_source_from_manufacturer_docs(
@@ -234,15 +289,25 @@ def test_enrichment_framework_supports_html_candidates(monkeypatch, tmp_path: Pa
     assert Path(source.manufacturer_documents[0]["local_path"]).suffix == ".html"
 
 
-def test_enrichment_framework_supports_adapters_without_fetcher_parameter(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(enrichment_module, "get_official_doc_adapters", lambda: [_FakeHtmlAdapter()])
-    source = SourceProductData(source_name="skroutz", brand="HtmlBrand", mpn="HTML-1", name="HtmlBrand HTML-1")
-    taxonomy = TaxonomyResolution(parent_category="A", leaf_category="B", sub_category="C")
+def test_enrichment_framework_supports_adapters_without_fetcher_parameter(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        enrichment_module, "get_official_doc_adapters", lambda: [_FakeHtmlAdapter()]
+    )
+    source = SourceProductData(
+        source_name="skroutz", brand="HtmlBrand", mpn="HTML-1", name="HtmlBrand HTML-1"
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="A", leaf_category="B", sub_category="C"
+    )
 
     diagnostics = enrich_source_from_manufacturer_docs(
         source=source,
         taxonomy=taxonomy,
-        fetcher=_DummyFetcher(html="<html><body><dl><dt>Χρώμα</dt><dd>Μαύρο</dd></dl></body></html>"),
+        fetcher=_DummyFetcher(
+            html="<html><body><dl><dt>Χρώμα</dt><dd>Μαύρο</dd></dl></body></html>"
+        ),
         output_dir=tmp_path,
     )
 
@@ -250,9 +315,18 @@ def test_enrichment_framework_supports_adapters_without_fetcher_parameter(monkey
     assert diagnostics["provider"] == "fakehtml"
 
 
-def test_enrichment_framework_gracefully_falls_back_when_no_provider_matches(tmp_path: Path) -> None:
-    source = SourceProductData(source_name="skroutz", brand="UnknownBrand", mpn="ABC123", name="UnknownBrand ABC123")
-    taxonomy = TaxonomyResolution(parent_category="A", leaf_category="B", sub_category="C")
+def test_enrichment_framework_gracefully_falls_back_when_no_provider_matches(
+    tmp_path: Path,
+) -> None:
+    source = SourceProductData(
+        source_name="skroutz",
+        brand="UnknownBrand",
+        mpn="ABC123",
+        name="UnknownBrand ABC123",
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="A", leaf_category="B", sub_category="C"
+    )
 
     diagnostics = enrich_source_from_manufacturer_docs(
         source=source,
@@ -266,4 +340,3 @@ def test_enrichment_framework_gracefully_falls_back_when_no_provider_matches(tmp
     assert diagnostics["documents_discovered"] == 0
     assert source.manufacturer_spec_sections == []
     assert source.manufacturer_source_text == ""
-

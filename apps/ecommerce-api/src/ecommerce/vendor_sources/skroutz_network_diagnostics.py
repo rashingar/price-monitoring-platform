@@ -14,9 +14,14 @@ from sqlalchemy.orm import Session
 from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.models.vendor_sources import Vendor
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
-from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
+from ecommerce.db.repositories.source_convergence import (
+    sync_source_url_to_product_source,
+)
 from ecommerce.db.repositories.source_urls import get_source_url
-from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
+from ecommerce.source_capture.canonicalize_url import (
+    canonical_url_hash,
+    canonicalize_url,
+)
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_capture.sanitize import content_hash
 from ecommerce.source_capture.skroutz_network_diagnostic import (
@@ -28,7 +33,9 @@ from ecommerce.source_capture.skroutz_network_diagnostic import (
     run_skroutz_network_diagnostic,
 )
 
-SKROUTZ_NETWORK_DIAGNOSTICS_DIR = Path("output") / "vendor_sources" / "diagnostics" / "skroutz-network"
+SKROUTZ_NETWORK_DIAGNOSTICS_DIR = (
+    Path("output") / "vendor_sources" / "diagnostics" / "skroutz-network"
+)
 
 DiagnosticRunner = Callable[..., SkroutzNetworkDiagnosticReport]
 
@@ -75,9 +82,15 @@ def run_and_persist_skroutz_network_diagnostic(
     source_url = _get_skroutz_source_url(session, source_url_id)
     product_source = sync_source_url_to_product_source(session, source_url)
     if product_source is None:
-        raise ValueError("Skroutz source URL must be active before a browser diagnostic can be run.")
+        raise ValueError(
+            "Skroutz source URL must be active before a browser diagnostic can be run."
+        )
     product = session.get(Product, product_source.product_id)
-    vendor = session.get(Vendor, product_source.vendor_id) if product_source.vendor_id is not None else None
+    vendor = (
+        session.get(Vendor, product_source.vendor_id)
+        if product_source.vendor_id is not None
+        else None
+    )
     active_runner = runner or run_skroutz_network_diagnostic
     safe_timeout = max(5, min(int(timeout_seconds), 180))
     diagnostic_url = source_url.url_normalized or source_url.url
@@ -133,7 +146,9 @@ def latest_skroutz_network_diagnostic(
             SourceCaptureSnapshot.product_source_id == product_source.id,
             SourceCaptureSnapshot.capture_strategy == CAPTURE_STRATEGY,
         )
-        .order_by(SourceCaptureSnapshot.created_at.desc(), SourceCaptureSnapshot.id.desc())
+        .order_by(
+            SourceCaptureSnapshot.created_at.desc(), SourceCaptureSnapshot.id.desc()
+        )
         .limit(1)
     )
     snapshot = session.execute(statement).scalar_one_or_none()
@@ -152,7 +167,14 @@ def latest_skroutz_network_diagnostic(
     )
 
 
-def failed_skroutz_network_report(source_url: str, *, error_code: str, error_message: str, timeout_seconds: int, headed: bool) -> dict[str, Any]:
+def failed_skroutz_network_report(
+    source_url: str,
+    *,
+    error_code: str,
+    error_message: str,
+    timeout_seconds: int,
+    headed: bool,
+) -> dict[str, Any]:
     now = _now().isoformat()
     return _report_payload_with_comparison(
         {
@@ -180,13 +202,19 @@ def _get_skroutz_source_url(session: Session, source_url_id: int) -> SourceUrl:
     source_url = get_source_url(session, int(source_url_id))
     if source_url is None:
         raise LookupError("Source URL not found.")
-    vendor_slug = (source_url.source_name or "").strip().lower() or (detect_vendor_slug(source_url.url_normalized or source_url.url) or "")
+    vendor_slug = (source_url.source_name or "").strip().lower() or (
+        detect_vendor_slug(source_url.url_normalized or source_url.url) or ""
+    )
     if vendor_slug != "skroutz":
-        raise ValueError("Skroutz browser network diagnostics are only available for Skroutz source URLs.")
+        raise ValueError(
+            "Skroutz browser network diagnostics are only available for Skroutz source URLs."
+        )
     return source_url
 
 
-def _find_product_source_for_source_url(session: Session, source_url: SourceUrl) -> ProductSource | None:
+def _find_product_source_for_source_url(
+    session: Session, source_url: SourceUrl
+) -> ProductSource | None:
     canonical = canonicalize_url(source_url.url_normalized or source_url.url)
     digest = canonical_url_hash(canonical)
     statement = (
@@ -214,21 +242,41 @@ def _persist_report_snapshot(
 ) -> SourceCaptureSnapshot:
     now = _now()
     captured_responses = report_payload.get("captured_responses")
-    first_response = captured_responses[0] if isinstance(captured_responses, list) and captured_responses else {}
+    first_response = (
+        captured_responses[0]
+        if isinstance(captured_responses, list) and captured_responses
+        else {}
+    )
     snapshot = SourceCaptureSnapshot(
         product_id=product.id if product is not None else None,
         product_source_id=product_source.id,
         vendor_id=vendor.id if vendor is not None else product_source.vendor_id,
         capture_strategy=CAPTURE_STRATEGY,
         page_url=source_url.url,
-        final_url=report_payload.get("source_url") if isinstance(report_payload.get("source_url"), str) else source_url.url,
-        request_url=first_response.get("url") if isinstance(first_response, dict) else None,
-        request_method=first_response.get("method") if isinstance(first_response, dict) else None,
-        response_status=first_response.get("status") if isinstance(first_response, dict) else None,
-        response_content_type=first_response.get("content_type") if isinstance(first_response, dict) else None,
+        final_url=(
+            report_payload.get("source_url")
+            if isinstance(report_payload.get("source_url"), str)
+            else source_url.url
+        ),
+        request_url=(
+            first_response.get("url") if isinstance(first_response, dict) else None
+        ),
+        request_method=(
+            first_response.get("method") if isinstance(first_response, dict) else None
+        ),
+        response_status=(
+            first_response.get("status") if isinstance(first_response, dict) else None
+        ),
+        response_content_type=(
+            first_response.get("content_type")
+            if isinstance(first_response, dict)
+            else None
+        ),
         response_body_json=report_payload,
         artifact_ref=str(artifact_path),
-        content_hash=content_hash(json.dumps(report_payload, sort_keys=True, ensure_ascii=False)),
+        content_hash=content_hash(
+            json.dumps(report_payload, sort_keys=True, ensure_ascii=False)
+        ),
         parser_version="skroutz_network_diagnostic_v1",
         capture_version="source-capture-diagnostic-v1",
         candidate_reason=report_payload.get("product_data_candidate_reason"),
@@ -247,24 +295,38 @@ def _persist_report_snapshot(
     return snapshot
 
 
-def _write_report_artifact(root: Path, source_url_id: int, payload: dict[str, Any]) -> Path:
+def _write_report_artifact(
+    root: Path, source_url_id: int, payload: dict[str, Any]
+) -> Path:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     path = Path(root) / str(source_url_id) / f"{timestamp}-skroutz-network.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     return path
 
 
 def _report_payload_with_comparison(report: dict[str, Any]) -> dict[str, Any]:
-    derived = report.get("derived_endpoints") if isinstance(report.get("derived_endpoints"), dict) else {}
+    derived = (
+        report.get("derived_endpoints")
+        if isinstance(report.get("derived_endpoints"), dict)
+        else {}
+    )
     payload = dict(report)
     payload["derived_filter_products_url"] = derived.get("filter_products")
     payload["derived_shops_details_url"] = derived.get("shops_details")
-    payload["observed_filter_products_url"] = bool(payload.get("observed_filter_products_url"))
-    payload["observed_shops_details_url"] = bool(payload.get("observed_shops_details_url"))
+    payload["observed_filter_products_url"] = bool(
+        payload.get("observed_filter_products_url")
+    )
+    payload["observed_shops_details_url"] = bool(
+        payload.get("observed_shops_details_url")
+    )
     payload["exact_match_count"] = int(payload.get("exact_match_count") or 0)
     payload["product_data_candidate_url"] = payload.get("product_data_candidate_url")
-    payload["product_data_candidate_reason"] = payload.get("product_data_candidate_reason")
+    payload["product_data_candidate_reason"] = payload.get(
+        "product_data_candidate_reason"
+    )
     return payload
 
 
@@ -278,7 +340,11 @@ def _summary_payload(
     artifact_path: str | None,
 ) -> dict[str, Any]:
     captured = report.get("captured_responses")
-    classifications_summary = report.get("classifications_summary") if isinstance(report.get("classifications_summary"), dict) else {}
+    classifications_summary = (
+        report.get("classifications_summary")
+        if isinstance(report.get("classifications_summary"), dict)
+        else {}
+    )
     observed = {
         "filter_products": bool(report.get("observed_filter_products_url")),
         "shops_details": bool(report.get("observed_shops_details_url")),
@@ -300,7 +366,10 @@ def _summary_payload(
         "product_data_candidate_url": report.get("product_data_candidate_url"),
         "product_data_candidate_reason": report.get("product_data_candidate_reason"),
         "classifications_summary": classifications_summary,
-        "blocked_or_challenge_detected": int(classifications_summary.get(BLOCKED_OR_CHALLENGE, 0) or 0) > 0,
+        "blocked_or_challenge_detected": int(
+            classifications_summary.get(BLOCKED_OR_CHALLENGE, 0) or 0
+        )
+        > 0,
         "diagnostic_report_id": diagnostic_report_id,
         "artifact_path": artifact_path,
         "error_code": report.get("error_code"),

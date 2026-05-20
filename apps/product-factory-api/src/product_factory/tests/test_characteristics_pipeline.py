@@ -10,12 +10,19 @@ from product_factory.characteristics_pipeline import (
 )
 from product_factory.html_builders import _normalize_characteristics_label
 from product_factory.mapping import build_row
-from product_factory.models import CLIInput, ParsedProduct, SchemaMatchResult, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 from product_factory.normalize import normalize_for_match
 from product_factory.repo_paths import SCHEMA_LIBRARY_PATH
 from product_factory.schema_matcher import SchemaMatcher
 from product_factory.utils import read_json
-
 
 _SCHEMA_LIBRARY = read_json(SCHEMA_LIBRARY_PATH)
 
@@ -40,15 +47,28 @@ AIR_CONDITIONER_SCHEMA_ID = _schema_id_for_source_file("toixoy.json")
 
 
 def test_normalize_characteristics_label_keeps_balanced_parentheses_unchanged() -> None:
-    assert _normalize_characteristics_label("Μέγιστη Ονομαστική Ισχύς (W)") == "Μέγιστη Ονομαστική Ισχύς (W)"
+    assert (
+        _normalize_characteristics_label("Μέγιστη Ονομαστική Ισχύς (W)")
+        == "Μέγιστη Ονομαστική Ισχύς (W)"
+    )
 
 
-def test_normalize_characteristics_label_repairs_single_unmatched_open_parenthesis() -> None:
-    assert _normalize_characteristics_label("Μέγιστη Ονομαστική Ισχύς (W") == "Μέγιστη Ονομαστική Ισχύς (W)"
+def test_normalize_characteristics_label_repairs_single_unmatched_open_parenthesis() -> (
+    None
+):
+    assert (
+        _normalize_characteristics_label("Μέγιστη Ονομαστική Ισχύς (W")
+        == "Μέγιστη Ονομαστική Ισχύς (W)"
+    )
 
 
-def test_normalize_characteristics_label_leaves_multiple_unmatched_open_parentheses_unchanged() -> None:
-    assert _normalize_characteristics_label("Διαστάσεις (Υ x Π x Β (cm") == "Διαστάσεις (Υ x Π x Β (cm"
+def test_normalize_characteristics_label_leaves_multiple_unmatched_open_parentheses_unchanged() -> (
+    None
+):
+    assert (
+        _normalize_characteristics_label("Διαστάσεις (Υ x Π x Β (cm")
+        == "Διαστάσεις (Υ x Π x Β (cm"
+    )
 
 
 def test_power_watt_labels_resolve_when_source_uses_max_power_wording() -> None:
@@ -101,13 +121,58 @@ def test_skroutz_fridge_freezer_characteristics_keep_electronet_shape() -> None:
             SpecItem(label="Χρώμα", value="Inox"),
         ],
         spec_sections=[
-            SpecSection(section="Στην Συντήρηση", items=[SpecItem(label="Στην Συντήρηση", value="4 ράφια (ρυθμιζόμενα), 1 συρτάρι, 4 ράφια στην πόρτα")]),
-            SpecSection(section="Στην Κατάψυξη", items=[SpecItem(label="Στην Κατάψυξη", value="3 συρτάρια")]),
-            SpecSection(section="Νέα Ενεργειακή Ετικέτα", items=[SpecItem(label="Ενεργειακή Κλάση", value="E"), SpecItem(label="Επίπεδο Θορύβου", value="42 dB")]),
-            SpecSection(section="Δυνατότητες & Λειτουργίες", items=[SpecItem(label="Αναστρέψιμη Πόρτα", value="Ναι"), SpecItem(label="Έξοδος Κρύου Νερού", value="Όχι"), SpecItem(label="Έξοδος για Παγάκια", value="Όχι"), SpecItem(label="Extra Δυνατότητες", value="Ηχητική Ειδοποίηση Πόρτας, Γρήγορη Ψύξη-Κατάψυξη, Οθόνη Ενδείξεων")]),
-            SpecSection(section="Διαστάσεις", items=[SpecItem(label="Ύψος", value="186 cm"), SpecItem(label="Πλάτος", value="60 cm"), SpecItem(label="Βάθος", value="66 cm")]),
-            SpecSection(section="Smart Ιδιότητες", items=[SpecItem(label="Wi-Fi", value="Όχι")]),
-            SpecSection(section="Εγγύηση", items=[SpecItem(label="Επιμέρους Εγγύηση Κατασκευαστή", value="10 χρόνια στον Συμπιεστή")]),
+            SpecSection(
+                section="Στην Συντήρηση",
+                items=[
+                    SpecItem(
+                        label="Στην Συντήρηση",
+                        value="4 ράφια (ρυθμιζόμενα), 1 συρτάρι, 4 ράφια στην πόρτα",
+                    )
+                ],
+            ),
+            SpecSection(
+                section="Στην Κατάψυξη",
+                items=[SpecItem(label="Στην Κατάψυξη", value="3 συρτάρια")],
+            ),
+            SpecSection(
+                section="Νέα Ενεργειακή Ετικέτα",
+                items=[
+                    SpecItem(label="Ενεργειακή Κλάση", value="E"),
+                    SpecItem(label="Επίπεδο Θορύβου", value="42 dB"),
+                ],
+            ),
+            SpecSection(
+                section="Δυνατότητες & Λειτουργίες",
+                items=[
+                    SpecItem(label="Αναστρέψιμη Πόρτα", value="Ναι"),
+                    SpecItem(label="Έξοδος Κρύου Νερού", value="Όχι"),
+                    SpecItem(label="Έξοδος για Παγάκια", value="Όχι"),
+                    SpecItem(
+                        label="Extra Δυνατότητες",
+                        value="Ηχητική Ειδοποίηση Πόρτας, Γρήγορη Ψύξη-Κατάψυξη, Οθόνη Ενδείξεων",
+                    ),
+                ],
+            ),
+            SpecSection(
+                section="Διαστάσεις",
+                items=[
+                    SpecItem(label="Ύψος", value="186 cm"),
+                    SpecItem(label="Πλάτος", value="60 cm"),
+                    SpecItem(label="Βάθος", value="66 cm"),
+                ],
+            ),
+            SpecSection(
+                section="Smart Ιδιότητες", items=[SpecItem(label="Wi-Fi", value="Όχι")]
+            ),
+            SpecSection(
+                section="Εγγύηση",
+                items=[
+                    SpecItem(
+                        label="Επιμέρους Εγγύηση Κατασκευαστή",
+                        value="10 χρόνια στον Συμπιεστή",
+                    )
+                ],
+            ),
         ],
         manufacturer_source_text=(
             "Εντοιχιζόμενη / Ελεύθερη: Ελεύθερη συσκευή Αριθμός συμπιεστών: 1 Αριθμός ανεξάρτητων συστημάτων ψύξης: 1 "
@@ -127,29 +192,108 @@ def test_skroutz_fridge_freezer_characteristics_keep_electronet_shape() -> None:
     html, diagnostics, warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=FRIDGE_FREEZER_SCHEMA_ID, score=0.95),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=FRIDGE_FREEZER_SCHEMA_ID, score=0.95
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        (normalize_for_match(field["section"]), normalize_for_match(field["label"])): field["value"]
+        (
+            normalize_for_match(field["section"]),
+            normalize_for_match(field["label"]),
+        ): field["value"]
         for field in diagnostics["fields"]
     }
 
     assert diagnostics["template_source"] == "schema_library_with_custom_overrides"
     assert diagnostics["matched_schema_id"] == FRIDGE_FREEZER_SCHEMA_ID
     assert "psygeiokatapsyktes.json" in diagnostics["preferred_schema_source_files"]
-    assert f"characteristics_template_used:schema:{FRIDGE_FREEZER_SCHEMA_ID}" in warnings
-    assert values[(normalize_for_match("Επισκόπηση Προϊόντος"), normalize_for_match("Τεχνολογία Ψύξης"))] == "Total NoFrost"
-    assert values[(normalize_for_match("Επισκόπηση Προϊόντος"), normalize_for_match("Συνολική Καθαρή Χωρητικότητα"))] == "305 lt"
-    assert values[(normalize_for_match("Επισκόπηση Προϊόντος"), normalize_for_match("Πολλαπλή Ροή Αέρα"))] == "Ναι"
-    assert values[(normalize_for_match("Επισκόπηση Προϊόντος"), normalize_for_match("Σήμα Ειδοποίησης Ανοικτής Πόρτας"))] == "Ναι"
-    assert values[(normalize_for_match("Συντήρηση"), normalize_for_match("Αριθμός Ραφιών"))] == "4"
-    assert values[(normalize_for_match("Συντήρηση"), normalize_for_match("Ρυθμιζόμενα Ράφια σε Ύψος"))] == "3"
-    assert values[(normalize_for_match("Συντήρηση"), normalize_for_match("Υλικό Ραφιών"))] == "Γυαλί Ασφαλείας"
-    assert values[(normalize_for_match("Κατάψυξη"), normalize_for_match("Λειτουργία Ταχείας Κατάψυξης"))] == "Ναι"
-    assert values[(normalize_for_match("Γενικά χαρακτηριστικά"), normalize_for_match("Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β"))] == "186 x 60 x 66 cm"
-    assert values[(normalize_for_match("Γενικά χαρακτηριστικά"), normalize_for_match("Εγγύηση Κατασκευαστή"))] == "10 χρόνια στον Συμπιεστή"
+    assert (
+        f"characteristics_template_used:schema:{FRIDGE_FREEZER_SCHEMA_ID}" in warnings
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επισκόπηση Προϊόντος"),
+                normalize_for_match("Τεχνολογία Ψύξης"),
+            )
+        ]
+        == "Total NoFrost"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επισκόπηση Προϊόντος"),
+                normalize_for_match("Συνολική Καθαρή Χωρητικότητα"),
+            )
+        ]
+        == "305 lt"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επισκόπηση Προϊόντος"),
+                normalize_for_match("Πολλαπλή Ροή Αέρα"),
+            )
+        ]
+        == "Ναι"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επισκόπηση Προϊόντος"),
+                normalize_for_match("Σήμα Ειδοποίησης Ανοικτής Πόρτας"),
+            )
+        ]
+        == "Ναι"
+    )
+    assert (
+        values[
+            (normalize_for_match("Συντήρηση"), normalize_for_match("Αριθμός Ραφιών"))
+        ]
+        == "4"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Συντήρηση"),
+                normalize_for_match("Ρυθμιζόμενα Ράφια σε Ύψος"),
+            )
+        ]
+        == "3"
+    )
+    assert (
+        values[(normalize_for_match("Συντήρηση"), normalize_for_match("Υλικό Ραφιών"))]
+        == "Γυαλί Ασφαλείας"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Κατάψυξη"),
+                normalize_for_match("Λειτουργία Ταχείας Κατάψυξης"),
+            )
+        ]
+        == "Ναι"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Γενικά χαρακτηριστικά"),
+                normalize_for_match("Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β"),
+            )
+        ]
+        == "186 x 60 x 66 cm"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Γενικά χαρακτηριστικά"),
+                normalize_for_match("Εγγύηση Κατασκευαστή"),
+            )
+        ]
+        == "10 χρόνια στον Συμπιεστή"
+    )
 
 
 def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() -> None:
@@ -174,7 +318,10 @@ def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() ->
             SpecItem(label="Ιονιστής", value="Ναι"),
         ],
         spec_sections=[
-            SpecSection(section="Γενικά", items=[SpecItem(label="Κωδικός Προϊόντος", value="OTN/OTG-09QINV")]),
+            SpecSection(
+                section="Γενικά",
+                items=[SpecItem(label="Κωδικός Προϊόντος", value="OTN/OTG-09QINV")],
+            ),
             SpecSection(
                 section="Απόδοση",
                 items=[
@@ -190,7 +337,10 @@ def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() ->
                     SpecItem(label="WiFi Ready", value="Όχι"),
                     SpecItem(label="Φίλτρα Αέρα", value="Ναι"),
                     SpecItem(label="Ιονιστής", value="Ναι"),
-                    SpecItem(label="Τύπος Φίλτρων", value="Antivirus, Active Carbon, Προ φίλτρο Υψηλής Πυκνότητας"),
+                    SpecItem(
+                        label="Τύπος Φίλτρων",
+                        value="Antivirus, Active Carbon, Προ φίλτρο Υψηλής Πυκνότητας",
+                    ),
                     SpecItem(label="Οικολογικό Ψυκτικό Υγρό (R32)", value="Ναι"),
                     SpecItem(label="με Τεχνητή Νοημοσύνη", value="Όχι"),
                     SpecItem(label="Λειτουργία Follow Me", value="Ναι"),
@@ -207,7 +357,10 @@ def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() ->
                     SpecItem(label="Κατανάλωση Ψύξης", value="150 kWh/y"),
                     SpecItem(label="Κατανάλωση Θέρμανσης", value="735 kWh/y"),
                     SpecItem(label="Θέρμανσης (Θερμή Ζώνη)", value="A+++"),
-                    SpecItem(label="Βαθμός Απόδοσης Θέρμανσης (SCOP) Θερμή Ζώνη", value="5,1 W/W"),
+                    SpecItem(
+                        label="Βαθμός Απόδοσης Θέρμανσης (SCOP) Θερμή Ζώνη",
+                        value="5,1 W/W",
+                    ),
                 ],
             ),
             SpecSection(
@@ -248,12 +401,17 @@ def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() ->
     html, diagnostics, warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        (normalize_for_match(field["section"]), normalize_for_match(field["label"])): field["value"]
+        (
+            normalize_for_match(field["section"]),
+            normalize_for_match(field["label"]),
+        ): field["value"]
         for field in diagnostics["fields"]
     }
     extra_features = values[
@@ -268,51 +426,148 @@ def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() ->
     assert diagnostics["matched_schema_id"] == AIR_CONDITIONER_SCHEMA_ID
     assert diagnostics["preferred_schema_source_files"] == ["toixoy.json"]
     assert diagnostics["unresolved_count"] < 20
-    assert f"characteristics_template_used:schema:{AIR_CONDITIONER_SCHEMA_ID}" in warnings
-    assert normalize_for_match("Ψυκτική / Θερμική Απόδοση") in [
-        normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("thead strong")
-    ]
-    assert values[(normalize_for_match("Ψυκτική / Θερμική Απόδοση"), normalize_for_match("Ονομαστική Απόδοση (Btu/h)"))] == "9000 BTU"
-    assert values[(normalize_for_match("Ψυκτική / Θερμική Απόδοση"), normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"))] == "9000 BTU"
-    assert values[(normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"), normalize_for_match("Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"))] == "6,1 W/W"
-    assert values[(normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"), normalize_for_match("Ενεργειακή Κλάση Ψύξης"))] == "A++"
-    assert values[
-        (
-            normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"),
-            normalize_for_match("Ενεργειακή Κλάση Θέρμανσης Θερμότερης Εποχής"),
-        )
-    ] == "A+++"
-    assert values[
-        (
-            normalize_for_match("Καταναλώσεις"),
-            normalize_for_match("Ετήσια Κατανάλωση Θέρμανσης Μέσης Εποχής ( kWh / a )"),
-        )
-    ] == "735 kWh/y"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Τεχνολογία Κλιματιστικού"))] == "Inverter"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ψυκτικό Υγρό"))] == "R32"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Αφύγρανση"))] == "Ναι"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Φίλτρα"))] == (
-        "Antivirus, Active Carbon, Προ φίλτρο Υψηλής Πυκνότητας"
+    assert (
+        f"characteristics_template_used:schema:{AIR_CONDITIONER_SCHEMA_ID}" in warnings
     )
+    assert normalize_for_match("Ψυκτική / Θερμική Απόδοση") in [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("thead strong")
+    ]
+    assert (
+        values[
+            (
+                normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+                normalize_for_match("Ονομαστική Απόδοση (Btu/h)"),
+            )
+        ]
+        == "9000 BTU"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+                normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"),
+            )
+        ]
+        == "9000 BTU"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"),
+                normalize_for_match("Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"),
+            )
+        ]
+        == "6,1 W/W"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"),
+                normalize_for_match("Ενεργειακή Κλάση Ψύξης"),
+            )
+        ]
+        == "A++"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"),
+                normalize_for_match("Ενεργειακή Κλάση Θέρμανσης Θερμότερης Εποχής"),
+            )
+        ]
+        == "A+++"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Καταναλώσεις"),
+                normalize_for_match(
+                    "Ετήσια Κατανάλωση Θέρμανσης Μέσης Εποχής ( kWh / a )"
+                ),
+            )
+        ]
+        == "735 kWh/y"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Τεχνολογία Κλιματιστικού"),
+            )
+        ]
+        == "Inverter"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ψυκτικό Υγρό"),
+            )
+        ]
+        == "R32"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Αφύγρανση"),
+            )
+        ]
+        == "Ναι"
+    )
+    assert values[
+        (normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Φίλτρα"))
+    ] == ("Antivirus, Active Carbon, Προ φίλτρο Υψηλής Πυκνότητας")
     assert "WiFi" in extra_features
     assert "Follow Me" in extra_features
     assert "Voice Control" in extra_features
     assert "Self Clean 56°C" in extra_features
-    assert values[(normalize_for_match("Διαστάσεις και Βάρος"), normalize_for_match("Ύψος Εσωτερικής Μονάδας ( mm )"))] == "281"
-    assert values[(normalize_for_match("Διαστάσεις και Βάρος"), normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"))] == "708"
-    assert values[(normalize_for_match("Διαστάσεις και Βάρος"), normalize_for_match("Βάθος Εξωτερικής Μονάδας ( mm )"))] == "278"
-    assert values[
-        (
-            normalize_for_match("Γενικά Χαρακτηριστικά"),
-            normalize_for_match("Εγγύηση Κατασκευαστή ( Εσωτερική μονάδα ) - Έτη"),
-        )
-    ] == "10"
-    assert values[
-        (
-            normalize_for_match("Γενικά Χαρακτηριστικά"),
-            normalize_for_match("Εγγύηση Κατασκευαστή ( Συμπιεστής ) - Έτη"),
-        )
-    ] == "10"
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Ύψος Εσωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "281"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "708"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Βάθος Εξωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "278"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Γενικά Χαρακτηριστικά"),
+                normalize_for_match("Εγγύηση Κατασκευαστή ( Εσωτερική μονάδα ) - Έτη"),
+            )
+        ]
+        == "10"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Γενικά Χαρακτηριστικά"),
+                normalize_for_match("Εγγύηση Κατασκευαστή ( Συμπιεστής ) - Έτη"),
+            )
+        ]
+        == "10"
+    )
 
 
 def test_bestprice_wall_air_conditioner_aliases_fill_electronet_template() -> None:
@@ -366,32 +621,166 @@ def test_bestprice_wall_air_conditioner_aliases_fill_electronet_template() -> No
     _html, diagnostics, warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95
+        ),
     )
 
     values = {
-        (normalize_for_match(field["section"]), normalize_for_match(field["label"])): field["value"]
+        (
+            normalize_for_match(field["section"]),
+            normalize_for_match(field["label"]),
+        ): field["value"]
         for field in diagnostics["fields"]
     }
 
     assert diagnostics["template_source"] == "schema_library"
-    assert f"characteristics_template_used:schema:{AIR_CONDITIONER_SCHEMA_ID}" in warnings
-    assert values[(normalize_for_match("Ψυκτική / Θερμική Απόδοση"), normalize_for_match("Ονομαστική Απόδοση (Btu/h)"))] == "24000 BTU"
-    assert values[(normalize_for_match("Ψυκτική / Θερμική Απόδοση"), normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"))] == "24.000BTU"
-    assert values[(normalize_for_match("Ψυκτική / Θερμική Απόδοση"), normalize_for_match("Θερμική Απόδοση ( Btu/h )"))] == "24.000BTU"
-    assert values[(normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"), normalize_for_match("Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"))] == "6,4"
-    assert values[(normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"), normalize_for_match("Βαθμός Εποχιακής Απόδοσης Θέρμανσης Μέσης Εποχής - SCOP"))] == "5,1W/W"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Τεχνολογία Κλιματιστικού"))] == "Inverter"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ψυκτικό Υγρό"))] == "R32"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A) - Hi"))] == "47dB"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ηχητική Ισχύς Εξωτερικής Μονάδας dB(A) - Hi"))] == "62dB"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Αφύγρανση"))] == "Ναι"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ιονιστής"))] == "Ναι"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Φίλτρα"))] == "Φίλτρα Καθαρισμού Αέρα"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"))] == "WiFi"
-    assert values[(normalize_for_match("Διαστάσεις και Βάρος"), normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"))] == "1083"
-    assert values[(normalize_for_match("Διαστάσεις και Βάρος"), normalize_for_match("Πλάτος Εξωτερικής Μονάδας ( mm )"))] == "955"
-    assert values[(normalize_for_match("Γενικά Χαρακτηριστικά"), normalize_for_match("Χρώμα"))] == "Άσπρο"
+    assert (
+        f"characteristics_template_used:schema:{AIR_CONDITIONER_SCHEMA_ID}" in warnings
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+                normalize_for_match("Ονομαστική Απόδοση (Btu/h)"),
+            )
+        ]
+        == "24000 BTU"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+                normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"),
+            )
+        ]
+        == "24.000BTU"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+                normalize_for_match("Θερμική Απόδοση ( Btu/h )"),
+            )
+        ]
+        == "24.000BTU"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"),
+                normalize_for_match("Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"),
+            )
+        ]
+        == "6,4"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Βαθμοί Εποχιακής Απόδοσης"),
+                normalize_for_match(
+                    "Βαθμός Εποχιακής Απόδοσης Θέρμανσης Μέσης Εποχής - SCOP"
+                ),
+            )
+        ]
+        == "5,1W/W"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Τεχνολογία Κλιματιστικού"),
+            )
+        ]
+        == "Inverter"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ψυκτικό Υγρό"),
+            )
+        ]
+        == "R32"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A) - Hi"),
+            )
+        ]
+        == "47dB"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ηχητική Ισχύς Εξωτερικής Μονάδας dB(A) - Hi"),
+            )
+        ]
+        == "62dB"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Αφύγρανση"),
+            )
+        ]
+        == "Ναι"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ιονιστής"),
+            )
+        ]
+        == "Ναι"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Φίλτρα"),
+            )
+        ]
+        == "Φίλτρα Καθαρισμού Αέρα"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"),
+            )
+        ]
+        == "WiFi"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "1083"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Πλάτος Εξωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "955"
+    )
+    assert (
+        values[
+            (normalize_for_match("Γενικά Χαρακτηριστικά"), normalize_for_match("Χρώμα"))
+        ]
+        == "Άσπρο"
+    )
 
 
 def test_bestprice_wall_air_conditioner_summary_fills_feature_fallbacks() -> None:
@@ -410,20 +799,51 @@ def test_bestprice_wall_air_conditioner_summary_fills_feature_fallbacks() -> Non
     _html, diagnostics, _warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95
+        ),
     )
 
     values = {
-        (normalize_for_match(field["section"]), normalize_for_match(field["label"])): field["value"]
+        (
+            normalize_for_match(field["section"]),
+            normalize_for_match(field["label"]),
+        ): field["value"]
         for field in diagnostics["fields"]
     }
 
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Τεχνολογία Κλιματιστικού"))] == "Inverter"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Ιονιστής"))] == "Ναι"
-    assert values[(normalize_for_match("Επιπλέον Χαρακτηριστικά"), normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"))] == "WiFi"
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Τεχνολογία Κλιματιστικού"),
+            )
+        ]
+        == "Inverter"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ιονιστής"),
+            )
+        ]
+        == "Ναι"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"),
+            )
+        ]
+        == "WiFi"
+    )
 
 
-def test_electronet_without_specs_uses_blank_template_for_specific_category_from_url() -> None:
+def test_electronet_without_specs_uses_blank_template_for_specific_category_from_url() -> (
+    None
+):
     source = SourceProductData(
         source_name="electronet",
         url="https://www.electronet.gr/klimatismos-thermansi/klimatistika/klimatistika-toihoy/ac-midea-rf-new-ms12fu-12hrdn1-qrd0gw",
@@ -449,7 +869,10 @@ def test_electronet_without_specs_uses_blank_template_for_specific_category_from
     assert diagnostics["preferred_schema_source_files"] == ["toixoy.json"]
     assert diagnostics["unresolved_count"] == len(values)
     assert set(values) == {"-"}
-    assert f"characteristics_template_used:electronet_blank:{AIR_CONDITIONER_SCHEMA_ID}" in warnings
+    assert (
+        f"characteristics_template_used:electronet_blank:{AIR_CONDITIONER_SCHEMA_ID}"
+        in warnings
+    )
 
 
 def test_labels_related_treats_dimension_separators_as_equivalent() -> None:
@@ -512,7 +935,9 @@ def make_tv_source(tmp_path: Path) -> SourceProductData:
                     SpecItem(label="Ευκρίνεια", value="4K Ultra HD"),
                     SpecItem(label="Ρυθμός Ανανέωσης", value="50/60 Hz"),
                     SpecItem(label="Τύπος Panel", value="Direct LED"),
-                    SpecItem(label="Τύποι HDR", value="HDR10, HDR10+, Dolby Vision, HLG"),
+                    SpecItem(
+                        label="Τύποι HDR", value="HDR10, HDR10+, Dolby Vision, HLG"
+                    ),
                 ],
             ),
             SpecSection(
@@ -566,21 +991,41 @@ def make_tv_taxonomy() -> TaxonomyResolution:
     )
 
 
-def test_build_row_uses_schema_first_tv_characteristics_template(tmp_path: Path) -> None:
+def test_build_row_uses_schema_first_tv_characteristics_template(
+    tmp_path: Path,
+) -> None:
     source = make_tv_source(tmp_path)
-    cli = CLIInput(model="143051", url=source.url, photos=4, sections=6, skroutz_status=1, boxnow=0, price="329")
+    cli = CLIInput(
+        model="143051",
+        url=source.url,
+        photos=4,
+        sections=6,
+        skroutz_status=1,
+        boxnow=0,
+        price="329",
+    )
     parsed = ParsedProduct(source=source)
     row, normalized, warnings = build_row(
         cli=cli,
         parsed=parsed,
         taxonomy=make_tv_taxonomy(),
-        schema_match=SchemaMatchResult(matched_schema_id=TV_TEMPLATE_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=TV_TEMPLATE_SCHEMA_ID, score=0.9
+        ),
     )
 
     soup = BeautifulSoup(row["characteristics"], "lxml")
-    section_titles = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("thead strong")]
-    labels = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("tbody tr td:first-child")]
-    values = [node.get_text(" ", strip=True) for node in soup.select("tbody tr td strong")]
+    section_titles = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("thead strong")
+    ]
+    labels = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("tbody tr td:first-child")
+    ]
+    values = [
+        node.get_text(" ", strip=True) for node in soup.select("tbody tr td strong")
+    ]
     normalized_values = [normalize_for_match(value) for value in values]
     diagnostics = normalized["characteristics_diagnostics"]
 
@@ -600,7 +1045,10 @@ def test_build_row_uses_schema_first_tv_characteristics_template(tmp_path: Path)
     assert diagnostics["template_source"] == "schema_library_with_custom_overrides"
     assert diagnostics["custom_template_id"] == "skroutz_tv_v1"
     assert diagnostics["matched_schema_id"] == TV_TEMPLATE_SCHEMA_ID
-    assert diagnostics["selection_reason"] == "matched_schema_template_with_custom_overrides"
+    assert (
+        diagnostics["selection_reason"]
+        == "matched_schema_template_with_custom_overrides"
+    )
     assert f"characteristics_template_used:schema:{TV_TEMPLATE_SCHEMA_ID}" in warnings
 
 
@@ -620,62 +1068,113 @@ def test_bestprice_tv_characteristics_use_label_alias_families() -> None:
                     SpecItem(label="Panel", value="Mini LED"),
                     SpecItem(label="Ανάλυση", value="4K Ultra HD"),
                     SpecItem(label="Μέγιστη Ανάλυση", value="3840 x 2160 (4K UHD)"),
-                    SpecItem(label="Διαστάσεις με βάση (ΠxΒxΥ)", value="1434 x 368 x 860"),
+                    SpecItem(
+                        label="Διαστάσεις με βάση (ΠxΒxΥ)", value="1434 x 368 x 860"
+                    ),
                     SpecItem(label="Βάρος", value="21,1kg"),
                     SpecItem(label="HDMI 2.1 Θύρες", value="4"),
                     SpecItem(label="USB Θύρες", value="1"),
-                    SpecItem(label="Ενσύρματες Συνδέσεις", value="USB • CI Slot • Είσοδος RF • Ethernet • HDMI 2.1 • Digital Audio Optical"),
-                    SpecItem(label="Πρότυπα Ήχου", value="Dolby Atmos • Dolby TrueHD • Dolby AC-4"),
+                    SpecItem(
+                        label="Ενσύρματες Συνδέσεις",
+                        value="USB • CI Slot • Είσοδος RF • Ethernet • HDMI 2.1 • Digital Audio Optical",
+                    ),
+                    SpecItem(
+                        label="Πρότυπα Ήχου",
+                        value="Dolby Atmos • Dolby TrueHD • Dolby AC-4",
+                    ),
                     SpecItem(label="Νέα Ενεργειακή Κλάση", value="D"),
                     SpecItem(label="VESA Mount", value="300x300"),
-                    SpecItem(label="Υποστηριζόμενα Πρότυπα", value="DVB-T • DVB-T2 • DVB-S • DVB-S2 • DVB-C"),
+                    SpecItem(
+                        label="Υποστηριζόμενα Πρότυπα",
+                        value="DVB-T • DVB-T2 • DVB-S • DVB-S2 • DVB-C",
+                    ),
                     SpecItem(label="Smart Assistant", value="Google Assistant"),
                     SpecItem(label="Smart Οικοσύστημα", value="Google Home"),
                     SpecItem(label="Ρυθμός Ανανέωσης", value="144Hz"),
                     SpecItem(label="Λογισμικό", value="Google TV"),
-                    SpecItem(label="Εγκατεστημένες Εφαρμογές", value="Netflix • YouTube"),
-                    SpecItem(label="HDR Type", value="HDR10 • HDR10+ • HLG • Dolby Vision"),
-                    SpecItem(label="Ασύρματες Συνδέσεις", value="WiFi • Bluetooth • Miracast • AirPlay • Chromecast Built-In • Screen Mirroring"),
+                    SpecItem(
+                        label="Εγκατεστημένες Εφαρμογές", value="Netflix • YouTube"
+                    ),
+                    SpecItem(
+                        label="HDR Type", value="HDR10 • HDR10+ • HLG • Dolby Vision"
+                    ),
+                    SpecItem(
+                        label="Ασύρματες Συνδέσεις",
+                        value="WiFi • Bluetooth • Miracast • AirPlay • Chromecast Built-In • Screen Mirroring",
+                    ),
                 ],
             )
         ],
     )
 
     row, normalized, warnings = build_row(
-        cli=CLIInput(model="143667", url=source.url, photos=1, sections=0, skroutz_status=1, boxnow=0, price="0"),
+        cli=CLIInput(
+            model="143667",
+            url=source.url,
+            photos=1,
+            sections=0,
+            skroutz_status=1,
+            boxnow=0,
+            price="0",
+        ),
         parsed=ParsedProduct(source=source),
         taxonomy=make_tv_taxonomy(),
-        schema_match=SchemaMatchResult(matched_schema_id=TV_TEMPLATE_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=TV_TEMPLATE_SCHEMA_ID, score=0.9
+        ),
     )
 
     soup = BeautifulSoup(row["characteristics"], "lxml")
     values_by_label = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
-        for cells in ([cell for cell in row_node.select("td")] for row_node in soup.select("tbody tr"))
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
+        for cells in (
+            [cell for cell in row_node.select("td")]
+            for row_node in soup.select("tbody tr")
+        )
         if len(cells) >= 2
     }
 
     assert values_by_label[normalize_for_match("Τεχνολογία Οθόνης")] == "Mini LED"
     assert values_by_label[normalize_for_match("Ανάλυση Οθόνης")] == "ULTRA HD ( 4K )"
     assert values_by_label[normalize_for_match("Αριθμός Pixels")] == "3840 × 2160"
-    assert values_by_label[normalize_for_match("HDR")] == "HDR10,HDR10+,Dolby Vision ™HDR,HLG"
+    assert (
+        values_by_label[normalize_for_match("HDR")]
+        == "HDR10,HDR10+,Dolby Vision ™HDR,HLG"
+    )
     assert values_by_label[normalize_for_match("Ενεργειακή Κλάση")] == "D"
     assert values_by_label[normalize_for_match("Δέκτης")] == "DVB-T2/C/S2"
-    assert values_by_label[normalize_for_match("Σύστημα Ήχου")] == "Dolby Atmos,Dolby TrueHD,Dolby AC-4"
+    assert (
+        values_by_label[normalize_for_match("Σύστημα Ήχου")]
+        == "Dolby Atmos,Dolby TrueHD,Dolby AC-4"
+    )
     assert values_by_label[normalize_for_match("Smart TV")] == "Υποστηρίζεται"
     assert values_by_label[normalize_for_match("Λειτουργικό Σύστημα")] == "Google TV"
-    assert values_by_label[normalize_for_match("Λειτουργίες Smart")] == "Netflix • YouTube"
+    assert (
+        values_by_label[normalize_for_match("Λειτουργίες Smart")] == "Netflix • YouTube"
+    )
     assert values_by_label[normalize_for_match("HDMI")] == "Ναι,4"
     assert values_by_label[normalize_for_match("Bluetooth")] == "Bluetooth"
     assert values_by_label[normalize_for_match("USB")] == "Ναι,1"
     assert "CI" in values_by_label[normalize_for_match("Είσοδοι / 'Εξοδοι")]
-    assert values_by_label[normalize_for_match("Διάκενο Βάσης Τοίχου Vesa (mm)")] == "300 × 300"
-    assert values_by_label[normalize_for_match("Διαστάσεις Συσκευής σε Εκατοστά με Βάση (Υ x Π x Β)")] == "86.00 × 143.40 × 36.80"
+    assert (
+        values_by_label[normalize_for_match("Διάκενο Βάσης Τοίχου Vesa (mm)")]
+        == "300 × 300"
+    )
+    assert (
+        values_by_label[
+            normalize_for_match("Διαστάσεις Συσκευής σε Εκατοστά με Βάση (Υ x Π x Β)")
+        ]
+        == "86.00 × 143.40 × 36.80"
+    )
     assert normalized["characteristics_diagnostics"]["unresolved_count"] < 24
     assert "characteristics_template_unresolved_fields:24" not in warnings
 
 
-def test_tv_characteristics_prefer_extracted_specs_over_skroutz_help_text(tmp_path: Path) -> None:
+def test_tv_characteristics_prefer_extracted_specs_over_skroutz_help_text(
+    tmp_path: Path,
+) -> None:
     raw_html = """
     <html><body>
       <p>Υπάρχουν διάφορα πρότυπα HDR, όπως HDR10, Dolby Vision, HLG και HDR10+.</p>
@@ -711,7 +1210,10 @@ def test_tv_characteristics_prefer_extracted_specs_over_skroutz_help_text(tmp_pa
                     SpecItem(label="Τύποι HDR", value="HDR10, HLG, AI Picture"),
                 ],
             ),
-            SpecSection(section="Ενεργειακή Ετικέτα", items=[SpecItem(label="Ενεργειακή Κλάση", value="F")]),
+            SpecSection(
+                section="Ενεργειακή Ετικέτα",
+                items=[SpecItem(label="Ενεργειακή Κλάση", value="F")],
+            ),
             SpecSection(
                 section="Smart Δυνατότητες",
                 items=[
@@ -736,16 +1238,31 @@ def test_tv_characteristics_prefer_extracted_specs_over_skroutz_help_text(tmp_pa
     )
 
     row, _normalized, _warnings = build_row(
-        cli=CLIInput(model="142659", url=source.url, photos=8, sections=7, skroutz_status=1, boxnow=0, price="299"),
+        cli=CLIInput(
+            model="142659",
+            url=source.url,
+            photos=8,
+            sections=7,
+            skroutz_status=1,
+            boxnow=0,
+            price="299",
+        ),
         parsed=ParsedProduct(source=source),
         taxonomy=taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=TV_TEMPLATE_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=TV_TEMPLATE_SCHEMA_ID, score=0.9
+        ),
     )
 
     soup = BeautifulSoup(row["characteristics"], "lxml")
     values_by_label = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
-        for cells in ([cell for cell in row_node.select("td")] for row_node in soup.select("tbody tr"))
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
+        for cells in (
+            [cell for cell in row_node.select("td")]
+            for row_node in soup.select("tbody tr")
+        )
         if len(cells) >= 2
     }
 
@@ -761,9 +1278,15 @@ def test_characteristics_pipeline_falls_back_to_raw_sections_without_template() 
     source = SourceProductData(
         source_name="electronet",
         name="Simple Product",
-        spec_sections=[SpecSection(section="Γενικά", items=[SpecItem(label="Χρώμα", value="Λευκό")])],
+        spec_sections=[
+            SpecSection(
+                section="Γενικά", items=[SpecItem(label="Χρώμα", value="Λευκό")]
+            )
+        ],
     )
-    taxonomy = TaxonomyResolution(parent_category="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ", leaf_category="Κουζίνες")
+    taxonomy = TaxonomyResolution(
+        parent_category="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ", leaf_category="Κουζίνες"
+    )
 
     html, diagnostics, warnings = build_characteristics_for_product(source, taxonomy)
 
@@ -774,7 +1297,9 @@ def test_characteristics_pipeline_falls_back_to_raw_sections_without_template() 
     assert "<td>Χρώμα</td>" in html
 
 
-def test_characteristics_pipeline_uses_matched_schema_layout_for_generic_categories() -> None:
+def test_characteristics_pipeline_uses_matched_schema_layout_for_generic_categories() -> (
+    None
+):
     source = SourceProductData(
         source_name="skroutz",
         name="Bosch Hood Example",
@@ -803,7 +1328,9 @@ def test_characteristics_pipeline_uses_matched_schema_layout_for_generic_categor
             ),
         ],
     )
-    taxonomy = TaxonomyResolution(parent_category="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ", leaf_category="Απορροφητήρες")
+    taxonomy = TaxonomyResolution(
+        parent_category="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ", leaf_category="Απορροφητήρες"
+    )
 
     html, diagnostics, warnings = build_characteristics_for_product(
         source,
@@ -812,9 +1339,18 @@ def test_characteristics_pipeline_uses_matched_schema_layout_for_generic_categor
     )
 
     soup = BeautifulSoup(html, "lxml")
-    section_titles = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("thead strong")]
-    labels = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("tbody tr td:first-child")]
-    values = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("tbody tr td strong")]
+    section_titles = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("thead strong")
+    ]
+    labels = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("tbody tr td:first-child")
+    ]
+    values = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("tbody tr td strong")
+    ]
 
     assert diagnostics["mode"] == "template"
     assert diagnostics["template_id"] == f"schema:{HOOD_SCHEMA_ID}"
@@ -871,7 +1407,10 @@ def test_schema_matcher_prefers_template_source_files_for_tv_sections() -> None:
         SpecSection(
             section="Smart Δυνατότητες",
             items=[
-                SpecItem("Υποστηριζόμενες Εφαρμογές", "Netflix, Youtube, Prime Video, DisneyPlus, Eon"),
+                SpecItem(
+                    "Υποστηριζόμενες Εφαρμογές",
+                    "Netflix, Youtube, Prime Video, DisneyPlus, Eon",
+                ),
                 SpecItem("Λογισμικό", "Vidaa"),
             ],
         ),
@@ -905,7 +1444,9 @@ def test_schema_matcher_prefers_template_source_files_for_tv_sections() -> None:
                 SpecItem("VESA Mount", "400 x 200 mm"),
             ],
         ),
-        SpecSection(section="Ενεργειακή Ετικέτα", items=[SpecItem("Ενεργειακή Κλάση", "E")]),
+        SpecSection(
+            section="Ενεργειακή Ετικέτα", items=[SpecItem("Ενεργειακή Κλάση", "E")]
+        ),
         SpecSection(
             section="Διαστάσεις (Χωρίς Βάση)",
             items=[
@@ -959,7 +1500,9 @@ def test_characteristics_registry_prefers_built_in_hob_schema_for_skroutz() -> N
     template = registry.select_template(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=BUILT_IN_HOB_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=BUILT_IN_HOB_SCHEMA_ID, score=0.9
+        ),
     )
 
     assert preferred_source_files == ["esties.json"]
@@ -983,7 +1526,9 @@ def test_characteristics_registry_prefers_air_conditioner_schema_for_skroutz() -
     template = registry.select_template(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.9
+        ),
     )
 
     assert preferred_source_files == ["toixoy.json"]
@@ -1007,7 +1552,9 @@ def test_characteristics_registry_prefers_soundbar_schema_for_skroutz() -> None:
     template = registry.select_template(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=SOUND_BAR_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=SOUND_BAR_SCHEMA_ID, score=0.9
+        ),
     )
 
     assert preferred_source_files == ["sound_bars.json"]
@@ -1031,7 +1578,9 @@ def test_characteristics_registry_prefers_washing_machine_schema_for_skroutz() -
     template = registry.select_template(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=WASHING_MACHINE_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=WASHING_MACHINE_SCHEMA_ID, score=0.9
+        ),
     )
 
     assert preferred_source_files == ["plyntiria_rouxwn.json"]
@@ -1041,7 +1590,9 @@ def test_characteristics_registry_prefers_washing_machine_schema_for_skroutz() -
     assert template["template_source"] == "custom"
 
 
-def test_characteristics_pipeline_uses_raw_sections_for_skroutz_washing_machines() -> None:
+def test_characteristics_pipeline_uses_raw_sections_for_skroutz_washing_machines() -> (
+    None
+):
     source = SourceProductData(
         source_name="skroutz",
         brand="Samsung",
@@ -1082,13 +1633,23 @@ def test_characteristics_pipeline_uses_raw_sections_for_skroutz_washing_machines
     html, diagnostics, warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=WASHING_MACHINE_SCHEMA_ID, score=0.91),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=WASHING_MACHINE_SCHEMA_ID, score=0.91
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
-    section_titles = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("thead strong")]
-    labels = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("tbody tr td:first-child")]
-    values = [node.get_text(" ", strip=True) for node in soup.select("tbody tr td strong")]
+    section_titles = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("thead strong")
+    ]
+    labels = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("tbody tr td:first-child")
+    ]
+    values = [
+        node.get_text(" ", strip=True) for node in soup.select("tbody tr td strong")
+    ]
 
     assert diagnostics["mode"] == "raw_spec_sections"
     assert diagnostics["template_id"] == "skroutz_washing_machine_v1"
@@ -1104,7 +1665,9 @@ def test_characteristics_pipeline_uses_raw_sections_for_skroutz_washing_machines
     assert "Wi-Fi" in values
 
 
-def test_characteristics_pipeline_uses_raw_sections_for_skroutz_ice_cream_makers() -> None:
+def test_characteristics_pipeline_uses_raw_sections_for_skroutz_ice_cream_makers() -> (
+    None
+):
     source = SourceProductData(
         source_name="skroutz",
         brand="Tefal",
@@ -1143,13 +1706,23 @@ def test_characteristics_pipeline_uses_raw_sections_for_skroutz_ice_cream_makers
     html, diagnostics, warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=ICE_CREAM_MAKER_SCHEMA_ID, score=0.91),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=ICE_CREAM_MAKER_SCHEMA_ID, score=0.91
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
-    section_titles = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("thead strong")]
-    labels = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("tbody tr td:first-child")]
-    values = [node.get_text(" ", strip=True) for node in soup.select("tbody tr td strong")]
+    section_titles = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("thead strong")
+    ]
+    labels = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("tbody tr td:first-child")
+    ]
+    values = [
+        node.get_text(" ", strip=True) for node in soup.select("tbody tr td strong")
+    ]
 
     assert diagnostics["mode"] == "raw_spec_sections"
     assert diagnostics["template_id"] == "skroutz_ice_cream_maker_v1"
@@ -1164,7 +1737,9 @@ def test_characteristics_pipeline_uses_raw_sections_for_skroutz_ice_cream_makers
     assert "10" in values
 
 
-def test_characteristics_pipeline_uses_raw_sections_for_manufacturer_tefal_ice_cream_makers() -> None:
+def test_characteristics_pipeline_uses_raw_sections_for_manufacturer_tefal_ice_cream_makers() -> (
+    None
+):
     source = SourceProductData(
         source_name="manufacturer_tefal",
         brand="Tefal",
@@ -1199,13 +1774,23 @@ def test_characteristics_pipeline_uses_raw_sections_for_manufacturer_tefal_ice_c
     html, diagnostics, warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=ICE_CREAM_MAKER_SCHEMA_ID, score=0.91),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=ICE_CREAM_MAKER_SCHEMA_ID, score=0.91
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
-    section_titles = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("thead strong")]
-    labels = [normalize_for_match(node.get_text(" ", strip=True)) for node in soup.select("tbody tr td:first-child")]
-    values = [node.get_text(" ", strip=True) for node in soup.select("tbody tr td strong")]
+    section_titles = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("thead strong")
+    ]
+    labels = [
+        normalize_for_match(node.get_text(" ", strip=True))
+        for node in soup.select("tbody tr td:first-child")
+    ]
+    values = [
+        node.get_text(" ", strip=True) for node in soup.select("tbody tr td strong")
+    ]
 
     assert diagnostics["mode"] == "raw_spec_sections"
     assert diagnostics["template_id"] == "manufacturer_tefal_ice_cream_maker_v1"
@@ -1268,9 +1853,17 @@ def test_built_in_hob_characteristics_use_source_and_manufacturer_evidence() -> 
                     SpecItem(label="Τύπος εγκατάστασης", value="Εντοιχιζόμενη συσκευή"),
                     SpecItem(label="Τύπος λειτουργίας", value="Ηλεκτρική"),
                     SpecItem(label="Βασικό υλικό επιφανειών", value="Υαλοκεραμική"),
-                    SpecItem(label="Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα", value="4"),
-                    SpecItem(label="Διαστάσεις εντοιχισμού (υ x π x β)", value="48 x 560 x 490 - 500 mm"),
-                    SpecItem(label="Διαστάσεις συσκευής (ΥxΠxΒ mm)", value="48 x 583 x 513"),
+                    SpecItem(
+                        label="Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα",
+                        value="4",
+                    ),
+                    SpecItem(
+                        label="Διαστάσεις εντοιχισμού (υ x π x β)",
+                        value="48 x 560 x 490 - 500 mm",
+                    ),
+                    SpecItem(
+                        label="Διαστάσεις συσκευής (ΥxΠxΒ mm)", value="48 x 583 x 513"
+                    ),
                     SpecItem(label="Καθαρό βάρος", value="8.0 kg"),
                     SpecItem(label="Χρώμα πλαισίου", value="Ανοξείδωτο"),
                 ],
@@ -1278,10 +1871,22 @@ def test_built_in_hob_characteristics_use_source_and_manufacturer_evidence() -> 
             SpecSection(
                 section="Γενικά χαρακτηριστικά",
                 items=[
-                    SpecItem(label="Είδος ηλεκτρονικού ελέγχου", value="TwistPad4: πλήρης έλεγχος της ισχύος"),
-                    SpecItem(label="Ψηφιακό χρονόμετρο", value="ένδειξη του χρόνου που έχει περάσει"),
-                    SpecItem(label="Αυτόματη απενεργοποίηση ασφαλείας", value="η εστία σταματά να θερμαίνεται"),
-                    SpecItem(label="Κλείδωμα ασφαλείας για τα παιδιά", value="αποτροπή ενεργοποίησης"),
+                    SpecItem(
+                        label="Είδος ηλεκτρονικού ελέγχου",
+                        value="TwistPad4: πλήρης έλεγχος της ισχύος",
+                    ),
+                    SpecItem(
+                        label="Ψηφιακό χρονόμετρο",
+                        value="ένδειξη του χρόνου που έχει περάσει",
+                    ),
+                    SpecItem(
+                        label="Αυτόματη απενεργοποίηση ασφαλείας",
+                        value="η εστία σταματά να θερμαίνεται",
+                    ),
+                    SpecItem(
+                        label="Κλείδωμα ασφαλείας για τα παιδιά",
+                        value="αποτροπή ενεργοποίησης",
+                    ),
                     SpecItem(label="Συνολική ισχύς", value="6.3 ΚW"),
                 ],
             ),
@@ -1302,12 +1907,16 @@ def test_built_in_hob_characteristics_use_source_and_manufacturer_evidence() -> 
     html, diagnostics, _warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=BUILT_IN_HOB_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=BUILT_IN_HOB_SCHEMA_ID, score=0.9
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
         for cells in (row.find_all("td") for row in soup.select("tbody tr"))
         if len(cells) == 2
     }
@@ -1320,14 +1929,22 @@ def test_built_in_hob_characteristics_use_source_and_manufacturer_evidence() -> 
     assert values[normalize_for_match("Ψηφιακές Ενδείξεις")] == "Ναι"
     assert values[normalize_for_match("Σύνδεση με Φυσικό Αέριο")] == "Όχι"
     assert values[normalize_for_match("Συνδεσιμότητα")] == "Όχι"
-    assert values[normalize_for_match("Άλλα Χαρακτηριστικά")] == "17 βαθμίδες ισχύος, λειτουργία Restart, λειτουργία Alarm, διατήρηση θερμότητας"
+    assert (
+        values[normalize_for_match("Άλλα Χαρακτηριστικά")]
+        == "17 βαθμίδες ισχύος, λειτουργία Restart, λειτουργία Alarm, διατήρηση θερμότητας"
+    )
     assert values[normalize_for_match("Ισχύς Εστίας Μπροστά Αριστερά (KW")] == "1.2 kW"
     assert values[normalize_for_match("Ισχύς Εστίας Πίσω Αριστερά (KW")] == "0.75 kW"
     assert values[normalize_for_match("Μέγιστη Ονομαστική Ισχύς (W")] == "6300 W"
     assert values[normalize_for_match("Χρώμα Πλαισίου")] == "Ανοξείδωτο"
     assert values[normalize_for_match("Βάρος Συσκευής σε Κιλά")] == "8.0"
     assert values[normalize_for_match("Ύψος Διάστασης Εντοιχισμού")] == "4.8 cm"
-    assert values[normalize_for_match("Βάθος Διάστασης Εντοιχισμού σε Εκατοστά")] == "49 - 50 cm"
+    assert (
+        values[normalize_for_match("Βάθος Διάστασης Εντοιχισμού σε Εκατοστά")]
+        == "49 - 50 cm"
+    )
+
+
 def test_built_in_hob_characteristics_prefer_manufacturer_values_on_conflict() -> None:
     source = SourceProductData(
         source_name="skroutz",
@@ -1351,7 +1968,10 @@ def test_built_in_hob_characteristics_prefer_manufacturer_values_on_conflict() -
                     SpecItem(label="Τύπος εγκατάστασης", value="Εντοιχιζόμενη συσκευή"),
                     SpecItem(label="Τύπος λειτουργίας", value="Ηλεκτρική"),
                     SpecItem(label="Βασικό υλικό επιφανειών", value="Υαλοκεραμική"),
-                    SpecItem(label="Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα", value="4"),
+                    SpecItem(
+                        label="Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα",
+                        value="4",
+                    ),
                 ],
             ),
         ],
@@ -1365,12 +1985,16 @@ def test_built_in_hob_characteristics_prefer_manufacturer_values_on_conflict() -
     html, diagnostics, _warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=BUILT_IN_HOB_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=BUILT_IN_HOB_SCHEMA_ID, score=0.9
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
         for cells in (row.find_all("td") for row in soup.select("tbody tr"))
         if len(cells) == 2
     }
@@ -1380,6 +2004,7 @@ def test_built_in_hob_characteristics_prefer_manufacturer_values_on_conflict() -
     assert values[normalize_for_match("Τεχνολογία Πλατώ Εστιών")] == "Υαλοκεραμική"
     assert values[normalize_for_match("Αριθμός Ζωνών")] == "4"
     assert values[normalize_for_match("Αριθμός Ζωνών")] != "2"
+
 
 def test_skroutz_hair_straightener_characteristics_use_alias_enrichment() -> None:
     source = SourceProductData(
@@ -1408,7 +2033,9 @@ def test_skroutz_hair_straightener_characteristics_use_alias_enrichment() -> Non
                     SpecItem(label="Επίστρωση Τιτανίου", value="Ναι"),
                     SpecItem(label="Χρώμα", value="Μαύρο"),
                     SpecItem(label="Επίστρωση Κερατίνης", value="-"),
-                    SpecItem(label="Ειδικά Χαρακτηριστικά", value="Περιστρεφόμενο Καλώδιο"),
+                    SpecItem(
+                        label="Ειδικά Χαρακτηριστικά", value="Περιστρεφόμενο Καλώδιο"
+                    ),
                     SpecItem(label="Σειρά", value="-"),
                 ],
             ),
@@ -1424,12 +2051,17 @@ def test_skroutz_hair_straightener_characteristics_use_alias_enrichment() -> Non
     html, diagnostics, _warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=_schema_id_for_source_file("isiotika_mallion.json"), score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=_schema_id_for_source_file("isiotika_mallion.json"),
+            score=0.9,
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
         for cells in (row.find_all("td") for row in soup.select("tbody tr"))
         if len(cells) == 2
     }
@@ -1483,18 +2115,26 @@ def test_skroutz_hair_straightener_characteristics_use_description_enrichment() 
     html, diagnostics, warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=_schema_id_for_source_file("isiotika_mallion.json"), score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=_schema_id_for_source_file("isiotika_mallion.json"),
+            score=0.9,
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
         for cells in (row.find_all("td") for row in soup.select("tbody tr"))
         if len(cells) == 2
     }
 
     assert diagnostics["template_source"] == "schema_library_with_custom_overrides"
-    assert values[normalize_for_match("Τεχνολογία Πλάκας")] == "Επίστρωση κράματος ορείχαλκου και τιτανίου χαλκού"
+    assert (
+        values[normalize_for_match("Τεχνολογία Πλάκας")]
+        == "Επίστρωση κράματος ορείχαλκου και τιτανίου χαλκού"
+    )
     assert values[normalize_for_match("Αυτόματη Απενεργοποίηση")] == "60 min"
     assert values[normalize_for_match("Γρήγορη Προθέρμαση")] == "10 δευτερόλεπτα"
     assert values[normalize_for_match("Διάσταση Πλάκας σε Εκατοστά")] == "10.2 × 3.2"

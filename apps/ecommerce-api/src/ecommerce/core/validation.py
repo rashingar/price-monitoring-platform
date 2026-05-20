@@ -49,14 +49,18 @@ def validate_input_rows(loaded_csv: LoadedCsv) -> list[ValidatedInputRow]:
         model = _trim_required(raw_row[resolution.canonical_to_actual["model"]])
         mpn = _trim_required(raw_row[resolution.canonical_to_actual["mpn"]])
         price = _trim_required(raw_row[resolution.canonical_to_actual["price"]])
-        extras = {header: raw_row.get(header, "") for header in resolution.extra_headers}
+        extras = {
+            header: raw_row.get(header, "") for header in resolution.extra_headers
+        }
 
         input_row = InputRow(
             row_number=index,
             model=model,
             mpn=mpn,
             price=price,
-            original_values={header: raw_row.get(header, "") for header in loaded_csv.headers},
+            original_values={
+                header: raw_row.get(header, "") for header in loaded_csv.headers
+            },
             extra_values=extras,
         )
 
@@ -97,14 +101,30 @@ def validate_enriched_rows(loaded_csv: LoadedCsv) -> list[ValidatedEnrichedRow]:
         model = _trim_required(raw_row[resolution.canonical_to_actual["model"]])
         mpn = _trim_required(raw_row[resolution.canonical_to_actual["mpn"]])
         price = _trim_required(raw_row[resolution.canonical_to_actual["price"]])
-        observed_price = _trim_required(raw_row[resolution.canonical_to_actual[contract.price_column]])
-        observed_url = _trim_required(raw_row[resolution.canonical_to_actual[contract.url_column]])
-        match_status = _trim_required(raw_row[resolution.canonical_to_actual["match_status"]])
-        observed_at = _trim_required(raw_row[resolution.canonical_to_actual["observed_at"]])
-        error_reason = _trim_required(raw_row[resolution.canonical_to_actual["error_reason"]])
-        price_relation = _trim_required(raw_row[resolution.canonical_to_actual["price_relation"]])
-        price_delta = _trim_required(raw_row[resolution.canonical_to_actual["price_delta"]])
-        matched_mpn = _trim_required(raw_row[resolution.canonical_to_actual["matched_mpn"]])
+        observed_price = _trim_required(
+            raw_row[resolution.canonical_to_actual[contract.price_column]]
+        )
+        observed_url = _trim_required(
+            raw_row[resolution.canonical_to_actual[contract.url_column]]
+        )
+        match_status = _trim_required(
+            raw_row[resolution.canonical_to_actual["match_status"]]
+        )
+        observed_at = _trim_required(
+            raw_row[resolution.canonical_to_actual["observed_at"]]
+        )
+        error_reason = _trim_required(
+            raw_row[resolution.canonical_to_actual["error_reason"]]
+        )
+        price_relation = _trim_required(
+            raw_row[resolution.canonical_to_actual["price_relation"]]
+        )
+        price_delta = _trim_required(
+            raw_row[resolution.canonical_to_actual["price_delta"]]
+        )
+        matched_mpn = _trim_required(
+            raw_row[resolution.canonical_to_actual["matched_mpn"]]
+        )
         source_extra_values = {
             header: _trim_required(raw_row.get(header, ""))
             for header in contract.source_extra_columns
@@ -127,7 +147,9 @@ def validate_enriched_rows(loaded_csv: LoadedCsv) -> list[ValidatedEnrichedRow]:
         )
         price_only_row = PriceOnlyRow(model=model, mpn=mpn, price=price)
         parsed_input_price = _try_parse_price(price)
-        parsed_observed_price = _try_parse_price(observed_price) if observed_price else None
+        parsed_observed_price = (
+            _try_parse_price(observed_price) if observed_price else None
+        )
         is_usable_for_pricing = (
             match_status == "matched"
             and parsed_input_price is not None

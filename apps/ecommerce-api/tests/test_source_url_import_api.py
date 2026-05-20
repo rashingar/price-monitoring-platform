@@ -14,9 +14,11 @@ from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
-from ecommerce.db.models.price_monitoring import MonitoringRun, PriceObservation  # noqa: E402
+from ecommerce.db.models.price_monitoring import (
+    MonitoringRun,
+    PriceObservation,
+)  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-
 
 NOW = datetime(2026, 4, 29, 12, tzinfo=timezone.utc)
 
@@ -32,7 +34,9 @@ def _client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
     return TestClient(create_app()), database_url
 
 
-def _catalog_product(session, *, model: str, mpn: str = "MPN-1", active: bool = True) -> CatalogProductRow:
+def _catalog_product(
+    session, *, model: str, mpn: str = "MPN-1", active: bool = True
+) -> CatalogProductRow:
     row = CatalogProductRow(
         catalog_source="sourceCata",
         model=model,
@@ -51,7 +55,13 @@ def _catalog_product(session, *, model: str, mpn: str = "MPN-1", active: bool = 
     return row
 
 
-def _run(session, *, run_id: str = "run-1", source: str = "skroutz", enriched_csv_path: str | None = None) -> MonitoringRun:
+def _run(
+    session,
+    *,
+    run_id: str = "run-1",
+    source: str = "skroutz",
+    enriched_csv_path: str | None = None,
+) -> MonitoringRun:
     run = MonitoringRun(
         run_id=run_id,
         source=source,
@@ -125,17 +135,44 @@ def _source_url(
     return row
 
 
-def test_source_url_summary_counts_coverage_and_groups(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_summary_counts_coverage_and_groups(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         first = _catalog_product(session, model="005606")
         second = _catalog_product(session, model="123456", mpn="MPN-2")
         third = _catalog_product(session, model="999999", mpn="MPN-3")
         inactive = _catalog_product(session, model="OLD", active=False)
-        _source_url(session, first, url="https://www.skroutz.gr/s/1", status="active", url_type="manual")
-        _source_url(session, first, url="https://www.bestprice.gr/item/1", status="needs_review", url_type="imported", source_name="bestprice")
-        _source_url(session, second, url="https://www.skroutz.gr/s/2", status="disabled", url_type="imported")
-        _source_url(session, inactive, url="https://www.skroutz.gr/s/old", status="active", url_type="imported")
+        _source_url(
+            session,
+            first,
+            url="https://www.skroutz.gr/s/1",
+            status="active",
+            url_type="manual",
+        )
+        _source_url(
+            session,
+            first,
+            url="https://www.bestprice.gr/item/1",
+            status="needs_review",
+            url_type="imported",
+            source_name="bestprice",
+        )
+        _source_url(
+            session,
+            second,
+            url="https://www.skroutz.gr/s/2",
+            status="disabled",
+            url_type="imported",
+        )
+        _source_url(
+            session,
+            inactive,
+            url="https://www.skroutz.gr/s/old",
+            status="active",
+            url_type="imported",
+        )
 
     response = client.get("/api/catalog/source-urls/summary")
 
@@ -163,7 +200,9 @@ def test_preview_returns_report_without_writes(tmp_path: Path, monkeypatch) -> N
         run = _run(session)
         _observation(session, run, url="https://www.skroutz.gr/s/1", model="005606")
 
-    response = client.post("/api/catalog/source-urls/import/preview", json={"report_items_limit": 10})
+    response = client.post(
+        "/api/catalog/source-urls/import/preview", json={"report_items_limit": 10}
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -200,7 +239,9 @@ def test_apply_writes_rows_and_is_idempotent(tmp_path: Path, monkeypatch) -> Non
 def test_product_factory_handoff_preview_and_apply(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("ECOMMERCE_FILE_ROOTS", str(tmp_path / "work"))
     client, database_url = _client(tmp_path, monkeypatch)
-    handoff_path = tmp_path / "work" / "005606" / "integrations" / "ecommerce_source_handoff.json"
+    handoff_path = (
+        tmp_path / "work" / "005606" / "integrations" / "ecommerce_source_handoff.json"
+    )
     handoff_path.parent.mkdir(parents=True)
     with session_scope(database_url) as session:
         product = _catalog_product(session, model="005606")
@@ -209,14 +250,21 @@ def test_product_factory_handoff_preview_and_apply(tmp_path: Path, monkeypatch) 
                 {
                     "schema_version": "v1",
                     "catalog_source": "sourceCata",
-                    "product": {"catalog_product_id": product.id, "model": "005606", "mpn": "MPN-1"},
+                    "product": {
+                        "catalog_product_id": product.id,
+                        "model": "005606",
+                        "mpn": "MPN-1",
+                    },
                     "sources": [
                         {
                             "source_name": "skroutz",
                             "url": "https://www.skroutz.gr/s/1?utm_campaign=x",
                             "confidence": 0.95,
                             "evidence": {"identity": "exact"},
-                            "price_evidence": {"price": "119.90", "observed_at": "2026-04-29T12:00:00Z"},
+                            "price_evidence": {
+                                "price": "119.90",
+                                "observed_at": "2026-04-29T12:00:00Z",
+                            },
                         }
                     ],
                 },
@@ -225,8 +273,14 @@ def test_product_factory_handoff_preview_and_apply(tmp_path: Path, monkeypatch) 
             encoding="utf-8",
         )
 
-    preview = client.post("/api/catalog/source-urls/import/product-factory/preview", json={"file_path": str(handoff_path)})
-    apply = client.post("/api/catalog/source-urls/import/product-factory/apply", json={"file_path": str(handoff_path)})
+    preview = client.post(
+        "/api/catalog/source-urls/import/product-factory/preview",
+        json={"file_path": str(handoff_path)},
+    )
+    apply = client.post(
+        "/api/catalog/source-urls/import/product-factory/apply",
+        json={"file_path": str(handoff_path)},
+    )
 
     assert preview.status_code == 200
     assert apply.status_code == 200
@@ -239,31 +293,54 @@ def test_product_factory_handoff_preview_and_apply(tmp_path: Path, monkeypatch) 
         assert row.url_normalized == "https://www.skroutz.gr/s/1"
 
 
-def test_product_factory_handoff_import_rejects_paths_outside_allowed_roots(tmp_path: Path, monkeypatch) -> None:
+def test_product_factory_handoff_import_rejects_paths_outside_allowed_roots(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setenv("ECOMMERCE_FILE_ROOTS", str(tmp_path / "allowed"))
     client, _database_url = _client(tmp_path, monkeypatch)
     outside_path = tmp_path / "outside" / "ecommerce_source_handoff.json"
     outside_path.parent.mkdir(parents=True)
     outside_path.write_text("{}", encoding="utf-8")
 
-    response = client.post("/api/catalog/source-urls/import/product-factory/preview", json={"file": str(outside_path)})
+    response = client.post(
+        "/api/catalog/source-urls/import/product-factory/preview",
+        json={"file": str(outside_path)},
+    )
     traversal = client.post(
         "/api/catalog/source-urls/import/product-factory/preview",
-        json={"file": str(tmp_path / "allowed" / ".." / "ecommerce_source_handoff.json")},
+        json={
+            "file": str(tmp_path / "allowed" / ".." / "ecommerce_source_handoff.json")
+        },
     )
 
     assert response.status_code == 400
-    assert "allowed artifact roots or configured file roots" in response.json()["detail"]
+    assert (
+        "allowed artifact roots or configured file roots" in response.json()["detail"]
+    )
     assert traversal.status_code == 400
     assert "path traversal" in traversal.json()["detail"]
 
 
-def test_preview_and_apply_preserve_manual_and_disabled_urls(tmp_path: Path, monkeypatch) -> None:
+def test_preview_and_apply_preserve_manual_and_disabled_urls(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         product = _catalog_product(session, model="005606")
-        manual = _source_url(session, product, url="https://www.skroutz.gr/s/manual", status="active", url_type="manual")
-        disabled = _source_url(session, product, url="https://www.skroutz.gr/s/disabled", status="disabled", url_type="imported")
+        manual = _source_url(
+            session,
+            product,
+            url="https://www.skroutz.gr/s/manual",
+            status="active",
+            url_type="manual",
+        )
+        disabled = _source_url(
+            session,
+            product,
+            url="https://www.skroutz.gr/s/disabled",
+            status="disabled",
+            url_type="imported",
+        )
         run = _run(session)
         _observation(session, run, url=manual.url, model="005606")
         _observation(session, run, url=disabled.url, model="005606")
@@ -281,16 +358,26 @@ def test_preview_and_apply_preserve_manual_and_disabled_urls(tmp_path: Path, mon
         assert rows[disabled.url].status == "disabled"
 
 
-def test_import_report_item_truncation_keeps_full_counters(tmp_path: Path, monkeypatch) -> None:
+def test_import_report_item_truncation_keeps_full_counters(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         run = _run(session)
         for index in range(3):
             model = f"MODEL-{index}"
             _catalog_product(session, model=model, mpn=f"MPN-{index}")
-            _observation(session, run, url=f"https://www.skroutz.gr/s/{index}", model=model, mpn=f"MPN-{index}")
+            _observation(
+                session,
+                run,
+                url=f"https://www.skroutz.gr/s/{index}",
+                model=model,
+                mpn=f"MPN-{index}",
+            )
 
-    response = client.post("/api/catalog/source-urls/import/preview", json={"report_items_limit": 2})
+    response = client.post(
+        "/api/catalog/source-urls/import/preview", json={"report_items_limit": 2}
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -311,7 +398,9 @@ def test_import_invalid_options_return_400(tmp_path: Path, monkeypatch) -> None:
     assert response.status_code == 400
 
 
-def test_import_routes_return_catalog_db_required_without_database(tmp_path: Path, monkeypatch) -> None:
+def test_import_routes_return_catalog_db_required_without_database(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, "")
     client = TestClient(create_app())
 
@@ -322,7 +411,10 @@ def test_import_routes_return_catalog_db_required_without_database(tmp_path: Pat
     ]
 
     assert {response.status_code for response in responses} == {503}
-    assert all(response.json()["detail"]["code"] == "catalog_database_required" for response in responses)
+    assert all(
+        response.json()["detail"]["code"] == "catalog_database_required"
+        for response in responses
+    )
 
 
 def test_import_options_note_describes_db_backed_capture() -> None:
@@ -331,7 +423,10 @@ def test_import_options_note_describes_db_backed_capture() -> None:
     assert response.status_code == 200
     notes = response.json()["notes"]
     assert "Monitoring fetch behavior does not use stored source URLs yet." not in notes
-    assert "Stored source URLs can be captured through DB-backed Vendor Sources capture." in notes
+    assert (
+        "Stored source URLs can be captured through DB-backed Vendor Sources capture."
+        in notes
+    )
 
 
 def test_openapi_includes_source_url_import_endpoints() -> None:

@@ -16,10 +16,18 @@ from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.vendor_sources import VendorSourceCaptureRun  # noqa: E402
 from ecommerce.db.models.price_monitoring import PriceObservation  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url  # noqa: E402
-from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation  # noqa: E402
-from ecommerce.vendor_sources.capture import capture_selected_source_urls_for_run, run_vendor_source_capture  # noqa: E402
-
+from ecommerce.db.repositories.source_urls import (
+    create_or_update_imported_source_url,
+)  # noqa: E402
+from ecommerce.source_capture.types import (
+    CaptureResult,
+    CaptureSnapshotPayload,
+    ParsedPriceObservation,
+)  # noqa: E402
+from ecommerce.vendor_sources.capture import (
+    capture_selected_source_urls_for_run,
+    run_vendor_source_capture,
+)  # noqa: E402
 
 NOW = datetime(2026, 5, 5, 12, tzinfo=timezone.utc)
 
@@ -61,19 +69,27 @@ def _fake_electronet_capture(captured_urls: list[str]):
                 fetched_at=NOW,
                 parsed_at=NOW,
             ),
-            price_observations=(ParsedPriceObservation(price=Decimal("499.90"), availability="available"),),
+            price_observations=(
+                ParsedPriceObservation(
+                    price=Decimal("499.90"), availability="available"
+                ),
+            ),
         )
 
     return fake_capture
 
 
-def test_vendor_sources_capture_for_run_writes_result_counts_without_live_http(tmp_path: Path, monkeypatch) -> None:
+def test_vendor_sources_capture_for_run_writes_result_counts_without_live_http(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     run_dir = tmp_path / "run-electronet"
     run_dir.mkdir()
     (run_dir / "selection_summary.json").write_text(
-        json.dumps({"selected_items": [{"catalog_product_id": 1}], "source": "electronet"}),
+        json.dumps(
+            {"selected_items": [{"catalog_product_id": 1}], "source": "electronet"}
+        ),
         encoding="utf-8",
     )
     captured_urls: list[str] = []
@@ -96,7 +112,9 @@ def test_vendor_sources_capture_for_run_writes_result_counts_without_live_http(t
         capture_fn=_fake_electronet_capture(captured_urls),
     )
 
-    payload = json.loads((run_dir / "source_url_capture_result.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        (run_dir / "source_url_capture_result.json").read_text(encoding="utf-8")
+    )
     assert result.succeeded_count == 1
     assert captured_urls == ["https://www.electronet.gr/p/write-result"]
     assert payload["status"] == "completed"
@@ -112,14 +130,18 @@ def test_vendor_sources_capture_for_run_writes_result_counts_without_live_http(t
     assert payload["run_id"] == result.run_id
     assert payload["observation_batch_id"] == result.run_id
     with session_scope(database_url) as session:
-        row = session.query(VendorSourceCaptureRun).filter_by(run_id=result.run_id).one()
+        row = (
+            session.query(VendorSourceCaptureRun).filter_by(run_id=result.run_id).one()
+        )
         observation = session.query(PriceObservation).one()
         assert row.observation_batch_id == result.run_id
         assert observation.run_id == run_dir.name
         assert observation.observation_batch_id == result.run_id
 
 
-def test_vendor_sources_capture_run_history_row_is_created(tmp_path: Path, monkeypatch) -> None:
+def test_vendor_sources_capture_run_history_row_is_created(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     captured_urls: list[str] = []
@@ -144,7 +166,9 @@ def test_vendor_sources_capture_run_history_row_is_created(tmp_path: Path, monke
             runs_dir=tmp_path / "vendor-captures",
         )
 
-        row = session.query(VendorSourceCaptureRun).filter_by(run_id=result.run_id).one()
+        row = (
+            session.query(VendorSourceCaptureRun).filter_by(run_id=result.run_id).one()
+        )
         run_id = result.run_id
         assert row.status == "completed"
         assert row.observation_batch_id == result.run_id
@@ -152,7 +176,9 @@ def test_vendor_sources_capture_run_history_row_is_created(tmp_path: Path, monke
         assert row.selected_source_url_count == 1
         assert row.selected_product_source_count == 1
         assert row.succeeded_count == 1
-        assert row.result_path and row.result_path.endswith("vendor_source_capture_result.json")
+        assert row.result_path and row.result_path.endswith(
+            "vendor_source_capture_result.json"
+        )
         assert captured_urls == ["https://www.electronet.gr/p/history"]
         observation = session.query(PriceObservation).one()
         assert observation.observation_batch_id == result.run_id
@@ -172,7 +198,9 @@ def test_vendor_sources_capture_run_history_row_is_created(tmp_path: Path, monke
     assert artifacts.json()["items"][0]["name"] == "vendor_source_capture_result.json"
 
 
-def test_vendor_sources_capture_run_failure_marks_run_failed(tmp_path: Path, monkeypatch) -> None:
+def test_vendor_sources_capture_run_failure_marks_run_failed(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
 
@@ -187,7 +215,9 @@ def test_vendor_sources_capture_run_failure_marks_run_failed(tmp_path: Path, mon
             status="active",
         )
 
-        def broken_capture(_url: str, *, vendor_slug: str | None = None) -> CaptureResult:
+        def broken_capture(
+            _url: str, *, vendor_slug: str | None = None
+        ) -> CaptureResult:
             raise RuntimeError("capture backend unavailable")
 
         try:
@@ -206,10 +236,14 @@ def test_vendor_sources_capture_run_failure_marks_run_failed(tmp_path: Path, mon
         row = session.query(VendorSourceCaptureRun).one()
         assert row.status == "failed"
         assert row.completed_at is not None
-        assert any("capture backend unavailable" in warning for warning in row.warnings_json)
+        assert any(
+            "capture backend unavailable" in warning for warning in row.warnings_json
+        )
 
 
-def test_vendor_sources_capture_run_requires_admin_flag_for_all_active_sources(tmp_path: Path) -> None:
+def test_vendor_sources_capture_run_requires_admin_flag_for_all_active_sources(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
     captured_urls: list[str] = []
 
@@ -243,7 +277,9 @@ def test_vendor_sources_capture_run_requires_admin_flag_for_all_active_sources(t
         except ValueError as exc:
             assert "admin_all_sources=true" in str(exc)
         else:
-            raise AssertionError("all-source capture should require admin_all_sources=true")
+            raise AssertionError(
+                "all-source capture should require admin_all_sources=true"
+            )
 
         result = run_vendor_source_capture(
             session,
@@ -257,10 +293,15 @@ def test_vendor_sources_capture_run_requires_admin_flag_for_all_active_sources(t
         assert result.observation_batch_id == result.run_id
         assert result.selected_source_url_count == 2
         assert result.selected_product_source_count == 2
-        assert sorted(captured_urls) == ["https://www.electronet.gr/p/all", "https://www.skroutz.gr/s/1/all.html"]
+        assert sorted(captured_urls) == [
+            "https://www.electronet.gr/p/all",
+            "https://www.skroutz.gr/s/1/all.html",
+        ]
 
 
-def test_vendor_sources_capture_run_source_filter_only_selects_requested_source(tmp_path: Path) -> None:
+def test_vendor_sources_capture_run_source_filter_only_selects_requested_source(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
     captured_urls: list[str] = []
 
@@ -298,7 +339,9 @@ def test_vendor_sources_capture_run_source_filter_only_selects_requested_source(
         assert captured_urls == ["https://www.electronet.gr/p/filter"]
 
 
-def test_vendor_sources_capture_run_excludes_ineligible_source_url_statuses(tmp_path: Path) -> None:
+def test_vendor_sources_capture_run_excludes_ineligible_source_url_statuses(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
     captured_urls: list[str] = []
 

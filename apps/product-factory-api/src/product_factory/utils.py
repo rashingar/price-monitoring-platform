@@ -12,23 +12,19 @@ from urllib.parse import urlparse
 from .normalize import normalize_for_match, normalize_whitespace
 
 
-
 def ensure_directory(path: str | Path) -> Path:
     out = Path(path)
     out.mkdir(parents=True, exist_ok=True)
     return out
 
 
-
 def utcnow_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-
 
 
 def read_json(path: str | Path) -> dict[str, Any]:
     with open(path, "r", encoding="utf-8") as handle:
         return json.load(handle)
-
 
 
 def write_json(path: str | Path, payload: Any) -> None:
@@ -37,17 +33,14 @@ def write_json(path: str | Path, payload: Any) -> None:
         handle.write("\n")
 
 
-
 def write_text(path: str | Path, text: str) -> None:
     with open(path, "w", encoding="utf-8") as handle:
         handle.write(text)
 
 
-
 def write_bytes(path: str | Path, payload: bytes) -> None:
     with open(path, "wb") as handle:
         handle.write(payload)
-
 
 
 def load_template_headers(path: str | Path) -> list[str]:
@@ -56,14 +49,12 @@ def load_template_headers(path: str | Path) -> list[str]:
         return next(reader)
 
 
-
 def first_non_empty(values: Iterable[str]) -> str:
     for value in values:
         normalized = normalize_whitespace(value)
         if normalized:
             return normalized
     return ""
-
 
 
 def as_decimal_string(value: Any) -> str:
@@ -81,13 +72,13 @@ def as_decimal_string(value: Any) -> str:
     return normalized
 
 
-
 def build_additional_image_value(model: str, photos: int) -> str:
     if photos <= 1:
         return ""
-    parts = [f"catalog/01_main/{model}/{model}-{index}.jpg" for index in range(2, photos + 1)]
+    parts = [
+        f"catalog/01_main/{model}/{model}-{index}.jpg" for index in range(2, photos + 1)
+    ]
     return ":::".join(parts)
-
 
 
 def dedupe_strings(values: Iterable[str]) -> list[str]:
@@ -102,14 +93,22 @@ def dedupe_strings(values: Iterable[str]) -> list[str]:
     return out
 
 
-
 def guess_extension_from_url(url: str) -> str:
     path = urlparse(url).path
     suffix = Path(path).suffix.lower()
-    if suffix in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff", ".avif"}:
+    if suffix in {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".gif",
+        ".bmp",
+        ".tif",
+        ".tiff",
+        ".avif",
+    }:
         return suffix
     return ""
-
 
 
 def guess_extension(content_type: str | None, url: str) -> str:

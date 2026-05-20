@@ -47,7 +47,9 @@ class DurableJobRegistry:
         try:
             return self._handlers[job_type]
         except KeyError as exc:
-            raise KeyError(f"No durable job handler registered for job_type={job_type!r}.") from exc
+            raise KeyError(
+                f"No durable job handler registered for job_type={job_type!r}."
+            ) from exc
 
     def job_types(self) -> tuple[str, ...]:
         return tuple(self._handlers)
@@ -66,7 +68,9 @@ def execute_job(
         return job
 
     if job.cancel_requested:
-        mark_cancelled(session, job_id, error_message="Cancellation requested before start.")
+        mark_cancelled(
+            session, job_id, error_message="Cancellation requested before start."
+        )
         session.commit()
         return _require_job(session, job_id)
 
@@ -92,8 +96,14 @@ def execute_job(
 
     session.expire_all()
     current_job = _require_job(session, job_id)
-    existing_result = current_job.result_json if isinstance(current_job.result_json, dict) else {}
-    if isinstance(result, dict) and "progress" in existing_result and "progress" not in result:
+    existing_result = (
+        current_job.result_json if isinstance(current_job.result_json, dict) else {}
+    )
+    if (
+        isinstance(result, dict)
+        and "progress" in existing_result
+        and "progress" not in result
+    ):
         result = {**result, "progress": existing_result["progress"]}
 
     mark_succeeded(session, job_id, result=result)
@@ -111,4 +121,10 @@ def execute_registered_job(
 ) -> EcommerceJob:
     job = _require_job(session, job_id)
     registered_handler = registry.get(job.job_type)
-    return execute_job(session, job_id, lambda payload: registered_handler(job_id, payload), reraise=reraise, claimed=claimed)
+    return execute_job(
+        session,
+        job_id,
+        lambda payload: registered_handler(job_id, payload),
+        reraise=reraise,
+        claimed=claimed,
+    )

@@ -23,7 +23,9 @@ def upgrade() -> None:
     op.create_table(
         "catalog_products",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("catalog_source", sa.String(), nullable=False, server_default="sourceCata"),
+        sa.Column(
+            "catalog_source", sa.String(), nullable=False, server_default="sourceCata"
+        ),
         sa.Column("model", sa.String(), nullable=False),
         sa.Column("mpn", sa.String(), nullable=False, server_default=""),
         sa.Column("name", sa.Text(), nullable=False, server_default=""),
@@ -39,8 +41,15 @@ def upgrade() -> None:
         sa.Column("status", sa.Integer(), nullable=True),
         sa.Column("bestprice_status", sa.Integer(), nullable=True),
         sa.Column("skroutz_status", sa.Integer(), nullable=True),
-        sa.Column("is_atomic_model", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("automation_eligible", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column(
+            "is_atomic_model", sa.Boolean(), nullable=False, server_default=sa.false()
+        ),
+        sa.Column(
+            "automation_eligible",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+        ),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("imported_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("source_path", sa.Text(), nullable=True),
@@ -50,17 +59,38 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("uq_catalog_products_catalog_source_model", "catalog_products", ["catalog_source", "model"], unique=True)
-    op.create_index("ix_catalog_products_catalog_source_active", "catalog_products", ["catalog_source", "active"])
+    op.create_index(
+        "uq_catalog_products_catalog_source_model",
+        "catalog_products",
+        ["catalog_source", "model"],
+        unique=True,
+    )
+    op.create_index(
+        "ix_catalog_products_catalog_source_active",
+        "catalog_products",
+        ["catalog_source", "active"],
+    )
     op.create_index("ix_catalog_products_model", "catalog_products", ["model"])
     op.create_index("ix_catalog_products_mpn", "catalog_products", ["mpn"])
-    op.create_index("ix_catalog_products_manufacturer", "catalog_products", ["manufacturer"])
+    op.create_index(
+        "ix_catalog_products_manufacturer", "catalog_products", ["manufacturer"]
+    )
     op.create_index("ix_catalog_products_family", "catalog_products", ["family"])
-    op.create_index("ix_catalog_products_category_name", "catalog_products", ["category_name"])
-    op.create_index("ix_catalog_products_sub_category", "catalog_products", ["sub_category"])
-    op.create_index("ix_catalog_products_bestprice_status", "catalog_products", ["bestprice_status"])
-    op.create_index("ix_catalog_products_skroutz_status", "catalog_products", ["skroutz_status"])
-    op.create_index("ix_catalog_products_imported_at", "catalog_products", ["imported_at"])
+    op.create_index(
+        "ix_catalog_products_category_name", "catalog_products", ["category_name"]
+    )
+    op.create_index(
+        "ix_catalog_products_sub_category", "catalog_products", ["sub_category"]
+    )
+    op.create_index(
+        "ix_catalog_products_bestprice_status", "catalog_products", ["bestprice_status"]
+    )
+    op.create_index(
+        "ix_catalog_products_skroutz_status", "catalog_products", ["skroutz_status"]
+    )
+    op.create_index(
+        "ix_catalog_products_imported_at", "catalog_products", ["imported_at"]
+    )
 
 
 def downgrade() -> None:
@@ -73,6 +103,10 @@ def downgrade() -> None:
     op.drop_index("ix_catalog_products_manufacturer", table_name="catalog_products")
     op.drop_index("ix_catalog_products_mpn", table_name="catalog_products")
     op.drop_index("ix_catalog_products_model", table_name="catalog_products")
-    op.drop_index("ix_catalog_products_catalog_source_active", table_name="catalog_products")
-    op.drop_index("uq_catalog_products_catalog_source_model", table_name="catalog_products")
+    op.drop_index(
+        "ix_catalog_products_catalog_source_active", table_name="catalog_products"
+    )
+    op.drop_index(
+        "uq_catalog_products_catalog_source_model", table_name="catalog_products"
+    )
     op.drop_table("catalog_products")

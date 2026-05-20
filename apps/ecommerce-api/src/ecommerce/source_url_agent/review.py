@@ -14,9 +14,11 @@ from sqlalchemy.orm import Session
 from ecommerce.source_urls import SourceUrlValidationError, normalize_source_url
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate
 from ecommerce.source_url_agent.products import AgentProduct
-from ecommerce.source_url_agent.persistence import update_candidate_review_status, write_candidate_source_url
+from ecommerce.source_url_agent.persistence import (
+    update_candidate_review_status,
+    write_candidate_source_url,
+)
 from ecommerce.source_url_agent.sources import SourceDefinition, load_source_registry
-
 
 VALID_REVIEW_DECISIONS = {"accept", "reject", "replace_url"}
 
@@ -33,7 +35,9 @@ class ReviewApplyResult:
         return {
             "apply": self.apply,
             "review_file": self.review_file,
-            "counters": {key: int(value) for key, value in sorted(self.counters.items())},
+            "counters": {
+                key: int(value) for key, value in sorted(self.counters.items())
+            },
             "warnings": list(self.warnings),
             "items": list(self.items),
         }
@@ -58,12 +62,18 @@ def apply_review_csv(
             continue
         if decision not in VALID_REVIEW_DECISIONS:
             result.counters["invalid_count"] += 1
-            result.warnings.append(f"Invalid review_decision for model {row.get('model')}: {decision}")
+            result.warnings.append(
+                f"Invalid review_decision for model {row.get('model')}: {decision}"
+            )
             continue
         if decision == "reject":
-            _record_non_write_decision(session, row, decision, result, run_id=run_id, apply=apply)
+            _record_non_write_decision(
+                session, row, decision, result, run_id=run_id, apply=apply
+            )
             continue
-        _apply_accept_or_replace(session, row, decision, registry, result, run_id=run_id, apply=apply)
+        _apply_accept_or_replace(
+            session, row, decision, registry, result, run_id=run_id, apply=apply
+        )
     return result
 
 
@@ -82,17 +92,23 @@ def _apply_accept_or_replace(
     url = reviewed_url if decision == "replace_url" else (reviewed_url or candidate_url)
     if not url:
         result.counters["invalid_count"] += 1
-        result.warnings.append(f"Missing URL for review decision {decision} on model {row.get('model')}.")
+        result.warnings.append(
+            f"Missing URL for review decision {decision} on model {row.get('model')}."
+        )
         return
     try:
         normalized = normalize_source_url(url)
     except SourceUrlValidationError as exc:
         result.counters["invalid_url_count"] += 1
-        result.warnings.append(f"Invalid reviewed URL for model {row.get('model')}: {exc}")
+        result.warnings.append(
+            f"Invalid reviewed URL for model {row.get('model')}: {exc}"
+        )
         return
     if session is None and apply:
         result.counters["skipped_count"] += 1
-        result.warnings.append("Database is not configured; review apply is artifact-only.")
+        result.warnings.append(
+            "Database is not configured; review apply is artifact-only."
+        )
         return
 
     source_name = str(row.get("source_name") or "").strip().lower()
@@ -105,8 +121,12 @@ def _apply_accept_or_replace(
     candidate = _row_to_candidate(row, source, reviewed_url=url, run_id=run_id)
     write_result = None
     if session is not None:
-        write_result = write_candidate_source_url(session, candidate, trust_level="manual", apply=apply)
-        _update_review_candidate(session, row, "accepted", result, run_id=run_id, apply=apply)
+        write_result = write_candidate_source_url(
+            session, candidate, trust_level="manual", apply=apply
+        )
+        _update_review_candidate(
+            session, row, "accepted", result, run_id=run_id, apply=apply
+        )
     result.counters["accepted_count" if decision == "accept" else "replaced_count"] += 1
     result.items.append(
         {
@@ -114,7 +134,11 @@ def _apply_accept_or_replace(
             "source_name": source_name,
             "decision": decision,
             "url": normalized,
-            "action": write_result.action if write_result is not None else ("would_write" if apply else "dry_run"),
+            "action": (
+                write_result.action
+                if write_result is not None
+                else ("would_write" if apply else "dry_run")
+            ),
             "reason": write_result.reason if write_result is not None else "",
         }
     )
@@ -133,14 +157,18 @@ def _record_non_write_decision(
         "reject": "rejected",
     }[decision]
     if session is not None:
-        _update_review_candidate(session, row, status, result, run_id=run_id, apply=apply)
+        _update_review_candidate(
+            session, row, status, result, run_id=run_id, apply=apply
+        )
     result.counters[f"{status}_count"] += 1
     result.items.append(
         {
             "model": row.get("model"),
             "source_name": row.get("source_name"),
             "decision": decision,
-            "action": "updated_candidate" if apply and session is not None else "dry_run",
+            "action": (
+                "updated_candidate" if apply and session is not None else "dry_run"
+            ),
         }
     )
 
@@ -169,10 +197,14 @@ def _update_review_candidate(
         notes=str(row.get("review_notes") or "").strip() or None,
     )
     if count == 0:
-        result.warnings.append(f"No stored candidate row matched review item model={row.get('model')} source={row.get('source_name')}.")
+        result.warnings.append(
+            f"No stored candidate row matched review item model={row.get('model')} source={row.get('source_name')}."
+        )
 
 
-def _row_to_candidate(row: dict[str, str], source: SourceDefinition, *, reviewed_url: str, run_id: str) -> SourceUrlAgentCandidate:
+def _row_to_candidate(
+    row: dict[str, str], source: SourceDefinition, *, reviewed_url: str, run_id: str
+) -> SourceUrlAgentCandidate:
     product = AgentProduct(
         catalog_product_id=_int_or_none(row.get("catalog_product_id")),
         catalog_source="sourceCata",
@@ -200,7 +232,8 @@ def _row_to_candidate(row: dict[str, str], source: SourceDefinition, *, reviewed
         confidence_score=1.0,
         match_method="manual_review",
         evidence_json={},
-        competing_candidates_count=_int_or_none(row.get("competing_candidates_count")) or 0,
+        competing_candidates_count=_int_or_none(row.get("competing_candidates_count"))
+        or 0,
         searched_queries=[],
         status="accepted",
         notes=str(row.get("review_notes") or "").strip(),
@@ -219,7 +252,11 @@ def _reviewed_at(value: object) -> datetime:
     if text:
         try:
             parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
-            return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+            return (
+                parsed
+                if parsed.tzinfo is not None
+                else parsed.replace(tzinfo=timezone.utc)
+            )
         except ValueError:
             pass
     return datetime.now(timezone.utc).replace(microsecond=0)

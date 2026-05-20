@@ -33,7 +33,9 @@ class RobotsDisallowedError(FetchError):
 
 
 class ElectronetFetcher:
-    def __init__(self, user_agent: str = USER_AGENT, timeout: httpx.Timeout = CRAWL_TIMEOUT) -> None:
+    def __init__(
+        self, user_agent: str = USER_AGENT, timeout: httpx.Timeout = CRAWL_TIMEOUT
+    ) -> None:
         self.user_agent = user_agent
         self.timeout = timeout
 
@@ -42,7 +44,11 @@ class ElectronetFetcher:
         robots_url = urljoin(f"{parts.scheme}://{parts.netloc}", "/robots.txt")
         parser = RobotFileParser()
         try:
-            with httpx.Client(timeout=self.timeout, headers={"User-Agent": self.user_agent}, follow_redirects=True) as client:
+            with httpx.Client(
+                timeout=self.timeout,
+                headers={"User-Agent": self.user_agent},
+                follow_redirects=True,
+            ) as client:
                 response = client.get(robots_url)
                 if response.status_code >= 400 or not response.text.strip():
                     return True, "robots_unavailable"
@@ -86,7 +92,10 @@ class ElectronetFetcher:
                     status_code=response.status_code,
                     method="httpx",
                     fallback_used=False,
-                    response_headers={**dict(response.headers), "x-robots-source": robots_info},
+                    response_headers={
+                        **dict(response.headers),
+                        "x-robots-source": robots_info,
+                    },
                 )
             except Exception as exc:
                 last_error = exc
@@ -100,13 +109,17 @@ class ElectronetFetcher:
             raise RobotsDisallowedError(f"Robots.txt disallows scraping for: {url}")
         try:
             from playwright.sync_api import sync_playwright
-        except Exception as exc:  # pragma: no cover - import path is environment-dependent
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - import path is environment-dependent
             raise FetchError(f"Playwright is not available: {exc}") from exc
 
         try:
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=True)
-                context = browser.new_context(user_agent=self.user_agent, locale="el-GR")
+                context = browser.new_context(
+                    user_agent=self.user_agent, locale="el-GR"
+                )
                 page = context.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=45000)
                 try:
@@ -136,13 +149,17 @@ class ElectronetFetcher:
             raise RobotsDisallowedError(f"Robots.txt disallows scraping for: {url}")
         try:
             from playwright.sync_api import sync_playwright
-        except Exception as exc:  # pragma: no cover - import path is environment-dependent
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - import path is environment-dependent
             raise FetchError(f"Playwright is not available: {exc}") from exc
 
         try:
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=True)
-                context = browser.new_context(user_agent=self.user_agent, locale="el-GR")
+                context = browser.new_context(
+                    user_agent=self.user_agent, locale="el-GR"
+                )
                 page = context.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=45000)
                 try:
@@ -175,19 +192,22 @@ class ElectronetFetcher:
     visible_area: Math.max(rect.width, 0) * Math.max(rect.height, 0),
   };
 }
-"""
-                        ,
+""",
                         index,
                     )
                     if meta.get("title_count"):
                         container_meta.append(meta)
 
-                selected_container = self._select_best_skroutz_section_container(container_meta)
+                selected_container = self._select_best_skroutz_section_container(
+                    container_meta
+                )
                 if selected_container is None:
                     raise FetchError("skroutz_section_window_not_found")
 
                 selected_dom_index = int(selected_container["dom_index"])
-                sections_locator = container_locator.nth(selected_dom_index).locator("div.rich-components section")
+                sections_locator = container_locator.nth(selected_dom_index).locator(
+                    "div.rich-components section"
+                )
                 section_count = sections_locator.count()
                 sections: list[dict[str, object]] = []
                 for section_index in range(section_count):
@@ -197,7 +217,9 @@ class ElectronetFetcher:
                     title_locator = section_locator.locator("h2, h3, h4").first
                     if title_locator.count() == 0:
                         continue
-                    title = normalize_whitespace(title_locator.inner_text(timeout=10000))
+                    title = normalize_whitespace(
+                        title_locator.inner_text(timeout=10000)
+                    )
                     if not title:
                         continue
                     if normalize_for_match(title) in SKIPPED_SECTION_TITLES:
@@ -205,15 +227,24 @@ class ElectronetFetcher:
                     body = ""
                     body_locator = section_locator.locator(".body-text")
                     if body_locator.count():
-                        body = normalize_whitespace(body_locator.first.inner_text(timeout=10000))
+                        body = normalize_whitespace(
+                            body_locator.first.inner_text(timeout=10000)
+                        )
 
                     image_locator = section_locator.locator("img").first
                     if image_locator.count() == 0:
-                        sections.append({"position": section_index + 1, "title": title, "body": body, "image_record": {}, "resolved_image_url": ""})
+                        sections.append(
+                            {
+                                "position": section_index + 1,
+                                "title": title,
+                                "body": body,
+                                "image_record": {},
+                                "resolved_image_url": "",
+                            }
+                        )
                         continue
 
-                    image_record = image_locator.evaluate(
-                        """
+                    image_record = image_locator.evaluate("""
 (el) => {
   const collectAttrs = (node) => {
     const out = {};
@@ -239,15 +270,16 @@ class ElectronetFetcher:
     natural_height: el.naturalHeight || 0,
   };
 }
-"""
-                    )
+""")
                     sections.append(
                         {
                             "position": section_index + 1,
                             "title": title,
                             "body": body,
                             "image_record": image_record,
-                            "resolved_image_url": resolve_skroutz_section_image_url(image_record, base_url=page.url),
+                            "resolved_image_url": resolve_skroutz_section_image_url(
+                                image_record, base_url=page.url
+                            ),
                         }
                     )
 
@@ -257,7 +289,9 @@ class ElectronetFetcher:
                 "window": {
                     "candidate_count": len(container_meta),
                     "selected_container_index": selected_dom_index,
-                    "duplicate_signatures_skipped": self._count_duplicate_signatures(container_meta),
+                    "duplicate_signatures_skipped": self._count_duplicate_signatures(
+                        container_meta
+                    ),
                 },
                 "containers": container_meta,
                 "sections": sections,
@@ -265,7 +299,9 @@ class ElectronetFetcher:
         except FetchError:
             raise
         except Exception as exc:
-            raise FetchError(f"Skroutz section image extraction failed for {url}: {exc}") from exc
+            raise FetchError(
+                f"Skroutz section image extraction failed for {url}: {exc}"
+            ) from exc
 
     def fetch_binary(self, url: str) -> tuple[bytes, str]:
         allowed, _ = self._robots_allowed(url)
@@ -339,7 +375,13 @@ class ElectronetFetcher:
     ) -> tuple[list[GalleryImage], list[str], list[str]]:
         target_dir = ensure_directory(Path(output_dir) / output_subdir)
         for existing_file in target_dir.iterdir():
-            if existing_file.is_file() and existing_file.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            if existing_file.is_file() and existing_file.suffix.lower() in {
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".webp",
+                ".gif",
+            }:
                 existing_file.unlink()
         selected = images
         if requested_count is not None and requested_count > 0:
@@ -367,7 +409,9 @@ class ElectronetFetcher:
                     content_type = "image/jpeg"
                 except ImageConversionError as exc:
                     warnings.append(f"{non_jpg_warning_prefix}:{asset_position}:{ext}")
-                    warnings.append(f"image_conversion_failed:{output_subdir}:{asset_position}:{ext}:{exc}")
+                    warnings.append(
+                        f"image_conversion_failed:{output_subdir}:{asset_position}:{ext}:{exc}"
+                    )
             filename_position = asset_position
             filename = filename_builder(filename_position, ext)
             local_path = target_dir / filename
@@ -385,15 +429,23 @@ class ElectronetFetcher:
             written_files.append(str(local_path))
         return downloaded, warnings, written_files
 
-    def _select_best_skroutz_section_container(self, containers: list[dict[str, object]]) -> dict[str, object] | None:
+    def _select_best_skroutz_section_container(
+        self, containers: list[dict[str, object]]
+    ) -> dict[str, object] | None:
         unique_by_signature: dict[tuple[str, ...], dict[str, object]] = {}
         for container in containers:
             titles = container.get("titles", [])
-            signature = tuple(normalize_whitespace(str(title)) for title in titles if normalize_whitespace(str(title)))
+            signature = tuple(
+                normalize_whitespace(str(title))
+                for title in titles
+                if normalize_whitespace(str(title))
+            )
             if not signature:
                 continue
             existing = unique_by_signature.get(signature)
-            if existing is None or self._skroutz_container_sort_key(container) > self._skroutz_container_sort_key(existing):
+            if existing is None or self._skroutz_container_sort_key(
+                container
+            ) > self._skroutz_container_sort_key(existing):
                 unique_by_signature[signature] = container
         if not unique_by_signature:
             return None
@@ -404,7 +456,11 @@ class ElectronetFetcher:
         duplicates = 0
         for container in containers:
             titles = container.get("titles", [])
-            signature = tuple(normalize_whitespace(str(title)) for title in titles if normalize_whitespace(str(title)))
+            signature = tuple(
+                normalize_whitespace(str(title))
+                for title in titles
+                if normalize_whitespace(str(title))
+            )
             if not signature:
                 continue
             if signature in seen:
@@ -413,7 +469,9 @@ class ElectronetFetcher:
             seen.add(signature)
         return duplicates
 
-    def _skroutz_container_sort_key(self, container: dict[str, object]) -> tuple[float, int, int]:
+    def _skroutz_container_sort_key(
+        self, container: dict[str, object]
+    ) -> tuple[float, int, int]:
         visible_area = float(container.get("visible_area", 0) or 0)
         title_count = int(container.get("title_count", 0) or 0)
         dom_index = int(container.get("dom_index", 0) or 0)

@@ -33,7 +33,15 @@ STOP_HEADINGS = {
     normalize_for_match("Περισσότερες φωτογραφίες"),
     normalize_for_match("Το ήξερες;"),
 }
-CRITICAL_FIELDS = ["name", "product_code", "price", "breadcrumbs", "spec_sections", "gallery_images", "hero_summary"]
+CRITICAL_FIELDS = [
+    "name",
+    "product_code",
+    "price",
+    "breadcrumbs",
+    "spec_sections",
+    "gallery_images",
+    "hero_summary",
+]
 PRICE_RE = re.compile(r"\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})?\s*€")
 INSTALLMENTS_RE = re.compile(r"\d+\s+άτοκες\s+δόσεις", re.IGNORECASE)
 CODE_RE = re.compile(r"ΚΩΔΙΚΟΣ\s+ΠΡΟΪΟΝΤΟΣ\s*:?\s*([0-9]{6})", re.IGNORECASE)
@@ -49,7 +57,9 @@ class ElectronetProductParser:
     def parse(self, html: str, url: str, fallback_used: bool = False) -> ParsedProduct:
         soup = BeautifulSoup(html, "lxml")
         product_root = self._find_product_root(soup)
-        product_lines = split_visible_lines(product_root.get_text("\n")) if product_root else []
+        product_lines = (
+            split_visible_lines(product_root.get_text("\n")) if product_root else []
+        )
         full_lines = split_visible_lines(soup.get_text("\n"))
         jsonld = self._parse_jsonld(soup)
         provenance: dict[str, str] = {}
@@ -58,7 +68,9 @@ class ElectronetProductParser:
 
         canonical_url = self._extract_canonical_url(soup, url)
 
-        breadcrumbs, breadcrumbs_source, breadcrumbs_confidence, breadcrumbs_trace = self._extract_breadcrumbs(soup, full_lines)
+        breadcrumbs, breadcrumbs_source, breadcrumbs_confidence, breadcrumbs_trace = (
+            self._extract_breadcrumbs(soup, full_lines)
+        )
         provenance["breadcrumbs"] = breadcrumbs_source
         field_diagnostics["breadcrumbs"] = self._make_diagnostic(
             breadcrumbs,
@@ -67,7 +79,12 @@ class ElectronetProductParser:
             breadcrumbs_trace,
         )
 
-        product_code, product_code_source, product_code_confidence, product_code_trace = self._extract_product_code(
+        (
+            product_code,
+            product_code_source,
+            product_code_confidence,
+            product_code_trace,
+        ) = self._extract_product_code(
             soup,
             product_root,
             product_lines,
@@ -81,33 +98,56 @@ class ElectronetProductParser:
             product_code_trace,
         )
 
-        name, name_source, name_confidence, name_trace = self._extract_name(product_root, soup, jsonld)
+        name, name_source, name_confidence, name_trace = self._extract_name(
+            product_root, soup, jsonld
+        )
         provenance["name"] = name_source
-        field_diagnostics["name"] = self._make_diagnostic(name, name_source, name_confidence, name_trace)
+        field_diagnostics["name"] = self._make_diagnostic(
+            name, name_source, name_confidence, name_trace
+        )
 
-        brand, brand_source, brand_confidence, brand_trace = self._extract_brand(product_root, product_lines, jsonld, name)
+        brand, brand_source, brand_confidence, brand_trace = self._extract_brand(
+            product_root, product_lines, jsonld, name
+        )
         provenance["brand"] = brand_source
-        field_diagnostics["brand"] = self._make_diagnostic(brand, brand_source, brand_confidence, brand_trace)
+        field_diagnostics["brand"] = self._make_diagnostic(
+            brand, brand_source, brand_confidence, brand_trace
+        )
 
-        price_text, price_value, price_source, price_confidence, price_trace = self._extract_price(
-            product_root,
-            soup,
-            product_lines,
-            jsonld,
+        price_text, price_value, price_source, price_confidence, price_trace = (
+            self._extract_price(
+                product_root,
+                soup,
+                product_lines,
+                jsonld,
+            )
         )
         provenance["price"] = price_source
-        field_diagnostics["price"] = self._make_diagnostic(price_text or price_value, price_source, price_confidence, price_trace)
+        field_diagnostics["price"] = self._make_diagnostic(
+            price_text or price_value, price_source, price_confidence, price_trace
+        )
 
         installments_text = self._extract_installments_text(product_root, product_lines)
-        delivery_text, pickup_text = self._extract_delivery_and_pickup(product_root, product_lines)
-
-        hero_summary, hero_source, hero_confidence, hero_trace = self._extract_hero_summary(product_root, soup, product_lines, jsonld, name)
-        provenance["hero_summary"] = hero_source
-        field_diagnostics["hero_summary"] = self._make_diagnostic(hero_summary, hero_source, hero_confidence, hero_trace)
-
-        presentation_html, presentation_text, presentation_count, presentation_source, presentation_confidence, presentation_trace = (
-            self._extract_presentation_source(product_root, soup)
+        delivery_text, pickup_text = self._extract_delivery_and_pickup(
+            product_root, product_lines
         )
+
+        hero_summary, hero_source, hero_confidence, hero_trace = (
+            self._extract_hero_summary(product_root, soup, product_lines, jsonld, name)
+        )
+        provenance["hero_summary"] = hero_source
+        field_diagnostics["hero_summary"] = self._make_diagnostic(
+            hero_summary, hero_source, hero_confidence, hero_trace
+        )
+
+        (
+            presentation_html,
+            presentation_text,
+            presentation_count,
+            presentation_source,
+            presentation_confidence,
+            presentation_trace,
+        ) = self._extract_presentation_source(product_root, soup)
         provenance["presentation_blocks"] = presentation_source
         field_diagnostics["presentation_blocks"] = self._make_diagnostic(
             presentation_count,
@@ -116,7 +156,9 @@ class ElectronetProductParser:
             presentation_trace,
         )
 
-        key_specs, key_specs_source, key_specs_confidence, key_specs_trace = self._extract_key_specs(product_root, product_lines, name)
+        key_specs, key_specs_source, key_specs_confidence, key_specs_trace = (
+            self._extract_key_specs(product_root, product_lines, name)
+        )
         provenance["key_specs"] = key_specs_source
         field_diagnostics["key_specs"] = self._make_diagnostic(
             key_specs,
@@ -125,7 +167,12 @@ class ElectronetProductParser:
             key_specs_trace,
         )
 
-        spec_sections, spec_sections_source, spec_sections_confidence, spec_sections_trace = self._extract_spec_sections(
+        (
+            spec_sections,
+            spec_sections_source,
+            spec_sections_confidence,
+            spec_sections_trace,
+        ) = self._extract_spec_sections(
             product_root,
             product_lines,
         )
@@ -137,17 +184,23 @@ class ElectronetProductParser:
             spec_sections_trace,
         )
 
-        mpn, mpn_source, mpn_confidence, mpn_trace = self._extract_mpn(key_specs, spec_sections, name, brand, jsonld)
+        mpn, mpn_source, mpn_confidence, mpn_trace = self._extract_mpn(
+            key_specs, spec_sections, name, brand, jsonld
+        )
         provenance["mpn"] = mpn_source
-        field_diagnostics["mpn"] = self._make_diagnostic(mpn, mpn_source, mpn_confidence, mpn_trace)
+        field_diagnostics["mpn"] = self._make_diagnostic(
+            mpn, mpn_source, mpn_confidence, mpn_trace
+        )
 
-        gallery_images, gallery_source, gallery_confidence, gallery_trace = self._extract_gallery_images(
-            product_root,
-            soup,
-            url,
-            name,
-            brand,
-            product_code,
+        gallery_images, gallery_source, gallery_confidence, gallery_trace = (
+            self._extract_gallery_images(
+                product_root,
+                soup,
+                url,
+                name,
+                brand,
+                product_code,
+            )
         )
         provenance["gallery_images"] = gallery_source
         field_diagnostics["gallery_images"] = self._make_diagnostic(
@@ -159,7 +212,9 @@ class ElectronetProductParser:
         if not gallery_images:
             warnings.append("gallery_images_missing")
 
-        energy_label_asset_url, product_sheet_asset_url = self._extract_assets(product_root or soup, soup, url)
+        energy_label_asset_url, product_sheet_asset_url = self._extract_assets(
+            product_root or soup, soup, url
+        )
 
         source = SourceProductData(
             page_type="product",
@@ -224,7 +279,9 @@ class ElectronetProductParser:
                 self._append_jsonld_payload(out, item)
         out.append(parsed)
 
-    def _product_jsonld_items(self, jsonld: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _product_jsonld_items(
+        self, jsonld: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         items = []
         for item in jsonld:
             item_type = normalize_for_match(self._jsonld_type_text(item.get("@type")))
@@ -238,14 +295,22 @@ class ElectronetProductParser:
         return str(value or "")
 
     def _find_product_root(self, soup: BeautifulSoup) -> Tag | BeautifulSoup:
-        for selector in ["article.product-page", "article[data-sku]", ".product-page", "main article", "main"]:
+        for selector in [
+            "article.product-page",
+            "article[data-sku]",
+            ".product-page",
+            "main article",
+            "main",
+        ]:
             node = soup.select_one(selector)
             if node:
                 return node
         return soup.body or soup
 
     def _extract_canonical_url(self, soup: BeautifulSoup, url: str) -> str:
-        link = soup.find("link", rel=lambda value: value and "canonical" in value.lower())
+        link = soup.find(
+            "link", rel=lambda value: value and "canonical" in value.lower()
+        )
         if link and link.get("href"):
             return make_absolute_url(link["href"], url)
         return url
@@ -265,7 +330,15 @@ class ElectronetProductParser:
             nodes = soup.select(selector)
             values = [safe_text(node) for node in nodes if safe_text(node)]
             cleaned = clean_breadcrumbs(values)
-            trace.append(self._trace_selector("dom", selector, nodes, next((node for node in nodes if safe_text(node)), None), note=f"{len(cleaned)} breadcrumbs"))
+            trace.append(
+                self._trace_selector(
+                    "dom",
+                    selector,
+                    nodes,
+                    next((node for node in nodes if safe_text(node)), None),
+                    note=f"{len(cleaned)} breadcrumbs",
+                )
+            )
             if cleaned:
                 return cleaned, f"dom:{selector}", confidence, trace
 
@@ -291,12 +364,32 @@ class ElectronetProductParser:
         trace: list[SelectorTraceEntry] = []
 
         nodes = soup.select("#cscp-sku")
-        text = next((safe_text(node) for node in nodes if re.fullmatch(r"\d{6}", safe_text(node))), "")
-        trace.append(self._trace_selector("dom", "#cscp-sku", nodes, next((node for node in nodes if re.fullmatch(r"\d{6}", safe_text(node))), None)))
+        text = next(
+            (
+                safe_text(node)
+                for node in nodes
+                if re.fullmatch(r"\d{6}", safe_text(node))
+            ),
+            "",
+        )
+        trace.append(
+            self._trace_selector(
+                "dom",
+                "#cscp-sku",
+                nodes,
+                next(
+                    (node for node in nodes if re.fullmatch(r"\d{6}", safe_text(node))),
+                    None,
+                ),
+            )
+        )
         if text:
             return text, "dom:#cscp-sku", 0.99, trace
 
-        for selector, confidence in [("article.product-page[data-sku]", 0.98), ("[data-sku]", 0.95)]:
+        for selector, confidence in [
+            ("article.product-page[data-sku]", 0.98),
+            ("[data-sku]", 0.95),
+        ]:
             nodes = soup.select(selector)
             chosen = None
             value = ""
@@ -306,7 +399,9 @@ class ElectronetProductParser:
                     chosen = node
                     value = candidate
                     break
-            trace.append(self._trace_selector("dom_attr", selector, nodes, chosen, note=value))
+            trace.append(
+                self._trace_selector("dom_attr", selector, nodes, chosen, note=value)
+            )
             if value:
                 return value, f"dom_attr:{selector}", confidence, trace
 
@@ -345,7 +440,9 @@ class ElectronetProductParser:
             ("title", None, 0.8),
         ]:
             nodes = soup.select(selector)
-            chosen = next((node for node in nodes if self._node_attr_or_text(node, attr)), None)
+            chosen = next(
+                (node for node in nodes if self._node_attr_or_text(node, attr)), None
+            )
             trace.append(self._trace_selector("dom", selector, nodes, chosen))
             if chosen:
                 text = self._node_attr_or_text(chosen, attr)
@@ -370,15 +467,26 @@ class ElectronetProductParser:
 
         nodes = product_root.select("#product-brand-logo a")
         chosen = next((node for node in nodes if safe_text(node)), None)
-        trace.append(self._trace_selector("dom", "#product-brand-logo a", nodes, chosen))
+        trace.append(
+            self._trace_selector("dom", "#product-brand-logo a", nodes, chosen)
+        )
         if chosen:
             return safe_text(chosen), "dom:#product-brand-logo a", 0.99, trace
 
         nodes = product_root.select("#product-brand-logo img")
-        chosen = next((node for node in nodes if normalize_whitespace(node.get("alt"))), None)
-        trace.append(self._trace_selector("dom", "#product-brand-logo img", nodes, chosen))
+        chosen = next(
+            (node for node in nodes if normalize_whitespace(node.get("alt"))), None
+        )
+        trace.append(
+            self._trace_selector("dom", "#product-brand-logo img", nodes, chosen)
+        )
         if chosen:
-            return normalize_whitespace(chosen.get("alt")), "dom:#product-brand-logo img", 0.97, trace
+            return (
+                normalize_whitespace(chosen.get("alt")),
+                "dom:#product-brand-logo img",
+                0.97,
+                trace,
+            )
 
         for item in self._product_jsonld_items(jsonld):
             brand = item.get("brand") or item.get("manufacturer")
@@ -388,7 +496,14 @@ class ElectronetProductParser:
             if candidate:
                 return candidate, "jsonld:brand", 0.95, trace
 
-        compare_idx = next((idx for idx, line in enumerate(product_lines) if normalize_for_match(line) == normalize_for_match("Σύγκριση")), -1)
+        compare_idx = next(
+            (
+                idx
+                for idx, line in enumerate(product_lines)
+                if normalize_for_match(line) == normalize_for_match("Σύγκριση")
+            ),
+            -1,
+        )
         if compare_idx >= 0 and compare_idx + 1 < len(product_lines):
             candidate = normalize_whitespace(product_lines[compare_idx + 1])
             if candidate and len(candidate.split()) <= 3:
@@ -409,8 +524,13 @@ class ElectronetProductParser:
         trace: list[SelectorTraceEntry] = []
 
         nodes = product_root.select("#product-price .price")
-        chosen = next((node for node in nodes if parse_euro_price(safe_text(node)) is not None), None)
-        trace.append(self._trace_selector("dom", "#product-price .price", nodes, chosen))
+        chosen = next(
+            (node for node in nodes if parse_euro_price(safe_text(node)) is not None),
+            None,
+        )
+        trace.append(
+            self._trace_selector("dom", "#product-price .price", nodes, chosen)
+        )
         if chosen:
             text = safe_text(chosen)
             price = parse_euro_price(text)
@@ -428,8 +548,18 @@ class ElectronetProductParser:
                     except ValueError:
                         price = None
                 if price is not None:
-                    trace.append(self._trace_selector("dom_attr", "#product-price", nodes, node, note=candidate))
-                    return candidate, price, "dom_attr:#product-price[data-price]", 0.96, trace
+                    trace.append(
+                        self._trace_selector(
+                            "dom_attr", "#product-price", nodes, node, note=candidate
+                        )
+                    )
+                    return (
+                        candidate,
+                        price,
+                        "dom_attr:#product-price[data-price]",
+                        0.96,
+                        trace,
+                    )
         trace.append(self._trace_selector("dom_attr", "#product-price", nodes, None))
 
         for selector, attr, confidence in [
@@ -438,7 +568,9 @@ class ElectronetProductParser:
             ("[itemprop='price']", "content", 0.88),
         ]:
             nodes = soup.select(selector)
-            chosen = next((node for node in nodes if self._node_attr_or_text(node, attr)), None)
+            chosen = next(
+                (node for node in nodes if self._node_attr_or_text(node, attr)), None
+            )
             trace.append(self._trace_selector("dom", selector, nodes, chosen))
             if chosen:
                 text = normalize_whitespace(self._node_attr_or_text(chosen, attr))
@@ -469,8 +601,13 @@ class ElectronetProductParser:
                         pass
         return "", None, "missing", 0.0, trace
 
-    def _extract_installments_text(self, product_root: Tag | BeautifulSoup, product_lines: list[str]) -> str:
-        for selector in ["#product-price .prod-tags-freeinstallments", "#product-price li"]:
+    def _extract_installments_text(
+        self, product_root: Tag | BeautifulSoup, product_lines: list[str]
+    ) -> str:
+        for selector in [
+            "#product-price .prod-tags-freeinstallments",
+            "#product-price li",
+        ]:
             for node in product_root.select(selector):
                 text = safe_text(node)
                 if INSTALLMENTS_RE.search(text):
@@ -480,12 +617,16 @@ class ElectronetProductParser:
                 return normalize_whitespace(line)
         return ""
 
-    def _extract_delivery_and_pickup(self, product_root: Tag | BeautifulSoup, product_lines: list[str]) -> tuple[str, str]:
+    def _extract_delivery_and_pickup(
+        self, product_root: Tag | BeautifulSoup, product_lines: list[str]
+    ) -> tuple[str, str]:
         delivery = ""
         pickup = ""
         for label_node in product_root.select(".cpa-label"):
             label = safe_text(label_node)
-            container = label_node.parent if isinstance(label_node.parent, Tag) else None
+            container = (
+                label_node.parent if isinstance(label_node.parent, Tag) else None
+            )
             if container is None:
                 continue
             lines = split_visible_lines(container.get_text("\n"))
@@ -498,9 +639,13 @@ class ElectronetProductParser:
             return delivery, pickup
 
         for idx, line in enumerate(product_lines):
-            if normalize_for_match(line) == normalize_for_match("Παράδοση") and idx + 1 < len(product_lines):
+            if normalize_for_match(line) == normalize_for_match(
+                "Παράδοση"
+            ) and idx + 1 < len(product_lines):
                 delivery = product_lines[idx + 1]
-            if normalize_for_match(line) == normalize_for_match("Παραλαβή") and idx + 1 < len(product_lines):
+            if normalize_for_match(line) == normalize_for_match(
+                "Παραλαβή"
+            ) and idx + 1 < len(product_lines):
                 pickup = product_lines[idx + 1]
         return delivery, pickup
 
@@ -514,7 +659,10 @@ class ElectronetProductParser:
     ) -> tuple[str, str, float, list[SelectorTraceEntry]]:
         trace: list[SelectorTraceEntry] = []
 
-        for selector, confidence in [(".product-desc p", 0.95), (".product-desc", 0.91)]:
+        for selector, confidence in [
+            (".product-desc p", 0.95),
+            (".product-desc", 0.91),
+        ]:
             nodes = product_root.select(selector)
             chosen = next((node for node in nodes if safe_text(node)), None)
             trace.append(self._trace_selector("dom", selector, nodes, chosen))
@@ -527,15 +675,27 @@ class ElectronetProductParser:
             ("meta[name='twitter:description']", "content", 0.86),
         ]:
             nodes = soup.select(selector)
-            chosen = next((node for node in nodes if self._node_attr_or_text(node, attr)), None)
+            chosen = next(
+                (node for node in nodes if self._node_attr_or_text(node, attr)), None
+            )
             trace.append(self._trace_selector("dom", selector, nodes, chosen))
             if chosen:
-                return normalize_whitespace(self._node_attr_or_text(chosen, attr)), f"dom:{selector}", confidence, trace
+                return (
+                    normalize_whitespace(self._node_attr_or_text(chosen, attr)),
+                    f"dom:{selector}",
+                    confidence,
+                    trace,
+                )
 
         for item in self._product_jsonld_items(jsonld):
             description = item.get("description")
             if description:
-                return normalize_whitespace(str(description)), "jsonld:description", 0.88, trace
+                return (
+                    normalize_whitespace(str(description)),
+                    "jsonld:description",
+                    0.88,
+                    trace,
+                )
 
         start = 0
         if name and name in product_lines:
@@ -564,25 +724,42 @@ class ElectronetProductParser:
     ) -> tuple[list[SpecItem], str, float, list[SelectorTraceEntry]]:
         trace: list[SelectorTraceEntry] = []
         rows = product_root.select("#product-main-attributes .product-main-attribute")
-        trace.append(self._trace_selector("dom", "#product-main-attributes .product-main-attribute", rows, rows[0] if rows else None, note=f"{len(rows)} rows"))
+        trace.append(
+            self._trace_selector(
+                "dom",
+                "#product-main-attributes .product-main-attribute",
+                rows,
+                rows[0] if rows else None,
+                note=f"{len(rows)} rows",
+            )
+        )
         if rows:
             items: list[SpecItem] = []
             for row in rows:
                 label = safe_text(row.select_one(".my-label"))
                 value = safe_text(row.select_one(".my-value"))
                 if label and value:
-                    items.append(SpecItem(label=label, value=nullify_dash_values(value)))
+                    items.append(
+                        SpecItem(label=label, value=nullify_dash_values(value))
+                    )
             items = self._dedupe_spec_items(items)
             if items:
                 confidence = 0.94 if len(items) >= 3 else 0.84
-                return items, "dom:#product-main-attributes .product-main-attribute", confidence, trace
+                return (
+                    items,
+                    "dom:#product-main-attributes .product-main-attribute",
+                    confidence,
+                    trace,
+                )
 
         items = self._extract_key_specs_from_lines(product_lines, name)
         if items:
             return items, "lines:product_scope", 0.5, trace
         return [], "missing", 0.0, trace
 
-    def _extract_key_specs_from_lines(self, product_lines: list[str], name: str) -> list[SpecItem]:
+    def _extract_key_specs_from_lines(
+        self, product_lines: list[str], name: str
+    ) -> list[SpecItem]:
         items: list[SpecItem] = []
         start = 0
         if name and name in product_lines:
@@ -598,7 +775,12 @@ class ElectronetProductParser:
                 normalize_for_match("Τεχνικά Χαρακτηριστικά"),
             }:
                 break
-            if len(line) >= 40 and not hero_seen and not PRICE_RE.search(line) and not INSTALLMENTS_RE.search(line):
+            if (
+                len(line) >= 40
+                and not hero_seen
+                and not PRICE_RE.search(line)
+                and not INSTALLMENTS_RE.search(line)
+            ):
                 hero_seen = True
                 idx += 1
                 continue
@@ -625,8 +807,12 @@ class ElectronetProductParser:
         soup: BeautifulSoup,
     ) -> tuple[str, str, int, str, float, list[SelectorTraceEntry]]:
         trace: list[SelectorTraceEntry] = []
-        all_blocks = product_root.select("#product-presentation .ck-text.whole, #product-presentation .ck-text.inline")
-        inline_blocks = [block for block in all_blocks if "inline" in (block.get("class") or [])]
+        all_blocks = product_root.select(
+            "#product-presentation .ck-text.whole, #product-presentation .ck-text.inline"
+        )
+        inline_blocks = [
+            block for block in all_blocks if "inline" in (block.get("class") or [])
+        ]
         trace.append(
             self._trace_selector(
                 "dom",
@@ -654,7 +840,9 @@ class ElectronetProductParser:
             return html, text, count, "headings:Παρουσίαση Προϊόντος", 0.65, trace
         return "", "", 0, "missing", 0.0, trace
 
-    def _extract_presentation_between_headings(self, soup: BeautifulSoup) -> tuple[str, str]:
+    def _extract_presentation_between_headings(
+        self, soup: BeautifulSoup
+    ) -> tuple[str, str]:
         start_heading = self._find_heading(soup, "Παρουσίαση Προϊόντος")
         stop_heading = self._find_heading(soup, "Τεχνικά Χαρακτηριστικά")
         if not start_heading or not stop_heading:
@@ -691,7 +879,9 @@ class ElectronetProductParser:
         if sections:
             return sections, "dom:#product-details .prop-group-wrapper", 0.98, trace
 
-        sections, heading_trace = self._extract_spec_sections_from_heading_dom(product_root)
+        sections, heading_trace = self._extract_spec_sections_from_heading_dom(
+            product_root
+        )
         trace.extend(heading_trace)
         if sections:
             return sections, "dom:headings", 0.8, trace
@@ -723,9 +913,15 @@ class ElectronetProductParser:
                 continue
             items: list[SpecItem] = []
             for row in wrapper.select(".property"):
-                cells = [safe_text(cell) for cell in row.find_all(["div", "span"], recursive=False) if safe_text(cell)]
+                cells = [
+                    safe_text(cell)
+                    for cell in row.find_all(["div", "span"], recursive=False)
+                    if safe_text(cell)
+                ]
                 if len(cells) >= 2:
-                    items.append(SpecItem(label=cells[0], value=nullify_dash_values(cells[-1])))
+                    items.append(
+                        SpecItem(label=cells[0], value=nullify_dash_values(cells[-1]))
+                    )
             if items:
                 sections.append(SpecSection(section=title, items=items))
         return sections, trace
@@ -769,13 +965,22 @@ class ElectronetProductParser:
             if node.name == "tr":
                 cells = [safe_text(cell) for cell in node.find_all(["th", "td"])]
                 if len(cells) >= 2:
-                    current.items.append(SpecItem(label=cells[0], value=nullify_dash_values(cells[1])))
+                    current.items.append(
+                        SpecItem(label=cells[0], value=nullify_dash_values(cells[1]))
+                    )
             elif node.name == "dt":
                 sibling = node.find_next_sibling("dd")
-                current.items.append(SpecItem(label=safe_text(node), value=nullify_dash_values(safe_text(sibling))))
+                current.items.append(
+                    SpecItem(
+                        label=safe_text(node),
+                        value=nullify_dash_values(safe_text(sibling)),
+                    )
+                )
         return [section for section in sections if section.items], trace
 
-    def _extract_spec_sections_from_lines(self, text_lines: list[str]) -> list[SpecSection]:
+    def _extract_spec_sections_from_lines(
+        self, text_lines: list[str]
+    ) -> list[SpecSection]:
         marker = "Τεχνικά Χαρακτηριστικά"
         if marker not in text_lines:
             return []
@@ -802,11 +1007,16 @@ class ElectronetProductParser:
                 idx += 1
                 continue
             next_line = text_lines[idx + 1]
-            if self._is_section_title(next_line) or normalize_for_match(next_line) in STOP_HEADINGS:
+            if (
+                self._is_section_title(next_line)
+                or normalize_for_match(next_line) in STOP_HEADINGS
+            ):
                 current.items.append(SpecItem(label=label, value=None))
                 idx += 1
                 continue
-            current.items.append(SpecItem(label=label, value=nullify_dash_values(next_line)))
+            current.items.append(
+                SpecItem(label=label, value=nullify_dash_values(next_line))
+            )
             idx += 2
         return [section for section in sections if section.items]
 
@@ -843,9 +1053,16 @@ class ElectronetProductParser:
         if nodes:
             ordered_urls = dedupe_urls_preserve_order(
                 [
-                    make_absolute_url(node.get("src") or node.get("data-src") or node.get("data-original"), url)
+                    make_absolute_url(
+                        node.get("src")
+                        or node.get("data-src")
+                        or node.get("data-original"),
+                        url,
+                    )
                     for node in nodes
-                    if node.get("src") or node.get("data-src") or node.get("data-original")
+                    if node.get("src")
+                    or node.get("data-src")
+                    or node.get("data-original")
                 ]
             )
             out: list[GalleryImage] = []
@@ -854,17 +1071,28 @@ class ElectronetProductParser:
                     (
                         item
                         for item in nodes
-                        if make_absolute_url(item.get("src") or item.get("data-src") or item.get("data-original"), url) == image_url
+                        if make_absolute_url(
+                            item.get("src")
+                            or item.get("data-src")
+                            or item.get("data-original"),
+                            url,
+                        )
+                        == image_url
                     ),
                     None,
                 )
-                alt = normalize_whitespace((node.get("alt") if node else "") or (node.get("title") if node else ""))
+                alt = normalize_whitespace(
+                    (node.get("alt") if node else "")
+                    or (node.get("title") if node else "")
+                )
                 out.append(GalleryImage(url=image_url, alt=alt, position=position))
             if out:
                 return out, "dom:img.lightbox", 0.96, trace
 
         scored: list[tuple[int, int, str, str]] = []
-        product_tokens = [token for token in normalize_for_match(name).split() if len(token) > 2][:8]
+        product_tokens = [
+            token for token in normalize_for_match(name).split() if len(token) > 2
+        ][:8]
         brand_token = normalize_for_match(brand)
         for position, img in enumerate((product_root or soup).find_all("img"), start=1):
             src = img.get("src") or img.get("data-src") or img.get("data-original")
@@ -884,7 +1112,17 @@ class ElectronetProductParser:
                 score += 1
             if "lightbox" in normalize_whitespace(img.get("class")):
                 score += 3
-            bad = ["logo", "icon", "energy", "share", "facebook", "twitter", "payment", "visa", "mastercard"]
+            bad = [
+                "logo",
+                "icon",
+                "energy",
+                "share",
+                "facebook",
+                "twitter",
+                "payment",
+                "visa",
+                "mastercard",
+            ]
             if any(token in haystack for token in bad):
                 score -= 5
             if score > 0:
@@ -909,10 +1147,14 @@ class ElectronetProductParser:
         product_sheet = ""
         for scope in [product_root, soup]:
             for trigger in scope.select(".eprel-modal-trigger"):
-                label_candidate = self._resolve_eprel_asset_url(trigger.get("data-label-url"), url)
+                label_candidate = self._resolve_eprel_asset_url(
+                    trigger.get("data-label-url"), url
+                )
                 if label_candidate and not energy_label:
                     energy_label = label_candidate
-                sheet_candidate = self._resolve_eprel_asset_url(trigger.get("data-pdf-url"), url)
+                sheet_candidate = self._resolve_eprel_asset_url(
+                    trigger.get("data-pdf-url"), url
+                )
                 if sheet_candidate and not product_sheet:
                     product_sheet = sheet_candidate
             for link in scope.find_all("a", href=True):
@@ -920,9 +1162,16 @@ class ElectronetProductParser:
                 img = link.find("img")
                 img_alt = normalize_for_match(img.get("alt") if img else "")
                 href = make_absolute_url(link["href"], url)
-                if ("δελτίο προϊόντος" in text or "product sheet" in text) and href != url and not product_sheet:
+                if (
+                    ("δελτίο προϊόντος" in text or "product sheet" in text)
+                    and href != url
+                    and not product_sheet
+                ):
                     product_sheet = href
-                if any(token in f"{text} {img_alt}" for token in ["energy class", "ενεργειακ", "ενεργειακή κλάση"]):
+                if any(
+                    token in f"{text} {img_alt}"
+                    for token in ["energy class", "ενεργειακ", "ενεργειακή κλάση"]
+                ):
                     if img and img.get("src") and not energy_label:
                         energy_label = make_absolute_url(img["src"], url)
             if energy_label or product_sheet:
@@ -989,7 +1238,9 @@ class ElectronetProductParser:
 
     def _extract_model_token_from_title(self, name: str) -> str:
         tokens = self._title_tokens(name)
-        return self._select_best_model_token(tokens) or self._select_best_model_sequence(tokens)
+        return self._select_best_model_token(
+            tokens
+        ) or self._select_best_model_sequence(tokens)
 
     def _title_tokens(self, name: str) -> list[str]:
         tokens: list[str] = []
@@ -1037,7 +1288,9 @@ class ElectronetProductParser:
         combined = "".join(tokens)
         if PURE_NUMERIC_TOKEN_RE.fullmatch(combined):
             return 0
-        if not any(ch.isalpha() for ch in combined) or not any(ch.isdigit() for ch in combined):
+        if not any(ch.isalpha() for ch in combined) or not any(
+            ch.isdigit() for ch in combined
+        ):
             return 0
         score = 20 + len(combined)
         if tokens[0][0].isalpha():
@@ -1064,7 +1317,9 @@ class ElectronetProductParser:
             return 0
         if not all(ch.isalnum() or ch in "._/-" for ch in upper):
             return 0
-        if not any(ch.isalpha() for ch in upper) or not any(ch.isdigit() for ch in upper):
+        if not any(ch.isalpha() for ch in upper) or not any(
+            ch.isdigit() for ch in upper
+        ):
             return 0
         score = 10
         if any(ch.isalpha() for ch in upper):
@@ -1193,7 +1448,12 @@ class ElectronetProductParser:
         if node is None:
             return ""
         if node.name == "img":
-            src = node.get("src") or node.get("data-src") or node.get("data-original") or ""
+            src = (
+                node.get("src")
+                or node.get("data-src")
+                or node.get("data-original")
+                or ""
+            )
             alt = node.get("alt") or ""
             return normalize_whitespace(f"{alt} {src}")[:160]
         return safe_text(node)[:160]

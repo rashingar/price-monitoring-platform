@@ -13,14 +13,31 @@ from ecommerce.db.models.price_monitoring import MonitoringRun  # noqa: E402
 from ecommerce.db.models.products import ProductSource  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.repositories.alerts import create_alert_rule  # noqa: E402
-from ecommerce.db.repositories.capture_persistence import persist_capture_result  # noqa: E402,F401
+from ecommerce.db.repositories.capture_persistence import (
+    persist_capture_result,
+)  # noqa: E402,F401
 from ecommerce.db.repositories.common import json_safe_value  # noqa: E402
-from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id  # noqa: E402
-from ecommerce.db.repositories.price_monitoring import get_monitoring_run, monitoring_run_to_dict  # noqa: E402
+from ecommerce.db.repositories.jobs import (
+    create_queued_job,
+    get_job_by_id,
+)  # noqa: E402
+from ecommerce.db.repositories.price_monitoring import (
+    get_monitoring_run,
+    monitoring_run_to_dict,
+)  # noqa: E402
 from ecommerce.db.repositories.products import product_source_to_dict  # noqa: E402
-from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source  # noqa: E402
-from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, get_active_catalog_product, source_url_to_dict  # noqa: E402
-from ecommerce.db.repositories.vendor_sources import create_vendor_source_capture_run_row, vendor_source_capture_run_to_dict  # noqa: E402
+from ecommerce.db.repositories.source_convergence import (
+    sync_source_url_to_product_source,
+)  # noqa: E402
+from ecommerce.db.repositories.source_urls import (
+    create_or_update_imported_source_url,
+    get_active_catalog_product,
+    source_url_to_dict,
+)  # noqa: E402
+from ecommerce.db.repositories.vendor_sources import (
+    create_vendor_source_capture_run_row,
+    vendor_source_capture_run_to_dict,
+)  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 
 
@@ -83,10 +100,14 @@ def test_repository_domain_imports_and_representative_behavior(tmp_path: Path) -
         assert get_monitoring_run(session, "run-1") is monitoring_run
         assert monitoring_run_to_dict(monitoring_run)["run_id"] == "run-1"
 
-        alert_rule = create_alert_rule(session, {"product_id": product_source.product_id, "threshold_amount": "1"})
+        alert_rule = create_alert_rule(
+            session, {"product_id": product_source.product_id, "threshold_amount": "1"}
+        )
         assert isinstance(alert_rule, AlertRule)
 
-        job = create_queued_job(session, job_type="diagnostic", payload={"ok": True}, job_id="job-1")
+        job = create_queued_job(
+            session, job_type="diagnostic", payload={"ok": True}, job_id="job-1"
+        )
         assert isinstance(job, EcommerceJob)
         assert get_job_by_id(session, "job-1") is job
 
@@ -119,4 +140,6 @@ def test_repository_package_does_not_reexport_helpers() -> None:
     }
 
     assert repository_package.__all__ == []
-    assert [name for name in sorted(removed_exports) if hasattr(repository_package, name)] == []
+    assert [
+        name for name in sorted(removed_exports) if hasattr(repository_package, name)
+    ] == []

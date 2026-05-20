@@ -83,14 +83,18 @@ def candidate_review_panel_payload(row: SourceUrlCandidate) -> dict[str, Any]:
     }
 
 
-def source_url_promotion_to_dict(promotion: SourceUrlCandidatePromotionResult | None) -> dict[str, Any] | None:
+def source_url_promotion_to_dict(
+    promotion: SourceUrlCandidatePromotionResult | None,
+) -> dict[str, Any] | None:
     if promotion is None:
         return None
     return {
         "action": promotion.action,
         "source_url_id": promotion.source_url_id,
         "changed_fields": list(promotion.changed_fields),
-        "item": source_url_to_dict(promotion.row) if promotion.row is not None else None,
+        "item": (
+            source_url_to_dict(promotion.row) if promotion.row is not None else None
+        ),
     }
 
 

@@ -5,10 +5,15 @@ from __future__ import annotations
 import re
 from urllib.parse import urlsplit
 
-from ecommerce.product_factory_source_resolution.config import PreferredSourceConfig, SourceResolutionConfig
+from ecommerce.product_factory_source_resolution.config import (
+    PreferredSourceConfig,
+    SourceResolutionConfig,
+)
 
 
-def classify_supported_product_url(url: str, config: SourceResolutionConfig) -> tuple[PreferredSourceConfig, str] | None:
+def classify_supported_product_url(
+    url: str, config: SourceResolutionConfig
+) -> tuple[PreferredSourceConfig, str] | None:
     source = config.classify_url(url)
     if source is None:
         return None
@@ -57,9 +62,14 @@ def matches_product_pattern(url: str, path: str, patterns: tuple[str, ...]) -> b
         if pattern == "/":
             return True
         try:
-            if re.search(pattern, url, flags=re.IGNORECASE) or re.search(pattern, path, flags=re.IGNORECASE):
+            if re.search(pattern, url, flags=re.IGNORECASE) or re.search(
+                pattern, path, flags=re.IGNORECASE
+            ):
                 return True
         except re.error:
-            if pattern.casefold() in path.casefold() or pattern.casefold() in url.casefold():
+            if (
+                pattern.casefold() in path.casefold()
+                or pattern.casefold() in url.casefold()
+            ):
                 return True
     return False

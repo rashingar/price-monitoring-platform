@@ -10,7 +10,11 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from ecommerce.db.config import DatabaseNotConfiguredError, get_database_url, is_database_configured
+from ecommerce.db.config import (
+    DatabaseNotConfiguredError,
+    get_database_url,
+    is_database_configured,
+)
 
 
 @lru_cache(maxsize=4)
@@ -26,7 +30,12 @@ def get_engine(database_url: str | None = None) -> Engine:
 
 
 def create_session_factory(database_url: str | None = None) -> sessionmaker[Session]:
-    return sessionmaker(bind=get_engine(database_url), autoflush=False, expire_on_commit=False, future=True)
+    return sessionmaker(
+        bind=get_engine(database_url),
+        autoflush=False,
+        expire_on_commit=False,
+        future=True,
+    )
 
 
 @contextmanager
@@ -49,4 +58,9 @@ def check_database_reachable(database_url: str | None = None) -> dict[str, objec
     engine = get_engine(database_url)
     with engine.connect() as connection:
         connection.execute(text("select 1"))
-    return {"configured": True, "reachable": True, "dialect": engine.dialect.name, "error": None}
+    return {
+        "configured": True,
+        "reachable": True,
+        "dialect": engine.dialect.name,
+        "error": None,
+    }

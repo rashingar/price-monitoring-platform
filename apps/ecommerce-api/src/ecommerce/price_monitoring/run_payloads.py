@@ -7,7 +7,10 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 
 from ecommerce.price_monitoring.review import PriceActionInput
-from ecommerce.price_monitoring.selection import PriceMonitoringFilters, PriceMonitoringSelectionRequest
+from ecommerce.price_monitoring.selection import (
+    PriceMonitoringFilters,
+    PriceMonitoringSelectionRequest,
+)
 
 
 class PriceMonitoringFiltersRequest(BaseModel):
@@ -28,7 +31,9 @@ class PriceMonitoringSelectionApiRequest(BaseModel):
     source_name: str | None = None
     vendor_slug: str | None = None
     source_filter: str | None = None
-    filters: PriceMonitoringFiltersRequest = Field(default_factory=PriceMonitoringFiltersRequest)
+    filters: PriceMonitoringFiltersRequest = Field(
+        default_factory=PriceMonitoringFiltersRequest
+    )
     selected_models: list[str] = Field(default_factory=list)
     excluded_models: list[str] = Field(default_factory=list)
     include_ignored: bool = False

@@ -16,21 +16,30 @@ from ecommerce.price_monitoring.fetch_run import (  # noqa: E402
     run_price_monitoring_fetch,
 )
 from ecommerce.vendor_sources.capture import SourceUrlCaptureRunResult  # noqa: E402
-from ecommerce.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
-from test_price_monitoring_execution_utils import install_fake_execution_child  # noqa: E402
+from ecommerce.price_monitoring.fetch_execution import (
+    wait_for_worker_idle,
+)  # noqa: E402
+from test_price_monitoring_execution_utils import (
+    install_fake_execution_child,
+)  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 def _allow_monitoring_api_without_real_db(monkeypatch):
-    monkeypatch.setattr(routes_price_monitoring, "require_database_ready_for_price_monitoring", lambda: None)
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "require_database_ready_for_price_monitoring",
+        lambda: None,
+    )
 
 
-def _write_run(run_dir: Path, *, source: str = "skroutz", input_csv: bool = True) -> None:
+def _write_run(
+    run_dir: Path, *, source: str = "skroutz", input_csv: bool = True
+) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     if input_csv:
         (run_dir / "input.csv").write_text(
-            "model,mpn,name,price\n"
-            "005606,MPN-1,Product One,123.45\n",
+            "model,mpn,name,price\n" "005606,MPN-1,Product One,123.45\n",
             encoding="utf-8",
         )
     (run_dir / "selection_summary.json").write_text(
@@ -39,7 +48,9 @@ def _write_run(run_dir: Path, *, source: str = "skroutz", input_csv: bool = True
     )
 
 
-def _fake_source_capture_result(run_dir: Path, source: str = "skroutz") -> SourceUrlCaptureRunResult:
+def _fake_source_capture_result(
+    run_dir: Path, source: str = "skroutz"
+) -> SourceUrlCaptureRunResult:
     return SourceUrlCaptureRunResult(
         status="completed",
         used_source_urls=True,
@@ -62,18 +73,25 @@ def _fake_source_capture_result(run_dir: Path, source: str = "skroutz") -> Sourc
 def _install_fake_source_capture(monkeypatch) -> dict[str, str]:
     captured: dict[str, str] = {}
 
-    def fake_capture(run_dir: Path, source: str, **_kwargs) -> SourceUrlCaptureRunResult:
+    def fake_capture(
+        run_dir: Path, source: str, **_kwargs
+    ) -> SourceUrlCaptureRunResult:
         captured["source"] = source
         result = _fake_source_capture_result(Path(run_dir), source)
         result.result_path.write_text(json.dumps(result.to_dict()), encoding="utf-8")
         return result
 
-    monkeypatch.setattr("ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
+    monkeypatch.setattr(
+        "ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run",
+        fake_capture,
+    )
     return captured
 
 
 def _install_missing_source_capture(monkeypatch) -> None:
-    def fake_capture(run_dir: Path, source: str, **_kwargs) -> SourceUrlCaptureRunResult:
+    def fake_capture(
+        run_dir: Path, source: str, **_kwargs
+    ) -> SourceUrlCaptureRunResult:
         return SourceUrlCaptureRunResult(
             status="no_active_source_urls",
             used_source_urls=False,
@@ -92,11 +110,16 @@ def _install_missing_source_capture(monkeypatch) -> None:
             observation_batch_id="vendor-capture-missing",
         )
 
-    monkeypatch.setattr("ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
+    monkeypatch.setattr(
+        "ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run",
+        fake_capture,
+    )
 
 
 def _install_all_failed_source_capture(monkeypatch) -> None:
-    def fake_capture(run_dir: Path, source: str, **_kwargs) -> SourceUrlCaptureRunResult:
+    def fake_capture(
+        run_dir: Path, source: str, **_kwargs
+    ) -> SourceUrlCaptureRunResult:
         return SourceUrlCaptureRunResult(
             status="completed_with_failures",
             used_source_urls=True,
@@ -108,17 +131,28 @@ def _install_all_failed_source_capture(monkeypatch) -> None:
             succeeded_count=0,
             failed_count=1,
             warnings=[],
-            items=[{"product_source_id": 1, "status": "failed", "error_code": "VENDOR_NOT_IMPLEMENTED"}],
+            items=[
+                {
+                    "product_source_id": 1,
+                    "status": "failed",
+                    "error_code": "VENDOR_NOT_IMPLEMENTED",
+                }
+            ],
             source_urls=[{"id": 1, "status": "active", "source_name": source}],
             result_path=Path(run_dir) / "source_url_capture_result.json",
             run_id="vendor-capture-failed",
             observation_batch_id="vendor-capture-failed",
         )
 
-    monkeypatch.setattr("ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run", fake_capture)
+    monkeypatch.setattr(
+        "ecommerce.price_monitoring.fetch_run.capture_selected_source_urls_for_run",
+        fake_capture,
+    )
 
 
-def test_source_is_read_from_selection_summary_when_not_supplied(tmp_path: Path, monkeypatch) -> None:
+def test_source_is_read_from_selection_summary_when_not_supplied(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir, source="bestprice")
     captured = _install_fake_source_capture(monkeypatch)
@@ -130,7 +164,9 @@ def test_source_is_read_from_selection_summary_when_not_supplied(tmp_path: Path,
     assert result.fetch_input_mode == "source_urls"
 
 
-def test_explicit_source_overrides_selection_summary(tmp_path: Path, monkeypatch) -> None:
+def test_explicit_source_overrides_selection_summary(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir, source="skroutz")
     captured = _install_fake_source_capture(monkeypatch)
@@ -141,7 +177,9 @@ def test_explicit_source_overrides_selection_summary(tmp_path: Path, monkeypatch
     assert result.source == "bestprice"
 
 
-def test_successful_fetch_writes_fetch_result_json_and_does_not_call_legacy_fetch(tmp_path: Path, monkeypatch) -> None:
+def test_successful_fetch_writes_fetch_result_json_and_does_not_call_legacy_fetch(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)
     _install_fake_source_capture(monkeypatch)
@@ -168,7 +206,9 @@ def test_successful_fetch_writes_fetch_result_json_and_does_not_call_legacy_fetc
     assert payload["error"] == ""
 
 
-def test_price_monitoring_fetch_has_no_core_run_fetch_hook(tmp_path: Path, monkeypatch) -> None:
+def test_price_monitoring_fetch_has_no_core_run_fetch_hook(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)
     _install_fake_source_capture(monkeypatch)
@@ -180,7 +220,9 @@ def test_price_monitoring_fetch_has_no_core_run_fetch_hook(tmp_path: Path, monke
     assert result.fetch_input_mode == "source_urls"
 
 
-def test_fetch_missing_active_source_url_error_points_to_vendor_sources(tmp_path: Path, monkeypatch) -> None:
+def test_fetch_missing_active_source_url_error_points_to_vendor_sources(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)
     _install_missing_source_capture(monkeypatch)
@@ -193,7 +235,9 @@ def test_fetch_missing_active_source_url_error_points_to_vendor_sources(tmp_path
     assert exc_info.value.result is not None
 
 
-def test_fetch_all_failed_source_url_capture_is_failed_not_completed(tmp_path: Path, monkeypatch) -> None:
+def test_fetch_all_failed_source_url_capture_is_failed_not_completed(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     _write_run(run_dir)
     _install_all_failed_source_capture(monkeypatch)
@@ -208,10 +252,14 @@ def test_fetch_all_failed_source_url_capture_is_failed_not_completed(tmp_path: P
     assert exc_info.value.result.source_url_capture_failed_count == 1
 
 
-def test_missing_selection_summary_rejects_fetch_without_one_source(tmp_path: Path, monkeypatch) -> None:
+def test_missing_selection_summary_rejects_fetch_without_one_source(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run-1"
     run_dir.mkdir()
-    (run_dir / "input.csv").write_text("model,mpn,name,price\n005606,MPN-1,Product One,123.45\n", encoding="utf-8")
+    (run_dir / "input.csv").write_text(
+        "model,mpn,name,price\n005606,MPN-1,Product One,123.45\n", encoding="utf-8"
+    )
     _install_fake_source_capture(monkeypatch)
 
     with pytest.raises(ValueError) as exc_info:
@@ -289,12 +337,16 @@ def test_api_fetch_failure_returns_clear_error(tmp_path: Path, monkeypatch) -> N
 
     assert response.status_code == 202
     assert wait_for_worker_idle()
-    payload = TestClient(create_app()).get("/api/price-monitoring/runs/run-1/fetch").json()
+    payload = (
+        TestClient(create_app()).get("/api/price-monitoring/runs/run-1/fetch").json()
+    )
     assert payload["status"] == "failed"
     assert payload["error"] == "Fetch command failed"
 
 
-def test_api_successful_fetch_returns_artifacts_and_get_reads_fetch_result(tmp_path: Path, monkeypatch) -> None:
+def test_api_successful_fetch_returns_artifacts_and_get_reads_fetch_result(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)

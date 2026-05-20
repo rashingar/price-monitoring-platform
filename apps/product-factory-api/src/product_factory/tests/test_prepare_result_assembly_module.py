@@ -2,8 +2,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from product_factory.models import CLIInput, FetchResult, ParsedProduct, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
-from product_factory.prepare_result_assembly import PrepareResultAssemblyResult, assemble_prepare_result
+from product_factory.models import (
+    CLIInput,
+    FetchResult,
+    ParsedProduct,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
+from product_factory.prepare_result_assembly import (
+    PrepareResultAssemblyResult,
+    assemble_prepare_result,
+)
 from product_factory.prepare_scrape_persistence import PrepareScrapePersistenceInput
 from product_factory.repo_paths import SCHEMA_LIBRARY_PATH
 from product_factory.schema_matcher import SchemaMatcher
@@ -67,7 +78,9 @@ def _build_manufacturer_enrichment_stub() -> dict[str, object]:
     }
 
 
-def _build_persistence_input(tmp_path: Path, *, model: str) -> PrepareScrapePersistenceInput:
+def _build_persistence_input(
+    tmp_path: Path, *, model: str
+) -> PrepareScrapePersistenceInput:
     return PrepareScrapePersistenceInput(
         model=model,
         scrape_dir=tmp_path / model,
@@ -132,7 +145,9 @@ def _build_skroutz_tv_source() -> SourceProductData:
                     SpecItem(label="Ευκρίνεια", value="4K Ultra HD"),
                     SpecItem(label="Ρυθμός Ανανέωσης", value="50/60 Hz"),
                     SpecItem(label="Τύπος Panel", value="Direct LED"),
-                    SpecItem(label="Τύποι HDR", value="HDR10, HDR10+, Dolby Vision, HLG"),
+                    SpecItem(
+                        label="Τύποι HDR", value="HDR10, HDR10+, Dolby Vision, HLG"
+                    ),
                 ],
             ),
             SpecSection(
@@ -211,7 +226,10 @@ def _build_skroutz_hob_source() -> SourceProductData:
                     SpecItem(label="Τύπος εγκατάστασης", value="Εντοιχιζόμενη συσκευή"),
                     SpecItem(label="Τύπος λειτουργίας", value="Ηλεκτρική"),
                     SpecItem(label="Βασικό υλικό επιφανειών", value="Υαλοκεραμική"),
-                    SpecItem(label="Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα", value="4"),
+                    SpecItem(
+                        label="Συνολικός αριθμός ζωνών που μπορούν να χρησιμοποιηθούν ταυτόχρονα",
+                        value="4",
+                    ),
                 ],
             ),
             SpecSection(
@@ -248,8 +266,14 @@ def _build_parsed(source: SourceProductData) -> ParsedProduct:
     )
 
 
-def test_assemble_prepare_result_passes_effective_sections_and_schema_preferences(tmp_path: Path) -> None:
-    cli = _build_cli(tmp_path, model="344424", url="https://www.skroutz.gr/s/344424/Neff-T16BT60N0.html")
+def test_assemble_prepare_result_passes_effective_sections_and_schema_preferences(
+    tmp_path: Path,
+) -> None:
+    cli = _build_cli(
+        tmp_path,
+        model="344424",
+        url="https://www.skroutz.gr/s/344424/Neff-T16BT60N0.html",
+    )
     source = _build_skroutz_hob_source()
     parsed = _build_parsed(source)
     matcher_calls: list[dict[str, object]] = []
@@ -303,7 +327,14 @@ def test_assemble_prepare_result_passes_effective_sections_and_schema_preference
         section_warnings=[],
         section_image_candidates=[],
         section_image_urls_resolved=[],
-        section_extraction_window={"candidate_count": 0, "duplicate_signatures_skipped": 0, "selected_container_index": None, "start_anchor": "", "stop_anchor": "", "title_signature": []},
+        section_extraction_window={
+            "candidate_count": 0,
+            "duplicate_signatures_skipped": 0,
+            "selected_container_index": None,
+            "start_anchor": "",
+            "stop_anchor": "",
+            "title_signature": [],
+        },
         selected_besco_images=[],
         downloaded_besco=[],
         besco_warnings=[],
@@ -335,10 +366,14 @@ def test_assemble_prepare_result_passes_effective_sections_and_schema_preference
     ]
     assert result.schema_match.matched_schema_id == BUILT_IN_HOB_SCHEMA_ID
     assert result.schema_candidates[0]["source_files"] == ["esties.json"]
-    assert result.report["schema_preference"] == {"preferred_source_files": ["esties.json"]}
+    assert result.report["schema_preference"] == {
+        "preferred_source_files": ["esties.json"]
+    }
 
 
-def test_assemble_prepare_result_pins_normalized_and_report_payloads(tmp_path: Path) -> None:
+def test_assemble_prepare_result_pins_normalized_and_report_payloads(
+    tmp_path: Path,
+) -> None:
     source = _build_skroutz_tv_source()
     cli = _build_cli(tmp_path, model="143051", url=source.url)
     result = assemble_prepare_result(
@@ -347,7 +382,9 @@ def test_assemble_prepare_result_pins_normalized_and_report_payloads(tmp_path: P
         fetch=_build_fetch(cli.url),
         parsed=_build_parsed(source),
         taxonomy=_build_tv_taxonomy(),
-        taxonomy_candidates=[{"taxonomy_path": "ΕΙΚΟΝΑ & ΗΧΟΣ > Τηλεοράσεις > 50'' & άνω"}],
+        taxonomy_candidates=[
+            {"taxonomy_path": "ΕΙΚΟΝΑ & ΗΧΟΣ > Τηλεοράσεις > 50'' & άνω"}
+        ],
         manufacturer_enrichment=_build_manufacturer_enrichment_stub(),
         extracted_gallery_count=0,
         downloaded_gallery=[],
@@ -357,7 +394,14 @@ def test_assemble_prepare_result_pins_normalized_and_report_payloads(tmp_path: P
         section_warnings=[],
         section_image_candidates=[],
         section_image_urls_resolved=[],
-        section_extraction_window={"candidate_count": 0, "duplicate_signatures_skipped": 0, "selected_container_index": None, "start_anchor": "", "stop_anchor": "", "title_signature": []},
+        section_extraction_window={
+            "candidate_count": 0,
+            "duplicate_signatures_skipped": 0,
+            "selected_container_index": None,
+            "start_anchor": "",
+            "stop_anchor": "",
+            "title_signature": [],
+        },
         selected_besco_images=[],
         downloaded_besco=[],
         besco_warnings=[],
@@ -373,7 +417,10 @@ def test_assemble_prepare_result_pins_normalized_and_report_payloads(tmp_path: P
     assert result.schema_match.matched_schema_id == TV_TEMPLATE_SCHEMA_ID
     assert result.schema_match.score == 1.0
     assert "weak_schema_match" not in result.schema_match.warnings
-    assert result.schema_match.resolved_category_path == "ΕΙΚΟΝΑ & ΗΧΟΣ > Τηλεοράσεις > 50'' & άνω"
+    assert (
+        result.schema_match.resolved_category_path
+        == "ΕΙΚΟΝΑ & ΗΧΟΣ > Τηλεοράσεις > 50'' & άνω"
+    )
     assert result.schema_match.candidate_pool_size == 1
     assert result.schema_match.selected_template_id == "tileoraseis"
     assert result.schema_match.match_mode == "direct_single"
@@ -384,13 +431,19 @@ def test_assemble_prepare_result_pins_normalized_and_report_payloads(tmp_path: P
     assert result.schema_match.label_overlap_score >= 0.0
     assert result.normalized["llm_product"] == {"meta_keywords": ["Hisense", "55A6Q"]}
     assert result.normalized["csv_row"] == result.row
-    assert result.normalized["characteristics_diagnostics"]["matched_schema_id"] == TV_TEMPLATE_SCHEMA_ID
+    assert (
+        result.normalized["characteristics_diagnostics"]["matched_schema_id"]
+        == TV_TEMPLATE_SCHEMA_ID
+    )
     assert result.report["schema_resolution"] == result.schema_match.to_dict()
     assert result.report["schema_resolution"]["selected_template_id"] == "tileoraseis"
     assert result.report["schema_resolution"]["candidate_pool_size"] == 1
     assert result.report["critical_extractors"]["schema_match"] == "matched"
     assert "weak_schema_match" not in result.report["warnings"]
-    assert result.report["schema_candidates"][0]["matched_schema_id"] == TV_TEMPLATE_SCHEMA_ID
+    assert (
+        result.report["schema_candidates"][0]["matched_schema_id"]
+        == TV_TEMPLATE_SCHEMA_ID
+    )
     assert result.report["files_written"] == [
         str(tmp_path / cli.model / f"{cli.model}.raw.html"),
         str(tmp_path / cli.model / f"{cli.model}.source.json"),
@@ -399,7 +452,9 @@ def test_assemble_prepare_result_pins_normalized_and_report_payloads(tmp_path: P
     ]
 
 
-def test_assemble_prepare_result_preserves_no_spec_sections_semantics(tmp_path: Path) -> None:
+def test_assemble_prepare_result_preserves_no_spec_sections_semantics(
+    tmp_path: Path,
+) -> None:
     source = _build_no_specs_source()
     cli = _build_cli(tmp_path, model="000001", url=source.url)
     result = assemble_prepare_result(
@@ -418,7 +473,14 @@ def test_assemble_prepare_result_preserves_no_spec_sections_semantics(tmp_path: 
         section_warnings=[],
         section_image_candidates=[],
         section_image_urls_resolved=[],
-        section_extraction_window={"candidate_count": 0, "duplicate_signatures_skipped": 0, "selected_container_index": None, "start_anchor": "", "stop_anchor": "", "title_signature": []},
+        section_extraction_window={
+            "candidate_count": 0,
+            "duplicate_signatures_skipped": 0,
+            "selected_container_index": None,
+            "start_anchor": "",
+            "stop_anchor": "",
+            "title_signature": [],
+        },
         selected_besco_images=[],
         downloaded_besco=[],
         besco_warnings=[],
@@ -437,7 +499,9 @@ def test_assemble_prepare_result_preserves_no_spec_sections_semantics(tmp_path: 
     assert result.schema_match.selected_template_id is None
     assert result.schema_match.fail_reason == "no_safe_template_match"
     assert result.normalized["schema_match"] == result.schema_match.to_dict()
-    assert result.normalized["characteristics_diagnostics"]["mode"] == "raw_spec_sections"
+    assert (
+        result.normalized["characteristics_diagnostics"]["mode"] == "raw_spec_sections"
+    )
     assert result.report["critical_extractors"]["taxonomy"] == "unresolved"
     assert result.report["critical_extractors"]["schema_match"] == "none"
     assert result.report["warnings"] == [

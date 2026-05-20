@@ -31,7 +31,11 @@ from ..tools.sync_filter_map import (
 )
 from ..utils import ensure_directory, read_json, utcnow_iso, write_json
 from .execution_models import PreparedProductContext
-from .filters_manager_service import _filter_persistence_lock, _persist_manual_and_sync, _utc_now
+from .filters_manager_service import (
+    _filter_persistence_lock,
+    _persist_manual_and_sync,
+    _utc_now,
+)
 
 
 class PreparedArtifactsNotFoundError(RuntimeError):
@@ -64,14 +68,22 @@ def get_filter_review_state(model: str) -> FilterReviewResponse:
     return _build_state(context, review_payload=review_payload)
 
 
-def save_filter_review(model: str, request: FilterReviewUpdateRequest) -> FilterReviewResponse:
+def save_filter_review(
+    model: str, request: FilterReviewUpdateRequest
+) -> FilterReviewResponse:
     context = _load_prepared_review_context(model)
     if context.filter_category is None:
         raise ValueError(f"Filter category not found for model {model}.")
 
     previous_payload = load_category_filter_review_payload(context.model_root)
-    previous_values = _canonical_review_values(previous_payload, context.filter_category)
-    warnings = list(previous_payload.get("warnings", [])) if isinstance(previous_payload, dict) else []
+    previous_values = _canonical_review_values(
+        previous_payload, context.filter_category
+    )
+    warnings = (
+        list(previous_payload.get("warnings", []))
+        if isinstance(previous_payload, dict)
+        else []
+    )
 
     manual_result = _apply_global_updates(context, request)
     context.filter_map = manual_result.filter_map
@@ -84,25 +96,42 @@ def save_filter_review(model: str, request: FilterReviewUpdateRequest) -> Filter
 
     next_values = dict(previous_values)
     for update in request.values:
-        group = _find_group(context.filter_category, group_id=update.group_id or "", group_name=update.group_name)
-        group_id = str(update.group_id or (group or {}).get("group_id") or stable_group_id(context.category_id, update.group_name))
+        group = _find_group(
+            context.filter_category,
+            group_id=update.group_id or "",
+            group_name=update.group_name,
+        )
+        group_id = str(
+            update.group_id
+            or (group or {}).get("group_id")
+            or stable_group_id(context.category_id, update.group_name)
+        )
         group_name = str((group or {}).get("name") or update.group_name)
         value = update.value.strip()
         next_values[group_id] = {
             "group_id": group_id,
             "group_name": group_name,
-            "value_id": _value_id_for(group, group_id=group_id, value=value, requested_value_id=update.value_id),
+            "value_id": _value_id_for(
+                group,
+                group_id=group_id,
+                value=value,
+                requested_value_id=update.value_id,
+            ),
             "value": value,
             "source": "manual_review",
         }
     for new_group in request.new_groups:
         group_id = stable_group_id(context.category_id, new_group.group_name)
         value = new_group.value.strip()
-        group = _find_group(context.filter_category, group_id=group_id, group_name=new_group.group_name)
+        group = _find_group(
+            context.filter_category, group_id=group_id, group_name=new_group.group_name
+        )
         next_values[group_id] = {
             "group_id": group_id,
             "group_name": str((group or {}).get("name") or new_group.group_name),
-            "value_id": _value_id_for(group, group_id=group_id, value=value, requested_value_id=None),
+            "value_id": _value_id_for(
+                group, group_id=group_id, value=value, requested_value_id=None
+            ),
             "value": value,
             "source": "manual_review",
         }
@@ -131,7 +160,11 @@ def approve_filter_review(model: str) -> FilterReviewResponse:
         values=_canonical_review_values(review_payload, context.filter_category),
         approved=True,
         approved_at=utcnow_iso(),
-        warnings=list(review_payload.get("warnings", [])) if isinstance(review_payload, dict) else [],
+        warnings=(
+            list(review_payload.get("warnings", []))
+            if isinstance(review_payload, dict)
+            else []
+        ),
     )
     _write_review_payload(context.review_path, payload)
     return _build_state(context, review_payload=payload)
@@ -140,8 +173,13 @@ def approve_filter_review(model: str) -> FilterReviewResponse:
 def _load_prepared_review_context(model: str) -> _PreparedReviewContext:
     model_root = repo_paths.model_root_path(model)
     prepared = PreparedProductContext.from_model(model, model_root=model_root)
-    if not prepared.source_json_path.exists() or not prepared.scrape_normalized_json_path.exists():
-        raise PreparedArtifactsNotFoundError(f"Prepared product artifacts not found for model {model}. Run prepare first.")
+    if (
+        not prepared.source_json_path.exists()
+        or not prepared.scrape_normalized_json_path.exists()
+    ):
+        raise PreparedArtifactsNotFoundError(
+            f"Prepared product artifacts not found for model {model}. Run prepare first."
+        )
 
     source = _load_source_product(prepared.source_json_path)
     normalized = read_json(prepared.scrape_normalized_json_path)
@@ -153,7 +191,9 @@ def _load_prepared_review_context(model: str) -> _PreparedReviewContext:
         category_id=taxonomy.category_id,
         taxonomy_path=taxonomy_path,
     )
-    category_id = str((filter_category or {}).get("category_id") or taxonomy.category_id or "")
+    category_id = str(
+        (filter_category or {}).get("category_id") or taxonomy.category_id or ""
+    )
     if filter_category and not taxonomy_path:
         taxonomy_path = str(filter_category.get("path", "") or "")
     return _PreparedReviewContext(
@@ -177,7 +217,11 @@ def _build_state(
     approved = bool(review_payload.get("approved"))
     approved_at = str(review_payload.get("approved_at") or "") or None
     review_values = coerce_category_filter_review_values(review_payload)
-    warnings = list(review_payload.get("warnings", [])) if isinstance(review_payload.get("warnings"), list) else []
+    warnings = (
+        list(review_payload.get("warnings", []))
+        if isinstance(review_payload.get("warnings"), list)
+        else []
+    )
     if context.filter_category is None:
         warnings.append("category_filter_map_entry_not_found")
         return FilterReviewResponse(
@@ -207,15 +251,24 @@ def _build_state(
         context.filter_category,
         review_values=review_values,
     )
-    render_missing = {group.group_id for group in render_resolution.groups if group.missing_required}
+    render_missing = {
+        group.group_id for group in render_resolution.groups if group.missing_required
+    }
 
     groups = [
-        _build_group_response(group, context.filter_category, review_values=review_values, render_missing=render_missing)
+        _build_group_response(
+            group,
+            context.filter_category,
+            review_values=review_values,
+            render_missing=render_missing,
+        )
         for group in display_resolution.groups
     ]
     render_block_reasons: list[str] = []
     render_blocked = False
-    missing_required_groups = [group for group in groups if group.group_id in render_missing]
+    missing_required_groups = [
+        group for group in groups if group.group_id in render_missing
+    ]
     merged_warnings = [*warnings, *display_resolution.warnings]
     if review_values and not approved:
         merged_warnings.append("category_filter_review_not_approved")
@@ -243,8 +296,19 @@ def _build_group_response(
     review_values: dict[str, str],
     render_missing: set[str],
 ) -> FilterReviewGroup:
-    group = _find_group(filter_category, group_id=group_resolution.group_id, group_name=group_resolution.group_name) or {}
-    reviewed_value = review_values.get(group_resolution.group_id) or review_values.get(group_resolution.group_name) or ""
+    group = (
+        _find_group(
+            filter_category,
+            group_id=group_resolution.group_id,
+            group_name=group_resolution.group_name,
+        )
+        or {}
+    )
+    reviewed_value = (
+        review_values.get(group_resolution.group_id)
+        or review_values.get(group_resolution.group_name)
+        or ""
+    )
     allowed_values = [
         FilterReviewValue(
             value_id=str(value.get("value_id", "") or ""),
@@ -260,12 +324,24 @@ def _build_group_response(
         required=group_resolution.required,
         status=group_resolution.group_status,
         allowed_values=allowed_values,
-        resolved_value=group_resolution.resolved_value if group_resolution.resolved_from != "approved_review" else "",
+        resolved_value=(
+            group_resolution.resolved_value
+            if group_resolution.resolved_from != "approved_review"
+            else ""
+        ),
         reviewed_value=reviewed_value,
         effective_value=group_resolution.resolved_value,
-        effective_value_id=_value_id_for(group, group_id=group_resolution.group_id, value=group_resolution.resolved_value),
+        effective_value_id=_value_id_for(
+            group,
+            group_id=group_resolution.group_id,
+            value=group_resolution.resolved_value,
+        ),
         value_status=group_resolution.value_status or None,
-        source="manual_review" if group_resolution.resolved_from == "approved_review" else group_resolution.resolved_from,
+        source=(
+            "manual_review"
+            if group_resolution.resolved_from == "approved_review"
+            else group_resolution.resolved_from
+        ),
         missing_required=group_resolution.group_id in render_missing,
         outside_allowed=group_resolution.outside_allowed,
         deprecated_value=group_resolution.deprecated_value,
@@ -274,17 +350,26 @@ def _build_group_response(
     )
 
 
-def _apply_global_updates(context: _PreparedReviewContext, request: FilterReviewUpdateRequest) -> _ManualUpdateResult:
+def _apply_global_updates(
+    context: _PreparedReviewContext, request: FilterReviewUpdateRequest
+) -> _ManualUpdateResult:
     should_update = request.add_new_values_globally
-    candidate_updates = [update for update in request.values if update.add_to_global and should_update]
+    candidate_updates = [
+        update for update in request.values if update.add_to_global and should_update
+    ]
     if not candidate_updates and not request.group_updates and not request.new_groups:
         return _ManualUpdateResult(filter_map=context.filter_map)
 
     with _filter_persistence_lock("filter_review_global_update"):
         manual = load_manual_overrides(repo_paths.FILTER_MAP_MANUAL_OVERRIDES_PATH)
-        category = deepcopy(context.filter_category) if context.filter_category else None
+        category = (
+            deepcopy(context.filter_category) if context.filter_category else None
+        )
         if category is None:
-            return _ManualUpdateResult(filter_map=context.filter_map, warnings=["category_filter_global_update_skipped_missing_category"])
+            return _ManualUpdateResult(
+                filter_map=context.filter_map,
+                warnings=["category_filter_global_update_skipped_missing_category"],
+            )
 
         category_override = manual.setdefault("categories", {}).setdefault(
             context.category_id,
@@ -295,31 +380,45 @@ def _apply_global_updates(context: _PreparedReviewContext, request: FilterReview
             },
         )
         category_override.setdefault("category_id", context.category_id)
-        category_override.setdefault("path", context.taxonomy_path or category.get("path", ""))
+        category_override.setdefault(
+            "path", context.taxonomy_path or category.get("path", "")
+        )
         groups_override = category_override.setdefault("groups", {})
         warnings: list[str] = []
         changed = False
 
         for update in candidate_updates:
-            group = _find_group(category, group_id=update.group_id or "", group_name=update.group_name)
+            group = _find_group(
+                category, group_id=update.group_id or "", group_name=update.group_name
+            )
             if group is None:
                 continue
-            added, duplicate_warning = _ensure_manual_value(groups_override, group, update.value, update.value_id)
+            added, duplicate_warning = _ensure_manual_value(
+                groups_override, group, update.value, update.value_id
+            )
             changed = changed or added
             if duplicate_warning:
                 warnings.append(duplicate_warning)
 
         for group_update in request.group_updates:
-            group = _find_group(category, group_id=group_update.group_id or "", group_name=group_update.group_name)
+            group = _find_group(
+                category,
+                group_id=group_update.group_id or "",
+                group_name=group_update.group_name,
+            )
             if group is None:
-                warnings.append(f"category_filter_group_update_skipped_missing_group:{group_update.group_name}")
+                warnings.append(
+                    f"category_filter_group_update_skipped_missing_group:{group_update.group_name}"
+                )
                 continue
             updated = _ensure_manual_group_update(groups_override, group, group_update)
             changed = changed or updated
 
         for new_group in request.new_groups:
             group_id = stable_group_id(context.category_id, new_group.group_name)
-            group = _find_group(category, group_id=group_id, group_name=new_group.group_name)
+            group = _find_group(
+                category, group_id=group_id, group_name=new_group.group_name
+            )
             if group is None:
                 group = {
                     "group_id": group_id,
@@ -339,7 +438,11 @@ def _apply_global_updates(context: _PreparedReviewContext, request: FilterReview
                     "values": {},
                 },
             )
-            for field_name, value in {"name": new_group.group_name, "required": new_group.required, "status": new_group.status}.items():
+            for field_name, value in {
+                "name": new_group.group_name,
+                "required": new_group.required,
+                "status": new_group.status,
+            }.items():
                 if group_override.get(field_name) != value:
                     group_override[field_name] = value
                     changed = True
@@ -373,8 +476,14 @@ def _ensure_manual_value(
     existing = _find_value(group, value=display_value, value_id=requested_value_id)
     if existing is not None:
         return False, None
-    normalized_duplicate = _find_value(group, value=display_value, value_id=None, normalized=True)
-    warning = f"normalized_duplicate_value_detected:{group.get('name')}:{display_value}" if normalized_duplicate else None
+    normalized_duplicate = _find_value(
+        group, value=display_value, value_id=None, normalized=True
+    )
+    warning = (
+        f"normalized_duplicate_value_detected:{group.get('name')}:{display_value}"
+        if normalized_duplicate
+        else None
+    )
     group_id = str(group.get("group_id", "") or "")
     value_id = requested_value_id or stable_value_id(group_id, display_value)
     group_override = groups_override.setdefault(
@@ -464,8 +573,14 @@ def _canonical_review_values(
     for key, item in values.items():
         if isinstance(item, dict):
             group_name = str(item.get("group_name", "") or "").strip()
-            group = _find_group(filter_category, group_id=str(item.get("group_id") or key or ""), group_name=group_name)
-            group_id = str((group or {}).get("group_id") or item.get("group_id") or key or "").strip()
+            group = _find_group(
+                filter_category,
+                group_id=str(item.get("group_id") or key or ""),
+                group_name=group_name,
+            )
+            group_id = str(
+                (group or {}).get("group_id") or item.get("group_id") or key or ""
+            ).strip()
             group_name = str((group or {}).get("name") or group_name).strip()
             value = str(item.get("value", "") or "").strip()
             if group_id and value:
@@ -474,7 +589,9 @@ def _canonical_review_values(
                     "group_name": group_name,
                     "value_id": str(item.get("value_id", "") or "").strip(),
                     "value": value,
-                    "source": str(item.get("source", "manual_review") or "manual_review"),
+                    "source": str(
+                        item.get("source", "manual_review") or "manual_review"
+                    ),
                 }
             continue
         group_name = str(key or "").strip()
@@ -498,7 +615,9 @@ def _write_review_payload(path: Path, payload: dict[str, Any]) -> None:
     write_json(path, payload)
 
 
-def _find_group(category: dict[str, Any] | None, *, group_id: str = "", group_name: str = "") -> dict[str, Any] | None:
+def _find_group(
+    category: dict[str, Any] | None, *, group_id: str = "", group_name: str = ""
+) -> dict[str, Any] | None:
     if not category:
         return None
     normalized_name = normalize_for_match(group_name)
@@ -510,7 +629,11 @@ def _find_group(category: dict[str, Any] | None, *, group_id: str = "", group_na
         if group_name and group.get("name") == group_name:
             return group
     for group in category.get("filter_groups", []):
-        if isinstance(group, dict) and normalized_name and normalize_for_match(group.get("name", "")) == normalized_name:
+        if (
+            isinstance(group, dict)
+            and normalized_name
+            and normalize_for_match(group.get("name", "")) == normalized_name
+        ):
             return group
     return None
 
@@ -556,7 +679,9 @@ def _value_id_for(
 def _load_source_product(path: Path) -> SourceProductData:
     payload = read_json(path)
     source_fields = {field.name for field in fields(SourceProductData)}
-    clean_payload = {key: value for key, value in payload.items() if key in source_fields}
+    clean_payload = {
+        key: value for key, value in payload.items() if key in source_fields
+    }
     return SourceProductData(
         **{
             **clean_payload,

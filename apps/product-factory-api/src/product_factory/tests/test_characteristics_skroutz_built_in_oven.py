@@ -1,9 +1,14 @@
 from bs4 import BeautifulSoup
 
 from product_factory.characteristics_pipeline import build_characteristics_for_product
-from product_factory.models import SchemaMatchResult, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    SchemaMatchResult,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 from product_factory.normalize import normalize_for_match
-
 
 BUILT_IN_OVEN_SCHEMA_ID = "sha1:a5ada7b3cbca265e72442764a28970c39d91d102"
 
@@ -50,12 +55,16 @@ def test_skroutz_built_in_oven_characteristics_use_alias_enrichment() -> None:
     html, diagnostics, _warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=BUILT_IN_OVEN_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=BUILT_IN_OVEN_SCHEMA_ID, score=0.9
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
         for cells in (row.find_all("td") for row in soup.select("tbody tr"))
         if len(cells) == 2
     }
@@ -73,7 +82,9 @@ def test_skroutz_built_in_oven_characteristics_use_alias_enrichment() -> None:
     assert values[normalize_for_match("Κλείδωμα Ασφαλείας για Παιδιά")] == "Ναι"
 
 
-def test_skroutz_built_in_oven_characteristics_prefer_actual_dimension_aliases() -> None:
+def test_skroutz_built_in_oven_characteristics_prefer_actual_dimension_aliases() -> (
+    None
+):
     source = SourceProductData(
         source_name="skroutz",
         brand="Bosch",
@@ -102,8 +113,13 @@ def test_skroutz_built_in_oven_characteristics_prefer_actual_dimension_aliases()
                 section="Διαστάσεις Συσκευής",
                 items=[
                     SpecItem(label="Πλάτος", value="59,4 cm"),
-                    SpecItem(label="Διαστάσεις συσκευής (ΥxΠxΒ)", value="595 x 594 x 548 mm"),
-                    SpecItem(label="Διαστάσεις εντοιχισμού (υ x π x β)", value="585-595 x 560-568 x 550 mm"),
+                    SpecItem(
+                        label="Διαστάσεις συσκευής (ΥxΠxΒ)", value="595 x 594 x 548 mm"
+                    ),
+                    SpecItem(
+                        label="Διαστάσεις εντοιχισμού (υ x π x β)",
+                        value="585-595 x 560-568 x 550 mm",
+                    ),
                 ],
             ),
             SpecSection(
@@ -121,15 +137,25 @@ def test_skroutz_built_in_oven_characteristics_prefer_actual_dimension_aliases()
     html, _diagnostics, _warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=BUILT_IN_OVEN_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=BUILT_IN_OVEN_SCHEMA_ID, score=0.9
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
         for cells in (row.find_all("td") for row in soup.select("tbody tr"))
         if len(cells) == 2
     }
 
-    assert values[normalize_for_match("Διαστάσεις Συσκευής σε Εκατοστά (Υ × Π × Β)")] == "595 × 594 × 548 mm"
-    assert values[normalize_for_match("Διαστάσεις Εντοιχισμού σε Εκατοστά (Υ × Π × Β)")] == "585-595 × 560-568 × 550 mm"
+    assert (
+        values[normalize_for_match("Διαστάσεις Συσκευής σε Εκατοστά (Υ × Π × Β)")]
+        == "595 × 594 × 548 mm"
+    )
+    assert (
+        values[normalize_for_match("Διαστάσεις Εντοιχισμού σε Εκατοστά (Υ × Π × Β)")]
+        == "585-595 × 560-568 × 550 mm"
+    )

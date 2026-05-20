@@ -33,7 +33,9 @@ class MissingCatalogColumnsError(ValueError):
 
     def __init__(self, missing_columns: list[str]) -> None:
         self.missing_columns = missing_columns
-        super().__init__(f"sourceCata.csv missing required columns: {', '.join(missing_columns)}")
+        super().__init__(
+            f"sourceCata.csv missing required columns: {', '.join(missing_columns)}"
+        )
 
 
 @dataclass(frozen=True)
@@ -95,8 +97,14 @@ def read_source_catalog_records(path: Path | None = None) -> list[SourceCatalogR
     with catalog_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames or []
-        header_map = {header.strip(): header for header in fieldnames if header is not None}
-        missing = [column for column in SOURCE_CATA_REQUIRED_COLUMNS if column not in header_map]
+        header_map = {
+            header.strip(): header for header in fieldnames if header is not None
+        }
+        missing = [
+            column
+            for column in SOURCE_CATA_REQUIRED_COLUMNS
+            if column not in header_map
+        ]
         if missing:
             raise MissingCatalogColumnsError(missing)
 
@@ -127,7 +135,9 @@ def _row_to_product(row: dict[str, str], header_map: dict[str, str]) -> CatalogP
     if not mpn:
         warnings.append("missing_mpn")
 
-    automation_eligible = atomic and status == 1 and price is not None and price > 0 and bool(mpn)
+    automation_eligible = (
+        atomic and status == 1 and price is not None and price > 0 and bool(mpn)
+    )
 
     return CatalogProduct(
         catalog_product_id=None,
@@ -153,7 +163,11 @@ def _row_to_product(row: dict[str, str], header_map: dict[str, str]) -> CatalogP
 
 
 def _raw_row(row: dict[str, str]) -> dict[str, str]:
-    return {str(key): value if value is not None else "" for key, value in row.items() if key is not None}
+    return {
+        str(key): value if value is not None else ""
+        for key, value in row.items()
+        if key is not None
+    }
 
 
 def _text(value: object) -> str:

@@ -15,9 +15,15 @@ from ecommerce.source_capture.egress_policy import (  # noqa: E402
 
 
 def test_policy_accepts_supported_vendor_urls() -> None:
-    skroutz = validate_outbound_url("https://www.skroutz.gr/s/123/product.html", require_known_vendor=True)
-    bestprice = validate_outbound_url("https://www.bestprice.gr/item/1/product.html", require_known_vendor=True)
-    electronet = validate_outbound_url("https://www.electronet.gr/product/1", require_known_vendor=True)
+    skroutz = validate_outbound_url(
+        "https://www.skroutz.gr/s/123/product.html", require_known_vendor=True
+    )
+    bestprice = validate_outbound_url(
+        "https://www.bestprice.gr/item/1/product.html", require_known_vendor=True
+    )
+    electronet = validate_outbound_url(
+        "https://www.electronet.gr/product/1", require_known_vendor=True
+    )
 
     assert skroutz.vendor_slug == "skroutz"
     assert bestprice.vendor_slug == "bestprice"
@@ -58,7 +64,9 @@ def test_policy_rejects_malformed_urls(url: str) -> None:
 
 def test_policy_can_require_known_vendor() -> None:
     with pytest.raises(EgressPolicyError) as exc_info:
-        validate_outbound_url("https://shop.example.test/product/1", require_known_vendor=True)
+        validate_outbound_url(
+            "https://shop.example.test/product/1", require_known_vendor=True
+        )
 
     assert exc_info.value.code == "unknown_vendor"
 
@@ -84,7 +92,9 @@ def test_safe_get_blocks_redirect_to_private_host_without_fetching_target() -> N
 def test_safe_get_blocks_redirect_to_different_vendor() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "www.bestprice.gr":
-            return httpx.Response(302, headers={"location": "https://www.skroutz.gr/s/1/product.html"})
+            return httpx.Response(
+                302, headers={"location": "https://www.skroutz.gr/s/1/product.html"}
+            )
         return httpx.Response(200, text="should not fetch")
 
     with pytest.raises(EgressPolicyError) as exc_info:

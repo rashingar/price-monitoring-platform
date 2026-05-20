@@ -6,7 +6,6 @@ from typing import Any
 
 from ecommerce.source_capture.types import ResponseCandidate, ScoredCandidate
 
-
 ANALYTICS_MARKERS = (
     "analytics",
     "gtm",
@@ -21,13 +20,37 @@ ANALYTICS_MARKERS = (
     "maps.googleapis.com",
 )
 PROMOTION_MARKERS = ("placements", "featured_cross_sell", "cross_sell", "sponsored")
-STATIC_EXTENSIONS = (".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".woff", ".woff2", ".ico")
-PRICE_RE = re.compile(r"(price|amount|final_price|current_price|τιμ|€|eur)", re.IGNORECASE)
-SELLER_RE = re.compile(r"(seller|shop|store|merchant|καταστημα|κατάστημα|πωλητ)", re.IGNORECASE)
-AVAILABILITY_RE = re.compile(r"(availability|available|stock|διαθεσιμ|απόθεμα|αποθεμα)", re.IGNORECASE)
-SHIPPING_RE = re.compile(r"(shipping|delivery|courier|pickup|παραδοση|παράδοση|μεταφορ)", re.IGNORECASE)
-OFFERS_ENDPOINT_RE = re.compile(r"(product|offer|offers|offering|offerings|shop|shops|seller|sku)", re.IGNORECASE)
-BLOCKED_RE = re.compile(r"(just a moment|cloudflare|cf-chl|challenge-platform)", re.IGNORECASE)
+STATIC_EXTENSIONS = (
+    ".css",
+    ".js",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".webp",
+    ".woff",
+    ".woff2",
+    ".ico",
+)
+PRICE_RE = re.compile(
+    r"(price|amount|final_price|current_price|τιμ|€|eur)", re.IGNORECASE
+)
+SELLER_RE = re.compile(
+    r"(seller|shop|store|merchant|καταστημα|κατάστημα|πωλητ)", re.IGNORECASE
+)
+AVAILABILITY_RE = re.compile(
+    r"(availability|available|stock|διαθεσιμ|απόθεμα|αποθεμα)", re.IGNORECASE
+)
+SHIPPING_RE = re.compile(
+    r"(shipping|delivery|courier|pickup|παραδοση|παράδοση|μεταφορ)", re.IGNORECASE
+)
+OFFERS_ENDPOINT_RE = re.compile(
+    r"(product|offer|offers|offering|offerings|shop|shops|seller|sku)", re.IGNORECASE
+)
+BLOCKED_RE = re.compile(
+    r"(just a moment|cloudflare|cf-chl|challenge-platform)", re.IGNORECASE
+)
 
 
 def score_response_candidate(candidate: ResponseCandidate) -> ScoredCandidate:
@@ -85,17 +108,27 @@ def score_response_candidate(candidate: ResponseCandidate) -> ScoredCandidate:
     return ScoredCandidate(candidate=candidate, score=score, reasons=tuple(reasons))
 
 
-def best_response_candidate(candidates: list[ResponseCandidate]) -> ScoredCandidate | None:
+def best_response_candidate(
+    candidates: list[ResponseCandidate],
+) -> ScoredCandidate | None:
     if not candidates:
         return None
     return ranked_response_candidates(candidates)[0]
 
 
-def ranked_response_candidates(candidates: list[ResponseCandidate]) -> list[ScoredCandidate]:
-    return sorted((score_response_candidate(candidate) for candidate in candidates), key=lambda item: item.score, reverse=True)
+def ranked_response_candidates(
+    candidates: list[ResponseCandidate],
+) -> list[ScoredCandidate]:
+    return sorted(
+        (score_response_candidate(candidate) for candidate in candidates),
+        key=lambda item: item.score,
+        reverse=True,
+    )
 
 
-def _looks_json(candidate: ResponseCandidate, body_text: str, content_type: str) -> bool:
+def _looks_json(
+    candidate: ResponseCandidate, body_text: str, content_type: str
+) -> bool:
     if candidate.body_json is not None:
         return True
     if "json" in content_type:

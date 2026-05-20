@@ -7,7 +7,11 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from ecommerce.artifacts import ArtifactPathError, ArtifactPathForbiddenError, list_run_artifacts
+from ecommerce.artifacts import (
+    ArtifactPathError,
+    ArtifactPathForbiddenError,
+    list_run_artifacts,
+)
 
 
 def source_url_agent_artifact_listing(run_id: str) -> dict[str, Any]:
@@ -20,7 +24,9 @@ def source_url_agent_artifact_listing(run_id: str) -> dict[str, Any]:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Source URL Agent artifact listing failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Source URL Agent artifact listing failed."
+        ) from exc
     return {
         "run_id": result.run_id,
         "run_type": result.run_type,

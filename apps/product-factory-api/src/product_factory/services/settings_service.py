@@ -11,7 +11,6 @@ from ..llm_contract import INTRO_MAX_WORDS, INTRO_MIN_WORDS
 from ..utils import ensure_directory, read_json, write_json
 from .llm_stage_execution import MAX_INTRO_ATTEMPTS
 
-
 DEFAULT_META_DESCRIPTION_MAX_CHARS = 260
 DEFAULT_MAX_EMPHASIZED_WORDS_PERCENT = int(MAX_EMPHASIZED_WORD_RATIO * 100)
 
@@ -72,14 +71,18 @@ def default_product_factory_settings_payload() -> dict[str, Any]:
     }
 
 
-def load_product_factory_settings(*, settings_path: Path | None = None) -> ProductFactorySettings:
+def load_product_factory_settings(
+    *, settings_path: Path | None = None
+) -> ProductFactorySettings:
     path = settings_path or repo_paths.PRODUCT_FACTORY_SETTINGS_PATH
     if not path.exists():
         return _validate_settings(default_product_factory_settings_payload())
     try:
         payload = read_json(path)
     except Exception as exc:
-        raise ProductFactorySettingsError(f"Invalid Product Factory settings JSON: {path}: {exc}") from exc
+        raise ProductFactorySettingsError(
+            f"Invalid Product Factory settings JSON: {path}: {exc}"
+        ) from exc
     return _validate_settings(payload)
 
 
@@ -129,19 +132,25 @@ def get_seo_meta_policy(
 
 def _validate_settings(payload: Mapping[str, Any]) -> ProductFactorySettings:
     if not isinstance(payload, Mapping):
-        raise ProductFactorySettingsError("Product Factory settings must be a JSON object.")
+        raise ProductFactorySettingsError(
+            "Product Factory settings must be a JSON object."
+        )
     normalized = deepcopy(dict(payload))
     normalized.setdefault("schema_version", 1)
     authoring = normalized.get("authoring")
     if not isinstance(authoring, Mapping):
-        raise ProductFactorySettingsError("Product Factory settings must include authoring settings.")
+        raise ProductFactorySettingsError(
+            "Product Factory settings must include authoring settings."
+        )
 
     intro_text = authoring.get("intro_text")
     if not isinstance(intro_text, Mapping):
         raise ProductFactorySettingsError("Malformed authoring.intro_text settings.")
     intro_default = intro_text.get("default")
     if not isinstance(intro_default, Mapping):
-        raise ProductFactorySettingsError("Malformed authoring.intro_text.default settings.")
+        raise ProductFactorySettingsError(
+            "Malformed authoring.intro_text.default settings."
+        )
     intro_policy = _validate_intro_policy(intro_default)
     _require_mapping(intro_text, "by_source", "authoring.intro_text.by_source")
     _require_mapping(intro_text, "by_category", "authoring.intro_text.by_category")
@@ -151,7 +160,9 @@ def _validate_settings(payload: Mapping[str, Any]) -> ProductFactorySettings:
         raise ProductFactorySettingsError("Malformed authoring.seo_meta settings.")
     seo_default = seo_meta.get("default")
     if not isinstance(seo_default, Mapping):
-        raise ProductFactorySettingsError("Malformed authoring.seo_meta.default settings.")
+        raise ProductFactorySettingsError(
+            "Malformed authoring.seo_meta.default settings."
+        )
     seo_policy = _validate_seo_policy(seo_default)
     _require_mapping(seo_meta, "by_source", "authoring.seo_meta.by_source")
     _require_mapping(seo_meta, "by_category", "authoring.seo_meta.by_category")
@@ -181,9 +192,15 @@ def _validate_settings(payload: Mapping[str, Any]) -> ProductFactorySettings:
 
 
 def _validate_intro_policy(payload: Mapping[str, Any]) -> IntroTextPolicy:
-    min_words = _require_int(payload, "min_words", "authoring.intro_text.default.min_words")
-    max_words = _require_int(payload, "max_words", "authoring.intro_text.default.max_words")
-    max_attempts = _require_int(payload, "max_attempts", "authoring.intro_text.default.max_attempts")
+    min_words = _require_int(
+        payload, "min_words", "authoring.intro_text.default.min_words"
+    )
+    max_words = _require_int(
+        payload, "max_words", "authoring.intro_text.default.max_words"
+    )
+    max_attempts = _require_int(
+        payload, "max_attempts", "authoring.intro_text.default.max_attempts"
+    )
     max_emphasized_words_percent = _optional_int(
         payload,
         "max_emphasized_words_percent",
@@ -191,15 +208,25 @@ def _validate_intro_policy(payload: Mapping[str, Any]) -> IntroTextPolicy:
         "authoring.intro_text.default.max_emphasized_words_percent",
     )
     if min_words <= 0:
-        raise ProductFactorySettingsError("authoring.intro_text.default.min_words must be a positive integer.")
+        raise ProductFactorySettingsError(
+            "authoring.intro_text.default.min_words must be a positive integer."
+        )
     if max_words <= 0:
-        raise ProductFactorySettingsError("authoring.intro_text.default.max_words must be a positive integer.")
+        raise ProductFactorySettingsError(
+            "authoring.intro_text.default.max_words must be a positive integer."
+        )
     if max_words < min_words:
-        raise ProductFactorySettingsError("authoring.intro_text.default.max_words must be greater than or equal to min_words.")
+        raise ProductFactorySettingsError(
+            "authoring.intro_text.default.max_words must be greater than or equal to min_words."
+        )
     if max_words > 500:
-        raise ProductFactorySettingsError("authoring.intro_text.default.max_words must be less than or equal to 500.")
+        raise ProductFactorySettingsError(
+            "authoring.intro_text.default.max_words must be less than or equal to 500."
+        )
     if max_attempts < 1 or max_attempts > 10:
-        raise ProductFactorySettingsError("authoring.intro_text.default.max_attempts must be between 1 and 10.")
+        raise ProductFactorySettingsError(
+            "authoring.intro_text.default.max_attempts must be between 1 and 10."
+        )
     if max_emphasized_words_percent < 0 or max_emphasized_words_percent > 100:
         raise ProductFactorySettingsError(
             "authoring.intro_text.default.max_emphasized_words_percent must be between 0 and 100."

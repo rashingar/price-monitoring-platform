@@ -50,13 +50,20 @@ _CHALLENGE_MARKERS = (
 )
 
 
-def is_skroutz_challenge_html(html: str, *, status_code: int = 0, headers: dict[str, str] | None = None) -> bool:
+def is_skroutz_challenge_html(
+    html: str, *, status_code: int = 0, headers: dict[str, str] | None = None
+) -> bool:
     lowered = (html or "").lower()
     header_values = " ".join(str(value).lower() for value in (headers or {}).values())
-    marker_present = any(marker in lowered or marker in header_values for marker in _CHALLENGE_MARKERS)
+    marker_present = any(
+        marker in lowered or marker in header_values for marker in _CHALLENGE_MARKERS
+    )
     if status_code in _CHALLENGE_STATUS_CODES and marker_present:
         return True
-    title_challenge = "<title>just a moment" in lowered or "please wait while your request is being verified" in lowered
+    title_challenge = (
+        "<title>just a moment" in lowered
+        or "please wait while your request is being verified" in lowered
+    )
     return title_challenge and marker_present
 
 
@@ -72,7 +79,9 @@ class SkroutzSnapshotFetcher:
         self.user_agent = user_agent
         self.timeout = timeout
         self.transport = transport
-        self.browser_fetcher = browser_fetcher or ElectronetFetcher(user_agent=user_agent, timeout=timeout)
+        self.browser_fetcher = browser_fetcher or ElectronetFetcher(
+            user_agent=user_agent, timeout=timeout
+        )
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -88,7 +97,9 @@ class SkroutzSnapshotFetcher:
 
         playwright_challenge: SkroutzFetchResult | None = None
         try:
-            playwright_result = self._from_fetch_result(self.browser_fetcher.fetch_playwright(url))
+            playwright_result = self._from_fetch_result(
+                self.browser_fetcher.fetch_playwright(url)
+            )
             if not playwright_result.blocked:
                 return playwright_result
             playwright_challenge = playwright_result
@@ -96,7 +107,9 @@ class SkroutzSnapshotFetcher:
             playwright_challenge = None
 
         try:
-            httpx_result = self._from_fetch_result(self.browser_fetcher.fetch_httpx(url))
+            httpx_result = self._from_fetch_result(
+                self.browser_fetcher.fetch_httpx(url)
+            )
             if not httpx_result.blocked:
                 return httpx_result
             return playwright_challenge or httpx_result
@@ -120,7 +133,9 @@ class SkroutzSnapshotFetcher:
         headers = {str(key): str(value) for key, value in response.headers.items()}
         status = (
             SkroutzFetchStatus.BLOCKED_BY_CHALLENGE
-            if is_skroutz_challenge_html(response.text, status_code=response.status_code, headers=headers)
+            if is_skroutz_challenge_html(
+                response.text, status_code=response.status_code, headers=headers
+            )
             else SkroutzFetchStatus.OK
         )
         if status == SkroutzFetchStatus.OK:
@@ -141,10 +156,14 @@ class SkroutzSnapshotFetcher:
         )
 
     def _from_fetch_result(self, fetch: FetchResult) -> SkroutzFetchResult:
-        headers = {str(key): str(value) for key, value in fetch.response_headers.items()}
+        headers = {
+            str(key): str(value) for key, value in fetch.response_headers.items()
+        }
         status = (
             SkroutzFetchStatus.BLOCKED_BY_CHALLENGE
-            if is_skroutz_challenge_html(fetch.html, status_code=fetch.status_code, headers=headers)
+            if is_skroutz_challenge_html(
+                fetch.html, status_code=fetch.status_code, headers=headers
+            )
             else SkroutzFetchStatus.OK
         )
         return SkroutzFetchResult(

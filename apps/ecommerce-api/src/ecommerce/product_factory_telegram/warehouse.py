@@ -7,8 +7,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
-OPTIONAL_METADATA_COLUMNS = ("manufacturer", "mpn", "barcode", "category", "price", "quantity")
+OPTIONAL_METADATA_COLUMNS = (
+    "manufacturer",
+    "mpn",
+    "barcode",
+    "category",
+    "price",
+    "quantity",
+)
 
 
 @dataclass(frozen=True)
@@ -53,8 +59,14 @@ def lookup_warehouse_product(
                     "warehouse_catalog_invalid_csv",
                     "ERP warehouse catalog CSV is missing a header row.",
                 )
-            _require_column(reader.fieldnames, model_column, "warehouse_catalog_model_column_missing")
-            _require_column(reader.fieldnames, name_column, "warehouse_catalog_name_column_missing")
+            _require_column(
+                reader.fieldnames,
+                model_column,
+                "warehouse_catalog_model_column_missing",
+            )
+            _require_column(
+                reader.fieldnames, name_column, "warehouse_catalog_name_column_missing"
+            )
             matches = _matching_rows(reader, model_column=model_column, model=model)
     except WarehouseCatalogError:
         raise
@@ -90,13 +102,17 @@ def lookup_warehouse_product(
     return WarehouseProduct(
         model=model,
         name=product_name,
-        metadata=_metadata_from_row(row, model_column=model_column, name_column=name_column),
+        metadata=_metadata_from_row(
+            row, model_column=model_column, name_column=name_column
+        ),
     )
 
 
 def _require_column(fieldnames: list[str], column: str, code: str) -> None:
     if column not in fieldnames:
-        raise WarehouseCatalogError(code, f"ERP warehouse catalog is missing configured column {column}.")
+        raise WarehouseCatalogError(
+            code, f"ERP warehouse catalog is missing configured column {column}."
+        )
 
 
 def _matching_rows(
@@ -117,7 +133,9 @@ def _matching_rows(
     return matches
 
 
-def _metadata_from_row(row: dict[str, Any], *, model_column: str, name_column: str) -> dict[str, str]:
+def _metadata_from_row(
+    row: dict[str, Any], *, model_column: str, name_column: str
+) -> dict[str, str]:
     excluded = {model_column, name_column}
     metadata: dict[str, str] = {}
     for key in OPTIONAL_METADATA_COLUMNS:

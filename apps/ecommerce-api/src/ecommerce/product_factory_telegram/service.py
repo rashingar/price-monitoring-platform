@@ -12,7 +12,11 @@ from typing import Any, Protocol
 from .audit import append_event, latest_enqueued_job_for_model
 from .client import ProductFactoryClientError, ProductFactoryJob
 from .config import ProductFactoryTelegramConfig
-from .parser import ProductFactoryCommand, ProductFactoryCommandParseError, parse_product_factory_command
+from .parser import (
+    ProductFactoryCommand,
+    ProductFactoryCommandParseError,
+    parse_product_factory_command,
+)
 from .source_resolution import (
     SourceResolutionCandidate,
     SourceResolutionConfigError,
@@ -22,13 +26,14 @@ from .source_resolution import (
 )
 from .warehouse import WarehouseCatalogError, WarehouseProduct, lookup_warehouse_product
 
-
 FULL_GALLERY_PHOTOS = 20
 DEFAULT_SECTIONS = 20
 
 
 class TelegramMessenger(Protocol):
-    def send_message(self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None) -> None: ...
+    def send_message(
+        self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None
+    ) -> None: ...
 
 
 class ProductFactoryStarter(Protocol):
@@ -145,7 +150,9 @@ def extract_telegram_identity(update: dict[str, Any]) -> TelegramIdentity:
     )
 
 
-def is_authorized_telegram_identity(identity: TelegramIdentity, config: ProductFactoryTelegramConfig) -> bool:
+def is_authorized_telegram_identity(
+    identity: TelegramIdentity, config: ProductFactoryTelegramConfig
+) -> bool:
     if not config.allowed_chat_ids and not config.allowed_user_ids:
         return False
     if config.allowed_chat_ids and identity.chat_id not in config.allowed_chat_ids:
@@ -200,7 +207,9 @@ def process_telegram_product_factory_update(
             status="invalid_command",
             message=reply,
         )
-        return TelegramIntakeResult(status="status_command_error", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="status_command_error", message=reply, sent_messages=sent_messages
+        )
     if status_command is not None:
         _audit_event(
             config.audit_log_path,
@@ -227,7 +236,9 @@ def process_telegram_product_factory_update(
     except ProductFactoryCommandParseError as exc:
         reply = f"Product Factory command error: {exc}"
         send(reply)
-        return TelegramIntakeResult(status="command_error", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="command_error", message=reply, sent_messages=sent_messages
+        )
     _audit_command_received(
         audit_log_path=config.audit_log_path,
         chat_id=chat_id,
@@ -255,7 +266,9 @@ def process_telegram_product_factory_update(
             status=exc.code,
             message=exc.message,
         )
-        return TelegramIntakeResult(status=exc.code, message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status=exc.code, message=reply, sent_messages=sent_messages
+        )
     _audit_product_event(
         config.audit_log_path,
         event_type="warehouse_lookup_succeeded",
@@ -270,7 +283,9 @@ def process_telegram_product_factory_update(
         resolver = source_resolver
         if resolver is None:
             try:
-                resolver = resolver_from_config_path(config.source_resolution_config_path)
+                resolver = resolver_from_config_path(
+                    config.source_resolution_config_path
+                )
             except SourceResolutionConfigError as exc:
                 reply = f"Source resolution config error: {exc}"
                 send(reply)
@@ -284,7 +299,11 @@ def process_telegram_product_factory_update(
                     status="source_resolution_config_error",
                     message=str(exc),
                 )
-                return TelegramIntakeResult(status="source_resolution_config_error", message=reply, sent_messages=sent_messages)
+                return TelegramIntakeResult(
+                    status="source_resolution_config_error",
+                    message=reply,
+                    sent_messages=sent_messages,
+                )
         try:
             resolution = resolver.resolve(product=product)
         except (SourceResolutionConfigError, SourceResolutionError) as exc:
@@ -300,9 +319,16 @@ def process_telegram_product_factory_update(
                 status="source_resolution_error",
                 message=str(exc),
             )
-            return TelegramIntakeResult(status="source_resolution_error", message=reply, sent_messages=sent_messages)
+            return TelegramIntakeResult(
+                status="source_resolution_error",
+                message=reply,
+                sent_messages=sent_messages,
+            )
 
-        if resolution.selected is not None and resolution.selected.confidence >= resolution.config.minimum_confidence:
+        if (
+            resolution.selected is not None
+            and resolution.selected.confidence >= resolution.config.minimum_confidence
+        ):
             selected = resolution.selected
             source_reply = _resolved_source_message(
                 model=command.model,
@@ -371,11 +397,18 @@ def process_telegram_product_factory_update(
                 metadata={
                     "choice_id": choice.choice_id,
                     "candidate_count": len(choice.candidates),
-                    "candidates": [_candidate_metadata(candidate) for candidate in choice.candidates],
+                    "candidates": [
+                        _candidate_metadata(candidate)
+                        for candidate in choice.candidates
+                    ],
                     "expires_at": choice.expires_at.isoformat(),
                 },
             )
-            return TelegramIntakeResult(status="source_resolution_suggestions", message=reply, sent_messages=sent_messages)
+            return TelegramIntakeResult(
+                status="source_resolution_suggestions",
+                message=reply,
+                sent_messages=sent_messages,
+            )
 
         reply = (
             "No confident scrape source was found\n"
@@ -395,7 +428,11 @@ def process_telegram_product_factory_update(
             message="No confident scrape source was found.",
             selection_method=resolution.method,
         )
-        return TelegramIntakeResult(status="source_resolution_no_usable_source", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="source_resolution_no_usable_source",
+            message=reply,
+            sent_messages=sent_messages,
+        )
 
     source_reply = _manual_source_message(command.manual_url)
     send(source_reply)
@@ -421,7 +458,9 @@ def process_telegram_product_factory_update(
         skroutz_enabled=command.skroutz_enabled,
         boxnow_enabled=command.boxnow_enabled,
         telegram_chat_id=chat_id,
-        source_resolution=_manual_source_resolution(product=product, url=command.manual_url),
+        source_resolution=_manual_source_resolution(
+            product=product, url=command.manual_url
+        ),
     )
     return _enqueue_and_report(
         payload=payload,
@@ -462,12 +501,16 @@ def _process_source_choice_callback(
 
     parsed = _parse_source_choice_callback_data(data)
     if parsed is None:
-        return TelegramIntakeResult(status="ignored", message="Unsupported callback data.")
+        return TelegramIntakeResult(
+            status="ignored", message="Unsupported callback data."
+        )
 
     choice_id, action = parsed
     choice = pending_choices.get(choice_id)
     if choice is None:
-        reply = "Source choice expired or is no longer available. Send the command again."
+        reply = (
+            "Source choice expired or is no longer available. Send the command again."
+        )
         send(reply)
         _audit_event(
             audit_log_path,
@@ -478,11 +521,15 @@ def _process_source_choice_callback(
             message=reply,
             metadata={"choice_id": choice_id},
         )
-        return TelegramIntakeResult(status="source_choice_expired", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="source_choice_expired", message=reply, sent_messages=sent_messages
+        )
     if choice.chat_id != chat_id or choice.user_id != (user_id or ""):
         reply = "This source choice belongs to another chat or user."
         send(reply)
-        return TelegramIntakeResult(status="source_choice_forbidden", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="source_choice_forbidden", message=reply, sent_messages=sent_messages
+        )
     if choice.is_expired(datetime.now(timezone.utc)):
         pending_choices.delete(choice_id)
         reply = "Source choice expired. Send the command again."
@@ -498,7 +545,9 @@ def _process_source_choice_callback(
             message=reply,
             metadata={"choice_id": choice_id},
         )
-        return TelegramIntakeResult(status="source_choice_expired", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="source_choice_expired", message=reply, sent_messages=sent_messages
+        )
     if action == "cancel":
         pending_choices.delete(choice_id)
         reply = "Source selection cancelled."
@@ -514,14 +563,18 @@ def _process_source_choice_callback(
             message=reply,
             metadata={"choice_id": choice_id},
         )
-        return TelegramIntakeResult(status="source_choice_cancelled", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="source_choice_cancelled", message=reply, sent_messages=sent_messages
+        )
 
     try:
         selected = choice.candidates[int(action) - 1]
     except (ValueError, IndexError):
         reply = "Selected source choice is invalid. Send the command again."
         send(reply)
-        return TelegramIntakeResult(status="source_choice_invalid", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="source_choice_invalid", message=reply, sent_messages=sent_messages
+        )
 
     send(_selected_choice_message(selected))
     _audit_candidate_event(
@@ -695,7 +748,11 @@ def _process_status_command(
                     message=reply,
                     metadata={"command": "status"},
                 )
-                return TelegramIntakeResult(status="status_not_found", message=reply, sent_messages=sent_messages)
+                return TelegramIntakeResult(
+                    status="status_not_found",
+                    message=reply,
+                    sent_messages=sent_messages,
+                )
             job = jobs[0]
 
         reply = _job_status_message(job)
@@ -709,7 +766,10 @@ def _process_status_command(
             job_id=job.job_id,
             status=job.status,
             message=job.message,
-            metadata={"command": "status", "source": "audit" if audit_job_id else "by_model"},
+            metadata={
+                "command": "status",
+                "source": "audit" if audit_job_id else "by_model",
+            },
         )
         return TelegramIntakeResult(
             status="status_reported",
@@ -731,7 +791,9 @@ def _process_status_command(
             message=str(exc),
             metadata={"command": command.kind},
         )
-        return TelegramIntakeResult(status="status_error", message=reply, sent_messages=sent_messages)
+        return TelegramIntakeResult(
+            status="status_error", message=reply, sent_messages=sent_messages
+        )
 
 
 def _parse_status_command(text: str) -> StatusCommand | None:
@@ -743,12 +805,16 @@ def _parse_status_command(text: str) -> StatusCommand | None:
     if command == "/pfstatus" or command.startswith("/pfstatus@"):
         job_id = _parse_pfstatus_job_id(rest)
         if job_id is None:
-            raise StatusCommandParseError(f"Invalid /pfstatus command.\n{_PFSTATUS_USAGE}")
+            raise StatusCommandParseError(
+                f"Invalid /pfstatus command.\n{_PFSTATUS_USAGE}"
+            )
         return StatusCommand(kind="pfstatus", job_id=job_id)
     if command == "status":
         model_tokens = rest.split()
         if len(model_tokens) != 1 or not _MODEL_RE.fullmatch(model_tokens[0]):
-            raise StatusCommandParseError(f"Invalid status command.\n{_STATUS_MODEL_USAGE}")
+            raise StatusCommandParseError(
+                f"Invalid status command.\n{_STATUS_MODEL_USAGE}"
+            )
         return StatusCommand(kind="status", model=model_tokens[0])
     return None
 
@@ -948,7 +1014,9 @@ def _manual_source_message(url: str) -> str:
     )
 
 
-def _resolved_source_message(*, model: str, product: WarehouseProduct, candidate: SourceResolutionCandidate) -> str:
+def _resolved_source_message(
+    *, model: str, product: WarehouseProduct, candidate: SourceResolutionCandidate
+) -> str:
     lines = [
         "Resolved Product Factory source",
         f"model: {model}",
@@ -982,7 +1050,11 @@ def _selected_choice_message(candidate: SourceResolutionCandidate) -> str:
     return "\n".join(lines)
 
 
-def _suggestions_message(model: str, product: WarehouseProduct, candidates: tuple[SourceResolutionCandidate, ...]) -> str:
+def _suggestions_message(
+    model: str,
+    product: WarehouseProduct,
+    candidates: tuple[SourceResolutionCandidate, ...],
+) -> str:
     lines = [
         "Choose a scrape source",
         f"model: {model}",
@@ -1013,7 +1085,9 @@ def _source_choice_reply_markup(choice: PendingSourceChoice) -> dict[str, Any]:
     }
 
 
-def _job_started_message(*, command: ProductFactoryCommand, product: WarehouseProduct, job: ProductFactoryJob) -> str:
+def _job_started_message(
+    *, command: ProductFactoryCommand, product: WarehouseProduct, job: ProductFactoryJob
+) -> str:
     return (
         f"Product Factory job started\n"
         f"model: {command.model}\n"

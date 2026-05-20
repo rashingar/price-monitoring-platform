@@ -6,7 +6,6 @@ from typing import Any
 
 import httpx
 
-
 ECOMMERCE_API_BASE_URL_ENV = "ECOMMERCE_API_BASE_URL"
 
 
@@ -20,7 +19,9 @@ class SourceCaptureSyncResult:
 def sync_initial_source_capture(model: str, source_url: str) -> SourceCaptureSyncResult:
     base_url = str(os.environ.get(ECOMMERCE_API_BASE_URL_ENV) or "").strip().rstrip("/")
     if not base_url:
-        return SourceCaptureSyncResult(status="skipped", message="ECOMMERCE_API_BASE_URL is not configured.")
+        return SourceCaptureSyncResult(
+            status="skipped", message="ECOMMERCE_API_BASE_URL is not configured."
+        )
     try:
         with httpx.Client(timeout=5.0) as client:
             response = client.post(
@@ -33,9 +34,15 @@ def sync_initial_source_capture(model: str, source_url: str) -> SourceCaptureSyn
                 message=f"Ecommerce source capture returned HTTP {response.status_code}.",
                 payload=_json_payload(response),
             )
-        return SourceCaptureSyncResult(status="submitted", message="Initial source capture submitted.", payload=_json_payload(response))
+        return SourceCaptureSyncResult(
+            status="submitted",
+            message="Initial source capture submitted.",
+            payload=_json_payload(response),
+        )
     except Exception as exc:
-        return SourceCaptureSyncResult(status="failed", message=str(exc) or exc.__class__.__name__)
+        return SourceCaptureSyncResult(
+            status="failed", message=str(exc) or exc.__class__.__name__
+        )
 
 
 def _json_payload(response: httpx.Response) -> dict[str, Any] | None:

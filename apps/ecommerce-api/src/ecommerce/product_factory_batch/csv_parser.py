@@ -7,7 +7,6 @@ import io
 
 from ecommerce.product_factory_batch.models import ParsedBatchCsv, ParsedBatchRow
 
-
 REQUIRED_COLUMNS = ("model", "brand", "name")
 
 
@@ -24,10 +23,17 @@ def parse_product_factory_batch_csv(content: bytes | str) -> ParsedBatchCsv:
     reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
     if reader.fieldnames is None:
         raise ProductFactoryBatchCsvError("empty_csv", "CSV file is empty.")
-    field_map = {_normalize_header(field): field for field in reader.fieldnames if field is not None}
+    field_map = {
+        _normalize_header(field): field
+        for field in reader.fieldnames
+        if field is not None
+    }
     missing = [column for column in REQUIRED_COLUMNS if column not in field_map]
     if missing:
-        raise ProductFactoryBatchCsvError("missing_required_columns", f"CSV is missing required columns: {', '.join(missing)}.")
+        raise ProductFactoryBatchCsvError(
+            "missing_required_columns",
+            f"CSV is missing required columns: {', '.join(missing)}.",
+        )
 
     rows: list[ParsedBatchRow] = []
     for row_number, row in enumerate(reader, start=2):
@@ -35,10 +41,16 @@ def parse_product_factory_batch_csv(content: bytes | str) -> ParsedBatchCsv:
         brand = _cell(row, field_map["brand"])
         name = _cell(row, field_map["name"])
         if not model:
-            raise ProductFactoryBatchCsvError("empty_model", f"CSV row {row_number} has an empty model.")
+            raise ProductFactoryBatchCsvError(
+                "empty_model", f"CSV row {row_number} has an empty model."
+            )
         if not name:
-            raise ProductFactoryBatchCsvError("empty_name", f"CSV row {row_number} has an empty name.")
-        rows.append(ParsedBatchRow(row_number=row_number, model=model, brand=brand, name=name))
+            raise ProductFactoryBatchCsvError(
+                "empty_name", f"CSV row {row_number} has an empty name."
+            )
+        rows.append(
+            ParsedBatchRow(row_number=row_number, model=model, brand=brand, name=name)
+        )
     if not rows:
         raise ProductFactoryBatchCsvError("empty_csv", "CSV file has no product rows.")
     return ParsedBatchCsv(delimiter=delimiter, rows=tuple(rows))
@@ -50,7 +62,9 @@ def _decode_csv(content: bytes | str) -> str:
     try:
         return content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        raise ProductFactoryBatchCsvError("invalid_encoding", "CSV file must be UTF-8 encoded.") from exc
+        raise ProductFactoryBatchCsvError(
+            "invalid_encoding", "CSV file must be UTF-8 encoded."
+        ) from exc
 
 
 def _detect_delimiter(text: str) -> str:

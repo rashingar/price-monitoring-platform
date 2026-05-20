@@ -11,18 +11,29 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.source_urls import normalize_source_url  # noqa: E402
 from ecommerce.source_url_agent.browser import _blocked_or_captcha  # noqa: E402
-from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate, candidate_from_evidence  # noqa: E402
-from ecommerce.source_url_agent.evidence import PageEvidence, error_evidence, extract_page_evidence  # noqa: E402
+from ecommerce.source_url_agent.candidates import (
+    SourceUrlAgentCandidate,
+    candidate_from_evidence,
+)  # noqa: E402
+from ecommerce.source_url_agent.evidence import (
+    PageEvidence,
+    error_evidence,
+    extract_page_evidence,
+)  # noqa: E402
 from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
-from ecommerce.source_url_agent.scoring import CandidateScore, score_candidate  # noqa: E402
+from ecommerce.source_url_agent.scoring import (
+    CandidateScore,
+    score_candidate,
+)  # noqa: E402
 from ecommerce.source_url_agent.search import generate_search_queries  # noqa: E402
 from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
-
 
 FIXED_CHECKED_AT = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
 
 
-def _assert_snapshot(fixtures_root: Path, parts: tuple[str, ...], payload: dict[str, Any]) -> None:
+def _assert_snapshot(
+    fixtures_root: Path, parts: tuple[str, ...], payload: dict[str, Any]
+) -> None:
     expected_path = fixtures_root / "golden_snapshots" / Path(*parts)
     expected = json.loads(expected_path.read_text(encoding="utf-8"))
     assert payload == expected
@@ -47,7 +58,9 @@ def _product(**overrides) -> AgentProduct:
     return AgentProduct(**values)
 
 
-def _html(*, include_mpn: bool = True, title: str = "LG MR25GB Magic Remote Control") -> str:
+def _html(
+    *, include_mpn: bool = True, title: str = "LG MR25GB Magic Remote Control"
+) -> str:
     mpn = "MR25GB" if include_mpn else "OTHER"
     return f"""
     <html>
@@ -105,7 +118,11 @@ def _candidate_payload(candidate: SourceUrlAgentCandidate) -> dict[str, Any]:
         "candidate_url": normalized.candidate_url,
         "canonical_url": normalized.canonical_url,
         "candidate_title": normalized.candidate_title,
-        "candidate_price": str(normalized.candidate_price) if normalized.candidate_price is not None else "",
+        "candidate_price": (
+            str(normalized.candidate_price)
+            if normalized.candidate_price is not None
+            else ""
+        ),
         "match_status": normalized.match_status,
         "confidence_score": normalized.confidence_score,
         "match_method": normalized.match_method,
@@ -180,7 +197,11 @@ def test_source_url_agent_evidence_snapshots(fixtures_root: Path) -> None:
             </html>
             """,
         ).to_json()
-        for title in ("LG MR25GB Review", "Αξιολόγησε LG MR25GB", "Αξιολογήστε LG MR25GB")
+        for title in (
+            "LG MR25GB Review",
+            "Αξιολόγησε LG MR25GB",
+            "Αξιολογήστε LG MR25GB",
+        )
     }
     marketplace_body_only = extract_page_evidence(
         product=product,
@@ -240,7 +261,11 @@ def test_source_url_agent_evidence_snapshots(fixtures_root: Path) -> None:
         },
     }
 
-    _assert_snapshot(fixtures_root, ("source_url_agent", "evidence", "evidence.expected.json"), payload)
+    _assert_snapshot(
+        fixtures_root,
+        ("source_url_agent", "evidence", "evidence.expected.json"),
+        payload,
+    )
 
 
 def test_source_url_agent_scoring_snapshots(fixtures_root: Path) -> None:
@@ -306,18 +331,33 @@ def test_source_url_agent_scoring_snapshots(fixtures_root: Path) -> None:
     )
 
     payload = {
-        "high_confidence_exact_mpn_brand": _score_payload(score_candidate(product=product, source=skroutz, evidence=valid)),
+        "high_confidence_exact_mpn_brand": _score_payload(
+            score_candidate(product=product, source=skroutz, evidence=valid)
+        ),
         "exact_mpn_brand_at_threshold_needs_review": _score_payload(
-            score_candidate(product=exact_at_threshold_product, source=skroutz, evidence=exact_at_threshold)
+            score_candidate(
+                product=exact_at_threshold_product,
+                source=skroutz,
+                evidence=exact_at_threshold,
+            )
         ),
         "exact_mpn_without_brand_needs_review": _score_payload(
-            score_candidate(product=without_brand_product, source=electronet, evidence=without_brand)
+            score_candidate(
+                product=without_brand_product, source=electronet, evidence=without_brand
+            )
         ),
         "title_only_forced_needs_review": _score_payload(
-            score_candidate(product=title_only_product, source=electronet, evidence=title_only)
+            score_candidate(
+                product=title_only_product, source=electronet, evidence=title_only
+            )
         ),
         "multiple_plausible_candidates_needs_review": _score_payload(
-            score_candidate(product=product, source=skroutz, evidence=valid, competing_candidates_count=2)
+            score_candidate(
+                product=product,
+                source=skroutz,
+                evidence=valid,
+                competing_candidates_count=2,
+            )
         ),
         "marketplace_body_only_mpn_not_high_confidence": _score_payload(
             score_candidate(product=product, source=bestprice, evidence=body_only)
@@ -326,11 +366,15 @@ def test_source_url_agent_scoring_snapshots(fixtures_root: Path) -> None:
             score_candidate(product=product, source=skroutz, evidence=blocked_valid)
         ),
         "blocked_non_product_url_remains_error": _score_payload(
-            score_candidate(product=product, source=skroutz, evidence=blocked_non_product)
+            score_candidate(
+                product=product, source=skroutz, evidence=blocked_non_product
+            )
         ),
     }
 
-    _assert_snapshot(fixtures_root, ("source_url_agent", "scoring", "scoring.expected.json"), payload)
+    _assert_snapshot(
+        fixtures_root, ("source_url_agent", "scoring", "scoring.expected.json"), payload
+    )
 
 
 def test_source_url_agent_candidate_shape_snapshots(fixtures_root: Path) -> None:
@@ -349,7 +393,9 @@ def test_source_url_agent_candidate_shape_snapshots(fixtures_root: Path) -> None
         final_url="https://www.electronet.gr/product/lg-magic-remote",
         html_text=_html(),
     )
-    review_score = score_candidate(product=review_product, source=review_source, evidence=review_evidence)
+    review_score = score_candidate(
+        product=review_product, source=review_source, evidence=review_evidence
+    )
 
     error_evidence_item = error_evidence(
         product=product,
@@ -358,11 +404,19 @@ def test_source_url_agent_candidate_shape_snapshots(fixtures_root: Path) -> None
         error_code="blocked_or_captcha",
         error_message="Blocked page or CAPTCHA marker detected.",
     )
-    error_score = score_candidate(product=product, source=source, evidence=error_evidence_item)
+    error_score = score_candidate(
+        product=product, source=source, evidence=error_evidence_item
+    )
 
     payload = {
         "high_confidence_match": _candidate_payload(
-            _candidate_for(product=product, source_name="skroutz", evidence=valid, score=high_score, status="pending")
+            _candidate_for(
+                product=product,
+                source_name="skroutz",
+                evidence=valid,
+                score=high_score,
+                status="pending",
+            )
         ),
         "needs_review": _candidate_payload(
             _candidate_for(
@@ -374,11 +428,21 @@ def test_source_url_agent_candidate_shape_snapshots(fixtures_root: Path) -> None
             )
         ),
         "error": _candidate_payload(
-            _candidate_for(product=product, source_name="skroutz", evidence=error_evidence_item, score=error_score, status="error")
+            _candidate_for(
+                product=product,
+                source_name="skroutz",
+                evidence=error_evidence_item,
+                score=error_score,
+                status="error",
+            )
         ),
     }
 
-    _assert_snapshot(fixtures_root, ("source_url_agent", "candidates", "candidates.expected.json"), payload)
+    _assert_snapshot(
+        fixtures_root,
+        ("source_url_agent", "candidates", "candidates.expected.json"),
+        payload,
+    )
 
 
 def test_source_url_agent_registry_url_shape_snapshot(fixtures_root: Path) -> None:
@@ -413,24 +477,42 @@ def test_source_url_agent_registry_url_shape_snapshot(fixtures_root: Path) -> No
         source_name: {
             "source_type": registry.get(source_name).source_type,
             "source_domain": registry.get(source_name).source_domain,
-            "valid_product_url_accepted": registry.get(source_name).is_product_url(urls["valid_product_url"]),
-            "invalid_listing_url_rejected": not registry.get(source_name).is_product_url(urls["invalid_listing_url"]),
+            "valid_product_url_accepted": registry.get(source_name).is_product_url(
+                urls["valid_product_url"]
+            ),
+            "invalid_listing_url_rejected": not registry.get(
+                source_name
+            ).is_product_url(urls["invalid_listing_url"]),
         }
         for source_name, urls in cases.items()
     }
 
-    _assert_snapshot(fixtures_root, ("source_url_agent", "registry", "url_shapes.expected.json"), payload)
+    _assert_snapshot(
+        fixtures_root,
+        ("source_url_agent", "registry", "url_shapes.expected.json"),
+        payload,
+    )
 
 
-def test_source_url_agent_search_query_and_normalization_snapshot(fixtures_root: Path) -> None:
-    product = _product(name="Long catalog title should not be part of source discovery query")
+def test_source_url_agent_search_query_and_normalization_snapshot(
+    fixtures_root: Path,
+) -> None:
+    product = _product(
+        name="Long catalog title should not be part of source discovery query"
+    )
     source = load_source_registry().get("skroutz")
     payload = {
         "search_queries": generate_search_queries(product, source),
-        "normalized_url": normalize_source_url("HTTPS://WWW.Skroutz.GR/s/123?utm_source=x&sku=abc#reviews"),
+        "normalized_url": normalize_source_url(
+            "HTTPS://WWW.Skroutz.GR/s/123?utm_source=x&sku=abc#reviews"
+        ),
         "normalization_keeps_meaningful_query": normalize_source_url(
             "https://www.bestprice.gr/item/1/lg.html?sku=abc&utm_campaign=drop&variant=black#reviews"
         ),
     }
 
-    _assert_snapshot(fixtures_root, ("source_url_agent", "search_queries", "search_queries.expected.json"), payload)
+    _assert_snapshot(
+        fixtures_root,
+        ("source_url_agent", "search_queries", "search_queries.expected.json"),
+        payload,
+    )

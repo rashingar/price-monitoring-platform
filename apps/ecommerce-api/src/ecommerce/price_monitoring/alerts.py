@@ -35,10 +35,18 @@ class AlertEvaluationResult:
         }
 
 
-def evaluate_alert_rules_for_run(session: Session, run_id: str) -> AlertEvaluationResult:
-    rules = session.execute(
-        select(AlertRule).where(AlertRule.active.is_(True)).order_by(AlertRule.id.asc())
-    ).scalars().all()
+def evaluate_alert_rules_for_run(
+    session: Session, run_id: str
+) -> AlertEvaluationResult:
+    rules = (
+        session.execute(
+            select(AlertRule)
+            .where(AlertRule.active.is_(True))
+            .order_by(AlertRule.id.asc())
+        )
+        .scalars()
+        .all()
+    )
     if not rules:
         return AlertEvaluationResult(warnings=["No active alert rules configured."])
 
@@ -48,20 +56,31 @@ def evaluate_alert_rules_for_run(session: Session, run_id: str) -> AlertEvaluati
         .where(latest_observation.run_id == run_id)
         .scalar_subquery()
     )
-    observations = session.execute(
-        select(PriceObservation)
-        .where(
-            PriceObservation.run_id == run_id,
-            PriceObservation.created_at == latest_created_at,
+    observations = (
+        session.execute(
+            select(PriceObservation)
+            .where(
+                PriceObservation.run_id == run_id,
+                PriceObservation.created_at == latest_created_at,
+            )
+            .order_by(PriceObservation.id.asc())
         )
-        .order_by(PriceObservation.id.asc())
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     if not observations:
-        return AlertEvaluationResult(evaluated_rule_count=len(rules), warnings=[f"No price observations found for run_id {run_id}."])
+        return AlertEvaluationResult(
+            evaluated_rule_count=len(rules),
+            warnings=[f"No price observations found for run_id {run_id}."],
+        )
 
     existing_dedupe_keys = {
         str(key)
-        for key in session.execute(select(AlertEvent.dedupe_key).where(AlertEvent.run_id == run_id)).scalars().all()
+        for key in session.execute(
+            select(AlertEvent.dedupe_key).where(AlertEvent.run_id == run_id)
+        )
+        .scalars()
+        .all()
     }
     created = 0
     duplicates = 0
@@ -78,7 +97,9 @@ def evaluate_alert_rules_for_run(session: Session, run_id: str) -> AlertEvaluati
         for observation in _matched_observations(rule, observations):
             if observation.id is not None:
                 evaluated_observation_ids.add(observation.id)
-            event, reason = evaluate_competitor_below_own_price(rule, observation, triggered_at=now)
+            event, reason = evaluate_competitor_below_own_price(
+                rule, observation, triggered_at=now
+            )
             if event is None:
                 skipped += 1
                 if reason:
@@ -126,7 +147,9 @@ def evaluate_competitor_below_own_price(
 
     now = triggered_at or _now()
     dedupe_key = _dedupe_key(rule, observation)
-    model_label = observation.model or observation.mpn or f"product {observation.product_id}"
+    model_label = (
+        observation.model or observation.mpn or f"product {observation.product_id}"
+    )
     message = (
         f"Competitor price is below own price for {model_label}: "
         f"own EUR {_money(observation.own_price)} vs competitor EUR {_money(observation.competitor_price)}."
@@ -179,20 +202,28 @@ def evaluate_competitor_below_own_price(
     )
 
 
-def _matched_observations(rule: AlertRule, observations: list[PriceObservation]) -> list[PriceObservation]:
+def _matched_observations(
+    rule: AlertRule, observations: list[PriceObservation]
+) -> list[PriceObservation]:
     if rule.product_id is not None:
-        return [observation for observation in observations if observation.product_id == rule.product_id]
+        return [
+            observation
+            for observation in observations
+            if observation.product_id == rule.product_id
+        ]
     if rule.catalog_source and rule.model:
         return [
             observation
             for observation in observations
-            if observation.catalog_source == rule.catalog_source and observation.model == rule.model
+            if observation.catalog_source == rule.catalog_source
+            and observation.model == rule.model
         ]
     if rule.catalog_source and rule.mpn:
         return [
             observation
             for observation in observations
-            if observation.catalog_source == rule.catalog_source and observation.mpn == rule.mpn
+            if observation.catalog_source == rule.catalog_source
+            and observation.mpn == rule.mpn
         ]
     return []
 

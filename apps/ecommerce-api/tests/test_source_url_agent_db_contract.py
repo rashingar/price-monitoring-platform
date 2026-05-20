@@ -39,7 +39,6 @@ from ecommerce.source_url_agent.review import apply_review_csv  # noqa: E402
 from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
 from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
 
-
 NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
 
 
@@ -70,7 +69,9 @@ def _product(**overrides) -> AgentProduct:
     return AgentProduct(**values)
 
 
-def _catalog_product(session, *, model: str = "005606", mpn: str = "MR25GB") -> CatalogProductRow:
+def _catalog_product(
+    session, *, model: str = "005606", mpn: str = "MR25GB"
+) -> CatalogProductRow:
     row = CatalogProductRow(
         catalog_source="sourceCata",
         model=model,
@@ -90,7 +91,9 @@ def _catalog_product(session, *, model: str = "005606", mpn: str = "MR25GB") -> 
     return row
 
 
-def _html(*, include_mpn: bool = True, title: str = "LG MR25GB Magic Remote Control") -> str:
+def _html(
+    *, include_mpn: bool = True, title: str = "LG MR25GB Magic Remote Control"
+) -> str:
     mpn = "MR25GB" if include_mpn else "OTHER"
     return f"""
     <html>
@@ -143,11 +146,15 @@ def test_source_urls_upsert_dry_run_and_apply_behavior(tmp_path: Path) -> None:
         product = _product(catalog_product_id=row.id)
         candidate = _candidate(product)
 
-        dry = write_candidate_source_url(session, candidate, trust_level="high_confidence", apply=False)
+        dry = write_candidate_source_url(
+            session, candidate, trust_level="high_confidence", apply=False
+        )
         assert dry.action == "created"
         assert session.query(SourceUrl).count() == 0
 
-        applied = write_candidate_source_url(session, candidate, trust_level="high_confidence", apply=True)
+        applied = write_candidate_source_url(
+            session, candidate, trust_level="high_confidence", apply=True
+        )
         stored = session.query(SourceUrl).one()
 
     assert applied.action == "created"
@@ -156,7 +163,9 @@ def test_source_urls_upsert_dry_run_and_apply_behavior(tmp_path: Path) -> None:
     assert stored.status == "active"
 
 
-def test_apply_high_confidence_requires_confidence_above_threshold(tmp_path: Path) -> None:
+def test_apply_high_confidence_requires_confidence_above_threshold(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     with session_scope(database_url) as session:
@@ -242,7 +251,9 @@ def test_candidate_rows_persist_deterministic_shape(tmp_path: Path) -> None:
         assert stored.evidence_json["mpn"]["expected"] == "MR25GB"
 
 
-def test_source_url_candidate_export_import_relinks_catalog_product(tmp_path: Path) -> None:
+def test_source_url_candidate_export_import_relinks_catalog_product(
+    tmp_path: Path,
+) -> None:
     source_dir = tmp_path / "source"
     target_dir = tmp_path / "target"
     source_dir.mkdir()
@@ -401,7 +412,10 @@ def test_source_url_transfer_exports_sources_and_candidates(tmp_path: Path) -> N
         assert imported_source_url.url == "https://www.skroutz.gr/s/123/LG-MR25GB.html"
         assert imported_source_url.trust_level == "manual"
         assert imported_candidate.catalog_product_id == target_product.id
-        assert imported_candidate.candidate_url == "https://www.skroutz.gr/s/124/LG-MR25GB.html"
+        assert (
+            imported_candidate.candidate_url
+            == "https://www.skroutz.gr/s/124/LG-MR25GB.html"
+        )
 
         second_apply = import_source_url_transfer(session, export_path, apply=True)
         assert session.query(SourceUrl).count() == 1
@@ -417,11 +431,15 @@ def test_source_url_transfer_exports_sources_and_candidates(tmp_path: Path) -> N
     assert second_apply.counters["updated_candidate_count"] == 1
 
 
-def test_source_url_discovery_run_history_helpers_count_order_and_get(tmp_path: Path) -> None:
+def test_source_url_discovery_run_history_helpers_count_order_and_get(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     with session_scope(database_url) as session:
-        older = _discovery_run("older-run", created_at=datetime(2026, 5, 1, 10, tzinfo=timezone.utc))
+        older = _discovery_run(
+            "older-run", created_at=datetime(2026, 5, 1, 10, tzinfo=timezone.utc)
+        )
         same_time_first = _discovery_run("same-time-first", created_at=NOW)
         same_time_second = _discovery_run("same-time-second", created_at=NOW)
         session.add_all([older, same_time_first, same_time_second])
@@ -439,12 +457,18 @@ def test_source_url_discovery_run_history_helpers_count_order_and_get(tmp_path: 
         second_page = list_source_url_discovery_run_page(session, limit=2, offset=2)
         fetched = get_source_url_discovery_run(session, "same-time-second")
         task_counts = source_url_discovery_task_counts(session, "same-time-second")
-        task_models = [task.model for task in list_source_url_discovery_tasks(session, "same-time-second")]
+        task_models = [
+            task.model
+            for task in list_source_url_discovery_tasks(session, "same-time-second")
+        ]
 
     assert page.total == 3
     assert page.limit == 2
     assert page.offset == 0
-    assert [item.run_id for item in page.items] == ["same-time-second", "same-time-first"]
+    assert [item.run_id for item in page.items] == [
+        "same-time-second",
+        "same-time-first",
+    ]
     assert [item.run_id for item in second_page.items] == ["older-run"]
     assert fetched is not None
     assert fetched.run_id == "same-time-second"

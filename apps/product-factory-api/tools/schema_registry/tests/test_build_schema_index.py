@@ -48,7 +48,10 @@ def test_build_schema_index_emits_deterministic_rows_with_stable_columns() -> No
                 "electronet_examples": [],
                 "n_sections": 1,
                 "n_rows_total": 1,
-                "sentinel": {"last_section": "TODO", "last_label": "NEEDS_MANUAL_LABELS"},
+                "sentinel": {
+                    "last_section": "TODO",
+                    "last_label": "NEEDS_MANUAL_LABELS",
+                },
             },
         ]
     }
@@ -80,10 +83,16 @@ def test_build_schema_index_computes_sentinel_derived_fields_correctly() -> None
                 "match_mode": "direct_single",
                 "fingerprint": "fp",
                 "source_template_file": "resources/templates/electronet/demo.json",
-                "electronet_examples": ["https://example.test/example-1", "https://example.test/example-2"],
+                "electronet_examples": [
+                    "https://example.test/example-1",
+                    "https://example.test/example-2",
+                ],
                 "n_sections": 3,
                 "n_rows_total": 8,
-                "sentinel": {"last_section": "Τελική Ενότητα", "last_label": "Τελική Ετικέτα"},
+                "sentinel": {
+                    "last_section": "Τελική Ενότητα",
+                    "last_label": "Τελική Ετικέτα",
+                },
             }
         ]
     }
@@ -97,7 +106,9 @@ def test_build_schema_index_computes_sentinel_derived_fields_correctly() -> None
     assert row["subcategory_match_policy"] == "leaf_family"
 
 
-def test_build_schema_index_fails_clearly_when_compiled_schema_is_missing_required_fields() -> None:
+def test_build_schema_index_fails_clearly_when_compiled_schema_is_missing_required_fields() -> (
+    None
+):
     payload = {
         "schemas": [
             {
@@ -116,7 +127,10 @@ def test_build_schema_index_fails_clearly_when_compiled_schema_is_missing_requir
                 "source_template_file": "resources/templates/electronet/demo.json",
                 "n_sections": 1,
                 "n_rows_total": 1,
-                "sentinel": {"last_section": "Τελική Ενότητα", "last_label": "Τελική Ετικέτα"},
+                "sentinel": {
+                    "last_section": "Τελική Ενότητα",
+                    "last_label": "Τελική Ετικέτα",
+                },
             }
         ]
     }

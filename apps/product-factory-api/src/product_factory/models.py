@@ -67,7 +67,10 @@ class SpecSection:
     items: list[SpecItem] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"section": self.section, "items": [item.to_dict() for item in self.items]}
+        return {
+            "section": self.section,
+            "items": [item.to_dict() for item in self.items],
+        }
 
 
 @dataclass(slots=True)
@@ -93,7 +96,9 @@ class NormalizedPresentationSection:
     image_url: str = ""
     quality: str = "missing"
     reason: str = "missing_extraction"
-    metrics: NormalizedPresentationSectionMetrics = field(default_factory=NormalizedPresentationSectionMetrics)
+    metrics: NormalizedPresentationSectionMetrics = field(
+        default_factory=NormalizedPresentationSectionMetrics
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -212,7 +217,9 @@ class SourceProductData:
             "product_sheet_asset_url": self.product_sheet_asset_url,
             "key_specs": [item.to_dict() for item in self.key_specs],
             "spec_sections": [section.to_dict() for section in self.spec_sections],
-            "manufacturer_spec_sections": [section.to_dict() for section in self.manufacturer_spec_sections],
+            "manufacturer_spec_sections": [
+                section.to_dict() for section in self.manufacturer_spec_sections
+            ],
             "manufacturer_source_text": self.manufacturer_source_text,
             "manufacturer_documents": self.manufacturer_documents,
             "presentation_source_html": self.presentation_source_html,
@@ -237,7 +244,9 @@ class ParsedProduct:
         return {
             "source": self.source.to_dict(),
             "provenance": self.provenance,
-            "field_diagnostics": {key: value.to_dict() for key, value in self.field_diagnostics.items()},
+            "field_diagnostics": {
+                key: value.to_dict() for key, value in self.field_diagnostics.items()
+            },
             "missing_fields": self.missing_fields,
             "warnings": self.warnings,
             "critical_missing": self.critical_missing,

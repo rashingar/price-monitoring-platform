@@ -10,7 +10,11 @@ from .config import (
 )
 from .exceptions import SourceResolutionError
 from .fetchers import BraveResultFetcher, BraveSearchResultFetcher
-from .models import SourceResolutionCandidate, SourceResolutionProduct, SourceResolutionResult
+from .models import (
+    SourceResolutionCandidate,
+    SourceResolutionProduct,
+    SourceResolutionResult,
+)
 from .resolver import ProductFactorySourceResolver, resolver_from_config_path
 from .urls import classify_supported_product_url, normalized_product_url
 

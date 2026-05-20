@@ -19,16 +19,39 @@ from ecommerce.product_factory_handoff import import_product_factory_handoff
 
 def main(argv: Sequence[str] | None = None) -> int:
     load_local_env_if_present()
-    parser = argparse.ArgumentParser(description="Import Product Factory source URL handoff artifacts.")
-    parser.add_argument("--file", required=True, type=Path, help="Path to ecommerce_source_handoff.json.")
+    parser = argparse.ArgumentParser(
+        description="Import Product Factory source URL handoff artifacts."
+    )
+    parser.add_argument(
+        "--file",
+        required=True,
+        type=Path,
+        help="Path to ecommerce_source_handoff.json.",
+    )
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--dry-run", action="store_true", help="Preview changes without writing. This is the default.")
+    mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview changes without writing. This is the default.",
+    )
     mode.add_argument("--apply", action="store_true", help="Write changes.")
-    parser.add_argument("--catalog-source", default=DEFAULT_CATALOG_SOURCE, help="Catalog source override.")
-    parser.add_argument("--no-initial-capture", action="store_true", help="Skip source_capture_snapshot and price observation import.")
-    parser.add_argument("--limit", type=int, default=None, help="Maximum source URLs to process.")
+    parser.add_argument(
+        "--catalog-source",
+        default=DEFAULT_CATALOG_SOURCE,
+        help="Catalog source override.",
+    )
+    parser.add_argument(
+        "--no-initial-capture",
+        action="store_true",
+        help="Skip source_capture_snapshot and price observation import.",
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Maximum source URLs to process."
+    )
     parser.add_argument("--json", action="store_true", help="Write JSON output.")
-    parser.add_argument("--report-path", type=Path, default=None, help="Optional JSON report path.")
+    parser.add_argument(
+        "--report-path", type=Path, default=None, help="Optional JSON report path."
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -54,7 +77,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     payload = result.to_dict(include_items=bool(args.report_path))
     if args.report_path is not None:
         args.report_path.parent.mkdir(parents=True, exist_ok=True)
-        args.report_path.write_text(json.dumps(result.to_dict(include_items=True), ensure_ascii=False, indent=2), encoding="utf-8")
+        args.report_path.write_text(
+            json.dumps(
+                result.to_dict(include_items=True), ensure_ascii=False, indent=2
+            ),
+            encoding="utf-8",
+        )
 
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))

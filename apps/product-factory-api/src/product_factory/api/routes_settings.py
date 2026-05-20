@@ -11,11 +11,13 @@ from ..services.settings_service import (
 )
 from .schemas import ErrorResponse, SettingsPatchRequest, SettingsResponse
 
-
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 _ERROR_RESPONSES = {
-    status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse, "description": "Invalid settings."},
+    status.HTTP_422_UNPROCESSABLE_ENTITY: {
+        "model": ErrorResponse,
+        "description": "Invalid settings.",
+    },
 }
 
 _ALLOWED_PATCH_PATHS = {
@@ -32,7 +34,9 @@ def get_settings() -> SettingsResponse:
     try:
         return SettingsResponse(**load_product_factory_settings().to_dict())
     except ProductFactorySettingsError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
 
 @router.patch("", response_model=SettingsResponse, responses=_ERROR_RESPONSES)
@@ -47,7 +51,9 @@ def patch_settings(request: SettingsPatchRequest) -> SettingsResponse:
     try:
         return SettingsResponse(**patch_product_factory_settings(patch).to_dict())
     except ProductFactorySettingsError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
 
 def _invalid_patch_paths(payload: dict[str, Any]) -> list[str]:
@@ -56,7 +62,9 @@ def _invalid_patch_paths(payload: dict[str, Any]) -> list[str]:
     return [".".join(path) for path in leaf_paths if path not in _ALLOWED_PATCH_PATHS]
 
 
-def _collect_leaf_paths(payload: Any, prefix: tuple[str, ...], out: list[tuple[str, ...]]) -> None:
+def _collect_leaf_paths(
+    payload: Any, prefix: tuple[str, ...], out: list[tuple[str, ...]]
+) -> None:
     if isinstance(payload, dict) and payload:
         for key, value in payload.items():
             _collect_leaf_paths(value, (*prefix, str(key)), out)

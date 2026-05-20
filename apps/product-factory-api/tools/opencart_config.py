@@ -27,9 +27,15 @@ def discover_repo_root(explicit_repo_root: str | None) -> Path:
         if candidate in seen:
             continue
         seen.add(candidate)
-        if (candidate / ".git").exists() or (candidate / "products").is_dir() or (candidate / "work").is_dir():
+        if (
+            (candidate / ".git").exists()
+            or (candidate / "products").is_dir()
+            or (candidate / "work").is_dir()
+        ):
             return candidate
-    raise RuntimeError("Could not auto-detect repo root for OpenCart config resolution.")
+    raise RuntimeError(
+        "Could not auto-detect repo root for OpenCart config resolution."
+    )
 
 
 def load_env_file(path: Path) -> dict[str, str]:
@@ -98,19 +104,39 @@ def resolve_opencart_config(
         "env_file": str(env_file),
         "legacy_env_file": str(legacy_env_file),
         "store_base": _resolve_value(
-            store_base, "OPENCART_STORE_BASE", root_env_file_values, legacy_env_file_values, ""
+            store_base,
+            "OPENCART_STORE_BASE",
+            root_env_file_values,
+            legacy_env_file_values,
+            "",
         ),
         "admin_path": _resolve_value(
-            admin_path, "OPENCART_ADMIN_PATH", root_env_file_values, legacy_env_file_values, ""
+            admin_path,
+            "OPENCART_ADMIN_PATH",
+            root_env_file_values,
+            legacy_env_file_values,
+            "",
         ),
         "username": _resolve_value(
-            username, "OPENCART_ADMIN_USER", root_env_file_values, legacy_env_file_values, ""
+            username,
+            "OPENCART_ADMIN_USER",
+            root_env_file_values,
+            legacy_env_file_values,
+            "",
         ),
         "password": _resolve_value(
-            password, "OPENCART_ADMIN_PASS", root_env_file_values, legacy_env_file_values, ""
+            password,
+            "OPENCART_ADMIN_PASS",
+            root_env_file_values,
+            legacy_env_file_values,
+            "",
         ),
         "profile": _resolve_value(
-            profile, "OPENCART_IMPORT_PROFILE", root_env_file_values, legacy_env_file_values, ""
+            profile,
+            "OPENCART_IMPORT_PROFILE",
+            root_env_file_values,
+            legacy_env_file_values,
+            "",
         ),
     }
 
@@ -136,10 +162,14 @@ def _export_shell(args: argparse.Namespace) -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Resolve shared OpenCart runtime configuration.")
+    parser = argparse.ArgumentParser(
+        description="Resolve shared OpenCart runtime configuration."
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    export_shell = subparsers.add_parser("export-shell", help="Print shell assignments for resolved OpenCart settings.")
+    export_shell = subparsers.add_parser(
+        "export-shell", help="Print shell assignments for resolved OpenCart settings."
+    )
     export_shell.add_argument("--repo-root", default=None)
     export_shell.add_argument("--store-base", default=None)
     export_shell.add_argument("--admin-path", default=None)

@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-
 DEFAULT_AUDIT_LOG_PATH = "output/product_factory_telegram/audit.jsonl"
 
 _LOGGER = logging.getLogger(__name__)
@@ -87,7 +86,9 @@ def append_event(
         with audit_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
     except (OSError, TypeError):
-        _LOGGER.warning("Failed to append Telegram Product Factory audit event.", exc_info=True)
+        _LOGGER.warning(
+            "Failed to append Telegram Product Factory audit event.", exc_info=True
+        )
     return event
 
 
@@ -101,12 +102,18 @@ def iter_events(path: str | Path | None = None) -> Iterator[dict[str, Any]]:
                 try:
                     event = json.loads(line)
                 except ValueError:
-                    _LOGGER.warning("Skipping malformed Telegram Product Factory audit JSONL line.")
+                    _LOGGER.warning(
+                        "Skipping malformed Telegram Product Factory audit JSONL line."
+                    )
                     continue
                 if isinstance(event, dict):
-                    yield {field: event[field] for field in _AUDIT_FIELDS if field in event}
+                    yield {
+                        field: event[field] for field in _AUDIT_FIELDS if field in event
+                    }
     except (OSError, UnicodeDecodeError):
-        _LOGGER.warning("Failed to read Telegram Product Factory audit log.", exc_info=True)
+        _LOGGER.warning(
+            "Failed to read Telegram Product Factory audit log.", exc_info=True
+        )
         return
 
 

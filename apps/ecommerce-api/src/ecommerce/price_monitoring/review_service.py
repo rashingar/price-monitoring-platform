@@ -149,7 +149,9 @@ def load_price_review_rows_from_db_observations(
             limit=5000,
         )
         if hasattr(session, "execute") and observations:
-            observation_ids = [int(item["id"]) for item in observations if item.get("id") is not None]
+            observation_ids = [
+                int(item["id"]) for item in observations if item.get("id") is not None
+            ]
             listings = list_price_observation_listings_fn(
                 session,
                 price_observation_ids=observation_ids,
@@ -165,10 +167,17 @@ def load_price_review_rows_from_db_observations(
         raise FileNotFoundError(
             f"Enriched CSV not found in run folder and no persisted price observations found for run: {run_id}"
         )
-    return load_price_review_rows_from_observations(run_dir, observations, include_all_listings=include_all_listings), warnings
+    return (
+        load_price_review_rows_from_observations(
+            run_dir, observations, include_all_listings=include_all_listings
+        ),
+        warnings,
+    )
 
 
-def review_listing_backfill_needed(observations: list[dict], listings: list[dict]) -> bool:
+def review_listing_backfill_needed(
+    observations: list[dict], listings: list[dict]
+) -> bool:
     listed_observation_ids = {
         int(listing["price_observation_id"])
         for listing in listings
@@ -178,12 +187,17 @@ def review_listing_backfill_needed(observations: list[dict], listings: list[dict
         observation_id = observation.get("id")
         if observation_id is None:
             continue
-        if observation.get("source_capture_snapshot_id") is not None and int(observation_id) not in listed_observation_ids:
+        if (
+            observation.get("source_capture_snapshot_id") is not None
+            and int(observation_id) not in listed_observation_ids
+        ):
             return True
     return False
 
 
-def attach_price_observation_listings(observations: list[dict], listings: list[dict]) -> None:
+def attach_price_observation_listings(
+    observations: list[dict], listings: list[dict]
+) -> None:
     by_observation_id: dict[int, list[dict]] = {}
     for listing in listings:
         observation_id = listing.get("price_observation_id")
@@ -194,4 +208,6 @@ def attach_price_observation_listings(observations: list[dict], listings: list[d
         observation_id = observation.get("id")
         if observation_id is None:
             continue
-        observation["price_observation_listings"] = by_observation_id.get(int(observation_id), [])
+        observation["price_observation_listings"] = by_observation_id.get(
+            int(observation_id), []
+        )

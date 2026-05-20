@@ -6,6 +6,7 @@ from pathlib import Path
 from product_factory.jobs.models import JobStatus, JobType
 from product_factory.jobs.store import JobStore
 
+
 def test_enqueue_persists_job_metadata_and_log_file(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs")
 
@@ -101,7 +102,9 @@ def test_store_marks_failed_with_error_detail(tmp_path: Path) -> None:
     assert failed.finished_at is not None
 
 
-def test_store_marks_queued_job_cancelled_and_reloads_stop_metadata(tmp_path: Path) -> None:
+def test_store_marks_queued_job_cancelled_and_reloads_stop_metadata(
+    tmp_path: Path,
+) -> None:
     store = JobStore(tmp_path / "jobs")
     record = store.enqueue(JobType.RENDER, {"model": "233541"}, job_id="job-1")
 

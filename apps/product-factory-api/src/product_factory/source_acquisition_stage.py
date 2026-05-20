@@ -6,7 +6,15 @@ from typing import Any, Callable, Mapping
 from urllib.parse import urlsplit
 
 from .fetcher import ElectronetFetcher, FetchError
-from .models import CLIInput, FetchResult, GalleryImage, ParsedProduct, SourceProductData, SpecItem, SpecSection
+from .models import (
+    CLIInput,
+    FetchResult,
+    GalleryImage,
+    ParsedProduct,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+)
 from .normalize import normalize_whitespace, repair_mojibake_text
 from .prepare_provider_resolution import (
     PrepareProviderResolutionResult,
@@ -32,20 +40,26 @@ def execute_source_acquisition_stage(
     gallery_mode: str | None = None,
     validate_url_scope_fn: Callable[[str], tuple[str, bool, str]] = validate_url_scope,
     fetcher_factory: Callable[[], ElectronetFetcher] = ElectronetFetcher,
-    resolve_prepare_provider_input_fn: Callable[..., PrepareProviderResolutionResult] = resolve_prepare_provider_resolution,
-    source_capture_sync_fn: Callable[[str, str], SourceCaptureSyncResult] = sync_initial_source_capture,
+    resolve_prepare_provider_input_fn: Callable[
+        ..., PrepareProviderResolutionResult
+    ] = resolve_prepare_provider_resolution,
+    source_capture_sync_fn: Callable[
+        [str, str], SourceCaptureSyncResult
+    ] = sync_initial_source_capture,
 ) -> SourceAcquisitionResult:
     resolved_model_dir = ensure_directory(model_dir)
     fetcher = fetcher_factory()
-    provider_resolution, source_capture_warnings, capture_sync = _resolve_provider_for_acquisition_url(
-        model=model,
-        url=url,
-        photos=photos,
-        model_dir=resolved_model_dir,
-        validate_url_scope_fn=validate_url_scope_fn,
-        fetcher=fetcher,
-        resolve_prepare_provider_input_fn=resolve_prepare_provider_input_fn,
-        source_capture_sync_fn=source_capture_sync_fn,
+    provider_resolution, source_capture_warnings, capture_sync = (
+        _resolve_provider_for_acquisition_url(
+            model=model,
+            url=url,
+            photos=photos,
+            model_dir=resolved_model_dir,
+            validate_url_scope_fn=validate_url_scope_fn,
+            fetcher=fetcher,
+            resolve_prepare_provider_input_fn=resolve_prepare_provider_input_fn,
+            source_capture_sync_fn=source_capture_sync_fn,
+        )
     )
     if source_capture_warnings:
         provider_resolution.parsed.warnings.extend(source_capture_warnings)
@@ -56,7 +70,11 @@ def execute_source_acquisition_stage(
     gallery_url_used = bool(str(gallery_url or "").strip())
     gallery_fetch: FetchResult | None = None
     if gallery_url_used:
-        gallery_provider_resolution, gallery_source_capture_warnings, _gallery_capture_sync = _resolve_provider_for_acquisition_url(
+        (
+            gallery_provider_resolution,
+            gallery_source_capture_warnings,
+            _gallery_capture_sync,
+        ) = _resolve_provider_for_acquisition_url(
             model=model,
             url=gallery_extraction_url,
             photos=photos,
@@ -68,15 +86,23 @@ def execute_source_acquisition_stage(
         )
         gallery_fetch = gallery_provider_resolution.fetch
         _repair_source_product_text(gallery_provider_resolution.parsed.source)
-        parsed.source.gallery_images = list(gallery_provider_resolution.parsed.source.gallery_images)
+        parsed.source.gallery_images = list(
+            gallery_provider_resolution.parsed.source.gallery_images
+        )
         if gallery_source_capture_warnings:
-            parsed.warnings.extend(f"gallery_{warning}" for warning in gallery_source_capture_warnings)
-    gallery_filter_final_url = gallery_fetch.final_url if gallery_fetch is not None else fetch.final_url
+            parsed.warnings.extend(
+                f"gallery_{warning}" for warning in gallery_source_capture_warnings
+            )
+    gallery_filter_final_url = (
+        gallery_fetch.final_url if gallery_fetch is not None else fetch.final_url
+    )
     gallery_extracted_before_source_filter_count = len(parsed.source.gallery_images)
-    gallery_images_after_source_filter, gallery_source_filter_metadata = apply_source_specific_gallery_rules(
-        parsed.source.gallery_images,
-        source_url=gallery_extraction_url,
-        final_url=gallery_filter_final_url,
+    gallery_images_after_source_filter, gallery_source_filter_metadata = (
+        apply_source_specific_gallery_rules(
+            parsed.source.gallery_images,
+            source_url=gallery_extraction_url,
+            final_url=gallery_filter_final_url,
+        )
     )
     parsed.source.gallery_images = gallery_images_after_source_filter
     gallery_after_source_filter_count = len(parsed.source.gallery_images)
@@ -103,7 +129,10 @@ def execute_source_acquisition_stage(
         characteristics_source = characteristics_provider_resolution.parsed.source
         _repair_source_product_text(characteristics_source)
         if characteristics_source_capture_warnings:
-            parsed.warnings.extend(f"characteristics_{warning}" for warning in characteristics_source_capture_warnings)
+            parsed.warnings.extend(
+                f"characteristics_{warning}"
+                for warning in characteristics_source_capture_warnings
+            )
     extracted_gallery_count = gallery_extracted_before_source_filter_count
     image_order_metadata: dict[str, Any] = {
         "second_opencart_image_index": second_opencart_image_index,
@@ -113,15 +142,21 @@ def execute_source_acquisition_stage(
     image_order_warnings: list[str] = []
     gallery_images_for_download: list[GalleryImage]
     if second_opencart_image_index is not None:
-        reordered_gallery, image_order_metadata, image_order_warnings = apply_second_opencart_image_index(
-            parsed.source.gallery_images,
-            second_opencart_image_index,
+        reordered_gallery, image_order_metadata, image_order_warnings = (
+            apply_second_opencart_image_index(
+                parsed.source.gallery_images,
+                second_opencart_image_index,
+            )
         )
         parsed.source.gallery_images = reordered_gallery
         if image_order_metadata["second_opencart_image_override_applied"]:
-            gallery_images_for_download = _inject_energy_label_after_second_opencart_image(parsed.source)
+            gallery_images_for_download = (
+                _inject_energy_label_after_second_opencart_image(parsed.source)
+            )
         else:
-            gallery_images_for_download = _inject_energy_label_into_gallery(parsed.source)
+            gallery_images_for_download = _inject_energy_label_into_gallery(
+                parsed.source
+            )
     else:
         gallery_images_for_download = _inject_energy_label_into_gallery(parsed.source)
     normalized_gallery_mode = _normalize_gallery_mode(gallery_mode)
@@ -135,11 +170,13 @@ def execute_source_acquisition_stage(
     downloaded_gallery: list[GalleryImage] = []
     if gallery_images_for_download:
         try:
-            downloaded_gallery, gallery_warnings, gallery_files = fetcher.download_gallery_images(
-                images=gallery_images_for_download,
-                model=model,
-                output_dir=resolved_model_dir,
-                requested_photos=requested_gallery_photos,
+            downloaded_gallery, gallery_warnings, gallery_files = (
+                fetcher.download_gallery_images(
+                    images=gallery_images_for_download,
+                    model=model,
+                    output_dir=resolved_model_dir,
+                    requested_photos=requested_gallery_photos,
+                )
             )
             if downloaded_gallery:
                 parsed.source.gallery_images = downloaded_gallery
@@ -167,16 +204,26 @@ def execute_source_acquisition_stage(
         "gallery_source_filter_rule": gallery_source_filter_metadata["rule"],
         "gallery_extracted_before_source_filter_count": gallery_extracted_before_source_filter_count,
         "gallery_after_source_filter_count": gallery_after_source_filter_count,
-        "gallery_skroutz_skip_last_applied": gallery_source_filter_metadata["skroutz_skip_last_applied"],
-        "gallery_skroutz_skip_last_skipped_url": gallery_source_filter_metadata["skipped_url"],
+        "gallery_skroutz_skip_last_applied": gallery_source_filter_metadata[
+            "skroutz_skip_last_applied"
+        ],
+        "gallery_skroutz_skip_last_skipped_url": gallery_source_filter_metadata[
+            "skipped_url"
+        ],
         "product_data_extraction_url": url,
         "product_data_extraction_uses_main_url": True,
         "characteristics_url_used": characteristics_url_used,
         "characteristics_extraction_url": characteristics_extraction_url,
         "second_opencart_image_index": second_opencart_image_index,
-        "second_opencart_image_override_applied": image_order_metadata["second_opencart_image_override_applied"],
-        "second_opencart_image_warning": image_order_metadata.get("second_opencart_image_warning"),
-        "deduplicated_gallery_count": image_order_metadata["deduplicated_gallery_count"],
+        "second_opencart_image_override_applied": image_order_metadata[
+            "second_opencart_image_override_applied"
+        ],
+        "second_opencart_image_warning": image_order_metadata.get(
+            "second_opencart_image_warning"
+        ),
+        "deduplicated_gallery_count": image_order_metadata[
+            "deduplicated_gallery_count"
+        ],
     }
     if gallery_fetch is not None:
         snapshot_provenance.update(
@@ -199,10 +246,13 @@ def execute_source_acquisition_stage(
             {
                 "source_capture_sync_status": capture_sync.status,
                 "source_capture_sync_message": capture_sync.message,
-                "source_capture_payload_used": not source_capture_warnings and fetch.method == "shared_source_capture",
-                "product_factory_capture_mode": "shared_source_capture"
-                if fetch.method == "shared_source_capture"
-                else "local_provider_fetch",
+                "source_capture_payload_used": not source_capture_warnings
+                and fetch.method == "shared_source_capture",
+                "product_factory_capture_mode": (
+                    "shared_source_capture"
+                    if fetch.method == "shared_source_capture"
+                    else "local_provider_fetch"
+                ),
             }
         )
 
@@ -242,19 +292,32 @@ def _provider_resolution_from_source_capture(
     if product_payload is None:
         return None
 
-    source_product = _source_product_data_from_mapping(product_payload, source=source, url=cli.url)
+    source_product = _source_product_data_from_mapping(
+        product_payload, source=source, url=cli.url
+    )
     if source_product is None:
         return None
 
     warnings = _source_capture_response_warnings(sync_result.payload)
     parsed = ParsedProduct(
         source=source_product,
-        provenance=_string_mapping(_first_mapping(product_payload, ("provenance",)) or source_payload.get("provenance")),
-        missing_fields=_string_list(product_payload.get("missing_fields") or source_payload.get("missing_fields")),
-        critical_missing=_string_list(product_payload.get("critical_missing") or source_payload.get("critical_missing")),
+        provenance=_string_mapping(
+            _first_mapping(product_payload, ("provenance",))
+            or source_payload.get("provenance")
+        ),
+        missing_fields=_string_list(
+            product_payload.get("missing_fields")
+            or source_payload.get("missing_fields")
+        ),
+        critical_missing=_string_list(
+            product_payload.get("critical_missing")
+            or source_payload.get("critical_missing")
+        ),
         warnings=warnings,
     )
-    fetch = _fetch_result_from_source_capture_payload(source_payload, source_product, requested_url=cli.url)
+    fetch = _fetch_result_from_source_capture_payload(
+        source_payload, source_product, requested_url=cli.url
+    )
     return validate_prepare_provider_resolution_result(
         cli,
         PrepareProviderResolutionResult(
@@ -267,7 +330,9 @@ def _provider_resolution_from_source_capture(
     )
 
 
-def _matching_source_capture_payload(payload: Mapping[str, Any] | None, source_url: str) -> Mapping[str, Any] | None:
+def _matching_source_capture_payload(
+    payload: Mapping[str, Any] | None, source_url: str
+) -> Mapping[str, Any] | None:
     if not isinstance(payload, Mapping):
         return None
     candidates: list[Mapping[str, Any]] = []
@@ -288,7 +353,9 @@ def _matching_source_capture_payload(payload: Mapping[str, Any] | None, source_u
     return candidates[0] if candidates else None
 
 
-def _normalized_product_payload(source_payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
+def _normalized_product_payload(
+    source_payload: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
     direct = _first_mapping(
         source_payload,
         (
@@ -323,10 +390,19 @@ def _fetch_result_from_source_capture_payload(
     *,
     requested_url: str,
 ) -> FetchResult:
-    snapshot = _first_mapping(source_payload, ("snapshot", "capture", "source_snapshot")) or source_payload
-    response_headers = _string_mapping(snapshot.get("response_headers") or snapshot.get("headers"))
+    snapshot = (
+        _first_mapping(source_payload, ("snapshot", "capture", "source_snapshot"))
+        or source_payload
+    )
+    response_headers = _string_mapping(
+        snapshot.get("response_headers") or snapshot.get("headers")
+    )
     return FetchResult(
-        url=str(snapshot.get("requested_url") or source_payload.get("requested_url") or requested_url),
+        url=str(
+            snapshot.get("requested_url")
+            or source_payload.get("requested_url")
+            or requested_url
+        ),
         final_url=str(
             snapshot.get("final_url")
             or source_payload.get("final_url")
@@ -334,15 +410,26 @@ def _fetch_result_from_source_capture_payload(
             or source_product.url
             or requested_url
         ),
-        html=str(snapshot.get("body_text") or snapshot.get("html") or snapshot.get("raw_html") or source_payload.get("raw_html") or ""),
-        status_code=_int_value(snapshot.get("status_code") or source_payload.get("status_code"), default=200),
+        html=str(
+            snapshot.get("body_text")
+            or snapshot.get("html")
+            or snapshot.get("raw_html")
+            or source_payload.get("raw_html")
+            or ""
+        ),
+        status_code=_int_value(
+            snapshot.get("status_code") or source_payload.get("status_code"),
+            default=200,
+        ),
         method="shared_source_capture",
         fallback_used=False,
         response_headers=response_headers,
     )
 
 
-def _source_product_data_from_mapping(payload: Mapping[str, Any], *, source: str, url: str) -> SourceProductData | None:
+def _source_product_data_from_mapping(
+    payload: Mapping[str, Any], *, source: str, url: str
+) -> SourceProductData | None:
     if not _looks_like_source_product(payload):
         return None
 
@@ -356,11 +443,15 @@ def _source_product_data_from_mapping(payload: Mapping[str, Any], *, source: str
     values["brand"] = str(values.get("brand") or "")
     values["name"] = str(values.get("name") or "")
     values["mpn"] = str(values.get("mpn") or "")
-    values["gallery_images"] = _gallery_images_from_payload(values.get("gallery_images"))
+    values["gallery_images"] = _gallery_images_from_payload(
+        values.get("gallery_images")
+    )
     values["besco_images"] = _gallery_images_from_payload(values.get("besco_images"))
     values["key_specs"] = _spec_items_from_payload(values.get("key_specs"))
     values["spec_sections"] = _spec_sections_from_payload(values.get("spec_sections"))
-    values["manufacturer_spec_sections"] = _spec_sections_from_payload(values.get("manufacturer_spec_sections"))
+    values["manufacturer_spec_sections"] = _spec_sections_from_payload(
+        values.get("manufacturer_spec_sections")
+    )
     return SourceProductData(**values)
 
 
@@ -392,7 +483,12 @@ def _spec_items_from_payload(value: Any) -> list[SpecItem]:
     for item in value:
         if not isinstance(item, Mapping):
             continue
-        items.append(SpecItem(label=str(item.get("label") or ""), value=None if item.get("value") is None else str(item.get("value"))))
+        items.append(
+            SpecItem(
+                label=str(item.get("label") or ""),
+                value=None if item.get("value") is None else str(item.get("value")),
+            )
+        )
     return items
 
 
@@ -403,7 +499,12 @@ def _spec_sections_from_payload(value: Any) -> list[SpecSection]:
     for section in value:
         if not isinstance(section, Mapping):
             continue
-        sections.append(SpecSection(section=str(section.get("section") or ""), items=_spec_items_from_payload(section.get("items"))))
+        sections.append(
+            SpecSection(
+                section=str(section.get("section") or ""),
+                items=_spec_items_from_payload(section.get("items")),
+            )
+        )
     return sections
 
 
@@ -415,7 +516,11 @@ def _source_capture_response_warnings(payload: Mapping[str, Any] | None) -> list
         if source.get("capture_status") == "failed":
             code = str(source.get("error_code") or "CAPTURE_FAILED")
             message = str(source.get("error_message") or "").strip()
-            warnings.append(f"source_capture_failed:{code}:{message}" if message else f"source_capture_failed:{code}")
+            warnings.append(
+                f"source_capture_failed:{code}:{message}"
+                if message
+                else f"source_capture_failed:{code}"
+            )
     return warnings
 
 
@@ -449,14 +554,28 @@ def _int_value(value: Any, *, default: int) -> int:
 
 
 def _looks_like_source_product(payload: Mapping[str, Any]) -> bool:
-    if any(key in payload for key in ("source_name", "page_type", "spec_sections", "gallery_images", "taxonomy_source_category")):
+    if any(
+        key in payload
+        for key in (
+            "source_name",
+            "page_type",
+            "spec_sections",
+            "gallery_images",
+            "taxonomy_source_category",
+        )
+    ):
         return True
-    return bool(payload.get("name") and (payload.get("brand") or payload.get("mpn") or payload.get("product_code")))
+    return bool(
+        payload.get("name")
+        and (payload.get("brand") or payload.get("mpn") or payload.get("product_code"))
+    )
 
 
 def _inject_energy_label_into_gallery(source: SourceProductData) -> list[GalleryImage]:
     gallery_images = list(getattr(source, "gallery_images", []) or [])
-    energy_label_asset_url = str(getattr(source, "energy_label_asset_url", "") or "").strip()
+    energy_label_asset_url = str(
+        getattr(source, "energy_label_asset_url", "") or ""
+    ).strip()
     if not gallery_images or not energy_label_asset_url:
         return gallery_images
 
@@ -485,9 +604,13 @@ def _inject_energy_label_into_gallery(source: SourceProductData) -> list[Gallery
     return injected_images
 
 
-def _inject_energy_label_after_second_opencart_image(source: SourceProductData) -> list[GalleryImage]:
+def _inject_energy_label_after_second_opencart_image(
+    source: SourceProductData,
+) -> list[GalleryImage]:
     gallery_images = list(getattr(source, "gallery_images", []) or [])
-    energy_label_asset_url = str(getattr(source, "energy_label_asset_url", "") or "").strip()
+    energy_label_asset_url = str(
+        getattr(source, "energy_label_asset_url", "") or ""
+    ).strip()
     if len(gallery_images) < 2 or not energy_label_asset_url:
         return _inject_energy_label_into_gallery(source)
 
@@ -500,7 +623,9 @@ def _inject_energy_label_after_second_opencart_image(source: SourceProductData) 
                 position=index,
             )
         )
-    injected_images.append(GalleryImage(url=energy_label_asset_url, alt="Energy Label", position=3))
+    injected_images.append(
+        GalleryImage(url=energy_label_asset_url, alt="Energy Label", position=3)
+    )
     for index, image in enumerate(gallery_images[2:], start=4):
         injected_images.append(
             GalleryImage(
@@ -539,7 +664,11 @@ def apply_second_opencart_image_index(
         return _renumber_gallery_images(deduplicated), metadata, []
 
     selected = deduplicated[requested_index - 1]
-    remaining = [image for index, image in enumerate(deduplicated, start=1) if index != requested_index]
+    remaining = [
+        image
+        for index, image in enumerate(deduplicated, start=1)
+        if index != requested_index
+    ]
     reordered = [remaining[0], selected, *remaining[1:]]
     metadata["second_opencart_image_override_applied"] = True
     return _renumber_gallery_images(reordered), metadata, []
@@ -675,7 +804,10 @@ def _repair_source_product_text(source: SourceProductData) -> None:
             setattr(
                 source,
                 field_name,
-                [repair_mojibake_text(item) if isinstance(item, str) else item for item in value],
+                [
+                    repair_mojibake_text(item) if isinstance(item, str) else item
+                    for item in value
+                ],
             )
 
     _repair_gallery_images(source.gallery_images)
@@ -712,7 +844,9 @@ def _resolve_provider_for_acquisition_url(
     try:
         capture_sync = source_capture_sync_fn(model, url)
     except Exception as exc:
-        capture_sync = SourceCaptureSyncResult(status="failed", message=str(exc) or exc.__class__.__name__)
+        capture_sync = SourceCaptureSyncResult(
+            status="failed", message=str(exc) or exc.__class__.__name__
+        )
     try:
         provider_resolution = _provider_resolution_from_source_capture(
             acquisition_cli,
@@ -730,9 +864,13 @@ def _resolve_provider_for_acquisition_url(
     # Direct provider fetch remains the canonical local path when shared
     # source capture has not returned a normalized product payload.
     if capture_sync.status == "failed":
-        source_capture_warnings.append(f"source_capture_sync_failed:{capture_sync.message}")
+        source_capture_warnings.append(
+            f"source_capture_sync_failed:{capture_sync.message}"
+        )
     elif capture_sync.status == "submitted":
-        source_capture_warnings.extend(_source_capture_response_warnings(capture_sync.payload))
+        source_capture_warnings.extend(
+            _source_capture_response_warnings(capture_sync.payload)
+        )
     return (
         resolve_prepare_provider_input_fn(
             acquisition_cli,

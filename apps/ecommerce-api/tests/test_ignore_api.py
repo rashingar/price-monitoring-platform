@@ -26,7 +26,9 @@ def test_get_ignore_products(tmp_path: Path, monkeypatch) -> None:
         encoding="utf-8-sig",
     )
 
-    response = client.get("/api/ignore/products", params={"q": "bosch", "page": 1, "page_size": 10})
+    response = client.get(
+        "/api/ignore/products", params={"q": "bosch", "page": 1, "page_size": 10}
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -35,7 +37,9 @@ def test_get_ignore_products(tmp_path: Path, monkeypatch) -> None:
     assert payload["items"][0]["model"] == "005606"
 
 
-def test_post_ignore_product_creates_file_and_returns_stored_row(tmp_path: Path, monkeypatch) -> None:
+def test_post_ignore_product_creates_file_and_returns_stored_row(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, ignore_path = _client_with_ignore_path(tmp_path, monkeypatch)
 
     response = client.post(
@@ -66,7 +70,9 @@ def test_post_ignore_product_creates_file_and_returns_stored_row(tmp_path: Path,
     assert rows[0]["model"] == "005606"
 
 
-def test_post_ignore_product_rejects_composite_model(tmp_path: Path, monkeypatch) -> None:
+def test_post_ignore_product_rejects_composite_model(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, _ignore_path = _client_with_ignore_path(tmp_path, monkeypatch)
 
     response = client.post("/api/ignore/products", json={"model": "233374-233203"})
@@ -75,7 +81,9 @@ def test_post_ignore_product_rejects_composite_model(tmp_path: Path, monkeypatch
     assert "exactly 6 numeric digits" in response.json()["detail"]
 
 
-def test_post_ignore_product_missing_model_returns_400(tmp_path: Path, monkeypatch) -> None:
+def test_post_ignore_product_missing_model_returns_400(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, _ignore_path = _client_with_ignore_path(tmp_path, monkeypatch)
 
     response = client.post("/api/ignore/products", json={"reason": "manual"})

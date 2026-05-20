@@ -14,8 +14,14 @@ from ecommerce.catalog.source_catalog import SOURCE_CATA_ENV_VAR  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
-from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
-from ecommerce.db.models.source_urls import SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.models.products import (
+    ProductSource,
+    SourceCaptureSnapshot,
+)  # noqa: E402
+from ecommerce.db.models.source_urls import (
+    SourceUrlCandidate,
+    SourceUrlDiscoveryRun,
+)  # noqa: E402
 from ecommerce.db.repositories.catalog import (  # noqa: E402
     get_catalog_brands,
     get_catalog_categories,
@@ -23,8 +29,13 @@ from ecommerce.db.repositories.catalog import (  # noqa: E402
     get_catalog_summary,
 )
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, create_or_update_manual_source_url  # noqa: E402
-from ecommerce.db.repositories.source_url_candidates import _candidate_sort_key  # noqa: E402
+from ecommerce.db.repositories.source_urls import (
+    create_or_update_imported_source_url,
+    create_or_update_manual_source_url,
+)  # noqa: E402
+from ecommerce.db.repositories.source_url_candidates import (
+    _candidate_sort_key,
+)  # noqa: E402
 from ecommerce.ignore.product_ignore import PRICE_IGNORE_ENV_VAR  # noqa: E402
 
 RAW_COOKWARE = (
@@ -61,11 +72,15 @@ def _client_with_catalog(tmp_path: Path, monkeypatch) -> TestClient:
     return TestClient(create_app())
 
 
-def _client_with_db_catalog_file(tmp_path: Path, monkeypatch, catalog_path: Path, ignore_path: Path | None = None) -> TestClient:
+def _client_with_db_catalog_file(
+    tmp_path: Path, monkeypatch, catalog_path: Path, ignore_path: Path | None = None
+) -> TestClient:
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
-    monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(ignore_path or tmp_path / "missing-price-ignore.csv"))
+    monkeypatch.setenv(
+        PRICE_IGNORE_ENV_VAR, str(ignore_path or tmp_path / "missing-price-ignore.csv")
+    )
     Base.metadata.create_all(get_engine(database_url))
     with session_scope(database_url) as session:
         ingest_source_catalog(session, source_cata_path=catalog_path)
@@ -147,10 +162,14 @@ def test_catalog_products_category_filter(tmp_path: Path, monkeypatch) -> None:
     assert {item["model"] for item in payload["items"]} == {"005606", "233374-233203"}
 
 
-def test_catalog_product_response_includes_parsed_category_fields(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_response_includes_parsed_category_fields(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
 
-    response = client.get("/api/catalog/products", params={"category": RAW_COOKWARE, "page_size": 1})
+    response = client.get(
+        "/api/catalog/products", params={"category": RAW_COOKWARE, "page_size": 1}
+    )
 
     assert response.status_code == 200
     item = response.json()["items"][0]
@@ -159,13 +178,19 @@ def test_catalog_product_response_includes_parsed_category_fields(tmp_path: Path
     assert item["family"] == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"
     assert item["category_name"] == "Σκεύη Μαγειρικής"
     assert item["sub_category"] == "Γάστρες"
-    assert item["category_levels"] == ["ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "Σκεύη Μαγειρικής", "Γάστρες"]
+    assert item["category_levels"] == [
+        "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        "Σκεύη Μαγειρικής",
+        "Γάστρες",
+    ]
 
 
 def test_catalog_products_hierarchy_filters(tmp_path: Path, monkeypatch) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
 
-    by_family = client.get("/api/catalog/products", params={"family": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"}).json()
+    by_family = client.get(
+        "/api/catalog/products", params={"family": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"}
+    ).json()
     by_category = client.get(
         "/api/catalog/products",
         params={"family": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "category_name": "Σκεύη Μαγειρικής"},
@@ -180,11 +205,19 @@ def test_catalog_products_hierarchy_filters(tmp_path: Path, monkeypatch) -> None
     ).json()
 
     assert {item["model"] for item in by_family["items"]} == {"005606", "233374-233203"}
-    assert {item["model"] for item in by_category["items"]} == {"005606", "233374-233203"}
-    assert {item["model"] for item in by_sub_category["items"]} == {"005606", "233374-233203"}
+    assert {item["model"] for item in by_category["items"]} == {
+        "005606",
+        "233374-233203",
+    }
+    assert {item["model"] for item in by_sub_category["items"]} == {
+        "005606",
+        "233374-233203",
+    }
 
 
-def test_catalog_products_raw_and_hierarchy_filters_combine(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_products_raw_and_hierarchy_filters_combine(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
 
     matched = client.get(
@@ -219,8 +252,12 @@ def test_catalog_products_manufacturer_filter(tmp_path: Path, monkeypatch) -> No
 def test_catalog_products_marketplace_filter(tmp_path: Path, monkeypatch) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
 
-    bestprice = client.get("/api/catalog/products", params={"marketplace": "bestprice"}).json()
-    skroutz = client.get("/api/catalog/products", params={"marketplace": "skroutz"}).json()
+    bestprice = client.get(
+        "/api/catalog/products", params={"marketplace": "bestprice"}
+    ).json()
+    skroutz = client.get(
+        "/api/catalog/products", params={"marketplace": "skroutz"}
+    ).json()
     both = client.get("/api/catalog/products", params={"marketplace": "both"}).json()
     none = client.get("/api/catalog/products", params={"marketplace": "none"}).json()
 
@@ -242,17 +279,31 @@ def test_catalog_products_sort_by_and_sort_dir(tmp_path: Path, monkeypatch) -> N
         params={"sort_by": "name", "sort_dir": "asc"},
     ).json()
 
-    assert [item["model"] for item in by_price_desc["items"]] == ["005606", "233374-233203", "ABC123", "123456"]
-    assert [item["model"] for item in by_name_asc["items"]] == ["233374-233203", "ABC123", "005606", "123456"]
+    assert [item["model"] for item in by_price_desc["items"]] == [
+        "005606",
+        "233374-233203",
+        "ABC123",
+        "123456",
+    ]
+    assert [item["model"] for item in by_name_asc["items"]] == [
+        "233374-233203",
+        "ABC123",
+        "005606",
+        "123456",
+    ]
 
 
-def test_catalog_products_search_mpn_atomic_and_automation_filters(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_products_search_mpn_atomic_and_automation_filters(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
 
     searched = client.get("/api/catalog/products", params={"q": "vacuum"}).json()
     has_mpn = client.get("/api/catalog/products", params={"has_mpn": "false"}).json()
     atomic = client.get("/api/catalog/products", params={"atomic_only": "true"}).json()
-    eligible = client.get("/api/catalog/products", params={"automation_eligible_only": "true"}).json()
+    eligible = client.get(
+        "/api/catalog/products", params={"automation_eligible_only": "true"}
+    ).json()
 
     assert {item["model"] for item in searched["items"]} == {"005606", "123456"}
     assert [item["model"] for item in has_mpn["items"]] == ["233374-233203"]
@@ -260,16 +311,22 @@ def test_catalog_products_search_mpn_atomic_and_automation_filters(tmp_path: Pat
     assert [item["model"] for item in eligible["items"]] == ["005606"]
 
 
-def test_catalog_products_has_quantity_filter_requires_active_positive_quantity(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_products_has_quantity_filter_requires_active_positive_quantity(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
 
-    payload = client.get("/api/catalog/products", params={"has_quantity": "true"}).json()
+    payload = client.get(
+        "/api/catalog/products", params={"has_quantity": "true"}
+    ).json()
 
     assert payload["filtered_total"] == 2
     assert {item["model"] for item in payload["items"]} == {"005606", "233374-233203"}
     assert "ABC123" not in {item["model"] for item in payload["items"]}
     assert "123456" not in {item["model"] for item in payload["items"]}
-    assert all(item["status"] == 1 and item["quantity"] > 0 for item in payload["items"])
+    assert all(
+        item["status"] == 1 and item["quantity"] > 0 for item in payload["items"]
+    )
 
 
 def test_catalog_products_source_url_filter(tmp_path: Path, monkeypatch) -> None:
@@ -286,8 +343,12 @@ def test_catalog_products_source_url_filter(tmp_path: Path, monkeypatch) -> None
             {"url": "https://www.skroutz.gr/s/123/vacuum-two.html"},
         )
 
-    with_source_url = client.get("/api/catalog/products", params={"has_source_url": "true"}).json()
-    without_source_url = client.get("/api/catalog/products", params={"has_source_url": "false"}).json()
+    with_source_url = client.get(
+        "/api/catalog/products", params={"has_source_url": "true"}
+    ).json()
+    without_source_url = client.get(
+        "/api/catalog/products", params={"has_source_url": "false"}
+    ).json()
     with_skroutz_source_url = client.get(
         "/api/catalog/products",
         params={"has_source_url": "true", "source_name": "SKROUTZ"},
@@ -298,7 +359,11 @@ def test_catalog_products_source_url_filter(tmp_path: Path, monkeypatch) -> None
     ).json()
 
     assert [item["model"] for item in with_source_url["items"]] == ["123456"]
-    assert {item["model"] for item in without_source_url["items"]} == {"005606", "233374-233203", "ABC123"}
+    assert {item["model"] for item in without_source_url["items"]} == {
+        "005606",
+        "233374-233203",
+        "ABC123",
+    }
     assert [item["model"] for item in with_skroutz_source_url["items"]] == ["123456"]
     assert {item["model"] for item in without_bestprice_source_url["items"]} == {
         "005606",
@@ -308,7 +373,9 @@ def test_catalog_products_source_url_filter(tmp_path: Path, monkeypatch) -> None
     }
 
 
-def test_catalog_products_include_source_url_eligibility_coverage(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_products_include_source_url_eligibility_coverage(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     with session_scope(database_url) as session:
@@ -351,17 +418,26 @@ def test_catalog_products_include_source_url_eligibility_coverage(tmp_path: Path
         create_or_update_manual_source_url(
             session,
             vacuum_two_id,
-            {"url": "https://www.bestprice.gr/item/123/vacuum-two.html", "source_name": "bestprice"},
+            {
+                "url": "https://www.bestprice.gr/item/123/vacuum-two.html",
+                "source_name": "bestprice",
+            },
         )
 
     payload = client.get(
         "/api/catalog/products",
-        params={"marketplace": "bestprice", "source_name": "bestprice", "atomic_only": "true"},
+        params={
+            "marketplace": "bestprice",
+            "source_name": "bestprice",
+            "atomic_only": "true",
+        },
     ).json()
 
     by_model = {item["model"]: item for item in payload["items"]}
     assert by_model["005606"]["source_url_coverage"]["has_active_source_url"] is False
-    assert by_model["005606"]["source_url_coverage"]["needs_review_source_url_count"] == 1
+    assert (
+        by_model["005606"]["source_url_coverage"]["needs_review_source_url_count"] == 1
+    )
     assert by_model["005606"]["source_url_coverage"]["disabled_source_url_count"] == 1
     assert by_model["005606"]["source_url_coverage"]["broken_source_url_count"] == 1
     assert by_model["005606"]["source_url_coverage"]["redirected_source_url_count"] == 1
@@ -382,7 +458,9 @@ def test_catalog_products_include_source_url_eligibility_coverage(tmp_path: Path
     assert [item["model"] for item in with_active_source_url["items"]] == ["123456"]
 
 
-def test_catalog_product_detail_returns_product_and_empty_source_urls(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_detail_returns_product_and_empty_source_urls(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     product_id = client.get(
         "/api/catalog/products",
@@ -411,7 +489,9 @@ def test_catalog_product_detail_returns_product_and_empty_source_urls(tmp_path: 
     }
 
 
-def test_catalog_product_detail_missing_product_returns_404(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_detail_missing_product_returns_404(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
 
     response = client.get("/api/catalog/products/999999")
@@ -420,7 +500,9 @@ def test_catalog_product_detail_missing_product_returns_404(tmp_path: Path, monk
     assert response.json()["detail"] == "Catalog product not found."
 
 
-def test_catalog_product_detail_returns_source_url_lifecycle_rows(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_detail_returns_source_url_lifecycle_rows(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     product_id = client.get(
@@ -433,7 +515,10 @@ def test_catalog_product_detail_returns_source_url_lifecycle_rows(tmp_path: Path
         create_or_update_manual_source_url(
             session,
             product_id,
-            {"url": "https://www.skroutz.gr/s/123/vacuum-one.html", "source_name": "skroutz"},
+            {
+                "url": "https://www.skroutz.gr/s/123/vacuum-one.html",
+                "source_name": "skroutz",
+            },
         )
         for status in statuses[1:]:
             create_or_update_imported_source_url(
@@ -442,7 +527,11 @@ def test_catalog_product_detail_returns_source_url_lifecycle_rows(tmp_path: Path
                 url=f"https://www.bestprice.gr/item/456/vacuum-one-{status}.html",
                 source_name="bestprice",
                 status=status,
-                last_error="provider returned token=live-secret and password=hidden" if status == "broken" else None,
+                last_error=(
+                    "provider returned token=live-secret and password=hidden"
+                    if status == "broken"
+                    else None
+                ),
             )
 
     payload = client.get(f"/api/catalog/products/{product_id}").json()
@@ -450,7 +539,9 @@ def test_catalog_product_detail_returns_source_url_lifecycle_rows(tmp_path: Path
     rows_by_status = {item["status"]: item for item in payload["source_urls"]}
     assert set(rows_by_status) == set(statuses)
     assert payload["source_url_summary"]["total_count"] == 5
-    assert payload["source_url_summary"]["by_status"] == {status: 1 for status in statuses}
+    assert payload["source_url_summary"]["by_status"] == {
+        status: 1 for status in statuses
+    }
     assert payload["source_url_summary"]["by_source"] == {"bestprice": 4, "skroutz": 1}
     assert rows_by_status["active"]["source_url_id"] == rows_by_status["active"]["id"]
     assert rows_by_status["active"]["url_type"] == "manual"
@@ -460,7 +551,9 @@ def test_catalog_product_detail_returns_source_url_lifecycle_rows(tmp_path: Path
     assert "<redacted>" in rows_by_status["broken"]["last_error"]
 
 
-def test_catalog_product_detail_includes_capture_fetch_fields_when_stored(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_detail_includes_capture_fetch_fields_when_stored(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     product_id = client.get(
@@ -474,7 +567,10 @@ def test_catalog_product_detail_includes_capture_fetch_fields_when_stored(tmp_pa
         create_or_update_manual_source_url(
             session,
             product_id,
-            {"url": "https://www.skroutz.gr/s/123/vacuum-two.html", "source_name": "skroutz"},
+            {
+                "url": "https://www.skroutz.gr/s/123/vacuum-two.html",
+                "source_name": "skroutz",
+            },
         )
         product_source = session.query(ProductSource).one()
         product_source.last_fetch_status = "success"
@@ -508,7 +604,9 @@ def test_catalog_product_detail_includes_capture_fetch_fields_when_stored(tmp_pa
     assert row["full_snapshot_ref"]["path"] == "source-captures/9001/full-snapshot.json"
 
 
-def test_catalog_product_detail_excludes_price_monitoring_history(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_detail_excludes_price_monitoring_history(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     product_id = client.get(
         "/api/catalog/products",
@@ -525,7 +623,9 @@ def test_catalog_product_detail_excludes_price_monitoring_history(tmp_path: Path
     assert "PriceObservation" not in serialized
 
 
-def test_catalog_product_source_url_candidates_missing_product_returns_404(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_source_url_candidates_missing_product_returns_404(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
 
     response = client.get("/api/catalog/products/999999/source-url-candidates")
@@ -534,7 +634,9 @@ def test_catalog_product_source_url_candidates_missing_product_returns_404(tmp_p
     assert response.json()["detail"] == "Catalog product not found."
 
 
-def test_catalog_product_source_url_candidates_empty_for_existing_product(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_source_url_candidates_empty_for_existing_product(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     product_id = client.get(
         "/api/catalog/products",
@@ -552,7 +654,9 @@ def test_catalog_product_source_url_candidates_empty_for_existing_product(tmp_pa
     }
 
 
-def test_catalog_product_source_url_candidates_group_sort_and_count_by_run(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_source_url_candidates_group_sort_and_count_by_run(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     product_id = client.get(
@@ -593,7 +697,14 @@ def test_catalog_product_source_url_candidates_group_sort_and_count_by_run(tmp_p
                 updated_at=datetime(2026, 5, 2, 10, tzinfo=timezone.utc),
             )
         )
-        _source_candidate(session, product_id=product_id, run_id="older-run", status="error", created_at=NOW, suffix="error")
+        _source_candidate(
+            session,
+            product_id=product_id,
+            run_id="older-run",
+            status="error",
+            created_at=NOW,
+            suffix="error",
+        )
         accepted = _source_candidate(
             session,
             product_id=product_id,
@@ -653,13 +764,19 @@ def test_catalog_product_source_url_candidates_group_sort_and_count_by_run(tmp_p
         needs_review_id,
         older_group["candidates"][2]["id"],
     ]
-    assert [candidate["status"] for candidate in older_group["candidates"]] == ["accepted", "needs_review", "error"]
+    assert [candidate["status"] for candidate in older_group["candidates"]] == [
+        "accepted",
+        "needs_review",
+        "error",
+    ]
     assert "price_observations" not in response.text
     assert "price_listings" not in response.text
     assert "monitoring_history" not in response.text
 
 
-def test_catalog_product_source_url_candidates_orphan_run_id_gets_minimal_run(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_source_url_candidates_orphan_run_id_gets_minimal_run(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     product_id = client.get(
@@ -673,7 +790,10 @@ def test_catalog_product_source_url_candidates_orphan_run_id_gets_minimal_run(tm
     response = client.get(f"/api/catalog/products/{product_id}/source-url-candidates")
 
     assert response.status_code == 200
-    assert response.json()["items"][0]["run"] == {"run_id": "deleted-run", "status": "unknown"}
+    assert response.json()["items"][0]["run"] == {
+        "run_id": "deleted-run",
+        "status": "unknown",
+    }
 
 
 def test_source_url_candidate_sort_key_handles_nullable_created_at() -> None:
@@ -690,7 +810,9 @@ def test_source_url_candidate_sort_key_handles_nullable_created_at() -> None:
     ]
 
 
-def test_catalog_product_source_url_candidates_sanitizes_database_errors(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_product_source_url_candidates_sanitizes_database_errors(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client_with_catalog(tmp_path, monkeypatch)
     product_id = client.get(
         "/api/catalog/products",
@@ -699,7 +821,9 @@ def test_catalog_product_source_url_candidates_sanitizes_database_errors(tmp_pat
 
     monkeypatch.setattr(
         "ecommerce.api.routes_catalog.product_source_url_candidate_history_payload",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("token=live-secret password=hidden")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            RuntimeError("token=live-secret password=hidden")
+        ),
     )
 
     response = client.get(f"/api/catalog/products/{product_id}/source-url-candidates")
@@ -716,7 +840,14 @@ def test_catalog_products_debug_metadata_is_opt_in(tmp_path: Path, monkeypatch) 
     default_payload = client.get("/api/catalog/products").json()
     debug_payload = client.get(
         "/api/catalog/products",
-        params={"debug": "true", "q": "vacuum", "sort_by": "name", "sort_dir": "desc", "page": 1, "page_size": 1},
+        params={
+            "debug": "true",
+            "q": "vacuum",
+            "sort_by": "name",
+            "sort_dir": "desc",
+            "page": 1,
+            "page_size": 1,
+        },
     ).json()
 
     assert "debug" not in default_payload
@@ -760,7 +891,9 @@ def test_catalog_category_hierarchy(tmp_path: Path, monkeypatch) -> None:
 
     assert response.status_code == 200
     items = response.json()["items"]
-    cookware_family = next(item for item in items if item["family"] == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ")
+    cookware_family = next(
+        item for item in items if item["family"] == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"
+    )
     cookware_category = cookware_family["categories"][0]
     cookware_sub_category = cookware_category["sub_categories"][0]
     assert cookware_family["count"] == 2
@@ -810,7 +943,9 @@ def test_catalog_summary(tmp_path: Path, monkeypatch) -> None:
     }
 
 
-def test_catalog_aggregation_repository_helpers_match_catalog_endpoint_shapes(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_aggregation_repository_helpers_match_catalog_endpoint_shapes(
+    tmp_path: Path, monkeypatch
+) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
     _write_api_catalog(catalog_path)
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
@@ -824,13 +959,23 @@ def test_catalog_aggregation_repository_helpers_match_catalog_endpoint_shapes(tm
         brands = get_catalog_brands(session)
         summary = get_catalog_summary(session)
 
-    cookware = next(item for item in categories["items"] if item["category"] == RAW_COOKWARE)
-    cookware_family = next(item for item in hierarchy["items"] if item["family"] == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ")
+    cookware = next(
+        item for item in categories["items"] if item["category"] == RAW_COOKWARE
+    )
+    cookware_family = next(
+        item for item in hierarchy["items"] if item["family"] == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"
+    )
 
     assert cookware["count"] == 2
-    assert cookware["category_levels"] == ["ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "Σκεύη Μαγειρικής", "Γάστρες"]
+    assert cookware["category_levels"] == [
+        "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        "Σκεύη Μαγειρικής",
+        "Γάστρες",
+    ]
     assert cookware_family["count"] == 2
-    assert cookware_family["categories"][0]["sub_categories"][0]["raw_categories"] == [RAW_COOKWARE]
+    assert cookware_family["categories"][0]["sub_categories"][0]["raw_categories"] == [
+        RAW_COOKWARE
+    ]
     assert brands == {
         "items": [
             {"manufacturer": "Bosch", "count": 2},
@@ -864,7 +1009,9 @@ def test_catalog_missing_columns_returns_400(tmp_path: Path, monkeypatch) -> Non
     assert "Active catalog is empty" in response.json()["warning"]
 
 
-def test_catalog_products_exclude_ignored_by_default(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_products_exclude_ignored_by_default(
+    tmp_path: Path, monkeypatch
+) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
     ignore_path = tmp_path / "price_ignore.csv"
     _write_api_catalog(catalog_path)
@@ -876,13 +1023,19 @@ def test_catalog_products_exclude_ignored_by_default(tmp_path: Path, monkeypatch
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
     monkeypatch.setenv(PRICE_IGNORE_ENV_VAR, str(ignore_path))
 
-    payload = _client_with_db_catalog_file(tmp_path, monkeypatch, catalog_path, ignore_path).get("/api/catalog/products").json()
+    payload = (
+        _client_with_db_catalog_file(tmp_path, monkeypatch, catalog_path, ignore_path)
+        .get("/api/catalog/products")
+        .json()
+    )
 
     assert payload["filtered_total"] == 3
     assert "005606" not in {item["model"] for item in payload["items"]}
 
 
-def test_catalog_products_ignored_include_and_only_filters(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_products_ignored_include_and_only_filters(
+    tmp_path: Path, monkeypatch
+) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
     ignore_path = tmp_path / "price_ignore.csv"
     _write_api_catalog(catalog_path)
@@ -891,12 +1044,16 @@ def test_catalog_products_ignored_include_and_only_filters(tmp_path: Path, monke
         "005606,Vacuum One,Bosch,MPN-1,manual,2026-04-28T12:30:00+00:00,\n",
         encoding="utf-8-sig",
     )
-    client = _client_with_db_catalog_file(tmp_path, monkeypatch, catalog_path, ignore_path)
+    client = _client_with_db_catalog_file(
+        tmp_path, monkeypatch, catalog_path, ignore_path
+    )
 
     included = client.get("/api/catalog/products", params={"ignored": "include"}).json()
     only = client.get("/api/catalog/products", params={"ignored": "only"}).json()
 
-    included_item = next(item for item in included["items"] if item["model"] == "005606")
+    included_item = next(
+        item for item in included["items"] if item["model"] == "005606"
+    )
     assert included["filtered_total"] == 4
     assert included_item["ignored"] is True
     assert included_item["automation_eligible"] is False
@@ -904,7 +1061,9 @@ def test_catalog_products_ignored_include_and_only_filters(tmp_path: Path, monke
     assert only["items"][0]["model"] == "005606"
 
 
-def test_catalog_automation_eligible_is_false_when_mpn_empty(tmp_path: Path, monkeypatch) -> None:
+def test_catalog_automation_eligible_is_false_when_mpn_empty(
+    tmp_path: Path, monkeypatch
+) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
     catalog_path.write_text(
         "model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n"
@@ -912,6 +1071,10 @@ def test_catalog_automation_eligible_is_false_when_mpn_empty(tmp_path: Path, mon
         encoding="utf-8-sig",
     )
 
-    payload = _client_with_db_catalog_file(tmp_path, monkeypatch, catalog_path).get("/api/catalog/products").json()
+    payload = (
+        _client_with_db_catalog_file(tmp_path, monkeypatch, catalog_path)
+        .get("/api/catalog/products")
+        .json()
+    )
 
     assert payload["items"][0]["automation_eligible"] is False

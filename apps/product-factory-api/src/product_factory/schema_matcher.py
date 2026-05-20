@@ -7,7 +7,6 @@ from .normalize import normalize_for_match
 from .repo_paths import SCHEMA_LIBRARY_PATH
 from .utils import read_json
 
-
 SUBCATEGORY_MATCH_POLICY_EXACT = "exact_subcategory"
 SUBCATEGORY_MATCH_POLICY_LEAF_FAMILY = "leaf_family"
 SUBCATEGORY_MATCH_POLICY_MIXED_FAMILY = "mixed_family"
@@ -28,13 +27,17 @@ class SchemaMatcher:
         for schema in self.schemas:
             category_key = normalize_for_match(schema.get("category_path", ""))
             if category_key:
-                self.schemas_by_category_path.setdefault(category_key, []).append(schema)
+                self.schemas_by_category_path.setdefault(category_key, []).append(
+                    schema
+                )
             parent_leaf_key = self._parent_leaf_key(
                 schema.get("parent_category"),
                 schema.get("leaf_category"),
             )
             if parent_leaf_key is not None:
-                self.schemas_by_parent_leaf.setdefault(parent_leaf_key, []).append(schema)
+                self.schemas_by_parent_leaf.setdefault(parent_leaf_key, []).append(
+                    schema
+                )
         self._known_titles = {
             normalize_for_match(section.get("title", ""))
             for schema in self.schemas
@@ -78,7 +81,11 @@ class SchemaMatcher:
                 [],
             )
 
-        extracted_titles = {normalize_for_match(section.section) for section in spec_sections if section.section}
+        extracted_titles = {
+            normalize_for_match(section.section)
+            for section in spec_sections
+            if section.section
+        }
         extracted_labels = {
             normalize_for_match(item.label)
             for section in spec_sections
@@ -104,8 +111,14 @@ class SchemaMatcher:
             taxonomy_leaf_category=taxonomy_leaf_category,
             taxonomy_sub_category=taxonomy_sub_category,
         )
-        candidate_template_ids = [str(schema.get("template_id", "")) for schema in category_pool if str(schema.get("template_id", "")).strip()]
-        pool_subcategory_match_policy = self._pool_subcategory_match_policy(category_pool)
+        candidate_template_ids = [
+            str(schema.get("template_id", ""))
+            for schema in category_pool
+            if str(schema.get("template_id", "")).strip()
+        ]
+        pool_subcategory_match_policy = self._pool_subcategory_match_policy(
+            category_pool
+        )
         if not category_pool:
             return (
                 self._debug_result(
@@ -125,9 +138,15 @@ class SchemaMatcher:
                 [],
             )
 
-        safe_templates, inactive_candidates = self.filter_inactive_templates(category_pool)
+        safe_templates, inactive_candidates = self.filter_inactive_templates(
+            category_pool
+        )
         if not safe_templates:
-            fail_reason = "manual_only_category" if self._all_manual_only(category_pool) else "no_active_templates"
+            fail_reason = (
+                "manual_only_category"
+                if self._all_manual_only(category_pool)
+                else "no_active_templates"
+            )
             return (
                 self._debug_result(
                     matched_schema_id=None,
@@ -195,7 +214,9 @@ class SchemaMatcher:
                     hard_gate_failures=self._hard_gate_failures(gated_candidates),
                     fail_reason=self._summarize_fail_reason(gated_candidates),
                     discriminator_hits=[],
-                    discriminator_misses=self._aggregate_discriminator_misses(gated_candidates),
+                    discriminator_misses=self._aggregate_discriminator_misses(
+                        gated_candidates
+                    ),
                 ),
                 gated_candidates[:5],
             )
@@ -206,7 +227,9 @@ class SchemaMatcher:
             extracted_labels=extracted_labels,
             extracted_pairs=extracted_pairs,
         )
-        selected = self.schemas_by_id.get(str(scored_candidates[0]["matched_schema_id"]).strip())
+        selected = self.schemas_by_id.get(
+            str(scored_candidates[0]["matched_schema_id"]).strip()
+        )
         if selected is None:
             return (
                 SchemaMatchResult(
@@ -241,18 +264,32 @@ class SchemaMatcher:
         preferred_source_files: list[str],
     ) -> list[dict[str, Any]]:
         normalized_taxonomy_path = normalize_for_match(taxonomy_path)
-        if not normalized_taxonomy_path and taxonomy_parent_category and taxonomy_leaf_category:
+        if (
+            not normalized_taxonomy_path
+            and taxonomy_parent_category
+            and taxonomy_leaf_category
+        ):
             normalized_taxonomy_path = self._normalize_category_path(
                 taxonomy_parent_category,
                 taxonomy_leaf_category,
                 taxonomy_sub_category,
             )
 
-        exact_pool = list(self.schemas_by_category_path.get(normalized_taxonomy_path, [])) if normalized_taxonomy_path else []
+        exact_pool = (
+            list(self.schemas_by_category_path.get(normalized_taxonomy_path, []))
+            if normalized_taxonomy_path
+            else []
+        )
         if exact_pool:
             pool = exact_pool
-        elif taxonomy_parent_category and taxonomy_leaf_category and taxonomy_sub_category:
-            pool = self._fallback_candidates_for_parent_leaf(taxonomy_parent_category, taxonomy_leaf_category)
+        elif (
+            taxonomy_parent_category
+            and taxonomy_leaf_category
+            and taxonomy_sub_category
+        ):
+            pool = self._fallback_candidates_for_parent_leaf(
+                taxonomy_parent_category, taxonomy_leaf_category
+            )
         else:
             pool = []
 
@@ -274,11 +311,15 @@ class SchemaMatcher:
         ]
         return preferred_pool or pool
 
-    def filter_inactive_templates(self, candidate_pool: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    def filter_inactive_templates(
+        self, candidate_pool: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         safe_templates: list[dict[str, Any]] = []
         diagnostics: list[dict[str, Any]] = []
         for schema in candidate_pool:
-            template_status = self._normalized_template_status(schema.get("template_status", ""))
+            template_status = self._normalized_template_status(
+                schema.get("template_status", "")
+            )
             if template_status == "active":
                 safe_templates.append(schema)
                 continue
@@ -290,7 +331,9 @@ class SchemaMatcher:
                     extracted_pairs=set(),
                     score=0.0,
                     gate_status="inactive",
-                    gate_reasons=[f"template_status:{schema.get('template_status', '') or 'unknown'}"],
+                    gate_reasons=[
+                        f"template_status:{schema.get('template_status', '') or 'unknown'}"
+                    ],
                 )
             )
         diagnostics.sort(key=self._candidate_sort_key)
@@ -307,8 +350,12 @@ class SchemaMatcher:
         passed: list[dict[str, Any]] = []
         diagnostics: list[dict[str, Any]] = []
         for schema in candidates:
-            section_overlap = len(extracted_titles & set(schema.get("section_names_normalized", [])))
-            label_overlap = len(extracted_labels & set(schema.get("label_set_normalized", [])))
+            section_overlap = len(
+                extracted_titles & set(schema.get("section_names_normalized", []))
+            )
+            label_overlap = len(
+                extracted_labels & set(schema.get("label_set_normalized", []))
+            )
             gate_reasons: list[str] = []
             required_any = set(schema.get("required_labels_any", []))
             required_all = set(schema.get("required_labels_all", []))
@@ -365,8 +412,15 @@ class SchemaMatcher:
             section_ratio = section_overlap / max(len(section_names), 1)
             label_ratio = label_overlap / max(len(labels), 1)
             pair_ratio = pair_overlap / max(len(section_label_pairs), 1)
-            discriminator_ratio = discriminator_overlap / max(len(discriminator_labels), 1)
-            score = (0.2 * section_ratio) + (0.3 * label_ratio) + (0.4 * pair_ratio) + (0.1 * discriminator_ratio)
+            discriminator_ratio = discriminator_overlap / max(
+                len(discriminator_labels), 1
+            )
+            score = (
+                (0.2 * section_ratio)
+                + (0.3 * label_ratio)
+                + (0.4 * pair_ratio)
+                + (0.1 * discriminator_ratio)
+            )
 
             scored.append(
                 self._candidate_record(
@@ -400,12 +454,19 @@ class SchemaMatcher:
         warnings: list[str] = []
         if len(candidates) > 1 and score < 0.35:
             warnings.append("weak_schema_match")
-        warnings.extend(self._selection_warnings(schema, extracted_titles=extracted_titles, extracted_labels=extracted_labels))
+        warnings.extend(
+            self._selection_warnings(
+                schema,
+                extracted_titles=extracted_titles,
+                extracted_labels=extracted_labels,
+            )
+        )
         best_candidate = candidates[0] if candidates else {}
         return (
             self._debug_result(
                 matched_schema_id=str(schema.get("schema_id", "")).strip() or None,
-                matched_sub_category=schema.get("sub_category") or taxonomy_sub_category,
+                matched_sub_category=schema.get("sub_category")
+                or taxonomy_sub_category,
                 score=round(score, 4),
                 warnings=warnings,
                 subcategory_match_policy=self._normalized_subcategory_match_policy(
@@ -419,9 +480,15 @@ class SchemaMatcher:
                 hard_gate_failures=self._hard_gate_failures(candidates),
                 fail_reason=fail_reason,
                 discriminator_hits=list(best_candidate.get("discriminator_hits", [])),
-                discriminator_misses=list(best_candidate.get("discriminator_misses", [])),
-                section_overlap_score=float(best_candidate.get("section_overlap_score", 0.0)),
-                label_overlap_score=float(best_candidate.get("label_overlap_score", 0.0)),
+                discriminator_misses=list(
+                    best_candidate.get("discriminator_misses", [])
+                ),
+                section_overlap_score=float(
+                    best_candidate.get("section_overlap_score", 0.0)
+                ),
+                label_overlap_score=float(
+                    best_candidate.get("label_overlap_score", 0.0)
+                ),
             ),
             candidates[:5],
         )
@@ -445,8 +512,12 @@ class SchemaMatcher:
         label_overlap = len(extracted_labels & labels)
         pair_overlap = len(extracted_pairs & section_label_pairs)
         discriminator_overlap = len(extracted_labels & discriminator_labels)
-        discriminator_hits = sorted(label for label in discriminator_labels if label in extracted_labels)
-        discriminator_misses = sorted(label for label in discriminator_labels if label not in extracted_labels)
+        discriminator_hits = sorted(
+            label for label in discriminator_labels if label in extracted_labels
+        )
+        discriminator_misses = sorted(
+            label for label in discriminator_labels if label not in extracted_labels
+        )
         section_overlap_score = section_overlap / max(len(section_names), 1)
         label_overlap_score = label_overlap / max(len(labels), 1)
         return {
@@ -488,7 +559,11 @@ class SchemaMatcher:
             for section in schema.get("sections", [])
             if section.get("title")
         }
-        missing_titles = sorted(title for title in expected_titles if title and title not in extracted_titles)
+        missing_titles = sorted(
+            title
+            for title in expected_titles
+            if title and title not in extracted_titles
+        )
         if missing_titles:
             warnings.append(f"missing_expected_sections:{len(missing_titles)}")
         sentinel = schema.get("sentinel") or {}
@@ -500,7 +575,9 @@ class SchemaMatcher:
             warnings.append("schema_sentinel_label_missing")
         return warnings
 
-    def _leaf_only_candidates(self, parent_category: str | None, leaf_category: str | None) -> list[dict[str, Any]]:
+    def _leaf_only_candidates(
+        self, parent_category: str | None, leaf_category: str | None
+    ) -> list[dict[str, Any]]:
         parent_leaf_key = self._parent_leaf_key(parent_category, leaf_category)
         if parent_leaf_key is None:
             return []
@@ -510,7 +587,9 @@ class SchemaMatcher:
             if not normalize_for_match(schema.get("sub_category", ""))
         ]
 
-    def _fallback_candidates_for_parent_leaf(self, parent_category: str | None, leaf_category: str | None) -> list[dict[str, Any]]:
+    def _fallback_candidates_for_parent_leaf(
+        self, parent_category: str | None, leaf_category: str | None
+    ) -> list[dict[str, Any]]:
         return [
             schema
             for schema in self._leaf_only_candidates(parent_category, leaf_category)
@@ -518,7 +597,9 @@ class SchemaMatcher:
         ]
 
     def _allows_leaf_fallback(self, schema: dict[str, Any]) -> bool:
-        return self._normalized_subcategory_match_policy(schema.get("subcategory_match_policy", "")) in {
+        return self._normalized_subcategory_match_policy(
+            schema.get("subcategory_match_policy", "")
+        ) in {
             SUBCATEGORY_MATCH_POLICY_LEAF_FAMILY,
             SUBCATEGORY_MATCH_POLICY_MIXED_FAMILY,
         }
@@ -558,14 +639,18 @@ class SchemaMatcher:
             return ""
         return f"{parent} > {leaf} > {taxonomy_sub_category or '-'}"
 
-    def _parent_leaf_key(self, parent_category: str | None, leaf_category: str | None) -> tuple[str, str] | None:
+    def _parent_leaf_key(
+        self, parent_category: str | None, leaf_category: str | None
+    ) -> tuple[str, str] | None:
         parent = normalize_for_match(parent_category)
         leaf = normalize_for_match(leaf_category)
         if not parent or not leaf:
             return None
         return parent, leaf
 
-    def _candidate_sort_key(self, item: dict[str, Any]) -> tuple[float, int, int, int, int, str]:
+    def _candidate_sort_key(
+        self, item: dict[str, Any]
+    ) -> tuple[float, int, int, int, int, str]:
         return (
             -float(item.get("score", 0.0)),
             -int(item.get("pair_overlap", 0)),
@@ -615,22 +700,38 @@ class SchemaMatcher:
         )
 
     def _all_manual_only(self, category_pool: list[dict[str, Any]]) -> bool:
-        return bool(category_pool) and all(self._normalized_template_status(schema.get("template_status", "")) == "manual_only" for schema in category_pool)
+        return bool(category_pool) and all(
+            self._normalized_template_status(schema.get("template_status", ""))
+            == "manual_only"
+            for schema in category_pool
+        )
 
     def _pool_match_mode(self, category_pool: list[dict[str, Any]]) -> str:
-        modes = [str(schema.get("match_mode", "")).strip() for schema in category_pool if str(schema.get("match_mode", "")).strip()]
-        return modes[0] if len(set(modes)) == 1 and modes else ("mixed" if modes else "")
+        modes = [
+            str(schema.get("match_mode", "")).strip()
+            for schema in category_pool
+            if str(schema.get("match_mode", "")).strip()
+        ]
+        return (
+            modes[0] if len(set(modes)) == 1 and modes else ("mixed" if modes else "")
+        )
 
-    def _pool_subcategory_match_policy(self, category_pool: list[dict[str, Any]]) -> str:
+    def _pool_subcategory_match_policy(
+        self, category_pool: list[dict[str, Any]]
+    ) -> str:
         policies = [
-            self._normalized_subcategory_match_policy(schema.get("subcategory_match_policy", ""))
+            self._normalized_subcategory_match_policy(
+                schema.get("subcategory_match_policy", "")
+            )
             for schema in category_pool
         ]
         if len(set(policies)) == 1 and policies:
             return policies[0]
         return "mixed" if policies else ""
 
-    def _hard_gate_failures(self, candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _hard_gate_failures(
+        self, candidates: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "template_id": candidate.get("template_id"),
@@ -640,7 +741,9 @@ class SchemaMatcher:
             if candidate.get("gate_reasons")
         ]
 
-    def _aggregate_discriminator_misses(self, candidates: list[dict[str, Any]]) -> list[str]:
+    def _aggregate_discriminator_misses(
+        self, candidates: list[dict[str, Any]]
+    ) -> list[str]:
         misses: list[str] = []
         seen: set[str] = set()
         for candidate in candidates:
@@ -652,14 +755,34 @@ class SchemaMatcher:
         return misses
 
     def _summarize_fail_reason(self, candidates: list[dict[str, Any]]) -> str:
-        failures = [set(candidate.get("gate_reasons", [])) for candidate in candidates if candidate.get("gate_reasons")]
+        failures = [
+            set(candidate.get("gate_reasons", []))
+            for candidate in candidates
+            if candidate.get("gate_reasons")
+        ]
         if not failures:
             return "no_safe_template_match"
-        if all(any(reason in reasons for reason in {"missing_required_labels_any", "missing_required_labels_all", "forbidden_labels_present"}) for reasons in failures):
+        if all(
+            any(
+                reason in reasons
+                for reason in {
+                    "missing_required_labels_any",
+                    "missing_required_labels_all",
+                    "forbidden_labels_present",
+                }
+            )
+            for reasons in failures
+        ):
             return "discriminator_miss"
-        if all("min_section_overlap" in reasons and reasons <= {"min_section_overlap"} for reasons in failures):
+        if all(
+            "min_section_overlap" in reasons and reasons <= {"min_section_overlap"}
+            for reasons in failures
+        ):
             return "insufficient_section_overlap"
-        if all("min_label_overlap" in reasons and reasons <= {"min_label_overlap"} for reasons in failures):
+        if all(
+            "min_label_overlap" in reasons and reasons <= {"min_label_overlap"}
+            for reasons in failures
+        ):
             return "insufficient_label_overlap"
         return "no_safe_template_match"
 
@@ -667,7 +790,9 @@ class SchemaMatcher:
         return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
 
     def _normalized_subcategory_match_policy(self, value: Any) -> str:
-        normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+        normalized = (
+            str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+        )
         if normalized == SUBCATEGORY_MATCH_POLICY_LEAF_FAMILY:
             return SUBCATEGORY_MATCH_POLICY_LEAF_FAMILY
         if normalized == SUBCATEGORY_MATCH_POLICY_MIXED_FAMILY:

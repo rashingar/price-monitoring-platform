@@ -45,7 +45,9 @@ def run_price(
 ) -> PriceRunResult:
     runtime_config = load_runtime_config()
     pricing_rule = _load_pricing_rule_config(rule_config_path)
-    output_dir = ensure_output_dir(resolve_output_dir(output_dir_override, runtime_config))
+    output_dir = ensure_output_dir(
+        resolve_output_dir(output_dir_override, runtime_config)
+    )
     output_paths = resolve_price_output_paths(input_path, output_dir)
 
     started_at = format_greece_timestamp()
@@ -74,7 +76,10 @@ def run_price(
     ) as priced_writer:
         for validated_row in validated_rows:
             priced_row = validated_row.priced_row
-            if validated_row.is_usable_for_pricing and validated_row.parsed_observed_price is not None:
+            if (
+                validated_row.is_usable_for_pricing
+                and validated_row.parsed_observed_price is not None
+            ):
                 new_price = compute_new_price(
                     pricing_rule,
                     validated_row.parsed_observed_price,
@@ -117,7 +122,9 @@ def run_price(
         list(PRICE_ONLY_COLUMNS),
         runtime_config.csv_encoding,
     ) as price_only_writer:
-        for validated_row, priced_row in zip(validated_rows, processed_priced_rows, strict=True):
+        for validated_row, priced_row in zip(
+            validated_rows, processed_priced_rows, strict=True
+        ):
             output_price = (
                 priced_row.new_price
                 if priced_row.new_price
@@ -145,7 +152,9 @@ def run_price(
         priced_rows=priced_rows_count,
         blank_new_price_rows=blank_new_price_rows,
     )
-    write_json(output_paths.summary_json, summary.to_dict(), runtime_config.csv_encoding)
+    write_json(
+        output_paths.summary_json, summary.to_dict(), runtime_config.csv_encoding
+    )
     return PriceRunResult(output_paths=output_paths, summary=summary)
 
 
@@ -159,7 +168,9 @@ def _load_pricing_rule_config(rule_config_path: Path) -> PricingRule:
     rule_family = payload.get("rule_family")
     if rule_family not in RULE_FAMILIES:
         supported = ", ".join(RULE_FAMILIES)
-        raise ValueError(f"unsupported rule_family in pricing config: {rule_family}. Supported: {supported}")
+        raise ValueError(
+            f"unsupported rule_family in pricing config: {rule_family}. Supported: {supported}"
+        )
 
     rounding_mode = payload.get("rounding_mode")
     if rounding_mode is not None and rounding_mode not in ROUNDING_MODES:
@@ -187,7 +198,9 @@ def _validate_rule_against_source_columns(
     if pricing_rule.rule_family != "bestprice_store_positioning":
         return
     if source_name != "bestprice":
-        raise ValueError("bestprice_store_positioning requires a BestPrice enriched CSV")
+        raise ValueError(
+            "bestprice_store_positioning requires a BestPrice enriched CSV"
+        )
 
     required_headers = (
         "bestprice_best_store",

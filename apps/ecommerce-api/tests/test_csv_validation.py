@@ -42,8 +42,7 @@ def test_case_insensitive_required_columns_and_row_validation(tmp_path: Path) ->
 def test_invalid_input_price_format_is_reported(tmp_path: Path) -> None:
     input_csv = tmp_path / "input.csv"
     input_csv.write_text(
-        "model,mpn,price\n"
-        "Phone X,ABC,\"178,99\"\n",
+        "model,mpn,price\n" 'Phone X,ABC,"178,99"\n',
         encoding="utf-8-sig",
     )
 
@@ -52,7 +51,9 @@ def test_invalid_input_price_format_is_reported(tmp_path: Path) -> None:
     assert validated_rows[0].error_reason == "invalid input price format"
 
 
-def test_price_fails_whole_run_when_required_enriched_columns_are_missing(tmp_path: Path) -> None:
+def test_price_fails_whole_run_when_required_enriched_columns_are_missing(
+    tmp_path: Path,
+) -> None:
     enriched_csv = tmp_path / "export_skroutz_enriched.csv"
     reduced_headers = [
         header
@@ -60,8 +61,7 @@ def test_price_fails_whole_run_when_required_enriched_columns_are_missing(tmp_pa
         if header != "matched_mpn"
     ]
     enriched_csv.write_text(
-        ",".join(reduced_headers) + "\n"
-        "Phone X,ABC,178.99,,,,,,,,\n",
+        ",".join(reduced_headers) + "\n" "Phone X,ABC,178.99,,,,,,,,\n",
         encoding="utf-8-sig",
     )
 

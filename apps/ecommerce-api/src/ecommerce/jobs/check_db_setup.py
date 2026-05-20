@@ -6,7 +6,10 @@ import sys
 from typing import Sequence
 
 from ecommerce.db.config import DATABASE_URL_ENV_VAR
-from ecommerce.db.diagnostics import REQUIRED_PRICE_MONITORING_TABLES, collect_database_status
+from ecommerce.db.diagnostics import (
+    REQUIRED_PRICE_MONITORING_TABLES,
+    collect_database_status,
+)
 from ecommerce.env import describe_local_env_warnings, load_local_env_if_present
 
 
@@ -15,10 +18,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     env_status = load_local_env_if_present()
     status = collect_database_status()
     print(f"{DATABASE_URL_ENV_VAR} configured: {status['configured']}")
-    print(f"{DATABASE_URL_ENV_VAR} source: {_database_url_source(env_status, bool(status['configured']))}")
+    print(
+        f"{DATABASE_URL_ENV_VAR} source: {_database_url_source(env_status, bool(status['configured']))}"
+    )
     for warning in describe_local_env_warnings(env_status):
         print(f"Local env warning: {warning}")
-    print(f"Sanitized database URL: {status['sanitized_database_url'] or '(not configured)'}")
+    print(
+        f"Sanitized database URL: {status['sanitized_database_url'] or '(not configured)'}"
+    )
     print(f"Reachable: {status['reachable']}")
     print(f"Dialect: {status['dialect'] or '(unknown)'}")
     print(f"Alembic current revision: {status['alembic_current_revision'] or '(none)'}")

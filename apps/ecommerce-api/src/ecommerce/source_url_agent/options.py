@@ -13,9 +13,11 @@ from ecommerce.source_url_agent.progress import SourceUrlAgentProgressReporter
 from ecommerce.source_url_agent.search import SourceSearchResult
 from ecommerce.source_url_agent.sources import SourceDefinition
 
-
 Resolver = Callable[[AgentProduct, SourceDefinition], SourceSearchResult]
-ProgressCallback = Callable[[str, AgentProduct, SourceDefinition, list[SourceUrlAgentCandidate], str | None], None]
+ProgressCallback = Callable[
+    [str, AgentProduct, SourceDefinition, list[SourceUrlAgentCandidate], str | None],
+    None,
+]
 
 
 @dataclass(frozen=True)

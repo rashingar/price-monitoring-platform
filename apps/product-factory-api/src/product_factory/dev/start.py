@@ -59,7 +59,9 @@ def main(argv: list[str] | None = None) -> int:
 
 def _validate_host(host: str) -> None:
     if not host or host.strip() != host:
-        raise ValueError("Host must be a non-empty value without leading or trailing whitespace.")
+        raise ValueError(
+            "Host must be a non-empty value without leading or trailing whitespace."
+        )
     if host == "localhost":
         return
     try:

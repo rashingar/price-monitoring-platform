@@ -45,7 +45,9 @@ class BestPriceProvider(ProductProvider):
         fetcher: ElectronetFetcher | None = None,
         parser: BestPriceProductParser | None = None,
     ) -> None:
-        self._fixture_html_by_url = {url: Path(path) for url, path in (fixture_html_by_url or {}).items()}
+        self._fixture_html_by_url = {
+            url: Path(path) for url, path in (fixture_html_by_url or {}).items()
+        }
         self._fetcher = fetcher or ElectronetFetcher()
         self._parser = parser or BestPriceProductParser()
 
@@ -83,7 +85,9 @@ class BestPriceProvider(ProductProvider):
 
         return self._snapshot_from_fetch(identity, fetch)
 
-    def normalize(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+    def normalize(
+        self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity
+    ) -> ProviderResult:
         try:
             parsed = self._parse_snapshot(snapshot)
         except Exception as exc:
@@ -98,7 +102,9 @@ class BestPriceProvider(ProductProvider):
 
         return self._provider_result(parsed, snapshot, identity)
 
-    def _snapshot_from_fixture(self, identity: ProviderInputIdentity, url: str, fixture_path: Path) -> ProviderSnapshot:
+    def _snapshot_from_fixture(
+        self, identity: ProviderInputIdentity, url: str, fixture_path: Path
+    ) -> ProviderSnapshot:
         if not fixture_path.exists():
             raise ProviderError.build(
                 provider_id=self.provider_id,
@@ -128,10 +134,16 @@ class BestPriceProvider(ProductProvider):
             content_type="text/html; charset=utf-8",
             status_code=200,
             body_text=html,
-            metadata={"fetch_method": "fixture", "fallback_used": False, "fixture_path": str(fixture_path)},
+            metadata={
+                "fetch_method": "fixture",
+                "fallback_used": False,
+                "fixture_path": str(fixture_path),
+            },
         )
 
-    def _snapshot_from_fetch(self, identity: ProviderInputIdentity, fetch) -> ProviderSnapshot:
+    def _snapshot_from_fetch(
+        self, identity: ProviderInputIdentity, fetch
+    ) -> ProviderSnapshot:
         return ProviderSnapshot(
             provider_id=self.provider_id,
             identity=identity,

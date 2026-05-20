@@ -78,7 +78,11 @@ class JobProgressState:
         details_sanitizer: JobProgressDetailsSanitizer | None = None,
     ) -> "JobProgressState":
         labels = {definition.id: definition.label for definition in step_definitions}
-        return cls(step_definitions=labels, current_step=initial_step, details_sanitizer=details_sanitizer)
+        return cls(
+            step_definitions=labels,
+            current_step=initial_step,
+            details_sanitizer=details_sanitizer,
+        )
 
     def start(self, timestamp: datetime) -> None:
         self.started_at = timestamp
@@ -94,10 +98,14 @@ class JobProgressState:
                     label=self.label_for(self.current_step),
                     started_at=self.current_step_started_at.isoformat(),
                     completed_at=timestamp.isoformat(),
-                    elapsed_seconds=elapsed_seconds(self.current_step_started_at, timestamp),
+                    elapsed_seconds=elapsed_seconds(
+                        self.current_step_started_at, timestamp
+                    ),
                     warnings=tuple(self.current_warnings),
                     errors=tuple(self.current_errors),
-                    details=dict(self.current_details) if self.current_details else None,
+                    details=(
+                        dict(self.current_details) if self.current_details else None
+                    ),
                 )
             )
         self.current_step = step
@@ -111,13 +119,17 @@ class JobProgressState:
         if safe_details:
             self.current_details.update(safe_details)
 
-    def add_warning(self, warning: object, details: dict[str, Any] | None = None) -> None:
+    def add_warning(
+        self, warning: object, details: dict[str, Any] | None = None
+    ) -> None:
         self.current_warnings.append(self.sanitize_notice(warning, details=details))
 
     def add_error(self, error: object, details: dict[str, Any] | None = None) -> None:
         self.current_errors.append(self.sanitize_notice(error, details=details))
 
-    def payload(self, timestamp: datetime, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
+    def payload(
+        self, timestamp: datetime, *, details: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         self.add_details(details)
         started_at = self.started_at or timestamp
         step_started_at = self.current_step_started_at or timestamp
@@ -147,7 +159,9 @@ class JobProgressState:
             return _json_safe_dict(self.details_sanitizer(details))
         return _json_safe_dict(details)
 
-    def sanitize_notice(self, message: object, *, details: dict[str, Any] | None = None) -> Any:
+    def sanitize_notice(
+        self, message: object, *, details: dict[str, Any] | None = None
+    ) -> Any:
         safe_message = self.sanitize_details({"message": message}).get("message")
         if safe_message is None:
             safe_message = _json_safe_value(message)
@@ -181,14 +195,18 @@ class JobProgressReporter:
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._now = now or now_utc
-        self._heartbeat_thread_name = heartbeat_thread_name or f"job-progress-heartbeat-{job_id}"
+        self._heartbeat_thread_name = (
+            heartbeat_thread_name or f"job-progress-heartbeat-{job_id}"
+        )
 
     def __enter__(self) -> "JobProgressReporter":
         timestamp = self._now()
         with self._lock:
             self._state.start(timestamp)
         self.report(self._state.current_step)
-        self._thread = threading.Thread(target=self._heartbeat_loop, name=self._heartbeat_thread_name, daemon=True)
+        self._thread = threading.Thread(
+            target=self._heartbeat_loop, name=self._heartbeat_thread_name, daemon=True
+        )
         self._thread.start()
         return self
 
@@ -215,7 +233,9 @@ class JobProgressReporter:
             progress = self._state.payload(timestamp, details=details)
         self._record(progress, timestamp)
 
-    def add_warning(self, warning: object, details: dict[str, Any] | None = None) -> None:
+    def add_warning(
+        self, warning: object, details: dict[str, Any] | None = None
+    ) -> None:
         timestamp = self._now()
         with self._lock:
             self._state.add_warning(warning, details=details)
@@ -244,7 +264,9 @@ class JobProgressReporter:
     def _record(self, progress: dict[str, Any], timestamp: datetime) -> None:
         try:
             with session_scope() as session:
-                record_progress(session, self._job_id, progress=progress, progress_at=timestamp)
+                record_progress(
+                    session, self._job_id, progress=progress, progress_at=timestamp
+                )
         except Exception:
             return
 

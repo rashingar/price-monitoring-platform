@@ -87,11 +87,17 @@ def test_refresh_template_coverage_marks_statuses_and_is_deterministic() -> None
     second = assess_template_coverage(expected, observed)
 
     assert first == second
-    assert [row["CTA Leaf Category"] for row in first] == ["Κατηγορία Α", "Κατηγορία Β", "Κατηγορία Γ"]
+    assert [row["CTA Leaf Category"] for row in first] == [
+        "Κατηγορία Α",
+        "Κατηγορία Β",
+        "Κατηγορία Γ",
+    ]
     assert [row["Status"] for row in first] == ["OK", "NEEDS_MANUAL", "MISSING"]
 
 
-def test_refresh_template_coverage_marks_duplicate_category_ownership_as_review() -> None:
+def test_refresh_template_coverage_marks_duplicate_category_ownership_as_review() -> (
+    None
+):
     expected = [
         _expected_category(
             label="Κατηγορία Α",
@@ -152,7 +158,9 @@ def test_refresh_template_coverage_keeps_unique_labels_compact() -> None:
     assert [row["CTA Leaf Category"] for row in rows] == ["Smartphones", "Tablets"]
 
 
-def test_refresh_template_coverage_disambiguates_branch_collisions_deterministically() -> None:
+def test_refresh_template_coverage_disambiguates_branch_collisions_deterministically() -> (
+    None
+):
     expected = [
         _expected_category(
             label="Android",
@@ -211,7 +219,9 @@ def test_refresh_template_coverage_disambiguates_branch_collisions_deterministic
     assert build_markdown_table(first) == build_markdown_table(second)
 
 
-def test_refresh_template_coverage_does_not_expand_non_colliding_rows_when_some_labels_collide() -> None:
+def test_refresh_template_coverage_does_not_expand_non_colliding_rows_when_some_labels_collide() -> (
+    None
+):
     expected = [
         _expected_category(
             label="Android",

@@ -11,14 +11,25 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.models.source_urls import SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
+from ecommerce.db.models.source_urls import (
+    SourceUrlDiscoveryRun,
+    SourceUrlDiscoveryTask,
+)
 from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.db.repositories.jobs import get_job_by_id
 from ecommerce.db.session import session_scope
 from ecommerce.jobs.durable import execute_job
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate
-from ecommerce.source_url_agent.options import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult
-from ecommerce.source_url_agent.products import AgentProduct, read_products_from_catalog, read_products_from_csv
+from ecommerce.source_url_agent.options import (
+    Resolver,
+    SourceUrlAgentOptions,
+    SourceUrlAgentResult,
+)
+from ecommerce.source_url_agent.products import (
+    AgentProduct,
+    read_products_from_catalog,
+    read_products_from_csv,
+)
 from ecommerce.source_url_agent.progress import SourceUrlAgentProgressReporter
 from ecommerce.source_url_agent.runner import run_source_url_agent
 from ecommerce.source_url_agent.sources import SourceDefinition
@@ -70,7 +81,9 @@ def execute_source_url_agent_job(
         return execute_job(
             session,
             job_id,
-            lambda job_payload: run_source_url_agent_job(job_id, job_payload, resolver=resolver),
+            lambda job_payload: run_source_url_agent_job(
+                job_id, job_payload, resolver=resolver
+            ),
             reraise=False,
             claimed=claimed,
         )
@@ -94,7 +107,9 @@ def run_source_url_agent_job(
     limit = _job_run_limit(request, payload=job_payload)
     input_path = _job_input_path(request, payload=job_payload)
     selected_models = _selected_models(request.selected_models)
-    max_products_per_batch = request.max_products_per_batch or DEFAULT_API_MAX_PRODUCTS_PER_BATCH
+    max_products_per_batch = (
+        request.max_products_per_batch or DEFAULT_API_MAX_PRODUCTS_PER_BATCH
+    )
     selected_resolver = resolver or SOURCE_URL_AGENT_JOB_RESOLVER
 
     try:
@@ -151,26 +166,38 @@ def run_source_url_agent_job(
     return source_url_agent_job_result_payload(result, progress=final_progress)
 
 
-def source_url_agent_job_request_from_payload(payload: dict[str, Any] | None) -> SourceUrlAgentJobRequest:
+def source_url_agent_job_request_from_payload(
+    payload: dict[str, Any] | None,
+) -> SourceUrlAgentJobRequest:
     job_payload = payload if isinstance(payload, dict) else {}
     data = job_payload.get("request")
     if not isinstance(data, dict):
         data = job_payload
     return SourceUrlAgentJobRequest(
-        source=str(data.get("source") or job_payload.get("source") or "all").strip().lower(),
+        source=str(data.get("source") or job_payload.get("source") or "all")
+        .strip()
+        .lower(),
         mode=str(data.get("mode") or job_payload.get("mode") or "catalog"),
         input_path=_optional_text(data.get("input_path")),
         limit=_optional_int(data.get("limit")),
         offset=max(0, _optional_int(data.get("offset")) or 0),
         catalog_product_id=_optional_int(data.get("catalog_product_id")),
         model=_optional_text(data.get("model")),
-        selected_models=_selected_models(data.get("selected_models") if isinstance(data.get("selected_models"), list) else []),
+        selected_models=_selected_models(
+            data.get("selected_models")
+            if isinstance(data.get("selected_models"), list)
+            else []
+        ),
         missing_only=_optional_bool(data.get("missing_only"), default=False),
         active_only=_optional_bool(data.get("active_only"), default=True),
         dry_run=_optional_bool(data.get("dry_run"), default=True),
-        apply_high_confidence=_optional_bool(data.get("apply_high_confidence"), default=False),
+        apply_high_confidence=_optional_bool(
+            data.get("apply_high_confidence"), default=False
+        ),
         max_products_per_batch=_optional_int(data.get("max_products_per_batch")),
-        max_searches_per_product_source=_optional_int(data.get("max_searches_per_product_source")),
+        max_searches_per_product_source=_optional_int(
+            data.get("max_searches_per_product_source")
+        ),
         rate_limit_seconds=_optional_float(data.get("rate_limit_seconds")),
         headed=_optional_bool(data.get("headed"), default=False),
         no_browser_cache=_optional_bool(data.get("no_browser_cache"), default=False),
@@ -215,7 +242,9 @@ def source_url_agent_job_payload(
     input_path: Path | None,
     selected_models: list[str],
 ) -> dict[str, Any]:
-    request_payload = request.model_dump() if hasattr(request, "model_dump") else request.dict()
+    request_payload = (
+        request.model_dump() if hasattr(request, "model_dump") else request.dict()
+    )
     return {
         "run_id": run_id,
         "source": source_name,
@@ -246,17 +275,23 @@ def source_url_agent_job_result_payload(
 def mark_discovery_run_failed(run_id: str, message: str) -> None:
     with session_scope() as session:
         timestamp = _now()
-        row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
+        row = session.execute(
+            select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)
+        ).scalar_one_or_none()
         if row is not None:
             row.status = "failed"
             row.completed_at = timestamp
             row.updated_at = timestamp
-        tasks = session.execute(
-            select(SourceUrlDiscoveryTask).where(
-                SourceUrlDiscoveryTask.run_id == run_id,
-                SourceUrlDiscoveryTask.status.in_(("queued", "running")),
+        tasks = (
+            session.execute(
+                select(SourceUrlDiscoveryTask).where(
+                    SourceUrlDiscoveryTask.run_id == run_id,
+                    SourceUrlDiscoveryTask.status.in_(("queued", "running")),
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for task in tasks:
             task.status = "failed"
             task.error_message = message
@@ -274,7 +309,9 @@ def record_discovery_task_progress(
     error_message: str | None,
 ) -> None:
     with session_scope() as session:
-        task = _find_discovery_task(session, run_id=run_id, product=product, source=source)
+        task = _find_discovery_task(
+            session, run_id=run_id, product=product, source=source
+        )
         if task is None:
             return
         timestamp = _now()
@@ -296,7 +333,9 @@ def record_discovery_task_progress(
 
 def _mark_discovery_run_running(run_id: str) -> None:
     with session_scope() as session:
-        row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
+        row = session.execute(
+            select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)
+        ).scalar_one_or_none()
         if row is None:
             return
         timestamp = _now()
@@ -305,16 +344,24 @@ def _mark_discovery_run_running(run_id: str) -> None:
         row.updated_at = timestamp
 
 
-def _job_run_limit(request: SourceUrlAgentJobRequest, *, payload: dict[str, Any]) -> int:
+def _job_run_limit(
+    request: SourceUrlAgentJobRequest, *, payload: dict[str, Any]
+) -> int:
     effective_limit = _optional_int(payload.get("effective_limit"))
     if effective_limit is not None:
         return min(effective_limit, MAX_API_SOURCE_URL_AGENT_LIMIT)
-    limit = request.limit if request.limit is not None else DEFAULT_API_MAX_PRODUCTS_PER_BATCH
+    limit = (
+        request.limit
+        if request.limit is not None
+        else DEFAULT_API_MAX_PRODUCTS_PER_BATCH
+    )
     max_batch = request.max_products_per_batch or DEFAULT_API_MAX_PRODUCTS_PER_BATCH
     return min(int(limit), int(max_batch), MAX_API_SOURCE_URL_AGENT_LIMIT)
 
 
-def _job_input_path(request: SourceUrlAgentJobRequest, *, payload: dict[str, Any]) -> Path | None:
+def _job_input_path(
+    request: SourceUrlAgentJobRequest, *, payload: dict[str, Any]
+) -> Path | None:
     value = _optional_text(payload.get("effective_input_path")) or request.input_path
     if request.mode != "csv" or value is None:
         return None
@@ -333,7 +380,9 @@ def _find_discovery_task(
         SourceUrlDiscoveryTask.source_name == source.source_name,
     )
     if product.catalog_product_id is not None:
-        statement = statement.where(SourceUrlDiscoveryTask.catalog_product_id == product.catalog_product_id)
+        statement = statement.where(
+            SourceUrlDiscoveryTask.catalog_product_id == product.catalog_product_id
+        )
     else:
         statement = statement.where(SourceUrlDiscoveryTask.model == product.model)
     return session.execute(statement.limit(1)).scalar_one_or_none()
@@ -355,15 +404,29 @@ def _task_error_message(candidates: list[SourceUrlAgentCandidate]) -> str | None
 
 
 def _refresh_discovery_run_progress(session: Session, run_id: str) -> None:
-    row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
+    row = session.execute(
+        select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)
+    ).scalar_one_or_none()
     if row is None or row.status == "completed":
         return
-    tasks = session.execute(select(SourceUrlDiscoveryTask).where(SourceUrlDiscoveryTask.run_id == run_id)).scalars().all()
+    tasks = (
+        session.execute(
+            select(SourceUrlDiscoveryTask).where(
+                SourceUrlDiscoveryTask.run_id == run_id
+            )
+        )
+        .scalars()
+        .all()
+    )
     row.candidate_count = sum(int(task.candidate_count or 0) for task in tasks)
     row.matched_count = sum(1 for task in tasks if task.match_status == "matched")
-    row.needs_review_count = sum(1 for task in tasks if task.match_status == "needs_review")
+    row.needs_review_count = sum(
+        1 for task in tasks if task.match_status == "needs_review"
+    )
     row.not_found_count = sum(1 for task in tasks if task.match_status == "not_found")
-    row.error_count = sum(1 for task in tasks if task.match_status == "error" or task.status == "failed")
+    row.error_count = sum(
+        1 for task in tasks if task.match_status == "error" or task.status == "failed"
+    )
     row.updated_at = _now()
 
 

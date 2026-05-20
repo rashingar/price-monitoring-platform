@@ -13,8 +13,15 @@ from fastapi.testclient import TestClient
 from ecommerce.api import routes_product_factory_telegram
 from ecommerce.api.app import create_app
 from ecommerce.product_factory_telegram import audit
-from ecommerce.product_factory_telegram.client import ProductFactoryClient, ProductFactoryClientError, ProductFactoryJob
-from ecommerce.product_factory_telegram.parser import ProductFactoryCommandParseError, parse_product_factory_command
+from ecommerce.product_factory_telegram.client import (
+    ProductFactoryClient,
+    ProductFactoryClientError,
+    ProductFactoryJob,
+)
+from ecommerce.product_factory_telegram.parser import (
+    ProductFactoryCommandParseError,
+    parse_product_factory_command,
+)
 from ecommerce.product_factory_telegram.service import (
     PendingSourceChoiceStore,
     process_telegram_product_factory_update,
@@ -28,9 +35,12 @@ from ecommerce.product_factory_telegram.source_resolution import (
     SourceResolutionResult,
     load_source_resolution_config,
 )
-from ecommerce.product_factory_telegram.warehouse import WarehouseCatalogError, WarehouseProduct, lookup_warehouse_product
+from ecommerce.product_factory_telegram.warehouse import (
+    WarehouseCatalogError,
+    WarehouseProduct,
+    lookup_warehouse_product,
+)
 from ecommerce.source_url_agent.brave_search import BraveSearchResultItem
-
 
 ACCEPTED_COMMANDS = [
     ("012345", False, False, False, None),
@@ -40,17 +50,61 @@ ACCEPTED_COMMANDS = [
     ("012345 B B", True, False, True, None),
     ("012345 S B", False, True, True, None),
     ("012345 B S B", True, True, True, None),
-    ("012345 https://example.com/product", False, False, False, "https://example.com/product"),
-    ("012345 B https://example.com/product", True, False, False, "https://example.com/product"),
-    ("012345 S https://example.com/product", False, True, False, "https://example.com/product"),
-    ("012345 B S https://example.com/product", True, True, False, "https://example.com/product"),
-    ("012345 B B https://example.com/product", True, False, True, "https://example.com/product"),
-    ("012345 S B https://example.com/product", False, True, True, "https://example.com/product"),
-    ("012345 B S B https://example.com/product", True, True, True, "https://example.com/product"),
+    (
+        "012345 https://example.com/product",
+        False,
+        False,
+        False,
+        "https://example.com/product",
+    ),
+    (
+        "012345 B https://example.com/product",
+        True,
+        False,
+        False,
+        "https://example.com/product",
+    ),
+    (
+        "012345 S https://example.com/product",
+        False,
+        True,
+        False,
+        "https://example.com/product",
+    ),
+    (
+        "012345 B S https://example.com/product",
+        True,
+        True,
+        False,
+        "https://example.com/product",
+    ),
+    (
+        "012345 B B https://example.com/product",
+        True,
+        False,
+        True,
+        "https://example.com/product",
+    ),
+    (
+        "012345 S B https://example.com/product",
+        False,
+        True,
+        True,
+        "https://example.com/product",
+    ),
+    (
+        "012345 B S B https://example.com/product",
+        True,
+        True,
+        True,
+        "https://example.com/product",
+    ),
 ]
 
 
-@pytest.mark.parametrize(("text", "bestprice", "skroutz", "boxnow", "url"), ACCEPTED_COMMANDS)
+@pytest.mark.parametrize(
+    ("text", "bestprice", "skroutz", "boxnow", "url"), ACCEPTED_COMMANDS
+)
 def test_parser_accepts_compact_product_factory_commands(
     text: str,
     bestprice: bool,
@@ -129,11 +183,15 @@ def test_warehouse_lookup_missing_configured_columns_fails(tmp_path: Path) -> No
     path.write_text("sku,title\n012345,Product\n", encoding="utf-8")
 
     with pytest.raises(WarehouseCatalogError) as missing_model:
-        lookup_warehouse_product(path=path, model="012345", model_column="model", name_column="title")
+        lookup_warehouse_product(
+            path=path, model="012345", model_column="model", name_column="title"
+        )
     assert missing_model.value.code == "warehouse_catalog_model_column_missing"
 
     with pytest.raises(WarehouseCatalogError) as missing_name:
-        lookup_warehouse_product(path=path, model="012345", model_column="sku", name_column="name")
+        lookup_warehouse_product(
+            path=path, model="012345", model_column="sku", name_column="name"
+        )
     assert missing_name.value.code == "warehouse_catalog_name_column_missing"
 
 
@@ -183,16 +241,35 @@ def test_audit_logger_write_failure_is_non_fatal(tmp_path: Path) -> None:
     audit.append_event(path=tmp_path, event_type="telegram_command_received")
 
 
-def test_latest_enqueued_job_for_model_returns_latest_matching_job_id(tmp_path: Path) -> None:
+def test_latest_enqueued_job_for_model_returns_latest_matching_job_id(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "audit.jsonl"
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", model="012345", job_id="job-old")
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", model="999999", job_id="job-other")
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", model="012345", job_id="job-new")
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        model="012345",
+        job_id="job-old",
+    )
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        model="999999",
+        job_id="job-other",
+    )
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        model="012345",
+        job_id="job-new",
+    )
 
     assert audit.latest_enqueued_job_for_model(path, "012345") == "job-new"
 
 
-def test_latest_enqueued_job_for_model_ignores_malformed_jsonl_lines(tmp_path: Path) -> None:
+def test_latest_enqueued_job_for_model_ignores_malformed_jsonl_lines(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "audit.jsonl"
     path.write_text(
         "{bad json}\n"
@@ -203,7 +280,9 @@ def test_latest_enqueued_job_for_model_ignores_malformed_jsonl_lines(tmp_path: P
     assert audit.latest_enqueued_job_for_model(path, "012345") == "job-1"
 
 
-def test_webhook_rejects_disabled_state(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_webhook_rejects_disabled_state(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     _configure_env(monkeypatch, tmp_path, enabled=False)
 
     response = TestClient(create_app()).post(
@@ -216,7 +295,9 @@ def test_webhook_rejects_disabled_state(monkeypatch: pytest.MonkeyPatch, tmp_pat
     assert response.json()["detail"]["code"] == "telegram_intake_disabled"
 
 
-def test_webhook_rejects_unauthorized_chat_and_user(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_webhook_rejects_unauthorized_chat_and_user(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     _configure_env(monkeypatch, tmp_path, enabled=True)
 
     response = TestClient(create_app()).post(
@@ -236,8 +317,16 @@ def test_webhook_with_manual_url_calls_product_factory_with_correct_flags(
     fake_telegram = FakeTelegramClient()
     fake_product_factory = FakeProductFactoryClient()
     _configure_env(monkeypatch, tmp_path, enabled=True)
-    monkeypatch.setattr(routes_product_factory_telegram, "_telegram_client", lambda _config: fake_telegram)
-    monkeypatch.setattr(routes_product_factory_telegram, "_product_factory_client", lambda _config: fake_product_factory)
+    monkeypatch.setattr(
+        routes_product_factory_telegram,
+        "_telegram_client",
+        lambda _config: fake_telegram,
+    )
+    monkeypatch.setattr(
+        routes_product_factory_telegram,
+        "_product_factory_client",
+        lambda _config: fake_product_factory,
+    )
 
     response = TestClient(create_app()).post(
         "/api/product-factory/telegram/webhook",
@@ -279,11 +368,24 @@ def test_webhook_without_manual_url_does_not_enqueue(
     monkeypatch.setattr(
         "ecommerce.product_factory_telegram.service.resolver_from_config_path",
         lambda _path: FakeSourceResolver(
-            SourceResolutionResult(method="brave_weighted", selected=None, candidates=(), config=_resolution_config())
+            SourceResolutionResult(
+                method="brave_weighted",
+                selected=None,
+                candidates=(),
+                config=_resolution_config(),
+            )
         ),
     )
-    monkeypatch.setattr(routes_product_factory_telegram, "_telegram_client", lambda _config: fake_telegram)
-    monkeypatch.setattr(routes_product_factory_telegram, "_product_factory_client", lambda _config: fake_product_factory)
+    monkeypatch.setattr(
+        routes_product_factory_telegram,
+        "_telegram_client",
+        lambda _config: fake_telegram,
+    )
+    monkeypatch.setattr(
+        routes_product_factory_telegram,
+        "_product_factory_client",
+        lambda _config: fake_product_factory,
+    )
 
     response = TestClient(create_app()).post(
         "/api/product-factory/telegram/webhook",
@@ -295,9 +397,14 @@ def test_webhook_without_manual_url_does_not_enqueue(
     assert response.json()["status"] == "source_resolution_no_usable_source"
     assert fake_product_factory.payloads == []
     assert "No confident scrape source was found" in fake_telegram.messages[0]["text"]
-    assert "Send the command again with a manual URL override" in fake_telegram.messages[0]["text"]
+    assert (
+        "Send the command again with a manual URL override"
+        in fake_telegram.messages[0]["text"]
+    )
     events = list(audit.iter_events(tmp_path / "audit" / "audit.jsonl"))
-    assert "source_resolution_no_usable_source" in [event["event_type"] for event in events]
+    assert "source_resolution_no_usable_source" in [
+        event["event_type"] for event in events
+    ]
 
 
 def test_source_resolution_config_loads_defaults() -> None:
@@ -310,7 +417,9 @@ def test_source_resolution_config_loads_defaults() -> None:
     assert config.preferred_source_names == ["electronet", "skroutz", "bestprice"]
 
 
-def test_source_resolution_env_override_config_path_is_honored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_source_resolution_env_override_config_path_is_honored(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     path = tmp_path / "source_resolution.json"
     path.write_text(
         json.dumps(
@@ -364,23 +473,39 @@ def test_source_aliases_classify_to_same_source() -> None:
         )
     )
 
-    assert config.source_for_alias("elnet") == config.classify_url("https://www.electronet.gr/a/b/c/d")
+    assert config.source_for_alias("elnet") == config.classify_url(
+        "https://www.electronet.gr/a/b/c/d"
+    )
 
 
 def test_custom_source_weights_change_ranking_without_code_changes() -> None:
     product = _warehouse_product()
     items = [
-        _brave_item("https://www.electronet.gr/a/b/c/d", "Brand MPN-1 Alpha Mixer", rank=1),
-        _brave_item("https://www.skroutz.gr/s/123/product.html", "Brand MPN-1 Alpha Mixer", rank=2),
+        _brave_item(
+            "https://www.electronet.gr/a/b/c/d", "Brand MPN-1 Alpha Mixer", rank=1
+        ),
+        _brave_item(
+            "https://www.skroutz.gr/s/123/product.html",
+            "Brand MPN-1 Alpha Mixer",
+            rank=2,
+        ),
     ]
 
-    default_result = ProductFactorySourceResolver(config=_resolution_config(), fetcher=StaticFetcher(items)).resolve(product=product)
+    default_result = ProductFactorySourceResolver(
+        config=_resolution_config(), fetcher=StaticFetcher(items)
+    ).resolve(product=product)
     custom_result = ProductFactorySourceResolver(
         config=_resolution_config(
             preferred_sources=(
-                PreferredSourceConfig("electronet", 10, ("electronet.gr", "www.electronet.gr"), (), ("/",)),
-                PreferredSourceConfig("skroutz", 100, ("skroutz.gr", "www.skroutz.gr"), (), ("/s/",)),
-                PreferredSourceConfig("bestprice", 50, ("bestprice.gr", "www.bestprice.gr"), (), ("/",)),
+                PreferredSourceConfig(
+                    "electronet", 10, ("electronet.gr", "www.electronet.gr"), (), ("/",)
+                ),
+                PreferredSourceConfig(
+                    "skroutz", 100, ("skroutz.gr", "www.skroutz.gr"), (), ("/s/",)
+                ),
+                PreferredSourceConfig(
+                    "bestprice", 50, ("bestprice.gr", "www.bestprice.gr"), (), ("/",)
+                ),
             )
         ),
         fetcher=StaticFetcher(items),
@@ -396,9 +521,21 @@ def test_default_ranking_prefers_electronet_then_skroutz_then_bestprice() -> Non
         config=_resolution_config(),
         fetcher=StaticFetcher(
             [
-                _brave_item("https://www.bestprice.gr/item/123/brand-mpn-1.html", "Brand MPN-1 Alpha Mixer", rank=1),
-                _brave_item("https://www.skroutz.gr/s/123/brand-mpn-1.html", "Brand MPN-1 Alpha Mixer", rank=2),
-                _brave_item("https://www.electronet.gr/a/b/c/brand-mpn-1", "Brand MPN-1 Alpha Mixer", rank=3),
+                _brave_item(
+                    "https://www.bestprice.gr/item/123/brand-mpn-1.html",
+                    "Brand MPN-1 Alpha Mixer",
+                    rank=1,
+                ),
+                _brave_item(
+                    "https://www.skroutz.gr/s/123/brand-mpn-1.html",
+                    "Brand MPN-1 Alpha Mixer",
+                    rank=2,
+                ),
+                _brave_item(
+                    "https://www.electronet.gr/a/b/c/brand-mpn-1",
+                    "Brand MPN-1 Alpha Mixer",
+                    rank=3,
+                ),
             ]
         ),
     ).resolve(product=product)
@@ -406,8 +543,16 @@ def test_default_ranking_prefers_electronet_then_skroutz_then_bestprice() -> Non
         config=_resolution_config(),
         fetcher=StaticFetcher(
             [
-                _brave_item("https://www.bestprice.gr/item/123/brand-mpn-1.html", "Brand MPN-1 Alpha Mixer", rank=1),
-                _brave_item("https://www.skroutz.gr/s/123/brand-mpn-1.html", "Brand MPN-1 Alpha Mixer", rank=2),
+                _brave_item(
+                    "https://www.bestprice.gr/item/123/brand-mpn-1.html",
+                    "Brand MPN-1 Alpha Mixer",
+                    rank=1,
+                ),
+                _brave_item(
+                    "https://www.skroutz.gr/s/123/brand-mpn-1.html",
+                    "Brand MPN-1 Alpha Mixer",
+                    rank=2,
+                ),
             ]
         ),
     ).resolve(product=product)
@@ -415,8 +560,16 @@ def test_default_ranking_prefers_electronet_then_skroutz_then_bestprice() -> Non
         config=_resolution_config(),
         fetcher=StaticFetcher(
             [
-                _brave_item("https://www.electronet.gr/search?q=mpn-1", "Search results for MPN-1", rank=1),
-                _brave_item("https://www.bestprice.gr/item/123/brand-mpn-1.html", "Brand MPN-1 Alpha Mixer", rank=2),
+                _brave_item(
+                    "https://www.electronet.gr/search?q=mpn-1",
+                    "Search results for MPN-1",
+                    rank=1,
+                ),
+                _brave_item(
+                    "https://www.bestprice.gr/item/123/brand-mpn-1.html",
+                    "Brand MPN-1 Alpha Mixer",
+                    rank=2,
+                ),
             ]
         ),
     ).resolve(product=product)
@@ -426,7 +579,9 @@ def test_default_ranking_prefers_electronet_then_skroutz_then_bestprice() -> Non
     assert only_bestprice.selected.source_name == "bestprice"
 
 
-def test_high_confidence_result_echoes_source_before_enqueue(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_high_confidence_result_echoes_source_before_enqueue(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     fake_telegram = FakeTelegramClient()
     fake_product_factory = FakeProductFactoryClient()
     config = _telegram_config(tmp_path, monkeypatch)
@@ -436,18 +591,31 @@ def test_high_confidence_result_echoes_source_before_enqueue(monkeypatch: pytest
         config=config,
         telegram_client=fake_telegram,
         product_factory_client=fake_product_factory,
-        source_resolver=FakeSourceResolver(_fake_resolution(selected=_candidate(confidence=91))),
+        source_resolver=FakeSourceResolver(
+            _fake_resolution(selected=_candidate(confidence=91))
+        ),
         pending_choices=PendingSourceChoiceStore(),
     )
 
     assert result.status == "queued"
     assert len(fake_product_factory.payloads) == 1
-    assert fake_telegram.messages[0]["text"].startswith("Resolved Product Factory source")
+    assert fake_telegram.messages[0]["text"].startswith(
+        "Resolved Product Factory source"
+    )
     assert "page title: Brand MPN-1 Alpha Mixer" in fake_telegram.messages[0]["text"]
-    assert "URL: https://www.electronet.gr/a/b/c/brand-mpn-1" in fake_telegram.messages[0]["text"]
+    assert (
+        "URL: https://www.electronet.gr/a/b/c/brand-mpn-1"
+        in fake_telegram.messages[0]["text"]
+    )
     assert "confidence: 91" in fake_telegram.messages[0]["text"]
-    assert fake_product_factory.payloads[0]["source_resolution"]["method"] == "brave_weighted"
-    assert fake_product_factory.payloads[0]["source_resolution"]["selected_source"] == "electronet"
+    assert (
+        fake_product_factory.payloads[0]["source_resolution"]["method"]
+        == "brave_weighted"
+    )
+    assert (
+        fake_product_factory.payloads[0]["source_resolution"]["selected_source"]
+        == "electronet"
+    )
     assert "source_auto_selected" in _audit_event_types(config)
     assert "product_factory_enqueue_succeeded" in _audit_event_types(config)
 
@@ -466,7 +634,9 @@ def test_low_confidence_candidates_create_pending_suggestions_and_do_not_enqueue
         config=config,
         telegram_client=fake_telegram,
         product_factory_client=fake_product_factory,
-        source_resolver=FakeSourceResolver(_fake_resolution(candidates=(_candidate(confidence=55),))),
+        source_resolver=FakeSourceResolver(
+            _fake_resolution(candidates=(_candidate(confidence=55),))
+        ),
         pending_choices=store,
     )
 
@@ -495,10 +665,14 @@ def test_selecting_pending_suggestion_enqueues_with_selected_candidate(
         config=config,
         telegram_client=fake_telegram,
         product_factory_client=fake_product_factory,
-        source_resolver=FakeSourceResolver(_fake_resolution(candidates=(_candidate(confidence=55),))),
+        source_resolver=FakeSourceResolver(
+            _fake_resolution(candidates=(_candidate(confidence=55),))
+        ),
         pending_choices=store,
     )
-    callback_data = fake_telegram.messages[0]["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
+    callback_data = fake_telegram.messages[0]["reply_markup"]["inline_keyboard"][0][0][
+        "callback_data"
+    ]
 
     result = process_telegram_product_factory_update(
         _telegram_callback_update(callback_data),
@@ -509,14 +683,22 @@ def test_selecting_pending_suggestion_enqueues_with_selected_candidate(
     )
 
     assert result.status == "queued"
-    assert fake_product_factory.payloads[0]["source_url"] == "https://www.electronet.gr/a/b/c/brand-mpn-1"
+    assert (
+        fake_product_factory.payloads[0]["source_url"]
+        == "https://www.electronet.gr/a/b/c/brand-mpn-1"
+    )
     assert fake_product_factory.payloads[0]["skroutz_enabled"] is True
-    assert fake_product_factory.payloads[0]["source_resolution"]["selected_title"] == "Brand MPN-1 Alpha Mixer"
+    assert (
+        fake_product_factory.payloads[0]["source_resolution"]["selected_title"]
+        == "Brand MPN-1 Alpha Mixer"
+    )
     assert "source_suggestion_selected" in _audit_event_types(config)
     assert "product_factory_enqueue_succeeded" in _audit_event_types(config)
 
 
-def test_expired_pending_suggestion_does_not_enqueue(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_expired_pending_suggestion_does_not_enqueue(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     fake_telegram = FakeTelegramClient()
     fake_product_factory = FakeProductFactoryClient()
     store = PendingSourceChoiceStore()
@@ -526,13 +708,19 @@ def test_expired_pending_suggestion_does_not_enqueue(monkeypatch: pytest.MonkeyP
         config=config,
         telegram_client=fake_telegram,
         product_factory_client=fake_product_factory,
-        source_resolver=FakeSourceResolver(_fake_resolution(candidates=(_candidate(confidence=55),))),
+        source_resolver=FakeSourceResolver(
+            _fake_resolution(candidates=(_candidate(confidence=55),))
+        ),
         pending_choices=store,
     )
-    callback_data = fake_telegram.messages[0]["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
+    callback_data = fake_telegram.messages[0]["reply_markup"]["inline_keyboard"][0][0][
+        "callback_data"
+    ]
     choice_id = callback_data.split(":")[1]
     choice = store.get(choice_id)
-    store._choices[choice_id] = replace(choice, expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+    store._choices[choice_id] = replace(
+        choice, expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)
+    )
 
     result = process_telegram_product_factory_update(
         _telegram_callback_update(callback_data),
@@ -561,10 +749,14 @@ def test_cancel_pending_suggestion_deletes_choice_and_does_not_enqueue(
         config=config,
         telegram_client=fake_telegram,
         product_factory_client=fake_product_factory,
-        source_resolver=FakeSourceResolver(_fake_resolution(candidates=(_candidate(confidence=55),))),
+        source_resolver=FakeSourceResolver(
+            _fake_resolution(candidates=(_candidate(confidence=55),))
+        ),
         pending_choices=store,
     )
-    cancel_data = fake_telegram.messages[0]["reply_markup"]["inline_keyboard"][1][0]["callback_data"]
+    cancel_data = fake_telegram.messages[0]["reply_markup"]["inline_keyboard"][1][0][
+        "callback_data"
+    ]
     choice_id = cancel_data.split(":")[1]
 
     result = process_telegram_product_factory_update(
@@ -581,7 +773,9 @@ def test_cancel_pending_suggestion_deletes_choice_and_does_not_enqueue(
     assert "source_suggestion_cancelled" in _audit_event_types(config)
 
 
-def test_manual_url_bypasses_brave_and_suggestions(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_manual_url_bypasses_brave_and_suggestions(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     fake_telegram = FakeTelegramClient()
     fake_product_factory = FakeProductFactoryClient()
     config = _telegram_config(tmp_path, monkeypatch)
@@ -596,8 +790,13 @@ def test_manual_url_bypasses_brave_and_suggestions(monkeypatch: pytest.MonkeyPat
     )
 
     assert result.status == "queued"
-    assert fake_product_factory.payloads[0]["source_resolution"]["method"] == "manual_url"
-    assert fake_product_factory.payloads[0]["source_resolution"]["selected_source"] == "Manual URL"
+    assert (
+        fake_product_factory.payloads[0]["source_resolution"]["method"] == "manual_url"
+    )
+    assert (
+        fake_product_factory.payloads[0]["source_resolution"]["selected_source"]
+        == "Manual URL"
+    )
     assert fake_telegram.messages[0]["text"] == (
         "Selected scrape source: Manual URL\n"
         "URL: https://example.com/product\n"
@@ -607,7 +806,9 @@ def test_manual_url_bypasses_brave_and_suggestions(monkeypatch: pytest.MonkeyPat
     assert "product_factory_enqueue_succeeded" in _audit_event_types(config)
 
 
-def test_listing_flags_do_not_affect_selected_scraping_source(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_listing_flags_do_not_affect_selected_scraping_source(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     fake_telegram = FakeTelegramClient()
     fake_product_factory = FakeProductFactoryClient()
     config = _telegram_config(tmp_path, monkeypatch)
@@ -617,7 +818,11 @@ def test_listing_flags_do_not_affect_selected_scraping_source(monkeypatch: pytes
         config=config,
         telegram_client=fake_telegram,
         product_factory_client=fake_product_factory,
-        source_resolver=FakeSourceResolver(_fake_resolution(selected=_candidate(source_name="electronet", confidence=91))),
+        source_resolver=FakeSourceResolver(
+            _fake_resolution(
+                selected=_candidate(source_name="electronet", confidence=91)
+            )
+        ),
         pending_choices=PendingSourceChoiceStore(),
     )
 
@@ -627,19 +832,27 @@ def test_listing_flags_do_not_affect_selected_scraping_source(monkeypatch: pytes
     assert payload["source_resolution"]["selected_source"] == "electronet"
 
 
-def test_product_factory_client_unavailable_has_clear_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_product_factory_client_unavailable_has_clear_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def raise_connect_error(*_args: Any, **_kwargs: Any) -> httpx.Response:
         raise httpx.ConnectError("connection refused")
 
     monkeypatch.setattr(httpx, "post", raise_connect_error)
 
     with pytest.raises(ProductFactoryClientError) as exc_info:
-        ProductFactoryClient("http://127.0.0.1:9").start_full_pipeline({"model": "012345"})
+        ProductFactoryClient("http://127.0.0.1:9").start_full_pipeline(
+            {"model": "012345"}
+        )
 
-    assert str(exc_info.value) == "Product Factory API is unavailable; no job was started."
+    assert (
+        str(exc_info.value) == "Product Factory API is unavailable; no job was started."
+    )
 
 
-def test_product_factory_client_get_job_maps_status_fields(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_product_factory_client_get_job_maps_status_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def fake_get(*_args: Any, **_kwargs: Any) -> httpx.Response:
         return httpx.Response(
             200,
@@ -670,8 +883,16 @@ def test_product_factory_client_get_job_maps_status_fields(monkeypatch: pytest.M
     assert job.updated_at == "updated"
 
 
-def test_product_factory_client_status_errors_are_clear(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(httpx, "get", lambda *_args, **_kwargs: httpx.Response(404, json={"detail": "Job not found."}))
+def test_product_factory_client_status_errors_are_clear(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda *_args, **_kwargs: httpx.Response(
+            404, json={"detail": "Job not found."}
+        ),
+    )
 
     with pytest.raises(ProductFactoryClientError) as exc_info:
         ProductFactoryClient("http://127.0.0.1:8000").get_job("missing")
@@ -685,8 +906,16 @@ def test_webhook_reports_product_factory_unavailable_to_telegram(
 ) -> None:
     fake_telegram = FakeTelegramClient()
     _configure_env(monkeypatch, tmp_path, enabled=True)
-    monkeypatch.setattr(routes_product_factory_telegram, "_telegram_client", lambda _config: fake_telegram)
-    monkeypatch.setattr(routes_product_factory_telegram, "_product_factory_client", lambda _config: FailingProductFactoryClient())
+    monkeypatch.setattr(
+        routes_product_factory_telegram,
+        "_telegram_client",
+        lambda _config: fake_telegram,
+    )
+    monkeypatch.setattr(
+        routes_product_factory_telegram,
+        "_product_factory_client",
+        lambda _config: FailingProductFactoryClient(),
+    )
 
     response = TestClient(create_app()).post(
         "/api/product-factory/telegram/webhook",
@@ -696,14 +925,25 @@ def test_webhook_reports_product_factory_unavailable_to_telegram(
 
     assert response.status_code == 200
     assert response.json()["status"] == "product_factory_error"
-    assert fake_telegram.messages[0]["text"].startswith("Selected scrape source: Manual URL")
-    assert fake_telegram.messages[1]["text"] == "Product Factory error: Product Factory API is unavailable; no job was started."
+    assert fake_telegram.messages[0]["text"].startswith(
+        "Selected scrape source: Manual URL"
+    )
+    assert (
+        fake_telegram.messages[1]["text"]
+        == "Product Factory error: Product Factory API is unavailable; no job was started."
+    )
     events = list(audit.iter_events(tmp_path / "audit" / "audit.jsonl"))
     assert "product_factory_enqueue_failed" in [event["event_type"] for event in events]
-    assert not any(event.get("job_id") for event in events if event["event_type"] == "product_factory_enqueue_failed")
+    assert not any(
+        event.get("job_id")
+        for event in events
+        if event["event_type"] == "product_factory_enqueue_failed"
+    )
 
 
-def test_pfstatus_fetches_job_and_sends_status_fields_only(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_pfstatus_fetches_job_and_sends_status_fields_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     fake_telegram = FakeTelegramClient()
     fake_product_factory = FakeProductFactoryClient()
     config = _telegram_config(tmp_path, monkeypatch)
@@ -736,7 +976,9 @@ def test_pfstatus_fetches_job_and_sends_status_fields_only(monkeypatch: pytest.M
     assert "product_factory_status_requested" in _audit_event_types(config)
 
 
-@pytest.mark.parametrize("text", ["/pfstatus job_id: job-123", "/pfstatus job: job-123"])
+@pytest.mark.parametrize(
+    "text", ["/pfstatus job_id: job-123", "/pfstatus job: job-123"]
+)
 def test_pfstatus_accepts_copied_job_id_forms(
     text: str,
     monkeypatch: pytest.MonkeyPatch,
@@ -758,7 +1000,9 @@ def test_pfstatus_accepts_copied_job_id_forms(
     assert fake_product_factory.get_job_calls == ["job-123"]
 
 
-@pytest.mark.parametrize("text", ["/pfstatus", "/pfstatus job-123 extra", "/pfstatus job_id: job-123 extra"])
+@pytest.mark.parametrize(
+    "text", ["/pfstatus", "/pfstatus job-123 extra", "/pfstatus job_id: job-123 extra"]
+)
 def test_invalid_pfstatus_returns_usage_examples(
     text: str,
     monkeypatch: pytest.MonkeyPatch,
@@ -782,7 +1026,9 @@ def test_invalid_pfstatus_returns_usage_examples(
     assert "/pfstatus job: <job_id>" in fake_telegram.messages[0]["text"]
 
 
-def test_status_model_uses_latest_audit_job_id_when_available(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_status_model_uses_latest_audit_job_id_when_available(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     fake_telegram = FakeTelegramClient()
     fake_product_factory = FakeProductFactoryClient()
     fake_product_factory.jobs["job-new"] = ProductFactoryJob(
@@ -795,8 +1041,18 @@ def test_status_model_uses_latest_audit_job_id_when_available(monkeypatch: pytes
         updated_at="2026-05-16T11:00:00+00:00",
     )
     config = _telegram_config(tmp_path, monkeypatch)
-    audit.append_event(path=config.audit_log_path, event_type="product_factory_enqueue_succeeded", model="012345", job_id="job-old")
-    audit.append_event(path=config.audit_log_path, event_type="product_factory_enqueue_succeeded", model="012345", job_id="job-new")
+    audit.append_event(
+        path=config.audit_log_path,
+        event_type="product_factory_enqueue_succeeded",
+        model="012345",
+        job_id="job-old",
+    )
+    audit.append_event(
+        path=config.audit_log_path,
+        event_type="product_factory_enqueue_succeeded",
+        model="012345",
+        job_id="job-new",
+    )
 
     result = process_telegram_product_factory_update(
         _telegram_update("status 012345"),
@@ -827,7 +1083,13 @@ def test_status_model_falls_back_to_jobs_by_model_when_audit_has_no_match(
             model="012345",
             message="Done.",
         ),
-        ProductFactoryJob(job_id="job-old", status="failed", raw={"job_id": "job-old"}, job_type="prepare", model="012345"),
+        ProductFactoryJob(
+            job_id="job-old",
+            status="failed",
+            raw={"job_id": "job-old"},
+            job_type="prepare",
+            model="012345",
+        ),
     ]
     config = _telegram_config(tmp_path, monkeypatch)
 
@@ -845,13 +1107,23 @@ def test_status_model_falls_back_to_jobs_by_model_when_audit_has_no_match(
     assert "job-old" not in fake_telegram.messages[0]["text"]
 
 
-def test_status_model_read_failure_falls_back_to_jobs_by_model(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_status_model_read_failure_falls_back_to_jobs_by_model(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     fake_telegram = FakeTelegramClient()
     fake_product_factory = FakeProductFactoryClient()
     fake_product_factory.jobs_by_model["012345"] = [
-        ProductFactoryJob(job_id="job-any", status="queued", raw={"job_id": "job-any"}, job_type="publish", model="012345")
+        ProductFactoryJob(
+            job_id="job-any",
+            status="queued",
+            raw={"job_id": "job-any"},
+            job_type="publish",
+            model="012345",
+        )
     ]
-    config = replace(_telegram_config(tmp_path, monkeypatch), audit_log_path=str(tmp_path))
+    config = replace(
+        _telegram_config(tmp_path, monkeypatch), audit_log_path=str(tmp_path)
+    )
 
     result = process_telegram_product_factory_update(
         _telegram_update("status 012345"),
@@ -883,7 +1155,10 @@ def test_status_model_preserves_leading_zeros_and_reports_no_job(
 
     assert result.status == "status_not_found"
     assert fake_product_factory.by_model_calls == ["000123"]
-    assert fake_telegram.messages[0]["text"] == "No Product Factory job found for model 000123."
+    assert (
+        fake_telegram.messages[0]["text"]
+        == "No Product Factory job found for model 000123."
+    )
 
 
 @pytest.mark.parametrize("text", ["status", "status 12345", "status 012345 extra"])
@@ -912,8 +1187,12 @@ class FakeTelegramClient:
     def __init__(self) -> None:
         self.messages: list[dict[str, Any]] = []
 
-    def send_message(self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None) -> None:
-        self.messages.append({"chat_id": chat_id, "text": text, "reply_markup": reply_markup})
+    def send_message(
+        self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None
+    ) -> None:
+        self.messages.append(
+            {"chat_id": chat_id, "text": text, "reply_markup": reply_markup}
+        )
 
 
 class FakeProductFactoryClient:
@@ -944,7 +1223,9 @@ class FakeProductFactoryClient:
         try:
             return self.jobs[job_id]
         except KeyError as exc:
-            raise ProductFactoryClientError(f"Product Factory job {job_id} was not found.") from exc
+            raise ProductFactoryClientError(
+                f"Product Factory job {job_id} was not found."
+            ) from exc
 
     def list_jobs_by_model(self, model: str) -> list[ProductFactoryJob]:
         self.by_model_calls.append(model)
@@ -959,15 +1240,21 @@ class FakeProductFactoryClient:
 class FailingProductFactoryClient:
     def start_full_pipeline(self, payload: dict[str, Any]) -> ProductFactoryJob:
         del payload
-        raise ProductFactoryClientError("Product Factory API is unavailable; no job was started.")
+        raise ProductFactoryClientError(
+            "Product Factory API is unavailable; no job was started."
+        )
 
     def get_job(self, job_id: str) -> ProductFactoryJob:
         del job_id
-        raise ProductFactoryClientError("Product Factory API is unavailable; job status could not be fetched.")
+        raise ProductFactoryClientError(
+            "Product Factory API is unavailable; job status could not be fetched."
+        )
 
     def list_jobs_by_model(self, model: str) -> list[ProductFactoryJob]:
         del model
-        raise ProductFactoryClientError("Product Factory API is unavailable; jobs by model could not be fetched.")
+        raise ProductFactoryClientError(
+            "Product Factory API is unavailable; jobs by model could not be fetched."
+        )
 
 
 class StaticFetcher:
@@ -992,17 +1279,23 @@ class FakeSourceResolver:
 class ExplodingSourceResolver:
     def resolve(self, *, product: WarehouseProduct) -> SourceResolutionResult:
         del product
-        raise AssertionError("source resolver should not be called for manual URL commands")
+        raise AssertionError(
+            "source resolver should not be called for manual URL commands"
+        )
 
 
-def _configure_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, enabled: bool) -> None:
+def _configure_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, enabled: bool
+) -> None:
     catalog_path = tmp_path / "warehouse.csv"
     catalog_path.write_text(
         "model,name,manufacturer,mpn,barcode,category\n"
         "012345,Warehouse Product,Brand,MPN-1,5200000000000,Mixers\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("PRODUCT_FACTORY_TELEGRAM_ENABLED", "true" if enabled else "false")
+    monkeypatch.setenv(
+        "PRODUCT_FACTORY_TELEGRAM_ENABLED", "true" if enabled else "false"
+    )
     monkeypatch.setenv("PRODUCT_FACTORY_TELEGRAM_BOT_TOKEN", "bot-token")
     monkeypatch.setenv("PRODUCT_FACTORY_TELEGRAM_WEBHOOK_SECRET", "secret")
     monkeypatch.setenv("PRODUCT_FACTORY_TELEGRAM_ALLOWED_CHAT_IDS", "-100")
@@ -1012,12 +1305,17 @@ def _configure_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, enabled: 
     monkeypatch.setenv("PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN", "name")
     monkeypatch.setenv("PRODUCT_FACTORY_WAREHOUSE_CATALOG_ENCODING", "utf-8-sig")
     monkeypatch.setenv("PRODUCT_FACTORY_API_BASE_URL", "http://127.0.0.1:8000")
-    monkeypatch.setenv("PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH", str(tmp_path / "audit" / "audit.jsonl"))
+    monkeypatch.setenv(
+        "PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH",
+        str(tmp_path / "audit" / "audit.jsonl"),
+    )
 
 
 def _telegram_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     _configure_env(monkeypatch, tmp_path, enabled=True)
-    from ecommerce.product_factory_telegram.config import product_factory_telegram_config_from_env
+    from ecommerce.product_factory_telegram.config import (
+        product_factory_telegram_config_from_env,
+    )
 
     return product_factory_telegram_config_from_env()
 
@@ -1030,7 +1328,9 @@ def _audit_event_types(config: Any) -> list[str]:
     return [event["event_type"] for event in _audit_events(config)]
 
 
-def _telegram_update(text: str, *, chat_id: str = "-100", user_id: str = "42") -> dict[str, Any]:
+def _telegram_update(
+    text: str, *, chat_id: str = "-100", user_id: str = "42"
+) -> dict[str, Any]:
     return {
         "update_id": 1,
         "message": {
@@ -1042,7 +1342,9 @@ def _telegram_update(text: str, *, chat_id: str = "-100", user_id: str = "42") -
     }
 
 
-def _telegram_callback_update(data: str, *, chat_id: str = "-100", user_id: str = "42") -> dict[str, Any]:
+def _telegram_callback_update(
+    data: str, *, chat_id: str = "-100", user_id: str = "42"
+) -> dict[str, Any]:
     return {
         "update_id": 2,
         "callback_query": {
@@ -1072,9 +1374,23 @@ def _resolution_config(
         pending_choice_ttl_minutes=pending_choice_ttl_minutes,
         preferred_sources=preferred_sources
         or (
-            PreferredSourceConfig("electronet", 100, ("electronet.gr", "www.electronet.gr"), ("electronet",), ("/",)),
-            PreferredSourceConfig("skroutz", 70, ("skroutz.gr", "www.skroutz.gr"), ("skroutz",), ("/s/",)),
-            PreferredSourceConfig("bestprice", 50, ("bestprice.gr", "www.bestprice.gr"), ("bestprice",), ("/",)),
+            PreferredSourceConfig(
+                "electronet",
+                100,
+                ("electronet.gr", "www.electronet.gr"),
+                ("electronet",),
+                ("/",),
+            ),
+            PreferredSourceConfig(
+                "skroutz", 70, ("skroutz.gr", "www.skroutz.gr"), ("skroutz",), ("/s/",)
+            ),
+            PreferredSourceConfig(
+                "bestprice",
+                50,
+                ("bestprice.gr", "www.bestprice.gr"),
+                ("bestprice",),
+                ("/",),
+            ),
         ),
     )
 

@@ -26,9 +26,7 @@ def resolve_job_artifacts(
     paths = _existing_expected_paths(record, repo_root=repo_root)
     paths.update(record.artifacts)
     return [
-        _resolved_artifact(name, path)
-        for name, path in sorted(paths.items())
-        if path
+        _resolved_artifact(name, path) for name, path in sorted(paths.items()) if path
     ]
 
 
@@ -36,14 +34,12 @@ def _existing_expected_paths(record: JobRecord, *, repo_root: Path) -> dict[str,
     if not record.model:
         return {}
     paths = _expected_paths(record.job_type, record.model, repo_root=repo_root)
-    return {
-        name: str(path)
-        for name, path in paths.items()
-        if path.exists()
-    }
+    return {name: str(path) for name, path in paths.items() if path.exists()}
 
 
-def _expected_paths(job_type: JobType, model: str, *, repo_root: Path) -> dict[str, Path]:
+def _expected_paths(
+    job_type: JobType, model: str, *, repo_root: Path
+) -> dict[str, Path]:
     model_root = repo_root / "work" / model
     scrape_dir = model_root / "scrape"
     llm_dir = model_root / "llm"
@@ -79,7 +75,8 @@ def _expected_paths(job_type: JobType, model: str, *, repo_root: Path) -> dict[s
                 "candidate_dir": candidate_dir,
                 "candidate_csv_path": candidate_dir / f"{model}.csv",
                 "published_csv_path": products_csv,
-                "candidate_normalized_json_path": candidate_dir / f"{model}.normalized.json",
+                "candidate_normalized_json_path": candidate_dir
+                / f"{model}.normalized.json",
                 "validation_report_path": candidate_dir / f"{model}.validation.json",
                 "description_html_path": candidate_dir / "description.html",
                 "characteristics_html_path": candidate_dir / "characteristics.html",
@@ -124,7 +121,8 @@ def _expected_paths(job_type: JobType, model: str, *, repo_root: Path) -> dict[s
             "seo_meta_output_path": llm_dir / "seo_meta.output.json",
             "candidate_csv_path": candidate_dir / f"{model}.csv",
             "published_csv_path": products_csv,
-            "candidate_normalized_json_path": candidate_dir / f"{model}.normalized.json",
+            "candidate_normalized_json_path": candidate_dir
+            / f"{model}.normalized.json",
             "validation_report_path": candidate_dir / f"{model}.validation.json",
             "description_html_path": candidate_dir / "description.html",
             "characteristics_html_path": candidate_dir / "characteristics.html",

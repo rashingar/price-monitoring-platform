@@ -20,7 +20,9 @@ from product_factory.skroutz_taxonomy import normalize_category_href_slug
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Capture and normalize a Skroutz fixture for local regression use.")
+    parser = argparse.ArgumentParser(
+        description="Capture and normalize a Skroutz fixture for local regression use."
+    )
     parser.add_argument("--model", required=True)
     parser.add_argument("--url", required=True)
     parser.add_argument("--output-dir", required=True)
@@ -54,7 +56,15 @@ def main() -> int:
     title_node = soup.select_one("div.sku-title h1.page-title")
     name = title_node.get_text(" ", strip=True) if title_node else ""
     brand_node = soup.select_one("a.brand-page-link img, a.brand-page-link span")
-    manufacturer = (brand_node.get("alt", "") if getattr(brand_node, "name", "") == "img" else brand_node.get_text(" ", strip=True)) if brand_node else ""
+    manufacturer = (
+        (
+            brand_node.get("alt", "")
+            if getattr(brand_node, "name", "") == "img"
+            else brand_node.get_text(" ", strip=True)
+        )
+        if brand_node
+        else ""
+    )
     section_window = extract_skroutz_section_window(html, base_url=fetch.final_url)
 
     html_path = output_dir / f"{args.model}.html"
@@ -76,7 +86,9 @@ def main() -> int:
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "content_hash": hashlib.sha256(html.encode("utf-8")).hexdigest(),
     }
-    meta_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+    meta_path.write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return 0
 
 

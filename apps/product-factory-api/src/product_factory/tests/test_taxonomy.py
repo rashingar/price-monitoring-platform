@@ -17,7 +17,9 @@ def test_taxonomy_serialization() -> None:
     assert resolver.serialize_category(resolution, 1).endswith(":::Μικροσυσκευές")
 
 
-def test_tv_category_serialization_includes_size_tech_and_manufacturer_subcategories() -> None:
+def test_tv_category_serialization_includes_size_tech_and_manufacturer_subcategories() -> (
+    None
+):
     resolver = TaxonomyResolver()
     resolution = TaxonomyResolution(
         parent_category="ΕΙΚΟΝΑ & ΗΧΟΣ",
@@ -26,7 +28,7 @@ def test_tv_category_serialization_includes_size_tech_and_manufacturer_subcatego
     )
     source = SourceProductData(
         brand="TCL",
-        name="TCL 60\" OLED 4K UHD TV",
+        name='TCL 60" OLED 4K UHD TV',
         key_specs=[
             SpecItem(label="Διαγώνιος Οθόνης ( Ίντσες )", value="60"),
             SpecItem(label="Τεχνολογία Οθόνης", value="OLED"),
@@ -62,7 +64,12 @@ def test_taxonomy_resolution_prefers_breadcrumb_match() -> None:
 def test_taxonomy_resolution_maps_koptiria_ravdomplenter_to_exact_subcategory() -> None:
     resolver = TaxonomyResolver()
     resolution, _ = resolver.resolve(
-        breadcrumbs=["Αρχική", "Εξοπλισμός Σπιτιού", "Συσκευές Κουζίνας", "Κοπτήρια - Ραβδομπλέντερ"],
+        breadcrumbs=[
+            "Αρχική",
+            "Εξοπλισμός Σπιτιού",
+            "Συσκευές Κουζίνας",
+            "Κοπτήρια - Ραβδομπλέντερ",
+        ],
         url="https://www.electronet.gr/exoplismos-spitioy/syskeyes-koyzinas/koptiria-rabdomplenter/example",
         name="Πολυκόπτης Tefal Fresh Express DN853B Γκρι",
         key_specs=[],
@@ -70,13 +77,23 @@ def test_taxonomy_resolution_maps_koptiria_ravdomplenter_to_exact_subcategory() 
     )
 
     assert resolution.sub_category == "Κοπτήρια-Ράβδοι"
-    assert resolution.cta_url == "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/kopthria-ravdoi"
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/oikiakos-eksoplismos/syskeues-kouzinas/kopthria-ravdoi"
+    )
 
 
-def test_taxonomy_resolution_maps_electronet_womens_care_brushes_to_personal_care() -> None:
+def test_taxonomy_resolution_maps_electronet_womens_care_brushes_to_personal_care() -> (
+    None
+):
     resolver = TaxonomyResolver()
     resolution, candidates = resolver.resolve(
-        breadcrumbs=["Αρχική", "Εξοπλισμός Σπιτιού", "Γυναικεία Φροντίδα", "Βούρτσες - Ψαλίδια"],
+        breadcrumbs=[
+            "Αρχική",
+            "Εξοπλισμός Σπιτιού",
+            "Γυναικεία Φροντίδα",
+            "Βούρτσες - Ψαλίδια",
+        ],
         url="https://www.electronet.gr/exoplismos-spitioy/gynaikeia-frontida/boyrtses-psalidia/boyrtsa-mallion-philips-bha71000",
         name="Βούρτσα Μαλλιών Philips BHA710/00",
         key_specs=[],
@@ -86,14 +103,24 @@ def test_taxonomy_resolution_maps_electronet_womens_care_brushes_to_personal_car
     assert resolution.parent_category == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"
     assert resolution.leaf_category == "Προσωπική Φροντίδα"
     assert resolution.sub_category == "Βούρτσες-Ψαλίδια-ισιωτικά"
-    assert resolution.cta_url == "https://www.etranoulis.gr/oikiakos-eksoplismos/proswpikh-frontida/vourtses-psalidia"
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/oikiakos-eksoplismos/proswpikh-frontida/vourtses-psalidia"
+    )
     assert candidates[0]["sub_category"] == "Βούρτσες-Ψαλίδια-ισιωτικά"
 
 
-def test_taxonomy_resolution_prefers_dryer_subcategory_for_singular_product_name() -> None:
+def test_taxonomy_resolution_prefers_dryer_subcategory_for_singular_product_name() -> (
+    None
+):
     resolver = TaxonomyResolver()
     resolution, candidates = resolver.resolve(
-        breadcrumbs=["Αρχική", "Οικιακές Συσκευές", "Πλυντήρια - Στεγνωτήρια", "Στεγνωτήρια"],
+        breadcrumbs=[
+            "Αρχική",
+            "Οικιακές Συσκευές",
+            "Πλυντήρια - Στεγνωτήρια",
+            "Στεγνωτήρια",
+        ],
         url="https://www.electronet.gr/oikiakes-syskeyes/plyntiria-stegnotiria/stegnotiria/stegnotirio-royhon-lg-rhx5009twb-9-kg-b",
         name="Στεγνωτήριο ρούχων LG RHX5009TWB 9 kg B",
         key_specs=[],
@@ -101,7 +128,10 @@ def test_taxonomy_resolution_prefers_dryer_subcategory_for_singular_product_name
     )
 
     assert resolution.sub_category == "Στεγνωτήρια Ρούχων"
-    assert resolution.cta_url == "https://www.etranoulis.gr/oikiakes-syskeues/plynthria-stegnwthria/stegnwthria-rouxwn"
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/oikiakes-syskeues/plynthria-stegnwthria/stegnwthria-rouxwn"
+    )
     assert candidates[0]["sub_category"] == "Στεγνωτήρια Ρούχων"
 
 
@@ -127,13 +157,20 @@ def test_taxonomy_resolution_prefers_television_size_bucket_for_50_inches() -> N
     assert resolution.plural_label == "Τηλεοράσεις"
     assert "television_size_bucket" in resolution.reason
     assert candidates[0]["sub_category"] == "33''-50''"
-    assert candidates[0]["cta_url"] == "https://www.etranoulis.gr/eikona-hxos/thleoraseis"
+    assert (
+        candidates[0]["cta_url"] == "https://www.etranoulis.gr/eikona-hxos/thleoraseis"
+    )
 
 
 def test_taxonomy_resolution_prefers_microwave_without_grill_url_and_base_cta() -> None:
     resolver = TaxonomyResolver()
     resolution, candidates = resolver.resolve(
-        breadcrumbs=["Αρχική", "Οικιακές Συσκευές", "Φούρνοι Μικροκυμάτων", "Φούρνοι Μικροκυμάτων Χωρίς Grill"],
+        breadcrumbs=[
+            "Αρχική",
+            "Οικιακές Συσκευές",
+            "Φούρνοι Μικροκυμάτων",
+            "Φούρνοι Μικροκυμάτων Χωρίς Grill",
+        ],
         url="https://www.electronet.gr/oikiakes-syskeyes/foyrnoi-mikrokymaton/foyrnoi-mikrokymaton-horis-grill/foyrnos-mikrokymaton-midea-mm20cf2esl",
         name="Φούρνος Μικροκυμάτων Midea MM20CF2ESL",
         key_specs=[SpecItem(label="Χωρητικότητα Φούρνου σε Λίτρα", value="20")],
@@ -147,17 +184,28 @@ def test_taxonomy_resolution_prefers_microwave_without_grill_url_and_base_cta() 
 
     assert resolution.leaf_category == "Φούρνοι Μικροκυμάτων"
     assert resolution.sub_category == "Χωρίς Grill"
-    assert resolution.cta_url == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    )
     assert resolution.plural_label == "Φούρνους Μικροκυμάτων"
     assert "electronet_microwave_without_grill_url" in resolution.reason
     assert candidates[0]["sub_category"] == "Χωρίς Grill"
-    assert candidates[0]["cta_url"] == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    assert (
+        candidates[0]["cta_url"]
+        == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    )
 
 
 def test_taxonomy_resolution_prefers_microwave_with_grill_url_and_base_cta() -> None:
     resolver = TaxonomyResolver()
     resolution, candidates = resolver.resolve(
-        breadcrumbs=["Αρχική", "Οικιακές Συσκευές", "Φούρνοι Μικροκυμάτων", "Φούρνοι Μικροκυμάτων Με Grill"],
+        breadcrumbs=[
+            "Αρχική",
+            "Οικιακές Συσκευές",
+            "Φούρνοι Μικροκυμάτων",
+            "Φούρνοι Μικροκυμάτων Με Grill",
+        ],
         url="https://www.electronet.gr/oikiakes-syskeyes/foyrnoi-mikrokymaton/foyrnoi-mikrokymaton-me-grill/foyrnos-mikrokymaton-midea-example",
         name="Φούρνος Μικροκυμάτων Midea Example με Grill",
         key_specs=[SpecItem(label="Χωρητικότητα Φούρνου σε Λίτρα", value="20")],
@@ -171,11 +219,17 @@ def test_taxonomy_resolution_prefers_microwave_with_grill_url_and_base_cta() -> 
 
     assert resolution.leaf_category == "Φούρνοι Μικροκυμάτων"
     assert resolution.sub_category == "Με Grill"
-    assert resolution.cta_url == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    )
     assert resolution.plural_label == "Φούρνους Μικροκυμάτων"
     assert "electronet_microwave_with_grill_url" in resolution.reason
     assert candidates[0]["sub_category"] == "Με Grill"
-    assert candidates[0]["cta_url"] == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    assert (
+        candidates[0]["cta_url"]
+        == "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+    )
 
 
 def test_taxonomy_resolution_prefers_hifi_for_electronet_mini_hifi_url() -> None:
@@ -190,7 +244,9 @@ def test_taxonomy_resolution_prefers_hifi_for_electronet_mini_hifi_url() -> None
 
     assert resolution.leaf_category == "Audio Systems"
     assert resolution.sub_category == "Hifi"
-    assert resolution.cta_url == "https://www.etranoulis.gr/eikona-hxos/audio-systems/hifi"
+    assert (
+        resolution.cta_url == "https://www.etranoulis.gr/eikona-hxos/audio-systems/hifi"
+    )
     assert "electronet_mini_hifi_url" in resolution.reason
     assert candidates[0]["sub_category"] == "Hifi"
 
@@ -213,12 +269,17 @@ def test_taxonomy_resolution_maps_electronet_frapieres_combined_breadcrumb() -> 
     assert resolution.parent_category == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"
     assert resolution.leaf_category == "Καφές-Ροφήματα-Χυμοί"
     assert resolution.sub_category == "Φραπιέρες"
-    assert resolution.cta_url == "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/frapieres"
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/frapieres"
+    )
     assert "electronet_frapieres_url" in resolution.reason
     assert candidates[0]["sub_category"] == "Φραπιέρες"
 
 
-def test_taxonomy_resolution_maps_electronet_combined_air_conditioner_wall_breadcrumb() -> None:
+def test_taxonomy_resolution_maps_electronet_combined_air_conditioner_wall_breadcrumb() -> (
+    None
+):
     resolver = TaxonomyResolver()
     resolution, candidates = resolver.resolve(
         breadcrumbs=[
@@ -236,7 +297,9 @@ def test_taxonomy_resolution_maps_electronet_combined_air_conditioner_wall_bread
     assert resolution.parent_category == "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ"
     assert resolution.leaf_category == "Κλιματιστικά"
     assert resolution.sub_category == "Τοίχου"
-    assert resolution.cta_url == "https://www.etranoulis.gr/klimatismos-thermansi/klimatistika/toixou"
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/klimatismos-thermansi/klimatistika/toixou"
+    )
     assert "sub_breadcrumb" in resolution.reason
     assert candidates[0]["sub_category"] == "Τοίχου"
-

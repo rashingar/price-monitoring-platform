@@ -50,7 +50,10 @@ HTML = """
 def test_product_parser_extracts_visible_code_and_specs() -> None:
     matcher = SchemaMatcher()
     parser = ElectronetProductParser(known_section_titles=matcher.known_section_titles)
-    parsed = parser.parse(HTML, "https://www.electronet.gr/exoplismos-spitioy/skoypisma/skoypes-stick/skoypa-stick-rowenta-x-force-flex-960-rh2099-kokkino")
+    parsed = parser.parse(
+        HTML,
+        "https://www.electronet.gr/exoplismos-spitioy/skoypisma/skoypes-stick/skoypa-stick-rowenta-x-force-flex-960-rh2099-kokkino",
+    )
     assert parsed.source.product_code == "343700"
     assert parsed.source.brand == "Rowenta"
     assert parsed.source.mpn == "RH2099"
@@ -155,7 +158,10 @@ def test_product_parser_preserves_video_block_in_presentation_source_html() -> N
 
     parsed = parser.parse(html, "https://www.electronet.gr/example")
 
-    assert '<video autoplay="" loop="" muted="" playsinline="" style="width: 70%;"><source src="/media/demo.mp4" type="video/mp4"/></video>' in parsed.source.presentation_source_html
+    assert (
+        '<video autoplay="" loop="" muted="" playsinline="" style="width: 70%;"><source src="/media/demo.mp4" type="video/mp4"/></video>'
+        in parsed.source.presentation_source_html
+    )
     assert parsed.field_diagnostics["presentation_blocks"].value_present is True
     assert parsed.field_diagnostics["presentation_blocks"].value_preview == "2"
 
@@ -190,6 +196,11 @@ def test_product_parser_prefers_eprel_modal_assets_over_arrow_thumbnail() -> Non
 
     parsed = parser.parse(html, "https://www.electronet.gr/example")
 
-    assert parsed.source.energy_label_asset_url == "https://eprel.ec.europa.eu/labels/electronicdisplays/Label_2204959.png"
-    assert parsed.source.product_sheet_asset_url == "https://eprel.ec.europa.eu/fiches/electronicdisplays/Fiche_2204959_EL.pdf"
-
+    assert (
+        parsed.source.energy_label_asset_url
+        == "https://eprel.ec.europa.eu/labels/electronicdisplays/Label_2204959.png"
+    )
+    assert (
+        parsed.source.product_sheet_asset_url
+        == "https://eprel.ec.europa.eu/fiches/electronicdisplays/Fiche_2204959_EL.pdf"
+    )

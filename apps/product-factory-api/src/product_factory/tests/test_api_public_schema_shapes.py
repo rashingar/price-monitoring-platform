@@ -45,7 +45,9 @@ def test_job_collection_logs_and_artifacts_public_fields_are_stable() -> None:
 
 def test_filter_public_fields_are_stable() -> None:
     assert {"categories"}.issubset(_properties(FilterCategoriesResponse))
-    assert {"category_id", "path", "groups"}.issubset(_properties(FilterCategoryResponse))
+    assert {"category_id", "path", "groups"}.issubset(
+        _properties(FilterCategoryResponse)
+    )
     assert {"group_id", "name", "required", "status", "source", "values"}.issubset(
         _properties(FilterGroupResponse)
     )

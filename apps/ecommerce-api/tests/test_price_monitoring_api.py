@@ -38,7 +38,11 @@ NOW = datetime(2026, 4, 29, 12, tzinfo=timezone.utc)
 
 @pytest.fixture(autouse=True)
 def _allow_monitoring_api_without_real_db(monkeypatch):
-    monkeypatch.setattr(routes_price_monitoring, "require_database_ready_for_price_monitoring", lambda: None)
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "require_database_ready_for_price_monitoring",
+        lambda: None,
+    )
 
 
 def _write_catalog(path: Path) -> None:
@@ -65,7 +69,9 @@ def _write_ignore(path: Path) -> None:
     )
 
 
-def _client(tmp_path: Path, monkeypatch, *, ignored: bool = True, seed_source_urls: bool = True) -> TestClient:
+def _client(
+    tmp_path: Path, monkeypatch, *, ignored: bool = True, seed_source_urls: bool = True
+) -> TestClient:
     catalog_path = tmp_path / "sourceCata.csv"
     ignore_path = tmp_path / "price_ignore.csv"
     _write_catalog(catalog_path)
@@ -257,7 +263,11 @@ def test_preview_route_delegates_and_preserves_response_shape(monkeypatch) -> No
             "source_url_required": True,
         }
 
-    monkeypatch.setattr(routes_price_monitoring.monitoring_service, "preview_selection_response", fake_preview)
+    monkeypatch.setattr(
+        routes_price_monitoring.monitoring_service,
+        "preview_selection_response",
+        fake_preview,
+    )
 
     response = TestClient(create_app()).post(
         "/api/price-monitoring/selection/preview",
@@ -279,7 +289,9 @@ def test_preview_route_delegates_and_preserves_response_shape(monkeypatch) -> No
     }
 
 
-def test_preview_selected_items_include_hierarchy_fields(tmp_path: Path, monkeypatch) -> None:
+def test_preview_selected_items_include_hierarchy_fields(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch)
 
     response = client.post(
@@ -296,7 +308,9 @@ def test_preview_selected_items_include_hierarchy_fields(tmp_path: Path, monkeyp
     assert item["sub_category"] == item["category_levels"][2]
 
 
-def test_preview_includes_source_specific_source_url_coverage(tmp_path: Path, monkeypatch) -> None:
+def test_preview_includes_source_specific_source_url_coverage(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch, seed_source_urls=False)
     database_url = _database_url(tmp_path)
     products = _catalog_products_by_model(database_url)
@@ -362,7 +376,10 @@ def test_preview_includes_source_specific_source_url_coverage(tmp_path: Path, mo
     assert coverage["disabled_source_url_count"] == 1
     assert coverage["redirected_source_url_count"] == 1
     assert coverage["missing_source_url_models"] == ["222222", "777777"]
-    assert coverage["missing_source_url_catalog_product_ids"] == [products["222222"].id, products["777777"].id]
+    assert coverage["missing_source_url_catalog_product_ids"] == [
+        products["222222"].id,
+        products["777777"].id,
+    ]
     assert "not eligible for Price Monitoring" in coverage["warning"]
     assert "Vendor Sources" in coverage["warning"]
     assert payload["source_url_required"] is True
@@ -383,7 +400,9 @@ def test_preview_includes_source_specific_source_url_coverage(tmp_path: Path, mo
     assert payload["skipped_items"][0]["reasons"] == ["missing_active_source_url"]
 
 
-def test_preview_source_url_coverage_is_source_specific_for_bestprice(tmp_path: Path, monkeypatch) -> None:
+def test_preview_source_url_coverage_is_source_specific_for_bestprice(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch, seed_source_urls=False)
     database_url = _database_url(tmp_path)
     products = _catalog_products_by_model(database_url)
@@ -446,7 +465,9 @@ def test_preview_rejects_all_source(tmp_path: Path, monkeypatch) -> None:
     assert "requires exactly one source/vendor" in response.json()["detail"]
 
 
-def test_preview_accepts_electronet_when_active_source_url_exists(tmp_path: Path, monkeypatch) -> None:
+def test_preview_accepts_electronet_when_active_source_url_exists(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch, seed_source_urls=False)
     database_url = _database_url(tmp_path)
     products = _catalog_products_by_model(database_url)
@@ -469,10 +490,17 @@ def test_preview_accepts_electronet_when_active_source_url_exists(tmp_path: Path
     assert payload["source_filter"] == "electronet"
     assert payload["selected_count"] == 1
     assert payload["items"][0]["model"] == "123456"
-    assert payload["items"][0]["source_url_coverage"]["active_source_urls"][0]["source_name"] == "electronet"
+    assert (
+        payload["items"][0]["source_url_coverage"]["active_source_urls"][0][
+            "source_name"
+        ]
+        == "electronet"
+    )
 
 
-def test_preview_default_all_excludes_ineligible_source_url_statuses(tmp_path: Path, monkeypatch) -> None:
+def test_preview_default_all_excludes_ineligible_source_url_statuses(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch, seed_source_urls=False)
     database_url = _database_url(tmp_path)
     products = _catalog_products_by_model(database_url)
@@ -507,10 +535,18 @@ def test_run_list_returns_items_newest_first(tmp_path: Path, monkeypatch) -> Non
     runs_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs"
     old_run = runs_dir / "20260429-110000-oldrun"
     new_run = runs_dir / "20260429-120000-newrun"
-    _write_run_metadata(old_run, created_at="2026-04-29T11:00:00+00:00", selected_models=["111111"])
-    _write_run_metadata(new_run, created_at="2026-04-29T12:00:00+00:00", selected_models=["222222"])
-    _insert_db_run(database_url, old_run, created_at="2026-04-29T11:00:00+00:00", selected_count=1)
-    _insert_db_run(database_url, new_run, created_at="2026-04-29T12:00:00+00:00", selected_count=1)
+    _write_run_metadata(
+        old_run, created_at="2026-04-29T11:00:00+00:00", selected_models=["111111"]
+    )
+    _write_run_metadata(
+        new_run, created_at="2026-04-29T12:00:00+00:00", selected_models=["222222"]
+    )
+    _insert_db_run(
+        database_url, old_run, created_at="2026-04-29T11:00:00+00:00", selected_count=1
+    )
+    _insert_db_run(
+        database_url, new_run, created_at="2026-04-29T12:00:00+00:00", selected_count=1
+    )
 
     response = TestClient(create_app()).get("/api/price-monitoring/runs")
 
@@ -521,10 +557,14 @@ def test_run_list_returns_items_newest_first(tmp_path: Path, monkeypatch) -> Non
     assert payload["items"][0]["latest_fetch"] is None
 
 
-def test_old_file_only_run_is_ignored_by_db_backed_listing(tmp_path: Path, monkeypatch) -> None:
+def test_old_file_only_run_is_ignored_by_db_backed_listing(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     _setup_empty_db(tmp_path, monkeypatch)
-    _write_run_metadata(tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "legacy-file-only")
+    _write_run_metadata(
+        tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "legacy-file-only"
+    )
 
     response = TestClient(create_app()).get("/api/price-monitoring/runs")
 
@@ -532,10 +572,19 @@ def test_old_file_only_run_is_ignored_by_db_backed_listing(tmp_path: Path, monke
     assert response.json()["items"] == []
 
 
-def test_run_detail_returns_one_run_with_latest_fetch(tmp_path: Path, monkeypatch) -> None:
+def test_run_detail_returns_one_run_with_latest_fetch(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     database_url = _setup_empty_db(tmp_path, monkeypatch)
-    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-120000-abcd1234"
+    run_dir = (
+        tmp_path
+        / "output"
+        / "ecommerce"
+        / "monitoring"
+        / "runs"
+        / "20260429-120000-abcd1234"
+    )
     _write_run_metadata(run_dir, selected_models=["005606"])
     fetch_result_path = run_dir / "fetch_result.json"
     _insert_db_run(
@@ -563,7 +612,9 @@ def test_run_detail_returns_one_run_with_latest_fetch(tmp_path: Path, monkeypatc
         encoding="utf-8",
     )
 
-    response = TestClient(create_app()).get(f"/api/price-monitoring/runs/{run_dir.name}")
+    response = TestClient(create_app()).get(
+        f"/api/price-monitoring/runs/{run_dir.name}"
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -575,10 +626,19 @@ def test_run_detail_returns_one_run_with_latest_fetch(tmp_path: Path, monkeypatc
     assert payload["latest_fetch"]["fetch_result_path"] == str(fetch_result_path)
 
 
-def test_run_detail_uses_db_when_artifact_directory_is_missing(tmp_path: Path, monkeypatch) -> None:
+def test_run_detail_uses_db_when_artifact_directory_is_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     database_url = _setup_empty_db(tmp_path, monkeypatch)
-    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-130000-dbonly"
+    run_dir = (
+        tmp_path
+        / "output"
+        / "ecommerce"
+        / "monitoring"
+        / "runs"
+        / "20260429-130000-dbonly"
+    )
     _insert_db_run(
         database_url,
         run_dir,
@@ -588,7 +648,9 @@ def test_run_detail_uses_db_when_artifact_directory_is_missing(tmp_path: Path, m
         skipped_count=2,
     )
 
-    response = TestClient(create_app()).get(f"/api/price-monitoring/runs/{run_dir.name}")
+    response = TestClient(create_app()).get(
+        f"/api/price-monitoring/runs/{run_dir.name}"
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -598,32 +660,57 @@ def test_run_detail_uses_db_when_artifact_directory_is_missing(tmp_path: Path, m
     assert payload["selected_count"] == 7
     assert payload["skipped_count"] == 2
     assert payload["artifacts"] == []
-    assert any("Run artifact directory is missing" in warning for warning in payload["artifact_warnings"])
+    assert any(
+        "Run artifact directory is missing" in warning
+        for warning in payload["artifact_warnings"]
+    )
 
 
-def test_run_detail_attaches_existing_artifacts_as_evidence(tmp_path: Path, monkeypatch) -> None:
+def test_run_detail_attaches_existing_artifacts_as_evidence(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     database_url = _setup_empty_db(tmp_path, monkeypatch)
-    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-140000-artifacts"
+    run_dir = (
+        tmp_path
+        / "output"
+        / "ecommerce"
+        / "monitoring"
+        / "runs"
+        / "20260429-140000-artifacts"
+    )
     _write_run_metadata(run_dir, selected_models=["005606"])
     extra_path = run_dir / "operator-note.txt"
     extra_path.write_text("kept for inspection\n", encoding="utf-8")
     _insert_db_run(database_url, run_dir, selected_count=1)
 
-    response = TestClient(create_app()).get(f"/api/price-monitoring/runs/{run_dir.name}")
+    response = TestClient(create_app()).get(
+        f"/api/price-monitoring/runs/{run_dir.name}"
+    )
 
     assert response.status_code == 200
     payload = response.json()
     artifact_names = {item["name"] for item in payload["artifacts"]}
-    assert {"input.csv", "selection_summary.json", "operator-note.txt"}.issubset(artifact_names)
+    assert {"input.csv", "selection_summary.json", "operator-note.txt"}.issubset(
+        artifact_names
+    )
     assert all(item["is_allowed"] is True for item in payload["artifacts"])
     assert payload["artifact_warnings"] == []
 
 
-def test_run_detail_db_fields_win_over_stale_artifact_content(tmp_path: Path, monkeypatch) -> None:
+def test_run_detail_db_fields_win_over_stale_artifact_content(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     database_url = _setup_empty_db(tmp_path, monkeypatch)
-    run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "20260429-150000-stale"
+    run_dir = (
+        tmp_path
+        / "output"
+        / "ecommerce"
+        / "monitoring"
+        / "runs"
+        / "20260429-150000-stale"
+    )
     _write_run_metadata(
         run_dir,
         source="stale-source",
@@ -640,7 +727,9 @@ def test_run_detail_db_fields_win_over_stale_artifact_content(tmp_path: Path, mo
         skipped_count=3,
     )
 
-    response = TestClient(create_app()).get(f"/api/price-monitoring/runs/{run_dir.name}")
+    response = TestClient(create_app()).get(
+        f"/api/price-monitoring/runs/{run_dir.name}"
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -682,7 +771,9 @@ def test_preview_by_category_filter(tmp_path: Path, monkeypatch) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["selected_count"] == 0
-    assert payload["skipped"] == [{"model": "123456", "reasons": ["missing_active_source_url"]}]
+    assert payload["skipped"] == [
+        {"model": "123456", "reasons": ["missing_active_source_url"]}
+    ]
 
 
 def test_preview_by_hierarchy_family_filter(tmp_path: Path, monkeypatch) -> None:
@@ -698,14 +789,19 @@ def test_preview_by_hierarchy_family_filter(tmp_path: Path, monkeypatch) -> None
     assert [item["model"] for item in payload["items"]] == ["005606", "222222"]
 
 
-def test_preview_by_hierarchy_family_and_category_name(tmp_path: Path, monkeypatch) -> None:
+def test_preview_by_hierarchy_family_and_category_name(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch)
 
     response = client.post(
         "/api/price-monitoring/selection/preview",
         json={
             "source": "skroutz",
-            "filters": {"family": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "category_name": "Σκεύη Μαγειρικής"},
+            "filters": {
+                "family": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+                "category_name": "Σκεύη Μαγειρικής",
+            },
         },
     )
 
@@ -761,12 +857,18 @@ def test_source_filter_for_skroutz_and_bestprice(tmp_path: Path, monkeypatch) ->
     ).json()
 
     assert [item["model"] for item in skroutz["items"]] == ["222222"]
-    assert skroutz["skipped"] == [{"model": "123456", "reasons": ["missing_active_source_url"]}]
+    assert skroutz["skipped"] == [
+        {"model": "123456", "reasons": ["missing_active_source_url"]}
+    ]
     assert [item["model"] for item in bestprice["items"]] == ["123456"]
-    assert bestprice["skipped"] == [{"model": "222222", "reasons": ["missing_active_source_url"]}]
+    assert bestprice["skipped"] == [
+        {"model": "222222", "reasons": ["missing_active_source_url"]}
+    ]
 
 
-def test_electronet_active_url_does_not_make_product_eligible_for_skroutz(tmp_path: Path, monkeypatch) -> None:
+def test_electronet_active_url_does_not_make_product_eligible_for_skroutz(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch, seed_source_urls=False)
     database_url = _database_url(tmp_path)
     products = _catalog_products_by_model(database_url)
@@ -789,15 +891,23 @@ def test_electronet_active_url_does_not_make_product_eligible_for_skroutz(tmp_pa
 
     assert [item["model"] for item in electronet["items"]] == ["123456"]
     assert skroutz["selected_count"] == 0
-    assert skroutz["skipped"] == [{"model": "123456", "reasons": ["missing_active_source_url"]}]
+    assert skroutz["skipped"] == [
+        {"model": "123456", "reasons": ["missing_active_source_url"]}
+    ]
 
 
-def test_include_ignored_true_allows_otherwise_eligible_product(tmp_path: Path, monkeypatch) -> None:
+def test_include_ignored_true_allows_otherwise_eligible_product(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch)
 
     response = client.post(
         "/api/price-monitoring/selection/preview",
-        json={"source": "skroutz", "selected_models": ["333333"], "include_ignored": True},
+        json={
+            "source": "skroutz",
+            "selected_models": ["333333"],
+            "include_ignored": True,
+        },
     )
 
     assert response.status_code == 200
@@ -806,7 +916,9 @@ def test_include_ignored_true_allows_otherwise_eligible_product(tmp_path: Path, 
     assert payload["items"][0]["model"] == "333333"
 
 
-def test_composite_missing_mpn_inactive_and_price_exclusions(tmp_path: Path, monkeypatch) -> None:
+def test_composite_missing_mpn_inactive_and_price_exclusions(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch, ignored=False)
 
     response = client.post(
@@ -833,16 +945,24 @@ def test_excluded_models_removes_product(tmp_path: Path, monkeypatch) -> None:
 
     response = client.post(
         "/api/price-monitoring/selection/preview",
-        json={"source": "skroutz", "selected_models": ["005606", "777777"], "excluded_models": ["777777"]},
+        json={
+            "source": "skroutz",
+            "selected_models": ["005606", "777777"],
+            "excluded_models": ["777777"],
+        },
     )
 
     assert response.status_code == 200
     payload = response.json()
     assert [item["model"] for item in payload["items"]] == ["005606"]
-    assert payload["skipped"] == [{"model": "777777", "reasons": ["explicitly_excluded"]}]
+    assert payload["skipped"] == [
+        {"model": "777777", "reasons": ["explicitly_excluded"]}
+    ]
 
 
-def test_run_creation_writes_input_csv_and_selection_summary(tmp_path: Path, monkeypatch) -> None:
+def test_run_creation_writes_input_csv_and_selection_summary(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch, seed_source_urls=False)
     database_url = _database_url(tmp_path)
     products = _catalog_products_by_model(database_url)
@@ -887,7 +1007,12 @@ def test_run_creation_writes_input_csv_and_selection_summary(tmp_path: Path, mon
         rows = list(csv.DictReader(f))
     assert list(rows[0].keys()) == ["model", "mpn", "name", "price"]
     assert rows == [
-        {"model": "005606", "mpn": "MPN-1", "name": "Eligible Bosch", "price": "123.45"},
+        {
+            "model": "005606",
+            "mpn": "MPN-1",
+            "name": "Eligible Bosch",
+            "price": "123.45",
+        },
     ]
 
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
@@ -898,10 +1023,15 @@ def test_run_creation_writes_input_csv_and_selection_summary(tmp_path: Path, mon
     assert summary["source_url_required"] is True
     assert summary["input_csv_path"] == payload["input_csv_path"]
     assert summary["source_url_coverage"] == payload["source_url_coverage"]
-    assert summary["selected_items"][0]["source_url_coverage"]["has_active_source_url"] is True
+    assert (
+        summary["selected_items"][0]["source_url_coverage"]["has_active_source_url"]
+        is True
+    )
 
 
-def test_run_creation_preserves_hierarchy_filters_in_selection_summary(tmp_path: Path, monkeypatch) -> None:
+def test_run_creation_preserves_hierarchy_filters_in_selection_summary(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch)
 
     response = client.post(
@@ -918,7 +1048,9 @@ def test_run_creation_preserves_hierarchy_filters_in_selection_summary(tmp_path:
 
     assert response.status_code == 200
     payload = response.json()
-    summary = json.loads(Path(payload["selection_summary_path"]).read_text(encoding="utf-8"))
+    summary = json.loads(
+        Path(payload["selection_summary_path"]).read_text(encoding="utf-8")
+    )
     assert summary["selected_models"] == ["005606"]
     assert summary["filters"]["family"] == "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ"
     assert summary["filters"]["category_name"] == "Σκεύη Μαγειρικής"
@@ -926,7 +1058,9 @@ def test_run_creation_preserves_hierarchy_filters_in_selection_summary(tmp_path:
     assert summary["filters"]["category"] is None
 
 
-def test_run_creation_fails_when_all_selected_products_lack_active_source_urls(tmp_path: Path, monkeypatch) -> None:
+def test_run_creation_fails_when_all_selected_products_lack_active_source_urls(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch)
 
     response = client.post(
@@ -945,7 +1079,9 @@ def test_run_creation_fails_when_all_selected_products_lack_active_source_urls(t
     assert "Vendor Sources" in detail["operator_message"]
 
 
-def test_run_creation_fails_with_400_when_selected_count_is_zero(tmp_path: Path, monkeypatch) -> None:
+def test_run_creation_fails_with_400_when_selected_count_is_zero(
+    tmp_path: Path, monkeypatch
+) -> None:
     client = _client(tmp_path, monkeypatch)
 
     response = client.post(

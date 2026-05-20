@@ -24,7 +24,9 @@ from ecommerce.product_factory_source_resolution.models import (
     SourceResolutionProduct,
     SourceResolutionResult,
 )
-from ecommerce.product_factory_source_resolution.resolver import ProductFactorySourceResolver as _GenericProductFactorySourceResolver
+from ecommerce.product_factory_source_resolution.resolver import (
+    ProductFactorySourceResolver as _GenericProductFactorySourceResolver,
+)
 from ecommerce.product_factory_telegram.warehouse import WarehouseProduct
 
 
@@ -36,14 +38,21 @@ class ProductFactorySourceResolver(_GenericProductFactorySourceResolver):
         product: WarehouseProduct | SourceResolutionProduct,
         source_scoped_queries: bool | None = None,
     ) -> SourceResolutionResult:
-        return super().resolve(product=_source_resolution_product(product), source_scoped_queries=source_scoped_queries)
+        return super().resolve(
+            product=_source_resolution_product(product),
+            source_scoped_queries=source_scoped_queries,
+        )
 
 
-def resolver_from_config_path(path: str | Path | None = None) -> ProductFactorySourceResolver:
+def resolver_from_config_path(
+    path: str | Path | None = None,
+) -> ProductFactorySourceResolver:
     return ProductFactorySourceResolver(config=load_source_resolution_config(path))
 
 
-def _source_resolution_product(product: WarehouseProduct | SourceResolutionProduct) -> SourceResolutionProduct:
+def _source_resolution_product(
+    product: WarehouseProduct | SourceResolutionProduct,
+) -> SourceResolutionProduct:
     if isinstance(product, SourceResolutionProduct):
         return product
     metadata = dict(product.metadata)

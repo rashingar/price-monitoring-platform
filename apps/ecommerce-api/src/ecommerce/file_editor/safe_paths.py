@@ -34,12 +34,20 @@ def get_file_root_entries() -> list[dict]:
     configured = os.environ.get(FILE_ROOTS_ENV_VAR)
     if configured is not None:
         entries = [
-            _root_entry(Path(part.strip()), FILE_ROOTS_ENV_VAR, is_default=False, is_configured=True)
+            _root_entry(
+                Path(part.strip()),
+                FILE_ROOTS_ENV_VAR,
+                is_default=False,
+                is_configured=True,
+            )
             for part in configured.split(";")
             if part.strip()
         ]
     else:
-        entries = [_root_entry(root, "default", is_default=True, is_configured=False) for root in DEFAULT_FILE_ROOTS]
+        entries = [
+            _root_entry(root, "default", is_default=True, is_configured=False)
+            for root in DEFAULT_FILE_ROOTS
+        ]
     return _dedupe_root_entries(entries)
 
 
@@ -84,7 +92,9 @@ def _dedupe_root_entries(entries: list[dict]) -> list[dict]:
     return result
 
 
-def _root_entry(path: Path, source: str, *, is_default: bool, is_configured: bool) -> dict:
+def _root_entry(
+    path: Path, source: str, *, is_default: bool, is_configured: bool
+) -> dict:
     resolved = _resolve_path(path)
     return {
         "path": str(resolved),

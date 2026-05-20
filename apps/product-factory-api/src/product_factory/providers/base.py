@@ -2,11 +2,21 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from .models import ProviderDefinition, ProviderErrorCode, ProviderErrorInfo, ProviderInputIdentity, ProviderResult, ProviderSnapshot, ProviderStage
+from .models import (
+    ProviderDefinition,
+    ProviderErrorCode,
+    ProviderErrorInfo,
+    ProviderInputIdentity,
+    ProviderResult,
+    ProviderSnapshot,
+    ProviderStage,
+)
 
 
 class ProviderError(RuntimeError):
-    def __init__(self, error: ProviderErrorInfo, *, cause: BaseException | None = None) -> None:
+    def __init__(
+        self, error: ProviderErrorInfo, *, cause: BaseException | None = None
+    ) -> None:
         super().__init__(error.message)
         self.error = error
         self.cause = cause
@@ -56,5 +66,7 @@ class ProductProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def normalize(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+    def normalize(
+        self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity
+    ) -> ProviderResult:
         raise NotImplementedError

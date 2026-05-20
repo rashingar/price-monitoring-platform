@@ -11,18 +11,28 @@ from product_factory import repo_paths
 from product_factory.api.app import create_app
 from product_factory.jobs.runner import SequentialJobRunner
 from product_factory.jobs.store import JobStore
-from product_factory.services.settings_service import default_product_factory_settings_payload
-from product_factory.tools.sync_filter_map import build_filter_map_payload, default_manual_overrides
+from product_factory.services.settings_service import (
+    default_product_factory_settings_payload,
+)
+from product_factory.tools.sync_filter_map import (
+    build_filter_map_payload,
+    default_manual_overrides,
+)
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 @pytest.fixture()
 def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    settings_path = tmp_path / "resources" / "settings" / "product_factory_settings.json"
+    settings_path = (
+        tmp_path / "resources" / "settings" / "product_factory_settings.json"
+    )
     monkeypatch.setattr(repo_paths, "PRODUCT_FACTORY_SETTINGS_PATH", settings_path)
     return settings_path
 
@@ -34,10 +44,15 @@ def isolated_repo_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture()
-def isolated_filter_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+def isolated_filter_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, Path]:
     paths = {
         "base": tmp_path / "resources" / "mappings" / "filter_map.base.json",
-        "manual": tmp_path / "resources" / "mappings" / "filter_map.manual_overrides.json",
+        "manual": tmp_path
+        / "resources"
+        / "mappings"
+        / "filter_map.manual_overrides.json",
         "final": tmp_path / "resources" / "mappings" / "filter_map.json",
         "report": tmp_path / "resources" / "mappings" / "filter_map.sync_report.json",
     }
@@ -93,12 +108,16 @@ def test_missing_job_routes_return_controlled_404(tmp_path: Path) -> None:
     assert all(response.json()["detail"] == "Job not found." for response in responses)
 
 
-def test_settings_endpoint_returns_shape_and_rejects_invalid_patch(isolated_settings: Path) -> None:
+def test_settings_endpoint_returns_shape_and_rejects_invalid_patch(
+    isolated_settings: Path,
+) -> None:
     _write_json(isolated_settings, default_product_factory_settings_payload())
     client = TestClient(create_app())
 
     get_response = client.get("/api/settings")
-    patch_response = client.patch("/api/settings", json={"authoring": {"unsupported": {}}})
+    patch_response = client.patch(
+        "/api/settings", json={"authoring": {"unsupported": {}}}
+    )
 
     assert get_response.status_code == 200
     assert {"schema_version", "authoring"}.issubset(get_response.json())
@@ -106,19 +125,25 @@ def test_settings_endpoint_returns_shape_and_rejects_invalid_patch(isolated_sett
     assert "Unsupported settings patch path" in patch_response.json()["detail"]
 
 
-def test_filter_status_returns_configured_paths_and_valid_statuses(isolated_filter_paths: dict[str, Path]) -> None:
+def test_filter_status_returns_configured_paths_and_valid_statuses(
+    isolated_filter_paths: dict[str, Path],
+) -> None:
     response = TestClient(create_app()).get("/api/filters/status")
     body = response.json()
 
     assert response.status_code == 200
     assert body["filter_map_base_path"] == str(isolated_filter_paths["base"])
-    assert body["filter_map_manual_overrides_path"] == str(isolated_filter_paths["manual"])
+    assert body["filter_map_manual_overrides_path"] == str(
+        isolated_filter_paths["manual"]
+    )
     assert body["filter_map_path"] == str(isolated_filter_paths["final"])
     assert body["sync_report_path"] == str(isolated_filter_paths["report"])
     assert set(body["valid_statuses"]) == {"active", "deprecated", "inactive"}
 
 
-def test_filter_category_missing_id_returns_404(isolated_filter_paths: dict[str, Path]) -> None:
+def test_filter_category_missing_id_returns_404(
+    isolated_filter_paths: dict[str, Path],
+) -> None:
     response = TestClient(create_app()).get("/api/filters/categories/cat_missing")
 
     assert response.status_code == 404
@@ -129,20 +154,26 @@ def test_filter_request_validation_rejects_empty_names_and_values() -> None:
     client = TestClient(create_app())
 
     group_response = client.put("/api/filters/categories/cat/groups", json={"name": ""})
-    value_response = client.put("/api/filters/categories/cat/groups/group/values", json={"value": ""})
+    value_response = client.put(
+        "/api/filters/categories/cat/groups/group/values", json={"value": ""}
+    )
 
     assert group_response.status_code == 422
     assert value_response.status_code == 422
 
 
-def test_filter_review_missing_model_returns_controlled_404(isolated_repo_root: Path) -> None:
+def test_filter_review_missing_model_returns_controlled_404(
+    isolated_repo_root: Path,
+) -> None:
     response = TestClient(create_app()).get("/api/filter-review/missing-model")
 
     assert response.status_code == 404
     assert "Run prepare first" in response.json()["detail"]
 
 
-def test_authoring_missing_model_returns_controlled_404(isolated_repo_root: Path) -> None:
+def test_authoring_missing_model_returns_controlled_404(
+    isolated_repo_root: Path,
+) -> None:
     response = TestClient(create_app()).get("/api/authoring/missing-model")
 
     assert response.status_code == 404

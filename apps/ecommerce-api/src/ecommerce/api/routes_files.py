@@ -46,7 +46,11 @@ class CsvSaveCopyRequest(BaseModel):
 
 @router.get("/roots")
 def get_roots() -> dict:
-    return {"roots": [{"path": str(root), "exists": root.exists()} for root in get_allowed_roots()]}
+    return {
+        "roots": [
+            {"path": str(root), "exists": root.exists()} for root in get_allowed_roots()
+        ]
+    }
 
 
 @router.get("/list")
@@ -62,7 +66,9 @@ def list_files(
     if not directory.exists():
         raise HTTPException(status_code=404, detail=f"Directory not found: {directory}")
     if not directory.is_dir():
-        raise HTTPException(status_code=400, detail=f"Path is not a directory: {directory}")
+        raise HTTPException(
+            status_code=400, detail=f"Path is not a directory: {directory}"
+        )
 
     allowed_extensions = _parse_extensions(extensions)
     items = []
@@ -73,7 +79,9 @@ def list_files(
             elif child.is_file() and child.suffix.lower() in allowed_extensions:
                 items.append(_file_item(child, "file"))
     except OSError as exc:
-        raise HTTPException(status_code=500, detail="Directory listing failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Directory listing failed."
+        ) from exc
 
     items.sort(key=lambda item: (item["type"] != "directory", item["name"].casefold()))
     return {"root": str(selected_root), "relative_path": relative_path, "items": items}
@@ -88,14 +96,20 @@ def read_file(request: CsvReadRequest) -> dict:
     if not path.is_file():
         raise HTTPException(status_code=400, detail=f"Path is not a file: {path}")
     if request.max_rows is not None and request.max_rows < 0:
-        raise HTTPException(status_code=400, detail="max_rows must be greater than or equal to 0")
+        raise HTTPException(
+            status_code=400, detail="max_rows must be greater than or equal to 0"
+        )
 
     try:
-        result = read_csv_file(path, delimiter=request.delimiter, max_rows=request.max_rows)
+        result = read_csv_file(
+            path, delimiter=request.delimiter, max_rows=request.max_rows
+        )
     except InvalidCsvDelimiterError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except UnicodeDecodeError as exc:
-        raise HTTPException(status_code=400, detail="CSV file must be UTF-8 encoded.") from exc
+        raise HTTPException(
+            status_code=400, detail="CSV file must be UTF-8 encoded."
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="CSV read failed.") from exc
 
@@ -129,30 +143,44 @@ def save_copy(request: CsvSaveCopyRequest) -> dict:
     _require_csv_extension(target_path)
     _ensure_parent_allowed(target_path)
     if not source_path.exists():
-        raise HTTPException(status_code=404, detail=f"Source file not found: {source_path}")
+        raise HTTPException(
+            status_code=404, detail=f"Source file not found: {source_path}"
+        )
     if not source_path.is_file():
-        raise HTTPException(status_code=400, detail=f"Source path is not a file: {source_path}")
+        raise HTTPException(
+            status_code=400, detail=f"Source path is not a file: {source_path}"
+        )
 
     try:
-        result = write_csv_copy(source_path, target_path, request.columns, request.rows, request.delimiter)
+        result = write_csv_copy(
+            source_path, target_path, request.columns, request.rows, request.delimiter
+        )
     except InvalidCsvDelimiterError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="CSV write failed.") from exc
-    return _write_payload(result.path, result.columns, result.written_rows, result.delimiter)
+    return _write_payload(
+        result.path, result.columns, result.written_rows, result.delimiter
+    )
 
 
-def _write_response(path: Path, columns: list[str], rows: list[dict[str, Any]], delimiter: str) -> dict:
+def _write_response(
+    path: Path, columns: list[str], rows: list[dict[str, Any]], delimiter: str
+) -> dict:
     try:
         result = write_csv_file(path, columns, rows, delimiter)
     except InvalidCsvDelimiterError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="CSV write failed.") from exc
-    return _write_payload(result.path, result.columns, result.written_rows, result.delimiter)
+    return _write_payload(
+        result.path, result.columns, result.written_rows, result.delimiter
+    )
 
 
-def _write_payload(path: Path, columns: list[str], written_rows: int, delimiter: str) -> dict:
+def _write_payload(
+    path: Path, columns: list[str], written_rows: int, delimiter: str
+) -> dict:
     metadata = _metadata(path)
     return {
         "path": str(path),
@@ -185,7 +213,9 @@ def _safe_path_or_403(path: str) -> Path:
 
 def _ensure_parent_allowed(path: Path) -> None:
     if not is_path_allowed(path.parent, get_allowed_roots()):
-        raise HTTPException(status_code=403, detail="Target directory is outside allowed roots.")
+        raise HTTPException(
+            status_code=403, detail="Target directory is outside allowed roots."
+        )
 
 
 def _require_csv_extension(path: Path) -> None:
@@ -219,5 +249,7 @@ def _metadata(path: Path) -> dict:
     stat = path.stat()
     return {
         "size_bytes": stat.st_size,
-        "modified_at": datetime.fromtimestamp(stat.st_mtime).replace(microsecond=0).isoformat(),
+        "modified_at": datetime.fromtimestamp(stat.st_mtime)
+        .replace(microsecond=0)
+        .isoformat(),
     }

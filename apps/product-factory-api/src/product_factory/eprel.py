@@ -35,7 +35,10 @@ _PRODUCT_GROUP_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("rangehoods", ("hood", "range hood", "hoods", "aporrofit", "απορροφητ")),
     ("dishwashers", ("dishwasher", "dishwashers", "piat", "πιατ")),
     ("electronicdisplays", ("tv", "television", "display", "τηλεορ")),
-    ("refrigeratingappliances2019", ("fridge", "freezer", "refrigerator", "ψυγει", "καταψυκτ")),
+    (
+        "refrigeratingappliances2019",
+        ("fridge", "freezer", "refrigerator", "ψυγει", "καταψυκτ"),
+    ),
     ("airconditioners", ("air condition", "aircondition", "klimatist", "κλιματιστ")),
 )
 
@@ -198,7 +201,9 @@ def _search_registration_number(
             continue
         if not _hit_matches(hit, field_name, expected_value):
             continue
-        registration_number = normalize_whitespace(str(hit.get("eprelRegistrationNumber") or ""))
+        registration_number = normalize_whitespace(
+            str(hit.get("eprelRegistrationNumber") or "")
+        )
         if registration_number:
             return registration_number
     return ""
@@ -230,7 +235,10 @@ def _resolve_label_url(
 
 def _hit_matches(hit: dict[str, Any], field_name: str, expected_value: str) -> bool:
     if field_name == "modelIdentifier":
-        return _normalize_field_value(field_name, hit.get("modelIdentifier")) == expected_value
+        return (
+            _normalize_field_value(field_name, hit.get("modelIdentifier"))
+            == expected_value
+        )
     if field_name == "gtinIdentifier":
         hit_values = {
             _normalize_field_value(field_name, hit.get("gtinIdentifier")),
@@ -270,7 +278,9 @@ def _fetch_eprel_json(url: str, params: dict[str, Any] | None = None) -> dict[st
     if referer:
         headers["Referer"] = referer
 
-    with httpx.Client(timeout=EPREL_TIMEOUT, follow_redirects=True, headers=headers) as client:
+    with httpx.Client(
+        timeout=EPREL_TIMEOUT, follow_redirects=True, headers=headers
+    ) as client:
         response = client.get(url, params=params)
         response.raise_for_status()
         payload = response.json()

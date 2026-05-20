@@ -25,9 +25,14 @@ from ecommerce.db.repositories.alerts import (
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.policy import require_database_ready_for_price_monitoring
 from ecommerce.db.session import session_scope
-from ecommerce.price_monitoring.runs import InvalidPriceMonitoringRunIdError, validate_price_monitoring_run_id
+from ecommerce.price_monitoring.runs import (
+    InvalidPriceMonitoringRunIdError,
+    validate_price_monitoring_run_id,
+)
 
-router = APIRouter(prefix="/api/price-monitoring/alerts", tags=["price-monitoring-alerts"])
+router = APIRouter(
+    prefix="/api/price-monitoring/alerts", tags=["price-monitoring-alerts"]
+)
 
 
 class AlertRuleCreateRequest(BaseModel):
@@ -80,7 +85,9 @@ def get_alert_rules(
                 offset=safe_offset,
             )
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert rule query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Alert rule query failed: {_safe_db_error(exc)}"
+        ) from exc
     return {"items": items, "count": count, "limit": safe_limit, "offset": safe_offset}
 
 
@@ -89,12 +96,16 @@ def post_alert_rule(request: AlertRuleCreateRequest) -> dict:
     _require_database_configured()
     try:
         with session_scope() as session:
-            rule = create_alert_rule(session, _model_payload(request, exclude_unset=False))
+            rule = create_alert_rule(
+                session, _model_payload(request, exclude_unset=False)
+            )
             payload = alert_rule_to_dict(rule)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert rule creation failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Alert rule creation failed: {_safe_db_error(exc)}"
+        ) from exc
     return payload
 
 
@@ -110,7 +121,9 @@ def get_alert_rule_by_id(rule_id: int) -> dict:
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert rule query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Alert rule query failed: {_safe_db_error(exc)}"
+        ) from exc
     return payload
 
 
@@ -119,7 +132,9 @@ def patch_alert_rule(rule_id: int, request: AlertRuleUpdateRequest) -> dict:
     _require_database_configured()
     try:
         with session_scope() as session:
-            rule = update_alert_rule(session, rule_id, _model_payload(request, exclude_unset=True))
+            rule = update_alert_rule(
+                session, rule_id, _model_payload(request, exclude_unset=True)
+            )
             if rule is None:
                 raise HTTPException(status_code=404, detail="Alert rule not found.")
             payload = alert_rule_to_dict(rule)
@@ -128,7 +143,9 @@ def patch_alert_rule(rule_id: int, request: AlertRuleUpdateRequest) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert rule update failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Alert rule update failed: {_safe_db_error(exc)}"
+        ) from exc
     return payload
 
 
@@ -144,7 +161,10 @@ def deactivate_alert_rule(rule_id: int) -> dict:
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert rule deactivation failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Alert rule deactivation failed: {_safe_db_error(exc)}",
+        ) from exc
     return payload
 
 
@@ -173,7 +193,9 @@ def get_alert_events(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert event query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Alert event query failed: {_safe_db_error(exc)}"
+        ) from exc
     return {"items": items, "count": count, "limit": safe_limit, "offset": safe_offset}
 
 
@@ -189,7 +211,10 @@ def acknowledge_event(event_id: int, request: AlertEventAcknowledgeRequest) -> d
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert event acknowledgement failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Alert event acknowledgement failed: {_safe_db_error(exc)}",
+        ) from exc
     return payload
 
 
@@ -205,7 +230,10 @@ def resolve_event(event_id: int, request: AlertEventResolveRequest) -> dict:
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert event resolution failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Alert event resolution failed: {_safe_db_error(exc)}",
+        ) from exc
     return payload
 
 
@@ -217,7 +245,9 @@ def evaluate_run_alerts(run_id: str) -> dict:
         with session_scope() as session:
             result = evaluate_alert_rules_for_run(session, run_id)
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Alert evaluation failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Alert evaluation failed: {_safe_db_error(exc)}"
+        ) from exc
     return {"run_id": run_id, "status": "evaluated", **result.to_dict()}
 
 
@@ -250,5 +280,7 @@ def _model_payload(model: BaseModel, *, exclude_unset: bool) -> dict[str, Any]:
 
 
 def _safe_db_error(exc: Exception) -> str:
-    message = str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    message = (
+        str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    )
     return sanitize_database_error(message) or exc.__class__.__name__

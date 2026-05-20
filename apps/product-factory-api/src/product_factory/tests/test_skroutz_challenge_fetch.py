@@ -6,7 +6,12 @@ from pathlib import Path
 import httpx
 import pytest
 
-from product_factory.models import CLIInput, FetchResult, ParsedProduct, SourceProductData
+from product_factory.models import (
+    CLIInput,
+    FetchResult,
+    ParsedProduct,
+    SourceProductData,
+)
 from product_factory.prepare_provider_resolution import (
     PrepareProviderResolutionResult,
     validate_prepare_provider_resolution_result,
@@ -18,11 +23,13 @@ from product_factory.providers.skroutz_fetcher import (
     SkroutzFetchStatus,
     SkroutzSnapshotFetcher,
 )
-from product_factory.providers.skroutz_provider import SKROUTZ_CHALLENGE_REASON, SkroutzProvider
+from product_factory.providers.skroutz_provider import (
+    SKROUTZ_CHALLENGE_REASON,
+    SkroutzProvider,
+)
 from product_factory.services.models import RunStatus
 from product_factory.services.prepare_execution import execute_prepare_workflow
 from product_factory.source_capture_client import SourceCaptureSyncResult
-
 
 PRODUCT_URL = "https://www.skroutz.gr/s/61054853/lg-icheio-dxl7t-mayro.html"
 CHALLENGE_HTML = """
@@ -69,13 +76,18 @@ def _blocked_resolution(cli: CLIInput) -> PrepareProviderResolutionResult:
             html=CHALLENGE_HTML,
             status_code=403,
             method="httpx",
-            response_headers={"content-type": "text/html", "x-product-factory-blocked-reason": SKROUTZ_CHALLENGE_REASON},
+            response_headers={
+                "content-type": "text/html",
+                "x-product-factory-blocked-reason": SKROUTZ_CHALLENGE_REASON,
+            },
         ),
         parsed=_blocked_parsed(cli.url),
     )
 
 
-def test_skroutz_provider_valid_product_html_parses(skroutz_provider_fixtures_root: Path) -> None:
+def test_skroutz_provider_valid_product_html_parses(
+    skroutz_provider_fixtures_root: Path,
+) -> None:
     fixture_path = skroutz_provider_fixtures_root / "taxonomy_cases" / "143109.html"
     provider = SkroutzProvider(fixture_html_by_url={PRODUCT_URL: fixture_path})
     identity = ProviderInputIdentity(model="143109", url=PRODUCT_URL)
@@ -127,7 +139,9 @@ def test_skroutz_live_fetch_uses_playwright_before_httpx() -> None:
 
         def fetch_httpx(self, url: str) -> FetchResult:
             self.calls.append("httpx")
-            raise AssertionError("httpx should not run when playwright returns a valid snapshot")
+            raise AssertionError(
+                "httpx should not run when playwright returns a valid snapshot"
+            )
 
     browser_fetcher = BrowserFetcher()
     fetcher = SkroutzSnapshotFetcher(browser_fetcher=browser_fetcher)
@@ -205,7 +219,9 @@ def test_skroutz_challenge_page_does_not_call_parser() -> None:
     assert "skroutz_snapshot_blocked_by_challenge" in result.warnings
 
 
-def test_prepare_workflow_succeeds_with_warning_when_skroutz_snapshot_is_blocked(tmp_path: Path) -> None:
+def test_prepare_workflow_succeeds_with_warning_when_skroutz_snapshot_is_blocked(
+    tmp_path: Path,
+) -> None:
     cli = CLIInput(
         model="580852",
         url=PRODUCT_URL,
@@ -221,20 +237,32 @@ def test_prepare_workflow_succeeds_with_warning_when_skroutz_snapshot_is_blocked
         return execute_prepare_stage(
             cli_arg,
             model_dir=model_dir,
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
             fetcher_factory=DummyAssetFetcher,
-            source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="skipped", message="test"),
-            resolve_prepare_provider_input_fn=lambda blocked_cli, **_kwargs: _blocked_resolution(blocked_cli),
+            source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+                status="skipped", message="test"
+            ),
+            resolve_prepare_provider_input_fn=lambda blocked_cli, **_kwargs: _blocked_resolution(
+                blocked_cli
+            ),
         )
 
-    result = execute_prepare_workflow(cli, work_root=tmp_path / "work", execute_prepare_stage_fn=execute_stage)
+    result = execute_prepare_workflow(
+        cli, work_root=tmp_path / "work", execute_prepare_stage_fn=execute_stage
+    )
 
     assert result.run_status == RunStatus.COMPLETED
     assert result.task_manifest_path.exists()
     assert result.scrape_result.parsed is not None
     assert result.scrape_result.parsed.source.page_type == "blocked_by_challenge"
     assert "blocked_by_challenge" in result.scrape_result.report_warnings
-    report = json.loads((result.scrape_dir / "580852.report.json").read_text(encoding="utf-8"))
+    report = json.loads(
+        (result.scrape_dir / "580852.report.json").read_text(encoding="utf-8")
+    )
     manifest = json.loads(result.task_manifest_path.read_text(encoding="utf-8"))
     assert report["blocked_snapshot"]["reason"] == "blocked_by_challenge"
     assert manifest["prepare_mode"] == "blocked_snapshot"
@@ -256,5 +284,7 @@ def test_invalid_skroutz_path_still_fails_as_invalid_or_unsupported() -> None:
         parsed=_blocked_parsed(invalid_url),
     )
 
-    with pytest.raises(RuntimeError, match="Resolved URL is not a supported product page"):
+    with pytest.raises(
+        RuntimeError, match="Resolved URL is not a supported product page"
+    ):
         validate_prepare_provider_resolution_result(cli, result)

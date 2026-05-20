@@ -14,7 +14,6 @@ from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.scoring import CandidateScore
 from ecommerce.source_url_agent.sources import SourceDefinition
 
-
 MIN_CANDIDATE_CONFIDENCE_TO_KEEP = 0.80
 
 
@@ -36,7 +35,9 @@ class SourceUrlAgentCandidate:
     searched_queries: list[str]
     status: str
     notes: str = ""
-    checked_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc).replace(microsecond=0))
+    checked_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(microsecond=0)
+    )
     reviewed_by: str | None = None
     reviewed_at: datetime | None = None
 
@@ -52,7 +53,9 @@ class SourceUrlAgentCandidate:
     def source_type(self) -> str:
         return self.source.source_type
 
-    def to_artifact_row(self, *, include_review_columns: bool = False) -> dict[str, Any]:
+    def to_artifact_row(
+        self, *, include_review_columns: bool = False
+    ) -> dict[str, Any]:
         evidence = self.evidence_json
         row: dict[str, Any] = {
             "model": self.product.model,
@@ -61,7 +64,11 @@ class SourceUrlAgentCandidate:
             "mpn": self.product.mpn,
             "manufacturer": self.product.manufacturer,
             "category": self.product.category,
-            "own_price": format_decimal_two_places(self.product.price) if self.product.price is not None else "",
+            "own_price": (
+                format_decimal_two_places(self.product.price)
+                if self.product.price is not None
+                else ""
+            ),
             "source_name": self.source_name,
             "source_domain": self.source_domain,
             "source_type": self.source_type,
@@ -69,7 +76,11 @@ class SourceUrlAgentCandidate:
             "candidate_url": self.candidate_url,
             "canonical_url": self.canonical_url,
             "candidate_title": self.candidate_title,
-            "candidate_price": format_decimal_two_places(self.candidate_price) if self.candidate_price is not None else "",
+            "candidate_price": (
+                format_decimal_two_places(self.candidate_price)
+                if self.candidate_price is not None
+                else ""
+            ),
             "match_status": self.match_status,
             "confidence_score": f"{self.confidence_score:.4f}",
             "match_method": self.match_method,
@@ -130,12 +141,14 @@ class SourceUrlAgentCandidate:
 def keep_candidate(candidate: SourceUrlAgentCandidate) -> bool:
     if candidate.status == "error" or candidate.match_status == "error":
         return True
-    if candidate.match_method == "composite_product_mismatch" and candidate.candidate_url:
+    if (
+        candidate.match_method == "composite_product_mismatch"
+        and candidate.candidate_url
+    ):
         return True
     if (
-        (candidate.status == "not_found" or candidate.match_status == "not_found")
-        and not candidate.candidate_url
-    ):
+        candidate.status == "not_found" or candidate.match_status == "not_found"
+    ) and not candidate.candidate_url:
         return True
     return candidate.confidence_score >= MIN_CANDIDATE_CONFIDENCE_TO_KEEP
 

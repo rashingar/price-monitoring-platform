@@ -7,17 +7,30 @@ import pytest
 
 import product_factory.prepare_stage as prepare_stage_module
 from product_factory.fetcher import FetchError
-from product_factory.models import CLIInput, FetchResult, GalleryImage, ParsedProduct, SchemaMatchResult, SourceProductData, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    FetchResult,
+    GalleryImage,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    TaxonomyResolution,
+)
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.prepare_result_assembly import PrepareResultAssemblyResult
 from product_factory.prepare_section_assets import PrepareSectionAssetsResult
-from product_factory.prepare_scrape_persistence import PrepareScrapePersistenceInput, PrepareScrapePersistenceResult
+from product_factory.prepare_scrape_persistence import (
+    PrepareScrapePersistenceInput,
+    PrepareScrapePersistenceResult,
+)
 from product_factory.prepare_stage import execute_prepare_stage
 from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult
 from product_factory.source_acquisition_models import SourceAcquisitionResult
 
 
-def _build_cli(tmp_path: Path, *, model: str = "100001", url: str, sections: int) -> CLIInput:
+def _build_cli(
+    tmp_path: Path, *, model: str = "100001", url: str, sections: int
+) -> CLIInput:
     return CLIInput(
         model=model,
         url=url,
@@ -132,12 +145,18 @@ def _build_assembly_result(**kwargs: Any) -> PrepareResultAssemblyResult:
         schema_candidates=[{"matched_schema_id": "schema-1"}],
         row={"model": kwargs["cli"].model},
         normalized={"source": kwargs["source"]},
-        report={"source": kwargs["source"], "warnings": [], "identity_checks": {"source": kwargs["source"]}},
+        report={
+            "source": kwargs["source"],
+            "warnings": [],
+            "identity_checks": {"source": kwargs["source"]},
+        },
     )
 
 
 def _capture_persist(calls: list[PrepareScrapePersistenceInput]):
-    def fake_persist(persistence_input: PrepareScrapePersistenceInput) -> PrepareScrapePersistenceResult:
+    def fake_persist(
+        persistence_input: PrepareScrapePersistenceInput,
+    ) -> PrepareScrapePersistenceResult:
         calls.append(persistence_input)
         return PrepareScrapePersistenceResult(
             scrape_dir=persistence_input.scrape_dir,
@@ -155,14 +174,19 @@ class RecordingFetcher:
     def __init__(
         self,
         *,
-        besco_download_result: tuple[list[GalleryImage], list[str], list[str]] | None = None,
+        besco_download_result: (
+            tuple[list[GalleryImage], list[str], list[str]] | None
+        ) = None,
         besco_error: Exception | None = None,
         rendered_section_data: dict[str, Any] | None = None,
         rendered_error: Exception | None = None,
     ) -> None:
         self.besco_download_result = besco_download_result or ([], [], [])
         self.besco_error = besco_error
-        self.rendered_section_data = rendered_section_data or {"window": {}, "sections": []}
+        self.rendered_section_data = rendered_section_data or {
+            "window": {},
+            "sections": [],
+        }
         self.rendered_error = rendered_error
         self.besco_download_calls: list[dict[str, Any]] = []
         self.rendered_calls: list[str] = []
@@ -242,20 +266,37 @@ def test_prepare_stage_can_start_from_prebuilt_source_acquisition_result(
         assert presentation_source_html == "<section>source html</section>"
         assert presentation_source_text == "source text"
         assert base_url == "https://www.electronet.gr/example/canonical"
-        return [{"title": "Direct One", "paragraph": "Paragraph 1", "image_url": "https://cdn.example/direct-1.jpg"}]
+        return [
+            {
+                "title": "Direct One",
+                "paragraph": "Paragraph 1",
+                "image_url": "https://cdn.example/direct-1.jpg",
+            }
+        ]
 
     def fake_assemble_prepare_result(**kwargs: Any) -> PrepareResultAssemblyResult:
         assembly_calls.append(kwargs)
         return _build_assembly_result(**kwargs)
 
-    monkeypatch.setattr(prepare_stage_module, "extract_presentation_blocks", fake_extract_presentation_blocks)
+    monkeypatch.setattr(
+        prepare_stage_module,
+        "extract_presentation_blocks",
+        fake_extract_presentation_blocks,
+    )
 
     result = execute_prepare_stage(
         cli,
         model_dir=tmp_path / cli.model,
-        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_product_path"),
+        validate_url_scope_fn=lambda _url: (
+            "electronet",
+            True,
+            "electronet_product_path",
+        ),
         fetcher_factory=lambda: fetcher,
-        execute_source_acquisition_stage_fn=lambda **kwargs: acquisition_calls.append(kwargs) or prebuilt_acquisition,
+        execute_source_acquisition_stage_fn=lambda **kwargs: acquisition_calls.append(
+            kwargs
+        )
+        or prebuilt_acquisition,
         resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: _build_taxonomy_enrichment(
             manufacturer_enrichment=_build_manufacturer_enrichment(
                 presentation_applied=False,
@@ -278,18 +319,28 @@ def test_prepare_stage_can_start_from_prebuilt_source_acquisition_result(
             "gallery_mode": cli.gallery_mode,
             "validate_url_scope_fn": acquisition_calls[0]["validate_url_scope_fn"],
             "fetcher_factory": acquisition_calls[0]["fetcher_factory"],
-            "resolve_prepare_provider_input_fn": acquisition_calls[0]["resolve_prepare_provider_input_fn"],
+            "resolve_prepare_provider_input_fn": acquisition_calls[0][
+                "resolve_prepare_provider_input_fn"
+            ],
         }
     ]
     assert len(fetcher.besco_download_calls) == 1
     assert fetcher.besco_download_calls[0]["requested_sections"] == 1
     assert assembly_calls[0]["source"] == "electronet"
     assert assembly_calls[0]["selected_presentation_blocks"] == [
-        {"title": "Direct One", "paragraph": "Paragraph 1", "image_url": "https://cdn.example/direct-1.jpg"}
+        {
+            "title": "Direct One",
+            "paragraph": "Paragraph 1",
+            "image_url": "https://cdn.example/direct-1.jpg",
+        }
     ]
     assert len(persistence_calls) == 1
     assert result["selected_presentation_blocks"] == [
-        {"title": "Direct One", "paragraph": "Paragraph 1", "image_url": "https://cdn.example/direct-1.jpg"}
+        {
+            "title": "Direct One",
+            "paragraph": "Paragraph 1",
+            "image_url": "https://cdn.example/direct-1.jpg",
+        }
     ]
 
 
@@ -307,10 +358,22 @@ def test_prepare_stage_direct_section_assets_use_extracted_blocks_and_keep_besco
     )
     parsed = _build_parsed(source)
     extracted_blocks = [
-        {"title": "Direct One", "paragraph": "Paragraph 1", "image_url": "https://cdn.example/direct-1.jpg"},
+        {
+            "title": "Direct One",
+            "paragraph": "Paragraph 1",
+            "image_url": "https://cdn.example/direct-1.jpg",
+        },
         {"title": "Direct Two", "paragraph": "Paragraph 2", "image_url": ""},
-        {"title": "Direct Three", "paragraph": "Paragraph 3", "image_url": "https://cdn.example/direct-3.jpg"},
-        {"title": "Direct Four", "paragraph": "Paragraph 4", "image_url": "https://cdn.example/direct-4.jpg"},
+        {
+            "title": "Direct Three",
+            "paragraph": "Paragraph 3",
+            "image_url": "https://cdn.example/direct-3.jpg",
+        },
+        {
+            "title": "Direct Four",
+            "paragraph": "Paragraph 4",
+            "image_url": "https://cdn.example/direct-4.jpg",
+        },
     ]
     extract_calls: list[dict[str, Any]] = []
     assembly_calls: list[dict[str, Any]] = []
@@ -336,12 +399,20 @@ def test_prepare_stage_direct_section_assets_use_extracted_blocks_and_keep_besco
         assembly_calls.append(kwargs)
         return _build_assembly_result(**kwargs)
 
-    monkeypatch.setattr(prepare_stage_module, "extract_presentation_blocks", fake_extract_presentation_blocks)
+    monkeypatch.setattr(
+        prepare_stage_module,
+        "extract_presentation_blocks",
+        fake_extract_presentation_blocks,
+    )
 
     result = execute_prepare_stage(
         cli,
         model_dir=tmp_path / cli.model,
-        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_product_path"),
+        validate_url_scope_fn=lambda _url: (
+            "electronet",
+            True,
+            "electronet_product_path",
+        ),
         fetcher_factory=lambda: fetcher,
         resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: _build_prepare_provider_resolution_result(
             source="electronet",
@@ -369,8 +440,12 @@ def test_prepare_stage_direct_section_assets_use_extracted_blocks_and_keep_besco
     assert fetcher.besco_download_calls[0]["requested_sections"] == 3
     assert fetcher.besco_download_calls[0]["output_dir"] == tmp_path / cli.model
     assert fetcher.besco_download_calls[0]["images"] == [
-        GalleryImage(url="https://cdn.example/direct-1.jpg", alt="Direct One", position=1),
-        GalleryImage(url="https://cdn.example/direct-3.jpg", alt="Direct Three", position=3),
+        GalleryImage(
+            url="https://cdn.example/direct-1.jpg", alt="Direct One", position=1
+        ),
+        GalleryImage(
+            url="https://cdn.example/direct-3.jpg", alt="Direct Three", position=3
+        ),
     ]
 
     assert len(assembly_calls) == 1
@@ -387,11 +462,17 @@ def test_prepare_stage_direct_section_assets_use_extracted_blocks_and_keep_besco
         "title_signature": [],
     }
     assert assembly_calls[0]["selected_besco_images"] == [
-        GalleryImage(url="https://cdn.example/direct-1.jpg", alt="Direct One", position=1),
-        GalleryImage(url="https://cdn.example/direct-3.jpg", alt="Direct Three", position=3),
+        GalleryImage(
+            url="https://cdn.example/direct-1.jpg", alt="Direct One", position=1
+        ),
+        GalleryImage(
+            url="https://cdn.example/direct-3.jpg", alt="Direct Three", position=3
+        ),
     ]
     assert assembly_calls[0]["downloaded_besco"] == []
-    assert assembly_calls[0]["besco_warnings"] == ["besco_download_failed:direct-besco-download-failed"]
+    assert assembly_calls[0]["besco_warnings"] == [
+        "besco_download_failed:direct-besco-download-failed"
+    ]
     assert assembly_calls[0]["besco_filenames_by_section"] == {}
     assert assembly_calls[0]["sections_artifact_payload"] is None
 
@@ -406,7 +487,12 @@ def test_prepare_stage_skroutz_prefers_manufacturer_blocks_and_preserves_manufac
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cli = _build_cli(tmp_path, model="143051", url="https://www.skroutz.gr/s/143051/example.html", sections=2)
+    cli = _build_cli(
+        tmp_path,
+        model="143051",
+        url="https://www.skroutz.gr/s/143051/example.html",
+        sections=2,
+    )
     source = _build_source(
         source_name="skroutz",
         url=cli.url,
@@ -415,9 +501,21 @@ def test_prepare_stage_skroutz_prefers_manufacturer_blocks_and_preserves_manufac
     )
     parsed = _build_parsed(source)
     manufacturer_blocks = [
-        {"title": "Manufacturer One", "paragraph": "Body 1", "image_url": "https://cdn.example/manufacturer-1.jpg"},
-        {"title": "Manufacturer Two", "paragraph": "Body 2", "image_url": "https://cdn.example/manufacturer-2.jpg"},
-        {"title": "Manufacturer Three", "paragraph": "Body 3", "image_url": "https://cdn.example/manufacturer-3.jpg"},
+        {
+            "title": "Manufacturer One",
+            "paragraph": "Body 1",
+            "image_url": "https://cdn.example/manufacturer-1.jpg",
+        },
+        {
+            "title": "Manufacturer Two",
+            "paragraph": "Body 2",
+            "image_url": "https://cdn.example/manufacturer-2.jpg",
+        },
+        {
+            "title": "Manufacturer Three",
+            "paragraph": "Body 3",
+            "image_url": "https://cdn.example/manufacturer-3.jpg",
+        },
     ]
     downloaded_besco = [
         GalleryImage(
@@ -473,17 +571,30 @@ def test_prepare_stage_skroutz_prefers_manufacturer_blocks_and_preserves_manufac
         ],
     }
 
-    def fake_resolve_skroutz_section_assets(**kwargs: Any) -> PrepareSectionAssetsResult:
+    def fake_resolve_skroutz_section_assets(
+        **kwargs: Any,
+    ) -> PrepareSectionAssetsResult:
         resolve_calls.append(kwargs)
         return PrepareSectionAssetsResult(
             selected_presentation_blocks=manufacturer_blocks[:2],
             selected_besco_images=[
-                GalleryImage(url="https://cdn.example/manufacturer-1.jpg", alt="Manufacturer One", position=1),
-                GalleryImage(url="https://cdn.example/manufacturer-2.jpg", alt="Manufacturer Two", position=2),
+                GalleryImage(
+                    url="https://cdn.example/manufacturer-1.jpg",
+                    alt="Manufacturer One",
+                    position=1,
+                ),
+                GalleryImage(
+                    url="https://cdn.example/manufacturer-2.jpg",
+                    alt="Manufacturer Two",
+                    position=2,
+                ),
             ],
             downloaded_besco=downloaded_besco,
             besco_warnings=[],
-            besco_files=[str(tmp_path / cli.model / "bescos" / "besco1.jpg"), str(tmp_path / cli.model / "bescos" / "besco2.jpg")],
+            besco_files=[
+                str(tmp_path / cli.model / "bescos" / "besco1.jpg"),
+                str(tmp_path / cli.model / "bescos" / "besco2.jpg"),
+            ],
             besco_filenames_by_section={1: "besco1.jpg", 2: "besco2.jpg"},
             section_warnings=[],
             section_image_candidates=[
@@ -591,11 +702,22 @@ def test_prepare_stage_skroutz_prefers_manufacturer_blocks_and_preserves_manufac
     ]
     assert assembly_calls[0]["section_extraction_window"] == expected_window
     assert assembly_calls[0]["selected_besco_images"] == [
-        GalleryImage(url="https://cdn.example/manufacturer-1.jpg", alt="Manufacturer One", position=1),
-        GalleryImage(url="https://cdn.example/manufacturer-2.jpg", alt="Manufacturer Two", position=2),
+        GalleryImage(
+            url="https://cdn.example/manufacturer-1.jpg",
+            alt="Manufacturer One",
+            position=1,
+        ),
+        GalleryImage(
+            url="https://cdn.example/manufacturer-2.jpg",
+            alt="Manufacturer Two",
+            position=2,
+        ),
     ]
     assert assembly_calls[0]["downloaded_besco"] == downloaded_besco
-    assert assembly_calls[0]["besco_filenames_by_section"] == {1: "besco1.jpg", 2: "besco2.jpg"}
+    assert assembly_calls[0]["besco_filenames_by_section"] == {
+        1: "besco1.jpg",
+        2: "besco2.jpg",
+    }
     assert assembly_calls[0]["sections_artifact_payload"] == expected_payload
 
     assert len(persistence_calls) == 1
@@ -609,7 +731,12 @@ def test_prepare_stage_skroutz_fallback_uses_section_window_and_rendered_records
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cli = _build_cli(tmp_path, model="143481", url="https://www.skroutz.gr/s/143481/example.html", sections=2)
+    cli = _build_cli(
+        tmp_path,
+        model="143481",
+        url="https://www.skroutz.gr/s/143481/example.html",
+        sections=2,
+    )
     source = _build_source(source_name="skroutz", url=cli.url)
     parsed = _build_parsed(source)
     downloaded_besco = [
@@ -638,7 +765,10 @@ def test_prepare_stage_skroutz_fallback_uses_section_window_and_rendered_records
         {
             "title": "Alpha",
             "paragraph": "Alpha body",
-            "image_candidates": ["https://cdn.example/alpha-candidate-1.jpg", "https://cdn.example/alpha-candidate-2.jpg"],
+            "image_candidates": [
+                "https://cdn.example/alpha-candidate-1.jpg",
+                "https://cdn.example/alpha-candidate-2.jpg",
+            ],
             "image_url": "https://cdn.example/alpha-resolved.jpg",
         },
         {
@@ -666,7 +796,10 @@ def test_prepare_stage_skroutz_fallback_uses_section_window_and_rendered_records
                 "position": 1,
                 "title": "Alpha",
                 "body": "Alpha body",
-                "image_candidates": ["https://cdn.example/alpha-candidate-1.jpg", "https://cdn.example/alpha-candidate-2.jpg"],
+                "image_candidates": [
+                    "https://cdn.example/alpha-candidate-1.jpg",
+                    "https://cdn.example/alpha-candidate-2.jpg",
+                ],
                 "resolved_image_url": "https://cdn.example/alpha-resolved.jpg",
                 "target_filename": "besco1.jpg",
             },
@@ -681,24 +814,40 @@ def test_prepare_stage_skroutz_fallback_uses_section_window_and_rendered_records
         ],
     }
 
-    def fake_resolve_skroutz_section_assets(**kwargs: Any) -> PrepareSectionAssetsResult:
+    def fake_resolve_skroutz_section_assets(
+        **kwargs: Any,
+    ) -> PrepareSectionAssetsResult:
         resolve_calls.append(kwargs)
         return PrepareSectionAssetsResult(
             selected_presentation_blocks=expected_blocks,
             selected_besco_images=[
-                GalleryImage(url="https://cdn.example/alpha-resolved.jpg", alt="Alpha", position=1),
-                GalleryImage(url="https://cdn.example/gamma-resolved.jpg", alt="Gamma", position=2),
+                GalleryImage(
+                    url="https://cdn.example/alpha-resolved.jpg",
+                    alt="Alpha",
+                    position=1,
+                ),
+                GalleryImage(
+                    url="https://cdn.example/gamma-resolved.jpg",
+                    alt="Gamma",
+                    position=2,
+                ),
             ],
             downloaded_besco=downloaded_besco,
             besco_warnings=[],
-            besco_files=[str(tmp_path / cli.model / "bescos" / "besco1.jpg"), str(tmp_path / cli.model / "bescos" / "besco2.jpg")],
+            besco_files=[
+                str(tmp_path / cli.model / "bescos" / "besco1.jpg"),
+                str(tmp_path / cli.model / "bescos" / "besco2.jpg"),
+            ],
             besco_filenames_by_section={1: "besco1.jpg", 2: "besco2.jpg"},
             section_warnings=["skroutz_window_warning"],
             section_image_candidates=[
                 {
                     "position": 1,
                     "title": "Alpha",
-                    "candidates": ["https://cdn.example/alpha-candidate-1.jpg", "https://cdn.example/alpha-candidate-2.jpg"],
+                    "candidates": [
+                        "https://cdn.example/alpha-candidate-1.jpg",
+                        "https://cdn.example/alpha-candidate-2.jpg",
+                    ],
                 },
                 {
                     "position": 2,
@@ -778,7 +927,10 @@ def test_prepare_stage_skroutz_fallback_uses_section_window_and_rendered_records
         {
             "position": 1,
             "title": "Alpha",
-            "candidates": ["https://cdn.example/alpha-candidate-1.jpg", "https://cdn.example/alpha-candidate-2.jpg"],
+            "candidates": [
+                "https://cdn.example/alpha-candidate-1.jpg",
+                "https://cdn.example/alpha-candidate-2.jpg",
+            ],
         },
         {
             "position": 2,
@@ -800,11 +952,18 @@ def test_prepare_stage_skroutz_fallback_uses_section_window_and_rendered_records
     ]
     assert assembly_calls[0]["section_extraction_window"] == expected_window
     assert assembly_calls[0]["selected_besco_images"] == [
-        GalleryImage(url="https://cdn.example/alpha-resolved.jpg", alt="Alpha", position=1),
-        GalleryImage(url="https://cdn.example/gamma-resolved.jpg", alt="Gamma", position=2),
+        GalleryImage(
+            url="https://cdn.example/alpha-resolved.jpg", alt="Alpha", position=1
+        ),
+        GalleryImage(
+            url="https://cdn.example/gamma-resolved.jpg", alt="Gamma", position=2
+        ),
     ]
     assert assembly_calls[0]["downloaded_besco"] == downloaded_besco
-    assert assembly_calls[0]["besco_filenames_by_section"] == {1: "besco1.jpg", 2: "besco2.jpg"}
+    assert assembly_calls[0]["besco_filenames_by_section"] == {
+        1: "besco1.jpg",
+        2: "besco2.jpg",
+    }
     assert assembly_calls[0]["sections_artifact_payload"] == expected_payload
 
     assert len(persistence_calls) == 1
@@ -819,20 +978,33 @@ def test_prepare_stage_skroutz_fallback_fails_when_rendered_sections_are_insuffi
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cli = _build_cli(tmp_path, model="200001", url="https://www.skroutz.gr/s/200001/example.html", sections=2)
+    cli = _build_cli(
+        tmp_path,
+        model="200001",
+        url="https://www.skroutz.gr/s/200001/example.html",
+        sections=2,
+    )
     parsed = _build_parsed(_build_source(source_name="skroutz", url=cli.url))
     fetcher = RecordingFetcher()
     resolve_calls: list[dict[str, Any]] = []
 
-    def fake_resolve_skroutz_section_assets(**kwargs: Any) -> PrepareSectionAssetsResult:
+    def fake_resolve_skroutz_section_assets(
+        **kwargs: Any,
+    ) -> PrepareSectionAssetsResult:
         resolve_calls.append(kwargs)
-        raise RuntimeError("Skroutz rendered section extraction failed: expected 2 image records, found 1")
+        raise RuntimeError(
+            "Skroutz rendered section extraction failed: expected 2 image records, found 1"
+        )
 
     with pytest.raises(RuntimeError) as excinfo:
         execute_prepare_stage(
             cli,
             model_dir=tmp_path / cli.model,
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
             fetcher_factory=lambda: fetcher,
             resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: _build_prepare_provider_resolution_result(
                 source="skroutz",
@@ -847,13 +1019,18 @@ def test_prepare_stage_skroutz_fallback_fails_when_rendered_sections_are_insuffi
                 )
             ),
             resolve_skroutz_section_assets_fn=fake_resolve_skroutz_section_assets,
-            assemble_prepare_result_fn=lambda **_kwargs: (_ for _ in ()).throw(AssertionError("result assembly should not run")),
-            persist_prepare_scrape_artifacts_fn=lambda _persistence_input: (_ for _ in ()).throw(
-                AssertionError("persistence should not run")
+            assemble_prepare_result_fn=lambda **_kwargs: (_ for _ in ()).throw(
+                AssertionError("result assembly should not run")
             ),
+            persist_prepare_scrape_artifacts_fn=lambda _persistence_input: (
+                _ for _ in ()
+            ).throw(AssertionError("persistence should not run")),
         )
 
-    assert str(excinfo.value) == "Skroutz rendered section extraction failed: expected 2 image records, found 1"
+    assert (
+        str(excinfo.value)
+        == "Skroutz rendered section extraction failed: expected 2 image records, found 1"
+    )
     assert len(resolve_calls) == 1
     assert fetcher.besco_download_calls == []
 
@@ -862,20 +1039,33 @@ def test_prepare_stage_skroutz_fallback_fails_on_title_order_mismatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cli = _build_cli(tmp_path, model="200002", url="https://www.skroutz.gr/s/200002/example.html", sections=2)
+    cli = _build_cli(
+        tmp_path,
+        model="200002",
+        url="https://www.skroutz.gr/s/200002/example.html",
+        sections=2,
+    )
     parsed = _build_parsed(_build_source(source_name="skroutz", url=cli.url))
     fetcher = RecordingFetcher()
     resolve_calls: list[dict[str, Any]] = []
 
-    def fake_resolve_skroutz_section_assets(**kwargs: Any) -> PrepareSectionAssetsResult:
+    def fake_resolve_skroutz_section_assets(
+        **kwargs: Any,
+    ) -> PrepareSectionAssetsResult:
         resolve_calls.append(kwargs)
-        raise RuntimeError("Skroutz section title order mismatch between rendered DOM and parsed description")
+        raise RuntimeError(
+            "Skroutz section title order mismatch between rendered DOM and parsed description"
+        )
 
     with pytest.raises(RuntimeError) as excinfo:
         execute_prepare_stage(
             cli,
             model_dir=tmp_path / cli.model,
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
             fetcher_factory=lambda: fetcher,
             resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: _build_prepare_provider_resolution_result(
                 source="skroutz",
@@ -890,13 +1080,18 @@ def test_prepare_stage_skroutz_fallback_fails_on_title_order_mismatch(
                 )
             ),
             resolve_skroutz_section_assets_fn=fake_resolve_skroutz_section_assets,
-            assemble_prepare_result_fn=lambda **_kwargs: (_ for _ in ()).throw(AssertionError("result assembly should not run")),
-            persist_prepare_scrape_artifacts_fn=lambda _persistence_input: (_ for _ in ()).throw(
-                AssertionError("persistence should not run")
+            assemble_prepare_result_fn=lambda **_kwargs: (_ for _ in ()).throw(
+                AssertionError("result assembly should not run")
             ),
+            persist_prepare_scrape_artifacts_fn=lambda _persistence_input: (
+                _ for _ in ()
+            ).throw(AssertionError("persistence should not run")),
         )
 
-    assert str(excinfo.value) == "Skroutz section title order mismatch between rendered DOM and parsed description"
+    assert (
+        str(excinfo.value)
+        == "Skroutz section title order mismatch between rendered DOM and parsed description"
+    )
     assert len(resolve_calls) == 1
     assert fetcher.besco_download_calls == []
 
@@ -905,7 +1100,12 @@ def test_prepare_stage_skroutz_manufacturer_path_keeps_besco_download_incomplete
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cli = _build_cli(tmp_path, model="200003", url="https://www.skroutz.gr/s/200003/example.html", sections=2)
+    cli = _build_cli(
+        tmp_path,
+        model="200003",
+        url="https://www.skroutz.gr/s/200003/example.html",
+        sections=2,
+    )
     parsed = _build_parsed(
         _build_source(
             source_name="skroutz",
@@ -917,15 +1117,23 @@ def test_prepare_stage_skroutz_manufacturer_path_keeps_besco_download_incomplete
     fetcher = RecordingFetcher()
     resolve_calls: list[dict[str, Any]] = []
 
-    def fake_resolve_skroutz_section_assets(**kwargs: Any) -> PrepareSectionAssetsResult:
+    def fake_resolve_skroutz_section_assets(
+        **kwargs: Any,
+    ) -> PrepareSectionAssetsResult:
         resolve_calls.append(kwargs)
-        raise RuntimeError("Skroutz besco image download incomplete: expected 2, downloaded 1")
+        raise RuntimeError(
+            "Skroutz besco image download incomplete: expected 2, downloaded 1"
+        )
 
     with pytest.raises(RuntimeError) as excinfo:
         execute_prepare_stage(
             cli,
             model_dir=tmp_path / cli.model,
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
             fetcher_factory=lambda: fetcher,
             resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: _build_prepare_provider_resolution_result(
                 source="skroutz",
@@ -940,18 +1148,25 @@ def test_prepare_stage_skroutz_manufacturer_path_keeps_besco_download_incomplete
                 )
             ),
             resolve_skroutz_section_assets_fn=fake_resolve_skroutz_section_assets,
-            assemble_prepare_result_fn=lambda **_kwargs: (_ for _ in ()).throw(AssertionError("result assembly should not run")),
-            persist_prepare_scrape_artifacts_fn=lambda _persistence_input: (_ for _ in ()).throw(
-                AssertionError("persistence should not run")
+            assemble_prepare_result_fn=lambda **_kwargs: (_ for _ in ()).throw(
+                AssertionError("result assembly should not run")
             ),
+            persist_prepare_scrape_artifacts_fn=lambda _persistence_input: (
+                _ for _ in ()
+            ).throw(AssertionError("persistence should not run")),
         )
 
-    assert str(excinfo.value) == "Skroutz besco image download incomplete: expected 2, downloaded 1"
+    assert (
+        str(excinfo.value)
+        == "Skroutz besco image download incomplete: expected 2, downloaded 1"
+    )
     assert len(resolve_calls) == 1
     assert fetcher.besco_download_calls == []
 
 
-def test_prepare_stage_injects_energy_label_into_gallery_slot_two(tmp_path: Path) -> None:
+def test_prepare_stage_injects_energy_label_into_gallery_slot_two(
+    tmp_path: Path,
+) -> None:
     cli = _build_cli(tmp_path, url="https://www.electronet.gr/example", sections=0)
     source = _build_source(source_name="electronet", url=cli.url)
     source.gallery_images = [
@@ -977,7 +1192,11 @@ def test_prepare_stage_injects_energy_label_into_gallery_slot_two(tmp_path: Path
     execute_prepare_stage(
         cli,
         model_dir=tmp_path / cli.model,
-        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_product_path"),
+        validate_url_scope_fn=lambda _url: (
+            "electronet",
+            True,
+            "electronet_product_path",
+        ),
         fetcher_factory=lambda: fetcher,
         resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: _build_prepare_provider_resolution_result(
             source="electronet",
@@ -996,7 +1215,12 @@ def test_prepare_stage_injects_energy_label_into_gallery_slot_two(tmp_path: Path
 
     assert len(fetcher.gallery_download_calls) == 1
     assert fetcher.gallery_download_calls[0]["requested_photos"] == 3
-    assert [item.position for item in fetcher.gallery_download_calls[0]["images"]] == [1, 2, 3, 4]
+    assert [item.position for item in fetcher.gallery_download_calls[0]["images"]] == [
+        1,
+        2,
+        3,
+        4,
+    ]
     assert [item.url for item in fetcher.gallery_download_calls[0]["images"]] == [
         "https://cdn.example/main.jpg",
         "https://eprel.ec.europa.eu/labels/example.png",
@@ -1005,7 +1229,9 @@ def test_prepare_stage_injects_energy_label_into_gallery_slot_two(tmp_path: Path
     ]
 
 
-def test_prepare_stage_adds_energy_label_on_top_of_requested_photo_count(tmp_path: Path) -> None:
+def test_prepare_stage_adds_energy_label_on_top_of_requested_photo_count(
+    tmp_path: Path,
+) -> None:
     cli = _build_cli(tmp_path, url="https://www.electronet.gr/example", sections=0)
     source = _build_source(source_name="electronet", url=cli.url)
     source.gallery_images = [
@@ -1031,7 +1257,11 @@ def test_prepare_stage_adds_energy_label_on_top_of_requested_photo_count(tmp_pat
     execute_prepare_stage(
         cli,
         model_dir=tmp_path / cli.model,
-        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_product_path"),
+        validate_url_scope_fn=lambda _url: (
+            "electronet",
+            True,
+            "electronet_product_path",
+        ),
         fetcher_factory=lambda: fetcher,
         resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: _build_prepare_provider_resolution_result(
             source="electronet",

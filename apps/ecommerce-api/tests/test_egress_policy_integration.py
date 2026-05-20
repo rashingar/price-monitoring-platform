@@ -6,10 +6,15 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce import source_urls  # noqa: E402
 from ecommerce.source_capture import runner  # noqa: E402
-from ecommerce.source_capture.egress_policy import EgressPolicyError, SafeFetchResponse  # noqa: E402
+from ecommerce.source_capture.egress_policy import (
+    EgressPolicyError,
+    SafeFetchResponse,
+)  # noqa: E402
 
 
-def _safe_response(url: str, *, status_code: int = 200, text: str = "<html></html>") -> SafeFetchResponse:
+def _safe_response(
+    url: str, *, status_code: int = 200, text: str = "<html></html>"
+) -> SafeFetchResponse:
     return SafeFetchResponse(
         url=url,
         final_url=url,
@@ -30,7 +35,9 @@ def test_source_url_reachability_uses_safe_fetch(monkeypatch) -> None:
 
     monkeypatch.setattr(source_urls, "safe_get", fake_safe_get)
 
-    result = source_urls.validate_source_url_reachability("https://www.skroutz.gr/s/1/product.html")
+    result = source_urls.validate_source_url_reachability(
+        "https://www.skroutz.gr/s/1/product.html"
+    )
 
     assert result.status == "success"
     assert result.http_status_code == 200
@@ -43,7 +50,9 @@ def test_source_url_reachability_reports_blocked_private_host(monkeypatch) -> No
 
     monkeypatch.setattr(source_urls, "safe_get", fake_safe_get)
 
-    result = source_urls.validate_source_url_reachability("https://www.skroutz.gr/s/1/product.html")
+    result = source_urls.validate_source_url_reachability(
+        "https://www.skroutz.gr/s/1/product.html"
+    )
 
     assert result.status == "inconclusive"
     assert result.message == "URL host is not eligible for reachability validation."
@@ -54,7 +63,13 @@ def test_electronet_capture_uses_safe_fetch(monkeypatch) -> None:
     html = '<html><meta property="product:price:amount" content="499.90"></html>'
 
     def fake_safe_get(url: str, **kwargs) -> SafeFetchResponse:
-        calls.append((url, kwargs.get("expected_vendor_slug"), bool(kwargs.get("require_known_vendor"))))
+        calls.append(
+            (
+                url,
+                kwargs.get("expected_vendor_slug"),
+                bool(kwargs.get("require_known_vendor")),
+            )
+        )
         return _safe_response(url, text=html)
 
     monkeypatch.setattr(runner, "safe_get", fake_safe_get)
@@ -69,7 +84,9 @@ def test_electronet_capture_uses_safe_fetch(monkeypatch) -> None:
 
 def test_bestprice_capture_reports_egress_policy_error(monkeypatch) -> None:
     def fake_safe_get(_url: str, **_kwargs) -> SafeFetchResponse:
-        raise EgressPolicyError("redirect_blocked", "Redirect target changed to a different vendor domain.")
+        raise EgressPolicyError(
+            "redirect_blocked", "Redirect target changed to a different vendor domain."
+        )
 
     monkeypatch.setattr(runner, "safe_get", fake_safe_get)
 

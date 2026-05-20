@@ -11,7 +11,11 @@ from typing import Any
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from ecommerce.catalog import CatalogProduct, DEFAULT_CATALOG_SOURCE, read_source_catalog_records
+from ecommerce.catalog import (
+    CatalogProduct,
+    DEFAULT_CATALOG_SOURCE,
+    read_source_catalog_records,
+)
 from ecommerce.catalog.source_catalog import resolve_source_catalog_path
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.session import session_scope
@@ -83,7 +87,9 @@ def ingest_source_catalog(
             inserted += 1
         else:
             updated_count += 1
-        _apply_product(row, product, record.raw_row, timestamp, source_path, source_filename)
+        _apply_product(
+            row, product, record.raw_row, timestamp, source_path, source_filename
+        )
         imported += 1
 
     session.flush()
@@ -102,7 +108,10 @@ def ingest_source_catalog(
     else:
         result = session.execute(
             update(CatalogProductRow)
-            .where(CatalogProductRow.catalog_source == catalog_source, CatalogProductRow.active.is_(True))
+            .where(
+                CatalogProductRow.catalog_source == catalog_source,
+                CatalogProductRow.active.is_(True),
+            )
             .values(active=False, updated_at=timestamp)
         )
         inactive_or_missing = int(result.rowcount or 0)
@@ -125,7 +134,9 @@ def load_active_catalog_products(
     database_url: str | None = None,
 ) -> list[CatalogProduct]:
     with session_scope(database_url) as session:
-        return list_catalog_products(session, catalog_source=catalog_source, active_only=True)
+        return list_catalog_products(
+            session, catalog_source=catalog_source, active_only=True
+        )
 
 
 def list_catalog_products(
@@ -134,14 +145,21 @@ def list_catalog_products(
     catalog_source: str = DEFAULT_CATALOG_SOURCE,
     active_only: bool = True,
 ) -> list[CatalogProduct]:
-    statement = select(CatalogProductRow).where(CatalogProductRow.catalog_source == catalog_source)
+    statement = select(CatalogProductRow).where(
+        CatalogProductRow.catalog_source == catalog_source
+    )
     if active_only:
         statement = statement.where(CatalogProductRow.active.is_(True))
     statement = statement.order_by(CatalogProductRow.id.asc())
-    return [_row_to_catalog_product(row) for row in session.execute(statement).scalars().all()]
+    return [
+        _row_to_catalog_product(row)
+        for row in session.execute(statement).scalars().all()
+    ]
 
 
-def count_active_catalog_products(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> int:
+def count_active_catalog_products(
+    session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE
+) -> int:
     return int(
         session.execute(
             select(func.count(CatalogProductRow.id)).where(
@@ -152,7 +170,9 @@ def count_active_catalog_products(session: Session, *, catalog_source: str = DEF
     )
 
 
-def latest_active_catalog_imported_at(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> datetime | None:
+def latest_active_catalog_imported_at(
+    session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE
+) -> datetime | None:
     return session.execute(
         select(func.max(CatalogProductRow.imported_at)).where(
             CatalogProductRow.catalog_source == catalog_source,

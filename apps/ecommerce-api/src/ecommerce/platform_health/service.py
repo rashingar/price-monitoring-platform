@@ -5,7 +5,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import ecommerce.platform_health.collectors as collectors
-from ecommerce.platform_health.models import HealthStatus, PlatformHealthGroup, PlatformHealthResponse
+from ecommerce.platform_health.models import (
+    HealthStatus,
+    PlatformHealthGroup,
+    PlatformHealthResponse,
+)
 from ecommerce.platform_health.sanitization import group
 
 
@@ -15,13 +19,21 @@ def get_platform_health_response() -> PlatformHealthResponse:
 
 def collect_platform_health() -> PlatformHealthResponse:
     try:
-        catalog_readiness = collectors.collect_readiness(collectors.collect_catalog_database_readiness)
-        price_readiness = collectors.collect_readiness(collectors.collect_price_monitoring_database_readiness)
+        catalog_readiness = collectors.collect_readiness(
+            collectors.collect_catalog_database_readiness
+        )
+        price_readiness = collectors.collect_readiness(
+            collectors.collect_price_monitoring_database_readiness
+        )
         groups = [
             collectors.collect_ecommerce_api_health(),
-            collectors.collect_database_health(catalog_readiness=catalog_readiness, price_readiness=price_readiness),
+            collectors.collect_database_health(
+                catalog_readiness=catalog_readiness, price_readiness=price_readiness
+            ),
             collectors.collect_catalog_health(catalog_readiness=catalog_readiness),
-            collectors.collect_catalog_update_health(catalog_readiness=catalog_readiness),
+            collectors.collect_catalog_update_health(
+                catalog_readiness=catalog_readiness
+            ),
             collectors.collect_source_url_agent_health(),
             collectors.collect_price_monitoring_health(price_readiness=price_readiness),
             collectors.collect_vendor_sources_capture_health(),

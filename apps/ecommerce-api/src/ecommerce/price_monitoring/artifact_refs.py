@@ -6,7 +6,10 @@ from pathlib import Path
 
 from ecommerce.db.diagnostics import collect_run_persistence_status
 from ecommerce.price_monitoring.artifacts import build_run_artifact_evidence
-from ecommerce.price_monitoring.fetch_execution import execution_response, load_latest_fetch_execution
+from ecommerce.price_monitoring.fetch_execution import (
+    execution_response,
+    load_latest_fetch_execution,
+)
 
 
 def fetch_result_persistence_payload(run_id: str) -> dict[str, object]:
@@ -14,11 +17,18 @@ def fetch_result_persistence_payload(run_id: str) -> dict[str, object]:
     persistence_status = str(status.get("persistence_status") or "unknown")
     warnings: list[str] = []
     if persistence_status == "not_configured":
-        warnings.append("Database persistence is disabled because ECOMMERCE_DATABASE_URL is not configured.")
+        warnings.append(
+            "Database persistence is disabled because ECOMMERCE_DATABASE_URL is not configured."
+        )
     elif persistence_status == "missing":
-        warnings.append("Fetch result exists on disk, but matching database rows were not found.")
+        warnings.append(
+            "Fetch result exists on disk, but matching database rows were not found."
+        )
     elif persistence_status == "unknown":
-        warning = str(status.get("warning") or "Database persistence status could not be determined.")
+        warning = str(
+            status.get("warning")
+            or "Database persistence status could not be determined."
+        )
         warnings.append(warning)
     elif persistence_status == "error":
         error = str(status.get("error") or "Database persistence status check failed.")
@@ -43,8 +53,12 @@ def run_db_payload(run_id: str) -> dict[str, object]:
         {
             "monitoring_run_exists": bool(status.get("monitoring_run_exists", False)),
             "observation_count": int(status.get("observation_count", 0)),
-            "matched_observation_count": int(status.get("matched_observation_count", 0)),
-            "unmatched_observation_count": int(status.get("unmatched_observation_count", 0)),
+            "matched_observation_count": int(
+                status.get("matched_observation_count", 0)
+            ),
+            "unmatched_observation_count": int(
+                status.get("unmatched_observation_count", 0)
+            ),
             "alert_event_count": int(status.get("alert_event_count", 0)),
         }
     )
@@ -98,7 +112,14 @@ def latest_fetch_payload(item: dict[str, object]) -> dict[str, object] | None:
 def db_latest_fetch_payload(item: dict[str, object]) -> dict[str, object] | None:
     has_fetch_state = any(
         str(item.get(field) or "").strip()
-        for field in ("fetch_result_path", "enriched_csv_path", "fetch_summary_path", "started_at", "completed_at", "error_message")
+        for field in (
+            "fetch_result_path",
+            "enriched_csv_path",
+            "fetch_summary_path",
+            "started_at",
+            "completed_at",
+            "error_message",
+        )
     )
     status = str(item.get("status") or "")
     if not has_fetch_state and not status.startswith("fetch_"):

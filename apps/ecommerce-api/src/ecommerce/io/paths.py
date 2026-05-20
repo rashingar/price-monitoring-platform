@@ -24,7 +24,9 @@ class PriceOutputPaths:
     summary_json: Path
 
 
-def load_runtime_config(config_path: Path = DEFAULT_RUNTIME_CONFIG_PATH) -> RuntimeConfig:
+def load_runtime_config(
+    config_path: Path = DEFAULT_RUNTIME_CONFIG_PATH,
+) -> RuntimeConfig:
     if not config_path.exists():
         return RuntimeConfig()
 
@@ -37,7 +39,9 @@ def load_runtime_config(config_path: Path = DEFAULT_RUNTIME_CONFIG_PATH) -> Runt
     )
 
 
-def resolve_output_dir(cli_output_dir: str | None, runtime_config: RuntimeConfig) -> Path:
+def resolve_output_dir(
+    cli_output_dir: str | None, runtime_config: RuntimeConfig
+) -> Path:
     selected = cli_output_dir or runtime_config.output_dir or DEFAULT_OUTPUT_DIR
     return Path(selected)
 

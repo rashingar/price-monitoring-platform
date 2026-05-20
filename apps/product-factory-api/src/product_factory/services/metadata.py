@@ -40,7 +40,10 @@ def _serialize(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
     if is_dataclass(value):
-        return {field.name: _serialize(getattr(value, field.name)) for field in fields(value)}
+        return {
+            field.name: _serialize(getattr(value, field.name))
+            for field in fields(value)
+        }
     if isinstance(value, dict):
         return {key: _serialize(item) for key, item in value.items()}
     if isinstance(value, list):

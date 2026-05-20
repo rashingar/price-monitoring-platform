@@ -11,10 +11,20 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
-from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun  # noqa: E402
+from ecommerce.db.models.source_urls import (
+    SourceUrl,
+    SourceUrlCandidate,
+    SourceUrlDiscoveryRun,
+)  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.source_url_agent.candidates import candidate_from_evidence, keep_candidate  # noqa: E402
-from ecommerce.source_url_agent.composite import detect_composite_mismatch, extract_product_code_identifiers  # noqa: E402
+from ecommerce.source_url_agent.candidates import (
+    candidate_from_evidence,
+    keep_candidate,
+)  # noqa: E402
+from ecommerce.source_url_agent.composite import (
+    detect_composite_mismatch,
+    extract_product_code_identifiers,
+)  # noqa: E402
 from ecommerce.source_url_agent.evidence import extract_page_evidence  # noqa: E402
 from ecommerce.source_url_agent.options import SourceUrlAgentOptions  # noqa: E402
 from ecommerce.source_url_agent.products import AgentProduct  # noqa: E402
@@ -22,7 +32,6 @@ from ecommerce.source_url_agent.runner import run_source_url_agent  # noqa: E402
 from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
 from ecommerce.source_url_agent.search import SourceSearchResult  # noqa: E402
 from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
-
 
 NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
 
@@ -54,7 +63,13 @@ def _oven_product(**overrides) -> AgentProduct:
     return AgentProduct(**values)
 
 
-def _catalog_product(session, *, model: str = "123456", mpn: str = "HBA514BS3", name: str = "Bosch HBA514BS3 oven") -> CatalogProductRow:
+def _catalog_product(
+    session,
+    *,
+    model: str = "123456",
+    mpn: str = "HBA514BS3",
+    name: str = "Bosch HBA514BS3 oven",
+) -> CatalogProductRow:
     row = CatalogProductRow(
         catalog_source="sourceCata",
         model=model,
@@ -96,7 +111,9 @@ def _html(title: str, *, mpn: str = "HBA514BS3", body: str = "") -> str:
     """
 
 
-def _evidence(product: AgentProduct, title: str, *, mpn: str | None = None, body: str = ""):
+def _evidence(
+    product: AgentProduct, title: str, *, mpn: str | None = None, body: str = ""
+):
     source = load_source_registry().get("skroutz")
     return extract_page_evidence(
         product=product,
@@ -110,14 +127,23 @@ def _evidence(product: AgentProduct, title: str, *, mpn: str | None = None, body
 def _score(product: AgentProduct, title: str):
     source = load_source_registry().get("skroutz")
     evidence = _evidence(product, title)
-    return score_candidate(product=product, source=source, evidence=evidence), evidence, source
+    return (
+        score_candidate(product=product, source=source, evidence=evidence),
+        evidence,
+        source,
+    )
 
 
 def test_extract_product_code_identifiers_finds_extra_mpn_like_codes() -> None:
-    assert extract_product_code_identifiers("Bosch HBA514BS3 + PKE61RBA2E") == ("HBA514BS3", "PKE61RBA2E")
+    assert extract_product_code_identifiers("Bosch HBA514BS3 + PKE61RBA2E") == (
+        "HBA514BS3",
+        "PKE61RBA2E",
+    )
 
 
-def test_single_oven_rejects_candidate_with_ceramic_hob_phrase_and_extra_identifier() -> None:
+def test_single_oven_rejects_candidate_with_ceramic_hob_phrase_and_extra_identifier() -> (
+    None
+):
     product = _oven_product()
     title = "Bosch \u03a6\u03bf\u03cd\u03c1\u03bd\u03bf\u03c2 \u0397\u03bb\u03b5\u03ba\u03c4\u03c1\u03b9\u03ba\u03cc\u03c2 \u0386\u03bd\u03c9 \u03a0\u03ac\u03b3\u03ba\u03bf\u03c5 HBA514BS3 \u03bc\u03b5 \u039a\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03ad\u03c2 \u0395\u03c3\u03c4\u03af\u03b5\u03c2 PKE61RBA2E"
 
@@ -140,7 +166,10 @@ def test_single_oven_rejects_candidate_with_ceramic_hob_phrase_and_extra_identif
     assert candidate.evidence_json["composite"] == {
         "is_mismatch": True,
         "reason": "candidate_contains_composite_phrase",
-        "markers": ["me keramikes esties", "expected_identifier_joined_with_extra_identifier"],
+        "markers": [
+            "me keramikes esties",
+            "expected_identifier_joined_with_extra_identifier",
+        ],
         "extra_identifiers": ["PKE61RBA2E"],
     }
 
@@ -158,18 +187,41 @@ def test_single_oven_rejects_candidate_with_plus_joined_extra_identifier() -> No
 @pytest.mark.parametrize(
     "title,marker",
     [
-        ("Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2", "me esties"),
-        ("Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c0\u03b1\u03b3\u03c9\u03b3\u03b9\u03ba\u03ad\u03c2 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2", "me epagogikes esties"),
-        ("Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c0\u03b1\u03b3\u03c9\u03b3\u03b9\u03ba\u03ad\u03c2", "me epagogikes"),
-        ("Bosch HBA514BS3 \u03bc\u03b5 \u03ba\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03ad\u03c2 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2", "me keramikes esties"),
-        ("Bosch HBA514BS3 \u03bc\u03b5 \u03ba\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03ad\u03c2", "me keramikes"),
-        ("Bosch HBA514BS3 \u03bc\u03b5 \u039a\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03b5\u03c2 \u0395\u03c3\u03c4\u03b9\u03b5\u03c2", "me keramikes esties"),
-        ("Bosch \u03c6\u03bf\u03cd\u03c1\u03bd\u03bf\u03c2 \u03bc\u03b5 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2 HBA514BS3", "foyrnos me esties"),
+        (
+            "Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2",
+            "me esties",
+        ),
+        (
+            "Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c0\u03b1\u03b3\u03c9\u03b3\u03b9\u03ba\u03ad\u03c2 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2",
+            "me epagogikes esties",
+        ),
+        (
+            "Bosch HBA514BS3 \u03bc\u03b5 \u03b5\u03c0\u03b1\u03b3\u03c9\u03b3\u03b9\u03ba\u03ad\u03c2",
+            "me epagogikes",
+        ),
+        (
+            "Bosch HBA514BS3 \u03bc\u03b5 \u03ba\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03ad\u03c2 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2",
+            "me keramikes esties",
+        ),
+        (
+            "Bosch HBA514BS3 \u03bc\u03b5 \u03ba\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03ad\u03c2",
+            "me keramikes",
+        ),
+        (
+            "Bosch HBA514BS3 \u03bc\u03b5 \u039a\u03b5\u03c1\u03b1\u03bc\u03b9\u03ba\u03b5\u03c2 \u0395\u03c3\u03c4\u03b9\u03b5\u03c2",
+            "me keramikes esties",
+        ),
+        (
+            "Bosch \u03c6\u03bf\u03cd\u03c1\u03bd\u03bf\u03c2 \u03bc\u03b5 \u03b5\u03c3\u03c4\u03af\u03b5\u03c2 HBA514BS3",
+            "foyrnos me esties",
+        ),
         ("Bosch fournos me esties HBA514BS3", "fournos me esties"),
         ("Bosch HBA514BS3 \u03bc\u03b1\u03b6\u03af \u03bc\u03b5 PKE61RBA2E", "mazi me"),
     ],
 )
-def test_single_oven_rejects_greek_composite_phrase_variants(title: str, marker: str) -> None:
+def test_single_oven_rejects_greek_composite_phrase_variants(
+    title: str, marker: str
+) -> None:
     product = _oven_product()
     score, evidence, _ = _score(product, title)
     result = detect_composite_mismatch(product, evidence)
@@ -190,7 +242,9 @@ def test_single_oven_rejects_greek_composite_phrase_variants(title: str, marker:
         "Bosch HBA514BS3 \u03bc\u03b5 PKE61RBA2E",
     ],
 )
-def test_single_oven_rejects_expected_identifier_connected_to_extra_identifier(title: str) -> None:
+def test_single_oven_rejects_expected_identifier_connected_to_extra_identifier(
+    title: str,
+) -> None:
     product = _oven_product()
     score, evidence, _ = _score(product, title)
     result = detect_composite_mismatch(product, evidence)
@@ -210,7 +264,9 @@ def test_single_oven_rejects_expected_identifier_connected_to_extra_identifier(t
         "Bosch HBA514BS3 \u03c0\u03b1\u03ba\u03ad\u03c4\u03bf PKE61RBA2E",
     ],
 )
-def test_single_oven_rejects_bundle_words_when_extra_identifier_exists(title: str) -> None:
+def test_single_oven_rejects_bundle_words_when_extra_identifier_exists(
+    title: str,
+) -> None:
     product = _oven_product()
     score, evidence, _ = _score(product, title)
     result = detect_composite_mismatch(product, evidence)
@@ -269,7 +325,12 @@ def test_source_url_agent_run_persists_composite_mismatch_candidate_for_operator
         evidence = _evidence(product, "Bosch HBA514BS3 + PKE61RBA2E")
 
         def resolver(_product, _source):
-            return SourceSearchResult(evidence=[evidence], searched_queries=["Bosch HBA514BS3"], searched_urls=[], errors=[])
+            return SourceSearchResult(
+                evidence=[evidence],
+                searched_queries=["Bosch HBA514BS3"],
+                searched_urls=[],
+                errors=[],
+            )
 
         result = run_source_url_agent(
             products=[product],
@@ -290,13 +351,17 @@ def test_source_url_agent_run_persists_composite_mismatch_candidate_for_operator
         assert session.query(SourceUrl).count() == 0
         assert stored_candidate.match_status == "not_found"
         assert stored_candidate.match_method == "composite_product_mismatch"
-        assert stored_candidate.evidence_json["composite"]["extra_identifiers"] == ["PKE61RBA2E"]
+        assert stored_candidate.evidence_json["composite"]["extra_identifiers"] == [
+            "PKE61RBA2E"
+        ]
 
     assert result.candidates[0].confidence_score == 0.0
     assert result.candidates[0].match_method == "composite_product_mismatch"
     assert result.summary["persisted_candidate_count"] == 1
     assert result.summary["discarded_low_confidence_candidate_count"] == 0
-    with result.artifacts.source_url_results.open("r", encoding="utf-8", newline="") as handle:
+    with result.artifacts.source_url_results.open(
+        "r", encoding="utf-8", newline=""
+    ) as handle:
         rows = list(csv.DictReader(handle))
     assert rows[0]["match_method"] == "composite_product_mismatch"
     assert "PKE61RBA2E" in rows[0]["notes"]

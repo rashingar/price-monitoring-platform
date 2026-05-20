@@ -89,7 +89,13 @@ def trigger_stock_sync_run(request: StockSyncRunRequest) -> StockSyncRunResponse
 
     mode = request.mode
     if mode not in MODE_TO_TASK_ENV:
-        raise HTTPException(status_code=400, detail={"message": "Unknown stock sync mode.", "code": "stock_sync_unknown_mode"})
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Unknown stock sync mode.",
+                "code": "stock_sync_unknown_mode",
+            },
+        )
 
     if mode == "import" and request.confirmation != "RUN IMPORT":
         raise HTTPException(
@@ -103,7 +109,10 @@ def trigger_stock_sync_run(request: StockSyncRunRequest) -> StockSyncRunResponse
     if not _schtasks_available():
         raise HTTPException(
             status_code=503,
-            detail={"message": "schtasks is not available on this machine.", "code": "stock_sync_schtasks_missing"},
+            detail={
+                "message": "schtasks is not available on this machine.",
+                "code": "stock_sync_schtasks_missing",
+            },
         )
 
     server = _server()
@@ -186,9 +195,15 @@ def get_latest_stock_sync() -> StockSyncLatestResponse:
         )
 
     safety = _optional_dict(payload.get("safety"))
-    warnings = _list_value(payload.get("warnings") if safety is None else safety.get("warnings", payload.get("warnings")))
+    warnings = _list_value(
+        payload.get("warnings")
+        if safety is None
+        else safety.get("warnings", payload.get("warnings"))
+    )
     hard_failures = _list_value(
-        payload.get("hard_failures") if safety is None else safety.get("hard_failures", payload.get("hard_failures"))
+        payload.get("hard_failures")
+        if safety is None
+        else safety.get("hard_failures", payload.get("hard_failures"))
     )
 
     return StockSyncLatestResponse(
@@ -237,7 +252,10 @@ def _enabled() -> bool:
 
 
 def _server() -> str:
-    return os.getenv("ECOMMERCE_STOCK_SYNC_SERVER", DEFAULT_SERVER).strip() or DEFAULT_SERVER
+    return (
+        os.getenv("ECOMMERCE_STOCK_SYNC_SERVER", DEFAULT_SERVER).strip()
+        or DEFAULT_SERVER
+    )
 
 
 def _task_name_for_mode(mode: str) -> str:
@@ -246,7 +264,12 @@ def _task_name_for_mode(mode: str) -> str:
 
 
 def _latest_review_path() -> str:
-    return os.getenv("ECOMMERCE_STOCK_SYNC_LATEST_REVIEW_PATH", DEFAULT_LATEST_REVIEW_PATH).strip() or DEFAULT_LATEST_REVIEW_PATH
+    return (
+        os.getenv(
+            "ECOMMERCE_STOCK_SYNC_LATEST_REVIEW_PATH", DEFAULT_LATEST_REVIEW_PATH
+        ).strip()
+        or DEFAULT_LATEST_REVIEW_PATH
+    )
 
 
 def _schtasks_available() -> bool:

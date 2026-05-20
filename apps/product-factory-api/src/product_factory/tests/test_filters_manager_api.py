@@ -22,7 +22,9 @@ from product_factory.tools.sync_filter_map import (
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 @pytest.fixture()
@@ -36,7 +38,9 @@ def filter_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, P
     }
     monkeypatch.setattr(repo_paths, "FILTER_MAP_BASE_PATH", paths["base"])
     monkeypatch.setattr(repo_paths, "FILTER_MAP_MANUAL_OVERRIDES_PATH", paths["manual"])
-    monkeypatch.setattr(repo_paths, "FILTER_MAP_MANUAL_OVERRIDES_BACKUP_DIR", paths["backups"])
+    monkeypatch.setattr(
+        repo_paths, "FILTER_MAP_MANUAL_OVERRIDES_BACKUP_DIR", paths["backups"]
+    )
     monkeypatch.setattr(repo_paths, "FILTER_MAP_PATH", paths["final"])
     monkeypatch.setattr(repo_paths, "FILTER_MAP_SYNC_REPORT_PATH", paths["report"])
     _write_json(paths["base"], _base_payload())
@@ -115,14 +119,26 @@ def test_create_app_registers_global_filters_routes(client: TestClient) -> None:
     assert ("GET", "/api/filters/categories") in routes
     assert ("GET", "/api/filters/categories/{category_id}") in routes
     assert ("PUT", "/api/filters/categories/{category_id}/groups") in routes
-    assert ("PATCH", "/api/filters/categories/{category_id}/groups/{group_id}") in routes
-    assert ("PUT", "/api/filters/categories/{category_id}/groups/{group_id}/values") in routes
-    assert ("PATCH", "/api/filters/categories/{category_id}/groups/{group_id}/values/{value_id}") in routes
+    assert (
+        "PATCH",
+        "/api/filters/categories/{category_id}/groups/{group_id}",
+    ) in routes
+    assert (
+        "PUT",
+        "/api/filters/categories/{category_id}/groups/{group_id}/values",
+    ) in routes
+    assert (
+        "PATCH",
+        "/api/filters/categories/{category_id}/groups/{group_id}/values/{value_id}",
+    ) in routes
     assert ("POST", "/api/filters/sync") in routes
     assert ("GET", "/api/filters/sync-report") in routes
     assert ("GET", "/api/filters/backups") in routes
     assert ("POST", "/api/filters/backups/restore") in routes
-    assert ("DELETE", f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}") not in routes
+    assert (
+        "DELETE",
+        f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}",
+    ) not in routes
 
 
 def test_list_and_detail_include_counts_and_source_metadata(
@@ -203,21 +219,42 @@ def test_add_group_writes_manual_defaults_regenerates_and_rejects_duplicates(
     ids = _ids()
     before_base = filter_paths["base"].read_text(encoding="utf-8")
 
-    response = client.put(f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"})
+    response = client.put(
+        f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"}
+    )
     assert response.status_code == 200
     group_id = stable_group_id(ids["category_id"], "Color")
-    group = next(group for group in response.json()["groups"] if group["group_id"] == group_id)
+    group = next(
+        group for group in response.json()["groups"] if group["group_id"] == group_id
+    )
     assert group["required"] is True
     assert group["status"] == "active"
     assert group["source"] == "manual"
 
     manual = _read(filter_paths["manual"])
-    assert manual["categories"][ids["category_id"]]["groups"][group_id]["name"] == "Color"
+    assert (
+        manual["categories"][ids["category_id"]]["groups"][group_id]["name"] == "Color"
+    )
     final = _read(filter_paths["final"])
-    assert any(group["group_id"] == group_id for group in final["by_category_id"][ids["category_id"]]["filter_groups"])
+    assert any(
+        group["group_id"] == group_id
+        for group in final["by_category_id"][ids["category_id"]]["filter_groups"]
+    )
     assert filter_paths["base"].read_text(encoding="utf-8") == before_base
-    assert client.put(f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"}).status_code == 409
-    assert client.put(f"/api/filters/categories/{ids['category_id']}/groups", json={"name": " color "}).status_code == 409
+    assert (
+        client.put(
+            f"/api/filters/categories/{ids['category_id']}/groups",
+            json={"name": "Color"},
+        ).status_code
+        == 409
+    )
+    assert (
+        client.put(
+            f"/api/filters/categories/{ids['category_id']}/groups",
+            json={"name": " color "},
+        ).status_code
+        == 409
+    )
 
 
 def test_update_group_preserves_group_id_and_validates_requests(
@@ -227,21 +264,35 @@ def test_update_group_preserves_group_id_and_validates_requests(
     ids = _ids()
     url = f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}"
 
-    response = client.patch(url, json={"name": "Memory RAM", "required": False, "status": "inactive"})
+    response = client.patch(
+        url, json={"name": "Memory RAM", "required": False, "status": "inactive"}
+    )
     assert response.status_code == 200
-    group = next(group for group in response.json()["groups"] if group["group_id"] == ids["group_id"])
+    group = next(
+        group
+        for group in response.json()["groups"]
+        if group["group_id"] == ids["group_id"]
+    )
     assert group["name"] == "Memory RAM"
     assert group["required"] is False
     assert group["status"] == "inactive"
     assert group["group_id"] == ids["group_id"]
 
-    manual_group = _read(filter_paths["manual"])["categories"][ids["category_id"]]["groups"][ids["group_id"]]
+    manual_group = _read(filter_paths["manual"])["categories"][ids["category_id"]][
+        "groups"
+    ][ids["group_id"]]
     assert manual_group["name"] == "Memory RAM"
     assert manual_group["required"] is False
     assert manual_group["status"] == "inactive"
     assert client.patch(url, json={"status": "bad"}).status_code == 422
     assert client.patch(url, json={"name": "   "}).status_code == 422
-    assert client.patch(f"/api/filters/categories/{ids['category_id']}/groups/fg_missing", json={"status": "inactive"}).status_code == 404
+    assert (
+        client.patch(
+            f"/api/filters/categories/{ids['category_id']}/groups/fg_missing",
+            json={"status": "inactive"},
+        ).status_code
+        == 404
+    )
 
 
 def test_add_value_writes_manual_defaults_regenerates_and_rejects_duplicates(
@@ -249,29 +300,53 @@ def test_add_value_writes_manual_defaults_regenerates_and_rejects_duplicates(
     filter_paths: dict[str, Path],
 ) -> None:
     ids = _ids()
-    url = f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}/values"
+    url = (
+        f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}/values"
+    )
 
     response = client.put(url, json={"value": "32 GB"})
     assert response.status_code == 200
     value_id = stable_value_id(ids["group_id"], "32 GB")
-    group = next(group for group in response.json()["groups"] if group["group_id"] == ids["group_id"])
+    group = next(
+        group
+        for group in response.json()["groups"]
+        if group["group_id"] == ids["group_id"]
+    )
     value = next(value for value in group["values"] if value["value_id"] == value_id)
     assert value["status"] == "active"
     assert value["source"] == "manual"
-    assert _read(filter_paths["manual"])["categories"][ids["category_id"]]["groups"][ids["group_id"]]["values"][value_id]["value"] == "32 GB"
-    assert any(value["value_id"] == value_id for value in _read(filter_paths["final"])["by_category_id"][ids["category_id"]]["filter_groups"][0]["values"])
+    assert (
+        _read(filter_paths["manual"])["categories"][ids["category_id"]]["groups"][
+            ids["group_id"]
+        ]["values"][value_id]["value"]
+        == "32 GB"
+    )
+    assert any(
+        value["value_id"] == value_id
+        for value in _read(filter_paths["final"])["by_category_id"][ids["category_id"]][
+            "filter_groups"
+        ][0]["values"]
+    )
     assert client.put(url, json={"value": "32 GB"}).status_code == 409
     assert client.put(url, json={"value": " 32   gb "}).status_code == 409
 
 
-def test_update_value_preserves_value_id_and_validates_requests(client: TestClient) -> None:
+def test_update_value_preserves_value_id_and_validates_requests(
+    client: TestClient,
+) -> None:
     ids = _ids()
     url = f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}/values/{ids['value_id']}"
 
     response = client.patch(url, json={"value": "16GB", "status": "deprecated"})
     assert response.status_code == 200
-    group = next(group for group in response.json()["groups"] if group["group_id"] == ids["group_id"])
-    value = next(value for value in group["values"] if value["value_id"] == ids["value_id"])
+    group = next(
+        group
+        for group in response.json()["groups"]
+        if group["group_id"] == ids["group_id"]
+    )
+    value = next(
+        value for value in group["values"] if value["value_id"] == ids["value_id"]
+    )
     assert value["value"] == "16GB"
     assert value["status"] == "deprecated"
     assert value["value_id"] == ids["value_id"]
@@ -281,7 +356,9 @@ def test_update_value_preserves_value_id_and_validates_requests(client: TestClie
     assert client.patch(missing_url, json={"status": "deprecated"}).status_code == 404
 
 
-def test_no_delete_behavior_and_inactive_status_preserves_values(client: TestClient) -> None:
+def test_no_delete_behavior_and_inactive_status_preserves_values(
+    client: TestClient,
+) -> None:
     ids = _ids()
     group_url = f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}"
     value_url = f"{group_url}/values/{ids['value_id']}"
@@ -291,7 +368,9 @@ def test_no_delete_behavior_and_inactive_status_preserves_values(client: TestCli
     assert client.patch(group_url, json={"status": "deprecated"}).status_code == 200
     assert client.patch(value_url, json={"status": "inactive"}).status_code == 200
     detail = client.get(f"/api/filters/categories/{ids['category_id']}").json()
-    group = next(group for group in detail["groups"] if group["group_id"] == ids["group_id"])
+    group = next(
+        group for group in detail["groups"] if group["group_id"] == ids["group_id"]
+    )
     assert group["status"] == "deprecated"
     assert group["values"][0]["status"] == "inactive"
 
@@ -334,7 +413,9 @@ def test_sync_endpoint_uses_base_plus_manual_without_csv_and_report_is_readable(
     assert body["overridden_value_count"] >= 1
     assert filter_paths["base"].read_text(encoding="utf-8") == before_base
 
-    final_group = _read(filter_paths["final"])["by_category_id"][ids["category_id"]]["filter_groups"][0]
+    final_group = _read(filter_paths["final"])["by_category_id"][ids["category_id"]][
+        "filter_groups"
+    ][0]
     assert final_group["group_id"] == ids["group_id"]
     assert final_group["name"] == "Memory RAM"
     assert final_group["values"][0]["value_id"] == ids["value_id"]
@@ -346,14 +427,20 @@ def test_sync_endpoint_uses_base_plus_manual_without_csv_and_report_is_readable(
     assert report.json()["overridden_values"]
 
 
-def test_sync_report_missing_returns_404(client: TestClient, filter_paths: dict[str, Path]) -> None:
+def test_sync_report_missing_returns_404(
+    client: TestClient, filter_paths: dict[str, Path]
+) -> None:
     filter_paths["report"].unlink()
     assert client.get("/api/filters/sync-report").status_code == 404
 
 
-def test_api_list_backups_works(client: TestClient, filter_paths: dict[str, Path]) -> None:
+def test_api_list_backups_works(
+    client: TestClient, filter_paths: dict[str, Path]
+) -> None:
     ids = _ids()
-    client.put(f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"})
+    client.put(
+        f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"}
+    )
 
     response = client.get("/api/filters/backups")
 
@@ -364,16 +451,27 @@ def test_api_list_backups_works(client: TestClient, filter_paths: dict[str, Path
     assert body["items"][0]["size_bytes"] > 0
 
 
-def test_api_restore_backup_works(client: TestClient, filter_paths: dict[str, Path]) -> None:
+def test_api_restore_backup_works(
+    client: TestClient, filter_paths: dict[str, Path]
+) -> None:
     ids = _ids()
-    client.put(f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"})
+    client.put(
+        f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"}
+    )
     backup_name = client.get("/api/filters/backups").json()["items"][0]["backup_name"]
 
-    response = client.post("/api/filters/backups/restore", json={"backup_name": backup_name})
+    response = client.post(
+        "/api/filters/backups/restore", json={"backup_name": backup_name}
+    )
 
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
     assert body["restored_backup_name"] == backup_name
-    manual_groups = _read(filter_paths["manual"]).get("categories", {}).get(ids["category_id"], {}).get("groups", {})
+    manual_groups = (
+        _read(filter_paths["manual"])
+        .get("categories", {})
+        .get(ids["category_id"], {})
+        .get("groups", {})
+    )
     assert stable_group_id(ids["category_id"], "Color") not in manual_groups

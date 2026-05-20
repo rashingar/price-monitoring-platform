@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.catalog import CatalogProductRow
 
-
 CSV_REQUIRED_COLUMNS = (
     "model",
     "mpn",
@@ -85,9 +84,13 @@ def read_products_from_csv(
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         header_map = _header_map(reader.fieldnames or [])
-        missing = [column for column in CSV_REQUIRED_COLUMNS if column not in header_map]
+        missing = [
+            column for column in CSV_REQUIRED_COLUMNS if column not in header_map
+        ]
         if missing:
-            raise SourceUrlAgentInputError(f"Input CSV missing required columns: {', '.join(missing)}")
+            raise SourceUrlAgentInputError(
+                f"Input CSV missing required columns: {', '.join(missing)}"
+            )
 
         skipped = 0
         for row in reader:
@@ -116,9 +119,13 @@ def read_products_from_catalog(
     model: str | None = None,
     selected_models: list[str] | None = None,
 ) -> list[AgentProduct]:
-    statement = select(CatalogProductRow).where(CatalogProductRow.catalog_source == catalog_source)
+    statement = select(CatalogProductRow).where(
+        CatalogProductRow.catalog_source == catalog_source
+    )
     if active_only:
-        statement = statement.where(CatalogProductRow.active.is_(True), CatalogProductRow.status == 1)
+        statement = statement.where(
+            CatalogProductRow.active.is_(True), CatalogProductRow.status == 1
+        )
     if catalog_product_id is not None:
         statement = statement.where(CatalogProductRow.id == catalog_product_id)
     selected_model = _optional_text(model)
@@ -130,10 +137,15 @@ def read_products_from_catalog(
     statement = statement.order_by(CatalogProductRow.id.asc()).offset(max(0, offset))
     if limit is not None:
         statement = statement.limit(max(0, limit))
-    return [_catalog_row_to_product(row) for row in session.execute(statement).scalars().all()]
+    return [
+        _catalog_row_to_product(row)
+        for row in session.execute(statement).scalars().all()
+    ]
 
 
-def _row_to_product(row: dict[str, str], header_map: dict[str, str], *, catalog_source: str) -> AgentProduct:
+def _row_to_product(
+    row: dict[str, str], header_map: dict[str, str], *, catalog_source: str
+) -> AgentProduct:
     raw = _raw_row(row)
     return AgentProduct(
         catalog_product_id=None,
@@ -166,16 +178,27 @@ def _catalog_row_to_product(row: CatalogProductRow) -> AgentProduct:
         status=row.status,
         bestprice_status=row.bestprice_status,
         skroutz_status=row.skroutz_status,
-        raw_row={str(key): str(value or "") for key, value in (row.raw_catalog_row or {}).items()},
+        raw_row={
+            str(key): str(value or "")
+            for key, value in (row.raw_catalog_row or {}).items()
+        },
     )
 
 
 def _header_map(fieldnames: list[str]) -> dict[str, str]:
-    return {str(fieldname).strip(): fieldname for fieldname in fieldnames if fieldname is not None}
+    return {
+        str(fieldname).strip(): fieldname
+        for fieldname in fieldnames
+        if fieldname is not None
+    }
 
 
 def _raw_row(row: dict[str, str]) -> dict[str, str]:
-    return {str(key): value if value is not None else "" for key, value in row.items() if key is not None}
+    return {
+        str(key): value if value is not None else ""
+        for key, value in row.items()
+        if key is not None
+    }
 
 
 def _status_hint(value: int | None) -> str:

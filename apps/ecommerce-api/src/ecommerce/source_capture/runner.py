@@ -9,7 +9,11 @@ from ecommerce.source_capture.egress_policy import (
     safe_get,
     validate_outbound_url,
 )
-from ecommerce.source_capture.parsing import parse_bestprice_html, parse_bestprice_offers, parse_electronet_html
+from ecommerce.source_capture.parsing import (
+    parse_bestprice_html,
+    parse_bestprice_offers,
+    parse_electronet_html,
+)
 from ecommerce.source_capture.sanitize import content_hash
 from ecommerce.source_capture.skroutz_firecrawl import capture_skroutz_firecrawl
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload
@@ -24,12 +28,18 @@ class CaptureError(RuntimeError):
         self.message = message
 
 
-def capture_source_url(url: str, *, vendor_slug: str | None = None, timeout_seconds: float = 30.0) -> CaptureResult:
+def capture_source_url(
+    url: str, *, vendor_slug: str | None = None, timeout_seconds: float = 30.0
+) -> CaptureResult:
     resolved_vendor = vendor_slug or detect_vendor_slug(url)
     if not resolved_vendor:
-        return _failed_result("unknown", url, "UNKNOWN_VENDOR", "Source URL host is not registered.")
+        return _failed_result(
+            "unknown", url, "UNKNOWN_VENDOR", "Source URL host is not registered."
+        )
     try:
-        validate_outbound_url(url, expected_vendor_slug=resolved_vendor, require_known_vendor=True)
+        validate_outbound_url(
+            url, expected_vendor_slug=resolved_vendor, require_known_vendor=True
+        )
     except EgressPolicyError as exc:
         return _failed_result(resolved_vendor, url, exc.code, exc.message)
     if resolved_vendor == "electronet":
@@ -38,7 +48,12 @@ def capture_source_url(url: str, *, vendor_slug: str | None = None, timeout_seco
         return _capture_bestprice(url, timeout_seconds=timeout_seconds)
     if resolved_vendor == "skroutz":
         return capture_skroutz_firecrawl(url, timeout_seconds=timeout_seconds)
-    return _failed_result(resolved_vendor, url, "VENDOR_NOT_IMPLEMENTED", f"{resolved_vendor} capture is scaffolded but not implemented.")
+    return _failed_result(
+        resolved_vendor,
+        url,
+        "VENDOR_NOT_IMPLEMENTED",
+        f"{resolved_vendor} capture is scaffolded but not implemented.",
+    )
 
 
 def _capture_electronet(url: str, *, timeout_seconds: float) -> CaptureResult:
@@ -50,7 +65,11 @@ def _capture_electronet(url: str, *, timeout_seconds: float) -> CaptureResult:
             url,
             expected_vendor_slug="electronet",
             require_known_vendor=True,
-            timeout=EgressTimeoutConfig(connect=min(timeout_seconds, 5.0), read=timeout_seconds, total=timeout_seconds),
+            timeout=EgressTimeoutConfig(
+                connect=min(timeout_seconds, 5.0),
+                read=timeout_seconds,
+                total=timeout_seconds,
+            ),
         )
         fetched_at = _now()
         status_code = response.status_code
@@ -91,11 +110,19 @@ def _capture_electronet(url: str, *, timeout_seconds: float) -> CaptureResult:
             snapshot=snapshot,
             price_observations=(parsed,) if parsed.price is not None else (),
             error_code=None if parsed.price is not None else "PRICE_MISSING",
-            error_message=None if parsed.price is not None else "Electronet parser did not find a price.",
+            error_message=(
+                None
+                if parsed.price is not None
+                else "Electronet parser did not find a price."
+            ),
         )
     except Exception as exc:
         error_code = exc.code if isinstance(exc, EgressPolicyError) else "FETCH_FAILED"
-        error_message = exc.message if isinstance(exc, EgressPolicyError) else (str(exc) or exc.__class__.__name__)
+        error_message = (
+            exc.message
+            if isinstance(exc, EgressPolicyError)
+            else (str(exc) or exc.__class__.__name__)
+        )
         return _failed_result(
             "electronet",
             url,
@@ -116,7 +143,11 @@ def _capture_bestprice(url: str, *, timeout_seconds: float) -> CaptureResult:
             url,
             expected_vendor_slug="bestprice",
             require_known_vendor=True,
-            timeout=EgressTimeoutConfig(connect=min(timeout_seconds, 5.0), read=timeout_seconds, total=timeout_seconds),
+            timeout=EgressTimeoutConfig(
+                connect=min(timeout_seconds, 5.0),
+                read=timeout_seconds,
+                total=timeout_seconds,
+            ),
             headers={
                 "User-Agent": "EcommerceSourceCapture/1.0",
                 "Accept-Language": "el-GR,el;q=0.9,en;q=0.8",
@@ -164,11 +195,19 @@ def _capture_bestprice(url: str, *, timeout_seconds: float) -> CaptureResult:
             price_observations=(parsed,) if parsed.price is not None else (),
             offer_observations=tuple(offers),
             error_code=None if parsed.price is not None else "PRICE_MISSING",
-            error_message=None if parsed.price is not None else "BestPrice parser did not find a price.",
+            error_message=(
+                None
+                if parsed.price is not None
+                else "BestPrice parser did not find a price."
+            ),
         )
     except Exception as exc:
         error_code = exc.code if isinstance(exc, EgressPolicyError) else "FETCH_FAILED"
-        error_message = exc.message if isinstance(exc, EgressPolicyError) else (str(exc) or exc.__class__.__name__)
+        error_message = (
+            exc.message
+            if isinstance(exc, EgressPolicyError)
+            else (str(exc) or exc.__class__.__name__)
+        )
         return _failed_result(
             "bestprice",
             url,

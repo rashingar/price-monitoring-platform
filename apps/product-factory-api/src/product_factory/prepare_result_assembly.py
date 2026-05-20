@@ -4,9 +4,18 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from .characteristics_pipeline import get_characteristics_registry
-from .deterministic_fields import effective_spec_sections as build_effective_spec_sections
+from .deterministic_fields import (
+    effective_spec_sections as build_effective_spec_sections,
+)
 from .mapping import build_row
-from .models import CLIInput, FetchResult, GalleryImage, ParsedProduct, SchemaMatchResult, TaxonomyResolution
+from .models import (
+    CLIInput,
+    FetchResult,
+    GalleryImage,
+    ParsedProduct,
+    SchemaMatchResult,
+    TaxonomyResolution,
+)
 from .normalize import normalize_for_match
 from .prepare_scrape_persistence import PrepareScrapePersistenceInput
 from .repo_paths import SCHEMA_LIBRARY_PATH
@@ -77,10 +86,17 @@ def assemble_prepare_result(
     schema_matcher = schema_matcher_factory(str(SCHEMA_LIBRARY_PATH))
     effective_spec_sections = build_effective_spec_sections(
         effective_characteristics_source,
-        manufacturer_first=normalize_for_match(effective_characteristics_source.source_name) == "skroutz",
+        manufacturer_first=normalize_for_match(
+            effective_characteristics_source.source_name
+        )
+        == "skroutz",
     )
     characteristics_registry = get_characteristics_registry()
-    preferred_schema_source_files = characteristics_registry.preferred_schema_source_files(effective_characteristics_source, taxonomy)
+    preferred_schema_source_files = (
+        characteristics_registry.preferred_schema_source_files(
+            effective_characteristics_source, taxonomy
+        )
+    )
     schema_match, schema_candidates = schema_matcher.match(
         effective_spec_sections,
         taxonomy.sub_category,
@@ -121,17 +137,27 @@ def assemble_prepare_result(
             "hero_summary_present": bool(parsed.source.hero_summary),
             "gallery_images_count": len(parsed.source.gallery_images),
             "spec_sections_count": len(effective_characteristics_source.spec_sections),
-            "manufacturer_spec_sections_count": len(effective_characteristics_source.manufacturer_spec_sections),
+            "manufacturer_spec_sections_count": len(
+                effective_characteristics_source.manufacturer_spec_sections
+            ),
         },
         "characteristics_pairs": {
             "count": sum(len(section.items) for section in effective_spec_sections),
-            "source_count": sum(len(section.items) for section in effective_characteristics_source.spec_sections),
-            "manufacturer_count": sum(len(section.items) for section in effective_characteristics_source.manufacturer_spec_sections),
+            "source_count": sum(
+                len(section.items)
+                for section in effective_characteristics_source.spec_sections
+            ),
+            "manufacturer_count": sum(
+                len(section.items)
+                for section in effective_characteristics_source.manufacturer_spec_sections
+            ),
         },
         "taxonomy_resolution": taxonomy.to_dict(),
         "manufacturer_enrichment": manufacturer_enrichment,
         "schema_resolution": schema_match.to_dict(),
-        "characteristics_diagnostics": normalized.get("characteristics_diagnostics", {}),
+        "characteristics_diagnostics": normalized.get(
+            "characteristics_diagnostics", {}
+        ),
         "skroutz_taxonomy_diagnostics": {
             "family_key": parsed.source.skroutz_family,
             "raw_category_tag": parsed.source.category_tag_text,
@@ -144,7 +170,12 @@ def assemble_prepare_result(
                 taxonomy.leaf_category,
                 [taxonomy.sub_category] if taxonomy.sub_category else [],
             ),
-            "match_type": parsed.source.taxonomy_match_type or ("exact_category" if taxonomy.parent_category and taxonomy.leaf_category else ""),
+            "match_type": parsed.source.taxonomy_match_type
+            or (
+                "exact_category"
+                if taxonomy.parent_category and taxonomy.leaf_category
+                else ""
+            ),
             "tv_inches": parsed.source.taxonomy_tv_inches,
             "ambiguity": parsed.source.taxonomy_ambiguity,
             "escalation_reason": parsed.source.taxonomy_escalation_reason,
@@ -159,10 +190,20 @@ def assemble_prepare_result(
             "mpn": parsed.provenance.get("mpn", "missing"),
             "name": parsed.provenance.get("name", "missing"),
             "price": parsed.provenance.get("price", "missing"),
-            "taxonomy": "resolved" if taxonomy.parent_category and taxonomy.leaf_category else "unresolved",
-            "schema_match": "matched" if schema_match.score >= 0.35 else ("weak" if schema_match.score > 0 else "none"),
+            "taxonomy": (
+                "resolved"
+                if taxonomy.parent_category and taxonomy.leaf_category
+                else "unresolved"
+            ),
+            "schema_match": (
+                "matched"
+                if schema_match.score >= 0.35
+                else ("weak" if schema_match.score > 0 else "none")
+            ),
         },
-        "field_diagnostics": {key: value.to_dict() for key, value in parsed.field_diagnostics.items()},
+        "field_diagnostics": {
+            key: value.to_dict() for key, value in parsed.field_diagnostics.items()
+        },
         "missing_fields": parsed.missing_fields,
         "warnings": parsed.warnings
         + gallery_warnings
@@ -178,11 +219,15 @@ def assemble_prepare_result(
             "downloaded_count": len(downloaded_gallery),
             "requested_photos": cli.photos,
             "gallery_mode": resolved_gallery_settings.get("gallery_mode"),
-            "whole_gallery_mode": bool(resolved_gallery_settings.get("gallery_whole_mode", False)),
+            "whole_gallery_mode": bool(
+                resolved_gallery_settings.get("gallery_whole_mode", False)
+            ),
             "extracted_before_source_filter_count": resolved_gallery_settings.get(
                 "extracted_before_source_filter_count"
             ),
-            "after_source_filter_count": resolved_gallery_settings.get("after_source_filter_count"),
+            "after_source_filter_count": resolved_gallery_settings.get(
+                "after_source_filter_count"
+            ),
         },
         "gallery_settings": resolved_gallery_settings,
         "characteristics_settings": resolved_characteristics_settings,
@@ -215,11 +260,18 @@ def assemble_prepare_result(
             *[
                 path
                 for document in manufacturer_enrichment.get("documents", [])
-                for path in [document.get("local_path", ""), document.get("text_path", "")]
+                for path in [
+                    document.get("local_path", ""),
+                    document.get("text_path", ""),
+                ]
                 if path
             ],
             *gallery_files,
-            *([str(scrape_persistence_input.bescos_raw_path)] if sections_artifact_payload is not None else []),
+            *(
+                [str(scrape_persistence_input.bescos_raw_path)]
+                if sections_artifact_payload is not None
+                else []
+            ),
             *besco_files,
         ],
     }
@@ -233,7 +285,9 @@ def assemble_prepare_result(
     )
 
 
-def build_prepare_result_identity_checks(cli: CLIInput, parsed: ParsedProduct, source: str) -> dict[str, Any]:
+def build_prepare_result_identity_checks(
+    cli: CLIInput, parsed: ParsedProduct, source: str
+) -> dict[str, Any]:
     return {
         "source": source,
         "input_model": cli.model,

@@ -43,12 +43,27 @@ def upgrade() -> None:
             "status IN ('active', 'disabled', 'broken', 'redirected', 'needs_review')",
             name="ck_source_urls_status",
         ),
-        sa.CheckConstraint("url_type IN ('manual', 'imported', 'discovered')", name="ck_source_urls_url_type"),
-        sa.ForeignKeyConstraint(["catalog_product_id"], ["catalog_products.id"], ondelete="CASCADE"),
-        sa.UniqueConstraint("catalog_product_id", "url_normalized", name="uq_source_urls_catalog_product_url_normalized"),
+        sa.CheckConstraint(
+            "url_type IN ('manual', 'imported', 'discovered')",
+            name="ck_source_urls_url_type",
+        ),
+        sa.ForeignKeyConstraint(
+            ["catalog_product_id"], ["catalog_products.id"], ondelete="CASCADE"
+        ),
+        sa.UniqueConstraint(
+            "catalog_product_id",
+            "url_normalized",
+            name="uq_source_urls_catalog_product_url_normalized",
+        ),
     )
-    op.create_index("ix_source_urls_catalog_product_id", "source_urls", ["catalog_product_id"])
-    op.create_index("ix_source_urls_catalog_source_model", "source_urls", ["catalog_source", "model"])
+    op.create_index(
+        "ix_source_urls_catalog_product_id", "source_urls", ["catalog_product_id"]
+    )
+    op.create_index(
+        "ix_source_urls_catalog_source_model",
+        "source_urls",
+        ["catalog_source", "model"],
+    )
     op.create_index("ix_source_urls_source_name", "source_urls", ["source_name"])
     op.create_index("ix_source_urls_source_domain", "source_urls", ["source_domain"])
     op.create_index("ix_source_urls_status", "source_urls", ["status"])

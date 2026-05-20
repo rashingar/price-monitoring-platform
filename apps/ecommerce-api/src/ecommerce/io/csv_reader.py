@@ -32,7 +32,9 @@ def load_csv(
         resolution = resolve_required_headers(headers, required_columns)
         rows: list[dict[str, str]] = []
         for row in reader:
-            normalized_row = {key: value if value is not None else "" for key, value in row.items()}
+            normalized_row = {
+                key: value if value is not None else "" for key, value in row.items()
+            }
             rows.append(normalized_row)
 
     return LoadedCsv(

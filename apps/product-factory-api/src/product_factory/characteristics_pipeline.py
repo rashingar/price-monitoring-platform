@@ -10,13 +10,27 @@ from typing import Any, Callable
 from bs4 import BeautifulSoup
 
 from .description_enrichment import build_description_spec_lookup
-from .deterministic_fields import build_spec_lookup, effective_spec_sections, resolve_spec_value
+from .deterministic_fields import (
+    build_spec_lookup,
+    effective_spec_sections,
+    resolve_spec_value,
+)
 from .html_builders import build_characteristics_html
-from .models import SchemaMatchResult, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
-from .normalize import candidate_label_keys, labels_equivalent, normalize_for_match, normalize_whitespace
+from .models import (
+    SchemaMatchResult,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
+from .normalize import (
+    candidate_label_keys,
+    labels_equivalent,
+    normalize_for_match,
+    normalize_whitespace,
+)
 from .repo_paths import CHARACTERISTICS_TEMPLATES_PATH, SCHEMA_LIBRARY_PATH
 from .utils import dedupe_strings, read_json
-
 
 TV_INCH_TO_CM = {
     24: 61,
@@ -71,16 +85,24 @@ class CharacteristicsTemplateRegistry:
             if str(schema.get("schema_id", "")).strip()
         }
 
-    def select_custom_template(self, source: SourceProductData, taxonomy: TaxonomyResolution) -> dict[str, Any] | None:
+    def select_custom_template(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution
+    ) -> dict[str, Any] | None:
         source_name = normalize_for_match(source.source_name)
         parent = normalize_for_match(taxonomy.parent_category)
         leaf = normalize_for_match(taxonomy.leaf_category)
         sub = normalize_for_match(taxonomy.sub_category or "")
         for template in self.templates:
             match = template.get("match", {})
-            if normalize_for_match(match.get("source_name", "")) not in {"", source_name}:
+            if normalize_for_match(match.get("source_name", "")) not in {
+                "",
+                source_name,
+            }:
                 continue
-            if normalize_for_match(match.get("taxonomy_parent", "")) not in {"", parent}:
+            if normalize_for_match(match.get("taxonomy_parent", "")) not in {
+                "",
+                parent,
+            }:
                 continue
             if normalize_for_match(match.get("taxonomy_leaf", "")) not in {"", leaf}:
                 continue
@@ -96,18 +118,26 @@ class CharacteristicsTemplateRegistry:
         schema_match: SchemaMatchResult | None = None,
     ) -> dict[str, Any] | None:
         custom_template = self.select_custom_template(source, taxonomy)
-        if custom_template is not None and _template_requests_raw_spec_sections(custom_template):
+        if custom_template is not None and _template_requests_raw_spec_sections(
+            custom_template
+        ):
             return {
                 **custom_template,
                 "template_source": "custom",
-                "matched_schema_id": schema_match.matched_schema_id if schema_match else "",
+                "matched_schema_id": (
+                    schema_match.matched_schema_id if schema_match else ""
+                ),
             }
-        schema_template = self.select_schema_template(schema_match.matched_schema_id if schema_match else None)
+        schema_template = self.select_schema_template(
+            schema_match.matched_schema_id if schema_match else None
+        )
         if schema_template is not None:
             if custom_template is not None:
                 return self.merge_template_overrides(schema_template, custom_template)
             return schema_template
-        electronet_blank_template = self.select_electronet_blank_template(source, taxonomy)
+        electronet_blank_template = self.select_electronet_blank_template(
+            source, taxonomy
+        )
         if electronet_blank_template is not None:
             return electronet_blank_template
         if custom_template is not None:
@@ -132,7 +162,9 @@ class CharacteristicsTemplateRegistry:
             include_aliases=True,
         )
 
-    def select_electronet_blank_template(self, source: SourceProductData, taxonomy: TaxonomyResolution) -> dict[str, Any] | None:
+    def select_electronet_blank_template(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution
+    ) -> dict[str, Any] | None:
         if not _should_render_raw_source_characteristics(source):
             return None
         schema = self._select_electronet_blank_schema(source, taxonomy)
@@ -163,11 +195,16 @@ class CharacteristicsTemplateRegistry:
             section_title = normalize_whitespace(section.get("title", ""))
             if not section_title:
                 continue
-            labels = [normalize_whitespace(label) for label in section.get("labels", []) if normalize_whitespace(label)]
+            labels = [
+                normalize_whitespace(label)
+                for label in section.get("labels", [])
+                if normalize_whitespace(label)
+            ]
             fields: list[dict[str, Any]] = []
             for label_index, label in enumerate(labels, start=1):
                 field = {
-                    "key": normalize_for_match(f"{section_title} {label}") or f"schema_{section_index}_{label_index}",
+                    "key": normalize_for_match(f"{section_title} {label}")
+                    or f"schema_{section_index}_{label_index}",
                     "label": label,
                     "section_title": section_title,
                 }
@@ -183,20 +220,33 @@ class CharacteristicsTemplateRegistry:
             "sections": sections,
         }
 
-    def _select_electronet_blank_schema(self, source: SourceProductData, taxonomy: TaxonomyResolution) -> dict[str, Any] | None:
+    def _select_electronet_blank_schema(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution
+    ) -> dict[str, Any] | None:
         candidates = self._active_schemas_for_taxonomy(taxonomy)
         if not candidates:
             return None
 
         sub_key = normalize_for_match(taxonomy.sub_category or "")
         if sub_key and sub_key != "-":
-            exact_sub = [schema for schema in candidates if normalize_for_match(schema.get("sub_category", "")) == sub_key]
+            exact_sub = [
+                schema
+                for schema in candidates
+                if normalize_for_match(schema.get("sub_category", "")) == sub_key
+            ]
             if exact_sub:
                 return exact_sub[0]
 
-        specific_candidates = [schema for schema in candidates if not self._schema_is_generic_category(schema)]
+        specific_candidates = [
+            schema
+            for schema in candidates
+            if not self._schema_is_generic_category(schema)
+        ]
         scored_specific = sorted(
-            ((self._source_url_schema_score(source, schema), schema) for schema in specific_candidates),
+            (
+                (self._source_url_schema_score(source, schema), schema)
+                for schema in specific_candidates
+            ),
             key=lambda item: item[0],
             reverse=True,
         )
@@ -204,12 +254,18 @@ class CharacteristicsTemplateRegistry:
             return scored_specific[0][1]
 
         taxonomy_path_key = normalize_for_match(taxonomy.taxonomy_path)
-        exact_path = [schema for schema in candidates if normalize_for_match(schema.get("category_path", "")) == taxonomy_path_key]
+        exact_path = [
+            schema
+            for schema in candidates
+            if normalize_for_match(schema.get("category_path", "")) == taxonomy_path_key
+        ]
         if exact_path:
             return exact_path[0]
         return candidates[0] if len(candidates) == 1 else None
 
-    def _active_schemas_for_taxonomy(self, taxonomy: TaxonomyResolution) -> list[dict[str, Any]]:
+    def _active_schemas_for_taxonomy(
+        self, taxonomy: TaxonomyResolution
+    ) -> list[dict[str, Any]]:
         parent = normalize_for_match(taxonomy.parent_category)
         leaf = normalize_for_match(taxonomy.leaf_category)
         taxonomy_path = normalize_for_match(taxonomy.taxonomy_path)
@@ -217,10 +273,19 @@ class CharacteristicsTemplateRegistry:
         for schema in self.schemas_by_id.values():
             if normalize_for_match(schema.get("template_status", "")) != "active":
                 continue
-            if taxonomy_path and normalize_for_match(schema.get("category_path", "")) == taxonomy_path:
+            if (
+                taxonomy_path
+                and normalize_for_match(schema.get("category_path", ""))
+                == taxonomy_path
+            ):
                 candidates.append(schema)
                 continue
-            if parent and leaf and normalize_for_match(schema.get("parent_category", "")) == parent and normalize_for_match(schema.get("leaf_category", "")) == leaf:
+            if (
+                parent
+                and leaf
+                and normalize_for_match(schema.get("parent_category", "")) == parent
+                and normalize_for_match(schema.get("leaf_category", "")) == leaf
+            ):
                 candidates.append(schema)
         return candidates
 
@@ -229,7 +294,9 @@ class CharacteristicsTemplateRegistry:
         sub_category = normalize_for_match(schema.get("sub_category", ""))
         return sub_category in {"", "-"}
 
-    def _source_url_schema_score(self, source: SourceProductData, schema: dict[str, Any]) -> float:
+    def _source_url_schema_score(
+        self, source: SourceProductData, schema: dict[str, Any]
+    ) -> float:
         source_tokens = self._url_tokens(source.canonical_url or source.url)
         if not source_tokens:
             return 0.0
@@ -264,8 +331,14 @@ class CharacteristicsTemplateRegistry:
             normalized_stem = normalize_for_match(stem)
             if normalized_stem:
                 tokens.add(normalized_stem)
-            tokens.update(token for token in re.split(r"[_\-.]+", normalized_stem) if token)
-        cta_parts = [part for part in urlparse(str(schema.get("cta_url", ""))).path.split("/") if part]
+            tokens.update(
+                token for token in re.split(r"[_\-.]+", normalized_stem) if token
+            )
+        cta_parts = [
+            part
+            for part in urlparse(str(schema.get("cta_url", ""))).path.split("/")
+            if part
+        ]
         if cta_parts:
             for part in re.split(r"[_\-.]+", cta_parts[-1]):
                 token = normalize_for_match(part)
@@ -273,14 +346,20 @@ class CharacteristicsTemplateRegistry:
                     tokens.add(token)
         return tokens
 
-    def merge_template_overrides(self, schema_template: dict[str, Any], custom_template: dict[str, Any]) -> dict[str, Any]:
+    def merge_template_overrides(
+        self, schema_template: dict[str, Any], custom_template: dict[str, Any]
+    ) -> dict[str, Any]:
         custom_sections = list(custom_template.get("sections", []))
         merged_sections: list[dict[str, Any]] = []
         for index, base_section in enumerate(schema_template.get("sections", [])):
-            custom_section = self._match_custom_section(base_section, custom_sections, index)
+            custom_section = self._match_custom_section(
+                base_section, custom_sections, index
+            )
             merged_fields: list[dict[str, Any]] = []
             for field_index, base_field in enumerate(base_section.get("fields", [])):
-                custom_field = self._match_custom_field(base_field, custom_section, field_index)
+                custom_field = self._match_custom_field(
+                    base_field, custom_section, field_index
+                )
                 merged_field = dict(base_field)
                 if custom_field:
                     merged_field.update(custom_field)
@@ -289,7 +368,11 @@ class CharacteristicsTemplateRegistry:
                 merged_fields.append(merged_field)
             merged_sections.append(
                 {
-                    "title": custom_section.get("title", base_section.get("title", "")) if custom_section else base_section.get("title", ""),
+                    "title": (
+                        custom_section.get("title", base_section.get("title", ""))
+                        if custom_section
+                        else base_section.get("title", "")
+                    ),
                     "fields": merged_fields,
                 }
             )
@@ -299,14 +382,29 @@ class CharacteristicsTemplateRegistry:
             "custom_template_id": custom_template.get("template_id", ""),
             "preferred_schema_source_files": dedupe_strings(
                 [
-                    *[str(item) for item in schema_template.get("preferred_schema_source_files", [])],
-                    *[str(item) for item in custom_template.get("preferred_schema_source_files", [])],
+                    *[
+                        str(item)
+                        for item in schema_template.get(
+                            "preferred_schema_source_files", []
+                        )
+                    ],
+                    *[
+                        str(item)
+                        for item in custom_template.get(
+                            "preferred_schema_source_files", []
+                        )
+                    ],
                 ]
             ),
             "sections": merged_sections,
         }
 
-    def _match_custom_section(self, base_section: dict[str, Any], custom_sections: list[dict[str, Any]], index: int) -> dict[str, Any] | None:
+    def _match_custom_section(
+        self,
+        base_section: dict[str, Any],
+        custom_sections: list[dict[str, Any]],
+        index: int,
+    ) -> dict[str, Any] | None:
         base_title = normalize_for_match(base_section.get("title", ""))
         for section in custom_sections:
             if normalize_for_match(section.get("title", "")) == base_title:
@@ -333,11 +431,17 @@ class CharacteristicsTemplateRegistry:
             return fields[index]
         return None
 
-    def preferred_schema_source_files(self, source: SourceProductData, taxonomy: TaxonomyResolution) -> list[str]:
+    def preferred_schema_source_files(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution
+    ) -> list[str]:
         template = self.select_custom_template(source, taxonomy)
         if not template:
             return []
-        return [str(item).strip() for item in template.get("preferred_schema_source_files", []) if str(item).strip()]
+        return [
+            str(item).strip()
+            for item in template.get("preferred_schema_source_files", [])
+            if str(item).strip()
+        ]
 
 
 def get_characteristics_registry() -> CharacteristicsTemplateRegistry:
@@ -353,7 +457,9 @@ def build_characteristics_for_product(
     schema_match: SchemaMatchResult | None = None,
     raw_html: str | None = None,
 ) -> tuple[str, dict[str, Any], list[str]]:
-    if _should_render_raw_source_characteristics(source) and _effective_spec_sections(source):
+    if _should_render_raw_source_characteristics(source) and _effective_spec_sections(
+        source
+    ):
         return _build_raw_spec_sections_result(source, schema_match=schema_match)
 
     registry = get_characteristics_registry()
@@ -362,7 +468,9 @@ def build_characteristics_for_product(
         return _build_raw_spec_sections_result(source, schema_match=schema_match)
 
     if _template_requests_raw_spec_sections(template):
-        return _build_raw_spec_sections_result(source, schema_match=schema_match, template=template)
+        return _build_raw_spec_sections_result(
+            source, schema_match=schema_match, template=template
+        )
 
     context = _build_resolution_context(source, taxonomy, raw_html=raw_html)
     warnings = [f"characteristics_template_used:{template['template_id']}"]
@@ -370,7 +478,9 @@ def build_characteristics_for_product(
     resolved_sections: list[SpecSection] = []
     unresolved_count = 0
     template_source = normalize_whitespace(template.get("template_source")) or "custom"
-    matched_schema_id = normalize_whitespace(template.get("matched_schema_id")) or (schema_match.matched_schema_id if schema_match else "")
+    matched_schema_id = normalize_whitespace(template.get("matched_schema_id")) or (
+        schema_match.matched_schema_id if schema_match else ""
+    )
 
     for section in template.get("sections", []):
         items: list[SpecItem] = []
@@ -379,7 +489,11 @@ def build_characteristics_for_product(
             normalized_value = normalize_whitespace(value) or "-"
             if normalized_value == "-":
                 unresolved_count += 1
-            items.append(SpecItem(label=str(field.get("label", "")).strip(), value=normalized_value))
+            items.append(
+                SpecItem(
+                    label=str(field.get("label", "")).strip(), value=normalized_value
+                )
+            )
             diagnostics_fields.append(
                 {
                     "section": section.get("title", ""),
@@ -389,10 +503,14 @@ def build_characteristics_for_product(
                     "resolved_from": resolved_from,
                 }
             )
-        resolved_sections.append(SpecSection(section=str(section.get("title", "")).strip(), items=items))
+        resolved_sections.append(
+            SpecSection(section=str(section.get("title", "")).strip(), items=items)
+        )
 
     if unresolved_count:
-        warnings.append(f"characteristics_template_unresolved_fields:{unresolved_count}")
+        warnings.append(
+            f"characteristics_template_unresolved_fields:{unresolved_count}"
+        )
 
     diagnostics = {
         "mode": "template",
@@ -400,16 +518,22 @@ def build_characteristics_for_product(
         "selection_reason": (
             "matched_schema_template_with_custom_overrides"
             if template_source == "schema_library_with_custom_overrides"
-            else "matched_schema_template"
-            if template_source == "schema_library"
-            else "electronet_blank_category_template"
-            if template_source == "electronet_blank_schema"
-            else "taxonomy_template_match"
+            else (
+                "matched_schema_template"
+                if template_source == "schema_library"
+                else (
+                    "electronet_blank_category_template"
+                    if template_source == "electronet_blank_schema"
+                    else "taxonomy_template_match"
+                )
+            )
         ),
         "template_source": template_source,
         "matched_schema_id": matched_schema_id,
         "custom_template_id": template.get("custom_template_id", ""),
-        "preferred_schema_source_files": list(template.get("preferred_schema_source_files", [])),
+        "preferred_schema_source_files": list(
+            template.get("preferred_schema_source_files", [])
+        ),
         "field_count": len(diagnostics_fields),
         "unresolved_count": unresolved_count,
         "fields": diagnostics_fields,
@@ -423,15 +547,25 @@ def _build_raw_spec_sections_result(
     template: dict[str, Any] | None = None,
 ) -> tuple[str, dict[str, Any], list[str]]:
     effective_sections = _effective_spec_sections(source)
-    template_source = normalize_whitespace(template.get("template_source")) if template else ""
+    template_source = (
+        normalize_whitespace(template.get("template_source")) if template else ""
+    )
     diagnostics = {
         "mode": "raw_spec_sections",
         "template_id": template.get("template_id", "") if template else "",
-        "selection_reason": "taxonomy_template_raw_spec_sections" if template else "no_matching_template",
+        "selection_reason": (
+            "taxonomy_template_raw_spec_sections"
+            if template
+            else "no_matching_template"
+        ),
         "template_source": template_source,
         "matched_schema_id": schema_match.matched_schema_id if schema_match else "",
-        "preferred_schema_source_files": list(template.get("preferred_schema_source_files", [])) if template else [],
-        "custom_template_id": template.get("template_id", "") if template_source == "custom" else "",
+        "preferred_schema_source_files": (
+            list(template.get("preferred_schema_source_files", [])) if template else []
+        ),
+        "custom_template_id": (
+            template.get("template_id", "") if template_source == "custom" else ""
+        ),
         "field_count": sum(len(section.items) for section in effective_sections),
         "unresolved_count": 0,
         "fields": [],
@@ -468,11 +602,19 @@ def _build_resolution_context(
                 resolved_raw_html = path.read_text(encoding="utf-8")
 
     spec_sections = _effective_spec_sections(source)
-    prefer_manufacturer = normalize_for_match(source.source_name) == "skroutz" and bool(source.manufacturer_spec_sections)
-    spec_lookup = build_spec_lookup(source.key_specs, spec_sections, key_specs_last=prefer_manufacturer)
+    prefer_manufacturer = normalize_for_match(source.source_name) == "skroutz" and bool(
+        source.manufacturer_spec_sections
+    )
+    spec_lookup = build_spec_lookup(
+        source.key_specs, spec_sections, key_specs_last=prefer_manufacturer
+    )
     raw_lookup = _extract_dt_dd_lookup(resolved_raw_html)
     section_lookup = _build_section_lookup(spec_sections)
-    description_lookup = build_description_spec_lookup(source) if normalize_for_match(source.source_name) == "skroutz" else {}
+    description_lookup = (
+        build_description_spec_lookup(source)
+        if normalize_for_match(source.source_name) == "skroutz"
+        else {}
+    )
     offer_titles = _extract_offer_titles(resolved_raw_html)
     raw_text = _extract_raw_text(resolved_raw_html)
     combined_text = normalize_whitespace(
@@ -504,7 +646,9 @@ def _build_resolution_context(
 
 
 def _effective_spec_sections(source: SourceProductData) -> list[SpecSection]:
-    return effective_spec_sections(source, manufacturer_first=normalize_for_match(source.source_name) == "skroutz")
+    return effective_spec_sections(
+        source, manufacturer_first=normalize_for_match(source.source_name) == "skroutz"
+    )
 
 
 def _extract_dt_dd_lookup(raw_html: str) -> dict[str, str]:
@@ -524,7 +668,9 @@ def _extract_dt_dd_lookup(raw_html: str) -> dict[str, str]:
     return lookup
 
 
-def _build_section_lookup(spec_sections: list[SpecSection]) -> dict[str, dict[str, str]]:
+def _build_section_lookup(
+    spec_sections: list[SpecSection],
+) -> dict[str, dict[str, str]]:
     lookup: dict[str, dict[str, str]] = {}
     for section in spec_sections:
         section_key = normalize_for_match(section.section)
@@ -543,7 +689,9 @@ def _extract_offer_titles(raw_html: str) -> list[str]:
     if not raw_html:
         return []
     soup = BeautifulSoup(raw_html, "lxml")
-    return dedupe_strings(node.get("title", "") for node in soup.select(".product-name[title]"))
+    return dedupe_strings(
+        node.get("title", "") for node in soup.select(".product-name[title]")
+    )
 
 
 def _extract_raw_text(raw_html: str) -> str:
@@ -563,8 +711,14 @@ _AIR_CONDITIONER_SECTION_KEYS = {
 
 _AIR_CONDITIONER_FIELD_ALIAS_MAP = {
     normalize_for_match("Ονομαστική Απόδοση (Btu/h)"): ("Απόδοση BTU", "Απόδοση (BTU)"),
-    normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"): ("Ψυκτική Απόδοση", "Ισχύς Ψύξης"),
-    normalize_for_match("Θερμική Απόδοση ( Btu/h )"): ("Θερμική Απόδοση", "Ισχύς Θέρμανσης"),
+    normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"): (
+        "Ψυκτική Απόδοση",
+        "Ισχύς Ψύξης",
+    ),
+    normalize_for_match("Θερμική Απόδοση ( Btu/h )"): (
+        "Θερμική Απόδοση",
+        "Ισχύς Θέρμανσης",
+    ),
     normalize_for_match("Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"): (
         "Βαθμός Απόδοσης SEER",
         "Βαθμός Απόδοσης Ψύξης (SEER)",
@@ -600,8 +754,12 @@ _AIR_CONDITIONER_FIELD_ALIAS_MAP = {
         "WiFi Ready",
         "Wi-Fi Ready",
     ),
-    normalize_for_match("Βάρος Εσωτερικής Μονάδας ( Kg )"): ("Βάρος Εσωτερικής Μονάδας",),
-    normalize_for_match("Βάρος Εξωτερικής Μονάδας ( Kg )"): ("Βάρος Εξωτερικής Μονάδας",),
+    normalize_for_match("Βάρος Εσωτερικής Μονάδας ( Kg )"): (
+        "Βάρος Εσωτερικής Μονάδας",
+    ),
+    normalize_for_match("Βάρος Εξωτερικής Μονάδας ( Kg )"): (
+        "Βάρος Εξωτερικής Μονάδας",
+    ),
     normalize_for_match("Ύψος Εσωτερικής Μονάδας ( mm )"): (
         "Ύψος Εσωτερικής Μονάδας",
         "Ύψος Εσωτερικής Μονάδα",
@@ -659,7 +817,9 @@ def _format_value_for_template_field(field: dict[str, Any], value: str) -> str:
     if section_key not in _AIR_CONDITIONER_SECTION_KEYS:
         return value
     if label_key in _AIR_CONDITIONER_DIMENSION_FIELD_KEYS:
-        return _format_air_conditioner_dimension_mm(value) or normalize_whitespace(value)
+        return _format_air_conditioner_dimension_mm(value) or normalize_whitespace(
+            value
+        )
     normalized_yes_no = _normalize_yes_no(value)
     if label_key == normalize_for_match("Τεχνολογία Κλιματιστικού"):
         return "Inverter" if normalized_yes_no == "Ναι" else normalize_whitespace(value)
@@ -671,36 +831,61 @@ def _format_value_for_template_field(field: dict[str, Any], value: str) -> str:
     if label_key in _AIR_CONDITIONER_YES_NO_FIELD_KEYS and normalized_yes_no:
         return normalized_yes_no
     if label_key == normalize_for_match("Φίλτρα"):
-        return "Φίλτρα Καθαρισμού Αέρα" if normalized_yes_no == "Ναι" else normalize_whitespace(value)
+        return (
+            "Φίλτρα Καθαρισμού Αέρα"
+            if normalized_yes_no == "Ναι"
+            else normalize_whitespace(value)
+        )
     if label_key == normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"):
         return "WiFi" if normalized_yes_no == "Ναι" else normalize_whitespace(value)
     return value
 
 
-def _fallback_value_for_template_field(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _fallback_value_for_template_field(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     section_key = normalize_for_match(str(field.get("section_title", "")))
     label_key = normalize_for_match(str(field.get("label", "")))
     if section_key not in _AIR_CONDITIONER_SECTION_KEYS:
         return "", "unresolved"
-    combined = " ".join([context.source.name, context.source.hero_summary, context.source.presentation_source_text, context.combined_text])
-    if label_key == normalize_for_match("Τεχνολογία Κλιματιστικού") and _contains_any(combined, "inverter"):
+    combined = " ".join(
+        [
+            context.source.name,
+            context.source.hero_summary,
+            context.source.presentation_source_text,
+            context.combined_text,
+        ]
+    )
+    if label_key == normalize_for_match("Τεχνολογία Κλιματιστικού") and _contains_any(
+        combined, "inverter"
+    ):
         return "Inverter", "combined_text:technology"
     if label_key == normalize_for_match("Ψυκτικό Υγρό"):
         match = re.search(r"\b(R[0-9A-Z]+)\b", combined, flags=re.IGNORECASE)
         if match:
             return match.group(1).upper(), "combined_text:refrigerant"
-    if label_key == normalize_for_match("Αφύγρανση") and _contains_any(combined, "αφύγρανση", "αφυγρανση"):
+    if label_key == normalize_for_match("Αφύγρανση") and _contains_any(
+        combined, "αφύγρανση", "αφυγρανση"
+    ):
         return "Ναι", "combined_text:dehumidification"
-    if label_key == normalize_for_match("Ιονιστής") and _contains_any(combined, "ιονιστ"):
+    if label_key == normalize_for_match("Ιονιστής") and _contains_any(
+        combined, "ιονιστ"
+    ):
         return "Ναι", "combined_text:ionizer"
-    if label_key == normalize_for_match("Φίλτρα") and _contains_any(combined, "φιλτρα καθαρισμου αερα", "φίλτρα καθαρισμού αέρα"):
+    if label_key == normalize_for_match("Φίλτρα") and _contains_any(
+        combined, "φιλτρα καθαρισμου αερα", "φίλτρα καθαρισμού αέρα"
+    ):
         return "Φίλτρα Καθαρισμού Αέρα", "combined_text:filters"
-    if label_key == normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού") and _contains_any(combined, "wifi", "wi-fi"):
+    if label_key == normalize_for_match(
+        "Πρόσθετες Λειτουργίες Κλιματιστικού"
+    ) and _contains_any(combined, "wifi", "wi-fi"):
         return "WiFi", "combined_text:wifi"
     return "", "unresolved"
 
 
-def _resolve_template_field(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_template_field(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     resolver_name = str(field.get("resolver", "")).strip()
     resolver = _RESOLVERS.get(resolver_name)
     if resolver is None:
@@ -718,7 +903,9 @@ def _resolve_template_field(context: _ResolutionContext, field: dict[str, Any]) 
     return resolver(context, field)
 
 
-def _first_value_from_aliases(context: _ResolutionContext, aliases: list[str], section_name: str = "") -> tuple[str, str]:
+def _first_value_from_aliases(
+    context: _ResolutionContext, aliases: list[str], section_name: str = ""
+) -> tuple[str, str]:
     if section_name:
         for alias in aliases:
             value, source = _section_value(context, section_name, alias)
@@ -734,29 +921,45 @@ def _first_value_from_aliases(context: _ResolutionContext, aliases: list[str], s
                 return context.description_lookup[key], f"description_alias:{alias}"
     fuzzy_spec = resolve_spec_value(context.spec_lookup, aliases)
     if fuzzy_spec.value:
-        return fuzzy_spec.value, f"{fuzzy_spec.source}:{fuzzy_spec.matched_label or 'alias'}"
+        return (
+            fuzzy_spec.value,
+            f"{fuzzy_spec.source}:{fuzzy_spec.matched_label or 'alias'}",
+        )
     for alias in aliases:
         for key in candidate_label_keys(alias):
             if key in context.raw_lookup:
                 return context.raw_lookup[key], f"raw_alias:{alias}"
     fuzzy_raw = resolve_spec_value(context.raw_lookup, aliases)
     if fuzzy_raw.value:
-        return fuzzy_raw.value, f"raw_{fuzzy_raw.source}:{fuzzy_raw.matched_label or 'alias'}"
+        return (
+            fuzzy_raw.value,
+            f"raw_{fuzzy_raw.source}:{fuzzy_raw.matched_label or 'alias'}",
+        )
     fuzzy_description = resolve_spec_value(context.description_lookup, aliases)
     if fuzzy_description.value:
-        return fuzzy_description.value, f"description_{fuzzy_description.source}:{fuzzy_description.matched_label or 'alias'}"
+        return (
+            fuzzy_description.value,
+            f"description_{fuzzy_description.source}:{fuzzy_description.matched_label or 'alias'}",
+        )
     return "", ""
 
 
-def _section_value(context: _ResolutionContext, section_name: str, label: str) -> tuple[str, str]:
+def _section_value(
+    context: _ResolutionContext, section_name: str, label: str
+) -> tuple[str, str]:
     section_key = normalize_for_match(section_name)
     label_key = normalize_for_match(label)
     if section_key in context.section_lookup:
         for candidate_key in candidate_label_keys(label):
             if candidate_key in context.section_lookup[section_key]:
-                return context.section_lookup[section_key][candidate_key], f"section:{section_name}/{label}"
+                return (
+                    context.section_lookup[section_key][candidate_key],
+                    f"section:{section_name}/{label}",
+                )
     if section_key in context.section_lookup:
-        for candidate_label, candidate_value in context.section_lookup[section_key].items():
+        for candidate_label, candidate_value in context.section_lookup[
+            section_key
+        ].items():
             if _labels_related(candidate_label, label_key) and candidate_value:
                 return candidate_value, f"section_label_related:{section_name}/{label}"
     for candidate_section in _effective_spec_sections(context.source):
@@ -766,7 +969,9 @@ def _section_value(context: _ResolutionContext, section_name: str, label: str) -
         for item in candidate_section.items:
             item_key = normalize_for_match(item.label)
             value = normalize_whitespace(item.value)
-            if (item_key == label_key or _labels_related(item_key, label_key)) and value:
+            if (
+                item_key == label_key or _labels_related(item_key, label_key)
+            ) and value:
                 return value, f"section_related:{candidate_section.section}/{label}"
     return "", ""
 
@@ -802,11 +1007,17 @@ def _extract_int_from_text(text: str) -> int | None:
 def _tv_inches_int(context: _ResolutionContext) -> tuple[int | None, str]:
     if context.source.taxonomy_tv_inches:
         return int(context.source.taxonomy_tv_inches), "taxonomy_tv_inches"
-    value, source = _first_value_from_aliases(context, ["Διαγώνιος", "Διαγώνιος Οθόνης ( Ίντσες )"])
+    value, source = _first_value_from_aliases(
+        context, ["Διαγώνιος", "Διαγώνιος Οθόνης ( Ίντσες )"]
+    )
     parsed = _extract_int_from_text(value)
     if parsed is not None:
         return parsed, source
-    title_match = re.search(r"\b(\d{2,3})\s*(?:\"|''|ιντσ|inch|in)\b", context.combined_text, flags=re.IGNORECASE)
+    title_match = re.search(
+        r"\b(\d{2,3})\s*(?:\"|''|ιντσ|inch|in)\b",
+        context.combined_text,
+        flags=re.IGNORECASE,
+    )
     if title_match:
         return int(title_match.group(1)), "title_inches"
     return None, ""
@@ -822,7 +1033,12 @@ def _normalize_panel(value: str) -> str:
         return "QLED"
     if "mini led" in normalized:
         return "Mini LED"
-    if "direct led" in normalized or "dled" in normalized or normalized == "led" or normalized.endswith(" led"):
+    if (
+        "direct led" in normalized
+        or "dled" in normalized
+        or normalized == "led"
+        or normalized.endswith(" led")
+    ):
         return "LED"
     return normalize_whitespace(value)
 
@@ -865,7 +1081,9 @@ def _section_titles_related(left: str, right: str) -> bool:
     return overlap >= max(1, min(len(left_tokens), len(right_tokens)) // 2)
 
 
-def _ordered_features(context: _ResolutionContext, candidates: list[tuple[str, tuple[str, ...]]]) -> list[str]:
+def _ordered_features(
+    context: _ResolutionContext, candidates: list[tuple[str, tuple[str, ...]]]
+) -> list[str]:
     values: list[str] = []
     for display, tokens in candidates:
         if any(_contains_any(context.combined_text, token) for token in tokens):
@@ -889,7 +1107,9 @@ def _focused_source_text(context: _ResolutionContext, *extra_parts: str) -> str:
     )
 
 
-def _focused_context(context: _ResolutionContext, *extra_parts: str) -> _ResolutionContext:
+def _focused_context(
+    context: _ResolutionContext, *extra_parts: str
+) -> _ResolutionContext:
     return _ResolutionContext(
         source=context.source,
         taxonomy=context.taxonomy,
@@ -904,7 +1124,9 @@ def _focused_context(context: _ResolutionContext, *extra_parts: str) -> _Resolut
     )
 
 
-def _exact_value_from_aliases(context: _ResolutionContext, aliases: list[str]) -> tuple[str, str]:
+def _exact_value_from_aliases(
+    context: _ResolutionContext, aliases: list[str]
+) -> tuple[str, str]:
     alias_keys: set[str] = set()
     alias_by_key: dict[str, str] = {}
     for alias in aliases:
@@ -913,11 +1135,22 @@ def _exact_value_from_aliases(context: _ResolutionContext, aliases: list[str]) -
                 continue
             alias_keys.add(key)
             alias_by_key.setdefault(key, alias)
-    for item in [*context.source.key_specs, *(item for section in _effective_spec_sections(context.source) for item in section.items)]:
+    for item in [
+        *context.source.key_specs,
+        *(
+            item
+            for section in _effective_spec_sections(context.source)
+            for item in section.items
+        ),
+    ]:
         matched_keys = candidate_label_keys(item.label) & alias_keys
         if matched_keys and normalize_whitespace(item.value):
             matched_key = next(iter(matched_keys))
-            matched_alias = item.label if matched_key.startswith("alias:") else alias_by_key.get(matched_key, item.label)
+            matched_alias = (
+                item.label
+                if matched_key.startswith("alias:")
+                else alias_by_key.get(matched_key, item.label)
+            )
             return normalize_whitespace(item.value), f"spec_alias:{matched_alias}"
     for alias in aliases:
         for key in candidate_label_keys(alias):
@@ -928,33 +1161,46 @@ def _exact_value_from_aliases(context: _ResolutionContext, aliases: list[str]) -
 
 def _normalize_yes_no_value(value: str) -> str:
     raw = normalize_whitespace(value).casefold()
-    if raw in {"✓", "✔", "✅", "true"} or any(token in raw for token in ("check", "tick")):
+    if raw in {"✓", "✔", "✅", "true"} or any(
+        token in raw for token in ("check", "tick")
+    ):
         return "yes"
     if raw in {"✕", "✖", "✗", "×", "x", "false"}:
         return "no"
     normalized = normalize_for_match(value)
-    if any(token in normalized for token in ("ναι", "yes", "υποστηριζεται", "supported")):
+    if any(
+        token in normalized for token in ("ναι", "yes", "υποστηριζεται", "supported")
+    ):
         return "yes"
     if any(token in normalized for token in ("οχι", "no", "not supported", "δεν")):
         return "no"
     return ""
 
 
-def _resolve_tv_screen_technology(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_screen_technology(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     if value:
         return _normalize_panel(value), source
-    if any(_contains_any(title, "dled", "direct led", "led") for title in context.offer_titles):
+    if any(
+        _contains_any(title, "dled", "direct led", "led")
+        for title in context.offer_titles
+    ):
         return "LED", "offer_title:panel"
     return "", "unresolved"
 
 
-def _resolve_tv_screen_size_inches(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_screen_size_inches(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     inches, source = _tv_inches_int(context)
     return (str(inches), source) if inches is not None else ("", "unresolved")
 
 
-def _resolve_tv_screen_size_cm(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_screen_size_cm(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     for title in context.offer_titles:
         match = re.search(r"(\d+(?:[.,]\d+)?)\s*cm\b", title, flags=re.IGNORECASE)
         if match:
@@ -967,7 +1213,9 @@ def _resolve_tv_screen_size_cm(context: _ResolutionContext, _field: dict[str, An
     return str(int(inches * 2.54)), f"{source}:derived_cm"
 
 
-def _resolve_tv_resolution(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_resolution(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     if value:
         return _map_resolution(value), source
@@ -976,8 +1224,12 @@ def _resolve_tv_resolution(context: _ResolutionContext, field: dict[str, Any]) -
     return "", "unresolved"
 
 
-def _resolve_tv_pixels(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Αριθμός Pixels", "Μέγιστη Ανάλυση"])
+def _resolve_tv_pixels(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Αριθμός Pixels", "Μέγιστη Ανάλυση"]
+    )
     if value:
         pixels = _format_pixels(value)
         if pixels:
@@ -988,11 +1240,16 @@ def _resolve_tv_pixels(context: _ResolutionContext, _field: dict[str, Any]) -> t
             return pixels, "text_pixels"
     resolution, source = _resolve_tv_resolution(context, {})
     if resolution:
-        return RESOLUTION_TO_PIXELS.get(normalize_for_match(resolution), ""), f"{source}:mapped_pixels"
+        return (
+            RESOLUTION_TO_PIXELS.get(normalize_for_match(resolution), ""),
+            f"{source}:mapped_pixels",
+        )
     return "", "unresolved"
 
 
-def _resolve_tv_image_features(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_image_features(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     hdr_value, _hdr_source = _exact_value_from_aliases(context, ["Τύποι HDR", "HDR"])
     features = _ordered_features(
         _focused_context(context, hdr_value),
@@ -1003,10 +1260,16 @@ def _resolve_tv_image_features(context: _ResolutionContext, _field: dict[str, An
             ("Dolby Vision", ("dolby vision",)),
         ],
     )
-    return (",".join(features), "combined_text:features") if features else ("", "unresolved")
+    return (
+        (",".join(features), "combined_text:features")
+        if features
+        else ("", "unresolved")
+    )
 
 
-def _resolve_tv_refresh_rate(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_refresh_rate(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     if not value:
         return "", "unresolved"
@@ -1016,7 +1279,9 @@ def _resolve_tv_refresh_rate(context: _ResolutionContext, field: dict[str, Any])
     return str(max(values)), source
 
 
-def _resolve_tv_hdr(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_hdr(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     haystack = value if value else _focused_source_text(context)
     tokens: list[str] = []
@@ -1030,30 +1295,48 @@ def _resolve_tv_hdr(context: _ResolutionContext, field: dict[str, Any]) -> tuple
         tokens.append("HLG")
     if re.search(r"\bai\s+picture\b", haystack, flags=re.IGNORECASE):
         tokens.append("AI Picture")
-    return (",".join(tokens), source or "combined_text:hdr") if tokens else ("", "unresolved")
+    return (
+        (",".join(tokens), source or "combined_text:hdr")
+        if tokens
+        else ("", "unresolved")
+    )
 
 
-def _resolve_tv_energy_class(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_energy_class(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     return _value_or_unresolved(value, source)
 
 
-def _resolve_tv_energy_class_hdr(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_energy_class_hdr(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _exact_value_from_aliases(context, ["Ενεργειακή Κλάση HDR"])
     return _value_or_unresolved(value, source)
 
 
-def _resolve_tv_energy_sdr(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _exact_value_from_aliases(context, ["Κατανάλωση Ενέργειας σε Λειτουργία SDR (kWh/1000h)"])
+def _resolve_tv_energy_sdr(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _exact_value_from_aliases(
+        context, ["Κατανάλωση Ενέργειας σε Λειτουργία SDR (kWh/1000h)"]
+    )
     return _value_or_unresolved(value, source)
 
 
-def _resolve_tv_energy_hdr(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _exact_value_from_aliases(context, ["Κατανάλωση Ενέργειας σε Λειτουργία HDR (kWh/1000h)"])
+def _resolve_tv_energy_hdr(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _exact_value_from_aliases(
+        context, ["Κατανάλωση Ενέργειας σε Λειτουργία HDR (kWh/1000h)"]
+    )
     return _value_or_unresolved(value, source)
 
 
-def _resolve_tv_tuner(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_tuner(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     if not value:
         return "", "unresolved"
@@ -1068,9 +1351,13 @@ def _resolve_tv_tuner(context: _ResolutionContext, field: dict[str, Any]) -> tup
     return ("/".join(parts), source) if parts else (normalize_whitespace(value), source)
 
 
-def _resolve_tv_sound_system(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_sound_system(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     parts: list[str] = []
-    sound_value, sound_source = _first_value_from_aliases(context, ["Σύστημα Ήχου", "Πρότυπα Ήχου"])
+    sound_value, sound_source = _first_value_from_aliases(
+        context, ["Σύστημα Ήχου", "Πρότυπα Ήχου"]
+    )
     channels_value, channels_source = _first_value_from_aliases(context, ["Κανάλια"])
     if channels_value:
         channels = normalize_whitespace(channels_value).replace(" ", "")
@@ -1090,28 +1377,62 @@ def _resolve_tv_sound_system(context: _ResolutionContext, _field: dict[str, Any]
         ],
     )
     parts.extend(token for token in tokens if token not in parts)
-    return (",".join(parts), sound_source or channels_source or "combined_text:sound") if parts else ("", "unresolved")
+    return (
+        (",".join(parts), sound_source or channels_source or "combined_text:sound")
+        if parts
+        else ("", "unresolved")
+    )
 
 
-def _resolve_tv_processor(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    match = re.search(r"hi[\s-]?view ai engine", context.combined_text, flags=re.IGNORECASE)
-    return ("Hi-View AI Engine", "combined_text:processor") if match else ("", "unresolved")
+def _resolve_tv_processor(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    match = re.search(
+        r"hi[\s-]?view ai engine", context.combined_text, flags=re.IGNORECASE
+    )
+    return (
+        ("Hi-View AI Engine", "combined_text:processor")
+        if match
+        else ("", "unresolved")
+    )
 
 
-def _resolve_tv_smart_tv(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_smart_tv(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _exact_value_from_aliases(
         context,
-        ["Smart TV", "Λογισμικό", "Smart Οικοσύστημα", "Smart Assistant", "Εγκατεστημένες Εφαρμογές"],
+        [
+            "Smart TV",
+            "Λογισμικό",
+            "Smart Οικοσύστημα",
+            "Smart Assistant",
+            "Εγκατεστημένες Εφαρμογές",
+        ],
     )
-    if value and _contains_any(value, "google tv", "vidaa", "netflix", "youtube", "google assistant", "google home"):
+    if value and _contains_any(
+        value,
+        "google tv",
+        "vidaa",
+        "netflix",
+        "youtube",
+        "google assistant",
+        "google home",
+    ):
         return "Υποστηρίζεται", source
-    if _contains_any(context.combined_text, "smart tv", "google tv", "vidaa", "netflix", "youtube"):
+    if _contains_any(
+        context.combined_text, "smart tv", "google tv", "vidaa", "netflix", "youtube"
+    ):
         return "Υποστηρίζεται", "combined_text:smart_tv"
     return "", "unresolved"
 
 
-def _resolve_tv_os(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _exact_value_from_aliases(context, ["Λογισμικό", "Λειτουργικό Σύστημα"])
+def _resolve_tv_os(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _exact_value_from_aliases(
+        context, ["Λογισμικό", "Λειτουργικό Σύστημα"]
+    )
     haystack = _focused_source_text(context, value)
     if _contains_any(value, "google tv"):
         return "Google TV", source
@@ -1125,17 +1446,30 @@ def _resolve_tv_os(context: _ResolutionContext, _field: dict[str, Any]) -> tuple
     return "", "unresolved"
 
 
-def _resolve_tv_smart_functions(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _exact_value_from_aliases(context, ["Υποστηριζόμενες Εφαρμογές", "Λειτουργίες Smart", "Εγκατεστημένες Εφαρμογές"])
+def _resolve_tv_smart_functions(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _exact_value_from_aliases(
+        context,
+        ["Υποστηριζόμενες Εφαρμογές", "Λειτουργίες Smart", "Εγκατεστημένες Εφαρμογές"],
+    )
     if value:
         return normalize_whitespace(value), source
     return "", "unresolved"
 
 
-def _resolve_tv_extra_functions(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    smart_assistant, _assistant_source = _exact_value_from_aliases(context, ["Smart Assistant"])
-    ecosystem, _ecosystem_source = _exact_value_from_aliases(context, ["Smart Οικοσύστημα"])
-    wireless, _wireless_source = _exact_value_from_aliases(context, ["Ασύρματες Συνδέσεις"])
+def _resolve_tv_extra_functions(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    smart_assistant, _assistant_source = _exact_value_from_aliases(
+        context, ["Smart Assistant"]
+    )
+    ecosystem, _ecosystem_source = _exact_value_from_aliases(
+        context, ["Smart Οικοσύστημα"]
+    )
+    wireless, _wireless_source = _exact_value_from_aliases(
+        context, ["Ασύρματες Συνδέσεις"]
+    )
     values = _ordered_features(
         _focused_context(context, smart_assistant, ecosystem, wireless),
         [
@@ -1153,11 +1487,19 @@ def _resolve_tv_extra_functions(context: _ResolutionContext, _field: dict[str, A
             ("Game Bar", ("game bar",)),
         ],
     )
-    return (",".join(values), "combined_text:extra_functions") if values else ("", "unresolved")
+    return (
+        (",".join(values), "combined_text:extra_functions")
+        if values
+        else ("", "unresolved")
+    )
 
 
-def _resolve_tv_hdmi(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Σύνολο Θυρών HDMI", "HDMI", "HDMI 2.1 Θύρες", "Θύρες HDMI"])
+def _resolve_tv_hdmi(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Σύνολο Θυρών HDMI", "HDMI", "HDMI 2.1 Θύρες", "Θύρες HDMI"]
+    )
     count = _extract_int_from_text(value)
     if count is None:
         for title in context.offer_titles:
@@ -1174,15 +1516,25 @@ def _resolve_tv_hdmi(context: _ResolutionContext, _field: dict[str, Any]) -> tup
     return ",".join(parts), source or "combined_text:hdmi"
 
 
-def _resolve_tv_bluetooth(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Bluetooth", "Ασύρματες Συνδέσεις"])
-    if _contains_any(value, "ναι", "yes", "bluetooth") or _contains_any(context.combined_text, "bluetooth", " bt "):
+def _resolve_tv_bluetooth(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Bluetooth", "Ασύρματες Συνδέσεις"]
+    )
+    if _contains_any(value, "ναι", "yes", "bluetooth") or _contains_any(
+        context.combined_text, "bluetooth", " bt "
+    ):
         return "Bluetooth", source or "combined_text:bluetooth"
     return "", "unresolved"
 
 
-def _resolve_tv_usb(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Πλήθος USB", "USB", "USB Θύρες", "Θύρες USB"])
+def _resolve_tv_usb(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Πλήθος USB", "USB", "USB Θύρες", "Θύρες USB"]
+    )
     count = _extract_int_from_text(value)
     if count is None:
         for title in context.offer_titles:
@@ -1191,13 +1543,21 @@ def _resolve_tv_usb(context: _ResolutionContext, _field: dict[str, Any]) -> tupl
                 count = int(match.group(1))
                 source = "offer_title:usb_count"
                 break
-    return (f"Ναι,{count}", source or "combined_text:usb") if count is not None else ("", "unresolved")
+    return (
+        (f"Ναι,{count}", source or "combined_text:usb")
+        if count is not None
+        else ("", "unresolved")
+    )
 
 
-def _resolve_tv_io(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_io(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     values: list[str] = []
     matched_sources: list[str] = []
-    connections_value, connections_source = _exact_value_from_aliases(context, ["Ενσύρματες Συνδέσεις", "Είσοδοι / Έξοδοι", "Είσοδοι / 'Εξοδοι"])
+    connections_value, connections_source = _exact_value_from_aliases(
+        context, ["Ενσύρματες Συνδέσεις", "Είσοδοι / Έξοδοι", "Είσοδοι / 'Εξοδοι"]
+    )
     if connections_value:
         for raw_part in re.split(r"\s*[•,]\s*", connections_value):
             part = normalize_whitespace(raw_part)
@@ -1205,7 +1565,11 @@ def _resolve_tv_io(context: _ResolutionContext, _field: dict[str, Any]) -> tuple
                 continue
             raw_part_key = part.lower()
             normalized_part_key = normalize_for_match(part)
-            display = "CI+" if "ci+" in raw_part_key else "CI" if normalized_part_key in {"ci", "ci slot"} else part
+            display = (
+                "CI+"
+                if "ci+" in raw_part_key
+                else "CI" if normalized_part_key in {"ci", "ci slot"} else part
+            )
             if display not in values:
                 values.append(display)
         if values:
@@ -1228,21 +1592,29 @@ def _resolve_tv_io(context: _ResolutionContext, _field: dict[str, Any]) -> tuple
     return (",".join(values), "combined_text:io") if values else ("", "unresolved")
 
 
-def _resolve_tv_equipment(_context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_equipment(
+    _context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     return "", "unresolved"
 
 
-def _resolve_tv_appearance(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_appearance(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     values = _ordered_features(
         context,
         [
             ("Bezel-less", ("bezel-less", "bezel less")),
         ],
     )
-    return (",".join(values), "combined_text:appearance") if values else ("", "unresolved")
+    return (
+        (",".join(values), "combined_text:appearance") if values else ("", "unresolved")
+    )
 
 
-def _resolve_tv_vesa(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_vesa(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     match = re.search(r"(\d+)\s*[x×]\s*(\d+)", value or "", flags=re.IGNORECASE)
     if not match:
@@ -1251,11 +1623,15 @@ def _resolve_tv_vesa(context: _ResolutionContext, field: dict[str, Any]) -> tupl
     return f"{dims[0]} × {dims[1]}", source
 
 
-def _resolve_tv_color(_context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_color(
+    _context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     return "", "unresolved"
 
 
-def _resolve_tv_weight_with_stand(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_weight_with_stand(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     number = _extract_first_number(value)
     if number is None:
@@ -1264,20 +1640,30 @@ def _resolve_tv_weight_with_stand(context: _ResolutionContext, field: dict[str, 
     return str(rounded), source
 
 
-def _resolve_tv_country(_context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_country(
+    _context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     return "", "unresolved"
 
 
-def _resolve_tv_warranty(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    match = re.search(r"(\d+)\s+χρόνια\s+εγγύηση", context.raw_html, flags=re.IGNORECASE)
+def _resolve_tv_warranty(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    match = re.search(
+        r"(\d+)\s+χρόνια\s+εγγύηση", context.raw_html, flags=re.IGNORECASE
+    )
     if not match:
-        match = re.search(r"εγγύηση[^0-9]{0,25}(\d+)\s+χρόν", context.raw_html, flags=re.IGNORECASE)
+        match = re.search(
+            r"εγγύηση[^0-9]{0,25}(\d+)\s+χρόν", context.raw_html, flags=re.IGNORECASE
+        )
     if match:
         return f"{match.group(1)} έτη", "raw_html:warranty"
     return "", "unresolved"
 
 
-def _resolve_tv_dimensions_with_stand(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_tv_dimensions_with_stand(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     combined_value, combined_source = _exact_value_from_aliases(
         context,
         [
@@ -1288,7 +1674,9 @@ def _resolve_tv_dimensions_with_stand(context: _ResolutionContext, _field: dict[
             "Διαστάσεις με βάση",
         ],
     )
-    combined = _format_dimension_triplet_cm(combined_value, source_label=combined_source)
+    combined = _format_dimension_triplet_cm(
+        combined_value, source_label=combined_source
+    )
     if combined:
         return combined, combined_source
 
@@ -1299,18 +1687,24 @@ def _resolve_tv_dimensions_with_stand(context: _ResolutionContext, _field: dict[
     ]
     width, width_source = _first_section_value(context, section_names, ["Πλάτος"])
     height, height_source = _first_section_value(context, section_names, ["Ύψος"])
-    depth, depth_source = _first_section_value(context, section_names, ["Πάχος", "Βάθος"])
+    depth, depth_source = _first_section_value(
+        context, section_names, ["Πάχος", "Βάθος"]
+    )
     if not width or not height or not depth:
         return "", "unresolved"
 
     values = _format_dimension_parts_cm([height, width, depth])
     if any(not item for item in values):
         return "", "unresolved"
-    source = ",".join(item for item in [height_source, width_source, depth_source] if item)
+    source = ",".join(
+        item for item in [height_source, width_source, depth_source] if item
+    )
     return " × ".join(values), source
 
 
-def _first_section_value(context: _ResolutionContext, section_names: list[str], labels: list[str]) -> tuple[str, str]:
+def _first_section_value(
+    context: _ResolutionContext, section_names: list[str], labels: list[str]
+) -> tuple[str, str]:
     for section_name in section_names:
         for label in labels:
             value, source = _section_value(context, section_name, label)
@@ -1324,7 +1718,9 @@ def _format_dimension_triplet_cm(value: str, *, source_label: str = "") -> str:
     if len(numbers) < 3:
         return ""
     label_key = normalize_for_match(source_label)
-    if all(token in label_key for token in ("π", "β", "υ")) and "πxβxυ" in label_key.replace(" ", ""):
+    if all(
+        token in label_key for token in ("π", "β", "υ")
+    ) and "πxβxυ" in label_key.replace(" ", ""):
         numbers = [numbers[2], numbers[0], numbers[1]]
     formatted = _format_dimension_parts_cm(numbers[:3], unit_hint=value)
     if any(not item for item in formatted):
@@ -1337,7 +1733,10 @@ def _format_dimension_parts_cm(values: list[str], *, unit_hint: str = "") -> lis
     if any(number is None for number in numbers):
         return []
     unit_text = normalize_for_match(" ".join([unit_hint, *values]))
-    convert_from_mm = "mm" in unit_text or (max(number for number in numbers if number is not None) >= 200 and "cm" not in unit_text)
+    convert_from_mm = "mm" in unit_text or (
+        max(number for number in numbers if number is not None) >= 200
+        and "cm" not in unit_text
+    )
     formatted: list[str] = []
     for number in numbers:
         assert number is not None
@@ -1349,22 +1748,31 @@ def _format_dimension_parts_cm(values: list[str], *, unit_hint: str = "") -> lis
 
 def _normalize_yes_no(value: str) -> str:
     raw = normalize_whitespace(value).casefold()
-    if raw in {"✓", "✔", "✅", "true"} or any(token in raw for token in ("check", "tick")):
+    if raw in {"✓", "✔", "✅", "true"} or any(
+        token in raw for token in ("check", "tick")
+    ):
         return "Ναι"
     if raw in {"✕", "✖", "✗", "×", "x", "false"}:
         return "Όχι"
     normalized = normalize_for_match(value)
     if not normalized:
         return ""
-    if any(token in normalized for token in ["ναι", "yes", "supported", "ξεχωριστ", "υποστηριζ"]):
+    if any(
+        token in normalized
+        for token in ["ναι", "yes", "supported", "ξεχωριστ", "υποστηριζ"]
+    ):
         return "Ναι"
     if any(token in normalized for token in ["οχι", "no", "not supported"]):
         return "Όχι"
     return ""
 
 
-def _resolve_personal_care_plate_technology(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
-    direct_value, direct_source = _first_value_from_aliases(context, list(field.get("aliases", [])))
+def _resolve_personal_care_plate_technology(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
+    direct_value, direct_source = _first_value_from_aliases(
+        context, list(field.get("aliases", []))
+    )
     if direct_value:
         return direct_value, direct_source
 
@@ -1383,21 +1791,30 @@ def _resolve_personal_care_plate_technology(context: _ResolutionContext, field: 
             if source:
                 matched_sources.append(source)
     if features:
-        return ", ".join(features), ",".join(matched_sources) or "spec_alias:plate_technology"
+        return (
+            ", ".join(features),
+            ",".join(matched_sources) or "spec_alias:plate_technology",
+        )
 
-    text_value = _extract_personal_care_plate_technology_from_text(context.combined_text)
+    text_value = _extract_personal_care_plate_technology_from_text(
+        context.combined_text
+    )
     if text_value:
         return text_value, "combined_text:plate_technology"
     return "", "unresolved"
 
 
-def _resolve_personal_care_yes_no(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_personal_care_yes_no(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     return (normalized, source) if normalized else ("", "unresolved")
 
 
-def _resolve_personal_care_rotating_cord(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_personal_care_rotating_cord(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -1407,7 +1824,9 @@ def _resolve_personal_care_rotating_cord(context: _ResolutionContext, field: dic
     return "", "unresolved"
 
 
-def _resolve_personal_care_auto_shutdown(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_personal_care_auto_shutdown(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -1420,12 +1839,19 @@ def _resolve_personal_care_auto_shutdown(context: _ResolutionContext, field: dic
         return duration, source or "combined_text:auto_shutdown"
     if value:
         return value, source
-    if _contains_any(context.combined_text, "αυτόματη απενεργοποίηση", "auto shutoff", "auto shut off"):
+    if _contains_any(
+        context.combined_text,
+        "αυτόματη απενεργοποίηση",
+        "auto shutoff",
+        "auto shut off",
+    ):
         return "Ναι", "combined_text:auto_shutdown"
     return "", "unresolved"
 
 
-def _resolve_personal_care_fast_heat(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_personal_care_fast_heat(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -1438,12 +1864,16 @@ def _resolve_personal_care_fast_heat(context: _ResolutionContext, field: dict[st
     )
     if duration:
         return duration, "combined_text:fast_heat"
-    if _contains_any(context.combined_text, "γρήγορη προθέρμανση", "γρήγορη θέρμανση", "fast heat"):
+    if _contains_any(
+        context.combined_text, "γρήγορη προθέρμανση", "γρήγορη θέρμανση", "fast heat"
+    ):
         return "Ναι", "combined_text:fast_heat"
     return "", "unresolved"
 
 
-def _resolve_personal_care_plate_dimensions(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_personal_care_plate_dimensions(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     formatted = _format_personal_care_plate_dimensions(value)
     if formatted:
@@ -1454,7 +1884,9 @@ def _resolve_personal_care_plate_dimensions(context: _ResolutionContext, field: 
     return "", "unresolved"
 
 
-def _resolve_personal_care_weight_kg(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_personal_care_weight_kg(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     formatted = _format_personal_care_weight_kg(value)
     if formatted:
@@ -1465,7 +1897,9 @@ def _resolve_personal_care_weight_kg(context: _ResolutionContext, field: dict[st
     return "", "unresolved"
 
 
-def _resolve_personal_care_cord_length_m(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_personal_care_cord_length_m(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     formatted = _format_personal_care_cord_length_m(value)
     if formatted:
@@ -1488,7 +1922,10 @@ def _extract_personal_care_plate_technology_from_text(text: str) -> str:
             return _capitalize_first(normalize_whitespace(match.group(1)))
 
     normalized_match_text = normalize_for_match(text)
-    match = re.search(r"πλακες\s+με\s+(επιστρωση\s+[^.]+?)(?:\s+(?:εξαιρετικα|τεχνολογια|μηκος|πλατος|αυτοματη)\b|$)", normalized_match_text)
+    match = re.search(
+        r"πλακες\s+με\s+(επιστρωση\s+[^.]+?)(?:\s+(?:εξαιρετικα|τεχνολογια|μηκος|πλατος|αυτοματη)\b|$)",
+        normalized_match_text,
+    )
     if match:
         return _capitalize_first(normalize_whitespace(match.group(1)))
     return ""
@@ -1510,7 +1947,10 @@ def _extract_personal_care_duration(text: str, prefix_pattern: str) -> str:
 def _format_personal_care_duration(number_text: str, unit_text: str) -> str:
     number = _format_decimal(float(str(number_text).replace(",", ".")))
     normalized_unit = normalize_for_match(unit_text)
-    if normalized_unit in {"s", "sec", "secs", "second", "seconds"} or "δευτερ" in normalized_unit:
+    if (
+        normalized_unit in {"s", "sec", "secs", "second", "seconds"}
+        or "δευτερ" in normalized_unit
+    ):
         return f"{number} δευτερόλεπτα"
     if normalized_unit == "min" or normalized_unit.startswith("minute"):
         return f"{number} min"
@@ -1527,7 +1967,11 @@ def _format_personal_care_plate_dimensions(text: str) -> str:
 
 
 def _extract_personal_care_labeled_measurement(text: str, label_pattern: str) -> str:
-    match = re.search(label_pattern + r"\s*(\d+(?:[.,]\d+)?)\s*(mm|χιλιοστα|cm|εκατοστα|m|μετρα)?\b", text, flags=re.IGNORECASE)
+    match = re.search(
+        label_pattern + r"\s*(\d+(?:[.,]\d+)?)\s*(mm|χιλιοστα|cm|εκατοστα|m|μετρα)?\b",
+        text,
+        flags=re.IGNORECASE,
+    )
     if not match:
         return ""
     number = float(match.group(1).replace(",", "."))
@@ -1541,7 +1985,10 @@ def _extract_personal_care_labeled_measurement(text: str, label_pattern: str) ->
 
 def _format_personal_care_weight_kg(text: str) -> str:
     normalized = normalize_for_match(text)
-    match = re.search(r"(?:βαρος(?:\s+συσκευης)?(?:\s+σε\s+κιλα)?|weight)\s*(\d+(?:[.,]\d+)?)\s*(kg|κιλα|κιλο|gr|g|γραμμαρια)?\b", normalized)
+    match = re.search(
+        r"(?:βαρος(?:\s+συσκευης)?(?:\s+σε\s+κιλα)?|weight)\s*(\d+(?:[.,]\d+)?)\s*(kg|κιλα|κιλο|gr|g|γραμμαρια)?\b",
+        normalized,
+    )
     if not match:
         return ""
     number = float(match.group(1).replace(",", "."))
@@ -1553,7 +2000,10 @@ def _format_personal_care_weight_kg(text: str) -> str:
 
 def _format_personal_care_cord_length_m(text: str) -> str:
     normalized = normalize_for_match(text)
-    match = re.search(r"(?:μηκος\s+καλωδιου|καλωδιο\s+μηκους)\s*(\d+(?:[.,]\d+)?)\s*(m|μετρα|μετρο|meters?)?\b", normalized)
+    match = re.search(
+        r"(?:μηκος\s+καλωδιου|καλωδιο\s+μηκους)\s*(\d+(?:[.,]\d+)?)\s*(m|μετρα|μετρο|meters?)?\b",
+        normalized,
+    )
     if not match:
         return ""
     number = float(match.group(1).replace(",", "."))
@@ -1567,9 +2017,17 @@ def _capitalize_first(value: str) -> str:
     return normalized[0].upper() + normalized[1:]
 
 
-def _resolve_oven_installation_type(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_oven_installation_type(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
-    haystack = normalize_whitespace(" ".join(part for part in [value, context.source.name, context.source.canonical_url] if part))
+    haystack = normalize_whitespace(
+        " ".join(
+            part
+            for part in [value, context.source.name, context.source.canonical_url]
+            if part
+        )
+    )
     if _contains_any(haystack, "ano pagkou", "άνω πάγκου"):
         return "Άνω Πάγκου", source or "title_or_url:installation_type"
     if value:
@@ -1577,24 +2035,35 @@ def _resolve_oven_installation_type(context: _ResolutionContext, field: dict[str
     return "", "unresolved"
 
 
-def _resolve_oven_type(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_oven_type(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     if _contains_any(value, "ηλεκτρ", "electric"):
         return "Ηλεκτρικός", source
     voltage, voltage_source = _first_value_from_aliases(context, ["Τάση", "Τάση (V)"])
-    power, power_source = _first_value_from_aliases(context, ["Ισχύς", "Συνολική Ισχύς (Watt)"])
+    power, power_source = _first_value_from_aliases(
+        context, ["Ισχύς", "Συνολική Ισχύς (Watt)"]
+    )
     if voltage or power:
-        return "Ηλεκτρικός", voltage_source or power_source or "spec_alias:electrical_power"
+        return (
+            "Ηλεκτρικός",
+            voltage_source or power_source or "spec_alias:electrical_power",
+        )
     return (value, source) if value else ("", "unresolved")
 
 
-def _resolve_oven_number(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_oven_number(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     count = _extract_int_from_text(value)
     return (str(count), source) if count is not None else ("", "unresolved")
 
 
-def _resolve_oven_yes_no(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_oven_yes_no(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -1604,7 +2073,9 @@ def _resolve_oven_yes_no(context: _ResolutionContext, field: dict[str, Any]) -> 
     return "", "unresolved"
 
 
-def _resolve_oven_clock(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_oven_clock(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -1616,7 +2087,9 @@ def _resolve_oven_clock(context: _ResolutionContext, field: dict[str, Any]) -> t
     return "", "unresolved"
 
 
-def _resolve_oven_connectivity(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_oven_connectivity(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     if normalized == "Ναι":
@@ -1628,7 +2101,9 @@ def _resolve_oven_connectivity(context: _ResolutionContext, field: dict[str, Any
     return "", "unresolved"
 
 
-def _resolve_oven_other_features(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_oven_other_features(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     features: list[str] = []
     matched_sources: list[str] = []
     candidates = [
@@ -1638,12 +2113,18 @@ def _resolve_oven_other_features(context: _ResolutionContext, _field: dict[str, 
     ]
     for display, aliases in candidates:
         value, source = _first_value_from_aliases(context, list(aliases))
-        if _normalize_yes_no(value) == "Ναι" or (display == "Τηλεσκοπικός Μηχανισμός" and value and normalize_whitespace(value) != "Μ/Δ"):
+        if _normalize_yes_no(value) == "Ναι" or (
+            display == "Τηλεσκοπικός Μηχανισμός"
+            and value
+            and normalize_whitespace(value) != "Μ/Δ"
+        ):
             features.append(display)
             if source:
                 matched_sources.append(source)
 
-    accessories, accessories_source = _first_value_from_aliases(context, ["Αξεσουάρ", "Αξεσουάρ συσκευασίας"])
+    accessories, accessories_source = _first_value_from_aliases(
+        context, ["Αξεσουάρ", "Αξεσουάρ συσκευασίας"]
+    )
     accessories = normalize_whitespace(accessories)
     if accessories and accessories != "-":
         features.append(accessories)
@@ -1657,7 +2138,14 @@ def _resolve_oven_other_features(context: _ResolutionContext, _field: dict[str, 
             matched_sources.append(connectivity_source)
 
     deduped = dedupe_strings(features)
-    return (", ".join(deduped), ",".join(dedupe_strings(matched_sources)) or "spec_alias:oven_features") if deduped else ("", "unresolved")
+    return (
+        (
+            ", ".join(deduped),
+            ",".join(dedupe_strings(matched_sources)) or "spec_alias:oven_features",
+        )
+        if deduped
+        else ("", "unresolved")
+    )
 
 
 def _format_decimal(value: float) -> str:
@@ -1678,7 +2166,9 @@ def _format_power_watts(value: str) -> str:
 
 def _format_dimension_token(token: str, assume_millimeters: bool = False) -> str:
     values: list[str] = []
-    for part in [segment.strip() for segment in re.split(r"\s*-\s*", token) if segment.strip()]:
+    for part in [
+        segment.strip() for segment in re.split(r"\s*-\s*", token) if segment.strip()
+    ]:
         number = _extract_first_number(part)
         if number is None:
             continue
@@ -1702,7 +2192,9 @@ def _dimension_from_triplet(value: str, position: int) -> str:
     return _format_dimension_token(tokens[position], assume_millimeters=True)
 
 
-def _resolve_hob_yes_no(context: _ResolutionContext, aliases: list[str], *tokens: str) -> tuple[str, str]:
+def _resolve_hob_yes_no(
+    context: _ResolutionContext, aliases: list[str], *tokens: str
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, aliases)
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -1720,20 +2212,30 @@ def _extract_hob_zone_powers(text: str) -> dict[str, str]:
     )
     for match in pattern.finditer(text or ""):
         key = f"{normalize_for_match(match.group(1))}_{normalize_for_match(match.group(2))}"
-        powers.setdefault(key, f"{_format_decimal(float(match.group(3).replace(',', '.')))} kW")
+        powers.setdefault(
+            key, f"{_format_decimal(float(match.group(3).replace(',', '.')))} kW"
+        )
     return powers
 
 
-def _resolve_hob_installation_type(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Τύπος εγκατάστασης", "Τρόπος Τοποθέτησης"])
+def _resolve_hob_installation_type(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Τύπος εγκατάστασης", "Τρόπος Τοποθέτησης"]
+    )
     if value:
         return value, source
-    if normalize_for_match(context.taxonomy.leaf_category) == normalize_for_match("Εντοιχιζόμενες Συσκευές"):
+    if normalize_for_match(context.taxonomy.leaf_category) == normalize_for_match(
+        "Εντοιχιζόμενες Συσκευές"
+    ):
         return "Εντοιχιζόμενη συσκευή", "taxonomy:leaf_category"
     return "", "unresolved"
 
 
-def _resolve_hob_surface_technology(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_surface_technology(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(
         context,
         ["Βασικό υλικό επιφανειών", "Τεχνολογία Πλατώ Εστιών", "Τύπος Εστίας", "Τύπος"],
@@ -1748,7 +2250,9 @@ def _resolve_hob_surface_technology(context: _ResolutionContext, _field: dict[st
     return _value_or_unresolved(value, source)
 
 
-def _resolve_hob_zone_count(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_zone_count(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(
         context,
         [
@@ -1763,9 +2267,16 @@ def _resolve_hob_zone_count(context: _ResolutionContext, _field: dict[str, Any])
     return (str(count), source) if count is not None else ("", "unresolved")
 
 
-def _resolve_hob_control_type(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Είδος ηλεκτρονικού ελέγχου", "Τύπος Χειριστηρίου", "Διακόπτες", "Neff"])
-    haystack = normalize_whitespace(" ".join(part for part in [value, context.combined_text] if part))
+def _resolve_hob_control_type(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context,
+        ["Είδος ηλεκτρονικού ελέγχου", "Τύπος Χειριστηρίου", "Διακόπτες", "Neff"],
+    )
+    haystack = normalize_whitespace(
+        " ".join(part for part in [value, context.combined_text] if part)
+    )
     if _contains_any(haystack, "twistpad", "twist pad"):
         return "TwistPad®", source or "combined_text:twistpad"
     if _contains_any(haystack, "αφης", "touch"):
@@ -1773,8 +2284,12 @@ def _resolve_hob_control_type(context: _ResolutionContext, _field: dict[str, Any
     return _value_or_unresolved(value, source)
 
 
-def _resolve_hob_digital_indicators(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Ψηφιακές Ενδείξεις", "Ψηφιακό χρονόμετρο"])
+def _resolve_hob_digital_indicators(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Ψηφιακές Ενδείξεις", "Ψηφιακό χρονόμετρο"]
+    )
     normalized = _normalize_yes_no(value)
     if normalized:
         return normalized, source
@@ -1785,25 +2300,40 @@ def _resolve_hob_digital_indicators(context: _ResolutionContext, _field: dict[st
     return "", "unresolved"
 
 
-def _resolve_hob_residual_heat(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_residual_heat(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     return _resolve_hob_yes_no(
         context,
-        ["Ένδειξη Υπολοίπου Θερμότητας", "Ενδεικτική λυχνία εναπομένουσας θερμότητας", "Διπλή ένδειξη (H/h) υπολοίπου θερμότητας για κάθε ζώνη"],
+        [
+            "Ένδειξη Υπολοίπου Θερμότητας",
+            "Ενδεικτική λυχνία εναπομένουσας θερμότητας",
+            "Διπλή ένδειξη (H/h) υπολοίπου θερμότητας για κάθε ζώνη",
+        ],
         "υπολοιπου θερμοτητας",
     )
 
 
-def _resolve_hob_timer(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_timer(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     return _resolve_hob_yes_no(
         context,
-        ["Χρονοδιακόπτης", "Χρονοδιακόπτης απενεργοποίησης", "Λειτουργία Alarm με ηχητική ειδοποίηση", "Ψηφιακό χρονόμετρο"],
+        [
+            "Χρονοδιακόπτης",
+            "Χρονοδιακόπτης απενεργοποίησης",
+            "Λειτουργία Alarm με ηχητική ειδοποίηση",
+            "Ψηφιακό χρονόμετρο",
+        ],
         "χρονοδιακοπτη",
         "alarm",
         "χρονόμετρο",
     )
 
 
-def _resolve_hob_pan_recognition(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_pan_recognition(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Αυτόματη Αναγνώρηση Σκευών"])
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -1813,7 +2343,9 @@ def _resolve_hob_pan_recognition(context: _ResolutionContext, _field: dict[str, 
     return "", "unresolved"
 
 
-def _resolve_hob_coffee_zone(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_coffee_zone(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Ζώνη Καφέ"])
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -1823,31 +2355,44 @@ def _resolve_hob_coffee_zone(context: _ResolutionContext, _field: dict[str, Any]
     return "", "unresolved"
 
 
-def _resolve_hob_natural_gas(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Σύνδεση με Φυσικό Αέριο", "Τύπος λειτουργίας", "Τύπος εστίας", "Τύπος"])
+def _resolve_hob_natural_gas(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context,
+        ["Σύνδεση με Φυσικό Αέριο", "Τύπος λειτουργίας", "Τύπος εστίας", "Τύπος"],
+    )
     normalized = _normalize_yes_no(value)
     if normalized:
         return normalized, source
     if _contains_any(value or context.combined_text, "φυσικο αεριο", "αεριου", "gas"):
         return "Ναι", source or "combined_text:gas"
-    if _contains_any(value or context.combined_text, "ηλεκτρ", "κεραμ", "υαλοκεραμ", "επαγωγ"):
+    if _contains_any(
+        value or context.combined_text, "ηλεκτρ", "κεραμ", "υαλοκεραμ", "επαγωγ"
+    ):
         return "Όχι", source or "combined_text:electric"
     return "", "unresolved"
 
 
-def _resolve_hob_connectivity(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_connectivity(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Συνδεσιμότητα", "Smart"])
     normalized = _normalize_yes_no(value)
     if normalized:
         return normalized, source
-    if _contains_any(context.combined_text, "home connect", "wifi", "wi-fi", "bluetooth"):
+    if _contains_any(
+        context.combined_text, "home connect", "wifi", "wi-fi", "bluetooth"
+    ):
         return "Ναι", "combined_text:connectivity"
     if _contains_any(value, "smart") and _contains_any(value, "οχι", "no"):
         return "Όχι", source
     return "", "unresolved"
 
 
-def _resolve_hob_other_features(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_other_features(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     features: list[str] = []
     if re.search(r"17\s+βαθμ", context.combined_text, flags=re.IGNORECASE):
         features.append("17 βαθμίδες ισχύος")
@@ -1855,12 +2400,20 @@ def _resolve_hob_other_features(context: _ResolutionContext, _field: dict[str, A
         features.append("λειτουργία Restart")
     if _contains_any(context.combined_text, "alarm"):
         features.append("λειτουργία Alarm")
-    if _contains_any(context.combined_text, "διατηρησης θερμοτητας", "διατήρησης θερμότητας"):
+    if _contains_any(
+        context.combined_text, "διατηρησης θερμοτητας", "διατήρησης θερμότητας"
+    ):
         features.append("διατήρηση θερμότητας")
-    return (", ".join(features), "combined_text:other_features") if features else ("", "unresolved")
+    return (
+        (", ".join(features), "combined_text:other_features")
+        if features
+        else ("", "unresolved")
+    )
 
 
-def _resolve_hob_zone_power(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_zone_power(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     position = str(field.get("zone_position", "")).strip()
     powers = _extract_hob_zone_powers(context.combined_text)
     if position and position in powers:
@@ -1868,13 +2421,19 @@ def _resolve_hob_zone_power(context: _ResolutionContext, field: dict[str, Any]) 
     return "", "unresolved"
 
 
-def _resolve_hob_total_power(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Συνολική ισχύς", "Μέγιστη Ονομαστική Ισχύς"])
+def _resolve_hob_total_power(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Συνολική ισχύς", "Μέγιστη Ονομαστική Ισχύς"]
+    )
     formatted = _format_power_watts(value)
     return (formatted, source) if formatted else ("", "unresolved")
 
 
-def _resolve_hob_child_lock(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_child_lock(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     return _resolve_hob_yes_no(
         context,
         ["Κλείδωμα ασφαλείας για τα παιδιά", "Λειτουργία Κλειδώματος"],
@@ -1882,7 +2441,9 @@ def _resolve_hob_child_lock(context: _ResolutionContext, _field: dict[str, Any])
     )
 
 
-def _resolve_hob_auto_safety_off(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_auto_safety_off(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     return _resolve_hob_yes_no(
         context,
         ["Αυτόματη απενεργοποίηση ασφαλείας"],
@@ -1890,24 +2451,34 @@ def _resolve_hob_auto_safety_off(context: _ResolutionContext, _field: dict[str, 
     )
 
 
-def _resolve_hob_color(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_color(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Χρώμα", "Χρώμα επιφανειών"])
     return _value_or_unresolved(value, source)
 
 
-def _resolve_hob_frame_color(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_frame_color(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Χρώμα Πλαισίου"])
     if value:
         if "ανοξειδ" in normalize_for_match(value):
             return "Ανοξείδωτο", source
         return value, source
-    if _contains_any(context.combined_text, "ανοξειδωτο πλαισιο", "περιμετρικο πλαισιο"):
+    if _contains_any(
+        context.combined_text, "ανοξειδωτο πλαισιο", "περιμετρικο πλαισιο"
+    ):
         return "Ανοξείδωτο", "combined_text:frame_color"
     return "", "unresolved"
 
 
-def _resolve_hob_weight(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Καθαρό βάρος", "Βάρος Συσκευής σε Κιλά"])
+def _resolve_hob_weight(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Καθαρό βάρος", "Βάρος Συσκευής σε Κιλά"]
+    )
     number = _extract_first_number(value)
     if number is None:
         return "", "unresolved"
@@ -1916,23 +2487,38 @@ def _resolve_hob_weight(context: _ResolutionContext, _field: dict[str, Any]) -> 
     return _format_decimal(number), source
 
 
-def _resolve_hob_cutout_height(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Διαστάσεις εντοιχισμού (υ x π x β)", "Διαστάσεις Εντοιχισμού (ΥxΠxΒ mm)"])
+def _resolve_hob_cutout_height(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context,
+        ["Διαστάσεις εντοιχισμού (υ x π x β)", "Διαστάσεις Εντοιχισμού (ΥxΠxΒ mm)"],
+    )
     formatted = _dimension_from_triplet(value, 0)
     return (formatted, source) if formatted else ("", "unresolved")
 
 
-def _resolve_hob_cutout_width(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_cutout_width(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Πλάτος Εντοιχισμού"])
     if value:
         return _value_or_unresolved(value, source)
-    triple_value, triple_source = _first_value_from_aliases(context, ["Διαστάσεις εντοιχισμού (υ x π x β)", "Διαστάσεις Εντοιχισμού (ΥxΠxΒ mm)"])
+    triple_value, triple_source = _first_value_from_aliases(
+        context,
+        ["Διαστάσεις εντοιχισμού (υ x π x β)", "Διαστάσεις Εντοιχισμού (ΥxΠxΒ mm)"],
+    )
     formatted = _dimension_from_triplet(triple_value, 1)
     return (formatted, triple_source) if formatted else ("", "unresolved")
 
 
-def _resolve_hob_cutout_depth(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    triple_value, triple_source = _first_value_from_aliases(context, ["Διαστάσεις εντοιχισμού (υ x π x β)", "Διαστάσεις Εντοιχισμού (ΥxΠxΒ mm)"])
+def _resolve_hob_cutout_depth(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    triple_value, triple_source = _first_value_from_aliases(
+        context,
+        ["Διαστάσεις εντοιχισμού (υ x π x β)", "Διαστάσεις Εντοιχισμού (ΥxΠxΒ mm)"],
+    )
     formatted = _dimension_from_triplet(triple_value, 2)
     if formatted:
         return formatted, triple_source
@@ -1940,25 +2526,37 @@ def _resolve_hob_cutout_depth(context: _ResolutionContext, _field: dict[str, Any
     return _value_or_unresolved(value, source)
 
 
-def _resolve_hob_device_width(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_device_width(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _section_value(context, "Διαστάσεις Συσκευής", "Πλάτος")
     if value:
         return value, source
-    triple_value, triple_source = _first_value_from_aliases(context, ["Διαστάσεις συσκευής (ΥxΠxΒ mm)", "Διαστάσεις Εσωτερικής μονάδας: (ΥxΠxΒ)"])
+    triple_value, triple_source = _first_value_from_aliases(
+        context,
+        ["Διαστάσεις συσκευής (ΥxΠxΒ mm)", "Διαστάσεις Εσωτερικής μονάδας: (ΥxΠxΒ)"],
+    )
     formatted = _dimension_from_triplet(triple_value, 1)
     return (formatted, triple_source) if formatted else ("", "unresolved")
 
 
-def _resolve_hob_device_depth(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_device_depth(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _section_value(context, "Διαστάσεις Συσκευής", "Βάθος")
     if value:
         return value, source
-    triple_value, triple_source = _first_value_from_aliases(context, ["Διαστάσεις συσκευής (ΥxΠxΒ mm)", "Διαστάσεις Εσωτερικής μονάδας: (ΥxΠxΒ)"])
+    triple_value, triple_source = _first_value_from_aliases(
+        context,
+        ["Διαστάσεις συσκευής (ΥxΠxΒ mm)", "Διαστάσεις Εσωτερικής μονάδας: (ΥxΠxΒ)"],
+    )
     formatted = _dimension_from_triplet(triple_value, 2)
     return (formatted, triple_source) if formatted else ("", "unresolved")
 
 
-def _resolve_hob_warranty(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_hob_warranty(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Εγγύηση Κατασκευαστή"])
     if value:
         return value, source
@@ -1975,69 +2573,123 @@ def _extract_count_from_text(text: str, pattern: str) -> str:
     return match.group(1)
 
 
-def _resolve_fridge_temperature_control(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    if _contains_any(context.combined_text, "panel ελέγχου", "panel ελεγχου", "οθόνη ενδείξεων", "οθονη ενδειξεων"):
+def _resolve_fridge_temperature_control(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    if _contains_any(
+        context.combined_text,
+        "panel ελέγχου",
+        "panel ελεγχου",
+        "οθόνη ενδείξεων",
+        "οθονη ενδειξεων",
+    ):
         return "Ηλεκτρονικό panel ελέγχου (LED)", "combined_text:temperature_control"
     return "", "unresolved"
 
 
-def _resolve_fridge_installation_type(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Τύπος εγκατάστασης", "Εντοιχιζόμενη / Ελεύθερη", "Εντοιχιζόμενο"])
+def _resolve_fridge_installation_type(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Τύπος εγκατάστασης", "Εντοιχιζόμενη / Ελεύθερη", "Εντοιχιζόμενο"]
+    )
     normalized = normalize_for_match(value)
     if "ελευθερ" in normalized:
         return "Ελεύθερη συσκευή", source
-    if "εντοιχιζ" in normalized and "οχι" not in normalized and "όχι" not in (value or "").lower():
+    if (
+        "εντοιχιζ" in normalized
+        and "οχι" not in normalized
+        and "όχι" not in (value or "").lower()
+    ):
         return "Εντοιχιζόμενη συσκευή", source
-    if _contains_any(context.combined_text, "perfect fit", "δίπλα σε τοίχους", "διπλα σε τοιχους"):
+    if _contains_any(
+        context.combined_text, "perfect fit", "δίπλα σε τοίχους", "διπλα σε τοιχους"
+    ):
         return "Ελεύθερη συσκευή", "combined_text:perfect_fit"
     if normalized in {"οχι", "oxi", "no", "false"}:
         return "Ελεύθερη συσκευή", source
     return "", "unresolved"
 
 
-def _resolve_fridge_dual_cooling_circuits(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Αριθμός ανεξάρτητων συστημάτων ψύξης"])
+def _resolve_fridge_dual_cooling_circuits(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Αριθμός ανεξάρτητων συστημάτων ψύξης"]
+    )
     count = _extract_int_from_text(value)
     if count is None:
         return "", "unresolved"
     return ("Ναι" if count >= 2 else "Όχι"), source
 
 
-def _resolve_fridge_multi_airflow(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    if _contains_any(context.combined_text, "multiairflow", "multi airflow", "dynamic multiairflow"):
+def _resolve_fridge_multi_airflow(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    if _contains_any(
+        context.combined_text, "multiairflow", "multi airflow", "dynamic multiairflow"
+    ):
         return "Ναι", "combined_text:multi_airflow"
     return "", "unresolved"
 
 
-def _resolve_fridge_connectivity(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Wi-Fi", "Bluetooth", "Συνδεσιμότητα"])
+def _resolve_fridge_connectivity(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Wi-Fi", "Bluetooth", "Συνδεσιμότητα"]
+    )
     normalized = _normalize_yes_no(value)
     if normalized:
         return normalized, source
-    if _contains_any(context.combined_text, "wifi", "wi-fi", "home connect", "bluetooth"):
+    if _contains_any(
+        context.combined_text, "wifi", "wi-fi", "home connect", "bluetooth"
+    ):
         return "Ναι", "combined_text:connectivity"
     return "Όχι", source or "combined_text:no_connectivity"
 
 
-def _resolve_fridge_open_door_alert(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_open_door_alert(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Extra Δυνατότητες"])
-    if _contains_any(" ".join([value, context.combined_text]), "ειδοποίηση πόρτας", "ειδοποιηση πορτας", "ανοικτής πόρτας", "ανοιχτής πόρτας"):
+    if _contains_any(
+        " ".join([value, context.combined_text]),
+        "ειδοποίηση πόρτας",
+        "ειδοποιηση πορτας",
+        "ανοικτής πόρτας",
+        "ανοιχτής πόρτας",
+    ):
         return "Ναι", source or "combined_text:door_alert"
     return "", "unresolved"
 
 
-def _resolve_fridge_overview_features(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_overview_features(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     features = _ordered_features(
         context,
         [
             ("Perfect Fit", ("perfect fit",)),
-            ("Ενσωματωμένη οριζόντια χειρολαβή", ("ενσωματωμένη οριζόντια χειρολαβή", "ενσωματωμενη οριζοντια χειρολαβη")),
+            (
+                "Ενσωματωμένη οριζόντια χειρολαβή",
+                (
+                    "ενσωματωμένη οριζόντια χειρολαβή",
+                    "ενσωματωμενη οριζοντια χειρολαβη",
+                ),
+            ),
         ],
     )
-    return (", ".join(features), "combined_text:fridge_features") if features else ("", "unresolved")
+    return (
+        (", ".join(features), "combined_text:fridge_features")
+        if features
+        else ("", "unresolved")
+    )
 
 
-def _resolve_fridge_fridge_shelf_count(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_fridge_shelf_count(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Στην Συντήρηση"])
     count = _extract_count_from_text(value, r"(\d+)\s+ράφια")
     if count:
@@ -2046,28 +2698,48 @@ def _resolve_fridge_fridge_shelf_count(context: _ResolutionContext, _field: dict
     return (count, "combined_text:fridge_shelves") if count else ("", "unresolved")
 
 
-def _resolve_fridge_adjustable_shelves(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Αριθμός ρυθμιζόμενων ραφιών στη συντήρηση"])
+def _resolve_fridge_adjustable_shelves(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Αριθμός ρυθμιζόμενων ραφιών στη συντήρηση"]
+    )
     count = _extract_int_from_text(value)
     if count is not None:
         return str(count), source
-    count_text = _extract_count_from_text(context.combined_text, r"αριθμός ρυθμιζόμενων ραφιών στη συντήρηση[: ]+(\d+)")
+    count_text = _extract_count_from_text(
+        context.combined_text, r"αριθμός ρυθμιζόμενων ραφιών στη συντήρηση[: ]+(\d+)"
+    )
     if count_text:
         return count_text, "combined_text:adjustable_shelves"
-    count_text = _extract_count_from_text(context.combined_text, r"ρυθμιζόμενα σε ύψος[: ]+(\d+)")
+    count_text = _extract_count_from_text(
+        context.combined_text, r"ρυθμιζόμενα σε ύψος[: ]+(\d+)"
+    )
     if count_text:
         return count_text, "combined_text:adjustable_shelves"
-    count_text = _extract_count_from_text(context.combined_text, r"ρυθμιζονται σε ύψος[: ]+(\d+)")
-    return (count_text, "combined_text:adjustable_shelves") if count_text else ("", "unresolved")
+    count_text = _extract_count_from_text(
+        context.combined_text, r"ρυθμιζονται σε ύψος[: ]+(\d+)"
+    )
+    return (
+        (count_text, "combined_text:adjustable_shelves")
+        if count_text
+        else ("", "unresolved")
+    )
 
 
-def _resolve_fridge_shelf_material(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    if _contains_any(context.combined_text, "γυαλί ασφαλείας", "γυάλινα ράφια", "γυαλινα ραφια"):
+def _resolve_fridge_shelf_material(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    if _contains_any(
+        context.combined_text, "γυαλί ασφαλείας", "γυάλινα ράφια", "γυαλινα ραφια"
+    ):
         return "Γυαλί Ασφαλείας", "combined_text:shelf_material"
     return "", "unresolved"
 
 
-def _resolve_fridge_fridge_drawer_count(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_fridge_drawer_count(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Στην Συντήρηση"])
     count = _extract_count_from_text(value, r"(\d+)\s+συρτάρι")
     if count:
@@ -2076,13 +2748,17 @@ def _resolve_fridge_fridge_drawer_count(context: _ResolutionContext, _field: dic
     return (count, "combined_text:fridge_drawers") if count else ("", "unresolved")
 
 
-def _resolve_fridge_humidity_drawer(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_humidity_drawer(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     if _contains_any(context.combined_text, "ρύθμιση υγρασίας", "ρυθμιση υγρασιας"):
         return "Ναι", "combined_text:humidity_drawer"
     return "", "unresolved"
 
 
-def _resolve_fridge_door_shelves(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_door_shelves(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Στην Συντήρηση"])
     count = _extract_count_from_text(value, r"(\d+)\s+ράφια\s+στην\s+πόρτα")
     if count:
@@ -2090,29 +2766,45 @@ def _resolve_fridge_door_shelves(context: _ResolutionContext, _field: dict[str, 
     count = _extract_count_from_text(context.combined_text, r"(\d+)\s+ράφια\s+θύρας")
     if count:
         return count, "combined_text:door_shelves"
-    count = _extract_count_from_text(context.combined_text, r"(\d+)\s+ράφια\s+στην\s+πόρτα")
+    count = _extract_count_from_text(
+        context.combined_text, r"(\d+)\s+ράφια\s+στην\s+πόρτα"
+    )
     return (count, "combined_text:door_shelves") if count else ("", "unresolved")
 
 
-def _resolve_fridge_internal_light(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_internal_light(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     if _contains_any(context.combined_text, "φωτισμός led", "φωτισμος led"):
         return "LED", "combined_text:internal_light"
     return "", "unresolved"
 
 
-def _resolve_fridge_fast_cool(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_fast_cool(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Extra Δυνατότητες"])
-    if _contains_any(" ".join([value, context.combined_text]), "γρήγορη ψύξη", "γρηγορη ψυξη"):
+    if _contains_any(
+        " ".join([value, context.combined_text]), "γρήγορη ψύξη", "γρηγορη ψυξη"
+    ):
         return "Ναι", source or "combined_text:fast_cool"
     return "", "unresolved"
 
 
-def _resolve_fridge_storage_features(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_storage_features(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     features = _ordered_features(context, [("MultiBox", ("multibox",))])
-    return (", ".join(features), "combined_text:storage_features") if features else ("", "unresolved")
+    return (
+        (", ".join(features), "combined_text:storage_features")
+        if features
+        else ("", "unresolved")
+    )
 
 
-def _resolve_fridge_freezer_drawer_count(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_freezer_drawer_count(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Στην Κατάψυξη"])
     count = _extract_count_from_text(value, r"(\d+)\s+συρτάρια")
     if count:
@@ -2121,33 +2813,55 @@ def _resolve_fridge_freezer_drawer_count(context: _ResolutionContext, _field: di
     return (count, "combined_text:freezer_drawers") if count else ("", "unresolved")
 
 
-def _resolve_fridge_freezer_shelf_count(_context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_freezer_shelf_count(
+    _context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     return "", "unresolved"
 
 
-def _resolve_fridge_fast_freeze(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    if _contains_any(context.combined_text, "superfreezing", "γρήγορη κατάψυξη", "γρηγορη καταψυξη"):
+def _resolve_fridge_fast_freeze(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    if _contains_any(
+        context.combined_text, "superfreezing", "γρήγορη κατάψυξη", "γρηγορη καταψυξη"
+    ):
         return "Ναι", "combined_text:fast_freeze"
     return "", "unresolved"
 
 
-def _resolve_fridge_freezer_features(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_freezer_features(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     features = _ordered_features(context, [("SuperFreezing", ("superfreezing",))])
-    return (", ".join(features), "combined_text:freezer_features") if features else ("", "unresolved")
+    return (
+        (", ".join(features), "combined_text:freezer_features")
+        if features
+        else ("", "unresolved")
+    )
 
 
-def _resolve_fridge_climate_class(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_fridge_climate_class(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, ["Κλιματική Κλάση"])
     if value:
         return value, source
-    match = re.search(r"Κλιματική\s+Κλάση[: ]+([A-Z]{1,3}(?:-[A-Z]{1,3})?)", context.combined_text, flags=re.IGNORECASE)
+    match = re.search(
+        r"Κλιματική\s+Κλάση[: ]+([A-Z]{1,3}(?:-[A-Z]{1,3})?)",
+        context.combined_text,
+        flags=re.IGNORECASE,
+    )
     if match:
         return match.group(1).upper(), "combined_text:climate_class"
     return "", "unresolved"
 
 
-def _resolve_fridge_dimensions_triplet(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Διαστάσεις συσκευής ΥxΠxΒ", "Διαστάσεις συσκευής Υ x Π x Β"])
+def _resolve_fridge_dimensions_triplet(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Διαστάσεις συσκευής ΥxΠxΒ", "Διαστάσεις συσκευής Υ x Π x Β"]
+    )
     if value:
         tokens = re.findall(r"\d+(?:[.,]\d+)?", value)
         if len(tokens) >= 3:
@@ -2156,30 +2870,47 @@ def _resolve_fridge_dimensions_triplet(context: _ResolutionContext, _field: dict
     width, width_source = _first_value_from_aliases(context, ["Πλάτος"])
     depth, depth_source = _first_value_from_aliases(context, ["Βάθος"])
     if height and width and depth:
-        compact = [re.sub(r"\s*cm\b", "", part, flags=re.IGNORECASE) for part in [height, width, depth]]
-        return f"{compact[0]} x {compact[1]} x {compact[2]} cm", ",".join([height_source, width_source, depth_source])
+        compact = [
+            re.sub(r"\s*cm\b", "", part, flags=re.IGNORECASE)
+            for part in [height, width, depth]
+        ]
+        return f"{compact[0]} x {compact[1]} x {compact[2]} cm", ",".join(
+            [height_source, width_source, depth_source]
+        )
     return "", "unresolved"
 
 
-def _resolve_fridge_warranty(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, ["Επιμέρους Εγγύηση Κατασκευαστή", "Εγγύηση Κατασκευαστή"])
+def _resolve_fridge_warranty(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, ["Επιμέρους Εγγύηση Κατασκευαστή", "Εγγύηση Κατασκευαστή"]
+    )
     if value:
         return value, source
     return "", "unresolved"
 
 
-def _resolve_air_conditioner_technology(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_air_conditioner_technology(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     if value:
         return value, source
-    if _contains_any(" ".join([context.source.name, context.combined_text]), "inverter"):
+    if _contains_any(
+        " ".join([context.source.name, context.combined_text]), "inverter"
+    ):
         return "Inverter", "combined_text:technology"
     return "", "unresolved"
 
 
-def _resolve_air_conditioner_refrigerant(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_air_conditioner_refrigerant(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     aliases = list(field.get("aliases", []))
-    refrigerant_code = normalize_whitespace(str(field.get("refrigerant_code", ""))).upper()
+    refrigerant_code = normalize_whitespace(
+        str(field.get("refrigerant_code", ""))
+    ).upper()
     for alias in aliases:
         value, source = _first_value_from_aliases(context, [alias])
         if not value:
@@ -2197,7 +2928,9 @@ def _resolve_air_conditioner_refrigerant(context: _ResolutionContext, field: dic
     return "", "unresolved"
 
 
-def _resolve_air_conditioner_dehumidification(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_air_conditioner_dehumidification(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, field.get("aliases", []))
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -2207,7 +2940,9 @@ def _resolve_air_conditioner_dehumidification(context: _ResolutionContext, field
     return "", "unresolved"
 
 
-def _resolve_air_conditioner_extra_features(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_air_conditioner_extra_features(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     features: list[str] = []
     sources: list[str] = []
 
@@ -2221,7 +2956,9 @@ def _resolve_air_conditioner_extra_features(context: _ResolutionContext, _field:
     if _normalize_yes_no(wifi_value) == "Ναι":
         add_feature("WiFi", wifi_source or "spec_alias:WiFi")
 
-    follow_me_value, follow_me_source = _first_value_from_aliases(context, ["Λειτουργία Follow Me"])
+    follow_me_value, follow_me_source = _first_value_from_aliases(
+        context, ["Λειτουργία Follow Me"]
+    )
     if _normalize_yes_no(follow_me_value) == "Ναι":
         add_feature("Follow Me", follow_me_source or "spec_alias:Λειτουργία Follow Me")
 
@@ -2265,8 +3002,12 @@ def _format_air_conditioner_dimension_mm(value: str) -> str:
     return _format_decimal(number)
 
 
-def _resolve_air_conditioner_dimension_mm(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
-    value, source = _first_value_from_aliases(context, _aliases_for_template_field(field))
+def _resolve_air_conditioner_dimension_mm(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
+    value, source = _first_value_from_aliases(
+        context, _aliases_for_template_field(field)
+    )
     formatted = _format_air_conditioner_dimension_mm(value)
     return (formatted, source) if formatted else ("", "unresolved")
 
@@ -2277,11 +3018,17 @@ def _extract_air_conditioner_warranty_years(text: str, target: str) -> str:
         return ""
 
     if target == "compressor":
-        match = re.search(r"(\d+)\s*χρ(?:ο|ό)ν(?:ια|ος)?[^,.;]*συμπιεστ", normalized, flags=re.IGNORECASE)
+        match = re.search(
+            r"(\d+)\s*χρ(?:ο|ό)ν(?:ια|ος)?[^,.;]*συμπιεστ",
+            normalized,
+            flags=re.IGNORECASE,
+        )
         if match:
             return match.group(1)
         if "συμπιεστ" in normalize_for_match(normalized):
-            fallback = re.search(r"(\d+)\s*χρ(?:ο|ό)ν(?:ια|ος)?", normalized, flags=re.IGNORECASE)
+            fallback = re.search(
+                r"(\d+)\s*χρ(?:ο|ό)ν(?:ια|ος)?", normalized, flags=re.IGNORECASE
+            )
             if fallback:
                 return fallback.group(1)
         return ""
@@ -2295,24 +3042,36 @@ def _extract_air_conditioner_warranty_years(text: str, target: str) -> str:
         if match:
             return match.group(1)
     if "συμπιεστ" not in normalize_for_match(normalized):
-        fallback = re.search(r"(\d+)\s*χρ(?:ο|ό)ν(?:ια|ος)?", normalized, flags=re.IGNORECASE)
+        fallback = re.search(
+            r"(\d+)\s*χρ(?:ο|ό)ν(?:ια|ος)?", normalized, flags=re.IGNORECASE
+        )
         if fallback:
             return fallback.group(1)
     return ""
 
 
-def _resolve_air_conditioner_warranty_years(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
-    aliases = list(field.get("aliases", [])) or ["Επιμέρους Εγγύηση Κατασκευαστή", "Εγγύηση Κατασκευαστή"]
+def _resolve_air_conditioner_warranty_years(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
+    aliases = list(field.get("aliases", [])) or [
+        "Επιμέρους Εγγύηση Κατασκευαστή",
+        "Εγγύηση Κατασκευαστή",
+    ]
     target = normalize_for_match(str(field.get("warranty_target", ""))) or "unit"
     value, source = _first_value_from_aliases(context, aliases)
-    for candidate_text, candidate_source in [(value, source), (context.combined_text, "combined_text:warranty")]:
+    for candidate_text, candidate_source in [
+        (value, source),
+        (context.combined_text, "combined_text:warranty"),
+    ]:
         years = _extract_air_conditioner_warranty_years(candidate_text, target)
         if years:
             return years, candidate_source
     return "", "unresolved"
 
 
-def _resolve_microwave_display(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_microwave_display(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     if normalized:
@@ -2322,12 +3081,18 @@ def _resolve_microwave_display(context: _ResolutionContext, field: dict[str, Any
     return "", "unresolved"
 
 
-def _resolve_microwave_grill_power(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_microwave_grill_power(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     formatted = _format_power_watts(value)
     if formatted:
         return formatted, source
-    match = re.search(r"(?:grill|γκριλ)[^\d]{0,30}(\d+(?:[.,]\d+)?)\s*w", normalize_for_match(context.combined_text), flags=re.IGNORECASE)
+    match = re.search(
+        r"(?:grill|γκριλ)[^\d]{0,30}(\d+(?:[.,]\d+)?)\s*w",
+        normalize_for_match(context.combined_text),
+        flags=re.IGNORECASE,
+    )
     if match:
         numeric = match.group(1).replace(",", ".")
         if numeric.endswith(".0"):
@@ -2336,34 +3101,46 @@ def _resolve_microwave_grill_power(context: _ResolutionContext, field: dict[str,
     return "", "unresolved"
 
 
-def _resolve_microwave_yes_no(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_microwave_yes_no(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     return (normalized, source) if normalized else ("", "unresolved")
 
 
-def _resolve_microwave_auto_program_count(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_microwave_auto_program_count(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     count = _extract_int_from_text(value)
     if count is not None:
         return str(count), source
-    match = re.search(r"(\d+)\s+αυτόματα?\s+προγράμ", context.combined_text, flags=re.IGNORECASE)
+    match = re.search(
+        r"(\d+)\s+αυτόματα?\s+προγράμ", context.combined_text, flags=re.IGNORECASE
+    )
     if match:
         return match.group(1), "combined_text:auto_program_count"
     return "", "unresolved"
 
 
-def _resolve_microwave_time_plus(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_microwave_time_plus(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     normalized = _normalize_yes_no(value)
     if normalized:
         return normalized, source
-    if _contains_any(context.combined_text, "κουμπί 30", "quick 30", "βήματα των 30 δευτερολέπτων"):
+    if _contains_any(
+        context.combined_text, "κουμπί 30", "quick 30", "βήματα των 30 δευτερολέπτων"
+    ):
         return "Ναι", "combined_text:time_plus"
     return "", "unresolved"
 
 
-def _resolve_microwave_other_features(context: _ResolutionContext, _field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_microwave_other_features(
+    context: _ResolutionContext, _field: dict[str, Any]
+) -> tuple[str, str]:
     features: list[str] = []
     sources: list[str] = []
     for display, aliases in [("Inverter", ("Inverter",)), ("Retro", ("Retro",))]:
@@ -2374,11 +3151,16 @@ def _resolve_microwave_other_features(context: _ResolutionContext, _field: dict[
                 sources.append(source)
     deduped = dedupe_strings(features)
     if deduped:
-        return ", ".join(deduped), ",".join(dedupe_strings(sources)) or "spec_alias:microwave_features"
+        return (
+            ", ".join(deduped),
+            ",".join(dedupe_strings(sources)) or "spec_alias:microwave_features",
+        )
     return "", "unresolved"
 
 
-def _resolve_microwave_dimensions_triplet(context: _ResolutionContext, field: dict[str, Any]) -> tuple[str, str]:
+def _resolve_microwave_dimensions_triplet(
+    context: _ResolutionContext, field: dict[str, Any]
+) -> tuple[str, str]:
     value, source = _first_value_from_aliases(context, list(field.get("aliases", [])))
     if value:
         tokens = re.findall(r"\d+(?:[.,]\d+)?", value)
@@ -2390,7 +3172,11 @@ def _resolve_microwave_dimensions_triplet(context: _ResolutionContext, field: di
     height, height_source = _section_value(context, "Εξωτερικές Διαστάσεις", "Ύψος")
     if not (width and depth and height):
         for section in _effective_spec_sections(context.source):
-            values = {normalize_for_match(item.label): normalize_whitespace(item.value) for item in section.items if normalize_whitespace(item.value)}
+            values = {
+                normalize_for_match(item.label): normalize_whitespace(item.value)
+                for item in section.items
+                if normalize_whitespace(item.value)
+            }
             width = width or values.get(normalize_for_match("Πλάτος"), "")
             depth = depth or values.get(normalize_for_match("Βάθος"), "")
             height = height or values.get(normalize_for_match("Ύψος"), "")
@@ -2400,12 +3186,19 @@ def _resolve_microwave_dimensions_triplet(context: _ResolutionContext, field: di
                 height_source = height_source or f"section_scan:{section.section}/Ύψος"
                 break
     if width and depth and height:
-        compact = [re.sub(r"\s*cm\b", "", part, flags=re.IGNORECASE) for part in [height, width, depth]]
-        return f"{compact[0]} x {compact[1]} x {compact[2]} cm", ",".join([height_source, width_source, depth_source])
+        compact = [
+            re.sub(r"\s*cm\b", "", part, flags=re.IGNORECASE)
+            for part in [height, width, depth]
+        ]
+        return f"{compact[0]} x {compact[1]} x {compact[2]} cm", ",".join(
+            [height_source, width_source, depth_source]
+        )
     return "", "unresolved"
 
 
-_RESOLVERS: dict[str, Callable[[_ResolutionContext, dict[str, Any]], tuple[str, str]]] = {
+_RESOLVERS: dict[
+    str, Callable[[_ResolutionContext, dict[str, Any]], tuple[str, str]]
+] = {
     "air_conditioner_technology": _resolve_air_conditioner_technology,
     "air_conditioner_refrigerant": _resolve_air_conditioner_refrigerant,
     "air_conditioner_dehumidification": _resolve_air_conditioner_dehumidification,

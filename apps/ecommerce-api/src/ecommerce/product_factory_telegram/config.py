@@ -32,12 +32,25 @@ def product_factory_telegram_config_from_env() -> ProductFactoryTelegramConfig:
         allowed_chat_ids=_env_id_set("PRODUCT_FACTORY_TELEGRAM_ALLOWED_CHAT_IDS"),
         allowed_user_ids=_env_id_set("PRODUCT_FACTORY_TELEGRAM_ALLOWED_USER_IDS"),
         warehouse_catalog_path=_env_text("PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH"),
-        warehouse_catalog_model_column=_env_text("PRODUCT_FACTORY_WAREHOUSE_CATALOG_MODEL_COLUMN") or "model",
-        warehouse_catalog_name_column=_env_text("PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN") or "name",
-        warehouse_catalog_encoding=_env_text("PRODUCT_FACTORY_WAREHOUSE_CATALOG_ENCODING") or "utf-8-sig",
-        product_factory_api_base_url=_env_text("PRODUCT_FACTORY_API_BASE_URL") or "http://127.0.0.1:8000",
-        source_resolution_config_path=_env_text("PRODUCT_FACTORY_SOURCE_RESOLUTION_CONFIG_PATH"),
-        audit_log_path=_env_text("PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH") or DEFAULT_AUDIT_LOG_PATH,
+        warehouse_catalog_model_column=_env_text(
+            "PRODUCT_FACTORY_WAREHOUSE_CATALOG_MODEL_COLUMN"
+        )
+        or "model",
+        warehouse_catalog_name_column=_env_text(
+            "PRODUCT_FACTORY_WAREHOUSE_CATALOG_NAME_COLUMN"
+        )
+        or "name",
+        warehouse_catalog_encoding=_env_text(
+            "PRODUCT_FACTORY_WAREHOUSE_CATALOG_ENCODING"
+        )
+        or "utf-8-sig",
+        product_factory_api_base_url=_env_text("PRODUCT_FACTORY_API_BASE_URL")
+        or "http://127.0.0.1:8000",
+        source_resolution_config_path=_env_text(
+            "PRODUCT_FACTORY_SOURCE_RESOLUTION_CONFIG_PATH"
+        ),
+        audit_log_path=_env_text("PRODUCT_FACTORY_TELEGRAM_AUDIT_LOG_PATH")
+        or DEFAULT_AUDIT_LOG_PATH,
     )
 
 

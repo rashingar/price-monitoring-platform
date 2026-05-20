@@ -2,10 +2,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from product_factory.models import CLIInput, FetchResult, ParsedProduct, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    FetchResult,
+    ParsedProduct,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.prepare_result_assembly import PrepareResultAssemblyResult
-from product_factory.prepare_scrape_persistence import PrepareScrapePersistenceInput, PrepareScrapePersistenceResult
+from product_factory.prepare_scrape_persistence import (
+    PrepareScrapePersistenceInput,
+    PrepareScrapePersistenceResult,
+)
 from product_factory.prepare_stage import execute_prepare_from_acquisition
 from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult
 from product_factory.source_acquisition_models import SourceAcquisitionResult
@@ -94,7 +105,9 @@ def _build_source_acquisition_result(
     )
 
 
-def _persist_stub(persistence_input: PrepareScrapePersistenceInput) -> PrepareScrapePersistenceResult:
+def _persist_stub(
+    persistence_input: PrepareScrapePersistenceInput,
+) -> PrepareScrapePersistenceResult:
     return PrepareScrapePersistenceResult(
         scrape_dir=persistence_input.scrape_dir,
         raw_html_path=persistence_input.raw_html_path,
@@ -118,7 +131,9 @@ def _build_cli(tmp_path: Path, *, model: str = "344424", url: str) -> CLIInput:
     )
 
 
-def _build_source(*, source_name: str, url: str, product_code: str, brand: str, mpn: str, name: str) -> SourceProductData:
+def _build_source(
+    *, source_name: str, url: str, product_code: str, brand: str, mpn: str, name: str
+) -> SourceProductData:
     return SourceProductData(
         source_name=source_name,
         page_type="product",
@@ -144,7 +159,9 @@ def _build_parsed(source: SourceProductData) -> ParsedProduct:
     )
 
 
-def test_execute_prepare_stage_calls_single_result_assembly_seam_with_prepared_inputs(tmp_path: Path) -> None:
+def test_execute_prepare_stage_calls_single_result_assembly_seam_with_prepared_inputs(
+    tmp_path: Path,
+) -> None:
     source = _build_source(
         source_name="skroutz",
         url="https://www.skroutz.gr/s/344424/Neff-T16BT60N0.html",
@@ -171,7 +188,11 @@ def test_execute_prepare_stage_calls_single_result_assembly_seam_with_prepared_i
         warnings: list[str] = []
 
         def to_dict(self) -> dict[str, object]:
-            return {"matched_schema_id": self.matched_schema_id, "score": self.score, "warnings": self.warnings}
+            return {
+                "matched_schema_id": self.matched_schema_id,
+                "score": self.score,
+                "warnings": self.warnings,
+            }
 
     def fake_assemble_prepare_result(**kwargs) -> PrepareResultAssemblyResult:
         assembly_calls.append(kwargs)
@@ -179,14 +200,25 @@ def test_execute_prepare_stage_calls_single_result_assembly_seam_with_prepared_i
             schema_match=SchemaMatchStub(),
             schema_candidates=[{"matched_schema_id": "schema-stub"}],
             row={"model": kwargs["cli"].model, "name": "stub"},
-            normalized={"input": kwargs["cli"].to_dict(), "csv_row": {"model": kwargs["cli"].model, "name": "stub"}},
-            report={"source": kwargs["source"], "warnings": [], "identity_checks": {"source": kwargs["source"]}},
+            normalized={
+                "input": kwargs["cli"].to_dict(),
+                "csv_row": {"model": kwargs["cli"].model, "name": "stub"},
+            },
+            report={
+                "source": kwargs["source"],
+                "warnings": [],
+                "identity_checks": {"source": kwargs["source"]},
+            },
         )
 
     result = execute_prepare_from_acquisition(
         cli,
         acquisition,
-        validate_url_scope_fn=lambda _url: (source.source_name or "unknown", True, "test_scope"),
+        validate_url_scope_fn=lambda _url: (
+            source.source_name or "unknown",
+            True,
+            "test_scope",
+        ),
         fetcher_factory=lambda: object(),
         resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: PrepareTaxonomyEnrichmentResult(
             taxonomy=TaxonomyResolution(
@@ -194,7 +226,11 @@ def test_execute_prepare_stage_calls_single_result_assembly_seam_with_prepared_i
                 leaf_category="Εντοιχιζόμενες Συσκευές",
                 sub_category="Εστίες",
             ),
-            taxonomy_candidates=[{"taxonomy_path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Εντοιχιζόμενες Συσκευές > Εστίες"}],
+            taxonomy_candidates=[
+                {
+                    "taxonomy_path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Εντοιχιζόμενες Συσκευές > Εστίες"
+                }
+            ],
             manufacturer_enrichment=_build_manufacturer_enrichment_stub(),
         ),
         assemble_prepare_result_fn=fake_assemble_prepare_result,
@@ -207,16 +243,27 @@ def test_execute_prepare_stage_calls_single_result_assembly_seam_with_prepared_i
     assert assembly_call["source"] == "skroutz"
     assert assembly_call["parsed"] is parsed
     assert assembly_call["taxonomy"].sub_category == "Εστίες"
-    assert assembly_call["taxonomy_candidates"] == [{"taxonomy_path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Εντοιχιζόμενες Συσκευές > Εστίες"}]
+    assert assembly_call["taxonomy_candidates"] == [
+        {"taxonomy_path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Εντοιχιζόμενες Συσκευές > Εστίες"}
+    ]
     assert assembly_call["manufacturer_enrichment"]["fallback_reason"] == "test_stub"
     assert assembly_call["scrape_persistence_input"].model == cli.model
     assert result["row"] == {"model": cli.model, "name": "stub"}
-    assert result["normalized"] == {"input": cli.to_dict(), "csv_row": {"model": cli.model, "name": "stub"}}
-    assert result["report"] == {"source": "skroutz", "warnings": [], "identity_checks": {"source": "skroutz"}}
+    assert result["normalized"] == {
+        "input": cli.to_dict(),
+        "csv_row": {"model": cli.model, "name": "stub"},
+    }
+    assert result["report"] == {
+        "source": "skroutz",
+        "warnings": [],
+        "identity_checks": {"source": "skroutz"},
+    }
     assert result["schema_candidates"] == [{"matched_schema_id": "schema-stub"}]
 
 
-def test_execute_prepare_stage_uses_result_assembly_output_for_persistence_and_return_paths(tmp_path: Path) -> None:
+def test_execute_prepare_stage_uses_result_assembly_output_for_persistence_and_return_paths(
+    tmp_path: Path,
+) -> None:
     source = _build_source(
         source_name="skroutz",
         url="https://www.skroutz.gr/s/61351575/hisense-smart-tileorasi-55-4k-uhd-led-a6q-hdr-2025-55a6q.html",
@@ -243,18 +290,27 @@ def test_execute_prepare_stage_uses_result_assembly_output_for_persistence_and_r
         warnings: list[str] = []
 
         def to_dict(self) -> dict[str, object]:
-            return {"matched_schema_id": self.matched_schema_id, "score": self.score, "warnings": self.warnings}
+            return {
+                "matched_schema_id": self.matched_schema_id,
+                "score": self.score,
+                "warnings": self.warnings,
+            }
 
     def fake_assemble_prepare_result(**kwargs) -> PrepareResultAssemblyResult:
         return PrepareResultAssemblyResult(
             schema_match=SchemaMatchStub(),
             schema_candidates=[{"matched_schema_id": "schema-stub"}],
             row={"model": kwargs["cli"].model, "name": "stub"},
-            normalized={"input": kwargs["cli"].to_dict(), "deterministic_product": {"mpn": "55A6Q"}},
+            normalized={
+                "input": kwargs["cli"].to_dict(),
+                "deterministic_product": {"mpn": "55A6Q"},
+            },
             report={"source": kwargs["source"], "warnings": ["assembly_warning"]},
         )
 
-    def fake_persist(persistence_input: PrepareScrapePersistenceInput) -> PrepareScrapePersistenceResult:
+    def fake_persist(
+        persistence_input: PrepareScrapePersistenceInput,
+    ) -> PrepareScrapePersistenceResult:
         persistence_calls.append(persistence_input)
         return PrepareScrapePersistenceResult(
             scrape_dir=persistence_input.scrape_dir,
@@ -268,7 +324,11 @@ def test_execute_prepare_stage_uses_result_assembly_output_for_persistence_and_r
     result = execute_prepare_from_acquisition(
         cli,
         acquisition,
-        validate_url_scope_fn=lambda _url: (source.source_name or "unknown", True, "test_scope"),
+        validate_url_scope_fn=lambda _url: (
+            source.source_name or "unknown",
+            True,
+            "test_scope",
+        ),
         fetcher_factory=lambda: object(),
         resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: PrepareTaxonomyEnrichmentResult(
             taxonomy=TaxonomyResolution(
@@ -286,9 +346,17 @@ def test_execute_prepare_stage_uses_result_assembly_output_for_persistence_and_r
 
     assert len(persistence_calls) == 1
     persistence_input = persistence_calls[0]
-    assert persistence_input.source_payload["raw_html_path"] == str(persistence_input.raw_html_path)
-    assert persistence_input.normalized_payload == {"input": cli.to_dict(), "deterministic_product": {"mpn": "55A6Q"}}
-    assert persistence_input.report_payload == {"source": "skroutz", "warnings": ["assembly_warning"]}
+    assert persistence_input.source_payload["raw_html_path"] == str(
+        persistence_input.raw_html_path
+    )
+    assert persistence_input.normalized_payload == {
+        "input": cli.to_dict(),
+        "deterministic_product": {"mpn": "55A6Q"},
+    }
+    assert persistence_input.report_payload == {
+        "source": "skroutz",
+        "warnings": ["assembly_warning"],
+    }
     assert result["schema_match"].matched_schema_id == "schema-stub"
     assert result["normalized"] == persistence_input.normalized_payload
     assert result["report"] == persistence_input.report_payload
@@ -296,7 +364,9 @@ def test_execute_prepare_stage_uses_result_assembly_output_for_persistence_and_r
     assert result["report_json_path"] == persistence_input.report_json_path
 
 
-def test_execute_prepare_stage_passes_characteristics_source_after_taxonomy_resolution(tmp_path: Path) -> None:
+def test_execute_prepare_stage_passes_characteristics_source_after_taxonomy_resolution(
+    tmp_path: Path,
+) -> None:
     main_source = _build_source(
         source_name="electronet",
         url="https://www.electronet.gr/main-product",
@@ -305,7 +375,9 @@ def test_execute_prepare_stage_passes_characteristics_source_after_taxonomy_reso
         mpn="MAIN-MPN",
         name="Main Product",
     )
-    main_source.spec_sections = [SpecSection(section="Main specs", items=[SpecItem(label="Main", value="A")])]
+    main_source.spec_sections = [
+        SpecSection(section="Main specs", items=[SpecItem(label="Main", value="A")])
+    ]
     characteristics_source = _build_source(
         source_name="electronet",
         url="https://www.electronet.gr/spec-product",
@@ -315,7 +387,9 @@ def test_execute_prepare_stage_passes_characteristics_source_after_taxonomy_reso
         name="Specs Product",
     )
     characteristics_source.spec_sections = [
-        SpecSection(section="Override specs", items=[SpecItem(label="Override", value="B")])
+        SpecSection(
+            section="Override specs", items=[SpecItem(label="Override", value="B")]
+        )
     ]
     cli = _build_cli(tmp_path, model="344424", url=main_source.url)
     cli.characteristics_url = characteristics_source.url
@@ -353,7 +427,11 @@ def test_execute_prepare_stage_passes_characteristics_source_after_taxonomy_reso
         warnings: list[str] = []
 
         def to_dict(self) -> dict[str, object]:
-            return {"matched_schema_id": self.matched_schema_id, "score": self.score, "warnings": self.warnings}
+            return {
+                "matched_schema_id": self.matched_schema_id,
+                "score": self.score,
+                "warnings": self.warnings,
+            }
 
     def fake_assemble_prepare_result(**kwargs) -> PrepareResultAssemblyResult:
         assembly_calls.append(kwargs)
@@ -370,9 +448,15 @@ def test_execute_prepare_stage_passes_characteristics_source_after_taxonomy_reso
         acquisition,
         validate_url_scope_fn=lambda _url: ("electronet", True, "test_scope"),
         fetcher_factory=lambda: object(),
-        resolve_prepare_taxonomy_enrichment_fn=lambda **kwargs: taxonomy_calls.append(kwargs["parsed"])
+        resolve_prepare_taxonomy_enrichment_fn=lambda **kwargs: taxonomy_calls.append(
+            kwargs["parsed"]
+        )
         or PrepareTaxonomyEnrichmentResult(
-            taxonomy=TaxonomyResolution(parent_category="Main category", leaf_category="Main leaf", sub_category="Main sub"),
+            taxonomy=TaxonomyResolution(
+                parent_category="Main category",
+                leaf_category="Main leaf",
+                sub_category="Main sub",
+            ),
             taxonomy_candidates=[],
             manufacturer_enrichment=_build_manufacturer_enrichment_stub(),
         ),
@@ -384,7 +468,10 @@ def test_execute_prepare_stage_passes_characteristics_source_after_taxonomy_reso
     assert taxonomy_calls[0].source.spec_sections[0].items[0].value == "A"
     assert assembly_calls[0]["parsed"] is parsed
     assert assembly_calls[0]["characteristics_source"] is characteristics_source
-    assert assembly_calls[0]["characteristics_raw_html"] == "<html>characteristics specs html</html>"
+    assert (
+        assembly_calls[0]["characteristics_raw_html"]
+        == "<html>characteristics specs html</html>"
+    )
     assert assembly_calls[0]["characteristics_settings"] == {
         "characteristics_url_used": True,
         "characteristics_extraction_url": characteristics_source.url,

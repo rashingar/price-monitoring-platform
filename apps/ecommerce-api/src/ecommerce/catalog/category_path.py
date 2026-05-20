@@ -18,7 +18,9 @@ def parse_opencart_category(serialized_category: str | None) -> ParsedCategoryPa
     """Parse an OpenCart serialized category path without raising on bad input."""
     raw = _text(serialized_category)
     if not raw:
-        return ParsedCategoryPath(raw="", family="", category_name="", sub_category="", levels=[])
+        return ParsedCategoryPath(
+            raw="", family="", category_name="", sub_category="", levels=[]
+        )
 
     deepest_levels: list[str] = []
     for node in raw.split(":::"):

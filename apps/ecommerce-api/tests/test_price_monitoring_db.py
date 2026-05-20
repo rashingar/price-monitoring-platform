@@ -22,21 +22,42 @@ from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.models.products import Product, SourceCaptureSnapshot  # noqa: E402
-from ecommerce.db.models.price_monitoring import CatalogSnapshot, MonitoringRun, OfferObservation, PriceObservation, PriceObservationListing  # noqa: E402
-from ecommerce.db.repositories.products import upsert_product_from_catalog_row  # noqa: E402
-from ecommerce.db.repositories.price_monitoring import catalog_snapshot_to_dict, list_price_observations, monitoring_run_to_dict, persist_monitoring_run_creation, replace_price_observations  # noqa: E402
+from ecommerce.db.models.price_monitoring import (
+    CatalogSnapshot,
+    MonitoringRun,
+    OfferObservation,
+    PriceObservation,
+    PriceObservationListing,
+)  # noqa: E402
+from ecommerce.db.repositories.products import (
+    upsert_product_from_catalog_row,
+)  # noqa: E402
+from ecommerce.db.repositories.price_monitoring import (
+    catalog_snapshot_to_dict,
+    list_price_observations,
+    monitoring_run_to_dict,
+    persist_monitoring_run_creation,
+    replace_price_observations,
+)  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs.run_price_monitoring_now import main as run_job_main  # noqa: E402
 from ecommerce.jobs.check_db_setup import main as check_db_setup_main  # noqa: E402
-from ecommerce.price_monitoring.fetch_execution import wait_for_worker_idle  # noqa: E402
-from ecommerce.price_monitoring.observations import ParsedPriceObservation, parse_price_observations_csv  # noqa: E402
+from ecommerce.price_monitoring.fetch_execution import (
+    wait_for_worker_idle,
+)  # noqa: E402
+from ecommerce.price_monitoring.observations import (
+    ParsedPriceObservation,
+    parse_price_observations_csv,
+)  # noqa: E402
 from ecommerce.price_monitoring.runs import PriceMonitoringRunRecord  # noqa: E402
 from ecommerce.price_monitoring.selection import (  # noqa: E402
     PriceMonitoringFilters,
     PriceMonitoringSelectionResult,
     SelectedPriceMonitoringProduct,
 )
-from test_price_monitoring_execution_utils import install_fake_execution_child  # noqa: E402
+from test_price_monitoring_execution_utils import (
+    install_fake_execution_child,
+)  # noqa: E402
 
 
 def _sqlite_url(tmp_path: Path) -> str:
@@ -52,9 +73,16 @@ def _stamp_alembic_head(database_url: str) -> None:
     assert head is not None
     engine = get_engine(database_url)
     with engine.begin() as connection:
-        connection.execute(text("create table if not exists alembic_version (version_num varchar(32) not null)"))
+        connection.execute(
+            text(
+                "create table if not exists alembic_version (version_num varchar(32) not null)"
+            )
+        )
         connection.execute(text("delete from alembic_version"))
-        connection.execute(text("insert into alembic_version (version_num) values (:head)"), {"head": head})
+        connection.execute(
+            text("insert into alembic_version (version_num) values (:head)"),
+            {"head": head},
+        )
 
 
 def _selected_product() -> SelectedPriceMonitoringProduct:
@@ -86,7 +114,9 @@ def _run_record(tmp_path: Path) -> PriceMonitoringRunRecord:
     output_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     output_dir.mkdir(parents=True, exist_ok=True)
     input_csv_path = output_dir / "input.csv"
-    input_csv_path.write_text("model,mpn,name,price\n005606,MPN-1,Product One,123.45\n", encoding="utf-8")
+    input_csv_path.write_text(
+        "model,mpn,name,price\n005606,MPN-1,Product One,123.45\n", encoding="utf-8"
+    )
     selection_summary_path = output_dir / "selection_summary.json"
     selection_summary_path.write_text("{}", encoding="utf-8")
     return PriceMonitoringRunRecord(
@@ -155,7 +185,11 @@ def _write_catalog(path: Path) -> None:
 def _ingest_test_catalog(database_url: str, path: Path) -> None:
     with session_scope(database_url) as session:
         ingest_source_catalog(session, source_cata_path=path)
-        product = session.query(CatalogProductRow).filter(CatalogProductRow.model == "005606").one()
+        product = (
+            session.query(CatalogProductRow)
+            .filter(CatalogProductRow.model == "005606")
+            .one()
+        )
         session.add(
             SourceUrl(
                 catalog_product_id=product.id,
@@ -176,7 +210,9 @@ def _ingest_test_catalog(database_url: str, path: Path) -> None:
         )
 
 
-def test_app_import_and_db_status_work_without_database_url(tmp_path: Path, monkeypatch) -> None:
+def test_app_import_and_db_status_work_without_database_url(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
 
@@ -200,12 +236,19 @@ def test_app_import_and_db_status_work_without_database_url(tmp_path: Path, monk
     assert "Set ECOMMERCE_DATABASE_URL." in payload["setup_hints"]
     assert "Restart ecommerce-api." in payload["setup_hints"]
 
-    observations_response = TestClient(create_app()).get("/api/price-monitoring/observations")
+    observations_response = TestClient(create_app()).get(
+        "/api/price-monitoring/observations"
+    )
     assert observations_response.status_code == 503
-    assert observations_response.json()["detail"]["code"] == "price_monitoring_database_required"
+    assert (
+        observations_response.json()["detail"]["code"]
+        == "price_monitoring_database_required"
+    )
 
 
-def test_check_db_setup_exits_nonzero_without_database_url(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_check_db_setup_exits_nonzero_without_database_url(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
 
@@ -219,7 +262,9 @@ def test_db_error_sanitization_removes_password(monkeypatch) -> None:
     raw_url = "postgresql+psycopg://ecommerce:super-secret@127.0.0.1:5432/ecommerce"
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", raw_url)
 
-    message = sanitize_database_error(f"could not connect using {raw_url}; password=super-secret")
+    message = sanitize_database_error(
+        f"could not connect using {raw_url}; password=super-secret"
+    )
 
     assert "super-secret" not in message
     assert "***" in message
@@ -245,11 +290,17 @@ def test_db_status_sanitizes_reachability_errors(monkeypatch) -> None:
             "price_monitoring_database_mode": "unreachable",
             "price_monitoring_database_required_future": True,
             "error": sanitize_database_error(f"could not connect using {raw_url}"),
-            "setup_hints": ["Check that PostgreSQL is running and that ECOMMERCE_DATABASE_URL credentials are correct."],
+            "setup_hints": [
+                "Check that PostgreSQL is running and that ECOMMERCE_DATABASE_URL credentials are correct."
+            ],
             "warnings": [],
         }
 
-    monkeypatch.setattr(routes_price_monitoring, "collect_price_monitoring_database_readiness", broken_database_status)
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "collect_price_monitoring_database_readiness",
+        broken_database_status,
+    )
 
     response = TestClient(create_app()).get("/api/price-monitoring/db/status")
 
@@ -263,7 +314,9 @@ def test_db_status_sanitizes_reachability_errors(monkeypatch) -> None:
     assert any("PostgreSQL" in hint for hint in payload["setup_hints"])
 
 
-def test_db_status_reports_migrated_empty_database_as_configured_empty(tmp_path: Path, monkeypatch) -> None:
+def test_db_status_reports_migrated_empty_database_as_configured_empty(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -313,9 +366,15 @@ def test_db_status_detects_missing_required_tables(tmp_path: Path, monkeypatch) 
 
 
 def test_model_metadata_contains_price_monitoring_tables() -> None:
-    assert {"catalog_products", "source_urls", "products", "monitoring_runs", "catalog_snapshots", "price_observations", "price_observation_listings"}.issubset(
-        Base.metadata.tables
-    )
+    assert {
+        "catalog_products",
+        "source_urls",
+        "products",
+        "monitoring_runs",
+        "catalog_snapshots",
+        "price_observations",
+        "price_observation_listings",
+    }.issubset(Base.metadata.tables)
     assert CatalogProductRow.__table__.c.model.nullable is False
     assert SourceUrl.__table__.c.catalog_product_id.nullable is False
     assert SourceUrl.__table__.c.failure_count.server_default is not None
@@ -336,47 +395,72 @@ def test_alembic_configuration_has_price_monitoring_head_migration() -> None:
     heads = script.get_heads()
 
     assert heads == [get_alembic_head_revision()]
-    migration_text = (PROJECT_ROOT / "migrations" / "versions" / "20260429_0001_price_monitoring_persistence.py").read_text(
-        encoding="utf-8"
-    )
-    for table_name in ("products", "monitoring_runs", "catalog_snapshots", "price_observations"):
+    migration_text = (
+        PROJECT_ROOT
+        / "migrations"
+        / "versions"
+        / "20260429_0001_price_monitoring_persistence.py"
+    ).read_text(encoding="utf-8")
+    for table_name in (
+        "products",
+        "monitoring_runs",
+        "catalog_snapshots",
+        "price_observations",
+    ):
         assert f'"{table_name}"' in migration_text
     assert "postgresql.JSONB" in migration_text
     assert "uq_products_catalog_source_model_present" in migration_text
     assert "ix_price_observations_match_status" in migration_text
-    active_catalog_migration = (PROJECT_ROOT / "migrations" / "versions" / "20260429_0003_active_catalog.py").read_text(
-        encoding="utf-8"
-    )
+    active_catalog_migration = (
+        PROJECT_ROOT / "migrations" / "versions" / "20260429_0003_active_catalog.py"
+    ).read_text(encoding="utf-8")
     assert '"catalog_products"' in active_catalog_migration
     assert "uq_catalog_products_catalog_source_model" in active_catalog_migration
-    source_urls_migration = (PROJECT_ROOT / "migrations" / "versions" / "20260429_0004_source_urls.py").read_text(
-        encoding="utf-8"
-    )
+    source_urls_migration = (
+        PROJECT_ROOT / "migrations" / "versions" / "20260429_0004_source_urls.py"
+    ).read_text(encoding="utf-8")
     assert '"source_urls"' in source_urls_migration
     assert "uq_source_urls_catalog_product_url_normalized" in source_urls_migration
     assert "catalog_products.id" in source_urls_migration
-    unified_sources_migration = (PROJECT_ROOT / "migrations" / "versions" / "20260503_0005_unified_product_sources.py").read_text(
-        encoding="utf-8"
-    )
-    for table_name in ("vendors", "product_sources", "source_capture_snapshots", "offer_observations"):
+    unified_sources_migration = (
+        PROJECT_ROOT
+        / "migrations"
+        / "versions"
+        / "20260503_0005_unified_product_sources.py"
+    ).read_text(encoding="utf-8")
+    for table_name in (
+        "vendors",
+        "product_sources",
+        "source_capture_snapshots",
+        "offer_observations",
+    ):
         assert f'"{table_name}"' in unified_sources_migration
     assert "uq_product_sources_product_canonical_url_hash" in unified_sources_migration
-    source_url_agent_migration = (PROJECT_ROOT / "migrations" / "versions" / "20260503_0006_source_url_agent.py").read_text(
-        encoding="utf-8"
-    )
+    source_url_agent_migration = (
+        PROJECT_ROOT / "migrations" / "versions" / "20260503_0006_source_url_agent.py"
+    ).read_text(encoding="utf-8")
     for table_name in ("source_url_discovery_runs", "source_url_candidates"):
         assert f'"{table_name}"' in source_url_agent_migration
-    observation_batch_migration = (PROJECT_ROOT / "migrations" / "versions" / "20260505_0009_observation_batches.py").read_text(
-        encoding="utf-8"
-    )
+    observation_batch_migration = (
+        PROJECT_ROOT
+        / "migrations"
+        / "versions"
+        / "20260505_0009_observation_batches.py"
+    ).read_text(encoding="utf-8")
     assert "observation_batch_id" in observation_batch_migration
-    listings_migration = (PROJECT_ROOT / "migrations" / "versions" / "20260513_0011_price_observation_listings.py").read_text(
-        encoding="utf-8"
-    )
+    listings_migration = (
+        PROJECT_ROOT
+        / "migrations"
+        / "versions"
+        / "20260513_0011_price_observation_listings.py"
+    ).read_text(encoding="utf-8")
     assert '"price_observation_listings"' in listings_migration
     assert "ix_price_observation_listings_observation_rank" in listings_migration
     catalog_listing_migration = (
-        PROJECT_ROOT / "migrations" / "versions" / "20260515_0013_catalog_listing_indexes.py"
+        PROJECT_ROOT
+        / "migrations"
+        / "versions"
+        / "20260515_0013_catalog_listing_indexes.py"
     ).read_text(encoding="utf-8")
     assert "ix_source_urls_catalog_product_status_source" in catalog_listing_migration
 
@@ -396,13 +480,23 @@ def test_sqlite_metadata_schema_contains_expected_indexes(tmp_path: Path) -> Non
         "price_observations",
         "price_observation_listings",
     }
-    catalog_indexes = {item["name"] for item in inspector.get_indexes("catalog_products")}
+    catalog_indexes = {
+        item["name"] for item in inspector.get_indexes("catalog_products")
+    }
     source_url_indexes = {item["name"] for item in inspector.get_indexes("source_urls")}
     product_indexes = {item["name"] for item in inspector.get_indexes("products")}
-    observation_indexes = {item["name"] for item in inspector.get_indexes("price_observations")}
-    listing_indexes = {item["name"] for item in inspector.get_indexes("price_observation_listings")}
-    offer_indexes = {item["name"] for item in inspector.get_indexes("offer_observations")}
-    vendor_capture_indexes = {item["name"] for item in inspector.get_indexes("vendor_source_capture_runs")}
+    observation_indexes = {
+        item["name"] for item in inspector.get_indexes("price_observations")
+    }
+    listing_indexes = {
+        item["name"] for item in inspector.get_indexes("price_observation_listings")
+    }
+    offer_indexes = {
+        item["name"] for item in inspector.get_indexes("offer_observations")
+    }
+    vendor_capture_indexes = {
+        item["name"] for item in inspector.get_indexes("vendor_source_capture_runs")
+    }
     assert "uq_catalog_products_catalog_source_model" in catalog_indexes
     assert "ix_source_urls_catalog_product_id" in source_url_indexes
     assert "ix_source_urls_status" in source_url_indexes
@@ -413,7 +507,9 @@ def test_sqlite_metadata_schema_contains_expected_indexes(tmp_path: Path) -> Non
     assert "ix_price_observation_listings_observation_rank" in listing_indexes
     assert "ix_price_observation_listings_run_product_price" in listing_indexes
     assert "ix_offer_observations_observation_batch_id" in offer_indexes
-    assert "ix_vendor_source_capture_runs_observation_batch_id" in vendor_capture_indexes
+    assert (
+        "ix_vendor_source_capture_runs_observation_batch_id" in vendor_capture_indexes
+    )
 
 
 def test_repository_serializes_decimal_and_datetime_safely(tmp_path: Path) -> None:
@@ -430,7 +526,9 @@ def test_repository_serializes_decimal_and_datetime_safely(tmp_path: Path) -> No
     assert snapshot_payload["raw_catalog_row"]["model"] == "005606"
 
 
-def test_run_creation_api_persists_monitoring_run_and_catalog_snapshot(tmp_path: Path, monkeypatch) -> None:
+def test_run_creation_api_persists_monitoring_run_and_catalog_snapshot(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -450,8 +548,16 @@ def test_run_creation_api_persists_monitoring_run_and_catalog_snapshot(tmp_path:
     assert payload["input_csv_path"]
     assert Path(payload["input_csv_path"]).exists()
     with session_scope(database_url) as session:
-        run = session.query(MonitoringRun).filter(MonitoringRun.run_id == payload["run_id"]).one()
-        snapshots = session.query(CatalogSnapshot).filter(CatalogSnapshot.run_id == payload["run_id"]).all()
+        run = (
+            session.query(MonitoringRun)
+            .filter(MonitoringRun.run_id == payload["run_id"])
+            .one()
+        )
+        snapshots = (
+            session.query(CatalogSnapshot)
+            .filter(CatalogSnapshot.run_id == payload["run_id"])
+            .all()
+        )
         products = session.query(Product).all()
 
     assert run.source == "skroutz"
@@ -464,19 +570,36 @@ def test_run_creation_api_persists_monitoring_run_and_catalog_snapshot(tmp_path:
     assert products[0].catalog_source == "sourceCata"
 
 
-def test_run_creation_api_reports_db_persistence_failure(tmp_path: Path, monkeypatch) -> None:
+def test_run_creation_api_reports_db_persistence_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
     catalog_path = tmp_path / "sourceCata.csv"
     _write_catalog(catalog_path)
     monkeypatch.setenv(SOURCE_CATA_ENV_VAR, str(catalog_path))
-    monkeypatch.setenv("ECOMMERCE_DATABASE_URL", "postgresql+psycopg://user:secret-password@localhost/db")
+    monkeypatch.setenv(
+        "ECOMMERCE_DATABASE_URL",
+        "postgresql+psycopg://user:secret-password@localhost/db",
+    )
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(routes_price_monitoring, "require_database_ready_for_price_monitoring", lambda: None)
-    monkeypatch.setattr(routes_price_monitoring, "create_price_monitoring_run", lambda request: _run_record(tmp_path))
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "require_database_ready_for_price_monitoring",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "create_price_monitoring_run",
+        lambda request: _run_record(tmp_path),
+    )
 
     def broken_persistence(record, *, trigger_type: str = "manual"):
         raise RuntimeError("connection failed for password secret-password")
 
-    monkeypatch.setattr(routes_price_monitoring, "persist_run_creation_if_configured", broken_persistence)
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "persist_run_creation_if_configured",
+        broken_persistence,
+    )
 
     response = TestClient(create_app()).post(
         "/api/price-monitoring/runs",
@@ -489,7 +612,9 @@ def test_run_creation_api_reports_db_persistence_failure(tmp_path: Path, monkeyp
     assert "secret-password" not in detail
 
 
-def test_observation_parser_handles_source_specific_and_generic_columns(tmp_path: Path) -> None:
+def test_observation_parser_handles_source_specific_and_generic_columns(
+    tmp_path: Path,
+) -> None:
     source_specific = tmp_path / "skroutz.csv"
     source_specific.write_text(
         "model,mpn,name,price,skroutz_price,skroutz_url,observed_at\n"
@@ -503,8 +628,12 @@ def test_observation_parser_handles_source_specific_and_generic_columns(tmp_path
         encoding="utf-8",
     )
 
-    parsed_source = parse_price_observations_csv(source_specific, run_id="run-1", source="skroutz")
-    parsed_generic = parse_price_observations_csv(generic, run_id="run-2", source="bestprice")
+    parsed_source = parse_price_observations_csv(
+        source_specific, run_id="run-1", source="skroutz"
+    )
+    parsed_generic = parse_price_observations_csv(
+        generic, run_id="run-2", source="bestprice"
+    )
 
     assert parsed_source.observations[0].competitor_price == Decimal("119.90")
     assert parsed_source.observations[0].own_price == Decimal("123.45")
@@ -514,7 +643,9 @@ def test_observation_parser_handles_source_specific_and_generic_columns(tmp_path
     assert parsed_generic.observations[0].raw_observation["store"] == "Store A"
 
 
-def test_observation_parser_handles_alias_columns_and_skips_rows_without_model_or_mpn(tmp_path: Path) -> None:
+def test_observation_parser_handles_alias_columns_and_skips_rows_without_model_or_mpn(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "alias.csv"
     path.write_text(
         "Product Model,Manufacturer-Part-Number,Title,Internal Price,Fetched Price,Shop,Source URL\n"
@@ -537,7 +668,9 @@ def test_observation_parser_handles_alias_columns_and_skips_rows_without_model_o
     assert parsed.warnings
 
 
-def test_observation_parser_keeps_mpn_only_identity_and_warns_on_bad_price(tmp_path: Path) -> None:
+def test_observation_parser_keeps_mpn_only_identity_and_warns_on_bad_price(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "mpn_only.csv"
     path.write_text(
         "Manufacturer Part Number,Product Name,Catalog Price,Price Found\n"
@@ -558,9 +691,21 @@ def test_product_upsert_uses_catalog_source_and_model_boundary(tmp_path: Path) -
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     with session_scope(database_url) as session:
-        first = upsert_product_from_catalog_row(session, {"model": "005606", "mpn": "MPN-1", "name": "One"}, catalog_source="sourceA")
-        second = upsert_product_from_catalog_row(session, {"model": "005606", "mpn": "MPN-2", "name": "Two"}, catalog_source="sourceB")
-        updated = upsert_product_from_catalog_row(session, {"model": "005606", "mpn": "MPN-3", "name": "Updated"}, catalog_source="sourceA")
+        first = upsert_product_from_catalog_row(
+            session,
+            {"model": "005606", "mpn": "MPN-1", "name": "One"},
+            catalog_source="sourceA",
+        )
+        second = upsert_product_from_catalog_row(
+            session,
+            {"model": "005606", "mpn": "MPN-2", "name": "Two"},
+            catalog_source="sourceB",
+        )
+        updated = upsert_product_from_catalog_row(
+            session,
+            {"model": "005606", "mpn": "MPN-3", "name": "Updated"},
+            catalog_source="sourceA",
+        )
         session.flush()
 
         assert first is not None
@@ -576,9 +721,15 @@ def test_product_upsert_falls_back_to_catalog_source_and_mpn(tmp_path: Path) -> 
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     with session_scope(database_url) as session:
-        first = upsert_product_from_catalog_row(session, {"mpn": "MPN-ONLY", "name": "One"}, catalog_source="sourceA")
-        updated = upsert_product_from_catalog_row(session, {"mpn": "MPN-ONLY", "name": "Updated"}, catalog_source="sourceA")
-        other_source = upsert_product_from_catalog_row(session, {"mpn": "MPN-ONLY", "name": "Other"}, catalog_source="sourceB")
+        first = upsert_product_from_catalog_row(
+            session, {"mpn": "MPN-ONLY", "name": "One"}, catalog_source="sourceA"
+        )
+        updated = upsert_product_from_catalog_row(
+            session, {"mpn": "MPN-ONLY", "name": "Updated"}, catalog_source="sourceA"
+        )
+        other_source = upsert_product_from_catalog_row(
+            session, {"mpn": "MPN-ONLY", "name": "Other"}, catalog_source="sourceB"
+        )
         session.flush()
 
         assert first is not None
@@ -590,7 +741,9 @@ def test_product_upsert_falls_back_to_catalog_source_and_mpn(tmp_path: Path) -> 
         assert updated.name == "Updated"
 
 
-def test_catalog_snapshot_writer_stores_selected_fields_and_raw_payload(tmp_path: Path) -> None:
+def test_catalog_snapshot_writer_stores_selected_fields_and_raw_payload(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
 
@@ -607,7 +760,9 @@ def test_catalog_snapshot_writer_stores_selected_fields_and_raw_payload(tmp_path
     assert snapshot.raw_catalog_row["category_levels"] == ["Family", "Category", "Sub"]
 
 
-def test_unresolved_product_id_is_allowed_for_observations_and_included_by_default(tmp_path: Path) -> None:
+def test_unresolved_product_id_is_allowed_for_observations_and_included_by_default(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
 
@@ -639,7 +794,9 @@ def test_unresolved_product_id_is_allowed_for_observations_and_included_by_defau
         )
         session.flush()
         items, count = list_price_observations(session, run_id="run-1")
-        matched_only, matched_count = list_price_observations(session, run_id="run-1", include_unmatched=False)
+        matched_only, matched_count = list_price_observations(
+            session, run_id="run-1", include_unmatched=False
+        )
 
     assert replacement.unmatched_observation_count == 1
     assert count == 1
@@ -650,7 +807,9 @@ def test_unresolved_product_id_is_allowed_for_observations_and_included_by_defau
     assert matched_only == []
 
 
-def test_fetch_response_includes_observation_count_when_db_configured(tmp_path: Path, monkeypatch) -> None:
+def test_fetch_response_includes_observation_count_when_db_configured(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -664,7 +823,9 @@ def test_fetch_response_includes_observation_count_when_db_configured(tmp_path: 
     install_fake_execution_child(monkeypatch, tmp_path, mode="success", persist=True)
 
     client = TestClient(create_app())
-    response = client.post("/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"})
+    response = client.post(
+        "/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"}
+    )
 
     assert response.status_code == 202
     assert wait_for_worker_idle()
@@ -683,7 +844,9 @@ def test_fetch_response_includes_observation_count_when_db_configured(tmp_path: 
     assert count == 1
 
 
-def test_get_fetch_result_reports_missing_when_db_rows_do_not_exist(tmp_path: Path, monkeypatch) -> None:
+def test_get_fetch_result_reports_missing_when_db_rows_do_not_exist(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -700,10 +863,15 @@ def test_get_fetch_result_reports_missing_when_db_rows_do_not_exist(tmp_path: Pa
     assert response.status_code == 200
     payload = response.json()
     assert payload["persistence_status"] == "missing"
-    assert any("database rows were not found" in warning for warning in payload["persistence_warnings"])
+    assert any(
+        "database rows were not found" in warning
+        for warning in payload["persistence_warnings"]
+    )
 
 
-def test_get_fetch_result_reports_persisted_when_db_rows_exist(tmp_path: Path, monkeypatch) -> None:
+def test_get_fetch_result_reports_persisted_when_db_rows_exist(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -749,10 +917,16 @@ def test_get_fetch_result_reports_persisted_when_db_rows_exist(tmp_path: Path, m
     assert payload["persistence_warnings"] == []
 
 
-def test_backfill_listings_endpoint_performs_explicit_mutation(tmp_path: Path, monkeypatch) -> None:
+def test_backfill_listings_endpoint_performs_explicit_mutation(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
-    monkeypatch.setattr(routes_price_monitoring, "require_database_ready_for_price_monitoring", lambda: None)
+    monkeypatch.setattr(
+        routes_price_monitoring,
+        "require_database_ready_for_price_monitoring",
+        lambda: None,
+    )
     _create_schema(database_url)
     now = datetime(2026, 4, 29, 12, tzinfo=timezone.utc)
     with session_scope(database_url) as session:
@@ -825,7 +999,9 @@ def test_backfill_listings_endpoint_performs_explicit_mutation(tmp_path: Path, m
             )
         )
 
-    response = TestClient(create_app()).post("/api/price-monitoring/runs/run-1/backfill-listings")
+    response = TestClient(create_app()).post(
+        "/api/price-monitoring/runs/run-1/backfill-listings"
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -838,7 +1014,9 @@ def test_backfill_listings_endpoint_performs_explicit_mutation(tmp_path: Path, m
     assert listings[0].price == Decimal("118.50")
 
 
-def test_run_detail_includes_db_status_without_breaking_file_first_response(tmp_path: Path, monkeypatch) -> None:
+def test_run_detail_includes_db_status_without_breaking_file_first_response(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -906,7 +1084,9 @@ def test_run_detail_includes_db_persistence_counts(tmp_path: Path, monkeypatch) 
     assert db["persistence_status"] == "persisted"
 
 
-def test_refetch_appends_observations_for_same_run_id_while_latest_query_matches_previous_behavior(tmp_path: Path, monkeypatch) -> None:
+def test_refetch_appends_observations_for_same_run_id_while_latest_query_matches_previous_behavior(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -917,12 +1097,21 @@ def test_refetch_appends_observations_for_same_run_id_while_latest_query_matches
     run_dir = tmp_path / "output" / "ecommerce" / "monitoring" / "runs" / "run-1"
     _write_run(run_dir)
 
-    install_fake_execution_child(monkeypatch, tmp_path, mode="success", persist=True, prices=["119.90", "111.11"])
+    install_fake_execution_child(
+        monkeypatch, tmp_path, mode="success", persist=True, prices=["119.90", "111.11"]
+    )
     client = TestClient(create_app())
 
-    assert client.post("/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"}).status_code == 202
+    assert (
+        client.post(
+            "/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"}
+        ).status_code
+        == 202
+    )
     assert wait_for_worker_idle()
-    second_response = client.post("/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"})
+    second_response = client.post(
+        "/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"}
+    )
     assert second_response.status_code == 202
     assert wait_for_worker_idle()
     second_payload = client.get("/api/price-monitoring/runs/run-1/fetch").json()
@@ -943,7 +1132,9 @@ def test_refetch_appends_observations_for_same_run_id_while_latest_query_matches
     assert run.last_was_refetch is True
 
 
-def test_observation_api_serializes_decimal_datetime_and_raw_json(tmp_path: Path, monkeypatch) -> None:
+def test_observation_api_serializes_decimal_datetime_and_raw_json(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -956,7 +1147,9 @@ def test_observation_api_serializes_decimal_datetime_and_raw_json(tmp_path: Path
 
     install_fake_execution_child(monkeypatch, tmp_path, mode="success", persist=True)
     client = TestClient(create_app())
-    fetch_response = client.post("/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"})
+    fetch_response = client.post(
+        "/api/price-monitoring/runs/run-1/fetch", json={"source": "skroutz"}
+    )
     assert fetch_response.status_code == 202
     assert wait_for_worker_idle()
 
@@ -973,12 +1166,19 @@ def test_observation_api_serializes_decimal_datetime_and_raw_json(tmp_path: Path
 
     filtered = client.get(
         "/api/price-monitoring/observations",
-        params={"catalog_source": "sourceCata", "match_status": "matched", "limit": 1, "offset": 0},
+        params={
+            "catalog_source": "sourceCata",
+            "match_status": "matched",
+            "limit": 1,
+            "offset": 0,
+        },
     ).json()
     assert filtered["count"] == 1
     assert filtered["limit"] == 1
 
-    run_observations = client.get("/api/price-monitoring/runs/run-1/observations").json()
+    run_observations = client.get(
+        "/api/price-monitoring/runs/run-1/observations"
+    ).json()
     assert run_observations["run_id"] == "run-1"
     assert run_observations["count"] == 1
     assert run_observations["matched_count"] == 1
@@ -991,14 +1191,20 @@ def test_observation_api_serializes_decimal_datetime_and_raw_json(tmp_path: Path
     product_id = snapshot["items"][0]["product_id"]
     assert product_id is not None
 
-    product_history = client.get(f"/api/price-monitoring/products/{product_id}/price-history").json()
+    product_history = client.get(
+        f"/api/price-monitoring/products/{product_id}/price-history"
+    ).json()
     assert product_history["product_id"] == product_id
     assert product_history["count"] == 1
-    ambiguous_product_history = client.get("/api/price-monitoring/products/005606/price-history")
+    ambiguous_product_history = client.get(
+        "/api/price-monitoring/products/005606/price-history"
+    )
     assert ambiguous_product_history.status_code == 400
     assert "by-model" in ambiguous_product_history.json()["detail"]
 
-    history = client.get("/api/price-monitoring/products/by-model/005606/price-history").json()
+    history = client.get(
+        "/api/price-monitoring/products/by-model/005606/price-history"
+    ).json()
     assert history["model"] == "005606"
     assert history["count"] == 1
 

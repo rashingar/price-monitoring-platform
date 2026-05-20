@@ -22,7 +22,9 @@ from product_factory.services.authoring_service import (
 from product_factory.services.errors import ServiceError, ServiceErrorCode
 
 
-def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(tmp_path: Path) -> None:
+def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(
+    tmp_path: Path,
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
@@ -32,7 +34,13 @@ def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(tmp_path: Pat
         log(f"fake callback for {record.job_id}")
         store.update_artifacts(
             record.job_id,
-            {"source_json_path": tmp_path / "work" / record.model / "scrape" / f"{record.model}.source.json"},
+            {
+                "source_json_path": tmp_path
+                / "work"
+                / record.model
+                / "scrape"
+                / f"{record.model}.source.json"
+            },
         )
 
     runner = SequentialJobRunner(store, fake_callback)
@@ -59,7 +67,9 @@ def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(tmp_path: Pat
         job_id = response.json()["job_id"]
         queued_payload = store.get_job(job_id).payload
         assert queued_payload["gallery_url"] == "https://www.electronet.gr/gallery"
-        assert queued_payload["characteristics_url"] == "https://www.electronet.gr/specs"
+        assert (
+            queued_payload["characteristics_url"] == "https://www.electronet.gr/specs"
+        )
         assert queued_payload["second_opencart_image_index"] == 4
 
         assert runner.wait_until_idle(timeout=2.0)
@@ -86,13 +96,17 @@ def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(tmp_path: Pat
     ]
 
 
-def test_prepare_route_accepts_legacy_payload_and_rejects_invalid_second_image_index(tmp_path: Path) -> None:
+def test_prepare_route_accepts_legacy_payload_and_rejects_invalid_second_image_index(
+    tmp_path: Path,
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
     store = JobStore(tmp_path / "jobs")
     runner = SequentialJobRunner(store, lambda _record, _log: None)
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         legacy_response = client.post(
@@ -119,19 +133,36 @@ def test_prepare_route_accepts_legacy_payload_and_rejects_invalid_second_image_i
         runner.stop()
 
     assert legacy_response.status_code == 202
-    assert store.get_job(legacy_response.json()["job_id"]).payload.get("gallery_url") is None
-    assert store.get_job(legacy_response.json()["job_id"]).payload.get("characteristics_url") is None
-    assert store.get_job(legacy_response.json()["job_id"]).payload.get("gallery_mode") is None
+    assert (
+        store.get_job(legacy_response.json()["job_id"]).payload.get("gallery_url")
+        is None
+    )
+    assert (
+        store.get_job(legacy_response.json()["job_id"]).payload.get(
+            "characteristics_url"
+        )
+        is None
+    )
+    assert (
+        store.get_job(legacy_response.json()["job_id"]).payload.get("gallery_mode")
+        is None
+    )
     assert invalid_response.status_code == 422
 
 
-def test_authoring_routes_enqueue_job_responses_and_preserve_model(tmp_path: Path) -> None:
+def test_authoring_routes_enqueue_job_responses_and_preserve_model(
+    tmp_path: Path,
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
     store = JobStore(tmp_path / "jobs")
-    runner = SequentialJobRunner(store, lambda record, log: log(f"queued {record.job_type.value}"))
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    runner = SequentialJobRunner(
+        store, lambda record, log: log(f"queued {record.job_type.value}")
+    )
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         responses = [
@@ -140,8 +171,12 @@ def test_authoring_routes_enqueue_job_responses_and_preserve_model(tmp_path: Pat
             client.post("/api/authoring/000001/seo-meta"),
             client.post("/api/authoring/000001/seo-meta/retry"),
         ]
-        canonical_intro = client.post("/api/jobs/authoring/intro-text", json={"model": "000001"})
-        canonical_seo = client.post("/api/jobs/authoring/seo-meta", json={"model": "000001", "retry": True})
+        canonical_intro = client.post(
+            "/api/jobs/authoring/intro-text", json={"model": "000001"}
+        )
+        canonical_seo = client.post(
+            "/api/jobs/authoring/seo-meta", json={"model": "000001", "retry": True}
+        )
     finally:
         runner.stop()
 
@@ -152,7 +187,10 @@ def test_authoring_routes_enqueue_job_responses_and_preserve_model(tmp_path: Pat
         "authoring_seo",
         "authoring_seo",
     ]
-    assert all(response.json()["job_id"].startswith("000001-authoring_") for response in responses)
+    assert all(
+        response.json()["job_id"].startswith("000001-authoring_")
+        for response in responses
+    )
     assert all(response.json()["model"] == "000001" for response in responses)
     assert canonical_intro.status_code == 202
     assert canonical_intro.json()["job_type"] == "authoring_intro"
@@ -160,7 +198,9 @@ def test_authoring_routes_enqueue_job_responses_and_preserve_model(tmp_path: Pat
     assert canonical_seo.json()["job_type"] == "authoring_seo"
 
 
-def test_authoring_get_remains_read_status_endpoint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_authoring_get_remains_read_status_endpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory import repo_paths
     from product_factory.api.app import create_app
@@ -168,7 +208,9 @@ def test_authoring_get_remains_read_status_endpoint(tmp_path: Path, monkeypatch:
     monkeypatch.setattr(repo_paths, "REPO_ROOT", tmp_path)
     store = JobStore(tmp_path / "jobs")
     runner = SequentialJobRunner(store)
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         response = client.get("/api/authoring/missing-model")
@@ -180,13 +222,19 @@ def test_authoring_get_remains_read_status_endpoint(tmp_path: Path, monkeypatch:
     assert store.list_jobs() == []
 
 
-def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(tmp_path: Path) -> None:
+def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(
+    tmp_path: Path,
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
     store = JobStore(tmp_path / "jobs")
-    runner = SequentialJobRunner(store, lambda record, log: log(f"queued {record.job_type.value}"))
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    runner = SequentialJobRunner(
+        store, lambda record, log: log(f"queued {record.job_type.value}")
+    )
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
     source_url = "https://www.electronet.gr/example"
 
     try:
@@ -222,12 +270,16 @@ def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(tmp_p
     assert record.payload["source_resolution"] == {"candidate_id": "abc"}
 
 
-def test_retry_requeues_failed_full_pipeline_from_prepared_artifacts(tmp_path: Path) -> None:
+def test_retry_requeues_failed_full_pipeline_from_prepared_artifacts(
+    tmp_path: Path,
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
     store = JobStore(tmp_path / "jobs")
-    runner = SequentialJobRunner(store, lambda record, log: log(f"queued {record.job_type.value}"))
+    runner = SequentialJobRunner(
+        store, lambda record, log: log(f"queued {record.job_type.value}")
+    )
     payload = {
         "model": "233541",
         "source_url": "https://www.electronet.gr/example",
@@ -240,8 +292,12 @@ def test_retry_requeues_failed_full_pipeline_from_prepared_artifacts(tmp_path: P
         "source_resolution": {"source": "operator"},
     }
     failed = store.enqueue(JobType.FULL_PIPELINE, payload, job_id="job-1")
-    store.mark_failed(failed.job_id, "publish failed", message="Full pipeline failed during publish.")
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    store.mark_failed(
+        failed.job_id, "publish failed", message="Full pipeline failed during publish."
+    )
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         response = client.post(f"/api/jobs/{failed.job_id}/retry")
@@ -259,12 +315,16 @@ def test_retry_requeues_failed_full_pipeline_from_prepared_artifacts(tmp_path: P
     }
 
 
-def test_start_requeues_terminal_full_pipeline_from_scratch_without_retry_metadata(tmp_path: Path) -> None:
+def test_start_requeues_terminal_full_pipeline_from_scratch_without_retry_metadata(
+    tmp_path: Path,
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
     store = JobStore(tmp_path / "jobs")
-    runner = SequentialJobRunner(store, lambda record, log: log(f"queued {record.job_type.value}"))
+    runner = SequentialJobRunner(
+        store, lambda record, log: log(f"queued {record.job_type.value}")
+    )
     payload = {
         "model": "233541",
         "source_url": "https://www.electronet.gr/example",
@@ -280,8 +340,12 @@ def test_start_requeues_terminal_full_pipeline_from_scratch_without_retry_metada
         "skip_prepare": True,
     }
     failed = store.enqueue(JobType.FULL_PIPELINE, payload, job_id="job-1")
-    store.mark_failed(failed.job_id, "render failed", message="Full pipeline failed during render.")
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    store.mark_failed(
+        failed.job_id, "render failed", message="Full pipeline failed during render."
+    )
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         response = client.post(f"/api/jobs/{failed.job_id}/start")
@@ -315,7 +379,9 @@ def test_retry_and_start_reject_active_or_missing_jobs(tmp_path: Path) -> None:
         {"model": "233541", "source_url": "https://www.electronet.gr/example"},
         job_id="job-1",
     )
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         retry_active = client.post(f"/api/jobs/{active.job_id}/retry")
@@ -339,7 +405,9 @@ def test_start_rejects_non_full_pipeline_jobs_intentionally(tmp_path: Path) -> N
     runner = SequentialJobRunner(store, lambda record, log: None)
     record = store.enqueue(JobType.RENDER, {"model": "233541"}, job_id="job-1")
     store.mark_failed(record.job_id, "validation failed", message="Render job failed.")
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         response = client.post(f"/api/jobs/{record.job_id}/start")
@@ -347,10 +415,15 @@ def test_start_rejects_non_full_pipeline_jobs_intentionally(tmp_path: Path) -> N
         runner.stop()
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Start from scratch is supported only for full_pipeline jobs."
+    assert (
+        response.json()["detail"]
+        == "Start from scratch is supported only for full_pipeline jobs."
+    )
 
 
-def test_start_rejects_full_pipeline_with_missing_original_payload_fields(tmp_path: Path) -> None:
+def test_start_rejects_full_pipeline_with_missing_original_payload_fields(
+    tmp_path: Path,
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
@@ -358,7 +431,9 @@ def test_start_rejects_full_pipeline_with_missing_original_payload_fields(tmp_pa
     runner = SequentialJobRunner(store, lambda record, log: None)
     record = store.enqueue(JobType.FULL_PIPELINE, {"model": "233541"}, job_id="job-1")
     store.mark_failed(record.job_id, "bad payload", message="Full pipeline failed.")
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         response = client.post(f"/api/jobs/{record.job_id}/start")
@@ -366,13 +441,20 @@ def test_start_rejects_full_pipeline_with_missing_original_payload_fields(tmp_pa
         runner.stop()
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Full pipeline job payload is missing source_url; cannot start job."
+    assert (
+        response.json()["detail"]
+        == "Full pipeline job payload is missing source_url; cannot start job."
+    )
 
 
-def test_authoring_intro_runner_dispatches_and_exposes_preview_artifacts(tmp_path: Path) -> None:
+def test_authoring_intro_runner_dispatches_and_exposes_preview_artifacts(
+    tmp_path: Path,
+) -> None:
     llm_dir = tmp_path / "work" / "000001" / "llm"
     llm_dir.mkdir(parents=True)
-    (llm_dir / "intro_text.output.txt").write_text("Intro <strong>preview</strong> text.", encoding="utf-8")
+    (llm_dir / "intro_text.output.txt").write_text(
+        "Intro <strong>preview</strong> text.", encoding="utf-8"
+    )
     (llm_dir / "task_manifest.json").write_text("{}\n", encoding="utf-8")
     record = JobRecord(
         job_id="000001-authoring_intro-test",
@@ -386,16 +468,25 @@ def test_authoring_intro_runner_dispatches_and_exposes_preview_artifacts(tmp_pat
     result = run_authoring_intro_job(
         record,
         lambda line: None,
-        run_intro_text_authoring_fn=lambda model, retry=False: calls.append((model, retry)) or _authoring_status(llm_dir),
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append(
+            (model, retry)
+        )
+        or _authoring_status(llm_dir),
     )
 
     assert calls == [("000001", True)]
     assert result.status == JobStatus.SUCCEEDED
-    assert result.artifacts["intro_text_preview_path"] == str(llm_dir / "intro_text.preview.html")
-    assert (llm_dir / "intro_text.preview.html").read_text(encoding="utf-8") == "Intro <strong>preview</strong> text."
+    assert result.artifacts["intro_text_preview_path"] == str(
+        llm_dir / "intro_text.preview.html"
+    )
+    assert (llm_dir / "intro_text.preview.html").read_text(
+        encoding="utf-8"
+    ) == "Intro <strong>preview</strong> text."
 
 
-def test_authoring_seo_runner_dispatches_independently_of_failed_intro(tmp_path: Path) -> None:
+def test_authoring_seo_runner_dispatches_independently_of_failed_intro(
+    tmp_path: Path,
+) -> None:
     llm_dir = tmp_path / "work" / "000001" / "llm"
     llm_dir.mkdir(parents=True)
     (llm_dir / "seo_meta.output.json").write_text(
@@ -421,7 +512,11 @@ def test_authoring_seo_runner_dispatches_independently_of_failed_intro(tmp_path:
         intro_record,
         lambda line: None,
         run_intro_text_authoring_fn=lambda model, retry=False: (_ for _ in ()).throw(
-            ServiceError(ServiceErrorCode.VALIDATION_FAILURE.value, "invalid intro", details={"error_code": "bad_intro"})
+            ServiceError(
+                ServiceErrorCode.VALIDATION_FAILURE.value,
+                "invalid intro",
+                details={"error_code": "bad_intro"},
+            )
         ),
     )
     seo_result = run_authoring_seo_job(
@@ -433,11 +528,17 @@ def test_authoring_seo_runner_dispatches_independently_of_failed_intro(tmp_path:
     assert intro_result.status == JobStatus.FAILED
     assert intro_result.error_code == "bad_intro"
     assert seo_result.status == JobStatus.SUCCEEDED
-    assert seo_result.artifacts["seo_meta_preview_path"] == str(llm_dir / "seo_meta.preview.json")
-    assert "Description" in (llm_dir / "seo_meta.preview.json").read_text(encoding="utf-8")
+    assert seo_result.artifacts["seo_meta_preview_path"] == str(
+        llm_dir / "seo_meta.preview.json"
+    )
+    assert "Description" in (llm_dir / "seo_meta.preview.json").read_text(
+        encoding="utf-8"
+    )
 
 
-def test_authoring_intro_runner_reports_missing_prepared_artifacts_as_structured_failure() -> None:
+def test_authoring_intro_runner_reports_missing_prepared_artifacts_as_structured_failure() -> (
+    None
+):
     record = JobRecord(
         job_id="000001-authoring_intro-test",
         job_type=JobType.AUTHORING_INTRO,
@@ -497,7 +598,9 @@ def test_authoring_seo_runner_reports_unexpected_error_without_throwing() -> Non
     result = run_authoring_seo_job(
         record,
         lambda line: None,
-        run_seo_meta_authoring_fn=lambda model, retry=False: (_ for _ in ()).throw(RuntimeError("resolver exploded")),
+        run_seo_meta_authoring_fn=lambda model, retry=False: (_ for _ in ()).throw(
+            RuntimeError("resolver exploded")
+        ),
     )
 
     assert result.status == JobStatus.FAILED
@@ -511,7 +614,9 @@ def test_stop_route_returns_404_for_missing_or_invalid_job(tmp_path: Path) -> No
 
     store = JobStore(tmp_path / "jobs")
     runner = SequentialJobRunner(store, lambda record, log: None)
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         missing_response = client.post("/api/jobs/missing/stop")
@@ -530,10 +635,14 @@ def test_stop_route_cancels_queued_job_and_writes_log(tmp_path: Path) -> None:
     store = JobStore(tmp_path / "jobs")
     runner = SequentialJobRunner(store)
     record = store.enqueue(JobType.RENDER, {"model": "233541"}, job_id="job-1")
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
-        response = client.post(f"/api/jobs/{record.job_id}/stop", json={"reason": "stuck"})
+        response = client.post(
+            f"/api/jobs/{record.job_id}/stop", json={"reason": "stuck"}
+        )
     finally:
         runner.stop()
 
@@ -544,10 +653,14 @@ def test_stop_route_cancels_queued_job_and_writes_log(tmp_path: Path) -> None:
     assert body["finished_at"] is not None
     assert loaded.status == JobStatus.CANCELLED
     assert loaded.stop_reason == "stuck"
-    assert "Stop requested by operator before job started." in store.read_logs(record.job_id)
+    assert "Stop requested by operator before job started." in store.read_logs(
+        record.job_id
+    )
 
 
-def test_jobs_by_model_lists_latest_first_and_retry_requeues_failed_stage(tmp_path: Path) -> None:
+def test_jobs_by_model_lists_latest_first_and_retry_requeues_failed_stage(
+    tmp_path: Path,
+) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
@@ -559,7 +672,9 @@ def test_jobs_by_model_lists_latest_first_and_retry_requeues_failed_stage(tmp_pa
     store.mark_succeeded(first.job_id)
     store.mark_failed(second.job_id, "validation failed", message="Render job failed.")
     store.mark_failed(other.job_id, "publish failed", message="Publish job failed.")
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         by_model = client.get("/api/jobs/by-model/233541")
@@ -582,7 +697,9 @@ def test_stop_route_cancels_stale_running_job(tmp_path: Path) -> None:
     runner = SequentialJobRunner(store)
     record = store.enqueue(JobType.PUBLISH, {"model": "233541"}, job_id="job-1")
     store.mark_running(record.job_id, message="Job started.")
-    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
 
     try:
         response = client.post(f"/api/jobs/{record.job_id}/stop")
@@ -592,10 +709,14 @@ def test_stop_route_cancels_stale_running_job(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert response.json()["status"] == JobStatus.CANCELLED.value
     assert store.get_job(record.job_id).status == JobStatus.CANCELLED
-    assert "Stop requested for stale running job record." in store.read_logs(record.job_id)
+    assert "Stop requested for stale running job record." in store.read_logs(
+        record.job_id
+    )
 
 
-def test_artifact_resolver_returns_existing_render_expected_paths(tmp_path: Path) -> None:
+def test_artifact_resolver_returns_existing_render_expected_paths(
+    tmp_path: Path,
+) -> None:
     candidate_dir = tmp_path / "work" / "233541" / "candidate"
     candidate_dir.mkdir(parents=True)
     csv_path = candidate_dir / "233541.csv"
@@ -627,23 +748,39 @@ def test_artifact_resolver_includes_stored_publish_detail_paths(tmp_path: Path) 
         status=JobStatus.SUCCEEDED,
         model="233541",
         artifacts={
-            "upload_report_path": str(tmp_path / "work" / "233541" / "upload.opencart.json"),
-            "import_report_path": str(tmp_path / "work" / "233541" / "import.opencart.json"),
+            "upload_report_path": str(
+                tmp_path / "work" / "233541" / "upload.opencart.json"
+            ),
+            "import_report_path": str(
+                tmp_path / "work" / "233541" / "import.opencart.json"
+            ),
         },
     )
 
     artifacts = resolve_job_artifacts(record, repo_root=tmp_path)
 
-    assert [(artifact.name, artifact.path, artifact.kind) for artifact in artifacts] == [
-        ("import_report_path", str(tmp_path / "work" / "233541" / "import.opencart.json"), None),
-        ("upload_report_path", str(tmp_path / "work" / "233541" / "upload.opencart.json"), None),
+    assert [
+        (artifact.name, artifact.path, artifact.kind) for artifact in artifacts
+    ] == [
+        (
+            "import_report_path",
+            str(tmp_path / "work" / "233541" / "import.opencart.json"),
+            None,
+        ),
+        (
+            "upload_report_path",
+            str(tmp_path / "work" / "233541" / "upload.opencart.json"),
+            None,
+        ),
     ]
 
 
 def test_artifact_resolver_includes_authoring_preview_content(tmp_path: Path) -> None:
     llm_dir = tmp_path / "work" / "000001" / "llm"
     llm_dir.mkdir(parents=True)
-    (llm_dir / "intro_text.preview.html").write_text("Rendered <strong>intro</strong>.", encoding="utf-8")
+    (llm_dir / "intro_text.preview.html").write_text(
+        "Rendered <strong>intro</strong>.", encoding="utf-8"
+    )
     record = JobRecord(
         job_id="job-1",
         job_type=JobType.AUTHORING_INTRO,
@@ -652,7 +789,9 @@ def test_artifact_resolver_includes_authoring_preview_content(tmp_path: Path) ->
     )
 
     artifacts = resolve_job_artifacts(record, repo_root=tmp_path)
-    preview = next(artifact for artifact in artifacts if artifact.name == "intro_text_preview_path")
+    preview = next(
+        artifact for artifact in artifacts if artifact.name == "intro_text_preview_path"
+    )
 
     assert preview.kind == "text_preview"
     assert preview.content_type == "text/html"

@@ -14,23 +14,34 @@ from ecommerce.db.models.vendor_sources import Vendor
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.source_capture.firecrawl_health import firecrawl_health_reason
-from ecommerce.source_capture.skroutz_network_diagnostic import CAPTURE_STRATEGY as SKROUTZ_NETWORK_DIAGNOSTIC_STRATEGY
-
+from ecommerce.source_capture.skroutz_network_diagnostic import (
+    CAPTURE_STRATEGY as SKROUTZ_NETWORK_DIAGNOSTIC_STRATEGY,
+)
 
 SOURCE_URL_STATUSES = ("active", "needs_review", "broken", "disabled", "redirected")
 SOURCE_URL_TYPES = ("manual", "imported", "discovered")
 
 
-def source_url_summary(session: Session, *, source_name: str | None = None) -> dict[str, Any]:
+def source_url_summary(
+    session: Session, *, source_name: str | None = None
+) -> dict[str, Any]:
     normalized_source = _optional_text(source_name)
     source_urls = _source_urls(session, normalized_source)
     product_sources = _product_sources(session, normalized_source)
     source_url_status_counts = Counter(str(row.status or "") for row in source_urls)
     source_url_type_counts = Counter(str(row.url_type or "") for row in source_urls)
-    source_url_source_counts = Counter(str(row.source_name or "") for row in source_urls)
-    products_with_active = {int(row.catalog_product_id) for row in source_urls if row.status == "active"}
+    source_url_source_counts = Counter(
+        str(row.source_name or "") for row in source_urls
+    )
+    products_with_active = {
+        int(row.catalog_product_id) for row in source_urls if row.status == "active"
+    }
     active_catalog_products = list(
-        session.execute(select(CatalogProductRow).where(CatalogProductRow.active.is_(True))).scalars().all()
+        session.execute(
+            select(CatalogProductRow).where(CatalogProductRow.active.is_(True))
+        )
+        .scalars()
+        .all()
     )
     active_catalog_product_ids = {int(row.id) for row in active_catalog_products}
     missing_active_products = [
@@ -45,17 +56,33 @@ def source_url_summary(session: Session, *, source_name: str | None = None) -> d
         for row in active_catalog_products
         if int(row.id) not in products_with_active
     ]
-    product_source_health = Counter(_product_source_health(row) for row in product_sources)
+    product_source_health = Counter(
+        _product_source_health(row) for row in product_sources
+    )
     by_source: dict[str, Counter] = defaultdict(Counter)
     for row in source_urls:
         by_source[str(row.source_name or "")][str(row.status or "")] += 1
     source_url_count = len(source_urls)
     products_with_active_count = len(products_with_active & active_catalog_product_ids)
-    products_without_active_count = max(0, len(active_catalog_product_ids) - products_with_active_count)
-    coverage_percent = round((products_with_active_count / len(active_catalog_product_ids)) * 100, 2) if active_catalog_product_ids else 0.0
-    by_status = {status: int(source_url_status_counts[status]) for status in SOURCE_URL_STATUSES}
-    by_url_type = {url_type: int(source_url_type_counts[url_type]) for url_type in SOURCE_URL_TYPES}
-    by_source_name = dict(sorted((source, int(count)) for source, count in source_url_source_counts.items()))
+    products_without_active_count = max(
+        0, len(active_catalog_product_ids) - products_with_active_count
+    )
+    coverage_percent = (
+        round((products_with_active_count / len(active_catalog_product_ids)) * 100, 2)
+        if active_catalog_product_ids
+        else 0.0
+    )
+    by_status = {
+        status: int(source_url_status_counts[status]) for status in SOURCE_URL_STATUSES
+    }
+    by_url_type = {
+        url_type: int(source_url_type_counts[url_type]) for url_type in SOURCE_URL_TYPES
+    }
+    by_source_name = dict(
+        sorted(
+            (source, int(count)) for source, count in source_url_source_counts.items()
+        )
+    )
     return {
         "source_name": normalized_source or None,
         "catalog_product_count": len(active_catalog_product_ids),
@@ -81,8 +108,12 @@ def source_url_summary(session: Session, *, source_name: str | None = None) -> d
         "by_source": by_source_name,
         "by_url_type": by_url_type,
         "by_type": by_url_type,
-        "missing_source_url_models": [str(row["model"]) for row in missing_active_products if row.get("model")],
-        "missing_source_url_catalog_product_ids": [row["catalog_product_id"] for row in missing_active_products],
+        "missing_source_url_models": [
+            str(row["model"]) for row in missing_active_products if row.get("model")
+        ],
+        "missing_source_url_catalog_product_ids": [
+            row["catalog_product_id"] for row in missing_active_products
+        ],
         "missing_active_source_url_products": missing_active_products,
         "product_source_count": len(product_sources),
         "active_product_source_count": sum(1 for row in product_sources if row.active),
@@ -90,7 +121,9 @@ def source_url_summary(session: Session, *, source_name: str | None = None) -> d
         "sources": [
             {
                 "source_name": source,
-                "status_counts": {status: int(counts[status]) for status in SOURCE_URL_STATUSES},
+                "status_counts": {
+                    status: int(counts[status]) for status in SOURCE_URL_STATUSES
+                },
                 "source_url_count": sum(counts.values()),
             }
             for source, counts in sorted(by_source.items())
@@ -135,21 +168,38 @@ def source_health_items(
             "last_error_at": json_safe_value(source.last_error_at),
             "last_error_code": source.last_error_code,
             "last_error_message": source.last_error_message,
-            "health_reason": _health_reason(source, vendor_row.slug if vendor_row is not None else None),
+            "health_reason": _health_reason(
+                source, vendor_row.slug if vendor_row is not None else None
+            ),
             "consecutive_failures": int(source.consecutive_failures or 0),
             "data_quality_flags": source.data_quality_flags or [],
-            "latest_skroutz_network_diagnostic": _latest_skroutz_network_diagnostic_summary(session, source) if (vendor_row.slug if vendor_row is not None else None) == "skroutz" else None,
+            "latest_skroutz_network_diagnostic": (
+                _latest_skroutz_network_diagnostic_summary(session, source)
+                if (vendor_row.slug if vendor_row is not None else None) == "skroutz"
+                else None
+            ),
             "updated_at": json_safe_value(source.updated_at),
         }
         for source, product, vendor_row in rows
     ]
     if normalized_health_reason:
-        items = [item for item in items if item.get("health_reason") == normalized_health_reason]
-    return {"items": items, "limit": safe_limit, "offset": safe_offset, "count": len(items)}
+        items = [
+            item
+            for item in items
+            if item.get("health_reason") == normalized_health_reason
+        ]
+    return {
+        "items": items,
+        "limit": safe_limit,
+        "offset": safe_offset,
+        "count": len(items),
+    }
 
 
 def _source_urls(session: Session, source_name: str | None) -> list[SourceUrl]:
-    statement = select(SourceUrl).join(CatalogProductRow, CatalogProductRow.id == SourceUrl.catalog_product_id)
+    statement = select(SourceUrl).join(
+        CatalogProductRow, CatalogProductRow.id == SourceUrl.catalog_product_id
+    )
     statement = statement.where(CatalogProductRow.active.is_(True))
     if source_name:
         statement = statement.where(SourceUrl.source_name == source_name)
@@ -157,7 +207,9 @@ def _source_urls(session: Session, source_name: str | None) -> list[SourceUrl]:
 
 
 def _product_sources(session: Session, vendor: str | None) -> list[ProductSource]:
-    statement = select(ProductSource).outerjoin(Vendor, Vendor.id == ProductSource.vendor_id)
+    statement = select(ProductSource).outerjoin(
+        Vendor, Vendor.id == ProductSource.vendor_id
+    )
     if vendor:
         statement = statement.where(Vendor.slug == vendor)
     return list(session.execute(statement).scalars().all())
@@ -183,16 +235,21 @@ def _health_reason(row: ProductSource, vendor_slug: str | None) -> str | None:
     )
 
 
-def _latest_skroutz_network_diagnostic_summary(session: Session, source: ProductSource) -> dict[str, Any] | None:
+def _latest_skroutz_network_diagnostic_summary(
+    session: Session, source: ProductSource
+) -> dict[str, Any] | None:
     if source.id is None:
         return None
     snapshot = session.execute(
         select(SourceCaptureSnapshot)
         .where(
             SourceCaptureSnapshot.product_source_id == source.id,
-            SourceCaptureSnapshot.capture_strategy == SKROUTZ_NETWORK_DIAGNOSTIC_STRATEGY,
+            SourceCaptureSnapshot.capture_strategy
+            == SKROUTZ_NETWORK_DIAGNOSTIC_STRATEGY,
         )
-        .order_by(SourceCaptureSnapshot.created_at.desc(), SourceCaptureSnapshot.id.desc())
+        .order_by(
+            SourceCaptureSnapshot.created_at.desc(), SourceCaptureSnapshot.id.desc()
+        )
         .limit(1)
     ).scalar_one_or_none()
     if snapshot is None or not isinstance(snapshot.response_body_json, dict):
@@ -201,11 +258,21 @@ def _latest_skroutz_network_diagnostic_summary(session: Session, source: Product
     return {
         "diagnostic_report_id": snapshot.id,
         "status": report.get("status"),
-        "captured_response_count": len(report.get("captured_responses") or []) if isinstance(report.get("captured_responses"), list) else 0,
-        "observed_filter_products_url": bool(report.get("observed_filter_products_url")),
+        "captured_response_count": (
+            len(report.get("captured_responses") or [])
+            if isinstance(report.get("captured_responses"), list)
+            else 0
+        ),
+        "observed_filter_products_url": bool(
+            report.get("observed_filter_products_url")
+        ),
         "observed_shops_details_url": bool(report.get("observed_shops_details_url")),
         "best_product_data_endpoint": report.get("product_data_candidate_url"),
-        "classifications_summary": report.get("classifications_summary") if isinstance(report.get("classifications_summary"), dict) else {},
+        "classifications_summary": (
+            report.get("classifications_summary")
+            if isinstance(report.get("classifications_summary"), dict)
+            else {}
+        ),
         "created_at": json_safe_value(snapshot.created_at),
     }
 

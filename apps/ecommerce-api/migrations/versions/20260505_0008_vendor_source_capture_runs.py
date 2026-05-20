@@ -11,7 +11,6 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-
 revision = "20260505_0008"
 down_revision = "20260503_0006"
 branch_labels = None
@@ -26,9 +25,24 @@ def upgrade() -> None:
         sa.Column("status", sa.String(), nullable=False),
         sa.Column("source_filter", sa.String(), nullable=True),
         sa.Column("catalog_source", sa.String(), nullable=True),
-        sa.Column("selected_catalog_product_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("selected_source_url_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("selected_product_source_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column(
+            "selected_catalog_product_count",
+            sa.Integer(),
+            nullable=False,
+            server_default="0",
+        ),
+        sa.Column(
+            "selected_source_url_count",
+            sa.Integer(),
+            nullable=False,
+            server_default="0",
+        ),
+        sa.Column(
+            "selected_product_source_count",
+            sa.Integer(),
+            nullable=False,
+            server_default="0",
+        ),
         sa.Column("succeeded_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("failed_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("skipped_count", sa.Integer(), nullable=False, server_default="0"),
@@ -41,19 +55,51 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("uq_vendor_source_capture_runs_run_id", "vendor_source_capture_runs", ["run_id"], unique=True)
-    op.create_index("ix_vendor_source_capture_runs_status", "vendor_source_capture_runs", ["status"])
-    op.create_index("ix_vendor_source_capture_runs_source_filter", "vendor_source_capture_runs", ["source_filter"])
-    op.create_index("ix_vendor_source_capture_runs_catalog_source", "vendor_source_capture_runs", ["catalog_source"])
-    op.create_index("ix_vendor_source_capture_runs_created_at", "vendor_source_capture_runs", ["created_at"])
+    op.create_index(
+        "uq_vendor_source_capture_runs_run_id",
+        "vendor_source_capture_runs",
+        ["run_id"],
+        unique=True,
+    )
+    op.create_index(
+        "ix_vendor_source_capture_runs_status", "vendor_source_capture_runs", ["status"]
+    )
+    op.create_index(
+        "ix_vendor_source_capture_runs_source_filter",
+        "vendor_source_capture_runs",
+        ["source_filter"],
+    )
+    op.create_index(
+        "ix_vendor_source_capture_runs_catalog_source",
+        "vendor_source_capture_runs",
+        ["catalog_source"],
+    )
+    op.create_index(
+        "ix_vendor_source_capture_runs_created_at",
+        "vendor_source_capture_runs",
+        ["created_at"],
+    )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_vendor_source_capture_runs_created_at", table_name="vendor_source_capture_runs")
-    op.drop_index("ix_vendor_source_capture_runs_catalog_source", table_name="vendor_source_capture_runs")
-    op.drop_index("ix_vendor_source_capture_runs_source_filter", table_name="vendor_source_capture_runs")
-    op.drop_index("ix_vendor_source_capture_runs_status", table_name="vendor_source_capture_runs")
-    op.drop_index("uq_vendor_source_capture_runs_run_id", table_name="vendor_source_capture_runs")
+    op.drop_index(
+        "ix_vendor_source_capture_runs_created_at",
+        table_name="vendor_source_capture_runs",
+    )
+    op.drop_index(
+        "ix_vendor_source_capture_runs_catalog_source",
+        table_name="vendor_source_capture_runs",
+    )
+    op.drop_index(
+        "ix_vendor_source_capture_runs_source_filter",
+        table_name="vendor_source_capture_runs",
+    )
+    op.drop_index(
+        "ix_vendor_source_capture_runs_status", table_name="vendor_source_capture_runs"
+    )
+    op.drop_index(
+        "uq_vendor_source_capture_runs_run_id", table_name="vendor_source_capture_runs"
+    )
     op.drop_table("vendor_source_capture_runs")
 
 

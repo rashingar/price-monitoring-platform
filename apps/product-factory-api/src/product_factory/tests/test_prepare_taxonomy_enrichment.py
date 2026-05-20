@@ -4,15 +4,29 @@ from pathlib import Path
 
 import pytest
 
-from product_factory.models import CLIInput, FetchResult, ParsedProduct, SchemaMatchResult, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    FetchResult,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.prepare_result_assembly import PrepareResultAssemblyResult
-from product_factory.prepare_scrape_persistence import PrepareScrapePersistenceInput, PrepareScrapePersistenceResult
+from product_factory.prepare_scrape_persistence import (
+    PrepareScrapePersistenceInput,
+    PrepareScrapePersistenceResult,
+)
 from product_factory.prepare_stage import execute_prepare_stage
 from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult
 
 
-def _build_cli(tmp_path: Path, *, model: str = "100001", url: str, sections: int = 0) -> CLIInput:
+def _build_cli(
+    tmp_path: Path, *, model: str = "100001", url: str, sections: int = 0
+) -> CLIInput:
     return CLIInput(
         model=model,
         url=url,
@@ -84,7 +98,9 @@ def _build_prepare_provider_resolution_result(
     )
 
 
-def _persist_stub(persistence_input: PrepareScrapePersistenceInput) -> PrepareScrapePersistenceResult:
+def _persist_stub(
+    persistence_input: PrepareScrapePersistenceInput,
+) -> PrepareScrapePersistenceResult:
     return PrepareScrapePersistenceResult(
         scrape_dir=persistence_input.scrape_dir,
         raw_html_path=persistence_input.raw_html_path,
@@ -99,13 +115,19 @@ def _build_schema_match() -> SchemaMatchResult:
     return SchemaMatchResult(matched_schema_id="schema-1", score=0.9)
 
 
-def _build_assembly_result(*, cli: CLIInput, source: str) -> PrepareResultAssemblyResult:
+def _build_assembly_result(
+    *, cli: CLIInput, source: str
+) -> PrepareResultAssemblyResult:
     return PrepareResultAssemblyResult(
         schema_match=_build_schema_match(),
         schema_candidates=[{"matched_schema_id": "schema-1"}],
         row={"model": cli.model},
         normalized={"input": cli.to_dict()},
-        report={"source": source, "warnings": [], "identity_checks": {"source": source}},
+        report={
+            "source": source,
+            "warnings": [],
+            "identity_checks": {"source": source},
+        },
     )
 
 
@@ -117,10 +139,14 @@ class DummyFetcher:
         return [], [], []
 
 
-def test_prepare_stage_passes_current_source_fields_to_taxonomy_resolver_and_propagates_candidates(tmp_path: Path) -> None:
+def test_prepare_stage_passes_current_source_fields_to_taxonomy_resolver_and_propagates_candidates(
+    tmp_path: Path,
+) -> None:
     cli = _build_cli(tmp_path, url="https://www.electronet.gr/example")
     key_specs = [SpecItem(label="Power", value="2200 W")]
-    spec_sections = [SpecSection(section="Specs", items=[SpecItem(label="Color", value="Black")])]
+    spec_sections = [
+        SpecSection(section="Specs", items=[SpecItem(label="Color", value="Black")])
+    ]
     source = _build_source(
         source_name="electronet",
         url=cli.url,
@@ -148,7 +174,11 @@ def test_prepare_stage_passes_current_source_fields_to_taxonomy_resolver_and_pro
     result = execute_prepare_stage(
         cli,
         model_dir=tmp_path / cli.model,
-        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_product_path"),
+        validate_url_scope_fn=lambda _url: (
+            "electronet",
+            True,
+            "electronet_product_path",
+        ),
         fetcher_factory=DummyFetcher,
         resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: _build_prepare_provider_resolution_result(
             source="electronet",
@@ -186,14 +216,22 @@ def test_prepare_stage_passes_current_source_fields_to_taxonomy_resolver_and_pro
     assert result["taxonomy_candidates"] is taxonomy_candidates
 
 
-def test_prepare_stage_propagates_taxonomy_enrichment_payload_and_mutated_source(tmp_path: Path) -> None:
-    cli = _build_cli(tmp_path, model="143051", url="https://www.skroutz.gr/s/143051/example.html")
+def test_prepare_stage_propagates_taxonomy_enrichment_payload_and_mutated_source(
+    tmp_path: Path,
+) -> None:
+    cli = _build_cli(
+        tmp_path, model="143051", url="https://www.skroutz.gr/s/143051/example.html"
+    )
     source = _build_source(
         source_name="skroutz",
         url=cli.url,
         breadcrumbs=["Home", "Televisions"],
         key_specs=[SpecItem(label="Diagonal", value='55"')],
-        spec_sections=[SpecSection(section="Image", items=[SpecItem(label="Resolution", value="4K")])],
+        spec_sections=[
+            SpecSection(
+                section="Image", items=[SpecItem(label="Resolution", value="4K")]
+            )
+        ],
     )
     parsed = _build_parsed(source)
     taxonomy = TaxonomyResolution(
@@ -221,10 +259,15 @@ def test_prepare_stage_propagates_taxonomy_enrichment_payload_and_mutated_source
 
     fetcher = DummyFetcher()
 
-    def fake_resolve_prepare_taxonomy_enrichment(**kwargs) -> PrepareTaxonomyEnrichmentResult:
+    def fake_resolve_prepare_taxonomy_enrichment(
+        **kwargs,
+    ) -> PrepareTaxonomyEnrichmentResult:
         kwargs["parsed"].source.manufacturer_source_text = "Power: 2200 W"
         kwargs["parsed"].source.manufacturer_spec_sections = [
-            SpecSection(section="Manufacturer Specs", items=[SpecItem(label="Power", value="2200 W")])
+            SpecSection(
+                section="Manufacturer Specs",
+                items=[SpecItem(label="Power", value="2200 W")],
+            )
         ]
         return PrepareTaxonomyEnrichmentResult(
             taxonomy=taxonomy,
@@ -239,10 +282,18 @@ def test_prepare_stage_propagates_taxonomy_enrichment_payload_and_mutated_source
             schema_candidates=[{"matched_schema_id": "schema-1"}],
             row={"model": kwargs["cli"].model},
             normalized={
-                "manufacturer_source_text": kwargs["parsed"].source.manufacturer_source_text,
-                "manufacturer_section_count": len(kwargs["parsed"].source.manufacturer_spec_sections),
+                "manufacturer_source_text": kwargs[
+                    "parsed"
+                ].source.manufacturer_source_text,
+                "manufacturer_section_count": len(
+                    kwargs["parsed"].source.manufacturer_spec_sections
+                ),
             },
-            report={"source": kwargs["source"], "warnings": [], "identity_checks": {"source": kwargs["source"]}},
+            report={
+                "source": kwargs["source"],
+                "warnings": [],
+                "identity_checks": {"source": kwargs["source"]},
+            },
         )
 
     result = execute_prepare_stage(
@@ -262,10 +313,13 @@ def test_prepare_stage_propagates_taxonomy_enrichment_payload_and_mutated_source
 
     assert len(assembly_calls) == 1
     assert assembly_calls[0]["manufacturer_enrichment"] is enrichment_result
-    assert assembly_calls[0]["parsed"].source.manufacturer_source_text == "Power: 2200 W"
-    assert [section.section for section in assembly_calls[0]["parsed"].source.manufacturer_spec_sections] == [
-        "Manufacturer Specs"
-    ]
+    assert (
+        assembly_calls[0]["parsed"].source.manufacturer_source_text == "Power: 2200 W"
+    )
+    assert [
+        section.section
+        for section in assembly_calls[0]["parsed"].source.manufacturer_spec_sections
+    ] == ["Manufacturer Specs"]
     assert result["manufacturer_enrichment"] is enrichment_result
     assert result["parsed"].source.manufacturer_source_text == "Power: 2200 W"
     assert result["normalized"] == {
@@ -307,7 +361,11 @@ def test_prepare_stage_uses_disabled_manufacturer_enrichment_default_shape(
             parsed=parsed,
         ),
         resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: PrepareTaxonomyEnrichmentResult(
-            taxonomy=TaxonomyResolution(parent_category="Home", leaf_category="Appliances", sub_category="Category"),
+            taxonomy=TaxonomyResolution(
+                parent_category="Home",
+                leaf_category="Appliances",
+                sub_category="Category",
+            ),
             taxonomy_candidates=[],
             manufacturer_enrichment={
                 "applied": False,
@@ -348,14 +406,18 @@ def test_prepare_stage_uses_disabled_manufacturer_enrichment_default_shape(
     }
 
     assert len(assembly_calls) == 1
-    assert assembly_calls[0]["manufacturer_enrichment"] == expected_manufacturer_enrichment
+    assert (
+        assembly_calls[0]["manufacturer_enrichment"] == expected_manufacturer_enrichment
+    )
     assert result["manufacturer_enrichment"] == expected_manufacturer_enrichment
 
 
 def test_prepare_stage_with_real_result_assembly_keeps_taxonomy_reason_in_report_warnings_and_enrichment_warnings_nested(
     tmp_path: Path,
 ) -> None:
-    cli = _build_cli(tmp_path, model="200002", url="https://www.skroutz.gr/s/200002/example.html")
+    cli = _build_cli(
+        tmp_path, model="200002", url="https://www.skroutz.gr/s/200002/example.html"
+    )
     source = _build_source(source_name="skroutz", url=cli.url)
     parsed = _build_parsed(source)
     taxonomy_reason = "taxonomy_resolved_from_candidate_fallback"
@@ -402,11 +464,15 @@ def test_prepare_stage_with_real_result_assembly_keeps_taxonomy_reason_in_report
 
     assert taxonomy_reason in result["report"]["warnings"]
     assert result["report"]["taxonomy_candidates"] == taxonomy_candidates
-    assert result["report"]["manufacturer_enrichment"]["warnings"] == ["manufacturer_doc_lookup_unavailable"]
+    assert result["report"]["manufacturer_enrichment"]["warnings"] == [
+        "manufacturer_doc_lookup_unavailable"
+    ]
     assert "manufacturer_doc_lookup_unavailable" not in result["report"]["warnings"]
 
 
-def test_prepare_stage_returns_current_output_shape_for_downstream_code(tmp_path: Path) -> None:
+def test_prepare_stage_returns_current_output_shape_for_downstream_code(
+    tmp_path: Path,
+) -> None:
     cli = _build_cli(tmp_path, url="https://www.electronet.gr/example")
     source = _build_source(source_name="electronet", url=cli.url)
     parsed = _build_parsed(source)
@@ -414,7 +480,11 @@ def test_prepare_stage_returns_current_output_shape_for_downstream_code(tmp_path
     result = execute_prepare_stage(
         cli,
         model_dir=tmp_path / cli.model,
-        validate_url_scope_fn=lambda _url: ("electronet", True, "electronet_product_path"),
+        validate_url_scope_fn=lambda _url: (
+            "electronet",
+            True,
+            "electronet_product_path",
+        ),
         fetcher_factory=DummyFetcher,
         resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: _build_prepare_provider_resolution_result(
             source="electronet",
@@ -422,7 +492,11 @@ def test_prepare_stage_returns_current_output_shape_for_downstream_code(tmp_path
             parsed=parsed,
         ),
         resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: PrepareTaxonomyEnrichmentResult(
-            taxonomy=TaxonomyResolution(parent_category="Home", leaf_category="Appliances", sub_category="Category"),
+            taxonomy=TaxonomyResolution(
+                parent_category="Home",
+                leaf_category="Appliances",
+                sub_category="Category",
+            ),
             taxonomy_candidates=[],
             manufacturer_enrichment={
                 "applied": False,
@@ -441,7 +515,9 @@ def test_prepare_stage_returns_current_output_shape_for_downstream_code(tmp_path
                 "fallback_reason": "manufacturer_enrichment_disabled",
             },
         ),
-        assemble_prepare_result_fn=lambda **kwargs: _build_assembly_result(cli=kwargs["cli"], source=kwargs["source"]),
+        assemble_prepare_result_fn=lambda **kwargs: _build_assembly_result(
+            cli=kwargs["cli"], source=kwargs["source"]
+        ),
         persist_prepare_scrape_artifacts_fn=_persist_stub,
     )
 

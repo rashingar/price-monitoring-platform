@@ -14,15 +14,24 @@ from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.models.vendor_sources import Vendor
 from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.db.repositories.products import upsert_product_from_catalog_row
-from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
+from ecommerce.source_capture.canonicalize_url import (
+    canonical_url_hash,
+    canonicalize_url,
+)
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_capture.vendor_registry import VENDORS_BY_SLUG
-from ecommerce.source_urls import extract_source_domain, infer_source_name, normalize_source_url
+from ecommerce.source_urls import (
+    extract_source_domain,
+    infer_source_name,
+    normalize_source_url,
+)
 
 SOURCE_URL_CAPTURE_TRUST_LEVELS = {"manual", "high_confidence", "reviewed"}
 
 
-def sync_source_url_to_product_source(session: Session, source_url: SourceUrl) -> ProductSource | None:
+def sync_source_url_to_product_source(
+    session: Session, source_url: SourceUrl
+) -> ProductSource | None:
     """Mirror an accepted catalog source URL into product_sources for capture."""
 
     catalog_product = session.get(CatalogProductRow, source_url.catalog_product_id)
@@ -79,19 +88,28 @@ def sync_source_url_to_product_source(session: Session, source_url: SourceUrl) -
 
     product_source.source_url = source_url.url.strip()
     product_source.canonical_url = canonical
-    product_source.vendor_id = vendor.id if vendor is not None else product_source.vendor_id
+    product_source.vendor_id = (
+        vendor.id if vendor is not None else product_source.vendor_id
+    )
     product_source.active = active
     product_source.last_seen_at = _newer_datetime(product_source.last_seen_at, seen_at)
-    product_source.last_success_at = _newer_datetime(product_source.last_success_at, success_at)
+    product_source.last_success_at = _newer_datetime(
+        product_source.last_success_at, success_at
+    )
     if confidence is not None:
         product_source.confidence_score = confidence
-    product_source.consecutive_failures = max(int(product_source.consecutive_failures or 0), int(source_url.failure_count or 0))
+    product_source.consecutive_failures = max(
+        int(product_source.consecutive_failures or 0),
+        int(source_url.failure_count or 0),
+    )
     product_source.updated_at = now
     session.flush()
     return product_source if active else None
 
 
-def sync_product_source_to_source_url(session: Session, product_source: ProductSource) -> SourceUrl | None:
+def sync_product_source_to_source_url(
+    session: Session, product_source: ProductSource
+) -> SourceUrl | None:
     """Mirror a product_source into source_urls when it maps to a catalog product."""
 
     product = session.get(Product, product_source.product_id)
@@ -101,7 +119,9 @@ def sync_product_source_to_source_url(session: Session, product_source: ProductS
     if catalog_product is None:
         return None
 
-    canonical = canonicalize_url(product_source.canonical_url or product_source.source_url)
+    canonical = canonicalize_url(
+        product_source.canonical_url or product_source.source_url
+    )
     normalized = normalize_source_url(canonical)
     existing = session.execute(
         select(SourceUrl).where(
@@ -111,7 +131,11 @@ def sync_product_source_to_source_url(session: Session, product_source: ProductS
     ).scalar_one_or_none()
 
     now = _now()
-    vendor = session.get(Vendor, product_source.vendor_id) if product_source.vendor_id is not None else None
+    vendor = (
+        session.get(Vendor, product_source.vendor_id)
+        if product_source.vendor_id is not None
+        else None
+    )
     domain = extract_source_domain(normalized)
     source_name = vendor.slug if vendor is not None else infer_source_name(domain)
     status = "active" if product_source.active else "disabled"
@@ -133,7 +157,11 @@ def sync_product_source_to_source_url(session: Session, product_source: ProductS
             added_by="product_source_sync",
             last_seen_at=_timestamp_or_none(product_source.last_seen_at),
             last_success_at=_timestamp_or_none(product_source.last_success_at),
-            last_error=_short_text(product_source.last_error_message) if product_source.last_error_message else None,
+            last_error=(
+                _short_text(product_source.last_error_message)
+                if product_source.last_error_message
+                else None
+            ),
             failure_count=max(0, int(product_source.consecutive_failures or 0)),
             created_at=_timestamp(product_source.created_at or now),
             updated_at=now,
@@ -157,17 +185,25 @@ def sync_product_source_to_source_url(session: Session, product_source: ProductS
     if existing.url_type != "manual":
         existing.url_type = "imported"
         existing.trust_level = existing.trust_level or "product_source"
-    existing.last_seen_at = _newer_datetime(existing.last_seen_at, _timestamp_or_none(product_source.last_seen_at))
-    existing.last_success_at = _newer_datetime(existing.last_success_at, _timestamp_or_none(product_source.last_success_at))
+    existing.last_seen_at = _newer_datetime(
+        existing.last_seen_at, _timestamp_or_none(product_source.last_seen_at)
+    )
+    existing.last_success_at = _newer_datetime(
+        existing.last_success_at, _timestamp_or_none(product_source.last_success_at)
+    )
     if product_source.last_error_message:
         existing.last_error = _short_text(product_source.last_error_message)
-    existing.failure_count = max(int(existing.failure_count or 0), int(product_source.consecutive_failures or 0))
+    existing.failure_count = max(
+        int(existing.failure_count or 0), int(product_source.consecutive_failures or 0)
+    )
     existing.updated_at = now
     session.flush()
     return existing
 
 
-def _catalog_product_for_product(session: Session, product: Product) -> CatalogProductRow | None:
+def _catalog_product_for_product(
+    session: Session, product: Product
+) -> CatalogProductRow | None:
     if product.model:
         row = session.execute(
             select(CatalogProductRow).where(
@@ -195,7 +231,9 @@ def _vendor_for_url(session: Session, url: str) -> Vendor | None:
     slug = detect_vendor_slug(url)
     if not slug:
         return None
-    vendor = session.execute(select(Vendor).where(Vendor.slug == slug)).scalar_one_or_none()
+    vendor = session.execute(
+        select(Vendor).where(Vendor.slug == slug)
+    ).scalar_one_or_none()
     definition = VENDORS_BY_SLUG.get(slug)
     if definition is None:
         return vendor
@@ -267,13 +305,21 @@ def _timestamp_or_none(value: datetime | None) -> datetime | None:
     return value
 
 
-def _newer_datetime(current: datetime | None, candidate: datetime | None) -> datetime | None:
+def _newer_datetime(
+    current: datetime | None, candidate: datetime | None
+) -> datetime | None:
     if candidate is None:
         return current
     if current is None:
         return candidate
-    current_cmp = current if current.tzinfo is not None else current.replace(tzinfo=timezone.utc)
-    candidate_cmp = candidate if candidate.tzinfo is not None else candidate.replace(tzinfo=timezone.utc)
+    current_cmp = (
+        current if current.tzinfo is not None else current.replace(tzinfo=timezone.utc)
+    )
+    candidate_cmp = (
+        candidate
+        if candidate.tzinfo is not None
+        else candidate.replace(tzinfo=timezone.utc)
+    )
     return candidate if candidate_cmp > current_cmp else current
 
 

@@ -10,7 +10,6 @@ from typing import Any, Mapping
 from ..repo_paths import REPO_ROOT
 from .models import JobRecord, JobStatus, JobType, coerce_job_type, utc_now_iso
 
-
 DEFAULT_JOBS_DIR = REPO_ROOT / "work" / "api" / "jobs"
 _JOB_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
@@ -51,7 +50,9 @@ class JobStore:
         with self._lock:
             if not self.jobs_dir.exists():
                 return []
-            records = [self._read_record_path(path) for path in self.jobs_dir.glob("*.json")]
+            records = [
+                self._read_record_path(path) for path in self.jobs_dir.glob("*.json")
+            ]
         return sorted(records, key=lambda record: (record.created_at, record.job_id))
 
     def list_jobs_for_model(self, model: str) -> list[JobRecord]:
@@ -96,7 +97,12 @@ class JobStore:
         now = utc_now_iso()
         with self._lock:
             record = self._require_job(job_id)
-            if record.status in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.KILLED}:
+            if record.status in {
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+                JobStatus.KILLED,
+            }:
                 return record
             record.status = JobStatus.SUCCEEDED
             record.finished_at = now
@@ -118,7 +124,12 @@ class JobStore:
         now = utc_now_iso()
         with self._lock:
             record = self._require_job(job_id)
-            if record.status in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.KILLED}:
+            if record.status in {
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+                JobStatus.KILLED,
+            }:
                 return record
             record.status = JobStatus.FAILED
             record.finished_at = now
@@ -142,7 +153,12 @@ class JobStore:
         stop_error = reason or "Job stopped by operator."
         with self._lock:
             record = self._require_job(job_id)
-            if record.status in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.KILLED}:
+            if record.status in {
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+                JobStatus.KILLED,
+            }:
                 return record
             record.status = JobStatus.CANCELLED
             record.finished_at = record.finished_at or now
@@ -167,13 +183,21 @@ class JobStore:
         now = utc_now_iso()
         with self._lock:
             record = self._require_job(job_id)
-            if record.status in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.KILLED}:
+            if record.status in {
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+                JobStatus.KILLED,
+            }:
                 return record
             record.status = JobStatus.KILLED
             record.finished_at = record.finished_at or now
             record.updated_at = now
             record.message = message or "Job process was force killed."
-            record.error = record.error or "Job process was force killed after graceful termination timed out."
+            record.error = (
+                record.error
+                or "Job process was force killed after graceful termination timed out."
+            )
             record.error_code = error_code
             record.kill_sent_at = record.kill_sent_at or now
             record.killed_at = record.killed_at or now
@@ -244,7 +268,9 @@ class JobStore:
             self._write_record(record)
             return record
 
-    def update_artifacts(self, job_id: str, artifacts: Mapping[str, object | None]) -> JobRecord:
+    def update_artifacts(
+        self, job_id: str, artifacts: Mapping[str, object | None]
+    ) -> JobRecord:
         with self._lock:
             record = self._require_job(job_id)
             record.artifacts = {

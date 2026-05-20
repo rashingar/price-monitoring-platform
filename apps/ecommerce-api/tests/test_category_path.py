@@ -24,7 +24,9 @@ def test_parse_three_level_serialized_category() -> None:
 
 
 def test_parse_two_level_serialized_category() -> None:
-    parsed = parse_opencart_category("ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Απορροφητήρες")
+    parsed = parse_opencart_category(
+        "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ:::ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ///Απορροφητήρες"
+    )
 
     assert parsed.family == "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ"
     assert parsed.category_name == "Απορροφητήρες"

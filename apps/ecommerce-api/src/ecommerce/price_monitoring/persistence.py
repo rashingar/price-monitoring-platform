@@ -12,7 +12,16 @@ from typing import Any
 
 from ecommerce.db.config import is_database_configured
 from ecommerce.db.repositories.products import match_product_for_observation
-from ecommerce.db.repositories.price_monitoring import backfill_price_observation_listings_from_offer_observations, count_price_observations, ensure_catalog_snapshots_from_rows, get_monitoring_run, persist_monitoring_run_creation, list_price_observation_listings, replace_price_observations, update_monitoring_run_from_fetch
+from ecommerce.db.repositories.price_monitoring import (
+    backfill_price_observation_listings_from_offer_observations,
+    count_price_observations,
+    ensure_catalog_snapshots_from_rows,
+    get_monitoring_run,
+    persist_monitoring_run_creation,
+    list_price_observation_listings,
+    replace_price_observations,
+    update_monitoring_run_from_fetch,
+)
 from ecommerce.db.session import session_scope
 from ecommerce.db.models.price_monitoring import CatalogSnapshot, PriceObservation
 from ecommerce.price_monitoring.fetch_run import PriceMonitoringFetchResult
@@ -56,9 +65,15 @@ def backfill_run_listing_evidence(run_id: str) -> ListingBackfillResult:
     with session_scope() as session:
         run = get_monitoring_run(session, run_id)
         if run is None:
-            raise FileNotFoundError(f"DB-backed price monitoring run not found: {run_id}")
-        inserted_count = backfill_price_observation_listings_from_offer_observations(session, run_id=run_id)
-        listing_count = len(list_price_observation_listings(session, run_id=run_id, limit=20_000))
+            raise FileNotFoundError(
+                f"DB-backed price monitoring run not found: {run_id}"
+            )
+        inserted_count = backfill_price_observation_listings_from_offer_observations(
+            session, run_id=run_id
+        )
+        listing_count = len(
+            list_price_observation_listings(session, run_id=run_id, limit=20_000)
+        )
     return ListingBackfillResult(
         run_id=run_id,
         inserted_count=inserted_count,
@@ -81,7 +96,9 @@ def persist_fetch_result_if_configured(
             was_refetch=False,
             fetch_attempt=0,
             persistence_status="not_configured",
-            warnings=["Database persistence is disabled because ECOMMERCE_DATABASE_URL is not configured."],
+            warnings=[
+                "Database persistence is disabled because ECOMMERCE_DATABASE_URL is not configured."
+            ],
         )
 
     warnings: list[str] = []
@@ -95,18 +112,31 @@ def persist_fetch_result_if_configured(
         )
         observations = parsed.observations
         warnings.extend(parsed.warnings)
-    elif result.status == "fetch_completed" and result.fetch_input_mode != "source_urls":
+    elif (
+        result.status == "fetch_completed" and result.fetch_input_mode != "source_urls"
+    ):
         warnings.append("Fetch completed without an enriched CSV path to persist.")
 
     run_dir = Path(result.input_csv_path).parent
     catalog_rows = _recover_catalog_rows(run_dir)
 
     with session_scope() as session:
-        monitoring_run = update_monitoring_run_from_fetch(session, result, trigger_type=trigger_type)
-        _apply_selection_summary_metadata(monitoring_run, _read_json_object(run_dir / "selection_summary.json"))
-        catalog_snapshot_count = ensure_catalog_snapshots_from_rows(session, monitoring_run, catalog_rows)
-        if result.fetch_input_mode == "source_urls" and result.enriched_csv_path is None:
-            previous_count = _count_attached_source_url_observations(session, monitoring_run)
+        monitoring_run = update_monitoring_run_from_fetch(
+            session, result, trigger_type=trigger_type
+        )
+        _apply_selection_summary_metadata(
+            monitoring_run, _read_json_object(run_dir / "selection_summary.json")
+        )
+        catalog_snapshot_count = ensure_catalog_snapshots_from_rows(
+            session, monitoring_run, catalog_rows
+        )
+        if (
+            result.fetch_input_mode == "source_urls"
+            and result.enriched_csv_path is None
+        ):
+            previous_count = _count_attached_source_url_observations(
+                session, monitoring_run
+            )
             fetch_attempt = int(monitoring_run.fetch_attempt or 0) + 1
             was_refetch = previous_count > 0
             observation_count = _attach_source_url_capture_observations(
@@ -153,7 +183,9 @@ def _attach_source_url_capture_observations(
 ) -> int:
     query = session.query(PriceObservation)
     if observation_batch_id:
-        rows = query.filter(PriceObservation.observation_batch_id == observation_batch_id).all()
+        rows = query.filter(
+            PriceObservation.observation_batch_id == observation_batch_id
+        ).all()
     else:
         rows = query.filter(
             PriceObservation.run_id == monitoring_run.run_id,
@@ -174,7 +206,11 @@ def _attach_source_url_capture_observations(
                 row.matched_by = row.matched_by or matched_by
         if row.own_price is None:
             row.own_price = _resolved_own_price(session, monitoring_run, row, product)
-        if row.price_delta is None and row.own_price is not None and row.competitor_price is not None:
+        if (
+            row.price_delta is None
+            and row.own_price is not None
+            and row.competitor_price is not None
+        ):
             row.price_delta = row.own_price - row.competitor_price
         if (
             row.price_delta_percent is None
@@ -199,7 +235,9 @@ def _attach_source_url_capture_observations(
 def _resolved_own_price(session, monitoring_run, row: PriceObservation, product) -> Any:
     if product is not None and product.current_price is not None:
         return product.current_price
-    snapshot_query = session.query(CatalogSnapshot).filter(CatalogSnapshot.monitoring_run_id == monitoring_run.id)
+    snapshot_query = session.query(CatalogSnapshot).filter(
+        CatalogSnapshot.monitoring_run_id == monitoring_run.id
+    )
     if row.model:
         snapshot = snapshot_query.filter(CatalogSnapshot.model == row.model).first()
         if snapshot is not None and snapshot.own_price is not None:
@@ -224,25 +262,50 @@ def _count_attached_source_url_observations(session, monitoring_run) -> int:
 
 def _recover_catalog_rows(run_dir: Path) -> list[dict[str, Any]]:
     summary = _read_json_object(run_dir / "selection_summary.json")
-    input_rows = _read_csv(run_dir / "input.csv") if (run_dir / "input.csv").exists() else []
+    input_rows = (
+        _read_csv(run_dir / "input.csv") if (run_dir / "input.csv").exists() else []
+    )
     for key in ("selected_items", "items"):
         value = summary.get(key)
         if isinstance(value, list) and all(isinstance(item, dict) for item in value):
-            return _merge_catalog_rows_with_input([dict(item) for item in value], input_rows)
+            return _merge_catalog_rows_with_input(
+                [dict(item) for item in value], input_rows
+            )
     return input_rows
 
 
-def _merge_catalog_rows_with_input(rows: list[dict[str, Any]], input_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
-    input_by_model = {str(row.get("model") or "").strip(): row for row in input_rows if str(row.get("model") or "").strip()}
-    input_by_mpn = {str(row.get("mpn") or "").strip(): row for row in input_rows if str(row.get("mpn") or "").strip()}
+def _merge_catalog_rows_with_input(
+    rows: list[dict[str, Any]], input_rows: list[dict[str, str]]
+) -> list[dict[str, Any]]:
+    input_by_model = {
+        str(row.get("model") or "").strip(): row
+        for row in input_rows
+        if str(row.get("model") or "").strip()
+    }
+    input_by_mpn = {
+        str(row.get("mpn") or "").strip(): row
+        for row in input_rows
+        if str(row.get("mpn") or "").strip()
+    }
     merged_rows: list[dict[str, Any]] = []
     for row in rows:
         model = str(row.get("model") or "").strip()
         mpn = str(row.get("mpn") or "").strip()
         input_row = input_by_model.get(model) or input_by_mpn.get(mpn) or {}
         merged = dict(row)
-        for field in ("model", "mpn", "name", "price", "manufacturer", "category", "raw_category"):
-            if not str(merged.get(field) or "").strip() and str(input_row.get(field) or "").strip():
+        for field in (
+            "model",
+            "mpn",
+            "name",
+            "price",
+            "manufacturer",
+            "category",
+            "raw_category",
+        ):
+            if (
+                not str(merged.get(field) or "").strip()
+                and str(input_row.get(field) or "").strip()
+            ):
                 merged[field] = input_row[field]
         merged_rows.append(merged)
     return merged_rows
@@ -251,8 +314,9 @@ def _merge_catalog_rows_with_input(rows: list[dict[str, Any]], input_rows: list[
 def _apply_selection_summary_metadata(monitoring_run, summary: dict[str, Any]) -> None:
     if not summary:
         return
-    monitoring_run.selection_summary_path = monitoring_run.selection_summary_path or str(
-        Path(str(monitoring_run.output_dir or "")) / "selection_summary.json"
+    monitoring_run.selection_summary_path = (
+        monitoring_run.selection_summary_path
+        or str(Path(str(monitoring_run.output_dir or "")) / "selection_summary.json")
     )
     if "selected_count" in summary:
         monitoring_run.selected_count = _int_or_none(summary.get("selected_count"))
@@ -279,7 +343,10 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         sample = f.read(4096)
         f.seek(0)
         reader = csv.DictReader(f, delimiter=_detect_delimiter(sample))
-        return [{key: value if value is not None else "" for key, value in row.items()} for row in reader]
+        return [
+            {key: value if value is not None else "" for key, value in row.items()}
+            for row in reader
+        ]
 
 
 def _detect_delimiter(sample: str) -> str:

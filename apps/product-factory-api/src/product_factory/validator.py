@@ -8,6 +8,7 @@ from .normalize import normalize_whitespace
 from .repo_paths import PRODUCT_TEMPLATE_PATH
 from .text_health import detect_text_issues
 from .utils import load_template_headers, write_json
+
 REQUIRED_NON_EMPTY_FIELDS = {
     "model",
     "mpn",
@@ -57,7 +58,9 @@ def validate_candidate_csv(
     report["actual_headers"] = headers
     base_header_block = headers[: len(expected_headers)]
     trailing_headers = headers[len(expected_headers) :]
-    dynamic_filter_headers = [header for header in trailing_headers if header.startswith("filter_group:")]
+    dynamic_filter_headers = [
+        header for header in trailing_headers if header.startswith("filter_group:")
+    ]
     report["dynamic_filter_headers"] = dynamic_filter_headers
     report["dynamic_filter_count"] = len(dynamic_filter_headers)
 
@@ -67,7 +70,9 @@ def validate_candidate_csv(
     if any(header.startswith("filter_group:") for header in base_header_block):
         report["ok"] = False
         report["errors"].append("dynamic_filter_header_inside_base_block")
-    non_filter_trailing_headers = [header for header in trailing_headers if not header.startswith("filter_group:")]
+    non_filter_trailing_headers = [
+        header for header in trailing_headers if not header.startswith("filter_group:")
+    ]
     if non_filter_trailing_headers:
         report["ok"] = False
         report["errors"].append("non_filter_trailing_headers")
@@ -92,7 +97,9 @@ def validate_candidate_csv(
         if encoding_issues:
             status = "encoding_issue"
             report["ok"] = False
-        if header in REQUIRED_NON_EMPTY_FIELDS and not normalize_whitespace(candidate_value):
+        if header in REQUIRED_NON_EMPTY_FIELDS and not normalize_whitespace(
+            candidate_value
+        ):
             status = "missing"
             report["ok"] = False
             report["errors"].append(f"required_field_missing:{header}")
@@ -108,7 +115,11 @@ def validate_candidate_csv(
     for header in trailing_headers:
         candidate_value = row.get(header, "")
         encoding_issues = detect_text_issues(candidate_value)
-        status = "dynamic_filter_filled" if normalize_whitespace(candidate_value) else "empty"
+        status = (
+            "dynamic_filter_filled"
+            if normalize_whitespace(candidate_value)
+            else "empty"
+        )
         if encoding_issues:
             status = "encoding_issue"
             report["ok"] = False

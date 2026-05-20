@@ -37,7 +37,9 @@ class SourceUrlCaptureRunResult:
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
-        payload["result_path"] = str(self.result_path) if self.result_path is not None else ""
+        payload["result_path"] = (
+            str(self.result_path) if self.result_path is not None else ""
+        )
         payload["artifact_path"] = payload["result_path"]
         return json_safe_value(payload)
 

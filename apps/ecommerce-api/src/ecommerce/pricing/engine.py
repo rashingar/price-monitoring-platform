@@ -59,11 +59,15 @@ def _compute_decimal_price(
     if rule.rule_family == "formula_with_rounding":
         formula = parameters.get("formula")
         if not isinstance(formula, str) or not formula.strip():
-            raise ValueError("formula_with_rounding requires a non-empty parameters.formula")
+            raise ValueError(
+                "formula_with_rounding requires a non-empty parameters.formula"
+            )
         return _evaluate_formula(formula, observed_price)
 
     if rule.rule_family == "bestprice_store_positioning":
-        return _compute_bestprice_store_positioning(rule, observed_price, pricing_context)
+        return _compute_bestprice_store_positioning(
+            rule, observed_price, pricing_context
+        )
 
     raise ValueError(f"unsupported rule_family in pricing config: {rule.rule_family}")
 
@@ -120,7 +124,9 @@ def _eval_ast(node: ast.AST, observed_price: Decimal) -> Decimal:
     if isinstance(node, ast.Name):
         if node.id in {"skroutz_price", "bestprice_price", "observed_price"}:
             return observed_price
-        raise ValueError("pricing formula may only reference skroutz_price, bestprice_price, or observed_price")
+        raise ValueError(
+            "pricing formula may only reference skroutz_price, bestprice_price, or observed_price"
+        )
 
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
         return Decimal(str(node.value))
@@ -140,7 +146,9 @@ def _compute_bestprice_store_positioning(
     if pricing_context is None:
         raise ValueError("bestprice_store_positioning requires pricing context")
     if pricing_context.source_name != "bestprice":
-        raise ValueError("bestprice_store_positioning requires a BestPrice enriched CSV")
+        raise ValueError(
+            "bestprice_store_positioning requires a BestPrice enriched CSV"
+        )
 
     own_store = _string_parameter(rule.parameters, "own_store")
     target_gap = _decimal_parameter(rule.parameters, "target_gap")
@@ -151,9 +159,15 @@ def _compute_bestprice_store_positioning(
 
     source_extra_values = pricing_context.source_extra_values
     best_store_name = source_extra_values.get("bestprice_best_store", "")
-    best_store_price = _optional_decimal_text(source_extra_values.get("bestprice_best_store_price", ""))
-    next_store_price = _optional_decimal_text(source_extra_values.get("bestprice_next_store_price", ""))
-    current_best_price = best_store_price if best_store_price is not None else observed_price
+    best_store_price = _optional_decimal_text(
+        source_extra_values.get("bestprice_best_store_price", "")
+    )
+    next_store_price = _optional_decimal_text(
+        source_extra_values.get("bestprice_next_store_price", "")
+    )
+    current_best_price = (
+        best_store_price if best_store_price is not None else observed_price
+    )
 
     if _normalize_store_name(best_store_name) == _normalize_store_name(own_store):
         if next_store_price is None:

@@ -13,26 +13,26 @@ def build_minimal_taxonomy_html(row: dict[str, str]) -> str:
     model = row["model"]
     return (
         "<!DOCTYPE html>"
-        "<html lang=\"el\">"
+        '<html lang="el">'
         "<head>"
-        "<meta charset=\"utf-8\" />"
+        '<meta charset="utf-8" />'
         f"<title>{title}</title>"
-        f"<link rel=\"canonical\" href=\"{url}\" />"
-        "<script id=\"product-schema\" type=\"application/ld+json\">"
+        f'<link rel="canonical" href="{url}" />'
+        '<script id="product-schema" type="application/ld+json">'
         f"{json.dumps({'@context': 'https://schema.org', '@type': 'Product', 'name': title, 'brand': {'@type': 'Brand', 'name': manufacturer}, 'mpn': model, 'sku': model, 'category': category_text, 'image': [f'https://static.skroutz.gr/mock/{model}/1.jpg', f'https://static.skroutz.gr/mock/{model}/2.jpg'], 'offers': {'@type': 'Offer', 'price': '199.00', 'priceCurrency': 'EUR'}}, ensure_ascii=False)}"
         "</script>"
         "</head>"
         "<body>"
-        "<div class=\"sku-title\">"
-        f"<a class=\"category-tag\" href=\"{category_href}\">{category_text}</a>"
-        f"<h1 class=\"page-title\">{title}<small class=\"sku-code\">Κωδικός: {model}</small></h1>"
+        '<div class="sku-title">'
+        f'<a class="category-tag" href="{category_href}">{category_text}</a>'
+        f'<h1 class="page-title">{title}<small class="sku-code">Κωδικός: {model}</small></h1>'
         "</div>"
-        f"<a class=\"brand-page-link\"><span>{manufacturer}</span></a>"
-        f"<div class=\"summary\"><div class=\"description long\"><div class=\"body-text\">{title}</div></div></div>"
-        f"<div id=\"prices\"><div class=\"product-name\" title=\"{title}\"></div></div>"
-        "<div class=\"prices\"><div class=\"final-price\"><span class=\"integer-part\">199</span><span class=\"decimal-part\">00</span></div></div>"
-        "<div id=\"specs\"><div class=\"spec-groups\">"
-        "<div class=\"spec-details\"><h3>Χαρακτηριστικά</h3>"
+        f'<a class="brand-page-link"><span>{manufacturer}</span></a>'
+        f'<div class="summary"><div class="description long"><div class="body-text">{title}</div></div></div>'
+        f'<div id="prices"><div class="product-name" title="{title}"></div></div>'
+        '<div class="prices"><div class="final-price"><span class="integer-part">199</span><span class="decimal-part">00</span></div></div>'
+        '<div id="specs"><div class="spec-groups">'
+        '<div class="spec-details"><h3>Χαρακτηριστικά</h3>'
         f"<dl><dt>Κατασκευαστής</dt><dd>{manufacturer or 'Άγνωστο'}</dd></dl>"
         f"<dl><dt>Μοντέλο</dt><dd>{model}</dd></dl>"
         "</div>"

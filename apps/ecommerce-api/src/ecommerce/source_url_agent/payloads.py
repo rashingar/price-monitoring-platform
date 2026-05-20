@@ -20,7 +20,11 @@ def discovery_run_to_dict(
     session: Session | None = None,
     include_tasks: bool = False,
 ) -> dict[str, Any]:
-    task_counts = source_url_discovery_task_counts(session, row.run_id) if session is not None else {}
+    task_counts = (
+        source_url_discovery_task_counts(session, row.run_id)
+        if session is not None
+        else {}
+    )
     filters = row.filters_json if isinstance(row.filters_json, dict) else {}
     payload = {
         "id": row.id,
@@ -47,7 +51,10 @@ def discovery_run_to_dict(
         "updated_at": json_safe_value(row.updated_at),
         "task_counts": task_counts,
         "task_total_count": sum(task_counts.values()) if task_counts else 0,
-        "task_finished_count": sum(int(task_counts.get(status, 0)) for status in ("completed", "failed", "skipped")),
+        "task_finished_count": sum(
+            int(task_counts.get(status, 0))
+            for status in ("completed", "failed", "skipped")
+        ),
     }
     payload["summary"] = {
         "selected_count": row.selected_count,

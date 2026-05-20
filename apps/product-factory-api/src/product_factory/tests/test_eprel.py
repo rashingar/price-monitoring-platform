@@ -21,7 +21,9 @@ def test_infer_eprel_product_group_uses_resolved_oven_taxonomy() -> None:
 def test_resolve_eprel_energy_label_uses_model_identifier_search() -> None:
     calls: list[tuple[str, dict[str, object] | None]] = []
 
-    def fake_fetch_json(url: str, params: dict[str, object] | None = None) -> dict[str, object]:
+    def fake_fetch_json(
+        url: str, params: dict[str, object] | None = None
+    ) -> dict[str, object]:
         calls.append((url, params))
         if url.endswith("/api/products/ovens"):
             assert params is not None
@@ -48,12 +50,17 @@ def test_resolve_eprel_energy_label_uses_model_identifier_search() -> None:
 
     assert resolved.product_group == "ovens"
     assert resolved.registration_number == "1334473"
-    assert resolved.label_url == "https://eprel.ec.europa.eu/labels/ovens/Label_1334473.png"
+    assert (
+        resolved.label_url
+        == "https://eprel.ec.europa.eu/labels/ovens/Label_1334473.png"
+    )
     assert resolved.search_strategy == "model_identifier"
     assert len(calls) == 2
 
 
-def test_skroutz_parser_skips_energy_label_when_eprel_resolution_is_empty(monkeypatch) -> None:
+def test_skroutz_parser_skips_energy_label_when_eprel_resolution_is_empty(
+    monkeypatch,
+) -> None:
     fixture_path = (
         Path(__file__).resolve().parent
         / "fixtures"
@@ -64,7 +71,10 @@ def test_skroutz_parser_skips_energy_label_when_eprel_resolution_is_empty(monkey
     )
     html = fixture_path.read_text(encoding="utf-8")
 
-    monkeypatch.setattr("product_factory.parser_product_skroutz.resolve_eprel_energy_label_asset_url", lambda **_: "")
+    monkeypatch.setattr(
+        "product_factory.parser_product_skroutz.resolve_eprel_energy_label_asset_url",
+        lambda **_: "",
+    )
 
     parsed = SkroutzProductParser().parse(
         html,
@@ -75,7 +85,9 @@ def test_skroutz_parser_skips_energy_label_when_eprel_resolution_is_empty(monkey
     assert parsed.source.energy_label_asset_url == ""
 
 
-def test_bosch_manufacturer_parser_uses_eprel_resolution_for_energy_label(monkeypatch) -> None:
+def test_bosch_manufacturer_parser_uses_eprel_resolution_for_energy_label(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(
         "product_factory.parser_product_manufacturer.resolve_eprel_energy_label_asset_url",
         lambda **_: "https://eprel.ec.europa.eu/labels/ovens/Label_1334473.png",
@@ -87,12 +99,23 @@ def test_bosch_manufacturer_parser_uses_eprel_resolution_for_energy_label(monkey
         source_name="manufacturer_bosch",
     )
 
-    assert parsed.source.energy_label_asset_url == "https://eprel.ec.europa.eu/labels/ovens/Label_1334473.png"
-    assert parsed.source.product_sheet_asset_url == "https://media3.bsh-group.com/Documents/eudatasheet/el-GR/HBG7241B1.pdf"
+    assert (
+        parsed.source.energy_label_asset_url
+        == "https://eprel.ec.europa.eu/labels/ovens/Label_1334473.png"
+    )
+    assert (
+        parsed.source.product_sheet_asset_url
+        == "https://media3.bsh-group.com/Documents/eudatasheet/el-GR/HBG7241B1.pdf"
+    )
 
 
-def test_bosch_manufacturer_parser_skips_icon_when_eprel_resolution_is_empty(monkeypatch) -> None:
-    monkeypatch.setattr("product_factory.parser_product_manufacturer.resolve_eprel_energy_label_asset_url", lambda **_: "")
+def test_bosch_manufacturer_parser_skips_icon_when_eprel_resolution_is_empty(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "product_factory.parser_product_manufacturer.resolve_eprel_energy_label_asset_url",
+        lambda **_: "",
+    )
 
     parsed = ManufacturerProductParser().parse(
         _bosch_product_html(),

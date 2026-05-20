@@ -6,7 +6,10 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.catalog_db import ingest_source_catalog, list_catalog_products  # noqa: E402
+from ecommerce.catalog_db import (
+    ingest_source_catalog,
+    list_catalog_products,
+)  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
@@ -30,7 +33,9 @@ def _create_schema(database_url: str) -> None:
     Base.metadata.create_all(get_engine(database_url))
 
 
-def _write_catalog(path: Path, *, name: str = "Product One", second: bool = True) -> None:
+def _write_catalog(
+    path: Path, *, name: str = "Product One", second: bool = True
+) -> None:
     rows = [
         "model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status",
         f"005606,MPN-1,{name},{RAW_COOKWARE},Bosch,123.45,3,1,1,1",
@@ -40,7 +45,9 @@ def _write_catalog(path: Path, *, name: str = "Product One", second: bool = True
     path.write_text("\n".join(rows) + "\n", encoding="utf-8-sig")
 
 
-def test_ingest_preserves_fields_hierarchy_raw_row_and_leading_zero_model(tmp_path: Path) -> None:
+def test_ingest_preserves_fields_hierarchy_raw_row_and_leading_zero_model(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
@@ -70,7 +77,9 @@ def test_ingest_preserves_fields_hierarchy_raw_row_and_leading_zero_model(tmp_pa
     assert row.raw_catalog_row["model"] == "005606"
 
 
-def test_ingest_upserts_duplicate_model_and_marks_missing_inactive(tmp_path: Path) -> None:
+def test_ingest_upserts_duplicate_model_and_marks_missing_inactive(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     catalog_path = tmp_path / "sourceCata.csv"
@@ -92,7 +101,9 @@ def test_ingest_upserts_duplicate_model_and_marks_missing_inactive(tmp_path: Pat
     assert rows["123456"].active is False
 
 
-def test_price_monitoring_selection_uses_db_catalog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_price_monitoring_selection_uses_db_catalog(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv("ECOMMERCE_DATABASE_URL", database_url)
     _create_schema(database_url)
@@ -102,7 +113,9 @@ def test_price_monitoring_selection_uses_db_catalog(tmp_path: Path, monkeypatch:
         ingest_source_catalog(session, source_cata_path=catalog_path)
 
     result = select_price_monitoring_products(
-        PriceMonitoringSelectionRequest(source="skroutz", selected_models=["005606", "123456"])
+        PriceMonitoringSelectionRequest(
+            source="skroutz", selected_models=["005606", "123456"]
+        )
     )
 
     assert [item.model for item in result.items] == ["005606"]

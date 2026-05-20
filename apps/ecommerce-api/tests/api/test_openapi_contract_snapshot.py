@@ -8,7 +8,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
-from ecommerce.jobs.export_openapi_snapshot import normalize_openapi_schema  # noqa: E402
+from ecommerce.jobs.export_openapi_snapshot import (
+    normalize_openapi_schema,
+)  # noqa: E402
 
 SNAPSHOT_PATH = PROJECT_ROOT / "docs" / "contracts" / "openapi.ecommerce.json"
 REGENERATE_COMMAND = "python -m ecommerce.jobs.export_openapi_snapshot"

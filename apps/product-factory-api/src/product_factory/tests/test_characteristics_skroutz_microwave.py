@@ -1,7 +1,13 @@
 from bs4 import BeautifulSoup
 
 from product_factory.characteristics_pipeline import build_characteristics_for_product
-from product_factory.models import SchemaMatchResult, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    SchemaMatchResult,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 from product_factory.normalize import normalize_for_match
 from product_factory.repo_paths import SCHEMA_LIBRARY_PATH
 from product_factory.utils import read_json
@@ -71,12 +77,17 @@ def test_skroutz_microwave_characteristics_use_alias_enrichment() -> None:
     html, diagnostics, _warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=_schema_id_for_source_file("foyrnoi_mikrokymaton.json"), score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=_schema_id_for_source_file("foyrnoi_mikrokymaton.json"),
+            score=0.9,
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
         for cells in (row.find_all("td") for row in soup.select("tbody tr"))
         if len(cells) == 2
     }
@@ -120,21 +131,27 @@ def test_skroutz_microwave_characteristics_use_description_label_pairs() -> None
     html, diagnostics, _warnings = build_characteristics_for_product(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=_schema_id_for_source_file("foyrnoi_mikrokymaton.json"), score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=_schema_id_for_source_file("foyrnoi_mikrokymaton.json"),
+            score=0.9,
+        ),
     )
 
     soup = BeautifulSoup(html, "lxml")
     values = {
-        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(" ", strip=True)
+        normalize_for_match(cells[0].get_text(" ", strip=True)): cells[1].get_text(
+            " ", strip=True
+        )
         for cells in (row.find_all("td") for row in soup.select("tbody tr"))
         if len(cells) == 2
     }
     diagnostics_by_label = {
-        normalize_for_match(field["label"]): field
-        for field in diagnostics["fields"]
+        normalize_for_match(field["label"]): field for field in diagnostics["fields"]
     }
 
     assert values[normalize_for_match("Τρόπος Τοποθέτησης")] == "Ελεύθερος"
     assert values[normalize_for_match("Ισχύς Μικροκυμάτων (Watt)")] == "800W"
     assert values[normalize_for_match("Χρώμα")] == "Λευκό"
-    assert diagnostics_by_label[normalize_for_match("Ισχύς Μικροκυμάτων (Watt)")]["resolved_from"].startswith("description_alias:")
+    assert diagnostics_by_label[normalize_for_match("Ισχύς Μικροκυμάτων (Watt)")][
+        "resolved_from"
+    ].startswith("description_alias:")

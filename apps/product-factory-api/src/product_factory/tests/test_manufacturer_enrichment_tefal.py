@@ -1,4 +1,7 @@
-from product_factory.manufacturer_enrichment import _parse_tefal_shop_product_html, _parse_tefal_shop_product_page
+from product_factory.manufacturer_enrichment import (
+    _parse_tefal_shop_product_html,
+    _parse_tefal_shop_product_page,
+)
 from product_factory.normalize import normalize_for_match
 
 
@@ -29,7 +32,9 @@ def test_parse_tefal_shop_product_html_extracts_spec_rows() -> None:
     assert flattened[normalize_for_match("Χωρητικότητα δοχείου σκόνης")] == "0.26 L"
 
 
-def test_parse_tefal_shop_product_page_extracts_intro_and_presentation_sections() -> None:
+def test_parse_tefal_shop_product_page_extracts_intro_and_presentation_sections() -> (
+    None
+):
     html = """
     <section id="shopify-section-template--1__product_title_description_abc">
       <div class="t-container">
@@ -86,9 +91,12 @@ def test_parse_tefal_shop_product_page_extracts_intro_and_presentation_sections(
     assert "Λαχταριστό σπιτικό παγωτό" in result.hero_summary
     assert "10 προγράμματα" in result.hero_summary
     assert result.presentation_source_html
-    assert normalize_for_match("Εξατομίκευση στο μέγιστο") in normalize_for_match(result.presentation_source_text)
-    assert normalize_for_match("Πεντανόστιμο παγωτό με μία μόνο κίνηση") in normalize_for_match(result.presentation_source_text)
+    assert normalize_for_match("Εξατομίκευση στο μέγιστο") in normalize_for_match(
+        result.presentation_source_text
+    )
+    assert normalize_for_match(
+        "Πεντανόστιμο παγωτό με μία μόνο κίνηση"
+    ) in normalize_for_match(result.presentation_source_text)
     assert result.presentation_source_html.count("<section>") == 4
     assert "https://shop.tefal.gr/cdn/card-1.jpg" in result.presentation_source_html
     assert "https://shop.tefal.gr/cdn/blog-2.jpg" in result.presentation_source_html
-

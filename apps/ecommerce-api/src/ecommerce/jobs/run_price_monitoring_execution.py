@@ -13,7 +13,9 @@ from ecommerce.price_monitoring.runs import (
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run one internal Price Monitoring execution.")
+    parser = argparse.ArgumentParser(
+        description="Run one internal Price Monitoring execution."
+    )
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--execution-id", required=True)
     parser.add_argument("--execution-type", required=True)

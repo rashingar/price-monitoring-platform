@@ -12,9 +12,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
-from ecommerce.api.source_url_agent import runs as source_url_agent_run_routes  # noqa: E402
-from ecommerce.api.source_url_agent import state as source_url_agent_api_state  # noqa: E402
-from ecommerce.api.source_url_agent import validation as source_url_agent_api_validation  # noqa: E402
+from ecommerce.api.source_url_agent import (
+    runs as source_url_agent_run_routes,
+)  # noqa: E402
+from ecommerce.api.source_url_agent import (
+    state as source_url_agent_api_state,
+)  # noqa: E402
+from ecommerce.api.source_url_agent import (
+    validation as source_url_agent_api_validation,
+)  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.jobs import EcommerceJob  # noqa: E402
@@ -25,15 +31,30 @@ from ecommerce.db.models.source_urls import (  # noqa: E402
     SourceUrlDiscoveryRun,
     SourceUrlDiscoveryTask,
 )
-from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
+from ecommerce.db.repositories.jobs import (
+    create_queued_job,
+    get_job_by_id,
+    mark_running,
+)  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs import source_url_agent as source_url_agent_job  # noqa: E402
-from ecommerce.jobs.execution_policy import API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR  # noqa: E402
-from ecommerce.jobs.worker import build_default_registry, run_worker_iteration  # noqa: E402
+from ecommerce.jobs.execution_policy import (
+    API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR,
+)  # noqa: E402
+from ecommerce.jobs.worker import (
+    build_default_registry,
+    run_worker_iteration,
+)  # noqa: E402
 from ecommerce.source_url_agent.artifacts import write_run_artifacts  # noqa: E402
 from ecommerce.source_url_agent.candidates import candidate_from_evidence  # noqa: E402
-from ecommerce.source_url_agent.evidence import PageEvidence, error_evidence, extract_page_evidence  # noqa: E402
-from ecommerce.source_url_agent import job_handler as source_url_agent_job_handler  # noqa: E402
+from ecommerce.source_url_agent.evidence import (
+    PageEvidence,
+    error_evidence,
+    extract_page_evidence,
+)  # noqa: E402
+from ecommerce.source_url_agent import (
+    job_handler as source_url_agent_job_handler,
+)  # noqa: E402
 from ecommerce.source_url_agent.enqueue_service import (  # noqa: E402
     SourceUrlAgentEnqueueCommand,
     enqueue_source_url_agent_run_setup,
@@ -50,9 +71,10 @@ from ecommerce.source_url_agent.progress import (  # noqa: E402
 from ecommerce.source_url_agent.runner import run_source_url_agent  # noqa: E402
 from ecommerce.source_url_agent.scoring import score_candidate  # noqa: E402
 from ecommerce.source_url_agent.search import SourceSearchResult  # noqa: E402
-from ecommerce.source_url_agent.search_providers import SearchProviderDefinition  # noqa: E402
+from ecommerce.source_url_agent.search_providers import (
+    SearchProviderDefinition,
+)  # noqa: E402
 from ecommerce.source_url_agent.sources import load_source_registry  # noqa: E402
-
 
 NOW = datetime(2026, 5, 3, 12, tzinfo=timezone.utc)
 
@@ -84,7 +106,9 @@ def _product(**overrides) -> AgentProduct:
     return AgentProduct(**values)
 
 
-def _catalog_product(session, *, model: str = "005606", mpn: str = "MR25GB") -> CatalogProductRow:
+def _catalog_product(
+    session, *, model: str = "005606", mpn: str = "MR25GB"
+) -> CatalogProductRow:
     row = CatalogProductRow(
         catalog_source="sourceCata",
         model=model,
@@ -104,7 +128,9 @@ def _catalog_product(session, *, model: str = "005606", mpn: str = "MR25GB") -> 
     return row
 
 
-def _html(*, include_mpn: bool = True, title: str = "LG MR25GB Magic Remote Control") -> str:
+def _html(
+    *, include_mpn: bool = True, title: str = "LG MR25GB Magic Remote Control"
+) -> str:
     mpn = "MR25GB" if include_mpn else "OTHER"
     return f"""
     <html>
@@ -149,7 +175,9 @@ def _candidate(product: AgentProduct, source_name: str = "skroutz"):
     )
 
 
-def test_source_url_agent_scores_marketplace_meta_description_evidence_as_review() -> None:
+def test_source_url_agent_scores_marketplace_meta_description_evidence_as_review() -> (
+    None
+):
     product = _product(
         mpn="CTN/CTG-356W",
         name="Toyotomi CTN/CTG-356W air conditioner",
@@ -181,7 +209,9 @@ def test_source_url_agent_scores_marketplace_meta_description_evidence_as_review
     assert score.confidence_score == 0.88
 
 
-def test_source_url_agent_keeps_inaccessible_url_mpn_brand_evidence_for_review() -> None:
+def test_source_url_agent_keeps_inaccessible_url_mpn_brand_evidence_for_review() -> (
+    None
+):
     product = _product(
         mpn="CTN/CTG-356W",
         name="Toyotomi CTN/CTG-356W air conditioner",
@@ -209,7 +239,11 @@ def test_source_url_agent_keeps_inaccessible_url_mpn_brand_evidence_for_review()
 
 
 def _allow_source_url_agent_run_database(monkeypatch) -> None:
-    monkeypatch.setattr(source_url_agent_run_routes, "require_source_url_agent_run_database_ready", lambda: None)
+    monkeypatch.setattr(
+        source_url_agent_run_routes,
+        "require_source_url_agent_run_database_ready",
+        lambda: None,
+    )
 
 
 def _fake_resolver(product, source) -> SourceSearchResult:
@@ -236,7 +270,12 @@ def _fake_resolver(product, source) -> SourceSearchResult:
         price_compatible=None,
         jsonld_products=(),
     )
-    return SourceSearchResult(evidence=[evidence], searched_queries=[f"{product.manufacturer} {product.mpn}"], searched_urls=[], errors=[])
+    return SourceSearchResult(
+        evidence=[evidence],
+        searched_queries=[f"{product.manufacturer} {product.mpn}"],
+        searched_urls=[],
+        errors=[],
+    )
 
 
 class _Clock:
@@ -252,14 +291,18 @@ class _Clock:
 def _run_api_client(tmp_path: Path, monkeypatch) -> tuple[TestClient, str]:
     monkeypatch.chdir(tmp_path)
     _allow_source_url_agent_run_database(monkeypatch)
-    monkeypatch.setattr(source_url_agent_api_state, "SOURCE_URL_AGENT_API_RESOLVER", _fake_resolver)
+    monkeypatch.setattr(
+        source_url_agent_api_state, "SOURCE_URL_AGENT_API_RESOLVER", _fake_resolver
+    )
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     _create_schema(database_url)
     return TestClient(create_app()), database_url
 
 
-def test_source_url_agent_enqueue_service_creates_queued_run_tasks_and_job(tmp_path: Path) -> None:
+def test_source_url_agent_enqueue_service_creates_queued_run_tasks_and_job(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     with session_scope(database_url) as session:
@@ -291,7 +334,9 @@ def test_source_url_agent_enqueue_service_creates_queued_run_tasks_and_job(tmp_p
         )
 
         run = session.query(SourceUrlDiscoveryRun).filter_by(run_id="run-service").one()
-        task = session.query(SourceUrlDiscoveryTask).filter_by(run_id="run-service").one()
+        task = (
+            session.query(SourceUrlDiscoveryTask).filter_by(run_id="run-service").one()
+        )
         job = session.query(EcommerceJob).filter_by(job_id="run-service").one()
 
         assert result.run_id == "run-service"
@@ -334,7 +379,9 @@ def test_artifact_writing_creates_required_files(tmp_path: Path) -> None:
     assert paths.rule_suggestions.exists()
 
 
-def test_artifact_writing_includes_provider_provenance_in_searched_queries(tmp_path: Path) -> None:
+def test_artifact_writing_includes_provider_provenance_in_searched_queries(
+    tmp_path: Path,
+) -> None:
     product = _product()
     candidate = _candidate(product)
     provenance = {
@@ -347,7 +394,10 @@ def test_artifact_writing_includes_provider_provenance_in_searched_queries(tmp_p
         "discovery_method": "public_source_search_page",
         "allow_high_confidence_auto_apply": True,
     }
-    candidate = replace(candidate, evidence_json={**candidate.evidence_json, "provider_provenance": provenance})
+    candidate = replace(
+        candidate,
+        evidence_json={**candidate.evidence_json, "provider_provenance": provenance},
+    )
 
     paths = write_run_artifacts(
         run_id="run-1",
@@ -379,11 +429,18 @@ def test_source_url_agent_progress_definitions_are_stable() -> None:
         "candidate_persistence_completed",
         "run_completed",
     )
-    assert [definition.label for definition in SOURCE_URL_AGENT_PROGRESS_STEP_DEFINITIONS]
-    assert SOURCE_URL_AGENT_PROGRESS_STEP_LABELS["product_source_completed"] == "Product-source completed"
+    assert [
+        definition.label for definition in SOURCE_URL_AGENT_PROGRESS_STEP_DEFINITIONS
+    ]
+    assert (
+        SOURCE_URL_AGENT_PROGRESS_STEP_LABELS["product_source_completed"]
+        == "Product-source completed"
+    )
 
 
-def test_agent_records_durable_progress_counts_and_resolver_errors(tmp_path: Path, monkeypatch) -> None:
+def test_agent_records_durable_progress_counts_and_resolver_errors(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     _create_schema(database_url)
@@ -392,7 +449,12 @@ def test_agent_records_durable_progress_counts_and_resolver_errors(tmp_path: Pat
 
     with session_scope(database_url) as session:
         row = _catalog_product(session)
-        create_queued_job(session, job_type=SOURCE_URL_AGENT_JOB_TYPE, payload={}, job_id="job-source-agent")
+        create_queued_job(
+            session,
+            job_type=SOURCE_URL_AGENT_JOB_TYPE,
+            payload={},
+            job_id="job-source-agent",
+        )
         mark_running(session, "job-source-agent")
         catalog_product_id = row.id
 
@@ -402,11 +464,17 @@ def test_agent_records_durable_progress_counts_and_resolver_errors(tmp_path: Pat
         return SourceSearchResult(
             evidence=[],
             searched_queries=["MR25GB"],
-            searched_urls=[f"https://{source.source_domain}/search?q=MR25GB&token=secret"],
-            errors=[f"https://{source.source_domain}/search?q=MR25GB&token=secret: timeout"],
+            searched_urls=[
+                f"https://{source.source_domain}/search?q=MR25GB&token=secret"
+            ],
+            errors=[
+                f"https://{source.source_domain}/search?q=MR25GB&token=secret: timeout"
+            ],
         )
 
-    with SourceUrlAgentProgressReporter("job-source-agent", heartbeat_interval_seconds=60, now=clock) as reporter:
+    with SourceUrlAgentProgressReporter(
+        "job-source-agent", heartbeat_interval_seconds=60, now=clock
+    ) as reporter:
         with session_scope(database_url) as session:
             result = run_source_url_agent(
                 products=[product],
@@ -432,7 +500,11 @@ def test_agent_records_durable_progress_counts_and_resolver_errors(tmp_path: Pat
 
     assert result.summary["error_count"] == 1
     assert progress["current_step"] == "run_completed"
-    assert persisted_progress["current_step"] in {"candidate_persistence_started", "candidate_persistence_completed", "run_completed"}
+    assert persisted_progress["current_step"] in {
+        "candidate_persistence_started",
+        "candidate_persistence_completed",
+        "run_completed",
+    }
     assert progress["details"]["product_count"] == 1
     assert progress["details"]["source_count"] == 1
     assert progress["details"]["product_source_task_count"] == 1
@@ -442,14 +514,21 @@ def test_agent_records_durable_progress_counts_and_resolver_errors(tmp_path: Pat
     assert progress["details"]["persisted_candidate_count"] == 1
     assert progress["details"]["applied_high_confidence_url_count"] == 0
     completed = {step["step"]: step for step in progress["completed_steps"]}
-    assert completed["product_source_completed"]["details"]["completed_product_source_task_count"] == 1
+    assert (
+        completed["product_source_completed"]["details"][
+            "completed_product_source_task_count"
+        ]
+        == 1
+    )
     scoring_errors = completed["candidate_scoring_completed"]["errors"]
     assert scoring_errors
     assert "token=secret" not in str(scoring_errors)
     assert "token=%5Bredacted%5D" in str(scoring_errors)
 
 
-def test_agent_persists_run_and_candidate_models_when_apply_high_confidence(tmp_path: Path) -> None:
+def test_agent_persists_run_and_candidate_models_when_apply_high_confidence(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     registry = load_source_registry()
@@ -466,7 +545,12 @@ def test_agent_persists_run_and_candidate_models_when_apply_high_confidence(tmp_
         )
 
         def resolver(_product, _source):
-            return SourceSearchResult(evidence=[evidence], searched_queries=["MR25GB"], searched_urls=[], errors=[])
+            return SourceSearchResult(
+                evidence=[evidence],
+                searched_queries=["MR25GB"],
+                searched_urls=[],
+                errors=[],
+            )
 
         result = run_source_url_agent(
             products=[product],
@@ -489,7 +573,9 @@ def test_agent_persists_run_and_candidate_models_when_apply_high_confidence(tmp_
     assert result.summary["matched_count"] == 1
 
 
-def test_provider_auto_apply_gate_prevents_high_confidence_write(tmp_path: Path) -> None:
+def test_provider_auto_apply_gate_prevents_high_confidence_write(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     registry = load_source_registry()
@@ -522,7 +608,12 @@ def test_provider_auto_apply_gate_prevents_high_confidence_write(tmp_path: Path)
         )
 
         def resolver(_product, _source):
-            return SourceSearchResult(evidence=[evidence], searched_queries=["MR25GB"], searched_urls=[], errors=[])
+            return SourceSearchResult(
+                evidence=[evidence],
+                searched_queries=["MR25GB"],
+                searched_urls=[],
+                errors=[],
+            )
 
         result = run_source_url_agent(
             products=[product],
@@ -552,10 +643,15 @@ def test_provider_auto_apply_gate_prevents_high_confidence_write(tmp_path: Path)
             "reason": "provider_auto_apply_disabled:fake_review_only",
         }
     ]
-    assert "source_url_write_skipped: provider_auto_apply_disabled:fake_review_only" in result.warnings
+    assert (
+        "source_url_write_skipped: provider_auto_apply_disabled:fake_review_only"
+        in result.warnings
+    )
 
 
-def test_agent_persists_high_confidence_needs_review_candidates_during_dry_run(tmp_path: Path) -> None:
+def test_agent_persists_high_confidence_needs_review_candidates_during_dry_run(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     registry = load_source_registry()
@@ -580,7 +676,12 @@ def test_agent_persists_high_confidence_needs_review_candidates_during_dry_run(t
         )
 
         def resolver(_product, _source):
-            return SourceSearchResult(evidence=[evidence], searched_queries=["LG MR25GB"], searched_urls=[], errors=[])
+            return SourceSearchResult(
+                evidence=[evidence],
+                searched_queries=["LG MR25GB"],
+                searched_urls=[],
+                errors=[],
+            )
 
         result = run_source_url_agent(
             products=[product],
@@ -609,7 +710,9 @@ def test_agent_persists_high_confidence_needs_review_candidates_during_dry_run(t
     assert result.summary["persisted_candidate_count"] == 1
 
 
-def test_agent_discards_low_confidence_candidates_from_storage_and_artifacts(tmp_path: Path) -> None:
+def test_agent_discards_low_confidence_candidates_from_storage_and_artifacts(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     registry = load_source_registry()
@@ -634,7 +737,12 @@ def test_agent_discards_low_confidence_candidates_from_storage_and_artifacts(tmp
         )
 
         def resolver(_product, _source):
-            return SourceSearchResult(evidence=[evidence], searched_queries=["LG MR25GB"], searched_urls=[], errors=[])
+            return SourceSearchResult(
+                evidence=[evidence],
+                searched_queries=["LG MR25GB"],
+                searched_urls=[],
+                errors=[],
+            )
 
         result = run_source_url_agent(
             products=[product],
@@ -654,14 +762,18 @@ def test_agent_discards_low_confidence_candidates_from_storage_and_artifacts(tmp
         assert session.query(SourceUrlCandidate).count() == 0
         assert session.query(SourceUrl).count() == 0
 
-    with result.artifacts.source_url_results.open("r", encoding="utf-8", newline="") as handle:
+    with result.artifacts.source_url_results.open(
+        "r", encoding="utf-8", newline=""
+    ) as handle:
         assert list(csv.DictReader(handle)) == []
     assert result.summary["needs_review_count"] == 1
     assert result.summary["persisted_candidate_count"] == 0
     assert result.summary["discarded_low_confidence_candidate_count"] == 1
 
 
-def test_agent_persists_matched_candidates_during_dry_run_without_source_url_write(tmp_path: Path) -> None:
+def test_agent_persists_matched_candidates_during_dry_run_without_source_url_write(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     registry = load_source_registry()
@@ -678,7 +790,12 @@ def test_agent_persists_matched_candidates_during_dry_run_without_source_url_wri
         )
 
         def resolver(_product, _source):
-            return SourceSearchResult(evidence=[evidence], searched_queries=["MR25GB"], searched_urls=[], errors=[])
+            return SourceSearchResult(
+                evidence=[evidence],
+                searched_queries=["MR25GB"],
+                searched_urls=[],
+                errors=[],
+            )
 
         result = run_source_url_agent(
             products=[product],
@@ -705,7 +822,9 @@ def test_agent_persists_matched_candidates_during_dry_run_without_source_url_wri
     assert result.summary["persisted_candidate_count"] == 1
 
 
-def test_agent_persists_terminal_error_candidates_for_review_filtering(tmp_path: Path) -> None:
+def test_agent_persists_terminal_error_candidates_for_review_filtering(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     registry = load_source_registry()
@@ -746,7 +865,9 @@ def test_agent_persists_terminal_error_candidates_for_review_filtering(tmp_path:
     assert result.summary["persisted_candidate_count"] == 1
 
 
-def test_agent_persists_terminal_not_found_candidates_for_review_filtering(tmp_path: Path) -> None:
+def test_agent_persists_terminal_not_found_candidates_for_review_filtering(
+    tmp_path: Path,
+) -> None:
     database_url = _sqlite_url(tmp_path)
     _create_schema(database_url)
     registry = load_source_registry()
@@ -755,7 +876,9 @@ def test_agent_persists_terminal_not_found_candidates_for_review_filtering(tmp_p
         product = _product(catalog_product_id=row.id)
 
         def resolver(_product, _source):
-            return SourceSearchResult(evidence=[], searched_queries=["MR25GB"], searched_urls=[], errors=[])
+            return SourceSearchResult(
+                evidence=[], searched_queries=["MR25GB"], searched_urls=[], errors=[]
+            )
 
         result = run_source_url_agent(
             products=[product],
@@ -781,19 +904,25 @@ def test_agent_persists_terminal_not_found_candidates_for_review_filtering(tmp_p
     assert result.summary["persisted_candidate_count"] == 1
 
 
-def test_source_url_agent_csv_run_requires_database_for_direct_persistence(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_source_url_agent_csv_run_requires_database_for_direct_persistence(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
     monkeypatch.chdir(tmp_path)
     input_path = tmp_path / "input.csv"
     input_path.write_text("model,mpn,name\n005606,MR25GB,LG Remote\n", encoding="utf-8")
 
-    code = source_url_agent_job.main(["run", "--input", str(input_path), "--source", "skroutz"])
+    code = source_url_agent_job.main(
+        ["run", "--input", str(input_path), "--source", "skroutz"]
+    )
 
     assert code == 1
     assert "requires ECOMMERCE_DATABASE_URL" in capsys.readouterr().err
 
 
-def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidates(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidates(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setenv(API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR, "true")
     client, database_url = _run_api_client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
@@ -842,14 +971,18 @@ def test_source_url_agent_run_api_dry_run_from_catalog_persists_run_and_candidat
     assert detail.json()["artifacts"]
 
 
-def test_source_url_agent_run_api_enqueues_only_when_api_inline_execution_disabled(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_run_api_enqueues_only_when_api_inline_execution_disabled(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setenv(API_EXECUTE_DURABLE_JOBS_INLINE_ENV_VAR, "false")
     client, database_url = _run_api_client(tmp_path, monkeypatch)
 
     def fail_if_executed(*_args, **_kwargs):
         raise AssertionError("Source URL Agent job should not execute inline")
 
-    monkeypatch.setattr(source_url_agent_run_routes, "execute_source_url_agent_job", fail_if_executed)
+    monkeypatch.setattr(
+        source_url_agent_run_routes, "execute_source_url_agent_job", fail_if_executed
+    )
     with session_scope(database_url) as session:
         product = _catalog_product(session)
 
@@ -873,8 +1006,16 @@ def test_source_url_agent_run_api_enqueues_only_when_api_inline_execution_disabl
     assert payload["summary"]["task_total_count"] == 1
 
     with session_scope(database_url) as session:
-        run = session.query(SourceUrlDiscoveryRun).filter_by(run_id=payload["run_id"]).one()
-        task = session.query(SourceUrlDiscoveryTask).filter_by(run_id=payload["run_id"]).one()
+        run = (
+            session.query(SourceUrlDiscoveryRun)
+            .filter_by(run_id=payload["run_id"])
+            .one()
+        )
+        task = (
+            session.query(SourceUrlDiscoveryTask)
+            .filter_by(run_id=payload["run_id"])
+            .one()
+        )
         job = get_job_by_id(session, payload["run_id"])
         assert run.status == "queued"
         assert task.status == "queued"
@@ -882,10 +1023,18 @@ def test_source_url_agent_run_api_enqueues_only_when_api_inline_execution_disabl
         assert job.status == "queued"
 
 
-def test_source_url_agent_worker_executes_queued_run_and_persists_progress(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_worker_executes_queued_run_and_persists_progress(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
-    monkeypatch.setattr(source_url_agent_run_routes, "execute_source_url_agent_job", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(source_url_agent_job_handler, "SOURCE_URL_AGENT_JOB_RESOLVER", _fake_resolver)
+    monkeypatch.setattr(
+        source_url_agent_run_routes,
+        "execute_source_url_agent_job",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        source_url_agent_job_handler, "SOURCE_URL_AGENT_JOB_RESOLVER", _fake_resolver
+    )
     with session_scope(database_url) as session:
         product = _catalog_product(session)
 
@@ -928,14 +1077,22 @@ def test_source_url_agent_worker_executes_queued_run_and_persists_progress(tmp_p
         assert job.result_json["progress"]["current_step"] == "run_completed"
 
 
-def test_source_url_agent_worker_marks_failed_run_and_job_on_execution_error(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_worker_marks_failed_run_and_job_on_execution_error(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
-    monkeypatch.setattr(source_url_agent_run_routes, "execute_source_url_agent_job", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        source_url_agent_run_routes,
+        "execute_source_url_agent_job",
+        lambda *_args, **_kwargs: None,
+    )
 
     def failing_resolver(_product, _source):
         raise RuntimeError("resolver exploded")
 
-    monkeypatch.setattr(source_url_agent_job_handler, "SOURCE_URL_AGENT_JOB_RESOLVER", failing_resolver)
+    monkeypatch.setattr(
+        source_url_agent_job_handler, "SOURCE_URL_AGENT_JOB_RESOLVER", failing_resolver
+    )
     with session_scope(database_url) as session:
         product = _catalog_product(session)
 
@@ -974,7 +1131,9 @@ def test_source_url_agent_worker_marks_failed_run_and_job_on_execution_error(tmp
         assert job.result_json["progress"]["current_step"] == "product_source_started"
 
 
-def test_source_url_agent_background_execution_noops_when_worker_already_claimed_job(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_background_execution_noops_when_worker_already_claimed_job(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _sqlite_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     _create_schema(database_url)
@@ -982,15 +1141,22 @@ def test_source_url_agent_background_execution_noops_when_worker_already_claimed
         create_queued_job(
             session,
             job_type=SOURCE_URL_AGENT_JOB_TYPE,
-            payload={"run_id": "job-source-agent", "request": {"source": "bestprice", "mode": "catalog"}},
+            payload={
+                "run_id": "job-source-agent",
+                "request": {"source": "bestprice", "mode": "catalog"},
+            },
             job_id="job-source-agent",
         )
         mark_running(session, "job-source-agent")
 
     def should_not_run(_product, _source):
-        raise AssertionError("running jobs should not be executed by an unclaimed background task")
+        raise AssertionError(
+            "running jobs should not be executed by an unclaimed background task"
+        )
 
-    job = source_url_agent_job_handler.execute_source_url_agent_job("job-source-agent", resolver=should_not_run)
+    job = source_url_agent_job_handler.execute_source_url_agent_job(
+        "job-source-agent", resolver=should_not_run
+    )
 
     assert job.status == "running"
     with session_scope(database_url) as session:
@@ -999,7 +1165,9 @@ def test_source_url_agent_background_execution_noops_when_worker_already_claimed
         assert persisted.attempt_count == 1
 
 
-def test_source_url_agent_run_api_lists_persisted_error_candidates(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_run_api_lists_persisted_error_candidates(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
 
     def error_resolver(product, source):
@@ -1010,7 +1178,9 @@ def test_source_url_agent_run_api_lists_persisted_error_candidates(tmp_path: Pat
             errors=[f"https://{source.source_domain}/search?q={product.mpn}: http_500"],
         )
 
-    monkeypatch.setattr(source_url_agent_api_state, "SOURCE_URL_AGENT_API_RESOLVER", error_resolver)
+    monkeypatch.setattr(
+        source_url_agent_api_state, "SOURCE_URL_AGENT_API_RESOLVER", error_resolver
+    )
     with session_scope(database_url) as session:
         product = _catalog_product(session)
 
@@ -1033,7 +1203,9 @@ def test_source_url_agent_run_api_lists_persisted_error_candidates(tmp_path: Pat
         assert run.error_count == 1
         assert session.query(SourceUrlCandidate).count() == 1
 
-    candidates = client.get("/api/source-url-agent/candidates", params={"status": "error", "run_id": run_id})
+    candidates = client.get(
+        "/api/source-url-agent/candidates", params={"status": "error", "run_id": run_id}
+    )
 
     assert candidates.status_code == 200
     payload = candidates.json()
@@ -1043,7 +1215,9 @@ def test_source_url_agent_run_api_lists_persisted_error_candidates(tmp_path: Pat
     assert "http_500" in payload["items"][0]["notes"]
 
 
-def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_path: Path, monkeypatch) -> None:
+def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         product = _catalog_product(session)
@@ -1068,7 +1242,9 @@ def test_vendor_sources_agent_run_namespace_delegates_to_source_url_agent(tmp_pa
     assert history.json()["items"][0]["run_id"] == payload["run_id"]
 
 
-def test_source_url_agent_run_api_accepts_selected_models(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_run_api_accepts_selected_models(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         _catalog_product(session, model="SELECT-1", mpn="MPN-1")
@@ -1093,18 +1269,26 @@ def test_source_url_agent_run_api_accepts_selected_models(tmp_path: Path, monkey
     with session_scope(database_url) as session:
         run = session.query(SourceUrlDiscoveryRun).one()
         assert run.filters_json["selected_models"] == ["SELECT-1", "SELECT-2"]
-        candidate_models = {candidate.model for candidate in session.query(SourceUrlCandidate).all()}
+        candidate_models = {
+            candidate.model for candidate in session.query(SourceUrlCandidate).all()
+        }
         assert candidate_models == {"SELECT-1", "SELECT-2"}
 
 
-def test_source_url_agent_run_api_enforces_bounded_default_limit(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_run_api_enforces_bounded_default_limit(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
-    monkeypatch.setattr(source_url_agent_api_validation, "DEFAULT_API_MAX_PRODUCTS_PER_BATCH", 2)
+    monkeypatch.setattr(
+        source_url_agent_api_validation, "DEFAULT_API_MAX_PRODUCTS_PER_BATCH", 2
+    )
     with session_scope(database_url) as session:
         for index in range(4):
             _catalog_product(session, model=f"MODEL-{index}", mpn=f"MPN-{index}")
 
-    response = client.post("/api/source-url-agent/runs", json={"source": "bestprice", "mode": "catalog"})
+    response = client.post(
+        "/api/source-url-agent/runs", json={"source": "bestprice", "mode": "catalog"}
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -1113,14 +1297,21 @@ def test_source_url_agent_run_api_enforces_bounded_default_limit(tmp_path: Path,
         assert session.query(SourceUrlCandidate).count() == 2
 
 
-def test_source_url_agent_run_artifact_endpoint_returns_safe_metadata(tmp_path: Path, monkeypatch) -> None:
+def test_source_url_agent_run_artifact_endpoint_returns_safe_metadata(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _run_api_client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         product = _catalog_product(session)
 
     run_response = client.post(
         "/api/source-url-agent/runs",
-        json={"source": "bestprice", "mode": "catalog", "catalog_product_id": product.id, "limit": 1},
+        json={
+            "source": "bestprice",
+            "mode": "catalog",
+            "catalog_product_id": product.id,
+            "limit": 1,
+        },
     )
     run_id = run_response.json()["run_id"]
     artifact_response = client.get(f"/api/source-url-agent/runs/{run_id}/artifacts")
@@ -1131,4 +1322,7 @@ def test_source_url_agent_run_artifact_endpoint_returns_safe_metadata(tmp_path: 
     names = {item["name"] for item in payload["items"]}
     assert "source_url_run_summary.json" in names
     assert all(item["is_allowed"] for item in payload["items"])
-    assert all(item["read_url"].startswith("/api/artifacts/read?path=") for item in payload["items"])
+    assert all(
+        item["read_url"].startswith("/api/artifacts/read?path=")
+        for item in payload["items"]
+    )

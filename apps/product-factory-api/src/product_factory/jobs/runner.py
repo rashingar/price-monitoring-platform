@@ -36,7 +36,6 @@ from .models import JobRecord, JobStatus, JobType, is_terminal_job_status, utc_n
 from .retry import is_full_pipeline_retry_from_artifacts
 from .store import JobStore
 
-
 SCRAPER_ROOT = Path(__file__).resolve().parents[2]
 MAX_WORKERS_ENV = "PRODUCT_FACTORY_MAX_JOB_WORKERS"
 TERMINATE_TIMEOUT_ENV = "PRODUCT_FACTORY_JOB_TERMINATE_TIMEOUT_SECONDS"
@@ -57,7 +56,9 @@ class JobRunResult:
 
 
 def stub_runner_callback(record: JobRecord, log: LogCallback) -> None:
-    log(f"Stub runner accepted {record.job_type.value} job; pipeline services were not invoked.")
+    log(
+        f"Stub runner accepted {record.job_type.value} job; pipeline services were not invoked."
+    )
 
 
 def service_runner_callback(record: JobRecord, log: LogCallback) -> JobRunResult | None:
@@ -103,20 +104,28 @@ def run_prepare_job(
     log(f"Prepare gallery_url provided: {bool(request.gallery_url)}")
     log(f"Prepare gallery image extraction URL: {gallery_extraction_url}")
     log(f"Prepare characteristics_url provided: {bool(request.characteristics_url)}")
-    log(f"Prepare characteristics/specifications extraction URL: {characteristics_extraction_url}")
+    log(
+        f"Prepare characteristics/specifications extraction URL: {characteristics_extraction_url}"
+    )
     if request.gallery_url or request.characteristics_url:
         log("Prepare product data extraction remains on the main URL.")
     if request.characteristics_url:
-        log("Prepare characteristics/specifications extraction uses the characteristics URL only.")
+        log(
+            "Prepare characteristics/specifications extraction uses the characteristics URL only."
+        )
     if request.second_opencart_image_index is not None:
-        log(f"Requested second OpenCart image index: {request.second_opencart_image_index}")
+        log(
+            f"Requested second OpenCart image index: {request.second_opencart_image_index}"
+        )
     if request.gallery_mode == "all":
         log("Prepare whole-gallery mode active.")
     log("Calling prepare service.")
     result = prepare_product_fn(request)
     _log_prepare_gallery_details(result, log)
     if "second_opencart_image_override_applied" in result.details:
-        log(f"Second OpenCart image override applied: {bool(result.details['second_opencart_image_override_applied'])}")
+        log(
+            f"Second OpenCart image override applied: {bool(result.details['second_opencart_image_override_applied'])}"
+        )
     return _job_result_from_service_result(
         "prepare",
         result,
@@ -155,7 +164,9 @@ def run_publish_job(
     current_job_product_file = record.payload.get("current_job_product_file")
     request = PublishRequest(
         model=str(record.payload["model"]),
-        current_job_product_file=Path(str(current_job_product_file)) if current_job_product_file else None,
+        current_job_product_file=(
+            Path(str(current_job_product_file)) if current_job_product_file else None
+        ),
     )
     log("Calling publish service.")
     result = publish_product_fn(request)
@@ -195,7 +206,9 @@ def run_full_pipeline_job(
         log("Retry from prepared artifacts active; skipping prepare/source scraping.")
         missing_artifacts = _missing_prepared_artifacts(model)
         if missing_artifacts:
-            log(f"Prepared artifacts missing for retry: {', '.join(sorted(missing_artifacts))}")
+            log(
+                f"Prepared artifacts missing for retry: {', '.join(sorted(missing_artifacts))}"
+            )
             return JobRunResult(
                 status=JobStatus.FAILED,
                 message="Cannot retry without scraping because prepared artifacts are missing.",
@@ -235,7 +248,9 @@ def run_full_pipeline_job(
     )
     _merge_stage_artifacts(artifacts, "intro_text_authoring", intro_result.artifacts)
     if intro_result.status == JobStatus.FAILED:
-        return _full_pipeline_failed_result("intro text authoring", intro_result, artifacts)
+        return _full_pipeline_failed_result(
+            "intro text authoring", intro_result, artifacts
+        )
 
     seo_record = _stage_record(record, JobType.AUTHORING_SEO, authoring_payload)
     seo_result = _run_full_pipeline_stage(
@@ -267,7 +282,9 @@ def run_full_pipeline_job(
 
     publish_payload = {"model": model}
     if render_result.artifacts.get("published_csv_path"):
-        publish_payload["current_job_product_file"] = render_result.artifacts["published_csv_path"]
+        publish_payload["current_job_product_file"] = render_result.artifacts[
+            "published_csv_path"
+        ]
     publish_record = _stage_record(record, JobType.PUBLISH, publish_payload)
     publish_result = _run_full_pipeline_stage(
         "publish",
@@ -280,7 +297,9 @@ def run_full_pipeline_job(
     )
     _merge_stage_artifacts(artifacts, "publish", publish_result.artifacts)
     if publish_result.status == JobStatus.FAILED:
-        log(f"Full pipeline publish warning: {publish_result.error or publish_result.message or 'publish failed'}")
+        log(
+            f"Full pipeline publish warning: {publish_result.error or publish_result.message or 'publish failed'}"
+        )
         return JobRunResult(
             status=JobStatus.SUCCEEDED,
             message="Full pipeline job succeeded with publish warning.",
@@ -304,7 +323,9 @@ def run_authoring_intro_job(
     *,
     run_intro_text_authoring_fn: Callable[..., AuthoringStatus] | None = None,
 ) -> JobRunResult:
-    run_intro_text_authoring_fn = run_intro_text_authoring_fn or run_intro_text_authoring
+    run_intro_text_authoring_fn = (
+        run_intro_text_authoring_fn or run_intro_text_authoring
+    )
     model = str(record.payload["model"])
     retry = bool(record.payload.get("retry", False))
     log("Calling intro text authoring service.")
@@ -312,7 +333,9 @@ def run_authoring_intro_job(
         status = run_intro_text_authoring_fn(model, retry=retry)
     except Exception as exc:
         service_error = authoring_service_error_from_exception(exc)
-        log(f"Intro text authoring failed [{service_error.code}]: {service_error.message}")
+        log(
+            f"Intro text authoring failed [{service_error.code}]: {service_error.message}"
+        )
         return _failed_authoring_result("Intro text authoring failed.", service_error)
     log("Intro text authoring succeeded.")
     return JobRunResult(
@@ -336,7 +359,9 @@ def run_authoring_seo_job(
         status = run_seo_meta_authoring_fn(model, retry=retry)
     except Exception as exc:
         service_error = authoring_service_error_from_exception(exc)
-        log(f"SEO meta authoring failed [{service_error.code}]: {service_error.message}")
+        log(
+            f"SEO meta authoring failed [{service_error.code}]: {service_error.message}"
+        )
         return _failed_authoring_result("SEO meta authoring failed.", service_error)
     log("SEO meta authoring succeeded.")
     return JobRunResult(
@@ -402,10 +427,14 @@ def _log_prepare_gallery_details(result: ServiceResult, log: LogCallback) -> Non
     before_count = details.get("gallery_extracted_before_source_filter_count")
     after_count = details.get("gallery_after_source_filter_count")
     if before_count is not None or after_count is not None:
-        log(f"Prepare gallery source-filter counts: before={before_count}, after={after_count}")
+        log(
+            f"Prepare gallery source-filter counts: before={before_count}, after={after_count}"
+        )
     if bool(details.get("gallery_skroutz_skip_last_applied", False)):
         domain = str(details.get("gallery_source_filter_domain", "") or "")
-        log(f"Prepare Skroutz skip-last gallery rule applied for source domain: {domain}")
+        log(
+            f"Prepare Skroutz skip-last gallery rule applied for source domain: {domain}"
+        )
 
 
 def _run_full_pipeline_stage(
@@ -432,7 +461,9 @@ def _run_full_pipeline_stage(
             error=str(exc),
         )
     if result.status == JobStatus.FAILED:
-        log(f"Full pipeline stage {stage} failed: {result.error or result.message or 'stage failed'}")
+        log(
+            f"Full pipeline stage {stage} failed: {result.error or result.message or 'stage failed'}"
+        )
     else:
         log(f"Full pipeline stage {stage} succeeded.")
     return result
@@ -496,7 +527,8 @@ def _job_result_from_service_result(
         return JobRunResult(
             status=JobStatus.FAILED,
             message=failure_message,
-            error=result.run.error_detail or f"{operation.capitalize()} service returned failed status.",
+            error=result.run.error_detail
+            or f"{operation.capitalize()} service returned failed status.",
             error_code=result.run.error_code,
             artifacts=artifacts,
         )
@@ -534,7 +566,11 @@ def _authoring_artifacts(status: AuthoringStatus, stage: str) -> dict[str, str]:
                 "intro_text_output_path": output_path,
                 "intro_text_prompt_path": llm_dir / "intro_text.prompt.txt",
                 "intro_text_context_path": llm_dir / "intro_text.context.json",
-                "intro_text_trace_path": Path(status.intro_text.trace_path) if status.intro_text.trace_path else None,
+                "intro_text_trace_path": (
+                    Path(status.intro_text.trace_path)
+                    if status.intro_text.trace_path
+                    else None
+                ),
                 "intro_text_preview_path": _write_intro_preview(output_path),
             }
         )
@@ -576,16 +612,26 @@ def _write_seo_preview(output_path: Path) -> Path | None:
     try:
         payload = json.loads(output_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
-        preview_path.write_text(output_path.read_text(encoding="utf-8"), encoding="utf-8")
+        preview_path.write_text(
+            output_path.read_text(encoding="utf-8"), encoding="utf-8"
+        )
         return preview_path
     product = payload.get("product", {}) if isinstance(payload, dict) else {}
     preview = {
         "meta_title": product.get("meta_title") if isinstance(product, dict) else None,
-        "meta_description": product.get("meta_description") if isinstance(product, dict) else None,
-        "meta_keywords": product.get("meta_keywords") if isinstance(product, dict) else None,
-        "seo_keyword": product.get("seo_keyword") if isinstance(product, dict) else None,
+        "meta_description": (
+            product.get("meta_description") if isinstance(product, dict) else None
+        ),
+        "meta_keywords": (
+            product.get("meta_keywords") if isinstance(product, dict) else None
+        ),
+        "seo_keyword": (
+            product.get("seo_keyword") if isinstance(product, dict) else None
+        ),
     }
-    preview_path.write_text(json.dumps(preview, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    preview_path.write_text(
+        json.dumps(preview, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     return preview_path
 
 
@@ -605,11 +651,17 @@ class MappingLike:
     def get(self, key: str, default: object | None = None) -> object | None: ...
 
 
-def _positive_int_from_env(name: str, *, default: int, env: MappingLike | None = None) -> int:
+def _positive_int_from_env(
+    name: str, *, default: int, env: MappingLike | None = None
+) -> int:
     source = os.environ if env is None else env
     value = source.get(name)
     try:
-        parsed = int(str(value).strip()) if value is not None and str(value).strip() else default
+        parsed = (
+            int(str(value).strip())
+            if value is not None and str(value).strip()
+            else default
+        )
     except (TypeError, ValueError):
         return default
     return parsed if parsed >= 1 else default
@@ -664,7 +716,9 @@ class SequentialJobRunner:
         if record.status == JobStatus.QUEUED:
             record = self._store.mark_cancelled(job_id, reason=reason)
             self._remove_queued_job(job_id)
-            self._store.append_log(job_id, "Stop requested by operator before job started.")
+            self._store.append_log(
+                job_id, "Stop requested by operator before job started."
+            )
             return record
         if record.status == JobStatus.RUNNING:
             with self._condition:
@@ -673,12 +727,20 @@ class SequentialJobRunner:
             if process is None:
                 if is_active_job:
                     record = self._store.mark_cancelled(job_id, reason=reason)
-                    self._store.update_process_metadata(job_id, termination_mode="graceful")
-                    self._store.append_log(job_id, "Stop requested by operator before subprocess started.")
+                    self._store.update_process_metadata(
+                        job_id, termination_mode="graceful"
+                    )
+                    self._store.append_log(
+                        job_id, "Stop requested by operator before subprocess started."
+                    )
                     return record
                 record = self._store.mark_cancelled(job_id, reason=reason)
-                self._store.update_process_metadata(job_id, termination_mode="stale_metadata")
-                self._store.append_log(job_id, "Stop requested for stale running job record.")
+                self._store.update_process_metadata(
+                    job_id, termination_mode="stale_metadata"
+                )
+                self._store.append_log(
+                    job_id, "Stop requested for stale running job record."
+                )
                 return record
             return self._terminate_running_job(job_id, process, reason=reason)
         return record
@@ -771,7 +833,9 @@ class SequentialJobRunner:
             self._run_callback_job(record)
             return
 
-        self._store.append_log(job_id, f"Started {record.job_type.value} job subprocess.")
+        self._store.append_log(
+            job_id, f"Started {record.job_type.value} job subprocess."
+        )
         command = self._command_builder(record)
         stdout_path = self._store.jobs_dir / f"{job_id}.stdout.log"
         stderr_path = self._store.jobs_dir / f"{job_id}.stderr.log"
@@ -788,7 +852,9 @@ class SequentialJobRunner:
             "errors": "replace",
         }
         if os.name == "nt":
-            popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            popen_kwargs["creationflags"] = getattr(
+                subprocess, "CREATE_NEW_PROCESS_GROUP", 0
+            )
         else:
             popen_kwargs["start_new_session"] = True
 
@@ -814,8 +880,12 @@ class SequentialJobRunner:
         with self._condition:
             self._processes[job_id] = process
             self._reader_threads[job_id] = [
-                self._start_stream_reader(job_id, process.stdout, stdout_path, "stdout"),
-                self._start_stream_reader(job_id, process.stderr, stderr_path, "stderr"),
+                self._start_stream_reader(
+                    job_id, process.stdout, stdout_path, "stdout"
+                ),
+                self._start_stream_reader(
+                    job_id, process.stderr, stderr_path, "stderr"
+                ),
             ]
             self._condition.notify_all()
 
@@ -826,14 +896,20 @@ class SequentialJobRunner:
             return
         if is_terminal_job_status(current.status):
             if current.status in {JobStatus.CANCELLED, JobStatus.KILLED}:
-                self._store.append_log(job_id, f"Job subprocess exited with code {exit_code}; preserving {current.status.value}.")
+                self._store.append_log(
+                    job_id,
+                    f"Job subprocess exited with code {exit_code}; preserving {current.status.value}.",
+                )
                 return
             self._store.set_terminal_exit_metadata(
                 job_id,
                 exit_code=exit_code,
                 termination_mode="process_exited",
             )
-            self._store.append_log(job_id, f"Job subprocess exited with code {exit_code}; preserving {current.status.value}.")
+            self._store.append_log(
+                job_id,
+                f"Job subprocess exited with code {exit_code}; preserving {current.status.value}.",
+            )
             return
         self._store.set_terminal_exit_metadata(
             job_id,
@@ -850,11 +926,20 @@ class SequentialJobRunner:
             )
             return
         if exit_code == 0:
-            self._store.append_log(job_id, "Job subprocess exited successfully without terminal metadata; marking succeeded.")
+            self._store.append_log(
+                job_id,
+                "Job subprocess exited successfully without terminal metadata; marking succeeded.",
+            )
             self._store.mark_succeeded(job_id, message="Job succeeded.")
             return
-        self._store.append_log(job_id, f"Job subprocess exited with code {exit_code}; marking failed.")
-        self._store.mark_failed(job_id, f"Job subprocess exited with code {exit_code}.", message="Job failed.")
+        self._store.append_log(
+            job_id, f"Job subprocess exited with code {exit_code}; marking failed."
+        )
+        self._store.mark_failed(
+            job_id,
+            f"Job subprocess exited with code {exit_code}.",
+            message="Job failed.",
+        )
 
     def _run_callback_job(self, record: JobRecord) -> None:
         job_id = record.job_id
@@ -864,8 +949,13 @@ class SequentialJobRunner:
 
         def preserve_cancelled_or_killed_if_requested() -> bool:
             current_record = self._store.get_job(job_id)
-            if current_record is not None and current_record.status in {JobStatus.CANCELLED, JobStatus.KILLED}:
-                log(f"Job finished after stop request; preserving {current_record.status.value} status.")
+            if current_record is not None and current_record.status in {
+                JobStatus.CANCELLED,
+                JobStatus.KILLED,
+            }:
+                log(
+                    f"Job finished after stop request; preserving {current_record.status.value} status."
+                )
                 return True
             return False
 
@@ -880,7 +970,9 @@ class SequentialJobRunner:
             log(f"Failed {record.job_type.value} job [{exc.code}]: {exc.message}")
             if preserve_cancelled_or_killed_if_requested():
                 return
-            self._store.mark_failed(job_id, exc.message, message="Job failed.", error_code=exc.code)
+            self._store.mark_failed(
+                job_id, exc.message, message="Job failed.", error_code=exc.code
+            )
         except Exception as exc:
             log(f"Failed {record.job_type.value} job: {exc}")
             if preserve_cancelled_or_killed_if_requested():
@@ -927,7 +1019,10 @@ class SequentialJobRunner:
             terminate_sent_at=terminate_sent_at,
             termination_mode="graceful",
         )
-        self._store.append_log(job_id, "Stop requested by operator. Sending graceful terminate to job process.")
+        self._store.append_log(
+            job_id,
+            "Stop requested by operator. Sending graceful terminate to job process.",
+        )
         _terminate_process_tree(process)
         try:
             exit_code = process.wait(timeout=self._terminate_timeout_seconds)
@@ -937,7 +1032,9 @@ class SequentialJobRunner:
                 return before_kill
             kill_sent_at = utc_now_iso()
             self._store.update_process_metadata(job_id, kill_sent_at=kill_sent_at)
-            self._store.append_log(job_id, "Graceful terminate timed out. Force killing job process tree.")
+            self._store.append_log(
+                job_id, "Graceful terminate timed out. Force killing job process tree."
+            )
             _kill_process_tree(process)
             exit_code = process.wait()
             self._join_reader_threads(job_id)
@@ -968,8 +1065,12 @@ class SequentialJobRunner:
         if after_exit is not None and is_terminal_job_status(after_exit.status):
             return after_exit
         cancelled = self._store.mark_cancelled(job_id, reason=reason)
-        self._store.update_process_metadata(job_id, exit_code=exit_code, termination_mode="graceful")
-        self._store.append_log(job_id, "Job process exited after graceful terminate; marking cancelled.")
+        self._store.update_process_metadata(
+            job_id, exit_code=exit_code, termination_mode="graceful"
+        )
+        self._store.append_log(
+            job_id, "Job process exited after graceful terminate; marking cancelled."
+        )
         return cancelled
 
     def _start_stream_reader(
@@ -1004,7 +1105,11 @@ class SequentialJobRunner:
 
     def _remove_queued_job(self, job_id: str) -> None:
         with self._condition:
-            self._queue = deque(queued_job_id for queued_job_id in self._queue if queued_job_id != job_id)
+            self._queue = deque(
+                queued_job_id
+                for queued_job_id in self._queue
+                if queued_job_id != job_id
+            )
             self._condition.notify_all()
 
     def _default_command(self, record: JobRecord) -> list[str]:

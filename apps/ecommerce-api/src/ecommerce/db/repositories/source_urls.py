@@ -11,9 +11,15 @@ from sqlalchemy.orm import Session
 
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.products import Product, ProductSource
-from ecommerce.db.models.source_urls import SourceUrl, SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
+from ecommerce.db.models.source_urls import (
+    SourceUrl,
+    SourceUrlDiscoveryRun,
+    SourceUrlDiscoveryTask,
+)
 from ecommerce.db.repositories.common import json_safe_value
-from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
+from ecommerce.db.repositories.source_convergence import (
+    sync_source_url_to_product_source,
+)
 from ecommerce.source_urls import (
     SourceUrlValidationResult,
     extract_source_domain,
@@ -42,7 +48,9 @@ class SourceUrlDiscoveryRunPage:
     offset: int
 
 
-def get_active_catalog_product(session: Session, catalog_product_id: int) -> CatalogProductRow | None:
+def get_active_catalog_product(
+    session: Session, catalog_product_id: int
+) -> CatalogProductRow | None:
     return session.execute(
         select(CatalogProductRow).where(
             CatalogProductRow.id == catalog_product_id,
@@ -55,7 +63,9 @@ def get_source_url(session: Session, source_url_id: int) -> SourceUrl | None:
     return session.get(SourceUrl, source_url_id)
 
 
-def list_source_urls_for_catalog_product(session: Session, catalog_product_id: int) -> list[SourceUrl]:
+def list_source_urls_for_catalog_product(
+    session: Session, catalog_product_id: int
+) -> list[SourceUrl]:
     statement = (
         select(SourceUrl)
         .where(SourceUrl.catalog_product_id == catalog_product_id)
@@ -76,7 +86,9 @@ def list_active_source_urls_for_catalog_products(
         select(SourceUrl)
         .join(CatalogProductRow, CatalogProductRow.id == SourceUrl.catalog_product_id)
         .where(
-            SourceUrl.catalog_product_id.in_([int(item) for item in catalog_product_ids]),
+            SourceUrl.catalog_product_id.in_(
+                [int(item) for item in catalog_product_ids]
+            ),
             SourceUrl.status == "active",
             CatalogProductRow.active.is_(True),
         )
@@ -88,7 +100,9 @@ def list_active_source_urls_for_catalog_products(
 
 
 def count_source_url_discovery_runs(session: Session) -> int:
-    return int(session.execute(select(func.count(SourceUrlDiscoveryRun.id))).scalar_one())
+    return int(
+        session.execute(select(func.count(SourceUrlDiscoveryRun.id))).scalar_one()
+    )
 
 
 def list_source_url_discovery_runs(
@@ -99,7 +113,9 @@ def list_source_url_discovery_runs(
 ) -> list[SourceUrlDiscoveryRun]:
     statement = (
         select(SourceUrlDiscoveryRun)
-        .order_by(SourceUrlDiscoveryRun.created_at.desc(), SourceUrlDiscoveryRun.id.desc())
+        .order_by(
+            SourceUrlDiscoveryRun.created_at.desc(), SourceUrlDiscoveryRun.id.desc()
+        )
         .limit(limit)
         .offset(offset)
     )
@@ -120,7 +136,9 @@ def list_source_url_discovery_run_page(
     )
 
 
-def get_source_url_discovery_run(session: Session, run_id: str) -> SourceUrlDiscoveryRun | None:
+def get_source_url_discovery_run(
+    session: Session, run_id: str
+) -> SourceUrlDiscoveryRun | None:
     return session.execute(
         select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)
     ).scalar_one_or_none()
@@ -135,7 +153,9 @@ def source_url_discovery_task_counts(session: Session, run_id: str) -> dict[str,
     return {str(status): int(count) for status, count in rows}
 
 
-def list_source_url_discovery_tasks(session: Session, run_id: str) -> list[SourceUrlDiscoveryTask]:
+def list_source_url_discovery_tasks(
+    session: Session, run_id: str
+) -> list[SourceUrlDiscoveryTask]:
     statement = (
         select(SourceUrlDiscoveryTask)
         .where(SourceUrlDiscoveryTask.run_id == run_id)
@@ -150,25 +170,35 @@ def source_url_summary(session: Session, catalog_source: str) -> dict[str, Any]:
         CatalogProductRow.active.is_(True),
     )
     catalog_product_count = int(
-        session.execute(select(func.count(CatalogProductRow.id)).where(*active_catalog_filter)).scalar_one()
+        session.execute(
+            select(func.count(CatalogProductRow.id)).where(*active_catalog_filter)
+        ).scalar_one()
     )
     active_source_product_count = int(
         session.execute(
             select(func.count(distinct(SourceUrl.catalog_product_id)))
-            .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
+            .join(
+                CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id
+            )
             .where(*active_catalog_filter, SourceUrl.status == "active")
         ).scalar_one()
     )
     source_url_count = int(
         session.execute(
             select(func.count(SourceUrl.id))
-            .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
+            .join(
+                CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id
+            )
             .where(*active_catalog_filter)
         ).scalar_one()
     )
     by_status = _grouped_source_url_counts(session, SourceUrl.status, catalog_source)
-    by_source_name = _grouped_source_url_counts(session, SourceUrl.source_name, catalog_source)
-    by_url_type = _grouped_source_url_counts(session, SourceUrl.url_type, catalog_source)
+    by_source_name = _grouped_source_url_counts(
+        session, SourceUrl.source_name, catalog_source
+    )
+    by_url_type = _grouped_source_url_counts(
+        session, SourceUrl.url_type, catalog_source
+    )
     updated_at = session.execute(
         select(func.max(SourceUrl.updated_at))
         .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
@@ -178,7 +208,11 @@ def source_url_summary(session: Session, catalog_source: str) -> dict[str, Any]:
         updated_at = _now()
 
     products_without = max(catalog_product_count - active_source_product_count, 0)
-    coverage = round((active_source_product_count / catalog_product_count) * 100, 2) if catalog_product_count else 0.0
+    coverage = (
+        round((active_source_product_count / catalog_product_count) * 100, 2)
+        if catalog_product_count
+        else 0.0
+    )
     return {
         "catalog_source": catalog_source,
         "catalog_product_count": catalog_product_count,
@@ -186,9 +220,15 @@ def source_url_summary(session: Session, catalog_source: str) -> dict[str, Any]:
         "products_without_active_source_urls": products_without,
         "coverage_percent": coverage,
         "source_url_count": source_url_count,
-        "by_status": {status: int(by_status.get(status, 0)) for status in sorted(SOURCE_URL_STATUSES)},
+        "by_status": {
+            status: int(by_status.get(status, 0))
+            for status in sorted(SOURCE_URL_STATUSES)
+        },
         "by_source_name": by_source_name,
-        "by_url_type": {url_type: int(by_url_type.get(url_type, 0)) for url_type in sorted(SOURCE_URL_TYPES)},
+        "by_url_type": {
+            url_type: int(by_url_type.get(url_type, 0))
+            for url_type in sorted(SOURCE_URL_TYPES)
+        },
         "updated_at": str(json_safe_value(updated_at)),
     }
 
@@ -211,7 +251,9 @@ def create_or_update_manual_source_url(
     trust_level = _optional_text(payload.get("trust_level")) or "manual"
     timestamp = _now()
 
-    existing = _find_source_url_by_normalized_url(session, catalog_product_id, normalized_url)
+    existing = _find_source_url_by_normalized_url(
+        session, catalog_product_id, normalized_url
+    )
     if existing is not None:
         existing.source_name = source_name
         existing.source_domain = domain
@@ -281,10 +323,14 @@ def create_or_update_imported_source_url(
     resolved_status = _validated_status(status)
     timestamp = _now()
 
-    existing = _find_source_url_by_normalized_url(session, catalog_product_id, normalized_url)
+    existing = _find_source_url_by_normalized_url(
+        session, catalog_product_id, normalized_url
+    )
     if existing is None:
         if not apply:
-            return ImportedSourceUrlUpsertResult(row=None, action="created", source_url_id=None, changed_fields=[])
+            return ImportedSourceUrlUpsertResult(
+                row=None, action="created", source_url_id=None, changed_fields=[]
+            )
         row = SourceUrl(
             catalog_product_id=product.id,
             catalog_source=product.catalog_source,
@@ -309,7 +355,9 @@ def create_or_update_imported_source_url(
         session.add(row)
         session.flush()
         sync_source_url_to_product_source(session, row)
-        return ImportedSourceUrlUpsertResult(row=row, action="created", source_url_id=row.id, changed_fields=[])
+        return ImportedSourceUrlUpsertResult(
+            row=row, action="created", source_url_id=row.id, changed_fields=[]
+        )
 
     updates = _imported_source_url_updates(
         existing,
@@ -329,19 +377,36 @@ def create_or_update_imported_source_url(
     if not changed_fields:
         if apply:
             sync_source_url_to_product_source(session, existing)
-        return ImportedSourceUrlUpsertResult(row=existing, action="duplicate", source_url_id=existing.id, changed_fields=[])
+        return ImportedSourceUrlUpsertResult(
+            row=existing,
+            action="duplicate",
+            source_url_id=existing.id,
+            changed_fields=[],
+        )
     if not apply:
-        return ImportedSourceUrlUpsertResult(row=existing, action="updated", source_url_id=existing.id, changed_fields=changed_fields)
+        return ImportedSourceUrlUpsertResult(
+            row=existing,
+            action="updated",
+            source_url_id=existing.id,
+            changed_fields=changed_fields,
+        )
 
     for field_name, value in updates.items():
         setattr(existing, field_name, value)
     existing.updated_at = timestamp
     session.flush()
     sync_source_url_to_product_source(session, existing)
-    return ImportedSourceUrlUpsertResult(row=existing, action="updated", source_url_id=existing.id, changed_fields=changed_fields)
+    return ImportedSourceUrlUpsertResult(
+        row=existing,
+        action="updated",
+        source_url_id=existing.id,
+        changed_fields=changed_fields,
+    )
 
 
-def update_source_url(session: Session, source_url_id: int, payload: dict[str, Any]) -> SourceUrl | None:
+def update_source_url(
+    session: Session, source_url_id: int, payload: dict[str, Any]
+) -> SourceUrl | None:
     row = get_source_url(session, source_url_id)
     if row is None:
         return None
@@ -358,7 +423,9 @@ def update_source_url(session: Session, source_url_id: int, payload: dict[str, A
     if "url" in payload:
         url = _required_text(payload.get("url"), "url")
         normalized_url = normalize_source_url(url)
-        duplicate = _find_source_url_by_normalized_url(session, row.catalog_product_id, normalized_url)
+        duplicate = _find_source_url_by_normalized_url(
+            session, row.catalog_product_id, normalized_url
+        )
         if duplicate is not None and duplicate.id != row.id:
             raise ValueError("Source URL already exists for this catalog product.")
         row.url = url.strip()
@@ -376,7 +443,9 @@ def update_source_url(session: Session, source_url_id: int, payload: dict[str, A
     return row
 
 
-def find_source_url_for_product_source(session: Session, product_source: ProductSource) -> SourceUrl | None:
+def find_source_url_for_product_source(
+    session: Session, product_source: ProductSource
+) -> SourceUrl | None:
     product = session.get(Product, product_source.product_id)
     if product is None:
         return None
@@ -385,8 +454,12 @@ def find_source_url_for_product_source(session: Session, product_source: Product
     if catalog_product is None:
         return None
 
-    normalized_url = normalize_source_url(canonicalize_url(product_source.canonical_url or product_source.source_url))
-    return _find_source_url_by_normalized_url(session, catalog_product.id, normalized_url)
+    normalized_url = normalize_source_url(
+        canonicalize_url(product_source.canonical_url or product_source.source_url)
+    )
+    return _find_source_url_by_normalized_url(
+        session, catalog_product.id, normalized_url
+    )
 
 
 def apply_source_url_validation_result(
@@ -446,7 +519,9 @@ def source_url_to_dict(row: SourceUrl) -> dict[str, Any]:
     }
 
 
-def _find_source_url_by_normalized_url(session: Session, catalog_product_id: int, normalized_url: str) -> SourceUrl | None:
+def _find_source_url_by_normalized_url(
+    session: Session, catalog_product_id: int, normalized_url: str
+) -> SourceUrl | None:
     return session.execute(
         select(SourceUrl).where(
             SourceUrl.catalog_product_id == catalog_product_id,
@@ -455,7 +530,9 @@ def _find_source_url_by_normalized_url(session: Session, catalog_product_id: int
     ).scalar_one_or_none()
 
 
-def _grouped_source_url_counts(session: Session, column, catalog_source: str) -> dict[str, int]:
+def _grouped_source_url_counts(
+    session: Session, column, catalog_source: str
+) -> dict[str, int]:
     rows = session.execute(
         select(column, func.count(SourceUrl.id))
         .join(CatalogProductRow, SourceUrl.catalog_product_id == CatalogProductRow.id)
@@ -469,7 +546,9 @@ def _grouped_source_url_counts(session: Session, column, catalog_source: str) ->
     return {str(key or ""): int(value) for key, value in rows}
 
 
-def _catalog_product_for_product(session: Session, product: Product) -> CatalogProductRow | None:
+def _catalog_product_for_product(
+    session: Session, product: Product
+) -> CatalogProductRow | None:
     if product.model:
         row = session.execute(
             select(CatalogProductRow).where(
@@ -530,7 +609,11 @@ def _imported_source_url_updates(
 
     if row.status != "disabled":
         next_status = row.status
-        if row.status == "broken" and status == "active" and last_success_at is not None:
+        if (
+            row.status == "broken"
+            and status == "active"
+            and last_success_at is not None
+        ):
             next_status = "active"
         elif row.status == "needs_review" and status == "active":
             next_status = "active"
@@ -551,25 +634,37 @@ def _imported_source_url_updates(
     return updates
 
 
-def _set_if_changed(updates: dict[str, Any], row: SourceUrl, field_name: str, value: Any) -> None:
+def _set_if_changed(
+    updates: dict[str, Any], row: SourceUrl, field_name: str, value: Any
+) -> None:
     if getattr(row, field_name) != value:
         updates[field_name] = value
 
 
-def _newer_datetime(current: datetime | None, candidate: datetime | None) -> datetime | None:
+def _newer_datetime(
+    current: datetime | None, candidate: datetime | None
+) -> datetime | None:
     if candidate is None:
         return current
     if current is None:
         return candidate
-    current_cmp = current if current.tzinfo is not None else current.replace(tzinfo=timezone.utc)
-    candidate_cmp = candidate if candidate.tzinfo is not None else candidate.replace(tzinfo=timezone.utc)
+    current_cmp = (
+        current if current.tzinfo is not None else current.replace(tzinfo=timezone.utc)
+    )
+    candidate_cmp = (
+        candidate
+        if candidate.tzinfo is not None
+        else candidate.replace(tzinfo=timezone.utc)
+    )
     return candidate if candidate_cmp > current_cmp else current
 
 
 def _validated_status(value: str) -> str:
     text = value.strip()
     if text not in SOURCE_URL_STATUSES:
-        raise ValueError("status must be one of: active, disabled, broken, redirected, needs_review")
+        raise ValueError(
+            "status must be one of: active, disabled, broken, redirected, needs_review"
+        )
     return text
 
 

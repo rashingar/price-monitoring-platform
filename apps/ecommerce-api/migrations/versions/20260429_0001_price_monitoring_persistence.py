@@ -45,7 +45,9 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("model IS NOT NULL AND model <> ''"),
     )
-    op.create_index("ix_products_catalog_source_mpn", "products", ["catalog_source", "mpn"])
+    op.create_index(
+        "ix_products_catalog_source_mpn", "products", ["catalog_source", "mpn"]
+    )
     op.create_index("ix_products_manufacturer", "products", ["manufacturer"])
     op.create_index("ix_products_family", "products", ["family"])
     op.create_index("ix_products_category_name", "products", ["category_name"])
@@ -67,14 +69,18 @@ def upgrade() -> None:
         sa.Column("selected_count", sa.Integer(), nullable=True),
         sa.Column("skipped_count", sa.Integer(), nullable=True),
         sa.Column("fetch_attempt", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("last_was_refetch", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column(
+            "last_was_refetch", sa.Boolean(), nullable=False, server_default=sa.false()
+        ),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("uq_monitoring_runs_run_id", "monitoring_runs", ["run_id"], unique=True)
+    op.create_index(
+        "uq_monitoring_runs_run_id", "monitoring_runs", ["run_id"], unique=True
+    )
     op.create_index("ix_monitoring_runs_created_at", "monitoring_runs", ["created_at"])
     op.create_index("ix_monitoring_runs_source", "monitoring_runs", ["source"])
     op.create_index("ix_monitoring_runs_status", "monitoring_runs", ["status"])
@@ -88,7 +94,12 @@ def upgrade() -> None:
             sa.ForeignKey("monitoring_runs.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column("product_id", sa.Integer(), sa.ForeignKey("products.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "product_id",
+            sa.Integer(),
+            sa.ForeignKey("products.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("run_id", sa.String(), nullable=False),
         sa.Column("catalog_source", sa.String(), nullable=False),
         sa.Column("model", sa.String(), nullable=True),
@@ -105,13 +116,29 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index("ix_catalog_snapshots_run_id", "catalog_snapshots", ["run_id"])
-    op.create_index("ix_catalog_snapshots_product_id", "catalog_snapshots", ["product_id"])
-    op.create_index("ix_catalog_snapshots_catalog_source_model", "catalog_snapshots", ["catalog_source", "model"])
-    op.create_index("ix_catalog_snapshots_catalog_source_mpn", "catalog_snapshots", ["catalog_source", "mpn"])
-    op.create_index("ix_catalog_snapshots_category_name", "catalog_snapshots", ["category_name"])
+    op.create_index(
+        "ix_catalog_snapshots_product_id", "catalog_snapshots", ["product_id"]
+    )
+    op.create_index(
+        "ix_catalog_snapshots_catalog_source_model",
+        "catalog_snapshots",
+        ["catalog_source", "model"],
+    )
+    op.create_index(
+        "ix_catalog_snapshots_catalog_source_mpn",
+        "catalog_snapshots",
+        ["catalog_source", "mpn"],
+    )
+    op.create_index(
+        "ix_catalog_snapshots_category_name", "catalog_snapshots", ["category_name"]
+    )
     op.create_index("ix_catalog_snapshots_family", "catalog_snapshots", ["family"])
-    op.create_index("ix_catalog_snapshots_manufacturer", "catalog_snapshots", ["manufacturer"])
-    op.create_index("ix_catalog_snapshots_sub_category", "catalog_snapshots", ["sub_category"])
+    op.create_index(
+        "ix_catalog_snapshots_manufacturer", "catalog_snapshots", ["manufacturer"]
+    )
+    op.create_index(
+        "ix_catalog_snapshots_sub_category", "catalog_snapshots", ["sub_category"]
+    )
     op.create_index(
         "uq_catalog_snapshots_run_catalog_model_present",
         "catalog_snapshots",
@@ -124,7 +151,9 @@ def upgrade() -> None:
         "catalog_snapshots",
         ["run_id", "catalog_source", "mpn"],
         unique=True,
-        postgresql_where=sa.text("(model IS NULL OR model = '') AND mpn IS NOT NULL AND mpn <> ''"),
+        postgresql_where=sa.text(
+            "(model IS NULL OR model = '') AND mpn IS NOT NULL AND mpn <> ''"
+        ),
     )
 
     op.create_table(
@@ -136,7 +165,12 @@ def upgrade() -> None:
             sa.ForeignKey("monitoring_runs.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column("product_id", sa.Integer(), sa.ForeignKey("products.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "product_id",
+            sa.Integer(),
+            sa.ForeignKey("products.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("run_id", sa.String(), nullable=False),
         sa.Column("catalog_source", sa.String(), nullable=False),
         sa.Column("source", sa.String(), nullable=False),
@@ -153,39 +187,73 @@ def upgrade() -> None:
         sa.Column("price_delta_percent", sa.Numeric(12, 4), nullable=True),
         sa.Column("raw_observation", _json_document(), nullable=True),
         sa.Column("matched_by", sa.String(), nullable=True),
-        sa.Column("match_status", sa.String(), nullable=False, server_default="unmatched"),
+        sa.Column(
+            "match_status", sa.String(), nullable=False, server_default="unmatched"
+        ),
         sa.Column("observed_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index("ix_price_observations_run_id", "price_observations", ["run_id"])
-    op.create_index("ix_price_observations_product_id", "price_observations", ["product_id"])
-    op.create_index("ix_price_observations_catalog_source_model", "price_observations", ["catalog_source", "model"])
-    op.create_index("ix_price_observations_catalog_source_mpn", "price_observations", ["catalog_source", "mpn"])
+    op.create_index(
+        "ix_price_observations_product_id", "price_observations", ["product_id"]
+    )
+    op.create_index(
+        "ix_price_observations_catalog_source_model",
+        "price_observations",
+        ["catalog_source", "model"],
+    )
+    op.create_index(
+        "ix_price_observations_catalog_source_mpn",
+        "price_observations",
+        ["catalog_source", "mpn"],
+    )
     op.create_index("ix_price_observations_source", "price_observations", ["source"])
-    op.create_index("ix_price_observations_observed_at", "price_observations", ["observed_at"])
-    op.create_index("ix_price_observations_competitor_price", "price_observations", ["competitor_price"])
-    op.create_index("ix_price_observations_match_status", "price_observations", ["match_status"])
+    op.create_index(
+        "ix_price_observations_observed_at", "price_observations", ["observed_at"]
+    )
+    op.create_index(
+        "ix_price_observations_competitor_price",
+        "price_observations",
+        ["competitor_price"],
+    )
+    op.create_index(
+        "ix_price_observations_match_status", "price_observations", ["match_status"]
+    )
 
 
 def downgrade() -> None:
     op.drop_index("ix_price_observations_match_status", table_name="price_observations")
-    op.drop_index("ix_price_observations_competitor_price", table_name="price_observations")
+    op.drop_index(
+        "ix_price_observations_competitor_price", table_name="price_observations"
+    )
     op.drop_index("ix_price_observations_observed_at", table_name="price_observations")
     op.drop_index("ix_price_observations_source", table_name="price_observations")
-    op.drop_index("ix_price_observations_catalog_source_mpn", table_name="price_observations")
-    op.drop_index("ix_price_observations_catalog_source_model", table_name="price_observations")
+    op.drop_index(
+        "ix_price_observations_catalog_source_mpn", table_name="price_observations"
+    )
+    op.drop_index(
+        "ix_price_observations_catalog_source_model", table_name="price_observations"
+    )
     op.drop_index("ix_price_observations_product_id", table_name="price_observations")
     op.drop_index("ix_price_observations_run_id", table_name="price_observations")
     op.drop_table("price_observations")
 
-    op.drop_index("uq_catalog_snapshots_run_catalog_mpn_present", table_name="catalog_snapshots")
-    op.drop_index("uq_catalog_snapshots_run_catalog_model_present", table_name="catalog_snapshots")
+    op.drop_index(
+        "uq_catalog_snapshots_run_catalog_mpn_present", table_name="catalog_snapshots"
+    )
+    op.drop_index(
+        "uq_catalog_snapshots_run_catalog_model_present", table_name="catalog_snapshots"
+    )
     op.drop_index("ix_catalog_snapshots_sub_category", table_name="catalog_snapshots")
     op.drop_index("ix_catalog_snapshots_manufacturer", table_name="catalog_snapshots")
     op.drop_index("ix_catalog_snapshots_family", table_name="catalog_snapshots")
     op.drop_index("ix_catalog_snapshots_category_name", table_name="catalog_snapshots")
-    op.drop_index("ix_catalog_snapshots_catalog_source_mpn", table_name="catalog_snapshots")
-    op.drop_index("ix_catalog_snapshots_catalog_source_model", table_name="catalog_snapshots")
+    op.drop_index(
+        "ix_catalog_snapshots_catalog_source_mpn", table_name="catalog_snapshots"
+    )
+    op.drop_index(
+        "ix_catalog_snapshots_catalog_source_model", table_name="catalog_snapshots"
+    )
     op.drop_index("ix_catalog_snapshots_product_id", table_name="catalog_snapshots")
     op.drop_index("ix_catalog_snapshots_run_id", table_name="catalog_snapshots")
     op.drop_table("catalog_snapshots")

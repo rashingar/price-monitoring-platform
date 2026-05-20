@@ -2,12 +2,20 @@ from pathlib import Path
 
 import pytest
 
-from product_factory.services import RunArtifacts, RunMetadata, RunStatus, RunType, ServiceResult
+from product_factory.services import (
+    RunArtifacts,
+    RunMetadata,
+    RunStatus,
+    RunType,
+    ServiceResult,
+)
 from product_factory.services import metadata as metadata_module
 from product_factory.services.metadata import MetadataWriteError
 
 
-def test_write_run_metadata_returns_metadata_path_and_serializes_payload(tmp_path: Path, monkeypatch) -> None:
+def test_write_run_metadata_returns_metadata_path_and_serializes_payload(
+    tmp_path: Path, monkeypatch
+) -> None:
     metadata_path = tmp_path / "work" / "233541" / "prepare.run.json"
     captured: dict[str, object] = {}
 
@@ -94,7 +102,9 @@ def test_write_run_metadata_requires_metadata_path(tmp_path: Path) -> None:
     assert str(excinfo.value) == "Run metadata path is required"
 
 
-def test_maybe_write_run_metadata_builds_service_result_payload_for_write(tmp_path: Path, monkeypatch) -> None:
+def test_maybe_write_run_metadata_builds_service_result_payload_for_write(
+    tmp_path: Path, monkeypatch
+) -> None:
     model_root = tmp_path / "work" / "233541"
     artifacts = RunArtifacts(model_root=model_root, scrape_dir=model_root / "scrape")
     captured: dict[str, object] = {}
@@ -140,7 +150,9 @@ def test_maybe_write_run_metadata_builds_service_result_payload_for_write(tmp_pa
     assert payload.details == {"llm_prepare_mode": "split_tasks"}
 
 
-def test_maybe_write_run_metadata_raises_structured_write_failure(tmp_path: Path, monkeypatch) -> None:
+def test_maybe_write_run_metadata_raises_structured_write_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
     model_root = tmp_path / "work" / "233541"
     artifacts = RunArtifacts(model_root=model_root, scrape_dir=model_root / "scrape")
 
@@ -164,7 +176,10 @@ def test_maybe_write_run_metadata_raises_structured_write_failure(tmp_path: Path
         )
 
     error = excinfo.value
-    assert str(error) == f"Failed to write render run metadata at {model_root / 'render.run.json'}: disk full"
+    assert (
+        str(error)
+        == f"Failed to write render run metadata at {model_root / 'render.run.json'}: disk full"
+    )
     assert error.metadata_path == model_root / "render.run.json"
     assert error.payload.run.model == "233541"
     assert error.payload.run.run_type == RunType.RENDER

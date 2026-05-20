@@ -154,7 +154,13 @@ def _looks_like_variant_code(token: str) -> bool:
 
 def parse_greek_money_text(value: str) -> Decimal:
     text = collapse_internal_spaces(value)
-    text = text.replace("\xa0", " ").replace("€", "").replace("β‚¬", "").replace("EUR", "").strip()
+    text = (
+        text.replace("\xa0", " ")
+        .replace("€", "")
+        .replace("β‚¬", "")
+        .replace("EUR", "")
+        .strip()
+    )
     if not text:
         raise ValueError("price parse failed")
     if not re.fullmatch(r"\d{1,3}(?:\.\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?", text):

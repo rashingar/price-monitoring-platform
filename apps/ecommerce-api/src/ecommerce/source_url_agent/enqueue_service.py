@@ -10,7 +10,10 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models.source_urls import SourceUrlDiscoveryRun, SourceUrlDiscoveryTask
+from ecommerce.db.models.source_urls import (
+    SourceUrlDiscoveryRun,
+    SourceUrlDiscoveryTask,
+)
 from ecommerce.db.repositories.jobs import create_queued_job
 from ecommerce.source_url_agent.job_handler import (
     products_for_source_url_agent_request,
@@ -84,7 +87,9 @@ def enqueue_source_url_agent_run_setup(
         selected_count=len(products),
         task_count=task_count,
     )
-    create_queued_discovery_tasks(session, run_id=run_id, products=products, sources=sources)
+    create_queued_discovery_tasks(
+        session, run_id=run_id, products=products, sources=sources
+    )
     create_queued_job(
         session,
         job_id=run_id,

@@ -5,15 +5,31 @@ from pathlib import Path
 
 import pytest
 
-from product_factory.models import CLIInput, FetchResult, FieldDiagnostic, ParsedProduct, SchemaMatchResult, SourceProductData, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    FetchResult,
+    FieldDiagnostic,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    TaxonomyResolution,
+)
 from product_factory.prepare_result_assembly import PrepareResultAssemblyResult
 from product_factory.prepare_stage import execute_prepare_stage
 from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult
-from product_factory.ecommerce_handoff import build_ecommerce_source_handoff, ecommerce_handoff_path
+from product_factory.ecommerce_handoff import (
+    build_ecommerce_source_handoff,
+    ecommerce_handoff_path,
+)
 from product_factory.source_acquisition_models import SourceAcquisitionResult
 
 
-def _build_cli(tmp_path: Path, *, model: str = "233541", url: str = "https://www.electronet.gr/example") -> CLIInput:
+def _build_cli(
+    tmp_path: Path,
+    *,
+    model: str = "233541",
+    url: str = "https://www.electronet.gr/example",
+) -> CLIInput:
     return CLIInput(
         model=model,
         url=url,
@@ -42,7 +58,11 @@ def _build_parsed(url: str, *, model: str = "233541") -> ParsedProduct:
             taxonomy_source_category="Ψυγειοκαταψύκτες",
         ),
         provenance={"name": "json_ld", "price": "json_ld"},
-        field_diagnostics={"price": FieldDiagnostic(confidence=0.98, selected_strategy="json_ld", value_present=True)},
+        field_diagnostics={
+            "price": FieldDiagnostic(
+                confidence=0.98, selected_strategy="json_ld", value_present=True
+            )
+        },
         warnings=["source_product_code_mismatch:input=233541:page=999999"],
         missing_fields=["source.energy_label_asset_url"],
     )
@@ -60,8 +80,13 @@ def _build_fetch(url: str) -> FetchResult:
     )
 
 
-def test_build_ecommerce_source_handoff_has_stable_contract_shape(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr("product_factory.ecommerce_handoff.utcnow_iso", lambda: "2026-05-05T10:20:30+00:00")
+def test_build_ecommerce_source_handoff_has_stable_contract_shape(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        "product_factory.ecommerce_handoff.utcnow_iso",
+        lambda: "2026-05-05T10:20:30+00:00",
+    )
     cli = _build_cli(tmp_path)
     parsed = _build_parsed(cli.url, model=cli.model)
     fetch = _build_fetch(cli.url)
@@ -111,7 +136,10 @@ def test_build_ecommerce_source_handoff_has_stable_contract_shape(monkeypatch, t
         "stock_status": "",
     }
     assert payload["evidence"]["provenance"] == {"name": "json_ld", "price": "json_ld"}
-    assert payload["evidence"]["field_diagnostics"]["price"]["selected_strategy"] == "json_ld"
+    assert (
+        payload["evidence"]["field_diagnostics"]["price"]["selected_strategy"]
+        == "json_ld"
+    )
     assert payload["fetch"] == {
         "method": "httpx",
         "status_code": 200,
@@ -129,8 +157,13 @@ def test_build_ecommerce_source_handoff_has_stable_contract_shape(monkeypatch, t
     }
 
 
-def test_prepare_stage_writes_ecommerce_handoff_after_success(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr("product_factory.ecommerce_handoff.utcnow_iso", lambda: "2026-05-05T10:20:30+00:00")
+def test_prepare_stage_writes_ecommerce_handoff_after_success(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        "product_factory.ecommerce_handoff.utcnow_iso",
+        lambda: "2026-05-05T10:20:30+00:00",
+    )
     cli = _build_cli(tmp_path)
     scrape_dir = tmp_path / "work" / cli.model / "scrape"
     parsed = _build_parsed(cli.url, model=cli.model)
@@ -168,10 +201,15 @@ def test_prepare_stage_writes_ecommerce_handoff_after_success(monkeypatch, tmp_p
     payload = json.loads(handoff_path.read_text(encoding="utf-8"))
     assert payload["schema_version"] == "1.0"
     assert payload["provider_id"] == "electronet"
-    assert payload["artifact_refs"]["source_json"] == "work/233541/scrape/233541.source.json"
+    assert (
+        payload["artifact_refs"]["source_json"]
+        == "work/233541/scrape/233541.source.json"
+    )
 
 
-def test_prepare_stage_writes_failure_handoff_after_partial_acquisition(tmp_path: Path) -> None:
+def test_prepare_stage_writes_failure_handoff_after_partial_acquisition(
+    tmp_path: Path,
+) -> None:
     cli = _build_cli(tmp_path)
     scrape_dir = tmp_path / "work" / cli.model / "scrape"
     parsed = _build_parsed(cli.url, model=cli.model)
@@ -191,7 +229,9 @@ def test_prepare_stage_writes_failure_handoff_after_partial_acquisition(tmp_path
             cli,
             model_dir=scrape_dir,
             execute_source_acquisition_stage_fn=fake_execute_source_acquisition_stage,
-            resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("taxonomy exploded")),
+            resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: (
+                _ for _ in ()
+            ).throw(RuntimeError("taxonomy exploded")),
         )
 
     handoff_path = ecommerce_handoff_path(scrape_dir)

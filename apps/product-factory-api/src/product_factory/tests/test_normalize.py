@@ -17,7 +17,10 @@ from product_factory.utils import build_additional_image_value
 
 def test_nbsp_and_whitespace_normalization() -> None:
     assert strip_nbsp("798,00\xa0€") == "798,00 €"
-    assert normalize_whitespace("  Σκούπα\u00a0\u00a0Stick   Rowenta ") == "Σκούπα Stick Rowenta"
+    assert (
+        normalize_whitespace("  Σκούπα\u00a0\u00a0Stick   Rowenta ")
+        == "Σκούπα Stick Rowenta"
+    )
 
 
 def test_dash_null_handling() -> None:
@@ -27,7 +30,9 @@ def test_dash_null_handling() -> None:
 
 
 def test_clean_breadcrumbs_and_additional_images() -> None:
-    assert clean_breadcrumbs(["Αρχική", "Οικιακές Συσκευές", "Οικιακές Συσκευές", "Πλυντήρια"]) == [
+    assert clean_breadcrumbs(
+        ["Αρχική", "Οικιακές Συσκευές", "Οικιακές Συσκευές", "Πλυντήρια"]
+    ) == [
         "Αρχική",
         "Οικιακές Συσκευές",
         "Πλυντήρια",
@@ -52,7 +57,10 @@ def test_greek_label_keys_are_accent_insensitive() -> None:
 def test_mojibake_repair_handles_known_power_examples() -> None:
     assert repair_mojibake_text("Ξ™ΟƒΟ‡ΟΟ‚") == "Ισχύς"
     assert repair_mojibake_text("Ξ™ΟƒΟ‡ΟΟ‚ ΟƒΞµ Watt") == "Ισχύς σε Watt"
-    assert repair_mojibake_text("ΞΞ­Ξ³ΞΉΟƒΟ„Ξ· Ξ™ΟƒΟ‡ΟΟ‚ (Watt)") == "Μέγιστη Ισχύς (Watt)"
+    assert (
+        repair_mojibake_text("ΞΞ­Ξ³ΞΉΟƒΟ„Ξ· Ξ™ΟƒΟ‡ΟΟ‚ (Watt)")
+        == "Μέγιστη Ισχύς (Watt)"
+    )
 
 
 def test_mojibake_repair_keeps_ascii_numeric_and_empty_values_stable() -> None:
@@ -115,6 +123,10 @@ def test_valid_unrelated_greek_is_not_repaired_into_power_label() -> None:
 
 
 def test_punctuation_and_parenthetical_variants_normalize_consistently() -> None:
-    assert normalize_label_key("Μέγιστη Ισχύς (Watt)") == normalize_label_key("Μέγιστη Ισχύς Watt")
-    assert labels_equivalent("Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)", "Διαστάσεις Συσκευής σε Εκατοστά (Υ × Π × Β)")
-
+    assert normalize_label_key("Μέγιστη Ισχύς (Watt)") == normalize_label_key(
+        "Μέγιστη Ισχύς Watt"
+    )
+    assert labels_equivalent(
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ χ Π χ Β)",
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ × Π × Β)",
+    )

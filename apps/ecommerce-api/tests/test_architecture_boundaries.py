@@ -2,7 +2,6 @@ import ast
 import sys
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = PROJECT_ROOT.parents[1]
 SRC_ROOT = PROJECT_ROOT / "src" / "ecommerce"
@@ -47,7 +46,9 @@ REMOVED_COMPAT_IMPORTS = DEPRECATED_DB_WRAPPER_MODULES | {
 
 
 def _python_files(root: Path) -> list[Path]:
-    return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
+    return sorted(
+        path for path in root.rglob("*.py") if "__pycache__" not in path.parts
+    )
 
 
 def _module_imports(path: Path) -> set[str]:
@@ -58,7 +59,11 @@ def _module_imports(path: Path) -> set[str]:
             imports.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             imports.add(node.module)
-            imports.update(f"{node.module}.{alias.name}" for alias in node.names if alias.name != "*")
+            imports.update(
+                f"{node.module}.{alias.name}"
+                for alias in node.names
+                if alias.name != "*"
+            )
     return imports
 
 
@@ -101,9 +106,12 @@ def _project_relative(path: Path) -> str:
     return path.relative_to(PROJECT_ROOT).as_posix()
 
 
-def _is_allowed_import(relative: str, imported: str, allowed_imports: set[tuple[str, str]]) -> bool:
+def _is_allowed_import(
+    relative: str, imported: str, allowed_imports: set[tuple[str, str]]
+) -> bool:
     return any(
-        relative == allowed_relative and (imported == allowed_import or imported.startswith(f"{allowed_import}."))
+        relative == allowed_relative
+        and (imported == allowed_import or imported.startswith(f"{allowed_import}."))
         for allowed_relative, allowed_import in allowed_imports
     )
 
@@ -123,7 +131,10 @@ def test_application_code_does_not_import_deprecated_db_barrels() -> None:
     for path in _python_files(SRC_ROOT):
         relative = _src_relative(path)
         for imported in _module_imports(path):
-            if imported in {"ecommerce.db.models", "ecommerce.db.repositories"} and relative not in ALLOWED_DB_BARREL_IMPORTS:
+            if (
+                imported in {"ecommerce.db.models", "ecommerce.db.repositories"}
+                and relative not in ALLOWED_DB_BARREL_IMPORTS
+            ):
                 violations.append(f"{relative} imports {imported}")
 
     assert violations == []
@@ -137,17 +148,25 @@ def test_non_api_imports_from_api_are_known_debt_only() -> None:
             continue
         for imported in _module_imports(path):
             if imported == "ecommerce.api" or imported.startswith("ecommerce.api."):
-                allowed = _is_allowed_import(relative, imported, ALLOWED_NON_API_IMPORTS_FROM_API)
+                allowed = _is_allowed_import(
+                    relative, imported, ALLOWED_NON_API_IMPORTS_FROM_API
+                )
                 if not allowed:
                     violations.append(f"{relative} imports {imported}")
 
     assert violations == []
 
 
-def test_source_url_agent_candidate_history_service_does_not_import_api_modules() -> None:
-    imports = _module_imports(SRC_ROOT / "source_url_agent" / "candidate_history_service.py")
+def test_source_url_agent_candidate_history_service_does_not_import_api_modules() -> (
+    None
+):
+    imports = _module_imports(
+        SRC_ROOT / "source_url_agent" / "candidate_history_service.py"
+    )
     api_imports = sorted(
-        imported for imported in imports if imported == "ecommerce.api" or imported.startswith("ecommerce.api.")
+        imported
+        for imported in imports
+        if imported == "ecommerce.api" or imported.startswith("ecommerce.api.")
     )
 
     assert api_imports == []
@@ -170,7 +189,11 @@ def test_domain_and_service_code_do_not_import_api_route_modules() -> None:
 
 
 def test_removed_compatibility_module_files_are_not_recreated() -> None:
-    existing = [relative for relative in sorted(REMOVED_COMPAT_MODULE_FILES) if (PROJECT_ROOT / relative).exists()]
+    existing = [
+        relative
+        for relative in sorted(REMOVED_COMPAT_MODULE_FILES)
+        if (PROJECT_ROOT / relative).exists()
+    ]
 
     assert existing == []
 

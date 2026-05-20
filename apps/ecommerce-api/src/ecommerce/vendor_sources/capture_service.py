@@ -16,10 +16,16 @@ from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.models.vendor_sources import Vendor
 from ecommerce.db.models.products import Product, ProductSource
 from ecommerce.price_monitoring.source_url_coverage import compute_source_url_coverage
-from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
+from ecommerce.source_capture.canonicalize_url import (
+    canonical_url_hash,
+    canonicalize_url,
+)
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_capture.firecrawl_health import firecrawl_health_reason
-from ecommerce.source_capture.runner import CAPTURE_IMPLEMENTED_VENDOR_SLUGS, capture_source_url
+from ecommerce.source_capture.runner import (
+    CAPTURE_IMPLEMENTED_VENDOR_SLUGS,
+    capture_source_url,
+)
 from ecommerce.source_urls import infer_source_name
 from ecommerce.vendor_sources.payloads import (
     SOURCE_URL_CAPTURE_RESULT_FILENAME,
@@ -61,20 +67,26 @@ def capture_selected_source_urls_for_run(
             source=normalized_source,
             status="not_configured",
             result_path=result_path,
-            warnings=["Source URL capture skipped because ECOMMERCE_DATABASE_URL is not configured."],
+            warnings=[
+                "Source URL capture skipped because ECOMMERCE_DATABASE_URL is not configured."
+            ],
         )
         if write_result:
             _write_result(result_path, result)
         return result
 
-    selected_catalog_product_ids = _selected_catalog_product_ids(run_dir / "selection_summary.json")
+    selected_catalog_product_ids = _selected_catalog_product_ids(
+        run_dir / "selection_summary.json"
+    )
     if not selected_catalog_product_ids:
         result = _empty_result(
             source=normalized_source,
             status="no_selected_catalog_products",
             result_path=result_path,
             selected_catalog_product_count=0,
-            warnings=["Source URL capture skipped because the run has no selected catalog product ids."],
+            warnings=[
+                "Source URL capture skipped because the run has no selected catalog product ids."
+            ],
         )
         if write_result:
             _write_result(result_path, result)
@@ -120,7 +132,9 @@ def capture_selected_source_urls_for_run(
             )
             update_vendor_source_capture_run(row, result)
         except Exception as exc:
-            mark_vendor_source_capture_run_failed(row, error=exc, result_path=result_path)
+            mark_vendor_source_capture_run_failed(
+                row, error=exc, result_path=result_path
+            )
             session.flush()
             raise
     if write_result:
@@ -139,14 +153,18 @@ def capture_selected_source_urls(
     result_path: Path | None = None,
     observation_batch_id: str | None = None,
 ) -> SourceUrlCaptureRunResult:
-    from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
+    from ecommerce.db.repositories.source_convergence import (
+        sync_source_url_to_product_source,
+    )
     from ecommerce.db.repositories.source_urls import (
         list_active_source_urls_for_catalog_products,
         source_url_to_dict,
     )
     from ecommerce.source_capture.scheduled import capture_due_product_sources
 
-    selected_ids = sorted({int(item) for item in catalog_product_ids if item is not None})
+    selected_ids = sorted(
+        {int(item) for item in catalog_product_ids if item is not None}
+    )
     active_source_urls = [
         row
         for row in list_active_source_urls_for_catalog_products(session, selected_ids)
@@ -155,11 +173,17 @@ def capture_selected_source_urls(
     eligible_source_urls: list[SourceUrl] = []
     product_source_ids: list[int] = []
     for source_url in active_source_urls:
-        existing_product_source = _existing_product_source_for_source_url(session, source_url)
+        existing_product_source = _existing_product_source_for_source_url(
+            session, source_url
+        )
         if existing_product_source is not None and not existing_product_source.active:
             continue
         product_source = sync_source_url_to_product_source(session, source_url)
-        if product_source is not None and product_source.active and product_source.id is not None:
+        if (
+            product_source is not None
+            and product_source.active
+            and product_source.id is not None
+        ):
             eligible_source_urls.append(source_url)
             product_source_ids.append(int(product_source.id))
     session.flush()
@@ -173,7 +197,9 @@ def capture_selected_source_urls(
             "Product is not eligible for Price Monitoring until an active source URL exists."
         )
         if strict_source_url_capture:
-            warnings.append("Strict source URL capture would exclude all selected products from DB-backed capture.")
+            warnings.append(
+                "Strict source URL capture would exclude all selected products from DB-backed capture."
+            )
         return SourceUrlCaptureRunResult(
             status="no_active_source_urls",
             used_source_urls=False,
@@ -195,7 +221,9 @@ def capture_selected_source_urls(
         missing_count = _missing_source_url_product_count(session, selected_ids, source)
         if missing_count:
             source_text = source or "Vendor Sources"
-            warnings.append(f"Strict source URL capture excluded {missing_count} selected products without active {source_text} source URLs.")
+            warnings.append(
+                f"Strict source URL capture excluded {missing_count} selected products without active {source_text} source URLs."
+            )
 
     summary = capture_due_product_sources(
         session,
@@ -242,7 +270,11 @@ def capture_due_vendor_sources(
     safe_limit = max(1, min(int(limit), 500))
     safe_refresh_after_minutes = max(0, int(refresh_after_minutes))
     source_filter = _source_filter(source_name=source_name, vendor_slug=vendor)
-    eligible_product_source_ids, eligible_source_urls, selected_catalog_product_count = _eligible_product_sources_from_active_source_urls(
+    (
+        eligible_product_source_ids,
+        eligible_source_urls,
+        selected_catalog_product_count,
+    ) = _eligible_product_sources_from_active_source_urls(
         session,
         source_filter=source_filter,
         catalog_source=_optional_text(catalog_source) or None,
@@ -264,9 +296,12 @@ def capture_due_vendor_sources(
     selected_ids = [
         int(item["product_source_id"])
         for item in summary.items
-        if isinstance(item, dict) and _int_or_none(item.get("product_source_id")) is not None
+        if isinstance(item, dict)
+        and _int_or_none(item.get("product_source_id")) is not None
     ]
-    selected_catalog_product_count, selected_source_urls = _selected_product_source_context(session, selected_ids)
+    selected_catalog_product_count, selected_source_urls = (
+        _selected_product_source_context(session, selected_ids)
+    )
     if not selected_ids:
         selected_source_urls = eligible_source_urls[:0]
         selected_catalog_product_count = 0
@@ -308,7 +343,9 @@ def run_vendor_source_capture(
     safe_refresh_after_minutes = max(0, int(refresh_after_minutes))
     source_filter = _source_filter(source_name=source_name, vendor_slug=vendor_slug)
     if source_filter is None and not admin_all_sources:
-        raise ValueError("Vendor Sources capture requires one source/vendor unless admin_all_sources=true for diagnostic all-source capture.")
+        raise ValueError(
+            "Vendor Sources capture requires one source/vendor unless admin_all_sources=true for diagnostic all-source capture."
+        )
     normalized_catalog_source = _optional_text(catalog_source) or None
     observation_batch_id = run_id
     filters = {
@@ -337,7 +374,11 @@ def run_vendor_source_capture(
     )
 
     try:
-        eligible_product_source_ids, eligible_source_urls, eligible_catalog_product_count = _eligible_product_sources_from_active_source_urls(
+        (
+            eligible_product_source_ids,
+            eligible_source_urls,
+            eligible_catalog_product_count,
+        ) = _eligible_product_sources_from_active_source_urls(
             session,
             source_filter=source_filter,
             catalog_source=normalized_catalog_source,
@@ -499,6 +540,7 @@ def recapture_product_source(
         "observation_batch_id": observation_batch_id,
     }
 
+
 def _capture_result_from_summary(
     *,
     source: str,
@@ -553,7 +595,10 @@ def _eligible_product_sources_from_active_source_urls(
     product_source_ids: list[int],
     limit: int,
 ) -> tuple[list[int], list[dict[str, Any]], int]:
-    from ecommerce.db.repositories.source_convergence import sync_product_source_to_source_url, sync_source_url_to_product_source
+    from ecommerce.db.repositories.source_convergence import (
+        sync_product_source_to_source_url,
+        sync_source_url_to_product_source,
+    )
     from ecommerce.db.repositories.source_urls import source_url_to_dict
 
     source_urls: list[SourceUrl] = []
@@ -568,8 +613,14 @@ def _eligible_product_sources_from_active_source_urls(
     if catalog_source:
         statement = statement.where(SourceUrl.catalog_source == catalog_source)
     if catalog_product_ids:
-        statement = statement.where(SourceUrl.catalog_product_id.in_([int(item) for item in catalog_product_ids]))
-    source_urls.extend(session.execute(statement.limit(max(1, int(limit)))).scalars().all())
+        statement = statement.where(
+            SourceUrl.catalog_product_id.in_(
+                [int(item) for item in catalog_product_ids]
+            )
+        )
+    source_urls.extend(
+        session.execute(statement.limit(max(1, int(limit)))).scalars().all()
+    )
 
     product_source_rows: list[ProductSource] = []
     if product_source_ids:
@@ -578,23 +629,35 @@ def _eligible_product_sources_from_active_source_urls(
             ProductSource.active.is_(True),
         )
         if source_filter:
-            product_source_statement = product_source_statement.outerjoin(Vendor, Vendor.id == ProductSource.vendor_id).where(Vendor.slug == source_filter)
-        product_source_rows = list(session.execute(product_source_statement).scalars().all())
+            product_source_statement = product_source_statement.outerjoin(
+                Vendor, Vendor.id == ProductSource.vendor_id
+            ).where(Vendor.slug == source_filter)
+        product_source_rows = list(
+            session.execute(product_source_statement).scalars().all()
+        )
 
     seen_product_source_ids: set[int] = set()
     eligible_source_urls_by_key: dict[tuple[int | None, str], dict[str, Any]] = {}
     catalog_product_ids_selected: set[int] = set()
     for source_url in source_urls:
-        existing_product_source = _existing_product_source_for_source_url(session, source_url)
+        existing_product_source = _existing_product_source_for_source_url(
+            session, source_url
+        )
         if existing_product_source is not None and not existing_product_source.active:
             continue
         product_source = sync_source_url_to_product_source(session, source_url)
-        if product_source is None or not product_source.active or product_source.id is None:
+        if (
+            product_source is None
+            or not product_source.active
+            or product_source.id is None
+        ):
             continue
         seen_product_source_ids.add(int(product_source.id))
         catalog_product_ids_selected.add(int(source_url.catalog_product_id))
         payload = source_url_to_dict(source_url)
-        eligible_source_urls_by_key[(source_url.catalog_product_id, source_url.url_normalized or source_url.url)] = payload
+        eligible_source_urls_by_key[
+            (source_url.catalog_product_id, source_url.url_normalized or source_url.url)
+        ] = payload
 
     for product_source in product_source_rows:
         source_url = sync_product_source_to_source_url(session, product_source)
@@ -602,21 +665,31 @@ def _eligible_product_sources_from_active_source_urls(
             continue
         if catalog_source and source_url.catalog_source != catalog_source:
             continue
-        if catalog_product_ids and int(source_url.catalog_product_id) not in {int(item) for item in catalog_product_ids}:
+        if catalog_product_ids and int(source_url.catalog_product_id) not in {
+            int(item) for item in catalog_product_ids
+        }:
             continue
         if source_filter and not _source_url_matches_source(source_url, source_filter):
             continue
         seen_product_source_ids.add(int(product_source.id))
         catalog_product_ids_selected.add(int(source_url.catalog_product_id))
-        eligible_source_urls_by_key[(source_url.catalog_product_id, source_url.url_normalized or source_url.url)] = source_url_to_dict(source_url)
+        eligible_source_urls_by_key[
+            (source_url.catalog_product_id, source_url.url_normalized or source_url.url)
+        ] = source_url_to_dict(source_url)
 
     session.flush()
     selected_ids = sorted(seen_product_source_ids)
     source_url_payloads = list(eligible_source_urls_by_key.values())
-    return selected_ids[: max(1, int(limit))], source_url_payloads[: max(1, int(limit))], len(catalog_product_ids_selected)
+    return (
+        selected_ids[: max(1, int(limit))],
+        source_url_payloads[: max(1, int(limit))],
+        len(catalog_product_ids_selected),
+    )
 
 
-def _existing_product_source_for_source_url(session: Session, source_url: SourceUrl) -> ProductSource | None:
+def _existing_product_source_for_source_url(
+    session: Session, source_url: SourceUrl
+) -> ProductSource | None:
     canonical = canonicalize_url(source_url.url_normalized or source_url.url)
     digest = canonical_url_hash(canonical)
     statement = (
@@ -631,14 +704,22 @@ def _existing_product_source_for_source_url(session: Session, source_url: Source
     return session.execute(statement).scalar_one_or_none()
 
 
-def _selected_product_source_context(session: Session, product_source_ids: list[int]) -> tuple[int, list[dict[str, Any]]]:
+def _selected_product_source_context(
+    session: Session, product_source_ids: list[int]
+) -> tuple[int, list[dict[str, Any]]]:
     if not product_source_ids:
         return 0, []
-    from ecommerce.db.repositories.source_convergence import sync_product_source_to_source_url
+    from ecommerce.db.repositories.source_convergence import (
+        sync_product_source_to_source_url,
+    )
     from ecommerce.db.repositories.source_urls import source_url_to_dict
 
     sources = list(
-        session.execute(select(ProductSource).where(ProductSource.id.in_(product_source_ids))).scalars().all()
+        session.execute(
+            select(ProductSource).where(ProductSource.id.in_(product_source_ids))
+        )
+        .scalars()
+        .all()
     )
     source_url_payloads: list[dict[str, Any]] = []
     catalog_product_ids: set[int] = set()
@@ -656,13 +737,22 @@ def _product_source_vendor_slug(session: Session, source: ProductSource) -> str 
     if source.vendor_id is None:
         return detect_vendor_slug(source.canonical_url or source.source_url)
     vendor = session.get(Vendor, source.vendor_id)
-    return vendor.slug if vendor is not None else detect_vendor_slug(source.canonical_url or source.source_url)
+    return (
+        vendor.slug
+        if vendor is not None
+        else detect_vendor_slug(source.canonical_url or source.source_url)
+    )
 
 
-def _missing_source_url_product_count(session: Session, catalog_product_ids: list[int], source: str) -> int:
+def _missing_source_url_product_count(
+    session: Session, catalog_product_ids: list[int], source: str
+) -> int:
     coverage = compute_source_url_coverage(
         session,
-        [_coverage_item(catalog_product_id) for catalog_product_id in catalog_product_ids],
+        [
+            _coverage_item(catalog_product_id)
+            for catalog_product_id in catalog_product_ids
+        ],
         source,  # type: ignore[arg-type]
     )
     return coverage.summary.products_without_active_source_urls
@@ -733,7 +823,10 @@ def _empty_result(
 
 def _write_result(path: Path, result: SourceUrlCaptureRunResult) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(result.to_dict(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(result.to_dict(), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _with_vendor_run_metadata(
@@ -756,7 +849,9 @@ def _with_vendor_run_metadata(
     )
 
 
-def _source_filter(*, source_name: str | None = None, vendor_slug: str | None = None) -> str | None:
+def _source_filter(
+    *, source_name: str | None = None, vendor_slug: str | None = None
+) -> str | None:
     text = _optional_text(source_name) or _optional_text(vendor_slug)
     if not text:
         return None
@@ -785,5 +880,3 @@ def _optional_text(value: object) -> str:
     if value is None:
         return ""
     return str(value).strip()
-
-

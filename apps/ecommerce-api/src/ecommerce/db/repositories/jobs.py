@@ -13,7 +13,13 @@ from sqlalchemy.orm import Session
 from ecommerce.db.models.jobs import EcommerceJob
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
-JOB_STATUSES: tuple[JobStatus, ...] = ("queued", "running", "succeeded", "failed", "cancelled")
+JOB_STATUSES: tuple[JobStatus, ...] = (
+    "queued",
+    "running",
+    "succeeded",
+    "failed",
+    "cancelled",
+)
 TERMINAL_JOB_STATUSES: tuple[JobStatus, ...] = ("succeeded", "failed", "cancelled")
 
 
@@ -46,7 +52,9 @@ def create_queued_job(
 
 
 def get_job_by_id(session: Session, job_id: str) -> EcommerceJob | None:
-    return session.execute(select(EcommerceJob).where(EcommerceJob.job_id == job_id).limit(1)).scalar_one_or_none()
+    return session.execute(
+        select(EcommerceJob).where(EcommerceJob.job_id == job_id).limit(1)
+    ).scalar_one_or_none()
 
 
 def list_jobs(
@@ -62,7 +70,9 @@ def list_jobs(
     if status:
         statement = statement.where(EcommerceJob.status == status)
     bounded_limit = max(1, min(int(limit), 500))
-    statement = statement.order_by(EcommerceJob.created_at.desc(), EcommerceJob.id.desc()).limit(bounded_limit)
+    statement = statement.order_by(
+        EcommerceJob.created_at.desc(), EcommerceJob.id.desc()
+    ).limit(bounded_limit)
     return list(session.execute(statement).scalars())
 
 
@@ -73,9 +83,13 @@ def list_queued_jobs_for_worker(
     job_types: Sequence[str] | None = None,
     limit: int = 1,
 ) -> list[EcommerceJob]:
-    statement: Select[tuple[EcommerceJob]] = select(EcommerceJob).where(EcommerceJob.status == "queued")
+    statement: Select[tuple[EcommerceJob]] = select(EcommerceJob).where(
+        EcommerceJob.status == "queued"
+    )
     statement = _filter_job_type(statement, job_type=job_type, job_types=job_types)
-    statement = statement.order_by(EcommerceJob.created_at.asc(), EcommerceJob.id.asc()).limit(_bounded_worker_limit(limit))
+    statement = statement.order_by(
+        EcommerceJob.created_at.asc(), EcommerceJob.id.asc()
+    ).limit(_bounded_worker_limit(limit))
     return list(session.execute(statement).scalars())
 
 
@@ -95,9 +109,13 @@ def lease_queued_jobs_for_worker(
     """
 
     timestamp = leased_at or _now()
-    statement: Select[tuple[EcommerceJob]] = select(EcommerceJob).where(EcommerceJob.status == "queued")
+    statement: Select[tuple[EcommerceJob]] = select(EcommerceJob).where(
+        EcommerceJob.status == "queued"
+    )
     statement = _filter_job_type(statement, job_type=job_type, job_types=job_types)
-    statement = statement.order_by(EcommerceJob.created_at.asc(), EcommerceJob.id.asc()).limit(_bounded_worker_limit(limit))
+    statement = statement.order_by(
+        EcommerceJob.created_at.asc(), EcommerceJob.id.asc()
+    ).limit(_bounded_worker_limit(limit))
     if session.get_bind().dialect.name == "postgresql":
         statement = statement.with_for_update(skip_locked=True)
 
@@ -125,7 +143,12 @@ def list_stale_running_jobs(
     now: datetime | None = None,
 ) -> list[EcommerceJob]:
     cutoff = (now or _now()) - timedelta(minutes=max(1, int(stale_after_minutes)))
-    last_activity = func.coalesce(EcommerceJob.heartbeat_at, EcommerceJob.started_at, EcommerceJob.updated_at, EcommerceJob.created_at)
+    last_activity = func.coalesce(
+        EcommerceJob.heartbeat_at,
+        EcommerceJob.started_at,
+        EcommerceJob.updated_at,
+        EcommerceJob.created_at,
+    )
     statement: Select[tuple[EcommerceJob]] = select(EcommerceJob).where(
         EcommerceJob.status == "running",
         last_activity <= cutoff,
@@ -156,7 +179,9 @@ def durable_job_backlog_summary(
     )
     oldest_age_seconds = None
     if oldest_queued_at is not None:
-        oldest_age_seconds = max(0, int((timestamp - _aware_datetime(oldest_queued_at)).total_seconds()))
+        oldest_age_seconds = max(
+            0, int((timestamp - _aware_datetime(oldest_queued_at)).total_seconds())
+        )
 
     return {
         "queued_total": sum(queued_by_job_type.values()),
@@ -201,7 +226,9 @@ def fail_stale_running_jobs(
     return jobs
 
 
-def mark_running(session: Session, job_id: str, *, started_at: datetime | None = None) -> EcommerceJob:
+def mark_running(
+    session: Session, job_id: str, *, started_at: datetime | None = None
+) -> EcommerceJob:
     job = _require_job(session, job_id)
     if job.status in TERMINAL_JOB_STATUSES:
         raise ValueError(f"Cannot mark terminal job {job_id!r} as running.")
@@ -217,7 +244,9 @@ def mark_running(session: Session, job_id: str, *, started_at: datetime | None =
     return job
 
 
-def heartbeat(session: Session, job_id: str, *, heartbeat_at: datetime | None = None) -> EcommerceJob:
+def heartbeat(
+    session: Session, job_id: str, *, heartbeat_at: datetime | None = None
+) -> EcommerceJob:
     job = _require_job(session, job_id)
     timestamp = heartbeat_at or _now()
     job.heartbeat_at = timestamp
@@ -288,7 +317,9 @@ def mark_failed(
     return job
 
 
-def request_cancel(session: Session, job_id: str, *, requested_at: datetime | None = None) -> EcommerceJob:
+def request_cancel(
+    session: Session, job_id: str, *, requested_at: datetime | None = None
+) -> EcommerceJob:
     job = _require_job(session, job_id)
     timestamp = requested_at or _now()
     job.cancel_requested = True
@@ -394,7 +425,9 @@ def _stale_running_count_by_job_type(
     thresholds_by_job_type: dict[str, int],
     now: datetime,
 ) -> dict[str, int]:
-    thresholds = {str(key): max(1, int(value)) for key, value in thresholds_by_job_type.items()}
+    thresholds = {
+        str(key): max(1, int(value)) for key, value in thresholds_by_job_type.items()
+    }
     counts: dict[str, int] = {}
     if thresholds:
         default_cutoff = now - timedelta(minutes=max(1, int(default_minutes)))
@@ -404,20 +437,27 @@ def _stale_running_count_by_job_type(
         counts.update(_rows_to_counts(session.execute(statement).all()))
 
     if not thresholds:
-        statement = _stale_running_counts_statement(now - timedelta(minutes=max(1, int(default_minutes))))
+        statement = _stale_running_counts_statement(
+            now - timedelta(minutes=max(1, int(default_minutes)))
+        )
         counts.update(_rows_to_counts(session.execute(statement).all()))
         return counts
 
     for job_type, minutes in thresholds.items():
-        statement = _stale_running_counts_statement(now - timedelta(minutes=minutes)).where(
-            EcommerceJob.job_type == job_type
-        )
+        statement = _stale_running_counts_statement(
+            now - timedelta(minutes=minutes)
+        ).where(EcommerceJob.job_type == job_type)
         counts.update(_rows_to_counts(session.execute(statement).all()))
     return counts
 
 
 def _stale_running_counts_statement(cutoff: datetime) -> Select[tuple[str, int]]:
-    last_activity = func.coalesce(EcommerceJob.heartbeat_at, EcommerceJob.started_at, EcommerceJob.updated_at, EcommerceJob.created_at)
+    last_activity = func.coalesce(
+        EcommerceJob.heartbeat_at,
+        EcommerceJob.started_at,
+        EcommerceJob.updated_at,
+        EcommerceJob.created_at,
+    )
     return (
         select(EcommerceJob.job_type, func.count(EcommerceJob.id))
         .where(EcommerceJob.status == "running", last_activity <= cutoff)

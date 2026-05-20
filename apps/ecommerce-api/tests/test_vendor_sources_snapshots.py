@@ -17,16 +17,26 @@ from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.products import ProductSource  # noqa: E402
 from ecommerce.db.models.price_monitoring import PriceObservation  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url  # noqa: E402
-from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation  # noqa: E402
-from ecommerce.vendor_sources.capture import SourceUrlCaptureRunResult, capture_selected_source_urls  # noqa: E402
-
+from ecommerce.db.repositories.source_urls import (
+    create_or_update_imported_source_url,
+)  # noqa: E402
+from ecommerce.source_capture.types import (
+    CaptureResult,
+    CaptureSnapshotPayload,
+    ParsedPriceObservation,
+)  # noqa: E402
+from ecommerce.vendor_sources.capture import (
+    SourceUrlCaptureRunResult,
+    capture_selected_source_urls,
+)  # noqa: E402
 
 NOW = datetime(2026, 5, 5, 12, tzinfo=timezone.utc)
 
 
 def _snapshot(fixtures_root: Path, *parts: str) -> dict:
-    return json.loads((fixtures_root / "golden_snapshots" / Path(*parts)).read_text(encoding="utf-8"))
+    return json.loads(
+        (fixtures_root / "golden_snapshots" / Path(*parts)).read_text(encoding="utf-8")
+    )
 
 
 def _database_url(tmp_path: Path) -> str:
@@ -66,13 +76,19 @@ def _fake_electronet_capture(captured_urls: list[str]):
                 fetched_at=NOW,
                 parsed_at=NOW,
             ),
-            price_observations=(ParsedPriceObservation(price=Decimal("499.90"), availability="available"),),
+            price_observations=(
+                ParsedPriceObservation(
+                    price=Decimal("499.90"), availability="available"
+                ),
+            ),
         )
 
     return fake_capture
 
 
-def _selection_snapshot(result: SourceUrlCaptureRunResult, captured_urls: list[str]) -> dict:
+def _selection_snapshot(
+    result: SourceUrlCaptureRunResult, captured_urls: list[str]
+) -> dict:
     return {
         "status": result.status,
         "used_source_urls": result.used_source_urls,
@@ -121,16 +137,22 @@ def test_vendor_source_selection_snapshot(fixtures_root: Path, tmp_path: Path) -
 
         assert session.query(PriceObservation).count() == 1
 
-    assert _selection_snapshot(result, captured_urls) == _snapshot(fixtures_root, "vendor_sources", "selection", "selection.expected.json")
+    assert _selection_snapshot(result, captured_urls) == _snapshot(
+        fixtures_root, "vendor_sources", "selection", "selection.expected.json"
+    )
 
 
-def test_vendor_source_status_filtering_snapshot(fixtures_root: Path, tmp_path: Path) -> None:
+def test_vendor_source_status_filtering_snapshot(
+    fixtures_root: Path, tmp_path: Path
+) -> None:
     database_url = _database_url(tmp_path)
     captured_urls: list[str] = []
 
     with session_scope(database_url) as session:
         active_product = _catalog_product(session, model="EL-ELIGIBLE")
-        disabled_product_source_product = _catalog_product(session, model="EL-PS-DISABLED")
+        disabled_product_source_product = _catalog_product(
+            session, model="EL-PS-DISABLED"
+        )
         for status in ["active", "broken", "disabled", "needs_review", "redirected"]:
             create_or_update_imported_source_url(
                 session,
@@ -150,7 +172,10 @@ def test_vendor_source_status_filtering_snapshot(fixtures_root: Path, tmp_path: 
         )
         disabled_source = (
             session.query(ProductSource)
-            .filter(ProductSource.source_url == "https://www.electronet.gr/p/product-source-disabled")
+            .filter(
+                ProductSource.source_url
+                == "https://www.electronet.gr/p/product-source-disabled"
+            )
             .one()
         )
         disabled_source.active = False
@@ -164,7 +189,9 @@ def test_vendor_source_status_filtering_snapshot(fixtures_root: Path, tmp_path: 
             capture_fn=_fake_electronet_capture(captured_urls),
         )
 
-    assert _selection_snapshot(result, captured_urls) == _snapshot(fixtures_root, "vendor_sources", "selection", "status_filtering.expected.json")
+    assert _selection_snapshot(result, captured_urls) == _snapshot(
+        fixtures_root, "vendor_sources", "selection", "status_filtering.expected.json"
+    )
 
 
 def test_vendor_source_run_result_serialization_snapshot(fixtures_root: Path) -> None:
@@ -184,11 +211,26 @@ def test_vendor_source_run_result_serialization_snapshot(fixtures_root: Path) ->
         warnings=["one source failed"],
         items=[
             {"product_source_id": 1, "vendor": "electronet", "status": "success"},
-            {"product_source_id": 2, "vendor": "electronet", "status": "failed", "error_code": "timeout"},
+            {
+                "product_source_id": 2,
+                "vendor": "electronet",
+                "status": "failed",
+                "error_code": "timeout",
+            },
         ],
         source_urls=[
-            {"id": 1, "source_name": "electronet", "status": "active", "url_normalized": "https://www.electronet.gr/p/1"},
-            {"id": 2, "source_name": "electronet", "status": "active", "url_normalized": "https://www.electronet.gr/p/2"},
+            {
+                "id": 1,
+                "source_name": "electronet",
+                "status": "active",
+                "url_normalized": "https://www.electronet.gr/p/1",
+            },
+            {
+                "id": 2,
+                "source_name": "electronet",
+                "status": "active",
+                "url_normalized": "https://www.electronet.gr/p/2",
+            },
         ],
         result_path=Path("vendor_source_capture_result.json"),
     )
@@ -216,16 +258,24 @@ def test_vendor_source_run_result_serialization_snapshot(fixtures_root: Path) ->
     }
     actual["result_file_name"] = Path(payload["result_path"]).name
 
-    assert actual == _snapshot(fixtures_root, "vendor_sources", "run_result", "serialization.expected.json")
+    assert actual == _snapshot(
+        fixtures_root, "vendor_sources", "run_result", "serialization.expected.json"
+    )
 
 
-def test_vendor_source_capture_api_response_snapshot(fixtures_root: Path, tmp_path: Path, monkeypatch) -> None:
+def test_vendor_source_capture_api_response_snapshot(
+    fixtures_root: Path, tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
-    monkeypatch.setattr(routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None)
+    monkeypatch.setattr(
+        routes_vendor_sources, "_require_vendor_sources_database_ready", lambda: None
+    )
     capture_kwargs: dict[str, object] = {}
 
-    def fake_run_vendor_source_capture(*_args: object, **kwargs: object) -> SourceUrlCaptureRunResult:
+    def fake_run_vendor_source_capture(
+        *_args: object, **kwargs: object
+    ) -> SourceUrlCaptureRunResult:
         capture_kwargs.update(kwargs)
         return SourceUrlCaptureRunResult(
             status="completed",
@@ -241,7 +291,9 @@ def test_vendor_source_capture_api_response_snapshot(fixtures_root: Path, tmp_pa
             succeeded_count=1,
             failed_count=0,
             warnings=[],
-            items=[{"product_source_id": 1, "vendor": "electronet", "status": "success"}],
+            items=[
+                {"product_source_id": 1, "vendor": "electronet", "status": "success"}
+            ],
             source_urls=[{"id": 1, "source_name": "electronet", "status": "active"}],
             result_path=None,
         )
@@ -281,4 +333,6 @@ def test_vendor_source_capture_api_response_snapshot(fixtures_root: Path, tmp_pa
         ]
     }
 
-    assert actual == _snapshot(fixtures_root, "vendor_sources", "api_response", "capture_run.expected.json")
+    assert actual == _snapshot(
+        fixtures_root, "vendor_sources", "api_response", "capture_run.expected.json"
+    )

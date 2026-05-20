@@ -25,12 +25,16 @@ def create_alert_rule(session: Session, payload: dict[str, Any]) -> AlertRule:
     return rule
 
 
-def update_alert_rule(session: Session, rule_id: int, payload: dict[str, Any]) -> AlertRule | None:
+def update_alert_rule(
+    session: Session, rule_id: int, payload: dict[str, Any]
+) -> AlertRule | None:
     rule = get_alert_rule(session, rule_id)
     if rule is None:
         return None
     current = alert_rule_to_dict(rule)
-    current.update({key: value for key, value in payload.items() if key in _RULE_UPDATE_FIELDS})
+    current.update(
+        {key: value for key, value in payload.items() if key in _RULE_UPDATE_FIELDS}
+    )
     values = _validated_rule_values(current)
     for key, value in values.items():
         setattr(rule, key, value)
@@ -47,12 +51,20 @@ def list_alert_rules(
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[list[dict[str, Any]], int]:
-    statement = _alert_rule_filters(select(AlertRule), active=active, rule_type=rule_type)
-    count_statement = _alert_rule_filters(select(func.count(AlertRule.id)), active=active, rule_type=rule_type)
-    statement = statement.order_by(AlertRule.created_at.desc(), AlertRule.id.desc()).limit(limit).offset(offset)
-    return [alert_rule_to_dict(rule) for rule in session.execute(statement).scalars().all()], int(
-        session.execute(count_statement).scalar_one()
+    statement = _alert_rule_filters(
+        select(AlertRule), active=active, rule_type=rule_type
     )
+    count_statement = _alert_rule_filters(
+        select(func.count(AlertRule.id)), active=active, rule_type=rule_type
+    )
+    statement = (
+        statement.order_by(AlertRule.created_at.desc(), AlertRule.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return [
+        alert_rule_to_dict(rule) for rule in session.execute(statement).scalars().all()
+    ], int(session.execute(count_statement).scalar_one())
 
 
 def get_alert_rule(session: Session, rule_id: int) -> AlertRule | None:
@@ -75,7 +87,9 @@ def has_active_alert_rules(session: Session) -> bool:
 
 
 def evaluate_alert_rules_for_run(session: Session, run_id: str):
-    from ecommerce.price_monitoring.alerts import evaluate_alert_rules_for_run as evaluate
+    from ecommerce.price_monitoring.alerts import (
+        evaluate_alert_rules_for_run as evaluate,
+    )
 
     return evaluate(session, run_id)
 
@@ -105,13 +119,20 @@ def list_alert_events(
         product_id=product_id,
         model=model,
     )
-    statement = statement.order_by(AlertEvent.triggered_at.desc(), AlertEvent.id.desc()).limit(limit).offset(offset)
-    return [alert_event_to_dict(event) for event in session.execute(statement).scalars().all()], int(
-        session.execute(count_statement).scalar_one()
+    statement = (
+        statement.order_by(AlertEvent.triggered_at.desc(), AlertEvent.id.desc())
+        .limit(limit)
+        .offset(offset)
     )
+    return [
+        alert_event_to_dict(event)
+        for event in session.execute(statement).scalars().all()
+    ], int(session.execute(count_statement).scalar_one())
 
 
-def acknowledge_alert_event(session: Session, event_id: int, acknowledged_by: str | None = None) -> AlertEvent | None:
+def acknowledge_alert_event(
+    session: Session, event_id: int, acknowledged_by: str | None = None
+) -> AlertEvent | None:
     event = session.get(AlertEvent, event_id)
     if event is None:
         return None
@@ -124,7 +145,9 @@ def acknowledge_alert_event(session: Session, event_id: int, acknowledged_by: st
     return event
 
 
-def resolve_alert_event(session: Session, event_id: int, resolved_by: str | None = None) -> AlertEvent | None:
+def resolve_alert_event(
+    session: Session, event_id: int, resolved_by: str | None = None
+) -> AlertEvent | None:
     event = session.get(AlertEvent, event_id)
     if event is None:
         return None
@@ -209,10 +232,16 @@ def _validated_rule_values(payload: dict[str, Any]) -> dict[str, Any]:
     model = _optional_text(payload.get("model"))
     mpn = _optional_text(payload.get("mpn"))
     if product_id is None and not (catalog_source and (model or mpn)):
-        raise ValueError("Alert rule target must include product_id, catalog_source + model, or catalog_source + mpn.")
+        raise ValueError(
+            "Alert rule target must include product_id, catalog_source + model, or catalog_source + mpn."
+        )
 
-    threshold_amount = _positive_decimal_or_none(payload.get("threshold_amount"), "threshold_amount")
-    threshold_percent = _positive_decimal_or_none(payload.get("threshold_percent"), "threshold_percent")
+    threshold_amount = _positive_decimal_or_none(
+        payload.get("threshold_amount"), "threshold_amount"
+    )
+    threshold_percent = _positive_decimal_or_none(
+        payload.get("threshold_percent"), "threshold_percent"
+    )
     active = payload.get("active")
     return {
         "name": _optional_text(payload.get("name")),
@@ -227,7 +256,9 @@ def _validated_rule_values(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _alert_rule_filters(statement: Select, *, active: bool | None, rule_type: str | None) -> Select:
+def _alert_rule_filters(
+    statement: Select, *, active: bool | None, rule_type: str | None
+) -> Select:
     if active is not None:
         statement = statement.where(AlertRule.active.is_(active))
     if rule_type:

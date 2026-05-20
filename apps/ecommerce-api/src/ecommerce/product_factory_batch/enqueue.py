@@ -8,15 +8,25 @@ from typing import Any, Protocol
 
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models.product_factory_batch import ProductFactoryBatch, ProductFactoryBatchRow
+from ecommerce.db.models.product_factory_batch import (
+    ProductFactoryBatch,
+    ProductFactoryBatchRow,
+)
 from ecommerce.db.repositories.common import _now
 from ecommerce.product_factory_batch import repository
 from ecommerce.product_factory_batch.service import ProductFactoryBatchError
-from ecommerce.product_factory_telegram.client import ProductFactoryClient, ProductFactoryClientError, ProductFactoryJob
-from ecommerce.product_factory_telegram.config import product_factory_telegram_config_from_env
+from ecommerce.product_factory_telegram.client import (
+    ProductFactoryClient,
+    ProductFactoryClientError,
+    ProductFactoryJob,
+)
+from ecommerce.product_factory_telegram.config import (
+    product_factory_telegram_config_from_env,
+)
 
-
-AUTO_ENQUEUE_CONFIDENCE_THRESHOLD_ENV = "PRODUCT_FACTORY_BATCH_AUTO_ENQUEUE_CONFIDENCE_THRESHOLD"
+AUTO_ENQUEUE_CONFIDENCE_THRESHOLD_ENV = (
+    "PRODUCT_FACTORY_BATCH_AUTO_ENQUEUE_CONFIDENCE_THRESHOLD"
+)
 DEFAULT_AUTO_ENQUEUE_CONFIDENCE_THRESHOLD = 85
 
 
@@ -59,11 +69,19 @@ def batch_auto_enqueue_confidence_threshold() -> int:
 
 
 def product_factory_client_from_env() -> ProductFactoryClient:
-    return ProductFactoryClient(product_factory_telegram_config_from_env().product_factory_api_base_url)
+    return ProductFactoryClient(
+        product_factory_telegram_config_from_env().product_factory_api_base_url
+    )
 
 
-def row_is_enqueueable(row: ProductFactoryBatchRow, *, threshold: int | None = None) -> bool:
-    effective_threshold = threshold if threshold is not None else batch_auto_enqueue_confidence_threshold()
+def row_is_enqueueable(
+    row: ProductFactoryBatchRow, *, threshold: int | None = None
+) -> bool:
+    effective_threshold = (
+        threshold
+        if threshold is not None
+        else batch_auto_enqueue_confidence_threshold()
+    )
     if not row.selected_url:
         return False
     if row.status == "manually_selected":
@@ -73,7 +91,9 @@ def row_is_enqueueable(row: ProductFactoryBatchRow, *, threshold: int | None = N
     return False
 
 
-def build_full_pipeline_payload(row: ProductFactoryBatchRow, batch: ProductFactoryBatch, *, threshold: int) -> dict[str, Any]:
+def build_full_pipeline_payload(
+    row: ProductFactoryBatchRow, batch: ProductFactoryBatch, *, threshold: int
+) -> dict[str, Any]:
     return {
         "model": row.model,
         "product_name": row.name,
@@ -109,9 +129,15 @@ def enqueue_batch_selected(
     threshold: int | None = None,
 ) -> BatchEnqueueResult:
     client = product_factory_client or product_factory_client_from_env()
-    effective_threshold = threshold if threshold is not None else batch_auto_enqueue_confidence_threshold()
+    effective_threshold = (
+        threshold
+        if threshold is not None
+        else batch_auto_enqueue_confidence_threshold()
+    )
     rows = repository.list_batch_rows(session, batch.id)
-    forced = _force_low_confidence_auto_selected_rows(session, rows=rows, threshold=effective_threshold)
+    forced = _force_low_confidence_auto_selected_rows(
+        session, rows=rows, threshold=effective_threshold
+    )
     enqueued_count = 0
     failed_count = 0
     errors: list[dict[str, Any]] = []
@@ -123,16 +149,33 @@ def enqueue_batch_selected(
         if not row_is_enqueueable(row, threshold=effective_threshold):
             continue
         try:
-            _enqueue_row(session, batch=batch, row=row, product_factory_client=client, threshold=effective_threshold)
+            _enqueue_row(
+                session,
+                batch=batch,
+                row=row,
+                product_factory_client=client,
+                threshold=effective_threshold,
+            )
             enqueued_count += 1
         except ProductFactoryClientError as exc:
             failed_count += 1
             message = str(exc)
-            _store_enqueue_error(row, code="product_factory_enqueue_failed", message=message)
-            errors.append({"row_id": row.id, "row_number": row.row_number, "code": "product_factory_enqueue_failed", "message": message})
+            _store_enqueue_error(
+                row, code="product_factory_enqueue_failed", message=message
+            )
+            errors.append(
+                {
+                    "row_id": row.id,
+                    "row_number": row.row_number,
+                    "code": "product_factory_enqueue_failed",
+                    "message": message,
+                }
+            )
     skipped_count = max(0, len(rows) - enqueued_count - failed_count)
     if forced:
-        warnings.append(f"{forced} low-confidence auto-selected row(s) were moved to needs_review before enqueue.")
+        warnings.append(
+            f"{forced} low-confidence auto-selected row(s) were moved to needs_review before enqueue."
+        )
     repository.refresh_batch_counts(session, batch)
     return BatchEnqueueResult(
         batch_id=batch.id,
@@ -141,7 +184,10 @@ def enqueue_batch_selected(
         skipped_count=skipped_count,
         forced_needs_review_count=forced,
         failed_count=failed_count,
-        rows=[repository.row_to_dict(row) for row in repository.list_batch_rows(session, batch.id)],
+        rows=[
+            repository.row_to_dict(row)
+            for row in repository.list_batch_rows(session, batch.id)
+        ],
         warnings=warnings,
         errors=errors,
     )
@@ -155,8 +201,14 @@ def enqueue_batch_row(
     product_factory_client: ProductFactoryJobClient | None = None,
     threshold: int | None = None,
 ) -> ProductFactoryBatchRow:
-    effective_threshold = threshold if threshold is not None else batch_auto_enqueue_confidence_threshold()
-    _force_low_confidence_auto_selected_rows(session, rows=[row], threshold=effective_threshold)
+    effective_threshold = (
+        threshold
+        if threshold is not None
+        else batch_auto_enqueue_confidence_threshold()
+    )
+    _force_low_confidence_auto_selected_rows(
+        session, rows=[row], threshold=effective_threshold
+    )
     if row.product_factory_job_id:
         return row
     if not row_is_enqueueable(row, threshold=effective_threshold):
@@ -168,13 +220,23 @@ def enqueue_batch_row(
         )
     client = product_factory_client or product_factory_client_from_env()
     try:
-        _enqueue_row(session, batch=batch, row=row, product_factory_client=client, threshold=effective_threshold)
+        _enqueue_row(
+            session,
+            batch=batch,
+            row=row,
+            product_factory_client=client,
+            threshold=effective_threshold,
+        )
     except ProductFactoryClientError as exc:
         message = str(exc)
-        _store_enqueue_error(row, code="product_factory_enqueue_failed", message=message)
+        _store_enqueue_error(
+            row, code="product_factory_enqueue_failed", message=message
+        )
         session.flush()
         session.commit()
-        raise ProductFactoryBatchError("product_factory_enqueue_failed", message, status_code=502) from exc
+        raise ProductFactoryBatchError(
+            "product_factory_enqueue_failed", message, status_code=502
+        ) from exc
     repository.refresh_batch_counts(session, batch)
     return row
 
@@ -198,9 +260,18 @@ def refresh_batch_job_statuses(
         except ProductFactoryClientError as exc:
             failed_count += 1
             message = str(exc)
-            _store_enqueue_error(row, code="product_factory_status_refresh_failed", message=message)
+            _store_enqueue_error(
+                row, code="product_factory_status_refresh_failed", message=message
+            )
             row.job_status_refreshed_at = _now()
-            errors.append({"row_id": row.id, "row_number": row.row_number, "code": "product_factory_status_refresh_failed", "message": message})
+            errors.append(
+                {
+                    "row_id": row.id,
+                    "row_number": row.row_number,
+                    "code": "product_factory_status_refresh_failed",
+                    "message": message,
+                }
+            )
             continue
         _store_job(row, job=job, set_enqueued_at=False)
         refreshed_count += 1
@@ -209,7 +280,10 @@ def refresh_batch_job_statuses(
         batch_id=batch.id,
         refreshed_count=refreshed_count,
         failed_count=failed_count,
-        rows=[repository.row_to_dict(row) for row in repository.list_batch_rows(session, batch.id)],
+        rows=[
+            repository.row_to_dict(row)
+            for row in repository.list_batch_rows(session, batch.id)
+        ],
         errors=errors,
     )
 
@@ -222,7 +296,11 @@ def _force_low_confidence_auto_selected_rows(
 ) -> int:
     forced = 0
     for row in rows:
-        if row.status != "auto_selected" or not row.selected_url or (row.confidence or 0) >= threshold:
+        if (
+            row.status != "auto_selected"
+            or not row.selected_url
+            or (row.confidence or 0) >= threshold
+        ):
             continue
         metadata = dict(row.selection_metadata_json or {})
         metadata.update(
@@ -249,12 +327,16 @@ def _enqueue_row(
     product_factory_client: ProductFactoryJobClient,
     threshold: int,
 ) -> None:
-    job = product_factory_client.start_full_pipeline(build_full_pipeline_payload(row, batch, threshold=threshold))
+    job = product_factory_client.start_full_pipeline(
+        build_full_pipeline_payload(row, batch, threshold=threshold)
+    )
     _store_job(row, job=job, set_enqueued_at=True)
     session.flush()
 
 
-def _store_job(row: ProductFactoryBatchRow, *, job: ProductFactoryJob, set_enqueued_at: bool) -> None:
+def _store_job(
+    row: ProductFactoryBatchRow, *, job: ProductFactoryJob, set_enqueued_at: bool
+) -> None:
     now = _now()
     row.product_factory_job_id = job.job_id
     row.product_factory_job_status = job.status
@@ -267,7 +349,9 @@ def _store_job(row: ProductFactoryBatchRow, *, job: ProductFactoryJob, set_enque
     row.updated_at = now
 
 
-def _store_enqueue_error(row: ProductFactoryBatchRow, *, code: str, message: str) -> None:
+def _store_enqueue_error(
+    row: ProductFactoryBatchRow, *, code: str, message: str
+) -> None:
     now = _now()
     row.product_factory_error_code = code
     row.product_factory_error_message = message

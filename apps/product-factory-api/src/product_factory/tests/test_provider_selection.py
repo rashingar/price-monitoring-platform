@@ -4,16 +4,35 @@ from pathlib import Path
 
 import pytest
 
-from product_factory.models import CLIInput, FetchResult, GalleryImage, ParsedProduct, SchemaMatchResult, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    FetchResult,
+    GalleryImage,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.prepare_result_assembly import PrepareResultAssemblyResult
-from product_factory.prepare_scrape_persistence import PrepareScrapePersistenceInput, PrepareScrapePersistenceResult
+from product_factory.prepare_scrape_persistence import (
+    PrepareScrapePersistenceInput,
+    PrepareScrapePersistenceResult,
+)
 from product_factory.prepare_stage import execute_prepare_stage
 from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult
 from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import execute_source_acquisition_stage
 from product_factory.parser_product_bestprice import BestPriceProductParser
-from product_factory.providers import BestPriceProvider, ProviderInputIdentity, ProviderRegistry, bootstrap_runtime_provider_registry, source_to_provider_id
+from product_factory.providers import (
+    BestPriceProvider,
+    ProviderInputIdentity,
+    ProviderRegistry,
+    bootstrap_runtime_provider_registry,
+    source_to_provider_id,
+)
 from product_factory.providers.models import (
     ProviderCapability,
     ProviderDefinition,
@@ -22,9 +41,14 @@ from product_factory.providers.models import (
     ProviderSnapshot,
     ProviderSnapshotKind,
 )
-from product_factory.providers.manufacturer_tefal_provider import ManufacturerTefalProvider
+from product_factory.providers.manufacturer_tefal_provider import (
+    ManufacturerTefalProvider,
+)
 from product_factory.providers.skroutz_provider import SkroutzProvider
-from product_factory.providers.skroutz_fetcher import SkroutzFetchResult, SkroutzFetchStatus
+from product_factory.providers.skroutz_fetcher import (
+    SkroutzFetchResult,
+    SkroutzFetchStatus,
+)
 
 SAMPLE_MODEL = "143109"
 SAMPLE_URL = "https://www.skroutz.gr/s/61054853/lg-icheio-dxl7t-mayro.html"
@@ -67,7 +91,8 @@ def _build_taxonomy_enrichment_result(
             sub_category="Βραστήρες",
         ),
         taxonomy_candidates=taxonomy_candidates or [],
-        manufacturer_enrichment=manufacturer_enrichment or _build_manufacturer_enrichment_stub(),
+        manufacturer_enrichment=manufacturer_enrichment
+        or _build_manufacturer_enrichment_stub(),
     )
 
 
@@ -92,12 +117,24 @@ class DummyFetcher:
 
 
 def build_provider(skroutz_fixtures_root: Path) -> SkroutzProvider:
-    return SkroutzProvider(fixture_html_by_url={SAMPLE_URL: skroutz_fixtures_root / "taxonomy_cases" / f"{SAMPLE_MODEL}.html"})
+    return SkroutzProvider(
+        fixture_html_by_url={
+            SAMPLE_URL: skroutz_fixtures_root
+            / "taxonomy_cases"
+            / f"{SAMPLE_MODEL}.html"
+        }
+    )
 
 
-def build_manufacturer_provider(manufacturer_tefal_provider_fixtures_root: Path) -> ManufacturerTefalProvider:
+def build_manufacturer_provider(
+    manufacturer_tefal_provider_fixtures_root: Path,
+) -> ManufacturerTefalProvider:
     return ManufacturerTefalProvider(
-        fixture_html_by_url={MANUFACTURER_URL: manufacturer_tefal_provider_fixtures_root / MANUFACTURER_MODEL / "product.html"}
+        fixture_html_by_url={
+            MANUFACTURER_URL: manufacturer_tefal_provider_fixtures_root
+            / MANUFACTURER_MODEL
+            / "product.html"
+        }
     )
 
 
@@ -124,7 +161,9 @@ def build_prepare_provider_resolution_result(
     )
 
 
-def test_execute_source_acquisition_stage_returns_provider_identity_and_snapshot_provenance(tmp_path: Path) -> None:
+def test_execute_source_acquisition_stage_returns_provider_identity_and_snapshot_provenance(
+    tmp_path: Path,
+) -> None:
     model_dir = tmp_path / SAMPLE_MODEL
     parsed = ParsedProduct(
         source=SourceProductData(
@@ -136,7 +175,9 @@ def test_execute_source_acquisition_stage_returns_provider_identity_and_snapshot
             brand="Estia",
             mpn="06-24567",
             name="Estia 06-24567",
-            gallery_images=[GalleryImage(url="https://cdn.example/1.jpg", alt="main", position=1)],
+            gallery_images=[
+                GalleryImage(url="https://cdn.example/1.jpg", alt="main", position=1)
+            ],
         )
     )
     gallery_downloads = [
@@ -156,7 +197,11 @@ def test_execute_source_acquisition_stage_returns_provider_identity_and_snapshot
 
         def download_gallery_images(self, **kwargs):
             self.gallery_calls.append(kwargs)
-            return gallery_downloads, [], [str(model_dir / "gallery" / f"{SAMPLE_MODEL}-1.jpg")]
+            return (
+                gallery_downloads,
+                [],
+                [str(model_dir / "gallery" / f"{SAMPLE_MODEL}-1.jpg")],
+            )
 
     fetcher = GalleryFetcher()
 
@@ -197,7 +242,11 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
     )
 
     assert registry.ids() == ("bestprice", "electronet", "skroutz")
-    assert [definition.provider_id for definition in registry.definitions()] == ["bestprice", "electronet", "skroutz"]
+    assert [definition.provider_id for definition in registry.definitions()] == [
+        "bestprice",
+        "electronet",
+        "skroutz",
+    ]
 
 
 def test_source_to_provider_id_maps_supported_sources() -> None:
@@ -259,9 +308,16 @@ def test_bestprice_parser_normalizes_jsonld_product() -> None:
     assert parsed.source.taxonomy_rule_id == "television:size_bucket"
     assert parsed.source.taxonomy_tv_inches == 65
     assert parsed.source.gallery_images[0].url == "https://cdn.example/product.jpg"
-    assert [item.label for item in parsed.source.spec_sections[0].items[:2]] == ["Κατασκευαστής", "Μέγεθος Οθόνης"]
-    assert {item.label: item.value for item in parsed.source.spec_sections[0].items}["Αφύγρανση"] == "Ναι"
-    assert {item.label: item.value for item in parsed.source.spec_sections[0].items}["Wifi Ready"] == "Ναι"
+    assert [item.label for item in parsed.source.spec_sections[0].items[:2]] == [
+        "Κατασκευαστής",
+        "Μέγεθος Οθόνης",
+    ]
+    assert {item.label: item.value for item in parsed.source.spec_sections[0].items}[
+        "Αφύγρανση"
+    ] == "Ναι"
+    assert {item.label: item.value for item in parsed.source.spec_sections[0].items}[
+        "Wifi Ready"
+    ] == "Ναι"
     assert parsed.critical_missing == []
 
 
@@ -302,7 +358,9 @@ def test_bestprice_provider_normalize_returns_provider_result(tmp_path: Path) ->
     assert result.metadata["fetch_method"] == "fixture"
 
 
-def test_skroutz_provider_fetch_snapshot_reads_fixture_html(skroutz_fixtures_root: Path) -> None:
+def test_skroutz_provider_fetch_snapshot_reads_fixture_html(
+    skroutz_fixtures_root: Path,
+) -> None:
     provider = build_provider(skroutz_fixtures_root)
     identity = ProviderInputIdentity(model=SAMPLE_MODEL, url=SAMPLE_URL)
 
@@ -318,7 +376,9 @@ def test_skroutz_provider_fetch_snapshot_reads_fixture_html(skroutz_fixtures_roo
     assert "LG" in snapshot.body_text
 
 
-def test_skroutz_provider_normalize_returns_provider_result(skroutz_fixtures_root: Path) -> None:
+def test_skroutz_provider_normalize_returns_provider_result(
+    skroutz_fixtures_root: Path,
+) -> None:
     provider = build_provider(skroutz_fixtures_root)
     identity = ProviderInputIdentity(model=SAMPLE_MODEL, url=SAMPLE_URL)
 
@@ -336,7 +396,9 @@ def test_skroutz_provider_normalize_returns_provider_result(skroutz_fixtures_roo
     assert "name" in result.field_diagnostics
 
 
-def test_skroutz_provider_fetch_snapshot_uses_raw_http_fetcher_when_no_fixture_override() -> None:
+def test_skroutz_provider_fetch_snapshot_uses_raw_http_fetcher_when_no_fixture_override() -> (
+    None
+):
     identity = ProviderInputIdentity(model=SAMPLE_MODEL, url=SAMPLE_URL)
     calls = {"fetch": 0}
 
@@ -403,7 +465,9 @@ def test_manufacturer_tefal_provider_normalize_returns_provider_result(
     assert "name" in result.field_diagnostics
 
 
-def test_execute_prepare_stage_uses_test_injected_skroutz_provider(tmp_path: Path, skroutz_fixtures_root: Path) -> None:
+def test_execute_prepare_stage_uses_test_injected_skroutz_provider(
+    tmp_path: Path, skroutz_fixtures_root: Path
+) -> None:
     cli = CLIInput(
         model=SAMPLE_MODEL,
         url=SAMPLE_URL,
@@ -423,14 +487,20 @@ def test_execute_prepare_stage_uses_test_injected_skroutz_provider(tmp_path: Pat
         validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
         fetcher_factory=DummyFetcher,
         resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: (
-            identity_calls.append(ProviderInputIdentity(model=cli_arg.model, url=cli_arg.url))
+            identity_calls.append(
+                ProviderInputIdentity(model=cli_arg.model, url=cli_arg.url)
+            )
             or build_prepare_provider_resolution_result(
                 source="skroutz",
                 url=cli_arg.url,
-                parsed=ParsedProduct(source=provider.normalize(
-                    provider.fetch_snapshot(ProviderInputIdentity(model=cli_arg.model, url=cli_arg.url)),
-                    ProviderInputIdentity(model=cli_arg.model, url=cli_arg.url),
-                ).product),
+                parsed=ParsedProduct(
+                    source=provider.normalize(
+                        provider.fetch_snapshot(
+                            ProviderInputIdentity(model=cli_arg.model, url=cli_arg.url)
+                        ),
+                        ProviderInputIdentity(model=cli_arg.model, url=cli_arg.url),
+                    ).product
+                ),
                 fetch_method="fixture",
             )
         ),
@@ -440,7 +510,12 @@ def test_execute_prepare_stage_uses_test_injected_skroutz_provider(tmp_path: Pat
             schema_candidates=[],
             row={"model": kwargs["cli"].model},
             normalized={"input": kwargs["cli"].to_dict()},
-            report={"source": kwargs["source"], "fetch_mode": kwargs["fetch"].method, "identity_checks": {"source": kwargs["source"]}, "warnings": []},
+            report={
+                "source": kwargs["source"],
+                "fetch_mode": kwargs["fetch"].method,
+                "identity_checks": {"source": kwargs["source"]},
+                "warnings": [],
+            },
         ),
     )
 
@@ -452,7 +527,9 @@ def test_execute_prepare_stage_uses_test_injected_skroutz_provider(tmp_path: Pat
     assert result["source_json_path"].exists()
 
 
-def test_execute_prepare_stage_reuses_injected_provider_resolution_payload(tmp_path: Path) -> None:
+def test_execute_prepare_stage_reuses_injected_provider_resolution_payload(
+    tmp_path: Path,
+) -> None:
     cli = CLIInput(
         model="229957",
         url="https://www.electronet.gr/example",
@@ -496,7 +573,12 @@ def test_execute_prepare_stage_reuses_injected_provider_resolution_payload(tmp_p
             schema_candidates=[],
             row={"model": kwargs["cli"].model},
             normalized={"input": kwargs["cli"].to_dict()},
-            report={"source": kwargs["source"], "fetch_mode": kwargs["fetch"].method, "identity_checks": {"source": kwargs["source"]}, "warnings": []},
+            report={
+                "source": kwargs["source"],
+                "fetch_mode": kwargs["fetch"].method,
+                "identity_checks": {"source": kwargs["source"]},
+                "warnings": [],
+            },
         ),
     )
 
@@ -515,7 +597,9 @@ def test_execute_prepare_stage_reuses_injected_provider_resolution_payload(tmp_p
     assert result["report"]["identity_checks"]["source"] == "electronet"
 
 
-def test_execute_prepare_stage_calls_persistence_seam_once_with_typed_input(tmp_path: Path) -> None:
+def test_execute_prepare_stage_calls_persistence_seam_once_with_typed_input(
+    tmp_path: Path,
+) -> None:
     cli = CLIInput(
         model="229957",
         url="https://www.electronet.gr/example",
@@ -537,7 +621,9 @@ def test_execute_prepare_stage_calls_persistence_seam_once_with_typed_input(tmp_
     )
     persistence_calls: list[PrepareScrapePersistenceInput] = []
 
-    def fake_persist(persistence_input: PrepareScrapePersistenceInput) -> PrepareScrapePersistenceResult:
+    def fake_persist(
+        persistence_input: PrepareScrapePersistenceInput,
+    ) -> PrepareScrapePersistenceResult:
         persistence_calls.append(persistence_input)
         return PrepareScrapePersistenceResult(
             scrape_dir=persistence_input.scrape_dir,
@@ -567,7 +653,12 @@ def test_execute_prepare_stage_calls_persistence_seam_once_with_typed_input(tmp_
             schema_candidates=[],
             row={"model": kwargs["cli"].model},
             normalized={"input": kwargs["cli"].to_dict()},
-            report={"source": kwargs["source"], "fetch_mode": kwargs["fetch"].method, "identity_checks": {"source": kwargs["source"]}, "warnings": []},
+            report={
+                "source": kwargs["source"],
+                "fetch_mode": kwargs["fetch"].method,
+                "identity_checks": {"source": kwargs["source"]},
+                "warnings": [],
+            },
         ),
         persist_prepare_scrape_artifacts_fn=fake_persist,
     )
@@ -577,7 +668,9 @@ def test_execute_prepare_stage_calls_persistence_seam_once_with_typed_input(tmp_
     assert persistence_input.model == cli.model
     assert persistence_input.scrape_dir == tmp_path / cli.model
     assert persistence_input.raw_html == "<html></html>"
-    assert persistence_input.source_payload["raw_html_path"] == str(persistence_input.raw_html_path)
+    assert persistence_input.source_payload["raw_html_path"] == str(
+        persistence_input.raw_html_path
+    )
     assert persistence_input.normalized_payload["input"]["model"] == cli.model
     assert result["raw_html_path"] == persistence_input.raw_html_path
     assert result["source_json_path"] == persistence_input.source_json_path
@@ -585,7 +678,9 @@ def test_execute_prepare_stage_calls_persistence_seam_once_with_typed_input(tmp_
     assert result["report_json_path"] == persistence_input.report_json_path
 
 
-def test_execute_prepare_stage_routes_skroutz_through_provider_by_default(tmp_path: Path) -> None:
+def test_execute_prepare_stage_routes_skroutz_through_provider_by_default(
+    tmp_path: Path,
+) -> None:
     cli = CLIInput(
         model=SAMPLE_MODEL,
         url=SAMPLE_URL,
@@ -606,14 +701,24 @@ def test_execute_prepare_stage_routes_skroutz_through_provider_by_default(tmp_pa
             brand="Estia",
             mpn="06-24567",
             name="Estia 06-24567",
-            breadcrumbs=["Αρχική", "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "Συσκευές Κουζίνας", "Βραστήρες"],
+            breadcrumbs=[
+                "Αρχική",
+                "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+                "Συσκευές Κουζίνας",
+                "Βραστήρες",
+            ],
             taxonomy_source_category="ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ:::Συσκευές Κουζίνας///Βραστήρες",
             taxonomy_match_type="exact_category",
             taxonomy_rule_id="family:kettle",
             price_text="19,00 €",
             price_value=19.0,
             key_specs=[SpecItem(label="Ισχύς", value="2200 W")],
-            spec_sections=[SpecSection(section="Χαρακτηριστικά", items=[SpecItem(label="Ισχύς", value="2200 W")])],
+            spec_sections=[
+                SpecSection(
+                    section="Χαρακτηριστικά",
+                    items=[SpecItem(label="Ισχύς", value="2200 W")],
+                )
+            ],
         ),
     )
     seam_calls: list[CLIInput] = []
@@ -639,7 +744,12 @@ def test_execute_prepare_stage_routes_skroutz_through_provider_by_default(tmp_pa
             schema_candidates=[],
             row={"model": kwargs["cli"].model},
             normalized={"input": kwargs["cli"].to_dict()},
-            report={"source": kwargs["source"], "fetch_mode": kwargs["fetch"].method, "identity_checks": {"source": kwargs["source"]}, "warnings": []},
+            report={
+                "source": kwargs["source"],
+                "fetch_mode": kwargs["fetch"].method,
+                "identity_checks": {"source": kwargs["source"]},
+                "warnings": [],
+            },
         ),
     )
 
@@ -658,7 +768,9 @@ def test_execute_prepare_stage_routes_skroutz_through_provider_by_default(tmp_pa
     assert result["parsed"].source.source_name == "skroutz"
 
 
-def test_execute_prepare_stage_routes_manufacturer_tefal_through_provider_by_default(tmp_path: Path) -> None:
+def test_execute_prepare_stage_routes_manufacturer_tefal_through_provider_by_default(
+    tmp_path: Path,
+) -> None:
     cli = CLIInput(
         model=MANUFACTURER_MODEL,
         url=MANUFACTURER_URL,
@@ -679,7 +791,12 @@ def test_execute_prepare_stage_routes_manufacturer_tefal_through_provider_by_def
             brand="Tefal",
             mpn="IG602A",
             name="Tefal Dolci Παγωτομηχανή IG602A",
-            breadcrumbs=["Αρχική", "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", "Μικροί Μάγειρες", "Παγωτομηχανές"],
+            breadcrumbs=[
+                "Αρχική",
+                "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+                "Μικροί Μάγειρες",
+                "Παγωτομηχανές",
+            ],
             taxonomy_source_category="ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ:::ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ///Μικροί Μάγειρες///Παγωτομηχανές",
             taxonomy_match_type="exact_category",
             taxonomy_rule_id="manufacturer_tefal:ice_cream_maker",
@@ -708,6 +825,7 @@ def test_execute_prepare_stage_routes_manufacturer_tefal_through_provider_by_def
             ],
         ),
     )
+
     class DummyManufacturerResolver:
         def resolve(self, **_kwargs):
             return (
@@ -718,12 +836,17 @@ def test_execute_prepare_stage_routes_manufacturer_tefal_through_provider_by_def
                 ),
                 [],
             )
+
     seam_calls: list[CLIInput] = []
 
     result = execute_prepare_stage(
         cli,
         model_dir=tmp_path / cli.model,
-        validate_url_scope_fn=lambda _url: ("manufacturer_tefal", True, "manufacturer_tefal_product_path"),
+        validate_url_scope_fn=lambda _url: (
+            "manufacturer_tefal",
+            True,
+            "manufacturer_tefal_product_path",
+        ),
         fetcher_factory=DummyFetcher,
         resolve_prepare_provider_input_fn=lambda cli_arg, **_kwargs: (
             seam_calls.append(cli_arg)
@@ -740,14 +863,26 @@ def test_execute_prepare_stage_routes_manufacturer_tefal_through_provider_by_def
                 leaf_category="Μικροί Μάγειρες",
                 sub_category="Παγωτομηχανές",
             ),
-            manufacturer_enrichment={"applied": False, "documents": [], "presentation_applied": False},
+            manufacturer_enrichment={
+                "applied": False,
+                "documents": [],
+                "presentation_applied": False,
+            },
         ),
         assemble_prepare_result_fn=lambda **kwargs: PrepareResultAssemblyResult(
             schema_match=SchemaMatchResult(matched_schema_id="schema-1", score=0.9),
             schema_candidates=[],
             row={"model": kwargs["cli"].model},
-            normalized={"input": kwargs["cli"].to_dict(), "deterministic_product": {"mpn": "IG602A"}},
-            report={"source": kwargs["source"], "fetch_mode": kwargs["fetch"].method, "identity_checks": {"source": kwargs["source"]}, "warnings": []},
+            normalized={
+                "input": kwargs["cli"].to_dict(),
+                "deterministic_product": {"mpn": "IG602A"},
+            },
+            report={
+                "source": kwargs["source"],
+                "fetch_mode": kwargs["fetch"].method,
+                "identity_checks": {"source": kwargs["source"]},
+                "warnings": [],
+            },
         ),
     )
 
@@ -766,7 +901,9 @@ def test_execute_prepare_stage_routes_manufacturer_tefal_through_provider_by_def
     assert result["normalized"]["deterministic_product"]["mpn"] == "IG602A"
 
 
-def test_execute_prepare_stage_fails_fast_when_supported_source_has_no_provider(tmp_path: Path) -> None:
+def test_execute_prepare_stage_fails_fast_when_supported_source_has_no_provider(
+    tmp_path: Path,
+) -> None:
     cli = CLIInput(
         model=SAMPLE_MODEL,
         url=SAMPLE_URL,
@@ -782,23 +919,34 @@ def test_execute_prepare_stage_fails_fast_when_supported_source_has_no_provider(
         execute_prepare_stage(
             cli,
             model_dir=tmp_path / SAMPLE_MODEL,
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
-            fetcher_factory=DummyFetcher,
-            resolve_prepare_provider_input_fn=lambda _cli, **_kwargs: (_ for _ in ()).throw(
-                RuntimeError("Provider 'skroutz' is not registered")
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
             ),
+            fetcher_factory=DummyFetcher,
+            resolve_prepare_provider_input_fn=lambda _cli, **_kwargs: (
+                _ for _ in ()
+            ).throw(RuntimeError("Provider 'skroutz' is not registered")),
             resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: _build_taxonomy_enrichment_result(),
             assemble_prepare_result_fn=lambda **kwargs: PrepareResultAssemblyResult(
                 schema_match=SchemaMatchResult(matched_schema_id="schema-1", score=0.9),
                 schema_candidates=[],
                 row={"model": kwargs["cli"].model},
                 normalized={"input": kwargs["cli"].to_dict()},
-                report={"source": kwargs["source"], "fetch_mode": kwargs["fetch"].method, "identity_checks": {"source": kwargs["source"]}, "warnings": []},
+                report={
+                    "source": kwargs["source"],
+                    "fetch_mode": kwargs["fetch"].method,
+                    "identity_checks": {"source": kwargs["source"]},
+                    "warnings": [],
+                },
             ),
         )
 
 
-def test_execute_prepare_stage_keeps_source_capture_sync_failure_as_prepare_warning(tmp_path: Path) -> None:
+def test_execute_prepare_stage_keeps_source_capture_sync_failure_as_prepare_warning(
+    tmp_path: Path,
+) -> None:
     cli = CLIInput(
         model="229957",
         url="https://www.electronet.gr/example",
@@ -818,7 +966,12 @@ def test_execute_prepare_stage_keeps_source_capture_sync_failure_as_prepare_warn
             product_code=cli.model,
             brand="LG",
             name="LG RHX5009TWB",
-            spec_sections=[SpecSection(section="Χαρακτηριστικά", items=[SpecItem(label="Τύπος", value="Στεγνωτήριο")])],
+            spec_sections=[
+                SpecSection(
+                    section="Χαρακτηριστικά",
+                    items=[SpecItem(label="Τύπος", value="Στεγνωτήριο")],
+                )
+            ],
         ),
     )
 
@@ -833,7 +986,9 @@ def test_execute_prepare_stage_keeps_source_capture_sync_failure_as_prepare_warn
             parsed=parsed,
             fetch_method="httpx",
         ),
-        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(status="failed", message="connection refused"),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="failed", message="connection refused"
+        ),
         resolve_prepare_taxonomy_enrichment_fn=lambda **_kwargs: _build_taxonomy_enrichment_result(
             manufacturer_enrichment={}
         ),
@@ -851,5 +1006,7 @@ def test_execute_prepare_stage_keeps_source_capture_sync_failure_as_prepare_warn
         ),
     )
 
-    assert result["report"]["warnings"] == ["source_capture_sync_failed:connection refused"]
+    assert result["report"]["warnings"] == [
+        "source_capture_sync_failed:connection refused"
+    ]
     assert result["source_json_path"].exists()

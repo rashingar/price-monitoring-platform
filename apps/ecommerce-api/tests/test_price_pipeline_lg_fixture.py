@@ -48,7 +48,9 @@ def test_price_pipeline_reproduces_lg_like_price_only_fixture(tmp_path: Path) ->
     assert summary["blank_new_price_rows"] == 1
 
 
-def test_bestprice_store_positioning_pipeline_keeps_or_repositions_live_store_prices(tmp_path: Path) -> None:
+def test_bestprice_store_positioning_pipeline_keeps_or_repositions_live_store_prices(
+    tmp_path: Path,
+) -> None:
     enriched_csv = tmp_path / "miele_bestprice_enriched.csv"
     output_dir = tmp_path / "output"
     enriched_csv.write_text(
@@ -85,7 +87,11 @@ def test_bestprice_store_positioning_pipeline_keeps_or_repositions_live_store_pr
 
     priced_rows = _read_csv(result.output_paths.priced_enriched_csv)
     assert [row["new_price"] for row in priced_rows] == ["397.00", "579.90", "497.90"]
-    assert [row["bestprice_best_store"] for row in priced_rows] == ["eTranoulis", "eTranoulis", "Competitor C"]
+    assert [row["bestprice_best_store"] for row in priced_rows] == [
+        "eTranoulis",
+        "eTranoulis",
+        "Competitor C",
+    ]
 
     price_only_rows = _read_csv(result.output_paths.price_only_csv)
     assert [row["price"] for row in price_only_rows] == ["397.00", "579.90", "497.90"]

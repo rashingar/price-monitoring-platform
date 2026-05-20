@@ -2,7 +2,13 @@ import argparse
 
 from product_factory.input_validation import validate_input
 from product_factory.mapping import build_row
-from product_factory.models import CLIInput, ParsedProduct, SchemaMatchResult, SourceProductData, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    TaxonomyResolution,
+)
 
 SAMPLES = {
     "143481": {
@@ -93,35 +99,76 @@ def test_validate_input_rejects_tefal_manufacturer_product_url() -> None:
     try:
         validate_input(args)
     except ValueError as exc:
-        assert str(exc) == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+        assert (
+            str(exc)
+            == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+        )
     else:
         raise AssertionError("Expected ValueError")
 
 
 def test_validate_input_rejects_non_product_skroutz_url() -> None:
-    args = argparse.Namespace(model="341490", url="https://www.skroutz.gr/c/699/vrastires.html", photos=1, sections=0, skroutz_status=0, boxnow=0, price="19", out="out")
+    args = argparse.Namespace(
+        model="341490",
+        url="https://www.skroutz.gr/c/699/vrastires.html",
+        photos=1,
+        sections=0,
+        skroutz_status=0,
+        boxnow=0,
+        price="19",
+        out="out",
+    )
     try:
         validate_input(args)
     except ValueError as exc:
-        assert str(exc) == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+        assert (
+            str(exc)
+            == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+        )
     else:
         raise AssertionError("Expected ValueError")
 
 
 def test_validate_input_rejects_non_product_tefal_url() -> None:
-    args = argparse.Namespace(model="344709", url="https://shop.tefal.gr/collections/all", photos=1, sections=0, skroutz_status=0, boxnow=0, price="219", out="out")
+    args = argparse.Namespace(
+        model="344709",
+        url="https://shop.tefal.gr/collections/all",
+        photos=1,
+        sections=0,
+        skroutz_status=0,
+        boxnow=0,
+        price="219",
+        out="out",
+    )
     try:
         validate_input(args)
     except ValueError as exc:
-        assert str(exc) == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+        assert (
+            str(exc)
+            == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+        )
     else:
         raise AssertionError("Expected ValueError")
 
 
 def test_build_row_keeps_prompt_price_contract() -> None:
     cli = CLIInput(model="341490", url=SAMPLES["341490"]["url"], price="0")
-    parsed = ParsedProduct(source=SourceProductData(source_name="skroutz", brand="Estia", mpn="06-24567", name="Estia 06-24567", price_value=15.9))
-    taxonomy = TaxonomyResolution(parent_category="ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ", leaf_category="Συσκευές Κουζίνας", sub_category="Βραστήρες", cta_url="https://example.com")
-    row, _, _ = build_row(cli=cli, parsed=parsed, taxonomy=taxonomy, schema_match=SchemaMatchResult())
+    parsed = ParsedProduct(
+        source=SourceProductData(
+            source_name="skroutz",
+            brand="Estia",
+            mpn="06-24567",
+            name="Estia 06-24567",
+            price_value=15.9,
+        )
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+        leaf_category="Συσκευές Κουζίνας",
+        sub_category="Βραστήρες",
+        cta_url="https://example.com",
+    )
+    row, _, _ = build_row(
+        cli=cli, parsed=parsed, taxonomy=taxonomy, schema_match=SchemaMatchResult()
+    )
     assert row["price"] == "0"
-

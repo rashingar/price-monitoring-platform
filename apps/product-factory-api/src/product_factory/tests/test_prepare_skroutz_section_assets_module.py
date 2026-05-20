@@ -8,7 +8,10 @@ import pytest
 import product_factory.prepare_section_assets as section_assets_module
 from product_factory.fetcher import FetchError
 from product_factory.models import GalleryImage
-from product_factory.prepare_section_assets import PrepareSectionAssetsResult, resolve_skroutz_section_assets
+from product_factory.prepare_section_assets import (
+    PrepareSectionAssetsResult,
+    resolve_skroutz_section_assets,
+)
 
 
 class RecordingFetcher:
@@ -22,7 +25,10 @@ class RecordingFetcher:
     ) -> None:
         self.download_result = download_result or ([], [], [])
         self.download_error = download_error
-        self.rendered_section_data = rendered_section_data or {"window": {}, "sections": []}
+        self.rendered_section_data = rendered_section_data or {
+            "window": {},
+            "sections": [],
+        }
         self.rendered_error = rendered_error
         self.download_calls: list[dict[str, Any]] = []
         self.rendered_calls: list[str] = []
@@ -40,7 +46,9 @@ class RecordingFetcher:
         return self.rendered_section_data
 
 
-def _build_manufacturer_enrichment(*, presentation_applied: bool, presentation_block_count: int = 0) -> dict[str, Any]:
+def _build_manufacturer_enrichment(
+    *, presentation_applied: bool, presentation_block_count: int = 0
+) -> dict[str, Any]:
     return {
         "applied": presentation_applied,
         "provider": "manufacturer_docs" if presentation_applied else "",
@@ -64,9 +72,21 @@ def test_resolve_skroutz_section_assets_prefers_manufacturer_blocks_when_enough_
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     manufacturer_blocks = [
-        {"title": "Manufacturer One", "paragraph": "Body 1", "image_url": "https://cdn.example/manufacturer-1.jpg"},
-        {"title": "Manufacturer Two", "paragraph": "Body 2", "image_url": "https://cdn.example/manufacturer-2.jpg"},
-        {"title": "Manufacturer Three", "paragraph": "Body 3", "image_url": "https://cdn.example/manufacturer-3.jpg"},
+        {
+            "title": "Manufacturer One",
+            "paragraph": "Body 1",
+            "image_url": "https://cdn.example/manufacturer-1.jpg",
+        },
+        {
+            "title": "Manufacturer Two",
+            "paragraph": "Body 2",
+            "image_url": "https://cdn.example/manufacturer-2.jpg",
+        },
+        {
+            "title": "Manufacturer Three",
+            "paragraph": "Body 3",
+            "image_url": "https://cdn.example/manufacturer-3.jpg",
+        },
     ]
     downloaded_besco = [
         GalleryImage(
@@ -90,7 +110,10 @@ def test_resolve_skroutz_section_assets_prefers_manufacturer_blocks_when_enough_
         download_result=(
             downloaded_besco,
             [],
-            [str(tmp_path / "bescos" / "besco1.jpg"), str(tmp_path / "bescos" / "besco2.jpg")],
+            [
+                str(tmp_path / "bescos" / "besco1.jpg"),
+                str(tmp_path / "bescos" / "besco2.jpg"),
+            ],
         )
     )
     extract_calls: list[dict[str, Any]] = []
@@ -110,11 +133,17 @@ def test_resolve_skroutz_section_assets_prefers_manufacturer_blocks_when_enough_
         )
         return manufacturer_blocks
 
-    monkeypatch.setattr(section_assets_module, "extract_presentation_blocks", fake_extract_presentation_blocks)
+    monkeypatch.setattr(
+        section_assets_module,
+        "extract_presentation_blocks",
+        fake_extract_presentation_blocks,
+    )
     monkeypatch.setattr(
         section_assets_module,
         "extract_skroutz_section_window",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("fallback should not run")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("fallback should not run")
+        ),
     )
 
     result = resolve_skroutz_section_assets(
@@ -125,7 +154,9 @@ def test_resolve_skroutz_section_assets_prefers_manufacturer_blocks_when_enough_
         url="https://www.skroutz.gr/s/143051/example.html",
         presentation_source_html="<section>manufacturer presentation</section>",
         presentation_source_text="manufacturer text",
-        manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=True, presentation_block_count=3),
+        manufacturer_enrichment=_build_manufacturer_enrichment(
+            presentation_applied=True, presentation_block_count=3
+        ),
         fetcher=fetcher,
         output_dir=tmp_path,
     )
@@ -141,8 +172,16 @@ def test_resolve_skroutz_section_assets_prefers_manufacturer_blocks_when_enough_
     assert fetcher.download_calls == [
         {
             "images": [
-                GalleryImage(url="https://cdn.example/manufacturer-1.jpg", alt="Manufacturer One", position=1),
-                GalleryImage(url="https://cdn.example/manufacturer-2.jpg", alt="Manufacturer Two", position=2),
+                GalleryImage(
+                    url="https://cdn.example/manufacturer-1.jpg",
+                    alt="Manufacturer One",
+                    position=1,
+                ),
+                GalleryImage(
+                    url="https://cdn.example/manufacturer-2.jpg",
+                    alt="Manufacturer Two",
+                    position=2,
+                ),
             ],
             "output_dir": tmp_path,
             "requested_sections": 2,
@@ -151,12 +190,23 @@ def test_resolve_skroutz_section_assets_prefers_manufacturer_blocks_when_enough_
     assert result == PrepareSectionAssetsResult(
         selected_presentation_blocks=manufacturer_blocks[:2],
         selected_besco_images=[
-            GalleryImage(url="https://cdn.example/manufacturer-1.jpg", alt="Manufacturer One", position=1),
-            GalleryImage(url="https://cdn.example/manufacturer-2.jpg", alt="Manufacturer Two", position=2),
+            GalleryImage(
+                url="https://cdn.example/manufacturer-1.jpg",
+                alt="Manufacturer One",
+                position=1,
+            ),
+            GalleryImage(
+                url="https://cdn.example/manufacturer-2.jpg",
+                alt="Manufacturer Two",
+                position=2,
+            ),
         ],
         downloaded_besco=downloaded_besco,
         besco_warnings=[],
-        besco_files=[str(tmp_path / "bescos" / "besco1.jpg"), str(tmp_path / "bescos" / "besco2.jpg")],
+        besco_files=[
+            str(tmp_path / "bescos" / "besco1.jpg"),
+            str(tmp_path / "bescos" / "besco2.jpg"),
+        ],
         besco_filenames_by_section={1: "besco1.jpg", 2: "besco2.jpg"},
         section_warnings=[],
         section_image_candidates=[
@@ -243,7 +293,10 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
             {
                 "title": "Alpha",
                 "paragraph": "Alpha body",
-                "image_candidates": ["https://cdn.example/alpha-candidate-1.jpg", "https://cdn.example/alpha-candidate-2.jpg"],
+                "image_candidates": [
+                    "https://cdn.example/alpha-candidate-1.jpg",
+                    "https://cdn.example/alpha-candidate-2.jpg",
+                ],
             },
             {
                 "title": "Beta",
@@ -265,9 +318,15 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
             "rendered_container_count": 2,
         },
         "sections": [
-            {"title": "Alpha", "resolved_image_url": "https://cdn.example/alpha-resolved.jpg"},
+            {
+                "title": "Alpha",
+                "resolved_image_url": "https://cdn.example/alpha-resolved.jpg",
+            },
             {"title": "Beta", "resolved_image_url": ""},
-            {"title": "Gamma", "resolved_image_url": "https://cdn.example/gamma-resolved.jpg"},
+            {
+                "title": "Gamma",
+                "resolved_image_url": "https://cdn.example/gamma-resolved.jpg",
+            },
         ],
     }
     downloaded_besco = [
@@ -292,7 +351,10 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
         download_result=(
             downloaded_besco,
             [],
-            [str(tmp_path / "bescos" / "besco1.jpg"), str(tmp_path / "bescos" / "besco2.jpg")],
+            [
+                str(tmp_path / "bescos" / "besco1.jpg"),
+                str(tmp_path / "bescos" / "besco2.jpg"),
+            ],
         ),
         rendered_section_data=rendered_section_data,
     )
@@ -300,9 +362,15 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
     monkeypatch.setattr(
         section_assets_module,
         "extract_presentation_blocks",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("manufacturer path should not run")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("manufacturer path should not run")
+        ),
     )
-    monkeypatch.setattr(section_assets_module, "extract_skroutz_section_window", lambda *_args, **_kwargs: extracted_window)
+    monkeypatch.setattr(
+        section_assets_module,
+        "extract_skroutz_section_window",
+        lambda *_args, **_kwargs: extracted_window,
+    )
     monkeypatch.setattr(
         section_assets_module,
         "build_skroutz_presentation_source_html",
@@ -317,7 +385,9 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
         url="https://www.skroutz.gr/s/143481/example.html",
         presentation_source_html="",
         presentation_source_text="",
-        manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
+        manufacturer_enrichment=_build_manufacturer_enrichment(
+            presentation_applied=False
+        ),
         fetcher=fetcher,
         output_dir=tmp_path,
     )
@@ -326,8 +396,16 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
     assert fetcher.download_calls == [
         {
             "images": [
-                GalleryImage(url="https://cdn.example/alpha-resolved.jpg", alt="Alpha", position=1),
-                GalleryImage(url="https://cdn.example/gamma-resolved.jpg", alt="Gamma", position=2),
+                GalleryImage(
+                    url="https://cdn.example/alpha-resolved.jpg",
+                    alt="Alpha",
+                    position=1,
+                ),
+                GalleryImage(
+                    url="https://cdn.example/gamma-resolved.jpg",
+                    alt="Gamma",
+                    position=2,
+                ),
             ],
             "output_dir": tmp_path,
             "requested_sections": 2,
@@ -337,7 +415,10 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
         {
             "title": "Alpha",
             "paragraph": "Alpha body",
-            "image_candidates": ["https://cdn.example/alpha-candidate-1.jpg", "https://cdn.example/alpha-candidate-2.jpg"],
+            "image_candidates": [
+                "https://cdn.example/alpha-candidate-1.jpg",
+                "https://cdn.example/alpha-candidate-2.jpg",
+            ],
             "image_url": "https://cdn.example/alpha-resolved.jpg",
         },
         {
@@ -348,19 +429,29 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
         },
     ]
     assert result.selected_besco_images == [
-        GalleryImage(url="https://cdn.example/alpha-resolved.jpg", alt="Alpha", position=1),
-        GalleryImage(url="https://cdn.example/gamma-resolved.jpg", alt="Gamma", position=2),
+        GalleryImage(
+            url="https://cdn.example/alpha-resolved.jpg", alt="Alpha", position=1
+        ),
+        GalleryImage(
+            url="https://cdn.example/gamma-resolved.jpg", alt="Gamma", position=2
+        ),
     ]
     assert result.downloaded_besco == downloaded_besco
     assert result.besco_warnings == []
-    assert result.besco_files == [str(tmp_path / "bescos" / "besco1.jpg"), str(tmp_path / "bescos" / "besco2.jpg")]
+    assert result.besco_files == [
+        str(tmp_path / "bescos" / "besco1.jpg"),
+        str(tmp_path / "bescos" / "besco2.jpg"),
+    ]
     assert result.besco_filenames_by_section == {1: "besco1.jpg", 2: "besco2.jpg"}
     assert result.section_warnings == ["skroutz_window_warning"]
     assert result.section_image_candidates == [
         {
             "position": 1,
             "title": "Alpha",
-            "candidates": ["https://cdn.example/alpha-candidate-1.jpg", "https://cdn.example/alpha-candidate-2.jpg"],
+            "candidates": [
+                "https://cdn.example/alpha-candidate-1.jpg",
+                "https://cdn.example/alpha-candidate-2.jpg",
+            ],
         },
         {
             "position": 2,
@@ -406,7 +497,10 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
                 "position": 1,
                 "title": "Alpha",
                 "body": "Alpha body",
-                "image_candidates": ["https://cdn.example/alpha-candidate-1.jpg", "https://cdn.example/alpha-candidate-2.jpg"],
+                "image_candidates": [
+                    "https://cdn.example/alpha-candidate-1.jpg",
+                    "https://cdn.example/alpha-candidate-2.jpg",
+                ],
                 "resolved_image_url": "https://cdn.example/alpha-resolved.jpg",
                 "target_filename": "besco1.jpg",
             },
@@ -439,8 +533,13 @@ def test_resolve_skroutz_section_assets_clamps_when_rendered_sections_are_insuff
         download_result=([downloaded], [], [str(tmp_path / "bescos" / "alpha.jpg")]),
         rendered_section_data={
             "window": {},
-            "sections": [{"title": "Alpha", "resolved_image_url": "https://cdn.example/alpha.jpg"}],
-        }
+            "sections": [
+                {
+                    "title": "Alpha",
+                    "resolved_image_url": "https://cdn.example/alpha.jpg",
+                }
+            ],
+        },
     )
 
     monkeypatch.setattr(
@@ -450,8 +549,16 @@ def test_resolve_skroutz_section_assets_clamps_when_rendered_sections_are_insuff
             "warnings": [],
             "window": {},
             "sections": [
-                {"title": "Alpha", "paragraph": "Alpha body", "image_candidates": ["https://cdn.example/alpha-candidate.jpg"]},
-                {"title": "Beta", "paragraph": "Beta body", "image_candidates": ["https://cdn.example/beta-candidate.jpg"]},
+                {
+                    "title": "Alpha",
+                    "paragraph": "Alpha body",
+                    "image_candidates": ["https://cdn.example/alpha-candidate.jpg"],
+                },
+                {
+                    "title": "Beta",
+                    "paragraph": "Beta body",
+                    "image_candidates": ["https://cdn.example/beta-candidate.jpg"],
+                },
             ],
         },
     )
@@ -464,14 +571,21 @@ def test_resolve_skroutz_section_assets_clamps_when_rendered_sections_are_insuff
         url="https://www.skroutz.gr/s/200001/example.html",
         presentation_source_html="",
         presentation_source_text="",
-        manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
+        manufacturer_enrichment=_build_manufacturer_enrichment(
+            presentation_applied=False
+        ),
         fetcher=fetcher,
         output_dir=tmp_path,
     )
 
-    assert [block["title"] for block in result.selected_presentation_blocks] == ["Alpha"]
+    assert [block["title"] for block in result.selected_presentation_blocks] == [
+        "Alpha"
+    ]
     assert result.downloaded_besco == [downloaded]
-    assert result.section_warnings == ["skroutz_rendered_sections_clamped:1/2", "skroutz_image_backed_sections_clamped:1/2"]
+    assert result.section_warnings == [
+        "skroutz_rendered_sections_clamped:1/2",
+        "skroutz_image_backed_sections_clamped:1/2",
+    ]
     assert len(fetcher.download_calls) == 1
 
 
@@ -518,12 +632,16 @@ def test_resolve_skroutz_section_assets_falls_back_to_static_section_images_when
         url="https://www.skroutz.gr/s/200003/example.html",
         presentation_source_html="",
         presentation_source_text="",
-        manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
+        manufacturer_enrichment=_build_manufacturer_enrichment(
+            presentation_applied=False
+        ),
         fetcher=fetcher,
         output_dir=tmp_path,
     )
 
-    assert [block["title"] for block in result.selected_presentation_blocks] == ["Alpha"]
+    assert [block["title"] for block in result.selected_presentation_blocks] == [
+        "Alpha"
+    ]
     assert result.downloaded_besco == [downloaded]
     assert result.section_warnings == [
         "skroutz_rendered_section_extraction_failed:skroutz_section_containers_not_found",
@@ -537,7 +655,9 @@ def test_resolve_skroutz_section_assets_allows_no_available_sections(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    fetcher = RecordingFetcher(rendered_error=FetchError("skroutz_section_containers_not_found"))
+    fetcher = RecordingFetcher(
+        rendered_error=FetchError("skroutz_section_containers_not_found")
+    )
 
     monkeypatch.setattr(
         section_assets_module,
@@ -557,7 +677,9 @@ def test_resolve_skroutz_section_assets_allows_no_available_sections(
         url="https://www.skroutz.gr/s/200004/example.html",
         presentation_source_html="",
         presentation_source_text="",
-        manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
+        manufacturer_enrichment=_build_manufacturer_enrichment(
+            presentation_applied=False
+        ),
         fetcher=fetcher,
         output_dir=tmp_path,
     )
@@ -582,8 +704,14 @@ def test_resolve_skroutz_section_assets_fails_on_title_order_mismatch(
         rendered_section_data={
             "window": {},
             "sections": [
-                {"title": "Alpha", "resolved_image_url": "https://cdn.example/alpha.jpg"},
-                {"title": "Wrong Title", "resolved_image_url": "https://cdn.example/beta.jpg"},
+                {
+                    "title": "Alpha",
+                    "resolved_image_url": "https://cdn.example/alpha.jpg",
+                },
+                {
+                    "title": "Wrong Title",
+                    "resolved_image_url": "https://cdn.example/beta.jpg",
+                },
             ],
         }
     )
@@ -595,8 +723,16 @@ def test_resolve_skroutz_section_assets_fails_on_title_order_mismatch(
             "warnings": [],
             "window": {},
             "sections": [
-                {"title": "Alpha", "paragraph": "Alpha body", "image_candidates": ["https://cdn.example/alpha-candidate.jpg"]},
-                {"title": "Beta", "paragraph": "Beta body", "image_candidates": ["https://cdn.example/beta-candidate.jpg"]},
+                {
+                    "title": "Alpha",
+                    "paragraph": "Alpha body",
+                    "image_candidates": ["https://cdn.example/alpha-candidate.jpg"],
+                },
+                {
+                    "title": "Beta",
+                    "paragraph": "Beta body",
+                    "image_candidates": ["https://cdn.example/beta-candidate.jpg"],
+                },
             ],
         },
     )
@@ -610,12 +746,17 @@ def test_resolve_skroutz_section_assets_fails_on_title_order_mismatch(
             url="https://www.skroutz.gr/s/200002/example.html",
             presentation_source_html="",
             presentation_source_text="",
-            manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=False),
+            manufacturer_enrichment=_build_manufacturer_enrichment(
+                presentation_applied=False
+            ),
             fetcher=fetcher,
             output_dir=tmp_path,
         )
 
-    assert str(excinfo.value) == "Skroutz section title order mismatch between rendered DOM and parsed description"
+    assert (
+        str(excinfo.value)
+        == "Skroutz section title order mismatch between rendered DOM and parsed description"
+    )
     assert fetcher.download_calls == []
 
 
@@ -643,14 +784,24 @@ def test_resolve_skroutz_section_assets_keeps_incomplete_besco_download_strict(
         section_assets_module,
         "extract_presentation_blocks",
         lambda *_args, **_kwargs: [
-            {"title": "Manufacturer One", "paragraph": "Body 1", "image_url": "https://cdn.example/manufacturer-1.jpg"},
-            {"title": "Manufacturer Two", "paragraph": "Body 2", "image_url": "https://cdn.example/manufacturer-2.jpg"},
+            {
+                "title": "Manufacturer One",
+                "paragraph": "Body 1",
+                "image_url": "https://cdn.example/manufacturer-1.jpg",
+            },
+            {
+                "title": "Manufacturer Two",
+                "paragraph": "Body 2",
+                "image_url": "https://cdn.example/manufacturer-2.jpg",
+            },
         ],
     )
     monkeypatch.setattr(
         section_assets_module,
         "extract_skroutz_section_window",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("fallback should not run")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("fallback should not run")
+        ),
     )
 
     with pytest.raises(RuntimeError) as excinfo:
@@ -662,17 +813,30 @@ def test_resolve_skroutz_section_assets_keeps_incomplete_besco_download_strict(
             url="https://www.skroutz.gr/s/200003/example.html",
             presentation_source_html="<section>manufacturer presentation</section>",
             presentation_source_text="manufacturer text",
-            manufacturer_enrichment=_build_manufacturer_enrichment(presentation_applied=True, presentation_block_count=2),
+            manufacturer_enrichment=_build_manufacturer_enrichment(
+                presentation_applied=True, presentation_block_count=2
+            ),
             fetcher=fetcher,
             output_dir=tmp_path,
         )
 
-    assert str(excinfo.value) == "Skroutz besco image download incomplete: expected 2, downloaded 1"
+    assert (
+        str(excinfo.value)
+        == "Skroutz besco image download incomplete: expected 2, downloaded 1"
+    )
     assert fetcher.download_calls == [
         {
             "images": [
-                GalleryImage(url="https://cdn.example/manufacturer-1.jpg", alt="Manufacturer One", position=1),
-                GalleryImage(url="https://cdn.example/manufacturer-2.jpg", alt="Manufacturer Two", position=2),
+                GalleryImage(
+                    url="https://cdn.example/manufacturer-1.jpg",
+                    alt="Manufacturer One",
+                    position=1,
+                ),
+                GalleryImage(
+                    url="https://cdn.example/manufacturer-2.jpg",
+                    alt="Manufacturer Two",
+                    position=2,
+                ),
             ],
             "output_dir": tmp_path,
             "requested_sections": 2,

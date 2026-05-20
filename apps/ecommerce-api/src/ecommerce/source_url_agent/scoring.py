@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ecommerce.source_url_agent.composite import CompositeMismatchResult, detect_composite_mismatch
+from ecommerce.source_url_agent.composite import (
+    CompositeMismatchResult,
+    detect_composite_mismatch,
+)
 from ecommerce.source_url_agent.evidence import PageEvidence
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.sources import SourceDefinition
-
 
 BLOCKED_REVIEW_CONFIDENCE = 0.80
 BLOCKED_REVIEW_ERROR_CODES = {"blocked_or_captcha", "http_403"}
@@ -47,7 +49,10 @@ def score_candidate(
                 "url_identifier_and_brand_inaccessible",
                 "Candidate URL contains exact MPN and brand evidence but the page could not be fetched.",
             )
-        if evidence.error_code in BLOCKED_REVIEW_ERROR_CODES and _evidence_has_valid_product_url(source, evidence):
+        if (
+            evidence.error_code in BLOCKED_REVIEW_ERROR_CODES
+            and _evidence_has_valid_product_url(source, evidence)
+        ):
             return CandidateScore(
                 BLOCKED_REVIEW_CONFIDENCE,
                 "needs_review",
@@ -63,7 +68,12 @@ def score_candidate(
                 "blocked_product_url",
                 "Candidate URL matches source product URL rules but the page was blocked during fetch.",
             )
-        return CandidateScore(0.0, "error", "blocked_or_captcha", "Blocked page or CAPTCHA marker detected.")
+        return CandidateScore(
+            0.0,
+            "error",
+            "blocked_or_captcha",
+            "Blocked page or CAPTCHA marker detected.",
+        )
 
     composite = detect_composite_mismatch(product, evidence)
     if composite.is_mismatch:
@@ -88,8 +98,14 @@ def score_candidate(
             notes.append("Exact MPN found without matching brand evidence.")
         elif evidence.exact_model_found:
             confidence = 0.60
-            notes.append("Exact model evidence is not enough for Source URL Agent auto-approval.")
-        elif evidence.title_similarity >= 0.50 or evidence.brand_found or evidence.category_compatible:
+            notes.append(
+                "Exact model evidence is not enough for Source URL Agent auto-approval."
+            )
+        elif (
+            evidence.title_similarity >= 0.50
+            or evidence.brand_found
+            or evidence.category_compatible
+        ):
             confidence = max(0.50, min(0.75, evidence.title_similarity))
             notes.append("Candidate does not satisfy exact MPN and brand matching.")
         else:
@@ -102,19 +118,25 @@ def score_candidate(
         and evidence.evidence_source != "provider_search_result"
     ):
         confidence = min(confidence, 0.60)
-        notes.append("Marketplace MPN evidence was found only in body text, not title or structured data.")
+        notes.append(
+            "Marketplace MPN evidence was found only in body text, not title or structured data."
+        )
     if (
         source.source_type == "marketplace"
         and evidence.exact_mpn_found
         and evidence.exact_mpn_source in URL_OR_META_IDENTIFIER_SOURCES
     ):
-        confidence = min(confidence, 0.88 if evidence.exact_mpn_source == "meta" else 0.80)
+        confidence = min(
+            confidence, 0.88 if evidence.exact_mpn_source == "meta" else 0.80
+        )
         notes.append(
             "Marketplace MPN evidence was found only in metadata or the product URL, not title or structured data."
         )
     if evidence.evidence_source == "provider_search_result" and confidence > 0:
         confidence = min(confidence, PROVIDER_SEARCH_RESULT_REVIEW_CONFIDENCE)
-        notes.append("Evidence came from provider search result title/snippets, not a fetched product page.")
+        notes.append(
+            "Evidence came from provider search result title/snippets, not a fetched product page."
+        )
     if evidence.price_compatible is True and confidence > 0:
         confidence = min(1.0, confidence + 0.02)
     elif evidence.price_compatible is False:
@@ -131,9 +153,15 @@ def score_candidate(
             confidence,
             "needs_review",
             method,
-            _notes([*notes, f"{competing_candidates_count} plausible candidates found."]),
+            _notes(
+                [*notes, f"{competing_candidates_count} plausible candidates found."]
+            ),
         )
-    if confidence > 0.90 and method == "exact_mpn_and_brand" and not evidence.title_only:
+    if (
+        confidence > 0.90
+        and method == "exact_mpn_and_brand"
+        and not evidence.title_only
+    ):
         return CandidateScore(confidence, "matched", method, _notes(notes))
     return CandidateScore(confidence, "needs_review", method, _notes(notes))
 
@@ -151,7 +179,9 @@ def _composite_notes(result: CompositeMismatchResult) -> str:
     return " ".join(parts)
 
 
-def _evidence_has_valid_product_url(source: SourceDefinition, evidence: PageEvidence) -> bool:
+def _evidence_has_valid_product_url(
+    source: SourceDefinition, evidence: PageEvidence
+) -> bool:
     return any(
         source.is_product_url(url)
         for url in (evidence.requested_url, evidence.canonical_url, evidence.final_url)

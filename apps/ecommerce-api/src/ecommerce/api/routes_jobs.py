@@ -11,7 +11,15 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ecommerce.db.config import DatabaseNotConfiguredError, sanitize_database_error
 from ecommerce.db.session import session_scope
-from ecommerce.db.repositories.jobs import JOB_STATUSES, JobNotFoundError, JobStatus, get_job_by_id, job_to_dict, list_jobs, request_cancel
+from ecommerce.db.repositories.jobs import (
+    JOB_STATUSES,
+    JobNotFoundError,
+    JobStatus,
+    get_job_by_id,
+    job_to_dict,
+    list_jobs,
+    request_cancel,
+)
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -46,7 +54,12 @@ def list_durable_jobs(
         raise HTTPException(status_code=400, detail="Unsupported job status.")
     try:
         with session_scope() as session:
-            items = [job_to_dict(job) for job in list_jobs(session, job_type=job_type, status=status, limit=limit)]
+            items = [
+                job_to_dict(job)
+                for job in list_jobs(
+                    session, job_type=job_type, status=status, limit=limit
+                )
+            ]
     except DatabaseNotConfiguredError as exc:
         raise _database_unavailable(exc) from exc
     except SQLAlchemyError as exc:

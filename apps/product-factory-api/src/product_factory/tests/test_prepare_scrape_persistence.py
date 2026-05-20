@@ -8,7 +8,9 @@ from product_factory.prepare_scrape_persistence import (
 )
 
 
-def test_persist_prepare_scrape_artifacts_writes_expected_file_set_into_scrape_dir(tmp_path):
+def test_persist_prepare_scrape_artifacts_writes_expected_file_set_into_scrape_dir(
+    tmp_path,
+):
     model = "233541"
     scrape_dir = tmp_path / "work" / model / "scrape"
     llm_dir = tmp_path / "work" / model / "llm"
@@ -21,7 +23,10 @@ def test_persist_prepare_scrape_artifacts_writes_expected_file_set_into_scrape_d
             model=model,
             scrape_dir=scrape_dir,
             raw_html="<html><body>δοκιμή</body></html>",
-            source_payload={"name": "Προϊόν", "raw_html_path": str(scrape_dir / f"{model}.raw.html")},
+            source_payload={
+                "name": "Προϊόν",
+                "raw_html_path": str(scrape_dir / f"{model}.raw.html"),
+            },
             normalized_payload={"product": {"name": "Προϊόν"}},
             report_payload={"warnings": [], "files_written": []},
             bescos_raw_payload={"sections": [{"title": "Intro"}]},
@@ -44,7 +49,9 @@ def test_persist_prepare_scrape_artifacts_writes_expected_file_set_into_scrape_d
     assert sorted(path.name for path in llm_dir.iterdir()) == ["keep.txt"]
 
 
-def test_persist_prepare_scrape_artifacts_preserves_text_and_json_content_contract(tmp_path):
+def test_persist_prepare_scrape_artifacts_preserves_text_and_json_content_contract(
+    tmp_path,
+):
     model = "998877"
     scrape_dir = tmp_path / "work" / model / "scrape"
     raw_html = "<html>\n  <body>Κατηγορία & λεπτομέρειες</body>\n</html>"
@@ -77,7 +84,9 @@ def test_persist_prepare_scrape_artifacts_preserves_text_and_json_content_contra
     assert "Καφετιέρα" in result.source_json_path.read_text(encoding="utf-8")
 
 
-def test_persist_prepare_scrape_artifacts_cleans_stale_support_artifacts_without_touching_llm_paths(tmp_path):
+def test_persist_prepare_scrape_artifacts_cleans_stale_support_artifacts_without_touching_llm_paths(
+    tmp_path,
+):
     model = "445566"
     scrape_dir = tmp_path / "work" / model / "scrape"
     scrape_dir.mkdir(parents=True)

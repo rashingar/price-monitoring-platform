@@ -30,7 +30,9 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
 
 
 def _sample_rows() -> list[dict[str, str]]:
-    category = "ΠΛΗΡΟΦΟΡΙΚΗ:::ΠΛΗΡΟΦΟΡΙΚΗ///Υπολογιστές:::ΠΛΗΡΟΦΟΡΙΚΗ///Υπολογιστές///Laptops"
+    category = (
+        "ΠΛΗΡΟΦΟΡΙΚΗ:::ΠΛΗΡΟΦΟΡΙΚΗ///Υπολογιστές:::ΠΛΗΡΟΦΟΡΙΚΗ///Υπολογιστές///Laptops"
+    )
     return [
         {
             "model": "A",
@@ -76,10 +78,14 @@ def test_csv_bootstrap_writes_object_only_filter_groups(tmp_path: Path) -> None:
 
     assert category["filter_groups"]
     assert all(isinstance(group, dict) for group in category["filter_groups"])
-    assert all("group_id" in group and "values" in group for group in category["filter_groups"])
+    assert all(
+        "group_id" in group and "values" in group for group in category["filter_groups"]
+    )
 
 
-def test_csv_bootstrap_preserves_exact_group_spelling_internal_spacing(tmp_path: Path) -> None:
+def test_csv_bootstrap_preserves_exact_group_spelling_internal_spacing(
+    tmp_path: Path,
+) -> None:
     csv_path = tmp_path / "filters.csv"
     _write_csv(csv_path, _sample_rows())
 
@@ -90,7 +96,9 @@ def test_csv_bootstrap_preserves_exact_group_spelling_internal_spacing(tmp_path:
     assert "Διαγώνιος Οθόνης (Ίντσες)" not in names
 
 
-def test_csv_bootstrap_preserves_exact_values_decimals_casing_and_accents(tmp_path: Path) -> None:
+def test_csv_bootstrap_preserves_exact_values_decimals_casing_and_accents(
+    tmp_path: Path,
+) -> None:
     csv_path = tmp_path / "filters.csv"
     _write_csv(csv_path, _sample_rows())
 
@@ -124,7 +132,9 @@ def test_category_parsing_uses_first_deepest_path_when_needed(tmp_path: Path) ->
     assert report["first_deepest_fallback_rows"][0]["selected_path"] == "A > B > C"
 
 
-def test_category_parsing_uses_existing_map_fallback_for_one_existing_deepest_path(tmp_path: Path) -> None:
+def test_category_parsing_uses_existing_map_fallback_for_one_existing_deepest_path(
+    tmp_path: Path,
+) -> None:
     existing_map = {
         "subcategories": [
             {
@@ -134,7 +144,9 @@ def test_category_parsing_uses_existing_map_fallback_for_one_existing_deepest_pa
         ]
     }
     existing_path = tmp_path / "filter_map.json"
-    existing_path.write_text(json.dumps(existing_map, ensure_ascii=False), encoding="utf-8")
+    existing_path.write_text(
+        json.dumps(existing_map, ensure_ascii=False), encoding="utf-8"
+    )
     csv_path = tmp_path / "filters.csv"
     _write_csv(
         csv_path,
@@ -163,7 +175,9 @@ def test_stable_category_id_generation_is_deterministic() -> None:
 
 def test_stable_group_id_generation_is_deterministic() -> None:
     category_id = stable_category_id("ΠΛΗΡΟΦΟΡΙΚΗ > Υπολογιστές > Laptops")
-    assert stable_group_id(category_id, "Μνήμη Ram") == stable_group_id(category_id, "Μνήμη Ram")
+    assert stable_group_id(category_id, "Μνήμη Ram") == stable_group_id(
+        category_id, "Μνήμη Ram"
+    )
     assert stable_group_id(category_id, "Μνήμη Ram").startswith("fg_")
 
 
@@ -174,7 +188,9 @@ def test_stable_value_id_generation_is_deterministic() -> None:
     assert stable_value_id(group_id, "16 GB").startswith("fv_")
 
 
-def test_final_base_contains_no_legacy_string_list_filter_groups(tmp_path: Path) -> None:
+def test_final_base_contains_no_legacy_string_list_filter_groups(
+    tmp_path: Path,
+) -> None:
     csv_path = tmp_path / "filters.csv"
     _write_csv(csv_path, _sample_rows())
 
@@ -184,7 +200,9 @@ def test_final_base_contains_no_legacy_string_list_filter_groups(tmp_path: Path)
         assert all(not isinstance(group, str) for group in category["filter_groups"])
 
 
-def test_manual_overrides_are_applied_after_base_and_can_add_values(tmp_path: Path) -> None:
+def test_manual_overrides_are_applied_after_base_and_can_add_values(
+    tmp_path: Path,
+) -> None:
     paths = _make_paths(tmp_path)
     _write_csv(paths["csv_path"], _sample_rows())
     run_bootstrap(**paths, write=True)
@@ -214,7 +232,9 @@ def test_manual_overrides_are_applied_after_base_and_can_add_values(tmp_path: Pa
             },
         }
     }
-    paths["manual_path"].write_text(json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    paths["manual_path"].write_text(
+        json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     run_apply_overrides(
         base_path=paths["base_path"],
@@ -259,7 +279,9 @@ def test_manual_overrides_win_conflicts(tmp_path: Path) -> None:
             },
         }
     }
-    paths["manual_path"].write_text(json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    paths["manual_path"].write_text(
+        json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     run_apply_overrides(
         base_path=paths["base_path"],
@@ -268,14 +290,21 @@ def test_manual_overrides_win_conflicts(tmp_path: Path) -> None:
         report_path=paths["report_path"],
         write=True,
     )
-    final_group = _only_group(_only_category(json.loads(paths["filter_map_path"].read_text(encoding="utf-8"))), "Μνήμη RAM")
+    final_group = _only_group(
+        _only_category(
+            json.loads(paths["filter_map_path"].read_text(encoding="utf-8"))
+        ),
+        "Μνήμη RAM",
+    )
 
     assert final_group["required"] is False
     assert final_group["status"] == "inactive"
     assert final_group["values"][0]["status"] == "deprecated"
 
 
-def test_manual_override_file_supports_active_inactive_deprecated_statuses(tmp_path: Path) -> None:
+def test_manual_override_file_supports_active_inactive_deprecated_statuses(
+    tmp_path: Path,
+) -> None:
     paths = _make_paths(tmp_path)
     _write_csv(paths["csv_path"], _sample_rows())
     run_bootstrap(**paths, write=True)
@@ -310,7 +339,9 @@ def test_manual_override_file_supports_active_inactive_deprecated_statuses(tmp_p
             },
         }
     }
-    paths["manual_path"].write_text(json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    paths["manual_path"].write_text(
+        json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     run_apply_overrides(
         base_path=paths["base_path"],
@@ -319,7 +350,12 @@ def test_manual_override_file_supports_active_inactive_deprecated_statuses(tmp_p
         report_path=paths["report_path"],
         write=True,
     )
-    group = _only_group(_only_category(json.loads(paths["filter_map_path"].read_text(encoding="utf-8"))), "Μνήμη Ram")
+    group = _only_group(
+        _only_category(
+            json.loads(paths["filter_map_path"].read_text(encoding="utf-8"))
+        ),
+        "Μνήμη Ram",
+    )
 
     assert group["status"] == "deprecated"
     assert {value["status"] for value in group["values"]} >= {"active", "inactive"}
@@ -354,7 +390,9 @@ def test_manual_override_file_preserves_value_aliases(tmp_path: Path) -> None:
             },
         }
     }
-    paths["manual_path"].write_text(json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    paths["manual_path"].write_text(
+        json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     run_apply_overrides(
         base_path=paths["base_path"],
@@ -363,7 +401,12 @@ def test_manual_override_file_preserves_value_aliases(tmp_path: Path) -> None:
         report_path=paths["report_path"],
         write=True,
     )
-    group = _only_group(_only_category(json.loads(paths["filter_map_path"].read_text(encoding="utf-8"))), "Μνήμη Ram")
+    group = _only_group(
+        _only_category(
+            json.loads(paths["filter_map_path"].read_text(encoding="utf-8"))
+        ),
+        "Μνήμη Ram",
+    )
 
     assert group["values"][0]["aliases"] == ["16 gigabyte", "16GB"]
 

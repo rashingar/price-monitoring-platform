@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 from typing import Iterable
 
-FIRECRAWL_SOURCE_REVIEW_FAILURE_THRESHOLD_ENV = "ECOMMERCE_FIRECRAWL_SOURCE_REVIEW_FAILURE_THRESHOLD"
+FIRECRAWL_SOURCE_REVIEW_FAILURE_THRESHOLD_ENV = (
+    "ECOMMERCE_FIRECRAWL_SOURCE_REVIEW_FAILURE_THRESHOLD"
+)
 DEFAULT_FIRECRAWL_SOURCE_REVIEW_FAILURE_THRESHOLD = 2
 MIN_FIRECRAWL_SOURCE_REVIEW_FAILURE_THRESHOLD = 1
 
@@ -58,8 +60,10 @@ def firecrawl_health_reason(
     for reason in FIRECRAWL_HEALTH_REASONS:
         if reason in flags:
             return reason
-    is_firecrawl = strategy == "skroutz_firecrawl" or code.startswith("firecrawl_") or any(
-        flag.startswith("firecrawl_") for flag in flags
+    is_firecrawl = (
+        strategy == "skroutz_firecrawl"
+        or code.startswith("firecrawl_")
+        or any(flag.startswith("firecrawl_") for flag in flags)
     )
     if not is_firecrawl and vendor != "skroutz":
         return None
@@ -75,12 +79,18 @@ def firecrawl_health_reason(
 
     if response_status == 429 or "rate_limit" in message or "rate limited" in message:
         return "firecrawl_rate_limited"
-    if response_status in {401, 403, 423} or any(token in message for token in ("blocked", "captcha", "challenge", "forbidden")):
+    if response_status in {401, 403, 423} or any(
+        token in message for token in ("blocked", "captcha", "challenge", "forbidden")
+    ):
         return "firecrawl_blocked"
     if response_status is not None and response_status >= 400:
         return "firecrawl_http_error"
     if code in {"firecrawl_api_failed", "firecrawl_network_error"}:
-        return "firecrawl_http_error" if code == "firecrawl_api_failed" else "firecrawl_unknown_error"
+        return (
+            "firecrawl_http_error"
+            if code == "firecrawl_api_failed"
+            else "firecrawl_unknown_error"
+        )
     if is_firecrawl:
         return "firecrawl_unknown_error"
     return None

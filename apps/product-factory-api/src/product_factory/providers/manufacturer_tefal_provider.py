@@ -44,7 +44,9 @@ class ManufacturerTefalProvider(ProductProvider):
         fetcher: ElectronetFetcher | None = None,
         parser: ManufacturerProductParser | None = None,
     ) -> None:
-        self._fixture_html_by_url = {url: Path(path) for url, path in (fixture_html_by_url or {}).items()}
+        self._fixture_html_by_url = {
+            url: Path(path) for url, path in (fixture_html_by_url or {}).items()
+        }
         self._fetcher = fetcher or ElectronetFetcher()
         self._parser = parser or ManufacturerProductParser()
 
@@ -96,7 +98,9 @@ class ManufacturerTefalProvider(ProductProvider):
             },
         )
 
-    def _snapshot_from_fixture(self, identity: ProviderInputIdentity, url: str, fixture_path: Path) -> ProviderSnapshot:
+    def _snapshot_from_fixture(
+        self, identity: ProviderInputIdentity, url: str, fixture_path: Path
+    ) -> ProviderSnapshot:
         if not fixture_path.exists():
             raise ProviderError.build(
                 provider_id=self.provider_id,
@@ -134,7 +138,9 @@ class ManufacturerTefalProvider(ProductProvider):
             },
         )
 
-    def normalize(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+    def normalize(
+        self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity
+    ) -> ProviderResult:
         try:
             parsed = self._parse_snapshot(snapshot)
         except Exception as exc:

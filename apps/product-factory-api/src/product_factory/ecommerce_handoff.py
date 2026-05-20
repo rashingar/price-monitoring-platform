@@ -12,7 +12,9 @@ HANDOFF_FILENAME = "ecommerce_source_handoff.json"
 
 
 def ecommerce_handoff_path(model_dir: Path) -> Path:
-    model_root = Path(model_dir).parent if Path(model_dir).name == "scrape" else Path(model_dir)
+    model_root = (
+        Path(model_dir).parent if Path(model_dir).name == "scrape" else Path(model_dir)
+    )
     return model_root / "integrations" / HANDOFF_FILENAME
 
 
@@ -79,7 +81,9 @@ def build_ecommerce_source_handoff(
     product = parsed.source
     source_name = first_non_empty([product.source_name, source])
     canonical_url = str(product.canonical_url or "")
-    source_domain = _domain_for(first_non_empty([fetch.final_url, canonical_url, fetch.url, cli.url]))
+    source_domain = _domain_for(
+        first_non_empty([fetch.final_url, canonical_url, fetch.url, cli.url])
+    )
     product_payload = _build_product_payload(product)
     computed_missing = _missing_schema_fields(product_payload)
 
@@ -133,7 +137,13 @@ def _build_product_payload(product: SourceProductData) -> dict[str, Any]:
         "page_type": product.page_type,
         "price": price,
         "currency": "EUR" if price is not None else None,
-        "availability": first_non_empty([str(getattr(product, "availability", "") or ""), product.delivery_text, product.pickup_text]),
+        "availability": first_non_empty(
+            [
+                str(getattr(product, "availability", "") or ""),
+                product.delivery_text,
+                product.pickup_text,
+            ]
+        ),
         "stock_status": str(getattr(product, "stock_status", "") or ""),
     }
 

@@ -16,7 +16,10 @@ from pathlib import Path
 from uuid import uuid4
 
 from ecommerce.artifacts import artifact_link_payload
-from ecommerce.db.repositories.alerts import evaluate_alert_rules_for_run, has_active_alert_rules
+from ecommerce.db.repositories.alerts import (
+    evaluate_alert_rules_for_run,
+    has_active_alert_rules,
+)
 from ecommerce.db.config import is_database_configured
 from ecommerce.db.session import session_scope
 from ecommerce.price_monitoring.fetch_run import (
@@ -30,7 +33,9 @@ from ecommerce.price_monitoring.persistence import persist_fetch_result_if_confi
 
 MAX_FETCH_WORKERS_ENV_VAR = "ECOMMERCE_MAX_FETCH_WORKERS"
 FETCH_STALE_AFTER_MINUTES_ENV_VAR = "ECOMMERCE_FETCH_STALE_AFTER_MINUTES"
-SUBPROCESS_TERMINATE_TIMEOUT_SECONDS_ENV_VAR = "ECOMMERCE_SUBPROCESS_TERMINATE_TIMEOUT_SECONDS"
+SUBPROCESS_TERMINATE_TIMEOUT_SECONDS_ENV_VAR = (
+    "ECOMMERCE_SUBPROCESS_TERMINATE_TIMEOUT_SECONDS"
+)
 DEFAULT_MAX_FETCH_WORKERS = 3
 MAX_FETCH_WORKERS_CAP = 8
 DEFAULT_FETCH_STALE_AFTER_MINUTES = 30
@@ -42,14 +47,18 @@ ACTIVE_STATUSES = {"queued", "running"}
 TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "killed"}
 FAILED_ARTIFACT_WARNING = "Execution failed. Artifacts may be partial or incomplete."
 KILLED_REASON = "Process did not exit before terminate timeout."
-KILLED_ARTIFACT_WARNING = "Execution was force killed. Artifacts may be partial or incomplete."
+KILLED_ARTIFACT_WARNING = (
+    "Execution was force killed. Artifacts may be partial or incomplete."
+)
 
 
 class ActiveFetchExecutionError(RuntimeError):
     """Raised when a run already has an active fetch execution."""
 
     def __init__(self, execution: "PriceMonitoringFetchExecution") -> None:
-        super().__init__(f"Fetch execution {execution.execution_id} is already {execution.status}.")
+        super().__init__(
+            f"Fetch execution {execution.execution_id} is already {execution.status}."
+        )
         self.execution = execution
 
 
@@ -118,16 +127,26 @@ class PriceMonitoringFetchExecution:
     def to_dict(self, *, include_artifacts: bool = False) -> dict[str, object]:
         payload = asdict(self)
         payload["input_csv_path"] = str(self.input_csv_path)
-        payload["enriched_csv_path"] = str(self.enriched_csv_path) if self.enriched_csv_path is not None else ""
-        payload["fetch_summary_path"] = str(self.fetch_summary_path) if self.fetch_summary_path is not None else ""
+        payload["enriched_csv_path"] = (
+            str(self.enriched_csv_path) if self.enriched_csv_path is not None else ""
+        )
+        payload["fetch_summary_path"] = (
+            str(self.fetch_summary_path) if self.fetch_summary_path is not None else ""
+        )
         payload["fetch_result_path"] = str(self.fetch_result_path)
         payload["source_url_capture_result_path"] = (
-            str(self.source_url_capture_result_path) if self.source_url_capture_result_path is not None else ""
+            str(self.source_url_capture_result_path)
+            if self.source_url_capture_result_path is not None
+            else ""
         )
         payload["execution_path"] = str(self.execution_path)
         payload["log_path"] = str(self.log_path)
-        payload["stdout_log_path"] = str(self.stdout_log_path) if self.stdout_log_path is not None else ""
-        payload["stderr_log_path"] = str(self.stderr_log_path) if self.stderr_log_path is not None else ""
+        payload["stdout_log_path"] = (
+            str(self.stdout_log_path) if self.stdout_log_path is not None else ""
+        )
+        payload["stderr_log_path"] = (
+            str(self.stderr_log_path) if self.stderr_log_path is not None else ""
+        )
         if include_artifacts:
             payload["artifacts"] = execution_artifacts(self)
         return payload
@@ -172,7 +191,9 @@ def enqueue_fetch_execution(
         raise FileNotFoundError(f"Price monitoring run folder not found: {run_dir}")
     input_csv_path = run_dir / "input.csv"
     if not input_csv_path.exists():
-        raise FileNotFoundError(f"Price monitoring input.csv not found: {input_csv_path}")
+        raise FileNotFoundError(
+            f"Price monitoring input.csv not found: {input_csv_path}"
+        )
 
     resolved_source = resolve_price_monitoring_fetch_source(run_dir, source)
     with _LOCK:
@@ -186,7 +207,9 @@ def enqueue_fetch_execution(
         execution = _new_execution(run_dir, resolved_source, catalog_url)
         save_fetch_execution(execution)
         _write_latest_log_alias(execution, "")
-        append_execution_log(execution, f"Queued fetch execution for source {resolved_source}.")
+        append_execution_log(
+            execution, f"Queued fetch execution for source {resolved_source}."
+        )
         _QUEUE.append(
             _FetchExecutionJob(
                 run_dir=run_dir,
@@ -201,7 +224,9 @@ def enqueue_fetch_execution(
         return load_fetch_execution(run_dir, execution.execution_id)
 
 
-def cancel_fetch_execution(run_dir: Path, execution_id: str, reason: str | None = None) -> PriceMonitoringFetchExecution:
+def cancel_fetch_execution(
+    run_dir: Path, execution_id: str, reason: str | None = None
+) -> PriceMonitoringFetchExecution:
     with _LOCK:
         execution = load_fetch_execution(run_dir, execution_id)
         if execution.status in TERMINAL_STATUSES:
@@ -214,7 +239,9 @@ def cancel_fetch_execution(run_dir: Path, execution_id: str, reason: str | None 
             return load_fetch_execution(run_dir, execution_id)
 
         previous_status = execution.status
-        was_stale_running = previous_status == "running" and is_execution_stale(execution)
+        was_stale_running = previous_status == "running" and is_execution_stale(
+            execution
+        )
         now = _now_iso()
         execution.status = "cancelled"
         execution.completed_at = now
@@ -228,7 +255,9 @@ def cancel_fetch_execution(run_dir: Path, execution_id: str, reason: str | None 
         elif previous_status == "running" and owned_by_process:
             execution.terminate_sent_at = now
             execution.termination_mode = "graceful"
-            message = "Cancellation requested. Sending graceful termination to child process."
+            message = (
+                "Cancellation requested. Sending graceful termination to child process."
+            )
         else:
             message = "Cancellation requested before execution started."
         save_fetch_execution(execution)
@@ -248,7 +277,9 @@ def cancel_fetch_execution(run_dir: Path, execution_id: str, reason: str | None 
         return load_fetch_execution(run_dir, execution_id)
 
 
-def cancel_latest_active_fetch_execution(run_dir: Path, reason: str | None = None) -> PriceMonitoringFetchExecution:
+def cancel_latest_active_fetch_execution(
+    run_dir: Path, reason: str | None = None
+) -> PriceMonitoringFetchExecution:
     latest = load_latest_fetch_execution(run_dir)
     if latest is None or latest.status not in ACTIVE_STATUSES:
         raise FileNotFoundError("No active fetch execution exists for this run.")
@@ -262,7 +293,9 @@ def load_latest_fetch_execution(run_dir: Path) -> PriceMonitoringFetchExecution 
     return _execution_from_payload(_read_json(path), Path(run_dir), path)
 
 
-def load_fetch_execution(run_dir: Path, execution_id: str) -> PriceMonitoringFetchExecution:
+def load_fetch_execution(
+    run_dir: Path, execution_id: str
+) -> PriceMonitoringFetchExecution:
     path = Path(run_dir) / FETCH_EXECUTIONS_DIRNAME / f"{execution_id}.json"
     if not path.exists():
         raise FileNotFoundError(f"Price monitoring fetch execution not found: {path}")
@@ -276,7 +309,9 @@ def list_fetch_executions(run_dir: Path) -> list[PriceMonitoringFetchExecution]:
     executions: list[PriceMonitoringFetchExecution] = []
     for path in execution_dir.glob("*.json"):
         try:
-            executions.append(_execution_from_payload(_read_json(path), Path(run_dir), path))
+            executions.append(
+                _execution_from_payload(_read_json(path), Path(run_dir), path)
+            )
         except (OSError, ValueError, json.JSONDecodeError):
             continue
     executions.sort(key=_execution_sort_key, reverse=True)
@@ -286,7 +321,9 @@ def list_fetch_executions(run_dir: Path) -> list[PriceMonitoringFetchExecution]:
 def save_fetch_execution(execution: PriceMonitoringFetchExecution) -> None:
     if _should_preserve_existing_cancel_terminal(execution):
         return
-    _atomic_write_json(execution.execution_path, execution.to_dict(include_artifacts=False))
+    _atomic_write_json(
+        execution.execution_path, execution.to_dict(include_artifacts=False)
+    )
     latest_path = execution.execution_path.parent.parent / FETCH_EXECUTION_FILENAME
     _atomic_write_json(latest_path, execution.to_dict(include_artifacts=False))
 
@@ -296,7 +333,9 @@ def append_execution_log(execution: PriceMonitoringFetchExecution, line: str) ->
     execution.log_path.parent.mkdir(parents=True, exist_ok=True)
     with execution.log_path.open("a", encoding="utf-8") as f:
         f.write(text)
-    latest_log_path = execution.execution_path.parent.parent / FETCH_EXECUTION_LOG_FILENAME
+    latest_log_path = (
+        execution.execution_path.parent.parent / FETCH_EXECUTION_LOG_FILENAME
+    )
     latest = load_latest_fetch_execution(execution.execution_path.parent.parent)
     if latest is not None and latest.execution_id == execution.execution_id:
         with latest_log_path.open("a", encoding="utf-8") as f:
@@ -320,13 +359,17 @@ def read_execution_log_lines(run_dir: Path, execution_id: str) -> list[str]:
 def execution_response(execution: PriceMonitoringFetchExecution) -> dict[str, object]:
     payload = execution.to_dict(include_artifacts=True)
     stale_after_minutes = get_fetch_stale_after_minutes()
-    payload["stale"] = is_execution_stale(execution, stale_after_minutes=stale_after_minutes)
+    payload["stale"] = is_execution_stale(
+        execution, stale_after_minutes=stale_after_minutes
+    )
     payload["stale_after_minutes"] = stale_after_minutes
     payload["queue_position"] = queue_position(execution.execution_id)
     return payload
 
 
-def source_url_fetch_result_to_execution_payload(result: PriceMonitoringFetchResult) -> dict[str, object]:
+def source_url_fetch_result_to_execution_payload(
+    result: PriceMonitoringFetchResult,
+) -> dict[str, object]:
     status = _normalize_fetch_status(result.status)
     payload = {
         "run_id": result.run_id,
@@ -341,8 +384,16 @@ def source_url_fetch_result_to_execution_payload(result: PriceMonitoringFetchRes
         "cancelled_at": None,
         "cancel_reason": "",
         "input_csv_path": str(result.input_csv_path),
-        "enriched_csv_path": str(result.enriched_csv_path) if result.enriched_csv_path is not None else "",
-        "fetch_summary_path": str(result.fetch_summary_path) if result.fetch_summary_path is not None else "",
+        "enriched_csv_path": (
+            str(result.enriched_csv_path)
+            if result.enriched_csv_path is not None
+            else ""
+        ),
+        "fetch_summary_path": (
+            str(result.fetch_summary_path)
+            if result.fetch_summary_path is not None
+            else ""
+        ),
         "fetch_result_path": str(result.fetch_result_path),
         "execution_path": "",
         "log_path": "",
@@ -360,7 +411,9 @@ def source_url_fetch_result_to_execution_payload(result: PriceMonitoringFetchRes
         "fetch_attempt": 0,
         "persistence_status": "unknown",
         "persistence_warnings": [],
-        "alert_evaluation_status": "not_configured" if not is_database_configured() else "skipped",
+        "alert_evaluation_status": (
+            "not_configured" if not is_database_configured() else "skipped"
+        ),
         "alert_event_count": 0,
         "alert_duplicate_count": 0,
         "alert_warnings": [],
@@ -370,7 +423,11 @@ def source_url_fetch_result_to_execution_payload(result: PriceMonitoringFetchRes
         "source_url_capture_selected_count": result.source_url_capture_selected_count,
         "source_url_capture_succeeded_count": result.source_url_capture_succeeded_count,
         "source_url_capture_failed_count": result.source_url_capture_failed_count,
-        "source_url_capture_result_path": str(result.source_url_capture_result_path) if result.source_url_capture_result_path else "",
+        "source_url_capture_result_path": (
+            str(result.source_url_capture_result_path)
+            if result.source_url_capture_result_path
+            else ""
+        ),
         "source_url_capture_warnings": list(result.source_url_capture_warnings or []),
         "source_url_capture_run_id": result.source_url_capture_run_id,
         "observation_batch_id": result.observation_batch_id,
@@ -431,11 +488,18 @@ def is_execution_stale(
 
 
 def get_max_fetch_workers() -> int:
-    return _env_int(MAX_FETCH_WORKERS_ENV_VAR, DEFAULT_MAX_FETCH_WORKERS, minimum=1, maximum=MAX_FETCH_WORKERS_CAP)
+    return _env_int(
+        MAX_FETCH_WORKERS_ENV_VAR,
+        DEFAULT_MAX_FETCH_WORKERS,
+        minimum=1,
+        maximum=MAX_FETCH_WORKERS_CAP,
+    )
 
 
 def get_fetch_stale_after_minutes() -> int:
-    return _env_int(FETCH_STALE_AFTER_MINUTES_ENV_VAR, DEFAULT_FETCH_STALE_AFTER_MINUTES, minimum=1)
+    return _env_int(
+        FETCH_STALE_AFTER_MINUTES_ENV_VAR, DEFAULT_FETCH_STALE_AFTER_MINUTES, minimum=1
+    )
 
 
 def get_subprocess_terminate_timeout_seconds() -> int:
@@ -485,7 +549,9 @@ def wait_for_worker_idle(timeout: float = 5.0) -> bool:
     return False
 
 
-def evaluate_alerts_after_persistence(run_id: str, *, persistence_status: str) -> tuple[str, int, int, list[str]]:
+def evaluate_alerts_after_persistence(
+    run_id: str, *, persistence_status: str
+) -> tuple[str, int, int, list[str]]:
     if not is_database_configured():
         return "not_configured", 0, 0, []
     if persistence_status != "persisted":
@@ -494,7 +560,12 @@ def evaluate_alerts_after_persistence(run_id: str, *, persistence_status: str) -
         if not has_active_alert_rules(session):
             return "skipped", 0, 0, []
         result = evaluate_alert_rules_for_run(session, run_id)
-        return "evaluated", result.created_event_count, result.duplicate_event_count, result.warnings
+        return (
+            "evaluated",
+            result.created_event_count,
+            result.duplicate_event_count,
+            result.warnings,
+        )
 
 
 def run_fetch_execution_child(run_dir: Path, execution_id: str) -> int:
@@ -510,7 +581,9 @@ def run_fetch_execution_child(run_dir: Path, execution_id: str) -> int:
         if execution.execution_type != "fetch":
             raise ValueError(f"Unsupported execution type: {execution.execution_type}")
         if execution.status in {"cancelled", "killed"}:
-            append_execution_log(execution, "Child process found execution already cancelled; exiting.")
+            append_execution_log(
+                execution, "Child process found execution already cancelled; exiting."
+            )
             return 0
         _heartbeat(job.run_dir, job.execution_id)
         append_execution_log(execution, "Child process started fetch work.")
@@ -565,15 +638,21 @@ def _start_execution(
     with _LOCK:
         execution = load_fetch_execution(run_dir, execution_id)
         if execution.status == "cancelled":
-            append_execution_log(execution, "Queued execution was cancelled; skipping fetch.")
+            append_execution_log(
+                execution, "Queued execution was cancelled; skipping fetch."
+            )
             return None, None
         if execution.status != "queued":
             return None, None
         now = _now_iso()
-        command = build_execution_command(execution.run_id, execution.execution_id, execution.execution_type)
+        command = build_execution_command(
+            execution.run_id, execution.execution_id, execution.execution_type
+        )
         stdout_log_path = execution.execution_path.with_suffix(".stdout.log")
         stderr_log_path = execution.execution_path.with_suffix(".stderr.log")
-        process = _launch_child_process(command, stdout_log_path=stdout_log_path, stderr_log_path=stderr_log_path)
+        process = _launch_child_process(
+            command, stdout_log_path=stdout_log_path, stderr_log_path=stderr_log_path
+        )
         execution.status = "running"
         execution.started_at = now
         execution.worker_id = worker_id
@@ -598,11 +677,15 @@ def _start_execution(
                 termination_requested=metadata.termination_requested,
             )
         save_fetch_execution(execution)
-        append_execution_log(execution, f"Started subprocess fetch execution with pid {process.pid}.")
+        append_execution_log(
+            execution, f"Started subprocess fetch execution with pid {process.pid}."
+        )
         return execution, process
 
 
-def build_execution_command(run_id: str, execution_id: str, execution_type: str) -> list[str]:
+def build_execution_command(
+    run_id: str, execution_id: str, execution_type: str
+) -> list[str]:
     return [
         sys.executable,
         "-m",
@@ -677,7 +760,9 @@ def _reconcile_child_exit(job: _FetchExecutionJob, exit_code: int) -> None:
             return
         if exit_code == 0:
             execution.status = "failed"
-            execution.error = "Child process exited without writing a terminal execution status."
+            execution.error = (
+                "Child process exited without writing a terminal execution status."
+            )
         else:
             execution.status = "failed"
             execution.error = f"Child process exited with code {exit_code}."
@@ -696,7 +781,9 @@ def _append_child_output(execution: PriceMonitoringFetchExecution) -> None:
         _append_prefixed_log_file(execution, execution.stderr_log_path, "[stderr]")
 
 
-def _append_prefixed_log_file(execution: PriceMonitoringFetchExecution, path: Path, prefix: str) -> None:
+def _append_prefixed_log_file(
+    execution: PriceMonitoringFetchExecution, path: Path, prefix: str
+) -> None:
     if not path.exists():
         return
     try:
@@ -717,7 +804,9 @@ def _terminate_active_execution(
         execution = load_fetch_execution(run_dir, execution_id)
         execution.termination_mode = "stale_metadata"
         save_fetch_execution(execution)
-        append_execution_log(execution, "Cancellation requested for stale running execution.")
+        append_execution_log(
+            execution, "Cancellation requested for stale running execution."
+        )
         _clear_run_active_locked(execution)
         return load_fetch_execution(run_dir, execution_id)
 
@@ -729,7 +818,10 @@ def _terminate_active_execution(
         execution = load_fetch_execution(run_dir, execution_id)
         execution.kill_sent_at = _now_iso()
         save_fetch_execution(execution)
-        append_execution_log(execution, "Graceful termination timed out; force killing child process tree.")
+        append_execution_log(
+            execution,
+            "Graceful termination timed out; force killing child process tree.",
+        )
         _force_kill_process_tree(process)
         try:
             exit_code = process.wait(timeout=5)
@@ -750,7 +842,9 @@ def _terminate_active_execution(
         execution.termination_mode = "graceful"
         execution.exit_code = exit_code
         save_fetch_execution(execution)
-        append_execution_log(execution, "Fetch execution process terminated gracefully.")
+        append_execution_log(
+            execution, "Fetch execution process terminated gracefully."
+        )
     elif execution.status == "cancelled" and execution.exit_code is None:
         execution.exit_code = exit_code
         execution.termination_mode = execution.termination_mode or "graceful"
@@ -783,14 +877,21 @@ def _force_kill_process_tree(process: subprocess.Popen) -> None:
             return
 
 
-def _complete_successful_execution(job: _FetchExecutionJob, result: PriceMonitoringFetchResult) -> None:
+def _complete_successful_execution(
+    job: _FetchExecutionJob, result: PriceMonitoringFetchResult
+) -> None:
     with _LOCK:
         execution = load_fetch_execution(job.run_dir, job.execution_id)
         if execution.status in TERMINAL_STATUSES:
-            append_execution_log(execution, f"Fetch completed after {execution.status}; final status remains {execution.status}.")
+            append_execution_log(
+                execution,
+                f"Fetch completed after {execution.status}; final status remains {execution.status}.",
+            )
             return
         _FINALIZING_EXECUTIONS.add(job.execution_id)
-        append_execution_log(execution, "Fetch completed; publishing result and running persistence.")
+        append_execution_log(
+            execution, "Fetch completed; publishing result and running persistence."
+        )
 
     try:
         _heartbeat(job.run_dir, job.execution_id)
@@ -799,7 +900,10 @@ def _complete_successful_execution(job: _FetchExecutionJob, result: PriceMonitor
         with _LOCK:
             execution = load_fetch_execution(job.run_dir, job.execution_id)
             if execution.status in {"cancelled", "killed"}:
-                append_execution_log(execution, f"Persistence skipped because execution is {execution.status}.")
+                append_execution_log(
+                    execution,
+                    f"Persistence skipped because execution is {execution.status}.",
+                )
                 return
         append_execution_log(execution, "Persisting fetch observations.")
         persistence = persist_fetch_result_if_configured(result, trigger_type="manual")
@@ -813,18 +917,28 @@ def _complete_successful_execution(job: _FetchExecutionJob, result: PriceMonitor
         with _LOCK:
             execution = load_fetch_execution(job.run_dir, job.execution_id)
             if execution.status in {"cancelled", "killed"}:
-                append_execution_log(execution, f"Alert evaluation skipped because execution is {execution.status}.")
+                append_execution_log(
+                    execution,
+                    f"Alert evaluation skipped because execution is {execution.status}.",
+                )
                 return
         append_execution_log(execution, "Evaluating alert rules if configured.")
-        alert_status, alert_count, duplicate_count, alert_warnings = evaluate_alerts_after_persistence(
-            result.run_id,
-            persistence_status=str(getattr(persistence, "persistence_status", "unknown")),
+        alert_status, alert_count, duplicate_count, alert_warnings = (
+            evaluate_alerts_after_persistence(
+                result.run_id,
+                persistence_status=str(
+                    getattr(persistence, "persistence_status", "unknown")
+                ),
+            )
         )
         _heartbeat(job.run_dir, job.execution_id)
         with _LOCK:
             execution = load_fetch_execution(job.run_dir, job.execution_id)
             if execution.status in TERMINAL_STATUSES:
-                append_execution_log(execution, f"Success finalization skipped because execution is {execution.status}.")
+                append_execution_log(
+                    execution,
+                    f"Success finalization skipped because execution is {execution.status}.",
+                )
                 return
             execution.heartbeat_at = _now_iso()
             execution.status = "succeeded"
@@ -834,15 +948,31 @@ def _complete_successful_execution(job: _FetchExecutionJob, result: PriceMonitor
             execution.fetch_result_path = result.fetch_result_path
             execution.warnings = result.warnings
             execution.error = ""
-            execution.observation_count = int(getattr(persistence, "observation_count", 0))
-            execution.replaced_observation_count = int(getattr(persistence, "replaced_observation_count", 0))
-            execution.catalog_snapshot_count = getattr(persistence, "catalog_snapshot_count", None)
-            execution.matched_observation_count = int(getattr(persistence, "matched_observation_count", 0))
-            execution.unmatched_observation_count = int(getattr(persistence, "unmatched_observation_count", 0))
+            execution.observation_count = int(
+                getattr(persistence, "observation_count", 0)
+            )
+            execution.replaced_observation_count = int(
+                getattr(persistence, "replaced_observation_count", 0)
+            )
+            execution.catalog_snapshot_count = getattr(
+                persistence, "catalog_snapshot_count", None
+            )
+            execution.matched_observation_count = int(
+                getattr(persistence, "matched_observation_count", 0)
+            )
+            execution.unmatched_observation_count = int(
+                getattr(persistence, "unmatched_observation_count", 0)
+            )
             execution.was_refetch = bool(getattr(persistence, "was_refetch", False))
-            execution.fetch_attempt = int(getattr(persistence, "fetch_attempt", execution.fetch_attempt))
-            execution.persistence_status = str(getattr(persistence, "persistence_status", "unknown"))
-            execution.persistence_warnings = [str(item) for item in getattr(persistence, "warnings", [])]
+            execution.fetch_attempt = int(
+                getattr(persistence, "fetch_attempt", execution.fetch_attempt)
+            )
+            execution.persistence_status = str(
+                getattr(persistence, "persistence_status", "unknown")
+            )
+            execution.persistence_warnings = [
+                str(item) for item in getattr(persistence, "warnings", [])
+            ]
             execution.alert_evaluation_status = alert_status
             execution.alert_event_count = alert_count
             execution.alert_duplicate_count = duplicate_count
@@ -851,7 +981,9 @@ def _complete_successful_execution(job: _FetchExecutionJob, result: PriceMonitor
             save_fetch_execution(execution)
             append_execution_log(execution, "Fetch execution succeeded.")
     except Exception as exc:
-        _complete_failed_execution(job, _safe_error_message(exc), result, write_result=False)
+        _complete_failed_execution(
+            job, _safe_error_message(exc), result, write_result=False
+        )
     finally:
         with _LOCK:
             _FINALIZING_EXECUTIONS.discard(job.execution_id)
@@ -867,12 +999,18 @@ def _complete_failed_execution(
     with _LOCK:
         execution = load_fetch_execution(job.run_dir, job.execution_id)
         if execution.status in TERMINAL_STATUSES:
-            append_execution_log(execution, f"Fetch failed after {execution.status}; final status remains {execution.status}.")
+            append_execution_log(
+                execution,
+                f"Fetch failed after {execution.status}; final status remains {execution.status}.",
+            )
             return
     with _LOCK:
         execution = load_fetch_execution(job.run_dir, job.execution_id)
         if execution.status in TERMINAL_STATUSES:
-            append_execution_log(execution, f"Failure finalization skipped because execution is {execution.status}.")
+            append_execution_log(
+                execution,
+                f"Failure finalization skipped because execution is {execution.status}.",
+            )
             return
         execution.heartbeat_at = _now_iso()
         if result is not None and write_result:
@@ -891,7 +1029,9 @@ def _complete_failed_execution(
         append_execution_log(execution, f"Fetch execution failed: {error}")
 
 
-def _mark_artifacts_diagnostic(execution: PriceMonitoringFetchExecution, warning: str) -> None:
+def _mark_artifacts_diagnostic(
+    execution: PriceMonitoringFetchExecution, warning: str
+) -> None:
     execution.artifacts_are_diagnostic = True
     execution.artifact_warning = warning
 
@@ -903,16 +1043,24 @@ def _apply_source_url_capture_result(
     execution.fetch_input_mode = result.fetch_input_mode
     execution.source_url_capture_used = result.source_url_capture_used
     execution.source_url_capture_status = result.source_url_capture_status
-    execution.source_url_capture_selected_count = result.source_url_capture_selected_count
-    execution.source_url_capture_succeeded_count = result.source_url_capture_succeeded_count
+    execution.source_url_capture_selected_count = (
+        result.source_url_capture_selected_count
+    )
+    execution.source_url_capture_succeeded_count = (
+        result.source_url_capture_succeeded_count
+    )
     execution.source_url_capture_failed_count = result.source_url_capture_failed_count
     execution.source_url_capture_result_path = result.source_url_capture_result_path
-    execution.source_url_capture_warnings = list(result.source_url_capture_warnings or [])
+    execution.source_url_capture_warnings = list(
+        result.source_url_capture_warnings or []
+    )
     execution.source_url_capture_run_id = result.source_url_capture_run_id
     execution.observation_batch_id = result.observation_batch_id
 
 
-def _mark_killed_execution(execution: PriceMonitoringFetchExecution, *, exit_code: int | None) -> None:
+def _mark_killed_execution(
+    execution: PriceMonitoringFetchExecution, *, exit_code: int | None
+) -> None:
     now = _now_iso()
     execution.status = "killed"
     execution.completed_at = now
@@ -926,7 +1074,9 @@ def _mark_killed_execution(execution: PriceMonitoringFetchExecution, *, exit_cod
     _mark_artifacts_diagnostic(execution, KILLED_ARTIFACT_WARNING)
 
 
-def _new_execution(run_dir: Path, source: str, catalog_url: str | None) -> PriceMonitoringFetchExecution:
+def _new_execution(
+    run_dir: Path, source: str, catalog_url: str | None
+) -> PriceMonitoringFetchExecution:
     execution_id = uuid4().hex
     execution_dir = run_dir / FETCH_EXECUTIONS_DIRNAME
     queued_at = _now_iso()
@@ -969,7 +1119,9 @@ def _ensure_worker_locked() -> None:
             _clear_run_active_locked_by_id(job.run_dir.name, job.execution_id)
             continue
         if execution.status == "cancelled":
-            append_execution_log(execution, "Queued execution was cancelled; skipping fetch.")
+            append_execution_log(
+                execution, "Queued execution was cancelled; skipping fetch."
+            )
             _clear_run_active_locked(execution)
             continue
         if execution.status != "queued":
@@ -985,7 +1137,9 @@ def _ensure_worker_locked() -> None:
             stdout_log_path=execution.execution_path.with_suffix(".stdout.log"),
             stderr_log_path=execution.execution_path.with_suffix(".stderr.log"),
         )
-        thread = threading.Thread(target=_worker_entry, args=(job, worker_id), name=thread_name, daemon=True)
+        thread = threading.Thread(
+            target=_worker_entry, args=(job, worker_id), name=thread_name, daemon=True
+        )
         _ACTIVE_EXECUTIONS[job.execution_id] = metadata
         _WORKER_THREADS[job.execution_id] = thread
         thread.start()
@@ -1022,13 +1176,17 @@ def _clear_run_active_locked_by_id(run_id: str, execution_id: str) -> None:
         _RUN_ACTIVE_EXECUTIONS.pop(run_id, None)
 
 
-def _write_latest_log_alias(execution: PriceMonitoringFetchExecution, content: str) -> None:
+def _write_latest_log_alias(
+    execution: PriceMonitoringFetchExecution, content: str
+) -> None:
     path = execution.execution_path.parent.parent / FETCH_EXECUTION_LOG_FILENAME
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
 
 
-def _execution_from_payload(payload: dict[str, object], run_dir: Path, path: Path) -> PriceMonitoringFetchExecution:
+def _execution_from_payload(
+    payload: dict[str, object], run_dir: Path, path: Path
+) -> PriceMonitoringFetchExecution:
     execution_id = str(payload.get("execution_id") or path.stem)
     execution_dir = run_dir / FETCH_EXECUTIONS_DIRNAME
     return PriceMonitoringFetchExecution(
@@ -1043,38 +1201,71 @@ def _execution_from_payload(payload: dict[str, object], run_dir: Path, path: Pat
         completed_at=_none_or_text(payload.get("completed_at")),
         cancelled_at=_none_or_text(payload.get("cancelled_at")),
         cancel_reason=str(payload.get("cancel_reason") or ""),
-        input_csv_path=Path(str(payload.get("input_csv_path") or run_dir / "input.csv")),
+        input_csv_path=Path(
+            str(payload.get("input_csv_path") or run_dir / "input.csv")
+        ),
         enriched_csv_path=_path_or_none(payload.get("enriched_csv_path")),
         fetch_summary_path=_path_or_none(payload.get("fetch_summary_path")),
-        fetch_result_path=Path(str(payload.get("fetch_result_path") or run_dir / "fetch_result.json")),
-        execution_path=Path(str(payload.get("execution_path") or execution_dir / f"{execution_id}.json")),
-        log_path=Path(str(payload.get("log_path") or execution_dir / f"{execution_id}.log")),
+        fetch_result_path=Path(
+            str(payload.get("fetch_result_path") or run_dir / "fetch_result.json")
+        ),
+        execution_path=Path(
+            str(payload.get("execution_path") or execution_dir / f"{execution_id}.json")
+        ),
+        log_path=Path(
+            str(payload.get("log_path") or execution_dir / f"{execution_id}.log")
+        ),
         warnings=[str(item) for item in _list_value(payload.get("warnings"))],
         error=str(payload.get("error") or ""),
         killed_reason=_none_or_text(payload.get("killed_reason")),
         artifacts_are_diagnostic=bool(payload.get("artifacts_are_diagnostic", False)),
         artifact_warning=_none_or_text(payload.get("artifact_warning")),
         observation_count=_int_value(payload.get("observation_count")),
-        replaced_observation_count=_int_value(payload.get("replaced_observation_count")),
-        catalog_snapshot_count=_optional_int_value(payload.get("catalog_snapshot_count")),
+        replaced_observation_count=_int_value(
+            payload.get("replaced_observation_count")
+        ),
+        catalog_snapshot_count=_optional_int_value(
+            payload.get("catalog_snapshot_count")
+        ),
         matched_observation_count=_int_value(payload.get("matched_observation_count")),
-        unmatched_observation_count=_int_value(payload.get("unmatched_observation_count")),
+        unmatched_observation_count=_int_value(
+            payload.get("unmatched_observation_count")
+        ),
         was_refetch=bool(payload.get("was_refetch", False)),
         fetch_attempt=_int_value(payload.get("fetch_attempt")),
         persistence_status=str(payload.get("persistence_status") or "not_configured"),
-        persistence_warnings=[str(item) for item in _list_value(payload.get("persistence_warnings"))],
-        alert_evaluation_status=str(payload.get("alert_evaluation_status") or "not_configured"),
+        persistence_warnings=[
+            str(item) for item in _list_value(payload.get("persistence_warnings"))
+        ],
+        alert_evaluation_status=str(
+            payload.get("alert_evaluation_status") or "not_configured"
+        ),
         alert_event_count=_int_value(payload.get("alert_event_count")),
         alert_duplicate_count=_int_value(payload.get("alert_duplicate_count")),
-        alert_warnings=[str(item) for item in _list_value(payload.get("alert_warnings"))],
+        alert_warnings=[
+            str(item) for item in _list_value(payload.get("alert_warnings"))
+        ],
         fetch_input_mode=str(payload.get("fetch_input_mode") or "source_urls"),
         source_url_capture_used=bool(payload.get("source_url_capture_used", False)),
-        source_url_capture_status=str(payload.get("source_url_capture_status") or "not_run"),
-        source_url_capture_selected_count=_int_value(payload.get("source_url_capture_selected_count")),
-        source_url_capture_succeeded_count=_int_value(payload.get("source_url_capture_succeeded_count")),
-        source_url_capture_failed_count=_int_value(payload.get("source_url_capture_failed_count")),
-        source_url_capture_result_path=_path_or_none(payload.get("source_url_capture_result_path")),
-        source_url_capture_warnings=[str(item) for item in _list_value(payload.get("source_url_capture_warnings"))],
+        source_url_capture_status=str(
+            payload.get("source_url_capture_status") or "not_run"
+        ),
+        source_url_capture_selected_count=_int_value(
+            payload.get("source_url_capture_selected_count")
+        ),
+        source_url_capture_succeeded_count=_int_value(
+            payload.get("source_url_capture_succeeded_count")
+        ),
+        source_url_capture_failed_count=_int_value(
+            payload.get("source_url_capture_failed_count")
+        ),
+        source_url_capture_result_path=_path_or_none(
+            payload.get("source_url_capture_result_path")
+        ),
+        source_url_capture_warnings=[
+            str(item)
+            for item in _list_value(payload.get("source_url_capture_warnings"))
+        ],
         source_url_capture_run_id=str(payload.get("source_url_capture_run_id") or ""),
         observation_batch_id=str(payload.get("observation_batch_id") or ""),
         worker_id=_none_or_text(payload.get("worker_id")),
@@ -1094,7 +1285,9 @@ def _execution_from_payload(payload: dict[str, object], run_dir: Path, path: Pat
     )
 
 
-def _should_preserve_existing_cancel_terminal(execution: PriceMonitoringFetchExecution) -> bool:
+def _should_preserve_existing_cancel_terminal(
+    execution: PriceMonitoringFetchExecution,
+) -> bool:
     if not execution.execution_path.exists():
         return False
     try:
@@ -1104,7 +1297,12 @@ def _should_preserve_existing_cancel_terminal(execution: PriceMonitoringFetchExe
     existing_status = _normalize_fetch_status(str(existing.get("status") or ""))
     if existing_status == "killed" and execution.status != "killed":
         return True
-    if existing_status == "cancelled" and execution.status in {"queued", "running", "succeeded", "failed"}:
+    if existing_status == "cancelled" and execution.status in {
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+    }:
         return True
     return False
 
@@ -1131,7 +1329,9 @@ def _read_json(path: Path) -> dict[str, object]:
                 raise
             time.sleep(0.02)
     else:
-        raise last_error or ValueError(f"Fetch execution metadata could not be read: {path}")
+        raise last_error or ValueError(
+            f"Fetch execution metadata could not be read: {path}"
+        )
     if not isinstance(payload, dict):
         raise ValueError(f"Fetch execution metadata is not a JSON object: {path}")
     return payload
@@ -1203,7 +1403,9 @@ def _replace_with_retry(source: Path, target: Path) -> None:
             time.sleep(0.02)
 
 
-def _execution_sort_key(execution: PriceMonitoringFetchExecution) -> tuple[str, str, str, str]:
+def _execution_sort_key(
+    execution: PriceMonitoringFetchExecution,
+) -> tuple[str, str, str, str]:
     return (
         execution.queued_at or "",
         execution.started_at or "",
@@ -1225,7 +1427,9 @@ def _parse_iso(value: str | None) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
-def _env_int(env_var: str, default: int, *, minimum: int, maximum: int | None = None) -> int:
+def _env_int(
+    env_var: str, default: int, *, minimum: int, maximum: int | None = None
+) -> int:
     text = _optional_text(os.environ.get(env_var))
     if not text:
         return default

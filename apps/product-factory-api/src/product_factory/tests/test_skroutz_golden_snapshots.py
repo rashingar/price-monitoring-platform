@@ -5,14 +5,18 @@ from pathlib import Path
 import pytest
 
 from product_factory.mapping import build_row
-from product_factory.models import CLIInput, ParsedProduct, SchemaMatchResult, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    ParsedProduct,
+    SchemaMatchResult,
+    TaxonomyResolution,
+)
 from product_factory.parser_product_skroutz import SkroutzProductParser
 from product_factory.repo_paths import PRODUCT_TEMPLATE_PATH
 from product_factory.skroutz_sections import extract_skroutz_section_window
 from product_factory.taxonomy import TaxonomyResolver
 from product_factory.utils import load_template_headers
 from product_factory.validator import validate_candidate_csv
-
 
 SAMPLES = {
     "143481": {
@@ -51,7 +55,11 @@ def disable_eprel_energy_label_resolution(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def _snapshot(root: Path, *parts: str) -> dict:
-    return json.loads((root / "golden_snapshots" / "skroutz" / Path(*parts)).read_text(encoding="utf-8"))
+    return json.loads(
+        (root / "golden_snapshots" / "skroutz" / Path(*parts)).read_text(
+            encoding="utf-8"
+        )
+    )
 
 
 def _cli(model: str) -> CLIInput:
@@ -68,9 +76,13 @@ def _cli(model: str) -> CLIInput:
     )
 
 
-def _parsed_and_taxonomy(skroutz_fixtures_root: Path, model: str) -> tuple[ParsedProduct, TaxonomyResolution]:
+def _parsed_and_taxonomy(
+    skroutz_fixtures_root: Path, model: str
+) -> tuple[ParsedProduct, TaxonomyResolution]:
     sample = SAMPLES[model]
-    html = (skroutz_fixtures_root / "html" / f"{model}.html").read_text(encoding="utf-8")
+    html = (skroutz_fixtures_root / "html" / f"{model}.html").read_text(
+        encoding="utf-8"
+    )
     parsed = SkroutzProductParser().parse(html, sample["url"])
     taxonomy, _ = TaxonomyResolver().resolve(
         parsed.source.breadcrumbs,
@@ -83,7 +95,9 @@ def _parsed_and_taxonomy(skroutz_fixtures_root: Path, model: str) -> tuple[Parse
 
 
 @pytest.mark.parametrize("model", ["143481", "344317", "341490"])
-def test_skroutz_parser_snapshot_covers_stable_fixture_fields(fixtures_root: Path, skroutz_fixtures_root: Path, model: str) -> None:
+def test_skroutz_parser_snapshot_covers_stable_fixture_fields(
+    fixtures_root: Path, skroutz_fixtures_root: Path, model: str
+) -> None:
     parsed, _taxonomy = _parsed_and_taxonomy(skroutz_fixtures_root, model)
     source = parsed.source
 
@@ -169,10 +183,18 @@ def test_skroutz_render_row_snapshot_covers_deterministic_fields(
     assert actual == _snapshot(fixtures_root, "render_row", f"{model}.expected.json")
 
 
-def test_skroutz_143481_section_extraction_snapshot(fixtures_root: Path, skroutz_fixtures_root: Path) -> None:
+def test_skroutz_143481_section_extraction_snapshot(
+    fixtures_root: Path, skroutz_fixtures_root: Path
+) -> None:
     html = (skroutz_fixtures_root / "html" / "143481.html").read_text(encoding="utf-8")
     extracted = extract_skroutz_section_window(html, SAMPLES["143481"]["url"])
-    rendered = json.loads((skroutz_fixtures_root / "rendered_sections" / "143481.rendered_sections.json").read_text(encoding="utf-8"))
+    rendered = json.loads(
+        (
+            skroutz_fixtures_root
+            / "rendered_sections"
+            / "143481.rendered_sections.json"
+        ).read_text(encoding="utf-8")
+    )
 
     actual = {
         "section_count": len(extracted["sections"]),
@@ -191,9 +213,19 @@ def test_skroutz_143481_section_extraction_snapshot(fixtures_root: Path, skroutz
             extracted["sections"][0]["paragraph"][:80],
             extracted["sections"][3]["paragraph"][:80],
         ],
-        "first_image_candidate_suffix": extracted["sections"][0]["image_candidates"][0].rsplit("/", 1)[-1],
-        "rendered_section_image_url_count": len([section for section in rendered["sections"] if section.get("resolved_image_url")]),
-        "local_filenames": [f"besco{index}.jpg" for index in range(1, len(rendered["sections"]) + 1)],
+        "first_image_candidate_suffix": extracted["sections"][0]["image_candidates"][
+            0
+        ].rsplit("/", 1)[-1],
+        "rendered_section_image_url_count": len(
+            [
+                section
+                for section in rendered["sections"]
+                if section.get("resolved_image_url")
+            ]
+        ),
+        "local_filenames": [
+            f"besco{index}.jpg" for index in range(1, len(rendered["sections"]) + 1)
+        ],
     }
 
     assert actual == _snapshot(fixtures_root, "sections", "143481.expected.json")
@@ -216,7 +248,10 @@ def test_skroutz_validation_snapshot_covers_basic_candidate_health(
             "meta_keywords": ["Snapshot", parsed.source.brand, parsed.source.mpn],
         },
     )
-    row["characteristics"] = row["characteristics"] or "<table><tbody><tr><td>Snapshot</td><td>OK</td></tr></tbody></table>"
+    row["characteristics"] = (
+        row["characteristics"]
+        or "<table><tbody><tr><td>Snapshot</td><td>OK</td></tr></tbody></table>"
+    )
     headers = load_template_headers(PRODUCT_TEMPLATE_PATH)
     candidate = tmp_path / "candidate.csv"
     baseline = tmp_path / "baseline.csv"

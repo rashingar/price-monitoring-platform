@@ -14,7 +14,15 @@ from product_factory.category_filters import (
     resolve_category_filter_values,
 )
 from product_factory.csv_writer import write_csv_row
-from product_factory.models import CLIInput, ParsedProduct, SchemaMatchResult, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 from product_factory.validator import validate_candidate_csv
 
 
@@ -39,7 +47,9 @@ def _category() -> dict:
                 "name": "Λειτουργικό",
                 "required": False,
                 "status": "active",
-                "values": [{"value_id": "fv_win11", "value": "Windows 11", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_win11", "value": "Windows 11", "status": "active"}
+                ],
             },
             {
                 "group_id": "fg_ram",
@@ -84,7 +94,9 @@ def _category() -> dict:
                 "name": "Παλιό Group",
                 "required": True,
                 "status": "deprecated",
-                "values": [{"value_id": "fv_legacy", "value": "Legacy", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_legacy", "value": "Legacy", "status": "active"}
+                ],
             },
         ],
     }
@@ -110,14 +122,22 @@ def _taxonomy(category_id: str = "cat_laptops") -> TaxonomyResolution:
     )
 
 
-def _source(*items: tuple[str, str], manufacturer_items: list[tuple[str, str]] | None = None) -> SourceProductData:
+def _source(
+    *items: tuple[str, str], manufacturer_items: list[tuple[str, str]] | None = None
+) -> SourceProductData:
     return SourceProductData(
         brand="Lenovo",
         mpn="ABC",
         name="Lenovo Laptop ABC",
         key_specs=[SpecItem(label=label, value=value) for label, value in items],
         manufacturer_spec_sections=[
-            SpecSection(section="Manufacturer", items=[SpecItem(label=label, value=value) for label, value in manufacturer_items or []])
+            SpecSection(
+                section="Manufacturer",
+                items=[
+                    SpecItem(label=label, value=value)
+                    for label, value in manufacturer_items or []
+                ],
+            )
         ],
     )
 
@@ -152,14 +172,30 @@ def _patch_mapping_dependencies(monkeypatch) -> None:
         },
     )
     monkeypatch.setattr(mapping, "build_deterministic_cta", lambda *_: "CTA")
-    monkeypatch.setattr(mapping, "build_description_html", lambda **_: ("<p>description</p>", []))
-    monkeypatch.setattr(mapping, "build_description_html_from_intro_and_sections", lambda **_: ("<p>description</p>", []))
-    monkeypatch.setattr(mapping, "build_description_html_from_llm", lambda **_: ("<p>description</p>", []))
-    monkeypatch.setattr(mapping, "build_characteristics_for_product", lambda **_: ("<table></table>", {}, []))
+    monkeypatch.setattr(
+        mapping, "build_description_html", lambda **_: ("<p>description</p>", [])
+    )
+    monkeypatch.setattr(
+        mapping,
+        "build_description_html_from_intro_and_sections",
+        lambda **_: ("<p>description</p>", []),
+    )
+    monkeypatch.setattr(
+        mapping,
+        "build_description_html_from_llm",
+        lambda **_: ("<p>description</p>", []),
+    )
+    monkeypatch.setattr(
+        mapping,
+        "build_characteristics_for_product",
+        lambda **_: ("<table></table>", {}, []),
+    )
 
 
 def test_category_filter_category_lookup_by_category_id() -> None:
-    assert find_filter_category(_filter_map(), category_id="cat_laptops")["path"].endswith("Laptops")
+    assert find_filter_category(_filter_map(), category_id="cat_laptops")[
+        "path"
+    ].endswith("Laptops")
 
 
 def test_tv_subcategories_share_filter_groups() -> None:
@@ -167,7 +203,8 @@ def test_tv_subcategories_share_filter_groups() -> None:
     tv_categories = [
         category
         for category in payload["subcategories"]
-        if category.get("parent_category") == "ΕΙΚΟΝΑ & ΗΧΟΣ" and category.get("leaf_category") == "Τηλεοράσεις"
+        if category.get("parent_category") == "ΕΙΚΟΝΑ & ΗΧΟΣ"
+        and category.get("leaf_category") == "Τηλεοράσεις"
     ]
 
     assert [category["sub_category"] for category in tv_categories] == [
@@ -182,7 +219,9 @@ def test_tv_subcategories_share_filter_groups() -> None:
     signatures = [
         {
             "groups": [group["name"] for group in category["filter_groups"]],
-            "required": {group["name"]: group["required"] for group in category["filter_groups"]},
+            "required": {
+                group["name"]: group["required"] for group in category["filter_groups"]
+            },
             "values": get_filter_group_value_map(category),
         }
         for category in tv_categories
@@ -198,7 +237,9 @@ def test_tv_subcategories_share_filter_groups() -> None:
 
 def test_tv_resolution_filter_maps_4k_ultra_hd_to_4k_uhd() -> None:
     payload = load_filter_map()
-    category = find_filter_category(payload, taxonomy_path="ΕΙΚΟΝΑ & ΗΧΟΣ > Τηλεοράσεις > 33''-50''")
+    category = find_filter_category(
+        payload, taxonomy_path="ΕΙΚΟΝΑ & ΗΧΟΣ > Τηλεοράσεις > 33''-50''"
+    )
     source = SourceProductData(
         name='TCL Smart Τηλεόραση 43" 4K UHD LED 43P6K',
         key_specs=[
@@ -223,19 +264,25 @@ def test_tv_resolution_filter_maps_4k_ultra_hd_to_4k_uhd() -> None:
 
 
 def test_category_filter_category_lookup_falls_back_to_taxonomy_path() -> None:
-    found = find_filter_category(_filter_map(), taxonomy_path="ΠΛΗΡΟΦΟΡΙΚΗ > Υπολογιστές > Laptops")
+    found = find_filter_category(
+        _filter_map(), taxonomy_path="ΠΛΗΡΟΦΟΡΙΚΗ > Υπολογιστές > Laptops"
+    )
     assert found["category_id"] == "cat_laptops"
 
 
 def test_exact_spec_label_resolves_filter_value() -> None:
-    result = resolve_category_filter_values(_source(("Μνήμη Ram", "16 GB")), _taxonomy(), _category())
+    result = resolve_category_filter_values(
+        _source(("Μνήμη Ram", "16 GB")), _taxonomy(), _category()
+    )
     ram = next(group for group in result.groups if group.group_name == "Μνήμη Ram")
     assert ram.resolved_value == "16 GB"
     assert ram.resolved_from == "source_spec_exact"
 
 
 def test_normalized_spec_label_resolves_filter_value() -> None:
-    result = resolve_category_filter_values(_source(("Μνήμη   Ram", "16 GB")), _taxonomy(), _category())
+    result = resolve_category_filter_values(
+        _source(("Μνήμη   Ram", "16 GB")), _taxonomy(), _category()
+    )
     ram = next(group for group in result.groups if group.group_name == "Μνήμη Ram")
     assert ram.resolved_value == "16 GB"
     assert ram.resolved_from == "normalized_source"
@@ -252,14 +299,22 @@ def test_air_conditioner_filters_derive_btu_and_wifi_from_product_text() -> None
                 "name": "Ονομαστική Απόδοση",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_24000", "value": "24000 BTU", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_24000", "value": "24000 BTU", "status": "active"}
+                ],
             },
             {
                 "group_id": "fg_wifi",
                 "name": "Wifi",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_wifi", "value": "Υποστηρίζεται", "status": "active"}],
+                "values": [
+                    {
+                        "value_id": "fv_wifi",
+                        "value": "Υποστηρίζεται",
+                        "status": "active",
+                    }
+                ],
             },
         ],
     }
@@ -293,11 +348,15 @@ def test_watt_filter_group_resolves_from_power_source_label() -> None:
                 "name": "Ισχύς (Watt)",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_580", "value": "580 W", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_580", "value": "580 W", "status": "active"}
+                ],
             }
         ],
     }
-    result = resolve_category_filter_values(_source(("Ισχύς", "580 W")), _taxonomy("cat_soundbar"), category)
+    result = resolve_category_filter_values(
+        _source(("Ισχύς", "580 W")), _taxonomy("cat_soundbar"), category
+    )
     power = result.groups[0]
     assert power.resolved_value == "580 W"
     assert power.resolved_from == "source_spec_alias"
@@ -313,11 +372,15 @@ def test_watt_filter_group_resolves_from_power_in_watts_source_label() -> None:
                 "name": "Ισχύς (Watt)",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_1000", "value": "1000", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_1000", "value": "1000", "status": "active"}
+                ],
             }
         ],
     }
-    result = resolve_category_filter_values(_source(("Ισχύς σε Watts", "1000")), _taxonomy("cat_coffee"), category)
+    result = resolve_category_filter_values(
+        _source(("Ισχύς σε Watts", "1000")), _taxonomy("cat_coffee"), category
+    )
     power = result.groups[0]
     assert power.resolved_value == "1000"
     assert power.resolved_from == "source_spec_alias"
@@ -337,7 +400,11 @@ def test_watt_filter_group_resolves_from_max_power_watt_source_label() -> None:
             }
         ],
     }
-    result = resolve_category_filter_values(_source(("ΞΞ­Ξ³ΞΉΟƒΟ„Ξ· Ξ™ΟƒΟ‡ΟΟ‚ (Watt)", "550")), _taxonomy("cat_vacuums"), category)
+    result = resolve_category_filter_values(
+        _source(("ΞΞ­Ξ³ΞΉΟƒΟ„Ξ· Ξ™ΟƒΟ‡ΟΟ‚ (Watt)", "550")),
+        _taxonomy("cat_vacuums"),
+        category,
+    )
     power = result.groups[0]
     assert power.resolved_value == "550"
     assert power.resolved_from == "source_spec_alias"
@@ -357,7 +424,9 @@ def test_watt_filter_group_resolves_from_max_power_watt_source_label() -> None:
         ("Ισχύς (Watt)", "ΞΞ­Ξ³ΞΉΟƒΟ„Ξ· Ξ™ΟƒΟ‡ΟΟ‚ (Watt)"),
     ],
 )
-def test_watt_filter_group_resolves_power_aliases_through_shared_registry(group_name: str, source_label: str) -> None:
+def test_watt_filter_group_resolves_power_aliases_through_shared_registry(
+    group_name: str, source_label: str
+) -> None:
     category = {
         "category_id": "cat_power",
         "path": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ > Σκούπισμα > Σκούπες",
@@ -371,14 +440,18 @@ def test_watt_filter_group_resolves_power_aliases_through_shared_registry(group_
             }
         ],
     }
-    result = resolve_category_filter_values(_source((source_label, "550")), _taxonomy("cat_power"), category)
+    result = resolve_category_filter_values(
+        _source((source_label, "550")), _taxonomy("cat_power"), category
+    )
     power = result.groups[0]
     assert power.resolved_value == "550"
     assert power.resolved_from in {"source_spec_alias", "normalized_source"}
     assert power.outside_allowed is False
 
 
-def test_watt_filter_group_does_not_resolve_unrelated_dimension_or_weight_labels() -> None:
+def test_watt_filter_group_does_not_resolve_unrelated_dimension_or_weight_labels() -> (
+    None
+):
     category = {
         "category_id": "cat_power",
         "path": "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ > Σκούπισμα > Σκούπες",
@@ -392,8 +465,12 @@ def test_watt_filter_group_does_not_resolve_unrelated_dimension_or_weight_labels
             }
         ],
     }
-    dimension = resolve_category_filter_values(_source(("Διαστάσεις", "550")), _taxonomy("cat_power"), category)
-    weight = resolve_category_filter_values(_source(("Βάρος", "550")), _taxonomy("cat_power"), category)
+    dimension = resolve_category_filter_values(
+        _source(("Διαστάσεις", "550")), _taxonomy("cat_power"), category
+    )
+    weight = resolve_category_filter_values(
+        _source(("Βάρος", "550")), _taxonomy("cat_power"), category
+    )
     assert dimension.groups[0].resolved_value == ""
     assert weight.groups[0].resolved_value == ""
 
@@ -412,7 +489,9 @@ def test_sound_system_filter_group_resolves_from_channels_source_label() -> None
             }
         ],
     }
-    result = resolve_category_filter_values(_source(("Κανάλια", "5.1")), _taxonomy("cat_soundbar"), category)
+    result = resolve_category_filter_values(
+        _source(("Κανάλια", "5.1")), _taxonomy("cat_soundbar"), category
+    )
     channels = result.groups[0]
     assert channels.resolved_value == "5.1"
     assert channels.resolved_from == "source_spec_alias"
@@ -432,7 +511,9 @@ def test_burner_count_filter_group_resolves_from_burners_source_label() -> None:
             }
         ],
     }
-    result = resolve_category_filter_values(_source(("Εστίες", "2")), _taxonomy("cat_hobs"), category)
+    result = resolve_category_filter_values(
+        _source(("Εστίες", "2")), _taxonomy("cat_hobs"), category
+    )
     burners = result.groups[0]
     assert burners.resolved_value == "2"
     assert burners.resolved_from == "source_spec_alias"
@@ -450,18 +531,26 @@ def test_approved_review_value_overrides_source_derived_value() -> None:
     assert ram.resolved_from == "approved_review"
 
 
-def test_saved_review_value_overrides_source_derived_value_before_approval(tmp_path: Path, monkeypatch) -> None:
+def test_saved_review_value_overrides_source_derived_value_before_approval(
+    tmp_path: Path, monkeypatch
+) -> None:
     _patch_mapping_dependencies(monkeypatch)
     review_dir = tmp_path / "review"
     review_dir.mkdir()
     (review_dir / "category_filters.override.json").write_text(
-        json.dumps({"approved": False, "values": {"Μνήμη Ram": "16 GB"}}, ensure_ascii=False),
+        json.dumps(
+            {"approved": False, "values": {"Μνήμη Ram": "16 GB"}}, ensure_ascii=False
+        ),
         encoding="utf-8",
     )
 
     row, _normalized, warnings = mapping.build_row(
         CLIInput(model="ABC", url="", price="1"),
-        ParsedProduct(source=_source(("Διαγώνιος Οθόνης  (Ίντσες)", "15.6"), ("Μνήμη Ram", "8 GB"))),
+        ParsedProduct(
+            source=_source(
+                ("Διαγώνιος Οθόνης  (Ίντσες)", "15.6"), ("Μνήμη Ram", "8 GB")
+            )
+        ),
         _taxonomy(),
         SchemaMatchResult(),
         model_root=tmp_path,
@@ -472,9 +561,15 @@ def test_saved_review_value_overrides_source_derived_value_before_approval(tmp_p
     assert "category_filter_review_not_approved" in warnings
 
 
-def test_active_required_missing_filter_produces_warning_and_no_emitted_column() -> None:
-    result = resolve_category_filter_values(_source(("Μνήμη Ram", "16 GB")), _taxonomy(), _category())
-    assert "required_category_filter_missing:Διαγώνιος Οθόνης  (Ίντσες)" in result.warnings
+def test_active_required_missing_filter_produces_warning_and_no_emitted_column() -> (
+    None
+):
+    result = resolve_category_filter_values(
+        _source(("Μνήμη Ram", "16 GB")), _taxonomy(), _category()
+    )
+    assert (
+        "required_category_filter_missing:Διαγώνιος Οθόνης  (Ίντσες)" in result.warnings
+    )
     assert not result.errors
     assert "filter_group:Διαγώνιος Οθόνης  (Ίντσες)" not in result.emitted_columns
 
@@ -490,7 +585,9 @@ def test_active_optional_missing_filter_does_not_produce_validation_error() -> N
 
 
 def test_inactive_group_does_not_block_render() -> None:
-    result = resolve_category_filter_values(_source(("Ανενεργό", "Old")), _taxonomy(), _category())
+    result = resolve_category_filter_values(
+        _source(("Ανενεργό", "Old")), _taxonomy(), _category()
+    )
     inactive = next(group for group in result.groups if group.group_name == "Ανενεργό")
     assert inactive.resolved_value == ""
     assert inactive.emitted is False
@@ -504,9 +601,16 @@ def test_deprecated_value_is_emitted_and_warned() -> None:
         _taxonomy(),
         _category(),
     )
-    screen = next(group for group in result.groups if group.group_name == "Διαγώνιος Οθόνης  (Ίντσες)")
+    screen = next(
+        group
+        for group in result.groups
+        if group.group_name == "Διαγώνιος Οθόνης  (Ίντσες)"
+    )
     assert screen.emitted is True
-    assert "deprecated_category_filter_value_used:Διαγώνιος Οθόνης  (Ίντσες)" in result.warnings
+    assert (
+        "deprecated_category_filter_value_used:Διαγώνιος Οθόνης  (Ίντσες)"
+        in result.warnings
+    )
 
 
 def test_outside_allowed_value_is_emitted_and_warned() -> None:
@@ -515,10 +619,17 @@ def test_outside_allowed_value_is_emitted_and_warned() -> None:
         _taxonomy(),
         _category(),
     )
-    screen = next(group for group in result.groups if group.group_name == "Διαγώνιος Οθόνης  (Ίντσες)")
+    screen = next(
+        group
+        for group in result.groups
+        if group.group_name == "Διαγώνιος Οθόνης  (Ίντσες)"
+    )
     assert screen.emitted is True
     assert screen.outside_allowed is True
-    assert "category_filter_value_outside_allowed:Διαγώνιος Οθόνης  (Ίντσες)" in result.warnings
+    assert (
+        "category_filter_value_outside_allowed:Διαγώνιος Οθόνης  (Ίντσες)"
+        in result.warnings
+    )
 
 
 def test_value_alias_resolves_to_canonical_allowed_filter_value() -> None:
@@ -562,17 +673,21 @@ def test_skroutz_description_pair_resolves_filter_value_and_unit_alias() -> None
                 "name": "Ισχύς (Watt)",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_800", "value": "800 W", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_800", "value": "800 W", "status": "active"}
+                ],
             }
         ],
     }
     source = SourceProductData(
         source_name="skroutz",
         name="Brand MW-1",
-        presentation_source_html='<ul><li>Ισχύς: 800W.</li></ul>',
+        presentation_source_html="<ul><li>Ισχύς: 800W.</li></ul>",
     )
 
-    result = resolve_category_filter_values(source, _taxonomy("cat_microwave"), category)
+    result = resolve_category_filter_values(
+        source, _taxonomy("cat_microwave"), category
+    )
 
     power = result.groups[0]
     assert power.resolved_value == "800 W"
@@ -590,12 +705,16 @@ def test_dash_source_values_are_treated_as_missing_filter_values() -> None:
                 "name": "Χρώμα",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_white", "value": "Λευκό", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_white", "value": "Λευκό", "status": "active"}
+                ],
             }
         ],
     }
 
-    result = resolve_category_filter_values(_source(("Χρώμα", "-")), _taxonomy("cat_dryers"), category)
+    result = resolve_category_filter_values(
+        _source(("Χρώμα", "-")), _taxonomy("cat_dryers"), category
+    )
 
     color = result.groups[0]
     assert color.resolved_value == ""
@@ -613,12 +732,16 @@ def test_loading_type_value_alias_resolves_front_loading_to_allowed_value() -> N
                 "name": "Τρόπος Φόρτωσης",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_front", "value": "Εμπρός", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_front", "value": "Εμπρός", "status": "active"}
+                ],
             }
         ],
     }
 
-    result = resolve_category_filter_values(_source(("Τύπος", "Εμπρόσθιας Φόρτωσης")), _taxonomy("cat_washers"), category)
+    result = resolve_category_filter_values(
+        _source(("Τύπος", "Εμπρόσθιας Φόρτωσης")), _taxonomy("cat_washers"), category
+    )
 
     loading = result.groups[0]
     assert loading.resolved_value == "Εμπρός"
@@ -654,8 +777,12 @@ def test_generic_capacity_label_only_feeds_dryer_kilos_for_dryer_taxonomy() -> N
         taxonomy_path="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Πλυντήρια-Στεγνωτήρια > Πλυντήρια Ρούχων",
     )
 
-    dryer_result = resolve_category_filter_values(_source(("Χωρητικότητα", "8 kg")), dryer_taxonomy, category)
-    washer_result = resolve_category_filter_values(_source(("Χωρητικότητα", "8 kg")), washer_taxonomy, category)
+    dryer_result = resolve_category_filter_values(
+        _source(("Χωρητικότητα", "8 kg")), dryer_taxonomy, category
+    )
+    washer_result = resolve_category_filter_values(
+        _source(("Χωρητικότητα", "8 kg")), washer_taxonomy, category
+    )
 
     assert dryer_result.groups[0].resolved_value == "8kg"
     assert dryer_result.groups[0].outside_allowed is False
@@ -672,7 +799,13 @@ def test_hob_zone_count_combines_count_and_technology_for_allowed_value() -> Non
                 "name": "Αριθμός Ζωνών",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_4_induction", "value": "4 επαγωγικές", "status": "active"}],
+                "values": [
+                    {
+                        "value_id": "fv_4_induction",
+                        "value": "4 επαγωγικές",
+                        "status": "active",
+                    }
+                ],
             }
         ],
     }
@@ -710,7 +843,9 @@ def test_hob_technology_value_alias_resolves_to_allowed_filter_value() -> None:
         ],
     }
 
-    result = resolve_category_filter_values(_source(("Τύπος", "Επαγωγική")), _taxonomy("cat_hobs"), category)
+    result = resolve_category_filter_values(
+        _source(("Τύπος", "Επαγωγική")), _taxonomy("cat_hobs"), category
+    )
 
     technology = result.groups[0]
     assert technology.resolved_value == "Αυτόνομο Κεραμικό Επαγωγικό"
@@ -737,7 +872,7 @@ def test_hob_technology_plato_label_alias_resolves_to_allowed_filter_value() -> 
                         "value_id": "fv_ceramic_electric",
                         "value": "Αυτόνομο Κεραμικό Ηλεκτρικό",
                         "status": "active",
-                    }
+                    },
                 ],
             }
         ],
@@ -761,7 +896,11 @@ def test_builtin_hobs_energy_class_filter_is_optional_in_effective_map() -> None
         taxonomy_path="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Εντοιχιζόμενες Συσκευές > Εστίες",
     )
 
-    energy = next(group for group in category["filter_groups"] if group["name"] == "Ενεργειακή Κλάση")
+    energy = next(
+        group
+        for group in category["filter_groups"]
+        if group["name"] == "Ενεργειακή Κλάση"
+    )
     assert energy["required"] is False
 
 
@@ -815,7 +954,9 @@ def test_fryer_capacity_uses_bucket_capacity_label_for_liter_filter() -> None:
                 "name": "Χωρητικότητα σε Λίτρα",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_15", "value": "- 1.5 -", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_15", "value": "- 1.5 -", "status": "active"}
+                ],
             }
         ],
     }
@@ -884,12 +1025,22 @@ def test_no_frost_spacing_alias_resolves_to_allowed_filter_value() -> None:
                 "name": "Ψύξη",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_total_no_frost", "value": "Total No Frost", "status": "active"}],
+                "values": [
+                    {
+                        "value_id": "fv_total_no_frost",
+                        "value": "Total No Frost",
+                        "status": "active",
+                    }
+                ],
             }
         ],
     }
 
-    result = resolve_category_filter_values(_source(("Σύστημα Ψύξης", "Total NoFrost")), _taxonomy("cat_fridge_freezers"), category)
+    result = resolve_category_filter_values(
+        _source(("Σύστημα Ψύξης", "Total NoFrost")),
+        _taxonomy("cat_fridge_freezers"),
+        category,
+    )
 
     cooling = result.groups[0]
     assert cooling.resolved_value == "Total No Frost"
@@ -962,14 +1113,18 @@ def test_oven_filter_aliases_and_inactive_group_allow_canonical_resolution() -> 
                 "name": "Πλάτος cm",
                 "required": True,
                 "status": "active",
-                "values": [{"value_id": "fv_width_594", "value": "59,4 cm", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_width_594", "value": "59,4 cm", "status": "active"}
+                ],
             },
             {
                 "group_id": "fg_cooling_energy",
                 "name": "Ενεργειακή Κλάση Ψύξης",
                 "required": True,
                 "status": "inactive",
-                "values": [{"value_id": "fv_unused", "value": "A+", "status": "active"}],
+                "values": [
+                    {"value_id": "fv_unused", "value": "A+", "status": "active"}
+                ],
             },
         ],
     }
@@ -991,16 +1146,28 @@ def test_oven_filter_aliases_and_inactive_group_allow_canonical_resolution() -> 
     assert by_group["Τύπος φούρνου"].resolved_value == "Ηλεκτρικό"
     assert by_group["Χωρητικότητα Φούρνου"].resolved_value == "71lt"
     assert by_group["Πλάτος cm"].resolved_value == "59,4 cm"
-    assert "required_category_filter_missing:Ενεργειακή Κλάση Ψύξης" not in result.errors
-    assert all(group.outside_allowed is False for group in by_group.values() if group.group_status == "active")
+    assert (
+        "required_category_filter_missing:Ενεργειακή Κλάση Ψύξης" not in result.errors
+    )
+    assert all(
+        group.outside_allowed is False
+        for group in by_group.values()
+        if group.group_status == "active"
+    )
 
 
 def test_empty_resolved_values_are_not_emitted() -> None:
-    result = resolve_category_filter_values(_source(("Διαγώνιος Οθόνης  (Ίντσες)", ""), ("Μνήμη Ram", "16 GB")), _taxonomy(), _category())
+    result = resolve_category_filter_values(
+        _source(("Διαγώνιος Οθόνης  (Ίντσες)", ""), ("Μνήμη Ram", "16 GB")),
+        _taxonomy(),
+        _category(),
+    )
     assert "filter_group:Διαγώνιος Οθόνης  (Ίντσες)" not in result.emitted_columns
 
 
-def test_csv_writer_writes_base_headers_first_and_dynamic_headers_after(tmp_path: Path) -> None:
+def test_csv_writer_writes_base_headers_first_and_dynamic_headers_after(
+    tmp_path: Path,
+) -> None:
     template = _template(tmp_path / "template.csv", ["model", "name"])
     headers, ordered = write_csv_row(
         {"model": "1", "filter_group:Μνήμη Ram": "16 GB", "name": "Laptop"},
@@ -1021,7 +1188,9 @@ def test_csv_writer_omits_empty_filter_group_fields(tmp_path: Path) -> None:
     assert headers == ["model"]
 
 
-def test_validator_accepts_base_headers_plus_trailing_filter_group_headers(tmp_path: Path) -> None:
+def test_validator_accepts_base_headers_plus_trailing_filter_group_headers(
+    tmp_path: Path,
+) -> None:
     template = _template(tmp_path / "template.csv", ["model", "name"])
     candidate = _csv(
         tmp_path / "candidate.csv",
@@ -1032,7 +1201,9 @@ def test_validator_accepts_base_headers_plus_trailing_filter_group_headers(tmp_p
     assert report["ok"] is True
 
 
-def test_validator_rejects_filter_group_headers_inside_base_header_block(tmp_path: Path) -> None:
+def test_validator_rejects_filter_group_headers_inside_base_header_block(
+    tmp_path: Path,
+) -> None:
     template = _template(tmp_path / "template.csv", ["model", "name"])
     candidate = _csv(
         tmp_path / "candidate.csv",
@@ -1059,18 +1230,32 @@ def test_validator_reports_dynamic_filter_headers_and_count(tmp_path: Path) -> N
     candidate = _csv(
         tmp_path / "candidate.csv",
         ["model", "name", "filter_group:Μνήμη Ram", "filter_group:Λειτουργικό"],
-        {"model": "1", "name": "Laptop", "filter_group:Μνήμη Ram": "16 GB", "filter_group:Λειτουργικό": "Windows 11"},
+        {
+            "model": "1",
+            "name": "Laptop",
+            "filter_group:Μνήμη Ram": "16 GB",
+            "filter_group:Λειτουργικό": "Windows 11",
+        },
     )
     report = validate_candidate_csv(candidate, template_path=template)
-    assert report["dynamic_filter_headers"] == ["filter_group:Μνήμη Ram", "filter_group:Λειτουργικό"]
+    assert report["dynamic_filter_headers"] == [
+        "filter_group:Μνήμη Ram",
+        "filter_group:Λειτουργικό",
+    ]
     assert report["dynamic_filter_count"] == 2
 
 
-def test_build_row_adds_category_filter_diagnostics_to_normalized_output(monkeypatch) -> None:
+def test_build_row_adds_category_filter_diagnostics_to_normalized_output(
+    monkeypatch,
+) -> None:
     _patch_mapping_dependencies(monkeypatch)
     row, normalized, _warnings = mapping.build_row(
         CLIInput(model="ABC", url="", price="1"),
-        ParsedProduct(source=_source(("Διαγώνιος Οθόνης  (Ίντσες)", "15.6"), ("Μνήμη Ram", "16 GB"))),
+        ParsedProduct(
+            source=_source(
+                ("Διαγώνιος Οθόνης  (Ίντσες)", "15.6"), ("Μνήμη Ram", "16 GB")
+            )
+        ),
         _taxonomy(),
         SchemaMatchResult(),
         filter_map=_filter_map(),
@@ -1086,7 +1271,7 @@ def test_build_row_serializes_multiple_tv_categories(monkeypatch) -> None:
         ParsedProduct(
             source=SourceProductData(
                 brand="TCL",
-                name="TCL 60\" OLED 4K UHD TV",
+                name='TCL 60" OLED 4K UHD TV',
                 key_specs=[
                     SpecItem(label="Διαγώνιος Οθόνης ( Ίντσες )", value="60"),
                     SpecItem(label="Τεχνολογία Οθόνης", value="OLED"),
@@ -1115,7 +1300,9 @@ def test_build_row_serializes_multiple_tv_categories(monkeypatch) -> None:
     ]
 
 
-def test_build_row_emits_laptop_style_filters_for_laptops_taxonomy_fixture(monkeypatch) -> None:
+def test_build_row_emits_laptop_style_filters_for_laptops_taxonomy_fixture(
+    monkeypatch,
+) -> None:
     _patch_mapping_dependencies(monkeypatch)
     row, _normalized, _warnings = mapping.build_row(
         CLIInput(model="ABC", url="", price="1"),
@@ -1152,7 +1339,9 @@ def test_microwave_filter_map_marks_grill_optional_and_removes_liter_capacity() 
     }
 
     for category_id, (grill_group_id, liters_group_id) in expected.items():
-        category = find_filter_category(filter_map, category_id=category_id, taxonomy_path="")
+        category = find_filter_category(
+            filter_map, category_id=category_id, taxonomy_path=""
+        )
         groups = {group["group_id"]: group for group in category["filter_groups"]}
         if grill_group_id:
             assert groups[grill_group_id]["name"] == "Με Grill"
@@ -1162,7 +1351,9 @@ def test_microwave_filter_map_marks_grill_optional_and_removes_liter_capacity() 
         assert groups[liters_group_id]["required"] is False
         assert groups[liters_group_id]["status"] == "inactive"
 
-    without_grill = find_filter_category(filter_map, category_id="cat_2860df0d9d56", taxonomy_path="")
+    without_grill = find_filter_category(
+        filter_map, category_id="cat_2860df0d9d56", taxonomy_path=""
+    )
     taxonomy = TaxonomyResolution(
         category_id="cat_2860df0d9d56",
         parent_category="ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ",
@@ -1187,7 +1378,9 @@ def test_microwave_filter_map_marks_grill_optional_and_removes_liter_capacity() 
     assert "filter_group:Χωρητικότητα σε Λίτρα" not in result.emitted_columns
 
 
-def test_render_style_missing_required_filters_warn_without_failing_validation(tmp_path: Path, monkeypatch) -> None:
+def test_render_style_missing_required_filters_warn_without_failing_validation(
+    tmp_path: Path, monkeypatch
+) -> None:
     _patch_mapping_dependencies(monkeypatch)
     row, normalized, _warnings = mapping.build_row(
         CLIInput(model="ABC", url="", price="1"),
@@ -1197,7 +1390,9 @@ def test_render_style_missing_required_filters_warn_without_failing_validation(t
         filter_map=_filter_map(),
         llm_product={"meta_description": "Valid description", "meta_keywords": []},
     )
-    template = _template(tmp_path / "template.csv", ["model", "name", "meta_description"])
+    template = _template(
+        tmp_path / "template.csv", ["model", "name", "meta_description"]
+    )
     csv_path = tmp_path / "candidate.csv"
     write_csv_row(row, csv_path, template)
     report = validate_candidate_csv(
@@ -1207,4 +1402,7 @@ def test_render_style_missing_required_filters_warn_without_failing_validation(t
         category_filter_warnings=normalized["category_filters"]["warnings"],
     )
     assert report["ok"] is True
-    assert "required_category_filter_missing:Διαγώνιος Οθόνης  (Ίντσες)" in report["warnings"]
+    assert (
+        "required_category_filter_missing:Διαγώνιος Οθόνης  (Ίντσες)"
+        in report["warnings"]
+    )

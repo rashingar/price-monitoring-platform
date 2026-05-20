@@ -38,7 +38,11 @@ def _report_paths(repo_root: Path, model: str) -> tuple[Path, Path]:
 
 
 def _summarize_command_output(stdout: str, stderr: str) -> str:
-    lines = [line.strip() for line in [*stdout.splitlines(), *stderr.splitlines()] if line.strip()]
+    lines = [
+        line.strip()
+        for line in [*stdout.splitlines(), *stderr.splitlines()]
+        if line.strip()
+    ]
     if not lines:
         return ""
     return " | ".join(lines[-3:])
@@ -74,17 +78,33 @@ def _preflight_publish_environment(
     repo_root: Path,
 ) -> tuple[str | None, str | None, str | None]:
     if not script_path.exists():
-        return "preflight", f"OpenCart publish failed during preflight: shell entrypoint not found at {script_path}", None
+        return (
+            "preflight",
+            f"OpenCart publish failed during preflight: shell entrypoint not found at {script_path}",
+            None,
+        )
     if not published_csv_path.exists():
-        return "preflight", f"OpenCart publish failed during preflight: missing published CSV: {published_csv_path}", None
+        return (
+            "preflight",
+            f"OpenCart publish failed during preflight: missing published CSV: {published_csv_path}",
+            None,
+        )
 
     main_image_path = work_root / model / "scrape" / "gallery" / f"{model}-1.jpg"
     if not main_image_path.exists():
-        return "preflight", f"OpenCart publish failed during preflight: missing gallery image: {main_image_path}", None
+        return (
+            "preflight",
+            f"OpenCart publish failed during preflight: missing gallery image: {main_image_path}",
+            None,
+        )
 
     bash_path = shutil.which("bash")
     if not bash_path:
-        return "preflight", "OpenCart publish failed during preflight: bash executable not found on PATH", None
+        return (
+            "preflight",
+            "OpenCart publish failed during preflight: bash executable not found on PATH",
+            None,
+        )
 
     try:
         completed = subprocess.run(
@@ -208,8 +228,14 @@ def execute_publish_workflow(
                     publish_message = "OpenCart publish completed successfully."
                 run_status = RunStatus.COMPLETED
             else:
-                launcher_failure = _classify_bash_probe_failure(completed.stdout, completed.stderr)
-                publish_stage = "preflight" if launcher_failure else PUBLISH_STAGE_EXIT_CODES.get(completed.returncode, "unknown")
+                launcher_failure = _classify_bash_probe_failure(
+                    completed.stdout, completed.stderr
+                )
+                publish_stage = (
+                    "preflight"
+                    if launcher_failure
+                    else PUBLISH_STAGE_EXIT_CODES.get(completed.returncode, "unknown")
+                )
                 summary = _summarize_command_output(completed.stdout, completed.stderr)
                 publish_message = f"OpenCart publish failed during {publish_stage}: exit={completed.returncode}"
                 if launcher_failure:

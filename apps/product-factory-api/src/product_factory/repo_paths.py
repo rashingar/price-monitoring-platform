@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESOURCES_DIR = REPO_ROOT / "resources"
 MAPPINGS_DIR = RESOURCES_DIR / "mappings"
@@ -43,7 +42,10 @@ def category_filter_review_dir(model: str, *, repo_root: Path | None = None) -> 
 
 
 def category_filter_review_path(model: str, *, repo_root: Path | None = None) -> Path:
-    return category_filter_review_dir(model, repo_root=repo_root) / "category_filters.override.json"
+    return (
+        category_filter_review_dir(model, repo_root=repo_root)
+        / "category_filters.override.json"
+    )
 
 
 def category_filter_review_path_for_model_root(model_root: Path) -> Path:

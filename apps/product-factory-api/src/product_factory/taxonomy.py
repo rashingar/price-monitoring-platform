@@ -27,7 +27,9 @@ ALIASES = {
 TV_LEAF = normalize_for_match("Τηλεοράσεις")
 TV_CATEGORY_CTA_URL = "https://www.etranoulis.gr/eikona-hxos/thleoraseis"
 MICROWAVE_LEAF = normalize_for_match("Φούρνοι Μικροκυμάτων")
-MICROWAVE_CATEGORY_CTA_URL = "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+MICROWAVE_CATEGORY_CTA_URL = (
+    "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
+)
 TV_SIZE_BUCKETS = {
     "Έως 32''": (0, 32),
     "33''-50''": (33, 50),
@@ -43,7 +45,9 @@ TV_MULTI_CATEGORY_ORDER = (
     "4K UHD",
     "TCL",
 )
-TV_NAME_INCHES_RE = re.compile(r"(?<!\d)(\d{2,3})(?:\s*(?:''|\"|”|ιντσ(?:ες|ών)?))(?!\d)", re.IGNORECASE)
+TV_NAME_INCHES_RE = re.compile(
+    r"(?<!\d)(\d{2,3})(?:\s*(?:''|\"|”|ιντσ(?:ες|ών)?))(?!\d)", re.IGNORECASE
+)
 TV_INCH_LABELS = {
     normalize_for_match("Διαγώνιος Οθόνης ( Ίντσες )"),
     normalize_for_match("Διαγώνιος Οθόνης"),
@@ -60,7 +64,9 @@ def _common_prefix_length(left: str, right: str) -> int:
     return idx
 
 
-def _tokens_soft_overlap(left_tokens: set[str], right_tokens: set[str], min_prefix: int = 6) -> int:
+def _tokens_soft_overlap(
+    left_tokens: set[str], right_tokens: set[str], min_prefix: int = 6
+) -> int:
     if not left_tokens or not right_tokens:
         return 0
     matches = 0
@@ -77,12 +83,18 @@ def _tokens_soft_overlap(left_tokens: set[str], right_tokens: set[str], min_pref
 
 
 class TaxonomyResolver:
-    def __init__(self, taxonomy_path: str = str(CATALOG_TAXONOMY_PATH), filter_map_path: str = str(FILTER_MAP_PATH)) -> None:
+    def __init__(
+        self,
+        taxonomy_path: str = str(CATALOG_TAXONOMY_PATH),
+        filter_map_path: str = str(FILTER_MAP_PATH),
+    ) -> None:
         self.taxonomy = read_json(taxonomy_path)
         self.filter_map = read_json(filter_map_path)
         self.paths: list[dict[str, Any]] = self.taxonomy.get("paths", [])
         self.gender_map: dict[str, dict[str, str]] = self.taxonomy.get("gender_map", {})
-        self.filter_rows: list[dict[str, Any]] = self.filter_map.get("subcategories", [])
+        self.filter_rows: list[dict[str, Any]] = self.filter_map.get(
+            "subcategories", []
+        )
         self.filter_by_path = {
             normalize_for_match(item.get("path", "")): item
             for item in self.filter_rows
@@ -108,7 +120,9 @@ class TaxonomyResolver:
             for item in section.items
             if item.label
         }
-        tv_size_bucket = self._resolve_tv_size_bucket(name=name, key_specs=key_specs, spec_sections=spec_sections)
+        tv_size_bucket = self._resolve_tv_size_bucket(
+            name=name, key_specs=key_specs, spec_sections=spec_sections
+        )
 
         candidates: list[dict[str, Any]] = []
         for candidate in self.paths:
@@ -132,7 +146,10 @@ class TaxonomyResolver:
                 if sub_norm and sub_norm in crumb_norms:
                     score += 5.0
                     reasons.append("sub_breadcrumb")
-                elif sub_norm and any(set(sub_norm.split()).issubset(set(crumb.split())) for crumb in crumb_norms):
+                elif sub_norm and any(
+                    set(sub_norm.split()).issubset(set(crumb.split()))
+                    for crumb in crumb_norms
+                ):
                     score += 5.0
                     reasons.append("sub_breadcrumb")
                 if len(crumb_norms) >= 3:
@@ -141,7 +158,9 @@ class TaxonomyResolver:
                         score += 4.0
                         reasons.append("full_breadcrumb_path")
 
-            candidate_url_tokens = set(normalize_for_match(candidate.get("url", "")).split())
+            candidate_url_tokens = set(
+                normalize_for_match(candidate.get("url", "")).split()
+            )
             shared_url = len(url_tokens & candidate_url_tokens)
             if shared_url:
                 score += min(shared_url * 0.5, 3.0)
@@ -158,11 +177,17 @@ class TaxonomyResolver:
                 score += 2.0 * (sub_overlap / max(len(sub_tokens), 1))
                 reasons.append("sub_name_overlap")
 
-            if leaf_norm == TV_LEAF and tv_size_bucket and (sub or "") == tv_size_bucket:
+            if (
+                leaf_norm == TV_LEAF
+                and tv_size_bucket
+                and (sub or "") == tv_size_bucket
+            ):
                 score += 3.5
                 reasons.append("television_size_bucket")
 
-            if sub_norm == normalize_for_match("Hifi") and {"mini", "hifi"}.issubset(url_tokens):
+            if sub_norm == normalize_for_match("Hifi") and {"mini", "hifi"}.issubset(
+                url_tokens
+            ):
                 score += 3.0
                 reasons.append("electronet_mini_hifi_url")
 
@@ -170,7 +195,11 @@ class TaxonomyResolver:
                 score += 3.0
                 reasons.append("electronet_frapieres_url")
 
-            if sub_norm == normalize_for_match("Τηγάνια") and "tigania" in url_tokens and "wok" in url_tokens:
+            if (
+                sub_norm == normalize_for_match("Τηγάνια")
+                and "tigania" in url_tokens
+                and "wok" in url_tokens
+            ):
                 score += 4.0
                 reasons.append("electronet_tigania_wok_url")
 
@@ -194,7 +223,11 @@ class TaxonomyResolver:
             if filter_row:
                 matched_filters = 0
                 for filter_group in filter_row.get("filter_groups", []):
-                    filter_group_name = filter_group.get("name", "") if isinstance(filter_group, dict) else filter_group
+                    filter_group_name = (
+                        filter_group.get("name", "")
+                        if isinstance(filter_group, dict)
+                        else filter_group
+                    )
                     if normalize_for_match(filter_group_name) in spec_labels:
                         matched_filters += 1
                 if matched_filters:
@@ -229,20 +262,45 @@ class TaxonomyResolver:
         resolved = False
         if best["confidence"] >= 7.0:
             resolved = True
-        elif best["confidence"] >= 5.0 and delta >= 1.5 and any(reason in best["reasons"] for reason in ["sub_breadcrumb", "full_breadcrumb_path"]):
+        elif (
+            best["confidence"] >= 5.0
+            and delta >= 1.5
+            and any(
+                reason in best["reasons"]
+                for reason in ["sub_breadcrumb", "full_breadcrumb_path"]
+            )
+        ):
             resolved = True
-        elif best["confidence"] >= 4.5 and delta >= 2.0 and "leaf_breadcrumb" in best["reasons"]:
+        elif (
+            best["confidence"] >= 4.5
+            and delta >= 2.0
+            and "leaf_breadcrumb" in best["reasons"]
+        ):
             resolved = True
 
         if not resolved:
-            return TaxonomyResolution(confidence=best["confidence"], reason="low_confidence"), candidates[:5]
+            return (
+                TaxonomyResolution(
+                    confidence=best["confidence"], reason="low_confidence"
+                ),
+                candidates[:5],
+            )
 
-        gender, plural_label = self._lookup_gender(best.get("sub_category"), best.get("leaf_category", ""))
+        gender, plural_label = self._lookup_gender(
+            best.get("sub_category"), best.get("leaf_category", "")
+        )
         if normalize_for_match(best.get("leaf_category", "")) == TV_LEAF:
-            gender, plural_label = self._lookup_gender(None, best.get("leaf_category", ""))
+            gender, plural_label = self._lookup_gender(
+                None, best.get("leaf_category", "")
+            )
         if normalize_for_match(best.get("leaf_category", "")) == MICROWAVE_LEAF:
-            gender, plural_label = self._lookup_gender(None, best.get("leaf_category", ""))
-        filter_row = self.filter_by_path.get(normalize_for_match(best.get("taxonomy_path", ""))) or {}
+            gender, plural_label = self._lookup_gender(
+                None, best.get("leaf_category", "")
+            )
+        filter_row = (
+            self.filter_by_path.get(normalize_for_match(best.get("taxonomy_path", "")))
+            or {}
+        )
         return (
             TaxonomyResolution(
                 category_id=str(filter_row.get("category_id", "") or ""),
@@ -259,7 +317,12 @@ class TaxonomyResolver:
             candidates[:5],
         )
 
-    def serialize_category(self, resolution: TaxonomyResolution, boxnow: int = 0, source: SourceProductData | None = None) -> str:
+    def serialize_category(
+        self,
+        resolution: TaxonomyResolution,
+        boxnow: int = 0,
+        source: SourceProductData | None = None,
+    ) -> str:
         if not resolution.parent_category or not resolution.leaf_category:
             return ""
         parent = resolution.parent_category
@@ -270,7 +333,11 @@ class TaxonomyResolver:
             if normalize_for_match(leaf) == TV_LEAF
             else [resolution.sub_category] if resolution.sub_category else []
         )
-        assignments.extend(f"{parent}///{leaf}///{sub_category}" for sub_category in subcategories if sub_category)
+        assignments.extend(
+            f"{parent}///{leaf}///{sub_category}"
+            for sub_category in subcategories
+            if sub_category
+        )
         serialized = ":::".join(dedupe_strings(assignments))
         if int(boxnow) == 1:
             serialized += ":::Μικροσυσκευές"
@@ -293,8 +360,18 @@ class TaxonomyResolver:
                 if self._source_matches_tv_manufacturer(source, manufacturer):
                     detected.add(manufacturer)
 
-        ordered = [sub_category for sub_category in TV_MULTI_CATEGORY_ORDER if sub_category in detected]
-        ordered.extend(sorted(sub_category for sub_category in detected if sub_category not in TV_MULTI_CATEGORY_ORDER))
+        ordered = [
+            sub_category
+            for sub_category in TV_MULTI_CATEGORY_ORDER
+            if sub_category in detected
+        ]
+        ordered.extend(
+            sorted(
+                sub_category
+                for sub_category in detected
+                if sub_category not in TV_MULTI_CATEGORY_ORDER
+            )
+        )
         return ordered
 
     def _resolve_tv_size_bucket_from_source(self, source: SourceProductData) -> str:
@@ -308,7 +385,9 @@ class TaxonomyResolver:
             spec_sections=[*source.spec_sections, *source.manufacturer_spec_sections],
         )
 
-    def _resolve_tv_technology_subcategories(self, source: SourceProductData) -> list[str]:
+    def _resolve_tv_technology_subcategories(
+        self, source: SourceProductData
+    ) -> list[str]:
         normalized = normalize_for_match(self._source_tv_text(source))
         tokens = set(normalized.split())
         detected: list[str] = []
@@ -320,7 +399,9 @@ class TaxonomyResolver:
             detected.append("4K UHD")
         return detected
 
-    def _source_matches_tv_manufacturer(self, source: SourceProductData, manufacturer: str) -> bool:
+    def _source_matches_tv_manufacturer(
+        self, source: SourceProductData, manufacturer: str
+    ) -> bool:
         manufacturer_key = normalize_for_match(manufacturer)
         brand_key = normalize_for_match(source.brand)
         if brand_key == manufacturer_key:
@@ -342,7 +423,9 @@ class TaxonomyResolver:
                 parts.extend([item.label, item.value or ""])
         return " ".join(part for part in parts if part)
 
-    def _lookup_gender(self, sub_category: str | None, leaf_category: str) -> tuple[str, str]:
+    def _lookup_gender(
+        self, sub_category: str | None, leaf_category: str
+    ) -> tuple[str, str]:
         for key in [sub_category or "", leaf_category]:
             entry = self.gender_map.get(key)
             if entry:
@@ -362,7 +445,9 @@ class TaxonomyResolver:
         key_specs: list[dict[str, Any]] | list[Any],
         spec_sections: list[SpecSection],
     ) -> str:
-        inches = self._extract_tv_inches(name=name, key_specs=key_specs, spec_sections=spec_sections)
+        inches = self._extract_tv_inches(
+            name=name, key_specs=key_specs, spec_sections=spec_sections
+        )
         if inches is None:
             return ""
         return self._tv_size_bucket_for_inches(inches)

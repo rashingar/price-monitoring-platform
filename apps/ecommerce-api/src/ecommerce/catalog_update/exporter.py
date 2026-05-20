@@ -5,9 +5,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from ecommerce.catalog_update import browser_steps
-from ecommerce.catalog_update.diagnostics import capture_export_failure_diagnostics, format_export_failure
+from ecommerce.catalog_update.diagnostics import (
+    capture_export_failure_diagnostics,
+    format_export_failure,
+)
 from ecommerce.catalog_update.progress import CatalogUpdateStepTracker
-from ecommerce.catalog_update.types import CatalogExportResult, CatalogUpdateConfig, CatalogUpdateError
+from ecommerce.catalog_update.types import (
+    CatalogExportResult,
+    CatalogUpdateConfig,
+    CatalogUpdateError,
+)
 
 
 def export_catalog_csv(
@@ -21,7 +28,9 @@ def export_catalog_csv(
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
         from playwright.sync_api import sync_playwright
     except Exception as exc:
-        raise CatalogUpdateError("OpenCart export failed: Playwright is not installed.") from exc
+        raise CatalogUpdateError(
+            "OpenCart export failed: Playwright is not installed."
+        ) from exc
 
     timeout_ms = int(config.timeout_seconds * 1000)
     selected_job_id = job_id or output_dir.name
@@ -45,12 +54,16 @@ def export_catalog_csv(
                 steps.emit_progress("export_page_opened")
                 steps.mark("load_profile")
                 browser_steps.load_export_profile(page, config.export_profile)
-                steps.emit_progress("profile_loaded", details={"export_profile": config.export_profile})
+                steps.emit_progress(
+                    "profile_loaded", details={"export_profile": config.export_profile}
+                )
                 steps.mark("step_2_next")
                 browser_steps.advance_export_step_two(page)
                 steps.emit_progress("export_step_advanced")
                 steps.mark("wait_for_download", progress_step="download_waiting")
-                downloaded_path = browser_steps.download_export(page, output_dir, timeout_ms, step_tracker=steps)
+                downloaded_path = browser_steps.download_export(
+                    page, output_dir, timeout_ms, step_tracker=steps
+                )
                 return CatalogExportResult(
                     downloaded_path=downloaded_path,
                     downloaded_size=downloaded_path.stat().st_size,
@@ -65,7 +78,12 @@ def export_catalog_csv(
                     error=exc,
                 )
                 raise CatalogUpdateError(
-                    format_export_failure("export timeout.", step=steps.current_step, diagnostics_dir=diagnostics_dir, config=config)
+                    format_export_failure(
+                        "export timeout.",
+                        step=steps.current_step,
+                        diagnostics_dir=diagnostics_dir,
+                        config=config,
+                    )
                 ) from exc
             except CatalogUpdateError as exc:
                 diagnostics_dir = capture_export_failure_diagnostics(
@@ -77,7 +95,12 @@ def export_catalog_csv(
                     error=exc,
                 )
                 raise CatalogUpdateError(
-                    format_export_failure(str(exc), step=steps.current_step, diagnostics_dir=diagnostics_dir, config=config)
+                    format_export_failure(
+                        str(exc),
+                        step=steps.current_step,
+                        diagnostics_dir=diagnostics_dir,
+                        config=config,
+                    )
                 ) from exc
             except Exception as exc:
                 diagnostics_dir = capture_export_failure_diagnostics(
@@ -89,7 +112,12 @@ def export_catalog_csv(
                     error=exc,
                 )
                 raise CatalogUpdateError(
-                    format_export_failure(exc.__class__.__name__, step=steps.current_step, diagnostics_dir=diagnostics_dir, config=config)
+                    format_export_failure(
+                        exc.__class__.__name__,
+                        step=steps.current_step,
+                        diagnostics_dir=diagnostics_dir,
+                        config=config,
+                    )
                 ) from exc
             finally:
                 try:
@@ -109,5 +137,10 @@ def export_catalog_csv(
             error=exc,
         )
         raise CatalogUpdateError(
-            format_export_failure(exc.__class__.__name__, step=steps.current_step, diagnostics_dir=diagnostics_dir, config=config)
+            format_export_failure(
+                exc.__class__.__name__,
+                step=steps.current_step,
+                diagnostics_dir=diagnostics_dir,
+                config=config,
+            )
         ) from exc

@@ -15,7 +15,9 @@ from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.products import SourceCaptureSnapshot  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url  # noqa: E402
+from ecommerce.db.repositories.source_urls import (
+    create_or_update_imported_source_url,
+)  # noqa: E402
 from ecommerce.source_capture.skroutz_network_diagnostic import (  # noqa: E402
     BLOCKED_OR_CHALLENGE,
     NON_JSON_XHR,
@@ -31,7 +33,9 @@ from ecommerce.source_capture.skroutz_network_diagnostic import (  # noqa: E402
     extract_skroutz_product_id,
     sanitize_diagnostic_url,
 )
-from ecommerce.vendor_sources import skroutz_network_diagnostics as diagnostic_service  # noqa: E402
+from ecommerce.vendor_sources import (
+    skroutz_network_diagnostics as diagnostic_service,
+)  # noqa: E402
 
 NOW = datetime(2026, 5, 7, 12, tzinfo=timezone.utc)
 
@@ -72,23 +76,68 @@ def test_skroutz_product_id_extraction_and_derived_endpoints() -> None:
 
 
 def test_skroutz_endpoint_classification_cases() -> None:
-    assert classify_skroutz_network_endpoint("https://www.skroutz.gr/s/1/filter_products.json", {}, "{}") == PRIMARY_CANDIDATE_PRODUCT_OFFERS
-    assert classify_skroutz_network_endpoint("https://www.skroutz.gr/s/1/shops_details.json", {}, "{}") == SECONDARY_CANDIDATE_SHOP_DETAILS
-    assert classify_skroutz_network_endpoint("https://www.skroutz.gr/api/data", {"product_cards": [{"price": 1}]}, "{}") == PRIMARY_CANDIDATE_PRODUCT_OFFERS
-    assert classify_skroutz_network_endpoint("https://www.skroutz.gr/api/data", {"offers": [{"seller": "shop"}]}, "{}") == POSSIBLE_PRODUCT_OR_OFFER_DATA
-    assert classify_skroutz_network_endpoint("https://www.skroutz.gr/api/reviews", {"ratings": []}, "{}") == POSSIBLE_REVIEWS_OR_RATING_DATA
-    assert classify_skroutz_network_endpoint("https://www.skroutz.gr/api/recommendations", {"similar_products": []}, "{}") == POSSIBLE_RECOMMENDATIONS
-    assert classify_skroutz_network_endpoint("https://www.skroutz.gr/challenge", None, "<html>captcha challenge</html>") == BLOCKED_OR_CHALLENGE
-    assert classify_skroutz_network_endpoint("https://www.skroutz.gr/api/data", None, "not json") == NON_JSON_XHR
+    assert (
+        classify_skroutz_network_endpoint(
+            "https://www.skroutz.gr/s/1/filter_products.json", {}, "{}"
+        )
+        == PRIMARY_CANDIDATE_PRODUCT_OFFERS
+    )
+    assert (
+        classify_skroutz_network_endpoint(
+            "https://www.skroutz.gr/s/1/shops_details.json", {}, "{}"
+        )
+        == SECONDARY_CANDIDATE_SHOP_DETAILS
+    )
+    assert (
+        classify_skroutz_network_endpoint(
+            "https://www.skroutz.gr/api/data", {"product_cards": [{"price": 1}]}, "{}"
+        )
+        == PRIMARY_CANDIDATE_PRODUCT_OFFERS
+    )
+    assert (
+        classify_skroutz_network_endpoint(
+            "https://www.skroutz.gr/api/data", {"offers": [{"seller": "shop"}]}, "{}"
+        )
+        == POSSIBLE_PRODUCT_OR_OFFER_DATA
+    )
+    assert (
+        classify_skroutz_network_endpoint(
+            "https://www.skroutz.gr/api/reviews", {"ratings": []}, "{}"
+        )
+        == POSSIBLE_REVIEWS_OR_RATING_DATA
+    )
+    assert (
+        classify_skroutz_network_endpoint(
+            "https://www.skroutz.gr/api/recommendations", {"similar_products": []}, "{}"
+        )
+        == POSSIBLE_RECOMMENDATIONS
+    )
+    assert (
+        classify_skroutz_network_endpoint(
+            "https://www.skroutz.gr/challenge", None, "<html>captcha challenge</html>"
+        )
+        == BLOCKED_OR_CHALLENGE
+    )
+    assert (
+        classify_skroutz_network_endpoint(
+            "https://www.skroutz.gr/api/data", None, "not json"
+        )
+        == NON_JSON_XHR
+    )
 
 
 def test_skroutz_diagnostic_url_sanitizes_sensitive_query_params() -> None:
     url = "https://www.skroutz.gr/api/offers?token=abc&session=secret&page=2&signature=sig"
 
-    assert sanitize_diagnostic_url(url) == "https://www.skroutz.gr/api/offers?token=%5BREDACTED%5D&session=%5BREDACTED%5D&page=2&signature=%5BREDACTED%5D"
+    assert (
+        sanitize_diagnostic_url(url)
+        == "https://www.skroutz.gr/api/offers?token=%5BREDACTED%5D&session=%5BREDACTED%5D&page=2&signature=%5BREDACTED%5D"
+    )
 
 
-def test_skroutz_network_diagnostic_api_rejects_non_skroutz_source_url(tmp_path: Path, monkeypatch) -> None:
+def test_skroutz_network_diagnostic_api_rejects_non_skroutz_source_url(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     with session_scope(database_url) as session:
@@ -104,13 +153,18 @@ def test_skroutz_network_diagnostic_api_rejects_non_skroutz_source_url(tmp_path:
         source_url_id = source_url.id
 
     client = TestClient(create_app())
-    response = client.post(f"/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network", json={})
+    response = client.post(
+        f"/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network",
+        json={},
+    )
 
     assert response.status_code == 400
     assert "only available for Skroutz" in response.json()["detail"]
 
 
-def test_skroutz_network_diagnostic_api_persists_and_fetches_latest_report(tmp_path: Path, monkeypatch) -> None:
+def test_skroutz_network_diagnostic_api_persists_and_fetches_latest_report(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     with session_scope(database_url) as session:
@@ -126,7 +180,9 @@ def test_skroutz_network_diagnostic_api_persists_and_fetches_latest_report(tmp_p
         assert source_url is not None
         source_url_id = source_url.id
 
-    def fake_runner(source_url: str, *, headed: bool = False, timeout_seconds: int = 60) -> SkroutzNetworkDiagnosticReport:
+    def fake_runner(
+        source_url: str, *, headed: bool = False, timeout_seconds: int = 60
+    ) -> SkroutzNetworkDiagnosticReport:
         del headed, timeout_seconds
         derived = derived_skroutz_endpoint_urls(source_url)
         return SkroutzNetworkDiagnosticReport(
@@ -166,7 +222,9 @@ def test_skroutz_network_diagnostic_api_persists_and_fetches_latest_report(tmp_p
             classifications_summary={PRIMARY_CANDIDATE_PRODUCT_OFFERS: 1},
         )
 
-    monkeypatch.setattr(diagnostic_service, "run_skroutz_network_diagnostic", fake_runner)
+    monkeypatch.setattr(
+        diagnostic_service, "run_skroutz_network_diagnostic", fake_runner
+    )
 
     client = TestClient(create_app())
     response = client.post(
@@ -179,14 +237,22 @@ def test_skroutz_network_diagnostic_api_persists_and_fetches_latest_report(tmp_p
     assert payload["captured_response_count"] == 1
     assert payload["observed_filter_products_url"] is True
     assert payload["observed_shops_details_url"] is False
-    assert payload["best_product_data_endpoint"] == "https://www.skroutz.gr/s/65005733/filter_products.json"
+    assert (
+        payload["best_product_data_endpoint"]
+        == "https://www.skroutz.gr/s/65005733/filter_products.json"
+    )
     assert payload["diagnostic_report_id"] is not None
 
-    latest = client.get(f"/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network/latest")
+    latest = client.get(
+        f"/api/vendor-sources/source-urls/{source_url_id}/diagnostics/skroutz-network/latest"
+    )
     assert latest.status_code == 200
     latest_payload = latest.json()
     assert latest_payload["summary"]["captured_response_count"] == 1
-    assert latest_payload["captured_responses"][0]["classification"] == PRIMARY_CANDIDATE_PRODUCT_OFFERS
+    assert (
+        latest_payload["captured_responses"][0]["classification"]
+        == PRIMARY_CANDIDATE_PRODUCT_OFFERS
+    )
     assert latest_payload["captured_responses"][0]["body_sample"].startswith("{")
 
     with session_scope(database_url) as session:

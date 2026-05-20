@@ -8,7 +8,11 @@ from typing import Any
 
 from .. import repo_paths
 from ..intro_text_markup import summarize_intro_text_emphasis
-from ..llm_contract import count_plain_text_words, validate_intro_text_output, validate_seo_meta_output
+from ..llm_contract import (
+    count_plain_text_words,
+    validate_intro_text_output,
+    validate_seo_meta_output,
+)
 from ..utils import read_json
 from .errors import ServiceError, ServiceErrorCode
 from .execution_models import PreparedProductContext
@@ -233,10 +237,14 @@ def _intro_policy_for_context(context: PreparedProductContext) -> IntroTextPolic
         taxonomy = normalized.get("taxonomy", {})
         if isinstance(taxonomy, dict):
             category_id = str(taxonomy.get("category_id", "") or "")
-            taxonomy_path = str(taxonomy.get("taxonomy_path", "") or taxonomy.get("path", "") or "")
+            taxonomy_path = str(
+                taxonomy.get("taxonomy_path", "") or taxonomy.get("path", "") or ""
+            )
     except Exception:
         pass
-    return get_intro_text_policy(source=source, category_id=category_id, taxonomy_path=taxonomy_path)
+    return get_intro_text_policy(
+        source=source, category_id=category_id, taxonomy_path=taxonomy_path
+    )
 
 
 def _read_text_no_bom(path: Path) -> str:
@@ -247,7 +255,11 @@ def _read_text_no_bom(path: Path) -> str:
 def _updated_at(path: Path) -> str | None:
     if not path.exists():
         return None
-    return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).replace(microsecond=0).isoformat()
+    return (
+        datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+    )
 
 
 def _optional_int(value: object) -> int | None:
@@ -255,12 +267,18 @@ def _optional_int(value: object) -> int | None:
 
 
 def _optional_float(value: object) -> float | None:
-    return float(value) if isinstance(value, (float, int)) and not isinstance(value, bool) else None
+    return (
+        float(value)
+        if isinstance(value, (float, int)) and not isinstance(value, bool)
+        else None
+    )
 
 
 def authoring_service_error_from_exception(exc: Exception) -> ServiceError:
     if isinstance(exc, ServiceError):
         return exc
     if isinstance(exc, PreparedAuthoringArtifactsNotFoundError):
-        return ServiceError(ServiceErrorCode.MISSING_ARTIFACT.value, str(exc), cause=exc)
+        return ServiceError(
+            ServiceErrorCode.MISSING_ARTIFACT.value, str(exc), cause=exc
+        )
     return ServiceError(ServiceErrorCode.UNEXPECTED_FAILURE.value, str(exc), cause=exc)

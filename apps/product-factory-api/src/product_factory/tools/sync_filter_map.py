@@ -22,12 +22,16 @@ from product_factory.repo_paths import (
 
 FILTER_PREFIX = "filter_group:"
 VALID_STATUSES = {"active", "inactive", "deprecated"}
-INVALID_MANUAL_OVERRIDES_MESSAGE = "Manual filter override JSON is invalid. Restore from backup or fix the file."
+INVALID_MANUAL_OVERRIDES_MESSAGE = (
+    "Manual filter override JSON is invalid. Restore from backup or fix the file."
+)
 
 
 class InvalidFilterOverrideJsonError(ValueError):
     def __init__(self, path: Path, detail: str) -> None:
-        super().__init__(f"{INVALID_MANUAL_OVERRIDES_MESSAGE} Path: {path}. Detail: {detail}")
+        super().__init__(
+            f"{INVALID_MANUAL_OVERRIDES_MESSAGE} Path: {path}. Detail: {detail}"
+        )
         self.path = path
         self.detail = detail
 
@@ -95,7 +99,9 @@ def parse_category_assignments(category_value: str) -> list[dict[str, Any]]:
         raw_assignment = raw_assignment.strip()
         if not raw_assignment:
             continue
-        depth = len([segment for segment in raw_assignment.split("///") if segment.strip()])
+        depth = len(
+            [segment for segment in raw_assignment.split("///") if segment.strip()]
+        )
         path = _canonical_path_from_assignment(raw_assignment)
         if path:
             assignments.append({"raw": raw_assignment, "depth": depth, "path": path})
@@ -111,11 +117,17 @@ def select_category_path(
 ) -> str:
     assignments = parse_category_assignments(category_value)
     if not assignments:
-        report["warnings"].append({"row": row_number, "message": "No usable category path found."})
+        report["warnings"].append(
+            {"row": row_number, "message": "No usable category path found."}
+        )
         return ""
 
     max_depth = max(item["depth"] for item in assignments)
-    deepest_paths = list(OrderedDict.fromkeys(item["path"] for item in assignments if item["depth"] == max_depth))
+    deepest_paths = list(
+        OrderedDict.fromkeys(
+            item["path"] for item in assignments if item["depth"] == max_depth
+        )
+    )
     if len(deepest_paths) == 1:
         return deepest_paths[0]
 
@@ -195,7 +207,11 @@ def _normalized_aliases(value: Any) -> list[str]:
 
 
 def _filter_columns(headers: list[str]) -> list[tuple[str, str]]:
-    return [(header, header[len(FILTER_PREFIX) :]) for header in headers if header.startswith(FILTER_PREFIX)]
+    return [
+        (header, header[len(FILTER_PREFIX) :])
+        for header in headers
+        if header.startswith(FILTER_PREFIX)
+    ]
 
 
 def _existing_paths_from_map(path: Path) -> set[str]:
@@ -208,7 +224,9 @@ def _existing_paths_from_map(path: Path) -> set[str]:
     return paths
 
 
-def build_base_from_csv(csv_path: Path, existing_map_path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+def build_base_from_csv(
+    csv_path: Path, existing_map_path: Path
+) -> tuple[dict[str, Any], dict[str, Any]]:
     existing_paths = _existing_paths_from_map(existing_map_path)
     report = new_report("bootstrap-from-csv", csv_path=csv_path)
 
@@ -271,8 +289,12 @@ def build_base_from_csv(csv_path: Path, existing_map_path: Path) -> tuple[dict[s
             group.pop("_value_index", None)
 
     report["categories_seen"] = len(categories)
-    report["categories_updated"] = len([path for path in categories if path in existing_paths])
-    report["categories_added"] = len([path for path in categories if path not in existing_paths])
+    report["categories_updated"] = len(
+        [path for path in categories if path in existing_paths]
+    )
+    report["categories_added"] = len(
+        [path for path in categories if path not in existing_paths]
+    )
     report["groups_seen"] = len(seen_groups)
     report["values_seen"] = len(seen_values)
 
@@ -327,16 +349,24 @@ def load_manual_overrides(path: Path) -> dict[str, Any]:
     if payload is None:
         return default_manual_overrides()
     if not isinstance(payload, dict):
-        raise InvalidFilterOverrideJsonError(path, "Top-level payload must be a JSON object.")
+        raise InvalidFilterOverrideJsonError(
+            path, "Top-level payload must be a JSON object."
+        )
     payload.setdefault("meta", default_manual_overrides()["meta"])
     payload.setdefault("metadata", default_manual_overrides()["metadata"])
     payload.setdefault("categories", {})
     if not isinstance(payload["meta"], dict):
-        raise InvalidFilterOverrideJsonError(path, "Field 'meta' must be a JSON object.")
+        raise InvalidFilterOverrideJsonError(
+            path, "Field 'meta' must be a JSON object."
+        )
     if not isinstance(payload["metadata"], dict):
-        raise InvalidFilterOverrideJsonError(path, "Field 'metadata' must be a JSON object.")
+        raise InvalidFilterOverrideJsonError(
+            path, "Field 'metadata' must be a JSON object."
+        )
     if not isinstance(payload["categories"], dict):
-        raise InvalidFilterOverrideJsonError(path, "Field 'categories' must be a JSON object.")
+        raise InvalidFilterOverrideJsonError(
+            path, "Field 'categories' must be a JSON object."
+        )
     return payload
 
 
@@ -345,20 +375,32 @@ def apply_manual_overrides(
     manual_payload: dict[str, Any],
     report: dict[str, Any],
 ) -> dict[str, Any]:
-    categories = OrderedDict((category["category_id"], copy.deepcopy(category)) for category in base_payload.get("subcategories", []))
+    categories = OrderedDict(
+        (category["category_id"], copy.deepcopy(category))
+        for category in base_payload.get("subcategories", [])
+    )
     report["manual_override_categories"] = len(manual_payload.get("categories", {}))
 
     for category_id, category_override in manual_payload.get("categories", {}).items():
-        if category_override.get("category_id") and category_override["category_id"] != category_id:
+        if (
+            category_override.get("category_id")
+            and category_override["category_id"] != category_id
+        ):
             report["warnings"].append(
-                {"category_id": category_id, "message": "Override key does not match category_id field."}
+                {
+                    "category_id": category_id,
+                    "message": "Override key does not match category_id field.",
+                }
             )
         path = canonicalize_category_path(category_override.get("path", ""))
         category = categories.get(category_id)
         if category is None:
             if not path:
                 report["warnings"].append(
-                    {"category_id": category_id, "message": "Cannot add override category without a path."}
+                    {
+                        "category_id": category_id,
+                        "message": "Cannot add override category without a path.",
+                    }
                 )
                 continue
             category = _new_category(path)
@@ -368,7 +410,9 @@ def apply_manual_overrides(
             category.update(_category_parts(path))
             category["path"] = path
 
-        groups_by_id = OrderedDict((group["group_id"], group) for group in category.get("filter_groups", []))
+        groups_by_id = OrderedDict(
+            (group["group_id"], group) for group in category.get("filter_groups", [])
+        )
         for group_id, group_override in category_override.get("groups", {}).items():
             report["manual_override_groups"] += 1
             _validate_status(group_override, "group", group_id, report)
@@ -377,7 +421,11 @@ def apply_manual_overrides(
                 group_name = _trim_outer(group_override.get("name", ""))
                 if not group_name:
                     report["warnings"].append(
-                        {"category_id": category_id, "group_id": group_id, "message": "Cannot add group without name."}
+                        {
+                            "category_id": category_id,
+                            "group_id": group_id,
+                            "message": "Cannot add group without name.",
+                        }
                     )
                     continue
                 group = {
@@ -394,13 +442,22 @@ def apply_manual_overrides(
                 )
             else:
                 for field in ("name", "required", "status"):
-                    if field in group_override and group.get(field) != group_override[field]:
+                    if (
+                        field in group_override
+                        and group.get(field) != group_override[field]
+                    ):
                         group[field] = group_override[field]
                         report["overridden_groups"].append(
-                            {"category_id": category_id, "group_id": group_id, "field": field}
+                            {
+                                "category_id": category_id,
+                                "group_id": group_id,
+                                "field": field,
+                            }
                         )
 
-            values_by_id = OrderedDict((value["value_id"], value) for value in group.get("values", []))
+            values_by_id = OrderedDict(
+                (value["value_id"], value) for value in group.get("values", [])
+            )
             value_overrides = group_override.get("values", {})
             for value_id, value_override in value_overrides.items():
                 report["manual_override_values"] += 1
@@ -429,13 +486,22 @@ def apply_manual_overrides(
                     group.setdefault("values", []).append(value)
                     values_by_id[value_id] = value
                     report["overridden_values"].append(
-                        {"category_id": category_id, "group_id": group_id, "value_id": value_id, "field": "added"}
+                        {
+                            "category_id": category_id,
+                            "group_id": group_id,
+                            "value_id": value_id,
+                            "field": "added",
+                        }
                     )
                 else:
                     for field in ("value", "status", "aliases"):
                         if field not in value_override:
                             continue
-                        override_value = _normalized_aliases(value_override[field]) if field == "aliases" else value_override[field]
+                        override_value = (
+                            _normalized_aliases(value_override[field])
+                            if field == "aliases"
+                            else value_override[field]
+                        )
                         if field == "aliases" and not override_value:
                             value.pop("aliases", None)
                         elif value.get(field) != override_value:
@@ -449,24 +515,44 @@ def apply_manual_overrides(
                                 }
                             )
 
-            override_value_ids = [value_id for value_id in value_overrides if value_id in values_by_id]
+            override_value_ids = [
+                value_id for value_id in value_overrides if value_id in values_by_id
+            ]
             if override_value_ids:
-                reordered_values = [values_by_id[value_id] for value_id in override_value_ids]
+                reordered_values = [
+                    values_by_id[value_id] for value_id in override_value_ids
+                ]
                 override_value_id_set = set(override_value_ids)
-                reordered_values.extend(value for value in group.get("values", []) if value.get("value_id") not in override_value_id_set)
-                if [value.get("value_id") for value in group.get("values", [])] != [value.get("value_id") for value in reordered_values]:
+                reordered_values.extend(
+                    value
+                    for value in group.get("values", [])
+                    if value.get("value_id") not in override_value_id_set
+                )
+                if [value.get("value_id") for value in group.get("values", [])] != [
+                    value.get("value_id") for value in reordered_values
+                ]:
                     group["values"] = reordered_values
                     report["overridden_groups"].append(
-                        {"category_id": category_id, "group_id": group_id, "field": "value_order"}
+                        {
+                            "category_id": category_id,
+                            "group_id": group_id,
+                            "field": "value_order",
+                        }
                     )
 
-    return build_filter_map_payload(categories.values(), source="base-plus-manual-overrides")
+    return build_filter_map_payload(
+        categories.values(), source="base-plus-manual-overrides"
+    )
 
 
-def _validate_status(payload: dict[str, Any], kind: str, item_id: str, report: dict[str, Any]) -> None:
+def _validate_status(
+    payload: dict[str, Any], kind: str, item_id: str, report: dict[str, Any]
+) -> None:
     status = payload.get("status")
     if status is not None and status not in VALID_STATUSES:
-        report["warnings"].append({"id": item_id, "kind": kind, "message": f"Unknown status: {status}"})
+        report["warnings"].append(
+            {"id": item_id, "kind": kind, "message": f"Unknown status: {status}"}
+        )
 
 
 def build_filter_map_payload(categories: Any, *, source: str) -> dict[str, Any]:
@@ -551,7 +637,9 @@ def new_report(mode: str, *, csv_path: Path | None = None) -> dict[str, Any]:
     }
 
 
-def _with_report_paths(report: dict[str, Any], *, base_path: Path, manual_path: Path, filter_map_path: Path) -> dict[str, Any]:
+def _with_report_paths(
+    report: dict[str, Any], *, base_path: Path, manual_path: Path, filter_map_path: Path
+) -> dict[str, Any]:
     report["base_path"] = str(base_path)
     report["manual_overrides_path"] = str(manual_path)
     report["filter_map_path"] = str(filter_map_path)
@@ -568,7 +656,12 @@ def run_bootstrap(
     write: bool,
 ) -> int:
     base_payload, report = build_base_from_csv(csv_path, filter_map_path)
-    report = _with_report_paths(report, base_path=base_path, manual_path=manual_path, filter_map_path=filter_map_path)
+    report = _with_report_paths(
+        report,
+        base_path=base_path,
+        manual_path=manual_path,
+        filter_map_path=filter_map_path,
+    )
     manual_payload = load_manual_overrides(manual_path)
     final_payload = apply_manual_overrides(base_payload, manual_payload, report)
 
@@ -610,7 +703,10 @@ def run_apply_overrides(
         filter_map_path=filter_map_path,
     )
     report["categories_seen"] = len(base_payload.get("subcategories", []))
-    report["groups_seen"] = sum(len(category.get("filter_groups", [])) for category in base_payload.get("subcategories", []))
+    report["groups_seen"] = sum(
+        len(category.get("filter_groups", []))
+        for category in base_payload.get("subcategories", [])
+    )
     report["values_seen"] = sum(
         len(group.get("values", []))
         for category in base_payload.get("subcategories", [])
@@ -651,7 +747,10 @@ def regenerate_filter_map_from_overrides(
         filter_map_path=filter_map_path,
     )
     report["categories_seen"] = len(base_payload.get("subcategories", []))
-    report["groups_seen"] = sum(len(category.get("filter_groups", [])) for category in base_payload.get("subcategories", []))
+    report["groups_seen"] = sum(
+        len(category.get("filter_groups", []))
+        for category in base_payload.get("subcategories", [])
+    )
     report["values_seen"] = sum(
         len(group.get("values", []))
         for category in base_payload.get("subcategories", [])
@@ -680,18 +779,36 @@ def _check_files(expected: dict[Path, Any]) -> int:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate Product Factory filter map files.")
+    parser = argparse.ArgumentParser(
+        description="Generate Product Factory filter map files."
+    )
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--bootstrap-from-csv", action="store_true", help="Rebuild base map from full catalog CSV.")
-    mode.add_argument("--apply-overrides", action="store_true", help="Regenerate final map from base plus overrides.")
+    mode.add_argument(
+        "--bootstrap-from-csv",
+        action="store_true",
+        help="Rebuild base map from full catalog CSV.",
+    )
+    mode.add_argument(
+        "--apply-overrides",
+        action="store_true",
+        help="Regenerate final map from base plus overrides.",
+    )
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--write", action="store_true", help="Write generated files.")
-    action.add_argument("--check", action="store_true", help="Exit non-zero when generated files are stale.")
+    action.add_argument(
+        "--check",
+        action="store_true",
+        help="Exit non-zero when generated files are stale.",
+    )
     parser.add_argument("--csv-path", type=Path, default=FULL_CATALOG_WITH_FILTERS_PATH)
     parser.add_argument("--base-path", type=Path, default=FILTER_MAP_BASE_PATH)
-    parser.add_argument("--manual-overrides-path", type=Path, default=FILTER_MAP_MANUAL_OVERRIDES_PATH)
+    parser.add_argument(
+        "--manual-overrides-path", type=Path, default=FILTER_MAP_MANUAL_OVERRIDES_PATH
+    )
     parser.add_argument("--filter-map-path", type=Path, default=FILTER_MAP_PATH)
-    parser.add_argument("--sync-report-path", type=Path, default=FILTER_MAP_SYNC_REPORT_PATH)
+    parser.add_argument(
+        "--sync-report-path", type=Path, default=FILTER_MAP_SYNC_REPORT_PATH
+    )
     return parser.parse_args(argv)
 
 

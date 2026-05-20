@@ -5,7 +5,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypeVar
 
-from ..models import CLIInput, ParsedProduct, SchemaMatchResult, SourceProductData, TaxonomyResolution
+from ..models import (
+    CLIInput,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    TaxonomyResolution,
+)
 from .models import RunStatus
 
 _T = TypeVar("_T")
@@ -104,7 +110,9 @@ class PreparedProductContext:
         context = cls.from_model(cli.model, model_root=model_root)
         payload_dict = _as_dict(stage_result)
         normalized_payload = payload_dict.get("normalized")
-        normalized_dict = normalized_payload if isinstance(normalized_payload, Mapping) else {}
+        normalized_dict = (
+            normalized_payload if isinstance(normalized_payload, Mapping) else {}
+        )
         report_payload = payload_dict.get("report")
         report_dict = report_payload if isinstance(report_payload, Mapping) else {}
         parsed = _typed_or_none(payload_dict.get("parsed"), ParsedProduct)
@@ -113,9 +121,17 @@ class PreparedProductContext:
             model_root=model_root,
             scrape_dir=scrape_dir,
             llm_dir=llm_dir,
-            source_json_path=_path_from_payload(payload_dict, "source_json_path", context.source_json_path),
-            scrape_normalized_json_path=_path_from_payload(payload_dict, "normalized_json_path", context.scrape_normalized_json_path),
-            source_report_json_path=_path_from_payload(payload_dict, "report_json_path", context.source_report_json_path),
+            source_json_path=_path_from_payload(
+                payload_dict, "source_json_path", context.source_json_path
+            ),
+            scrape_normalized_json_path=_path_from_payload(
+                payload_dict,
+                "normalized_json_path",
+                context.scrape_normalized_json_path,
+            ),
+            source_report_json_path=_path_from_payload(
+                payload_dict, "report_json_path", context.source_report_json_path
+            ),
             task_manifest_path=llm_dir / "task_manifest.json",
             intro_text_context_path=llm_dir / "intro_text.context.json",
             intro_text_prompt_path=llm_dir / "intro_text.prompt.txt",
@@ -126,7 +142,9 @@ class PreparedProductContext:
             source_product=parsed.source if parsed is not None else None,
             parsed=parsed,
             taxonomy=_typed_or_none(payload_dict.get("taxonomy"), TaxonomyResolution),
-            schema_match=_typed_or_none(payload_dict.get("schema_match"), SchemaMatchResult),
+            schema_match=_typed_or_none(
+                payload_dict.get("schema_match"), SchemaMatchResult
+            ),
             normalized_payload=normalized_dict,
             report_payload=report_dict,
             payload=payload_dict,
@@ -211,7 +229,8 @@ class PreparedProductContext:
             boxnow=int(input_data.get("boxnow", 0)),
             price=input_data.get("price", 0),
             gallery_url=str(input_data.get("gallery_url") or "") or None,
-            characteristics_url=str(input_data.get("characteristics_url") or "") or None,
+            characteristics_url=str(input_data.get("characteristics_url") or "")
+            or None,
             second_opencart_image_index=(
                 int(input_data["second_opencart_image_index"])
                 if input_data.get("second_opencart_image_index") not in (None, "")
@@ -222,7 +241,9 @@ class PreparedProductContext:
         )
 
 
-def _path_from_payload(payload: Mapping[str, object], field_name: str, default: Path) -> Path:
+def _path_from_payload(
+    payload: Mapping[str, object], field_name: str, default: Path
+) -> Path:
     value = payload.get(field_name)
     if value in (None, ""):
         return default
@@ -239,7 +260,9 @@ class PrepareExecutionScrapeResult:
     payload: dict[str, object] = field(default_factory=dict)
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, object] | None) -> "PrepareExecutionScrapeResult":
+    def from_mapping(
+        cls, payload: Mapping[str, object] | None
+    ) -> "PrepareExecutionScrapeResult":
         payload_dict = _as_dict(payload)
         report = payload_dict.get("report")
         report_dict = _as_dict(report) if isinstance(report, Mapping) else {}
@@ -247,7 +270,9 @@ class PrepareExecutionScrapeResult:
             source=str(payload_dict.get("source", "") or ""),
             parsed=_typed_or_none(payload_dict.get("parsed"), ParsedProduct),
             taxonomy=_typed_or_none(payload_dict.get("taxonomy"), TaxonomyResolution),
-            schema_match=_typed_or_none(payload_dict.get("schema_match"), SchemaMatchResult),
+            schema_match=_typed_or_none(
+                payload_dict.get("schema_match"), SchemaMatchResult
+            ),
             report_warnings=_coerce_warnings(report_dict.get("warnings")),
             payload=payload_dict,
         )
@@ -267,7 +292,9 @@ class PrepareExecutionResult:
     seo_meta_output_path: Path
     run_status: RunStatus
     metadata_path: Path
-    scrape_result: PrepareExecutionScrapeResult = field(default_factory=PrepareExecutionScrapeResult)
+    scrape_result: PrepareExecutionScrapeResult = field(
+        default_factory=PrepareExecutionScrapeResult
+    )
     payload: dict[str, object] = field(default_factory=dict)
 
     @classmethod
@@ -278,15 +305,23 @@ class PrepareExecutionResult:
             scrape_dir=_require_path(payload_dict, "scrape_dir"),
             llm_dir=_require_path(payload_dict, "llm_dir"),
             task_manifest_path=_require_path(payload_dict, "task_manifest_path"),
-            intro_text_context_path=_require_path(payload_dict, "intro_text_context_path"),
-            intro_text_prompt_path=_require_path(payload_dict, "intro_text_prompt_path"),
-            intro_text_output_path=_require_path(payload_dict, "intro_text_output_path"),
+            intro_text_context_path=_require_path(
+                payload_dict, "intro_text_context_path"
+            ),
+            intro_text_prompt_path=_require_path(
+                payload_dict, "intro_text_prompt_path"
+            ),
+            intro_text_output_path=_require_path(
+                payload_dict, "intro_text_output_path"
+            ),
             seo_meta_context_path=_require_path(payload_dict, "seo_meta_context_path"),
             seo_meta_prompt_path=_require_path(payload_dict, "seo_meta_prompt_path"),
             seo_meta_output_path=_require_path(payload_dict, "seo_meta_output_path"),
             run_status=_coerce_run_status(payload_dict["run_status"]),
             metadata_path=_require_path(payload_dict, "metadata_path"),
-            scrape_result=PrepareExecutionScrapeResult.from_mapping(payload_dict.get("scrape_result")),
+            scrape_result=PrepareExecutionScrapeResult.from_mapping(
+                payload_dict.get("scrape_result")
+            ),
             payload=payload_dict,
         )
 
@@ -298,7 +333,9 @@ class RenderExecutionValidationReport:
     payload: dict[str, object] = field(default_factory=dict)
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, object] | None) -> "RenderExecutionValidationReport":
+    def from_mapping(
+        cls, payload: Mapping[str, object] | None
+    ) -> "RenderExecutionValidationReport":
         payload_dict = _as_dict(payload)
         return cls(
             ok=bool(payload_dict.get("ok", False)),
@@ -317,7 +354,9 @@ class RenderExecutionResult:
     validation_report_path: Path
     run_status: RunStatus
     metadata_path: Path
-    validation_report: RenderExecutionValidationReport = field(default_factory=RenderExecutionValidationReport)
+    validation_report: RenderExecutionValidationReport = field(
+        default_factory=RenderExecutionValidationReport
+    )
     payload: dict[str, object] = field(default_factory=dict)
 
     @property
@@ -341,9 +380,13 @@ class RenderExecutionResult:
             published_csv_path=_optional_path(payload_dict.get("published_csv_path")),
             description_path=_require_path(payload_dict, "description_path"),
             characteristics_path=_require_path(payload_dict, "characteristics_path"),
-            validation_report_path=_require_path(payload_dict, "validation_report_path"),
+            validation_report_path=_require_path(
+                payload_dict, "validation_report_path"
+            ),
             run_status=_coerce_run_status(payload_dict["run_status"]),
             metadata_path=_require_path(payload_dict, "metadata_path"),
-            validation_report=RenderExecutionValidationReport.from_mapping(payload_dict.get("validation_report")),
+            validation_report=RenderExecutionValidationReport.from_mapping(
+                payload_dict.get("validation_report")
+            ),
             payload=payload_dict,
         )

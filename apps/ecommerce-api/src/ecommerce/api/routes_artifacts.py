@@ -22,7 +22,12 @@ router = APIRouter(prefix="/api/artifacts", tags=["artifacts"])
 
 @router.get("/roots")
 def get_roots() -> dict:
-    return {"roots": [{"path": str(root), "exists": root.exists()} for root in get_artifact_roots()]}
+    return {
+        "roots": [
+            {"path": str(root), "exists": root.exists()}
+            for root in get_artifact_roots()
+        ]
+    }
 
 
 @router.get("/price-monitoring/runs/{run_id}")
@@ -31,7 +36,9 @@ def get_price_monitoring_run_artifacts(run_id: str) -> dict:
 
 
 @router.get("/read")
-def read_artifact(path: str | None = Query(None), max_bytes: int = Query(1048576)) -> dict:
+def read_artifact(
+    path: str | None = Query(None), max_bytes: int = Query(1048576)
+) -> dict:
     try:
         result = read_text_artifact(Path(_required_path(path)), max_bytes=max_bytes)
     except ArtifactPathForbiddenError as exc:
@@ -71,7 +78,9 @@ def download_artifact(path: str | None = Query(None)) -> FileResponse:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Artifact download failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Artifact download failed."
+        ) from exc
     return FileResponse(resolved, filename=resolved.name)
 
 

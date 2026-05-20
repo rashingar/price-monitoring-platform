@@ -1,6 +1,11 @@
 from product_factory.deterministic_fields import build_deterministic_product_fields
 from product_factory.mapping import derive_seo_keyword
-from product_factory.models import SourceProductData, SpecItem, SpecSection, TaxonomyResolution
+from product_factory.models import (
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
 
 
 def _make_ice_cream_taxonomy() -> TaxonomyResolution:
@@ -26,12 +31,22 @@ def test_skroutz_ice_cream_maker_uses_singular_category_phrase() -> None:
         ],
     )
 
-    fields = build_deterministic_product_fields(source, _make_ice_cream_taxonomy(), "344709", derive_seo_keyword)
+    fields = build_deterministic_product_fields(
+        source, _make_ice_cream_taxonomy(), "344709", derive_seo_keyword
+    )
 
     assert fields["category_phrase"] == "Παγωτομηχανή"
-    assert fields["name"] == "Tefal IG602A – Παγωτομηχανή 1,4Lt 10 Προγραμμάτων 3 Δοχείων"
-    assert fields["meta_title"] == "Tefal IG602A Παγωτομηχανή 1,4Lt 10 Προγραμμάτων | eTranoulis"
-    assert fields["seo_keyword"] == "tefal-ig602a-pagotomichani-14lt-10-programmaton-3-docheion-kafe"
+    assert (
+        fields["name"] == "Tefal IG602A – Παγωτομηχανή 1,4Lt 10 Προγραμμάτων 3 Δοχείων"
+    )
+    assert (
+        fields["meta_title"]
+        == "Tefal IG602A Παγωτομηχανή 1,4Lt 10 Προγραμμάτων | eTranoulis"
+    )
+    assert (
+        fields["seo_keyword"]
+        == "tefal-ig602a-pagotomichani-14lt-10-programmaton-3-docheion-kafe"
+    )
 
 
 def test_manufacturer_tefal_ice_cream_maker_uses_family_deterministic_fields() -> None:
@@ -64,9 +79,15 @@ def test_manufacturer_tefal_ice_cream_maker_uses_family_deterministic_fields() -
         ],
     )
 
-    fields = build_deterministic_product_fields(source, _make_ice_cream_taxonomy(), "344709", derive_seo_keyword)
+    fields = build_deterministic_product_fields(
+        source, _make_ice_cream_taxonomy(), "344709", derive_seo_keyword
+    )
 
     assert fields["category_phrase"] == "Παγωτομηχανή"
-    assert fields["name"] == "Tefal IG602A – Παγωτομηχανή 1,4Lt 10 Προγραμμάτων 3 Δοχείων"
-    assert fields["meta_title"] == "Tefal IG602A Παγωτομηχανή 1,4Lt 10 Προγραμμάτων | eTranoulis"
-
+    assert (
+        fields["name"] == "Tefal IG602A – Παγωτομηχανή 1,4Lt 10 Προγραμμάτων 3 Δοχείων"
+    )
+    assert (
+        fields["meta_title"]
+        == "Tefal IG602A Παγωτομηχανή 1,4Lt 10 Προγραμμάτων | eTranoulis"
+    )

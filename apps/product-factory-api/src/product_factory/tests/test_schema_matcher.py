@@ -8,7 +8,9 @@ from product_factory.schema_matcher import SchemaMatcher
 
 def _write_schema_library(tmp_path: Path, schemas: list[dict[str, object]]) -> Path:
     path = tmp_path / "schema_library.json"
-    path.write_text(json.dumps({"schemas": schemas}, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(
+        json.dumps({"schemas": schemas}, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return path
 
 
@@ -42,8 +44,12 @@ def _schema(
     min_section_overlap: int = 1,
     min_label_overlap: int = 1,
 ) -> dict[str, object]:
-    label_set_exact = _preserve_order([label for _section, labels in sections for label in labels])
-    section_names_normalized = [normalize_for_match(section) for section, _labels in sections]
+    label_set_exact = _preserve_order(
+        [label for _section, labels in sections for label in labels]
+    )
+    section_names_normalized = [
+        normalize_for_match(section) for section, _labels in sections
+    ]
     label_set_normalized = [normalize_for_match(label) for label in label_set_exact]
     section_label_pairs_normalized = _preserve_order(
         [
@@ -68,15 +74,23 @@ def _schema(
         "label_set_normalized": label_set_normalized,
         "section_label_pairs_normalized": section_label_pairs_normalized,
         "discriminator_labels": [],
-        "required_labels_any": [normalize_for_match(label) for label in (required_labels_any or [])],
-        "required_labels_all": [normalize_for_match(label) for label in (required_labels_all or [])],
-        "forbidden_labels": [normalize_for_match(label) for label in (forbidden_labels or [])],
+        "required_labels_any": [
+            normalize_for_match(label) for label in (required_labels_any or [])
+        ],
+        "required_labels_all": [
+            normalize_for_match(label) for label in (required_labels_all or [])
+        ],
+        "forbidden_labels": [
+            normalize_for_match(label) for label in (forbidden_labels or [])
+        ],
         "min_section_overlap": min_section_overlap,
         "min_label_overlap": min_label_overlap,
         "sibling_template_ids": list(sibling_template_ids or []),
         "n_sections": len(sections),
         "n_rows_total": sum(len(labels) for _section, labels in sections),
-        "sections": [{"title": section, "labels": labels} for section, labels in sections],
+        "sections": [
+            {"title": section, "labels": labels} for section, labels in sections
+        ],
         "sentinel": {},
         "source_files": [f"{template_id}.json"],
     }
@@ -84,12 +98,17 @@ def _schema(
 
 def _spec_sections(*sections: tuple[str, list[str]]) -> list[SpecSection]:
     return [
-        SpecSection(section=section, items=[SpecItem(label=label, value="x") for label in labels])
+        SpecSection(
+            section=section,
+            items=[SpecItem(label=label, value="x") for label in labels],
+        )
         for section, labels in sections
     ]
 
 
-def test_direct_single_category_selects_only_active_safe_template(tmp_path: Path) -> None:
+def test_direct_single_category_selects_only_active_safe_template(
+    tmp_path: Path,
+) -> None:
     schema_path = _write_schema_library(
         tmp_path,
         [
@@ -269,8 +288,14 @@ def test_category_pool_compares_only_sibling_templates(tmp_path: Path) -> None:
     assert result.resolved_category_path == "Home > Small Appliances > Kettles"
     assert result.candidate_pool_size == 2
     assert result.candidate_template_ids == ["kettle_basic", "kettle_glass"]
-    assert {candidate["matched_schema_id"] for candidate in candidates} == {"kettle-basic", "kettle-glass"}
-    assert all(candidate["category_path"] == "Home > Small Appliances > Kettles" for candidate in candidates)
+    assert {candidate["matched_schema_id"] for candidate in candidates} == {
+        "kettle-basic",
+        "kettle-glass",
+    }
+    assert all(
+        candidate["category_path"] == "Home > Small Appliances > Kettles"
+        for candidate in candidates
+    )
 
 
 def test_wrong_category_schema_cannot_be_selected(tmp_path: Path) -> None:
@@ -347,14 +372,25 @@ def test_wrong_category_schema_cannot_be_selected(tmp_path: Path) -> None:
     assert result.selected_template_id is None
     assert result.candidate_template_ids == ["kettle_basic", "kettle_glass"]
     assert result.hard_gate_failures == [
-        {"template_id": "kettle_basic", "gate_reasons": ["missing_required_labels_any", "min_label_overlap"]},
-        {"template_id": "kettle_glass", "gate_reasons": ["missing_required_labels_any", "min_label_overlap"]},
+        {
+            "template_id": "kettle_basic",
+            "gate_reasons": ["missing_required_labels_any", "min_label_overlap"],
+        },
+        {
+            "template_id": "kettle_glass",
+            "gate_reasons": ["missing_required_labels_any", "min_label_overlap"],
+        },
     ]
-    assert {candidate["matched_schema_id"] for candidate in candidates} == {"kettle-basic", "kettle-glass"}
+    assert {candidate["matched_schema_id"] for candidate in candidates} == {
+        "kettle-basic",
+        "kettle-glass",
+    }
     assert "wm-1" not in {candidate["matched_schema_id"] for candidate in candidates}
 
 
-def test_leaf_family_policy_allows_leaf_only_fallback_when_exact_subcategory_pool_is_absent(tmp_path: Path) -> None:
+def test_leaf_family_policy_allows_leaf_only_fallback_when_exact_subcategory_pool_is_absent(
+    tmp_path: Path,
+) -> None:
     schema_path = _write_schema_library(
         tmp_path,
         [
@@ -404,7 +440,10 @@ def test_leaf_family_policy_allows_leaf_only_fallback_when_exact_subcategory_poo
     assert result.candidate_pool_size == 1
     assert result.candidate_template_ids == ["tileoraseis"]
     assert candidates[0]["subcategory_match_policy"] == "leaf_family"
-    assert all(candidate["category_path"] == "Electronics > TVs > -" for candidate in candidates)
+    assert all(
+        candidate["category_path"] == "Electronics > TVs > -"
+        for candidate in candidates
+    )
 
 
 def test_mixed_family_exact_pool_wins_over_leaf_template(tmp_path: Path) -> None:
@@ -511,10 +550,14 @@ def test_mixed_family_allows_leaf_fallback_when_exact_missing(tmp_path: Path) ->
     assert result.candidate_pool_size == 1
     assert result.candidate_template_ids == ["anemistires"]
     assert candidates[0]["subcategory_match_policy"] == "mixed_family"
-    assert all(candidate["category_path"] == "Home > Fans > -" for candidate in candidates)
+    assert all(
+        candidate["category_path"] == "Home > Fans > -" for candidate in candidates
+    )
 
 
-def test_exact_subcategory_policy_does_not_fall_back_to_leaf_only_template(tmp_path: Path) -> None:
+def test_exact_subcategory_policy_does_not_fall_back_to_leaf_only_template(
+    tmp_path: Path,
+) -> None:
     schema_path = _write_schema_library(
         tmp_path,
         [
@@ -658,11 +701,16 @@ def test_generic_overlap_fails_closed_instead_of_global_drift(tmp_path: Path) ->
     assert result.matched_schema_id is None
     assert result.warnings == ["no_safe_template_match"]
     assert result.fail_reason == "discriminator_miss"
-    assert {candidate["matched_schema_id"] for candidate in candidates} == {"kettle-basic", "kettle-glass"}
+    assert {candidate["matched_schema_id"] for candidate in candidates} == {
+        "kettle-basic",
+        "kettle-glass",
+    }
     assert all(candidate["gate_status"] == "failed" for candidate in candidates)
 
 
-def test_washing_machine_like_specs_cannot_select_small_appliance_template(tmp_path: Path) -> None:
+def test_washing_machine_like_specs_cannot_select_small_appliance_template(
+    tmp_path: Path,
+) -> None:
     schema_path = _write_schema_library(
         tmp_path,
         [
@@ -718,7 +766,10 @@ def test_washing_machine_like_specs_cannot_select_small_appliance_template(tmp_p
     assert result.matched_schema_id is None
     assert result.warnings == ["no_safe_template_match"]
     assert result.fail_reason == "discriminator_miss"
-    assert {candidate["matched_schema_id"] for candidate in candidates} == {"kettle-basic", "toaster-1"}
+    assert {candidate["matched_schema_id"] for candidate in candidates} == {
+        "kettle-basic",
+        "toaster-1",
+    }
 
 
 def test_manual_only_category_reports_manual_only_fail_reason(tmp_path: Path) -> None:
@@ -756,7 +807,9 @@ def test_manual_only_category_reports_manual_only_fail_reason(tmp_path: Path) ->
     assert candidates[0]["gate_reasons"] == ["template_status:manual_only"]
 
 
-def test_insufficient_section_overlap_reports_specific_fail_reason(tmp_path: Path) -> None:
+def test_insufficient_section_overlap_reports_specific_fail_reason(
+    tmp_path: Path,
+) -> None:
     schema_path = _write_schema_library(
         tmp_path,
         [
@@ -810,7 +863,9 @@ def test_insufficient_section_overlap_reports_specific_fail_reason(tmp_path: Pat
     assert result.fail_reason == "insufficient_section_overlap"
 
 
-def test_insufficient_label_overlap_reports_specific_fail_reason(tmp_path: Path) -> None:
+def test_insufficient_label_overlap_reports_specific_fail_reason(
+    tmp_path: Path,
+) -> None:
     schema_path = _write_schema_library(
         tmp_path,
         [

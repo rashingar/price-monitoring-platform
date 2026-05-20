@@ -10,9 +10,16 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
-from ecommerce.db.models.price_monitoring import OfferObservation, PriceObservation, PriceObservationListing
+from ecommerce.db.models.price_monitoring import (
+    OfferObservation,
+    PriceObservation,
+    PriceObservationListing,
+)
 from ecommerce.source_capture.sanitize import sanitize_json
-from ecommerce.source_capture.types import ParsedOfferObservation, ParsedPriceObservation
+from ecommerce.source_capture.types import (
+    ParsedOfferObservation,
+    ParsedPriceObservation,
+)
 
 
 def price_observation_row(
@@ -28,7 +35,9 @@ def price_observation_row(
     observation_batch_id: str | None = None,
     monitoring_run_id: int | None = None,
 ) -> PriceObservation:
-    observed_at = snapshot.parsed_at or snapshot.fetched_at or snapshot.captured_at or now
+    observed_at = (
+        snapshot.parsed_at or snapshot.fetched_at or snapshot.captured_at or now
+    )
     timestamp_source, timestamp_quality = observation_timestamp_metadata(
         observation.timestamp_source,
         observation.timestamp_quality,
@@ -80,7 +89,9 @@ def offer_observation_row(
     *,
     observation_batch_id: str | None = None,
 ) -> OfferObservation:
-    observed_at = snapshot.parsed_at or snapshot.fetched_at or snapshot.captured_at or now
+    observed_at = (
+        snapshot.parsed_at or snapshot.fetched_at or snapshot.captured_at or now
+    )
     timestamp_source, timestamp_quality = observation_timestamp_metadata(
         observation.timestamp_source,
         observation.timestamp_quality,
@@ -124,7 +135,9 @@ def add_price_observation_listings(
     now: datetime,
     observation_batch_id: str | None,
 ) -> None:
-    observed_at = snapshot.parsed_at or snapshot.fetched_at or snapshot.captured_at or now
+    observed_at = (
+        snapshot.parsed_at or snapshot.fetched_at or snapshot.captured_at or now
+    )
     for rank, offer in enumerate(rank_parsed_offer_observations(offers), start=1):
         if offer.price is None or offer.price <= 0:
             continue
@@ -157,11 +170,27 @@ def add_price_observation_listings(
         )
 
 
-def rank_parsed_offer_observations(offers: tuple[ParsedOfferObservation, ...]) -> list[ParsedOfferObservation]:
+def rank_parsed_offer_observations(
+    offers: tuple[ParsedOfferObservation, ...],
+) -> list[ParsedOfferObservation]:
     valid = [offer for offer in offers if offer.price is not None and offer.price > 0]
     if any(parsed_offer_rank(offer) is not None for offer in valid):
-        return sorted(valid, key=lambda offer: (parsed_offer_rank(offer) or 1_000_000, offer.price or Decimal("0"), (offer.seller_name or "").casefold()))
-    return sorted(valid, key=lambda offer: (offer.price or Decimal("0"), (offer.seller_name or "").casefold(), offer.seller_url or ""))
+        return sorted(
+            valid,
+            key=lambda offer: (
+                parsed_offer_rank(offer) or 1_000_000,
+                offer.price or Decimal("0"),
+                (offer.seller_name or "").casefold(),
+            ),
+        )
+    return sorted(
+        valid,
+        key=lambda offer: (
+            offer.price or Decimal("0"),
+            (offer.seller_name or "").casefold(),
+            offer.seller_url or "",
+        ),
+    )
 
 
 def parsed_offer_rank(offer: ParsedOfferObservation) -> int | None:
@@ -177,7 +206,9 @@ def parsed_offer_rank(offer: ParsedOfferObservation) -> int | None:
     return None
 
 
-def price_observation_from_offer(offer: ParsedOfferObservation) -> ParsedPriceObservation:
+def price_observation_from_offer(
+    offer: ParsedOfferObservation,
+) -> ParsedPriceObservation:
     raw = dict(offer.raw_observation or {})
     raw.setdefault("persistence_source", "offer_observation_primary_bridge")
     return ParsedPriceObservation(

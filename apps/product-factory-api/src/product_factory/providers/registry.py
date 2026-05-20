@@ -54,10 +54,14 @@ class ProviderRegistry:
             )
         return provider
 
-    def definitions(self, *, kind: ProviderKind | None = None) -> list[ProviderDefinition]:
+    def definitions(
+        self, *, kind: ProviderKind | None = None
+    ) -> list[ProviderDefinition]:
         definitions = [provider.definition for provider in self._providers.values()]
         if kind is not None:
-            definitions = [definition for definition in definitions if definition.kind == kind]
+            definitions = [
+                definition for definition in definitions if definition.kind == kind
+            ]
         return sorted(definitions, key=lambda definition: definition.provider_id)
 
     def ids(self) -> tuple[str, ...]:
@@ -77,7 +81,11 @@ def bootstrap_runtime_provider_registry(
     bestprice_parser: BestPriceProductParser | None = None,
 ) -> ProviderRegistry:
     registry = ProviderRegistry()
-    registry.register(BestPriceProvider(fetcher=fetcher, parser=bestprice_parser or BestPriceProductParser()))
+    registry.register(
+        BestPriceProvider(
+            fetcher=fetcher, parser=bestprice_parser or BestPriceProductParser()
+        )
+    )
     registry.register(ElectronetProvider(fetcher=fetcher, parser=electronet_parser))
     registry.register(SkroutzProvider(parser=skroutz_parser))
     return registry

@@ -14,7 +14,9 @@ def _decimal_or_none(value: object) -> Decimal | None:
     if not text:
         return None
     try:
-        return Decimal(text.replace("EUR", "").replace("€", "").replace(" ", "").replace(",", "."))
+        return Decimal(
+            text.replace("EUR", "").replace("€", "").replace(" ", "").replace(",", ".")
+        )
     except Exception:
         return None
 

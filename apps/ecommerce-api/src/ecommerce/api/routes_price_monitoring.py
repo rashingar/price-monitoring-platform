@@ -14,7 +14,17 @@ from ecommerce.db.policy import (
     collect_price_monitoring_database_readiness,
     require_database_ready_for_price_monitoring,
 )
-from ecommerce.db.repositories.price_monitoring import count_run_observations_by_match_status, get_monitoring_run, list_catalog_snapshot, list_monitoring_runs as list_db_monitoring_runs, list_model_price_history, list_product_price_history, list_price_observations, list_price_observation_listings, monitoring_run_to_dict
+from ecommerce.db.repositories.price_monitoring import (
+    count_run_observations_by_match_status,
+    get_monitoring_run,
+    list_catalog_snapshot,
+    list_monitoring_runs as list_db_monitoring_runs,
+    list_model_price_history,
+    list_product_price_history,
+    list_price_observations,
+    list_price_observation_listings,
+    monitoring_run_to_dict,
+)
 from ecommerce.db.session import session_scope
 from ecommerce.file_editor.safe_paths import get_allowed_roots, is_path_allowed
 from ecommerce.ignore import MissingIgnoreColumnsError
@@ -74,6 +84,7 @@ from ecommerce.price_monitoring import service as monitoring_service
 from ecommerce.price_monitoring.selection import (
     PriceMonitoringSelectionRequest,
 )
+
 router = APIRouter(prefix="/api/price-monitoring", tags=["price-monitoring"])
 
 
@@ -84,7 +95,9 @@ def preview_selection(request: PriceMonitoringSelectionApiRequest) -> dict:
     _require_price_monitoring_database_ready()
     selection_request = _to_selection_request(request, dry_run=True)
     try:
-        return monitoring_service.preview_selection_response(selection_request, session_scope_fn=session_scope)
+        return monitoring_service.preview_selection_response(
+            selection_request, session_scope_fn=session_scope
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except FileNotFoundError as exc:
@@ -92,9 +105,14 @@ def preview_selection(request: PriceMonitoringSelectionApiRequest) -> dict:
     except (MissingCatalogColumnsError, MissingIgnoreColumnsError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Price monitoring selection failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Price monitoring selection failed."
+        ) from exc
 
 
 @router.post("/runs")
@@ -124,9 +142,14 @@ def create_run(request: PriceMonitoringSelectionApiRequest) -> dict:
             detail=f"Price monitoring DB persistence failed: {_safe_db_error(exc.original)}",
         ) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Price monitoring run creation failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Price monitoring run creation failed."
+        ) from exc
 
 
 @router.get("/runs")
@@ -138,7 +161,10 @@ def list_runs() -> dict:
             list_monitoring_runs_fn=list_db_monitoring_runs,
         )
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB persistence failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB persistence failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.get("/runs/{run_id}")
@@ -156,11 +182,16 @@ def get_run(run_id: str) -> dict:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.post("/runs/{run_id}/fetch", status_code=202)
-def post_price_monitoring_fetch(run_id: str, request: PriceMonitoringFetchApiRequest) -> dict:
+def post_price_monitoring_fetch(
+    run_id: str, request: PriceMonitoringFetchApiRequest
+) -> dict:
     """Run Vendor Sources capture for selected active source URLs; no marketplace fallback."""
 
     _require_price_monitoring_database_ready()
@@ -187,7 +218,9 @@ def post_price_monitoring_fetch(run_id: str, request: PriceMonitoringFetchApiReq
             },
         ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Price monitoring fetch enqueue failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Price monitoring fetch enqueue failed."
+        ) from exc
 
 
 @router.get("/runs/{run_id}/fetch")
@@ -199,7 +232,9 @@ def get_price_monitoring_fetch(run_id: str) -> dict:
     except Exception as exc:
         if isinstance(exc, FileNotFoundError):
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        raise HTTPException(status_code=500, detail="Price monitoring fetch result loading failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Price monitoring fetch result loading failed."
+        ) from exc
 
 
 @router.get("/runs/{run_id}/fetch/logs")
@@ -220,7 +255,9 @@ def cancel_latest_price_monitoring_fetch(
     _require_price_monitoring_database_ready()
     run_dir = _resolve_run_dir(run_id)
     try:
-        return monitoring_service.cancel_latest_fetch_response(run_dir, reason=(request.reason if request else None))
+        return monitoring_service.cancel_latest_fetch_response(
+            run_dir, reason=(request.reason if request else None)
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -247,7 +284,9 @@ def get_price_monitoring_fetch_execution_logs(run_id: str, execution_id: str) ->
     _require_price_monitoring_database_ready()
     run_dir = _resolve_run_dir(run_id)
     try:
-        return monitoring_service.fetch_execution_logs_response(run_id, run_dir, execution_id)
+        return monitoring_service.fetch_execution_logs_response(
+            run_id, run_dir, execution_id
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -261,7 +300,9 @@ def cancel_price_monitoring_fetch_execution(
     _require_price_monitoring_database_ready()
     run_dir = _resolve_run_dir(run_id)
     try:
-        return monitoring_service.cancel_fetch_execution_response(run_dir, execution_id, reason=(request.reason if request else None))
+        return monitoring_service.cancel_fetch_execution_response(
+            run_dir, execution_id, reason=(request.reason if request else None)
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -304,7 +345,10 @@ def get_price_monitoring_observations(
                 offset=safe_offset,
             )
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
     return {"items": items, "limit": safe_limit, "offset": safe_offset, "count": count}
 
 
@@ -328,9 +372,14 @@ def get_price_monitoring_run_observations(
                 limit=safe_limit,
                 offset=safe_offset,
             )
-            matched_count, unmatched_count = count_run_observations_by_match_status(session, run_id)
+            matched_count, unmatched_count = count_run_observations_by_match_status(
+                session, run_id
+            )
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
     return {
         "run_id": run_id,
         "items": items,
@@ -348,7 +397,10 @@ def get_price_monitoring_run_catalog_snapshot(run_id: str) -> dict:
         with session_scope() as session:
             items = list_catalog_snapshot(session, run_id)
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
     return {"run_id": run_id, "items": items, "count": len(items)}
 
 
@@ -368,8 +420,16 @@ def get_price_monitoring_model_price_history(
                 include_unmatched=include_unmatched,
             )
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
-    return {"model": model, "catalog_source": _optional_query_text(catalog_source), "items": items, "count": count}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
+    return {
+        "model": model,
+        "catalog_source": _optional_query_text(catalog_source),
+        "items": items,
+        "count": count,
+    }
 
 
 @router.get("/products/{product_id}/price-history")
@@ -380,12 +440,19 @@ def get_price_monitoring_product_price_history(product_id: str) -> dict:
         with session_scope() as session:
             items, count = list_product_price_history(session, numeric_product_id)
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
     return {"product_id": numeric_product_id, "items": items, "count": count}
 
 
 @router.get("/runs/{run_id}/review")
-def get_price_review(run_id: str, enriched_csv_path: str | None = None, include_all_listings: bool = False) -> dict:
+def get_price_review(
+    run_id: str,
+    enriched_csv_path: str | None = None,
+    include_all_listings: bool = False,
+) -> dict:
     _require_price_monitoring_database_ready()
     run_dir = _resolve_run_dir(run_id)
     enriched_path = _optional_read_path(enriched_csv_path)
@@ -404,9 +471,14 @@ def get_price_review(run_id: str, enriched_csv_path: str | None = None, include_
     except PriceReviewError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Price review loading failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Price review loading failed."
+        ) from exc
 
 
 @router.post("/runs/{run_id}/backfill-listings")
@@ -418,11 +490,16 @@ def post_price_review_listing_backfill(run_id: str) -> dict:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB persistence failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB persistence failed: {_safe_db_error(exc)}",
+        ) from exc
 
 
 @router.post("/runs/{run_id}/review/actions")
-def post_price_review_actions(run_id: str, request: PriceReviewActionsApiRequest) -> dict:
+def post_price_review_actions(
+    run_id: str, request: PriceReviewActionsApiRequest
+) -> dict:
     _require_price_monitoring_database_ready()
     run_dir = _resolve_run_dir(run_id)
     enriched_path = _optional_read_path(request.enriched_csv_path)
@@ -441,26 +518,37 @@ def post_price_review_actions(run_id: str, request: PriceReviewActionsApiRequest
     except (PriceReviewError, MissingIgnoreColumnsError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Price monitoring DB query failed: {_safe_db_error(exc)}",
+        ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Price review action application failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Price review action application failed."
+        ) from exc
 
 
 @router.post("/runs/{run_id}/export-price-update")
 def post_price_update_export(run_id: str, request: PriceUpdateExportApiRequest) -> dict:
     _require_price_monitoring_database_ready()
     run_dir = _resolve_run_dir(run_id)
-    review_csv_path = _optional_read_path(request.review_csv_path) or run_dir / "review.csv"
+    review_csv_path = (
+        _optional_read_path(request.review_csv_path) or run_dir / "review.csv"
+    )
     output_path = _optional_write_path(request.output_path)
 
     try:
-        return review_service.export_price_update_response(run_id, run_dir, review_csv_path, output_path)
+        return review_service.export_price_update_response(
+            run_id, run_dir, review_csv_path, output_path
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (PriceReviewError, MissingIgnoreColumnsError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Price update export failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Price update export failed."
+        ) from exc
 
 
 def _to_selection_request(
@@ -480,7 +568,9 @@ def _resolve_run_dir(run_id: str) -> Path:
     except InvalidPriceMonitoringRunIdError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not run_dir.exists() or not run_dir.is_dir():
-        raise HTTPException(status_code=404, detail=f"Price monitoring run folder not found: {run_dir}")
+        raise HTTPException(
+            status_code=404, detail=f"Price monitoring run folder not found: {run_dir}"
+        )
     return run_dir
 
 
@@ -492,7 +582,9 @@ def _optional_write_path(value: str | None) -> Path | None:
     return _optional_safe_path(value, operation="write", artifact_roots_only=True)
 
 
-def _optional_safe_path(value: str | None, *, operation: str, artifact_roots_only: bool) -> Path | None:
+def _optional_safe_path(
+    value: str | None, *, operation: str, artifact_roots_only: bool
+) -> Path | None:
     if value is None:
         return None
     text = value.strip()
@@ -504,10 +596,16 @@ def _optional_safe_path(value: str | None, *, operation: str, artifact_roots_onl
     resolved = requested.expanduser().resolve(strict=False)
     if artifact_roots_only:
         if not is_artifact_path_allowed(resolved.parent):
-            raise HTTPException(status_code=403, detail=f"Path is outside allowed artifact roots: {resolved}")
+            raise HTTPException(
+                status_code=403,
+                detail=f"Path is outside allowed artifact roots: {resolved}",
+            )
         return resolved
     if not _is_allowed_browser_read_path(resolved):
-        raise HTTPException(status_code=403, detail=f"Path is outside allowed {operation} roots: {resolved}")
+        raise HTTPException(
+            status_code=403,
+            detail=f"Path is outside allowed {operation} roots: {resolved}",
+        )
     return resolved
 
 
@@ -561,7 +659,9 @@ def _optional_match_status(value: str | None) -> str | None:
     if text is None:
         return None
     if text not in {"matched", "unmatched"}:
-        raise HTTPException(status_code=400, detail="match_status must be one of: matched, unmatched")
+        raise HTTPException(
+            status_code=400, detail="match_status must be one of: matched, unmatched"
+        )
     return text
 
 
@@ -569,12 +669,19 @@ def _parse_product_id_route_value(value: str) -> int:
     text = value.strip()
     by_model_hint = "Use /api/price-monitoring/products/by-model/{model}/price-history for model identifiers."
     if not text.isdigit():
-        raise HTTPException(status_code=400, detail=f"product_id must be an integer. {by_model_hint}")
+        raise HTTPException(
+            status_code=400, detail=f"product_id must be an integer. {by_model_hint}"
+        )
     if len(text) > 1 and text.startswith("0"):
-        raise HTTPException(status_code=400, detail=f"product_id must not contain leading zeroes. {by_model_hint}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"product_id must not contain leading zeroes. {by_model_hint}",
+        )
     return int(text)
 
 
 def _safe_db_error(exc: Exception) -> str:
-    message = str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    message = (
+        str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    )
     return sanitize_database_error(message) or exc.__class__.__name__

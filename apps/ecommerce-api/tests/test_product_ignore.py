@@ -23,11 +23,15 @@ def test_loading_missing_ignore_csv_returns_empty_list(tmp_path: Path) -> None:
     assert load_ignored_products(tmp_path / "missing.csv") == []
 
 
-def test_upsert_creates_ignore_csv_with_headers_and_preserves_leading_zeroes(tmp_path: Path) -> None:
+def test_upsert_creates_ignore_csv_with_headers_and_preserves_leading_zeroes(
+    tmp_path: Path,
+) -> None:
     ignore_path = tmp_path / "price_ignore.csv"
 
     product = upsert_ignored_product(
-        IgnoredProductInput(model=" 005606 ", name=" Product ", manufacturer=" Bosch ", mpn=" MPN-1 "),
+        IgnoredProductInput(
+            model=" 005606 ", name=" Product ", manufacturer=" Bosch ", mpn=" MPN-1 "
+        ),
         ignore_path,
     )
 
@@ -44,13 +48,20 @@ def test_upsert_creates_ignore_csv_with_headers_and_preserves_leading_zeroes(tmp
 
 def test_rejecting_composite_bundle_model_on_create(tmp_path: Path) -> None:
     with pytest.raises(InvalidIgnoredModelError, match="exactly 6 numeric digits"):
-        upsert_ignored_product(IgnoredProductInput(model="233374-233203"), tmp_path / "price_ignore.csv")
+        upsert_ignored_product(
+            IgnoredProductInput(model="233374-233203"), tmp_path / "price_ignore.csv"
+        )
 
 
 def test_upserting_duplicate_model_replaces_existing_row(tmp_path: Path) -> None:
     ignore_path = tmp_path / "price_ignore.csv"
-    upsert_ignored_product(IgnoredProductInput(model="005606", reason="old"), ignore_path)
-    upsert_ignored_product(IgnoredProductInput(model=" 005606 ", reason="new", notes="updated"), ignore_path)
+    upsert_ignored_product(
+        IgnoredProductInput(model="005606", reason="old"), ignore_path
+    )
+    upsert_ignored_product(
+        IgnoredProductInput(model=" 005606 ", reason="new", notes="updated"),
+        ignore_path,
+    )
 
     products = load_ignored_products(ignore_path)
 
@@ -70,7 +81,9 @@ def test_deleting_ignored_product(tmp_path: Path) -> None:
     assert not remove_ignored_product("005606", ignore_path)
 
 
-def test_existing_ignore_csv_missing_required_columns_is_reported(tmp_path: Path) -> None:
+def test_existing_ignore_csv_missing_required_columns_is_reported(
+    tmp_path: Path,
+) -> None:
     ignore_path = tmp_path / "price_ignore.csv"
     ignore_path.write_text("model,name\n005606,Product\n", encoding="utf-8-sig")
 

@@ -19,14 +19,32 @@ from ecommerce.source_url_import import SUMMARY_COUNTERS, import_source_urls
 
 def main(argv: Sequence[str] | None = None) -> int:
     load_local_env_if_present()
-    parser = argparse.ArgumentParser(description="Import known product URLs into source_urls.")
-    parser.add_argument("--apply", action="store_true", help="Write changes. Defaults to dry-run.")
-    parser.add_argument("--catalog-source", default=DEFAULT_CATALOG_SOURCE, help="Catalog source to resolve candidates against.")
-    parser.add_argument("--observations", action="store_true", help="Include DB price_observations.")
-    parser.add_argument("--artifacts", action="store_true", help="Include DB-referenced enriched CSV artifacts.")
-    parser.add_argument("--limit", type=int, default=None, help="Maximum candidates to process.")
+    parser = argparse.ArgumentParser(
+        description="Import known product URLs into source_urls."
+    )
+    parser.add_argument(
+        "--apply", action="store_true", help="Write changes. Defaults to dry-run."
+    )
+    parser.add_argument(
+        "--catalog-source",
+        default=DEFAULT_CATALOG_SOURCE,
+        help="Catalog source to resolve candidates against.",
+    )
+    parser.add_argument(
+        "--observations", action="store_true", help="Include DB price_observations."
+    )
+    parser.add_argument(
+        "--artifacts",
+        action="store_true",
+        help="Include DB-referenced enriched CSV artifacts.",
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Maximum candidates to process."
+    )
     parser.add_argument("--json", action="store_true", help="Write JSON output.")
-    parser.add_argument("--report-path", type=Path, default=None, help="Optional JSON report path.")
+    parser.add_argument(
+        "--report-path", type=Path, default=None, help="Optional JSON report path."
+    )
     args = parser.parse_args(argv)
 
     include_observations = args.observations or not args.artifacts
@@ -43,7 +61,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 limit=args.limit,
             )
     except SQLAlchemyError as exc:
-        print(f"Source URL import failed: {sanitize_database_error(str(exc)) or exc.__class__.__name__}", file=sys.stderr)
+        print(
+            f"Source URL import failed: {sanitize_database_error(str(exc)) or exc.__class__.__name__}",
+            file=sys.stderr,
+        )
         return 1
     except Exception as exc:
         print(f"Source URL import failed: {exc}", file=sys.stderr)
@@ -52,7 +73,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     payload = result.to_dict(include_candidates=bool(args.report_path))
     if args.report_path is not None:
         args.report_path.parent.mkdir(parents=True, exist_ok=True)
-        args.report_path.write_text(json.dumps(result.to_dict(include_candidates=True), ensure_ascii=False, indent=2), encoding="utf-8")
+        args.report_path.write_text(
+            json.dumps(
+                result.to_dict(include_candidates=True), ensure_ascii=False, indent=2
+            ),
+            encoding="utf-8",
+        )
 
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))

@@ -6,7 +6,10 @@ from ecommerce.platform_health.models import (
     PlatformHealthLink,
     PlatformHealthResponse,
 )
-from ecommerce.platform_health.service import collect_platform_health, get_platform_health_response
+from ecommerce.platform_health.service import (
+    collect_platform_health,
+    get_platform_health_response,
+)
 
 __all__ = [
     "HealthStatus",

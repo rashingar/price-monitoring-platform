@@ -8,7 +8,11 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
-from ecommerce.db.repositories.jobs import create_queued_job, get_job_by_id, mark_running  # noqa: E402
+from ecommerce.db.repositories.jobs import (
+    create_queued_job,
+    get_job_by_id,
+    mark_running,
+)  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.jobs.progress import (  # noqa: E402
     JobProgressReporter,
@@ -72,14 +76,18 @@ def test_job_progress_state_advances_steps_and_records_completed_history() -> No
     ]
 
 
-def test_job_progress_reporter_persists_nested_steps_completed(tmp_path: Path, monkeypatch) -> None:
+def test_job_progress_reporter_persists_nested_steps_completed(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
     Base.metadata.create_all(get_engine(database_url))
     clock = _Clock(datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc))
 
     with session_scope(database_url) as session:
-        create_queued_job(session, job_type="test_job", payload={}, job_id="job-progress")
+        create_queued_job(
+            session, job_type="test_job", payload={}, job_id="job-progress"
+        )
         mark_running(session, "job-progress")
 
     with JobProgressReporter(
@@ -99,7 +107,10 @@ def test_job_progress_reporter_persists_nested_steps_completed(tmp_path: Path, m
 
     assert progress["current_step"] == "persist"
     assert progress["steps_completed"] == 2
-    assert [step["step"] for step in progress["completed_steps"]] == ["queued", "download"]
+    assert [step["step"] for step in progress["completed_steps"]] == [
+        "queued",
+        "download",
+    ]
     assert progress["completed_steps"][0]["elapsed_seconds"] == 2.0
 
 
@@ -115,11 +126,15 @@ def test_job_progress_state_supports_warnings_and_errors_per_step() -> None:
     next_payload = state.payload(started_at + timedelta(seconds=3))
 
     assert current_payload["warnings"] == ["slow response"]
-    assert current_payload["errors"] == [{"message": "retry failed", "details": {"attempt": 1}}]
+    assert current_payload["errors"] == [
+        {"message": "retry failed", "details": {"attempt": 1}}
+    ]
     assert next_payload["warnings"] == []
     assert next_payload["errors"] == []
     assert next_payload["completed_steps"][0]["warnings"] == ["slow response"]
-    assert next_payload["completed_steps"][0]["errors"] == [{"message": "retry failed", "details": {"attempt": 1}}]
+    assert next_payload["completed_steps"][0]["errors"] == [
+        {"message": "retry failed", "details": {"attempt": 1}}
+    ]
 
 
 def test_job_progress_state_sanitizes_details_with_supplied_callback() -> None:
@@ -132,11 +147,17 @@ def test_job_progress_state_sanitizes_details_with_supplied_callback() -> None:
         return safe
 
     timestamp = datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc)
-    state = JobProgressState.create(step_definitions=STEPS, initial_step="queued", details_sanitizer=sanitizer)
+    state = JobProgressState.create(
+        step_definitions=STEPS, initial_step="queued", details_sanitizer=sanitizer
+    )
     state.start(timestamp)
-    state.add_warning("loaded supersecret", details={"url": "https://example.test?token=supersecret"})
+    state.add_warning(
+        "loaded supersecret", details={"url": "https://example.test?token=supersecret"}
+    )
 
-    payload = state.payload(timestamp, details={"password": "supersecret", "note": "using supersecret"})
+    payload = state.payload(
+        timestamp, details={"password": "supersecret", "note": "using supersecret"}
+    )
     serialized = str(payload)
 
     assert "supersecret" not in serialized

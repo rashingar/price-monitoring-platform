@@ -1,7 +1,6 @@
 import ast
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_ROOT = PROJECT_ROOT / "product_factory"
 REPO_ROOT = PROJECT_ROOT.parents[2]
@@ -20,7 +19,9 @@ REMOVED_API_JOB_COMPAT_FILES = {
 
 
 def _python_files(root: Path) -> list[Path]:
-    return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
+    return sorted(
+        path for path in root.rglob("*.py") if "__pycache__" not in path.parts
+    )
 
 
 def _module_imports(path: Path) -> set[str]:
@@ -31,7 +32,11 @@ def _module_imports(path: Path) -> set[str]:
             imports.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             imports.add(node.module)
-            imports.update(f"{node.module}.{alias.name}" for alias in node.names if alias.name != "*")
+            imports.update(
+                f"{node.module}.{alias.name}"
+                for alias in node.names
+                if alias.name != "*"
+            )
     return imports
 
 
@@ -71,7 +76,11 @@ def _obvious_unreachable_locations(path: Path) -> list[str]:
 
 
 def test_api_job_compat_shim_files_are_not_recreated() -> None:
-    existing = [relative for relative in sorted(REMOVED_API_JOB_COMPAT_FILES) if (PROJECT_ROOT / relative).exists()]
+    existing = [
+        relative
+        for relative in sorted(REMOVED_API_JOB_COMPAT_FILES)
+        if (PROJECT_ROOT / relative).exists()
+    ]
 
     assert existing == []
 

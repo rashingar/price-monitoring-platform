@@ -9,7 +9,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate as SourceUrlCandidateRow, SourceUrlDiscoveryRun
+from ecommerce.db.models.source_urls import (
+    SourceUrl,
+    SourceUrlCandidate as SourceUrlCandidateRow,
+    SourceUrlDiscoveryRun,
+)
 from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url
 from ecommerce.source_urls import SourceUrlValidationError, normalize_source_url
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate
@@ -33,9 +37,13 @@ def persist_discovery_run(
 ) -> SourceUrlDiscoveryRun:
     timestamp = _now()
     run_id = str(summary.get("run_id") or "")
-    row = session.execute(select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)).scalar_one_or_none()
+    row = session.execute(
+        select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id == run_id)
+    ).scalar_one_or_none()
     if row is None:
-        row = SourceUrlDiscoveryRun(run_id=run_id, created_at=timestamp, updated_at=timestamp)
+        row = SourceUrlDiscoveryRun(
+            run_id=run_id, created_at=timestamp, updated_at=timestamp
+        )
         session.add(row)
     row.source_name = str(summary.get("source") or "")
     row.mode = str(summary.get("mode") or "")
@@ -55,12 +63,16 @@ def persist_discovery_run(
     return row
 
 
-def persist_candidate_rows(session: Session, candidates: list[SourceUrlAgentCandidate]) -> list[SourceUrlCandidateRow]:
+def persist_candidate_rows(
+    session: Session, candidates: list[SourceUrlAgentCandidate]
+) -> list[SourceUrlCandidateRow]:
     rows: list[SourceUrlCandidateRow] = []
     timestamp = _now()
     for candidate in candidates:
         payload = candidate.to_db_dict()
-        row = SourceUrlCandidateRow(**payload, created_at=timestamp, updated_at=timestamp)
+        row = SourceUrlCandidateRow(
+            **payload, created_at=timestamp, updated_at=timestamp
+        )
         session.add(row)
         rows.append(row)
     session.flush()
@@ -112,17 +124,34 @@ def write_candidate_source_url(
 ) -> SourceUrlWriteResult:
     catalog_product_id = candidate.product.catalog_product_id
     if catalog_product_id is None:
-        return SourceUrlWriteResult(candidate_index, "skipped", reason="catalog_product_id_missing")
+        return SourceUrlWriteResult(
+            candidate_index, "skipped", reason="catalog_product_id_missing"
+        )
     url = candidate.canonical_url or candidate.candidate_url
     if not url:
-        return SourceUrlWriteResult(candidate_index, "skipped", reason="candidate_url_missing")
+        return SourceUrlWriteResult(
+            candidate_index, "skipped", reason="candidate_url_missing"
+        )
     try:
         normalized = normalize_source_url(url)
     except SourceUrlValidationError as exc:
-        return SourceUrlWriteResult(candidate_index, "skipped", reason=f"invalid_url:{exc}")
-    manual = _manual_source_url_for_source(session, catalog_product_id, candidate.source_name)
-    if manual is not None and manual.url_normalized != normalized and trust_level == "high_confidence":
-        return SourceUrlWriteResult(candidate_index, "skipped", source_url_id=manual.id, reason="manual_source_url_exists")
+        return SourceUrlWriteResult(
+            candidate_index, "skipped", reason=f"invalid_url:{exc}"
+        )
+    manual = _manual_source_url_for_source(
+        session, catalog_product_id, candidate.source_name
+    )
+    if (
+        manual is not None
+        and manual.url_normalized != normalized
+        and trust_level == "high_confidence"
+    ):
+        return SourceUrlWriteResult(
+            candidate_index,
+            "skipped",
+            source_url_id=manual.id,
+            reason="manual_source_url_exists",
+        )
 
     try:
         upsert = create_or_update_imported_source_url(
@@ -142,7 +171,9 @@ def write_candidate_source_url(
         return SourceUrlWriteResult(candidate_index, "skipped", reason=str(exc))
     except ValueError as exc:
         return SourceUrlWriteResult(candidate_index, "skipped", reason=str(exc))
-    return SourceUrlWriteResult(candidate_index, upsert.action, source_url_id=upsert.source_url_id, reason="")
+    return SourceUrlWriteResult(
+        candidate_index, upsert.action, source_url_id=upsert.source_url_id, reason=""
+    )
 
 
 def update_candidate_review_status(
@@ -163,7 +194,9 @@ def update_candidate_review_status(
         SourceUrlCandidateRow.candidate_url == candidate_url,
     )
     if catalog_product_id is not None:
-        statement = statement.where(SourceUrlCandidateRow.catalog_product_id == catalog_product_id)
+        statement = statement.where(
+            SourceUrlCandidateRow.catalog_product_id == catalog_product_id
+        )
     rows = list(session.execute(statement).scalars().all())
     timestamp = _now()
     for row in rows:
@@ -177,7 +210,9 @@ def update_candidate_review_status(
     return len(rows)
 
 
-def _manual_source_url_for_source(session: Session, catalog_product_id: int, source_name: str) -> SourceUrl | None:
+def _manual_source_url_for_source(
+    session: Session, catalog_product_id: int, source_name: str
+) -> SourceUrl | None:
     return session.execute(
         select(SourceUrl)
         .where(

@@ -8,7 +8,6 @@ from typing import Any
 
 from ecommerce.artifacts import artifact_link_payload, is_artifact_path_allowed
 
-
 RUN_ARTIFACT_PATH_FIELDS = (
     "input_csv_path",
     "selection_summary_path",
@@ -50,7 +49,9 @@ def build_run_artifact_evidence(run_payload: dict[str, object]) -> RunArtifactEv
         warnings.append(f"Run artifact path is not a directory: {output_dir}")
         return RunArtifactEvidence(artifacts=artifacts, warnings=warnings)
     if not is_artifact_path_allowed(output_dir):
-        warnings.append(f"Run artifact directory is outside allowed artifact roots: {output_dir}")
+        warnings.append(
+            f"Run artifact directory is outside allowed artifact roots: {output_dir}"
+        )
         return RunArtifactEvidence(artifacts=artifacts, warnings=warnings)
 
     for child in sorted(output_dir.iterdir(), key=lambda item: item.name.casefold()):
@@ -59,7 +60,9 @@ def build_run_artifact_evidence(run_payload: dict[str, object]) -> RunArtifactEv
     return RunArtifactEvidence(artifacts=artifacts, warnings=warnings)
 
 
-def _append_artifact(artifacts: list[dict[str, Any]], seen: set[str], path: Path) -> None:
+def _append_artifact(
+    artifacts: list[dict[str, Any]], seen: set[str], path: Path
+) -> None:
     key = str(path.expanduser().resolve(strict=False)).casefold()
     if key in seen:
         return

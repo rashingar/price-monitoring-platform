@@ -28,12 +28,17 @@ class GifStubFetcher(ElectronetFetcher):
         return buffer.getvalue(), "image/gif"
 
 
-
-def test_gallery_images_saved_in_model_folder_with_business_names(tmp_path: Path) -> None:
+def test_gallery_images_saved_in_model_folder_with_business_names(
+    tmp_path: Path,
+) -> None:
     fetcher = StubFetcher()
     images = [
-        GalleryImage(url="https://www.electronet.gr/image/one.jpg", alt="one", position=1),
-        GalleryImage(url="https://www.electronet.gr/image/two.jpg", alt="two", position=2),
+        GalleryImage(
+            url="https://www.electronet.gr/image/one.jpg", alt="one", position=1
+        ),
+        GalleryImage(
+            url="https://www.electronet.gr/image/two.jpg", alt="two", position=2
+        ),
     ]
 
     downloaded, warnings, files_written = fetcher.download_gallery_images(
@@ -44,19 +49,31 @@ def test_gallery_images_saved_in_model_folder_with_business_names(tmp_path: Path
     )
 
     assert warnings == []
-    assert [item.local_filename for item in downloaded] == ["234385-1.jpg", "234385-2.jpg"]
-    assert all((tmp_path / "234385" / "gallery" / name).exists() for name in ["234385-1.jpg", "234385-2.jpg"])
+    assert [item.local_filename for item in downloaded] == [
+        "234385-1.jpg",
+        "234385-2.jpg",
+    ]
+    assert all(
+        (tmp_path / "234385" / "gallery" / name).exists()
+        for name in ["234385-1.jpg", "234385-2.jpg"]
+    )
     assert files_written == [
         str(tmp_path / "234385" / "gallery" / "234385-1.jpg"),
         str(tmp_path / "234385" / "gallery" / "234385-2.jpg"),
     ]
 
 
-def test_besco_images_saved_in_bescos_subfolder_with_section_names(tmp_path: Path) -> None:
+def test_besco_images_saved_in_bescos_subfolder_with_section_names(
+    tmp_path: Path,
+) -> None:
     fetcher = StubFetcher()
     images = [
-        GalleryImage(url="https://www.electronet.gr/image/one.jpg", alt="one", position=1),
-        GalleryImage(url="https://www.electronet.gr/image/three.jpg", alt="three", position=3),
+        GalleryImage(
+            url="https://www.electronet.gr/image/one.jpg", alt="one", position=1
+        ),
+        GalleryImage(
+            url="https://www.electronet.gr/image/three.jpg", alt="three", position=3
+        ),
     ]
 
     downloaded, warnings, files_written = fetcher.download_besco_images(
@@ -67,7 +84,10 @@ def test_besco_images_saved_in_bescos_subfolder_with_section_names(tmp_path: Pat
 
     assert warnings == ["besco_images_less_than_requested_sections"]
     assert [item.local_filename for item in downloaded] == ["besco1.jpg", "besco3.jpg"]
-    assert all((tmp_path / "234385" / "bescos" / name).exists() for name in ["besco1.jpg", "besco3.jpg"])
+    assert all(
+        (tmp_path / "234385" / "bescos" / name).exists()
+        for name in ["besco1.jpg", "besco3.jpg"]
+    )
     assert files_written == [
         str(tmp_path / "234385" / "bescos" / "besco1.jpg"),
         str(tmp_path / "234385" / "bescos" / "besco3.jpg"),
@@ -76,7 +96,11 @@ def test_besco_images_saved_in_bescos_subfolder_with_section_names(tmp_path: Pat
 
 def test_gallery_non_jpg_images_are_converted_to_jpg(tmp_path: Path) -> None:
     fetcher = ConvertingStubFetcher()
-    images = [GalleryImage(url="https://www.electronet.gr/image/one.png", alt="one", position=1)]
+    images = [
+        GalleryImage(
+            url="https://www.electronet.gr/image/one.png", alt="one", position=1
+        )
+    ]
 
     downloaded, warnings, files_written = fetcher.download_gallery_images(
         images=images,
@@ -94,7 +118,11 @@ def test_gallery_non_jpg_images_are_converted_to_jpg(tmp_path: Path) -> None:
 
 def test_besco_non_jpg_images_are_converted_and_resized_to_jpg(tmp_path: Path) -> None:
     fetcher = ConvertingStubFetcher()
-    images = [GalleryImage(url="https://www.electronet.gr/image/one.png", alt="one", position=1)]
+    images = [
+        GalleryImage(
+            url="https://www.electronet.gr/image/one.png", alt="one", position=1
+        )
+    ]
 
     downloaded, warnings, _files_written = fetcher.download_besco_images(
         images=images,
@@ -115,7 +143,11 @@ def test_besco_non_jpg_images_are_converted_and_resized_to_jpg(tmp_path: Path) -
 
 def test_besco_gif_images_are_preserved_as_gif(tmp_path: Path) -> None:
     fetcher = GifStubFetcher()
-    images = [GalleryImage(url="https://www.electronet.gr/image/anim.gif", alt="anim", position=1)]
+    images = [
+        GalleryImage(
+            url="https://www.electronet.gr/image/anim.gif", alt="anim", position=1
+        )
+    ]
 
     downloaded, warnings, files_written = fetcher.download_besco_images(
         images=images,
@@ -128,4 +160,3 @@ def test_besco_gif_images_are_preserved_as_gif(tmp_path: Path) -> None:
     assert downloaded[0].content_type == "image/gif"
     assert (tmp_path / "234385" / "bescos" / "besco1.gif").exists()
     assert files_written == [str(tmp_path / "234385" / "bescos" / "besco1.gif")]
-

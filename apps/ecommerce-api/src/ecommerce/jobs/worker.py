@@ -18,14 +18,23 @@ from ecommerce.catalog_update import service as catalog_update_service
 from ecommerce.db.config import DatabaseNotConfiguredError, sanitize_database_error
 from ecommerce.db.session import create_session_factory
 from ecommerce.env import load_local_env_if_present
-from ecommerce.db.repositories.jobs import fail_stale_running_jobs, lease_queued_jobs_for_worker, list_queued_jobs_for_worker, list_stale_running_jobs
+from ecommerce.db.repositories.jobs import (
+    fail_stale_running_jobs,
+    lease_queued_jobs_for_worker,
+    list_queued_jobs_for_worker,
+    list_stale_running_jobs,
+)
 from ecommerce.jobs.durable import DurableJobRegistry, execute_registered_job
 from ecommerce.source_url_agent.job_handler import run_source_url_agent_job
 from ecommerce.source_url_agent.progress import SOURCE_URL_AGENT_JOB_TYPE
 
-CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES_ENV = "ECOMMERCE_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES"
+CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES_ENV = (
+    "ECOMMERCE_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES"
+)
 DEFAULT_CATALOG_UPDATE_STALE_RUNNING_AFTER_MINUTES = 240
-SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES_ENV = "ECOMMERCE_SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES"
+SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES_ENV = (
+    "ECOMMERCE_SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES"
+)
 DEFAULT_SOURCE_URL_AGENT_STALE_RUNNING_AFTER_MINUTES = 180
 
 
@@ -40,14 +49,18 @@ class WorkerIterationResult:
 
     @property
     def did_work(self) -> bool:
-        return bool(self.stale_failed or self.claimed or self.cancelled or self.executed)
+        return bool(
+            self.stale_failed or self.claimed or self.cancelled or self.executed
+        )
 
 
 def build_default_registry() -> DurableJobRegistry:
     registry = DurableJobRegistry()
     registry.register(
         CATALOG_UPDATE_JOB_TYPE,
-        lambda job_id, _payload: catalog_update_service.run_catalog_update_durable_job(job_id),
+        lambda job_id, _payload: catalog_update_service.run_catalog_update_durable_job(
+            job_id
+        ),
     )
     registry.register(
         SOURCE_URL_AGENT_JOB_TYPE,
@@ -58,13 +71,23 @@ def build_default_registry() -> DurableJobRegistry:
 
 def build_parser(registry: DurableJobRegistry | None = None) -> argparse.ArgumentParser:
     selected_registry = registry or build_default_registry()
-    parser = argparse.ArgumentParser(description="Run queued DB-backed Ecommerce durable jobs.")
-    parser.add_argument("--job-type", choices=selected_registry.job_types(), default=None)
-    parser.add_argument("--once", action="store_true", help="Run one polling iteration and exit.")
+    parser = argparse.ArgumentParser(
+        description="Run queued DB-backed Ecommerce durable jobs."
+    )
+    parser.add_argument(
+        "--job-type", choices=selected_registry.job_types(), default=None
+    )
+    parser.add_argument(
+        "--once", action="store_true", help="Run one polling iteration and exit."
+    )
     parser.add_argument("--poll-seconds", type=float, default=5)
     parser.add_argument("--limit", type=int, default=1)
     parser.add_argument("--stale-running-after-minutes", type=int, default=60)
-    parser.add_argument("--dry-run", action="store_true", help="Inspect matching jobs without mutating or executing them.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Inspect matching jobs without mutating or executing them.",
+    )
     return parser
 
 
@@ -86,7 +109,8 @@ def run_worker_iteration(
         job_type=job_type,
         job_types=job_types,
         default_minutes=stale_running_after_minutes,
-        overrides=stale_running_after_minutes_by_job_type or default_stale_running_thresholds(stale_running_after_minutes),
+        overrides=stale_running_after_minutes_by_job_type
+        or default_stale_running_thresholds(stale_running_after_minutes),
     )
     session = create_session_factory(database_url)()
     try:
@@ -115,11 +139,19 @@ def run_worker_iteration(
                 f"job_type={job_type or ','.join(job_types)}",
             )
             for job in stale_jobs:
-                _print(output, f"dry-run stale running job would be failed: job_id={job.job_id} job_type={job.job_type}")
+                _print(
+                    output,
+                    f"dry-run stale running job would be failed: job_id={job.job_id} job_type={job.job_type}",
+                )
             for job in queued_jobs:
-                _print(output, f"dry-run queued job would be claimed: job_id={job.job_id} job_type={job.job_type}")
+                _print(
+                    output,
+                    f"dry-run queued job would be claimed: job_id={job.job_id} job_type={job.job_type}",
+                )
             session.rollback()
-            return WorkerIterationResult(stale_seen=len(stale_jobs), claimed=len(queued_jobs), dry_run=True)
+            return WorkerIterationResult(
+                stale_seen=len(stale_jobs), claimed=len(queued_jobs), dry_run=True
+            )
 
         stale_jobs = []
         for threshold, selected_job_type, selected_job_types in stale_groups:
@@ -134,7 +166,10 @@ def run_worker_iteration(
             )
         session.commit()
         for job in stale_jobs:
-            _print(output, f"marked stale running job failed: job_id={job.job_id} job_type={job.job_type}")
+            _print(
+                output,
+                f"marked stale running job failed: job_id={job.job_id} job_type={job.job_type}",
+            )
 
         claimed_jobs = lease_queued_jobs_for_worker(
             session,
@@ -149,16 +184,30 @@ def run_worker_iteration(
         for job in claimed_jobs:
             if job.status == "cancelled":
                 cancelled += 1
-                _print(output, f"cancelled queued job before start: job_id={job.job_id} job_type={job.job_type}")
+                _print(
+                    output,
+                    f"cancelled queued job before start: job_id={job.job_id} job_type={job.job_type}",
+                )
                 continue
 
-            _print(output, f"running durable job: job_id={job.job_id} job_type={job.job_type}")
-            final_job = execute_registered_job(session, job.job_id, registry, reraise=False, claimed=True)
+            _print(
+                output,
+                f"running durable job: job_id={job.job_id} job_type={job.job_type}",
+            )
+            final_job = execute_registered_job(
+                session, job.job_id, registry, reraise=False, claimed=True
+            )
             executed += 1
-            _print(output, f"finished durable job: job_id={final_job.job_id} status={final_job.status}")
+            _print(
+                output,
+                f"finished durable job: job_id={final_job.job_id} status={final_job.status}",
+            )
 
         if not stale_jobs and not claimed_jobs:
-            _print(output, f"no matching durable jobs found: job_type={job_type or ','.join(job_types)}")
+            _print(
+                output,
+                f"no matching durable jobs found: job_type={job_type or ','.join(job_types)}",
+            )
 
         return WorkerIterationResult(
             stale_failed=len(stale_jobs),
@@ -210,7 +259,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         _print(sys.stdout, "stopping Ecommerce durable job worker")
         return 0
     except (DatabaseNotConfiguredError, SQLAlchemyError) as exc:
-        _print(sys.stderr, f"Ecommerce durable job worker failed: {sanitize_database_error(exc)}")
+        _print(
+            sys.stderr,
+            f"Ecommerce durable job worker failed: {sanitize_database_error(exc)}",
+        )
         return 1
 
 
@@ -245,7 +297,9 @@ def _stale_threshold_groups(
 
     selected_job_types = tuple(job_types or ())
     groups: list[tuple[int, str | None, tuple[str, ...] | None]] = []
-    regular_job_types = tuple(job_type for job_type in selected_job_types if job_type not in bounded_overrides)
+    regular_job_types = tuple(
+        job_type for job_type in selected_job_types if job_type not in bounded_overrides
+    )
     if regular_job_types:
         groups.append((default_threshold, None, regular_job_types))
     for selected_job_type in selected_job_types:

@@ -7,7 +7,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "check" / "operator-smoke.ps1"
 
@@ -19,7 +18,11 @@ class _RouteHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         self.requests_seen.append(("GET", self.path))
         status, payload = self.routes.get(self.path, (404, {"detail": "not found"}))
-        body = payload if isinstance(payload, bytes) else json.dumps(payload).encode("utf-8")
+        body = (
+            payload
+            if isinstance(payload, bytes)
+            else json.dumps(payload).encode("utf-8")
+        )
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -94,10 +97,14 @@ def test_operator_smoke_json_uses_read_only_status_endpoints() -> None:
         "/api/catalog/update-db/latest": (200, None),
         "/api/vendor-sources/source-urls/summary": (200, {"total": 10}),
     }
-    product_factory_routes = {"/api/health": (200, {"status": "ok", "service": "product-factory-api"})}
+    product_factory_routes = {
+        "/api/health": (200, {"status": "ok", "service": "product-factory-api"})
+    }
     web_routes = {"/": (200, b"<html><body>ok</body></html>")}
 
-    with FakeHttpServer(product_factory_routes) as product_factory, FakeHttpServer(ecommerce_routes) as ecommerce, FakeHttpServer(web_routes) as web:
+    with FakeHttpServer(product_factory_routes) as product_factory, FakeHttpServer(
+        ecommerce_routes
+    ) as ecommerce, FakeHttpServer(web_routes) as web:
         completed = _run_operator_smoke(
             "-ProductFactoryBaseUrl",
             product_factory.base_url,
@@ -115,7 +122,12 @@ def test_operator_smoke_json_uses_read_only_status_endpoints() -> None:
         assert statuses["ecommerce_db_readiness"] == "passed"
         assert statuses["alembic_at_head"] == "passed"
         assert statuses["web_dev_server"] == "passed"
-        assert all(method == "GET" for method, _path in product_factory.requests_seen + ecommerce.requests_seen + web.requests_seen)
+        assert all(
+            method == "GET"
+            for method, _path in product_factory.requests_seen
+            + ecommerce.requests_seen
+            + web.requests_seen
+        )
 
 
 def test_operator_smoke_skip_web_does_not_call_web_server() -> None:
@@ -141,7 +153,9 @@ def test_operator_smoke_skip_web_does_not_call_web_server() -> None:
     }
     product_factory_routes = {"/api/health": (200, {"status": "ok"})}
 
-    with FakeHttpServer(product_factory_routes) as product_factory, FakeHttpServer(ecommerce_routes) as ecommerce:
+    with FakeHttpServer(product_factory_routes) as product_factory, FakeHttpServer(
+        ecommerce_routes
+    ) as ecommerce:
         completed = _run_operator_smoke(
             "-ProductFactoryBaseUrl",
             product_factory.base_url,
@@ -168,4 +182,6 @@ def _run_operator_smoke(*args: str) -> subprocess.CompletedProcess[str]:
         str(SCRIPT_PATH),
         *args,
     ]
-    return subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True, timeout=60, check=False)
+    return subprocess.run(
+        command, cwd=REPO_ROOT, text=True, capture_output=True, timeout=60, check=False
+    )

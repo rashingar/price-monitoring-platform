@@ -16,10 +16,16 @@ from ecommerce.utils.decimals import format_decimal_two_places
 from ecommerce.source_url_agent.page_rules import review_page_rejection_reason
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.sources import SourceDefinition
-from ecommerce.utils.text import normalize_product_text, parse_greek_money_text, product_tokens
+from ecommerce.utils.text import (
+    normalize_product_text,
+    parse_greek_money_text,
+    product_tokens,
+)
 
-
-CANONICAL_RE = re.compile(r"<link[^>]+rel=[\"'][^\"']*canonical[^\"']*[\"'][^>]+href=[\"']([^\"']+)[\"']", re.IGNORECASE)
+CANONICAL_RE = re.compile(
+    r"<link[^>]+rel=[\"'][^\"']*canonical[^\"']*[\"'][^>]+href=[\"']([^\"']+)[\"']",
+    re.IGNORECASE,
+)
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 META_DESCRIPTION_RE = re.compile(
     r"<meta\b(?=[^>]*\bname=[\"']description[\"'])(?=[^>]*\bcontent=[\"']([^\"']*)[\"'])[^>]*>",
@@ -33,7 +39,9 @@ JSONLD_RE = re.compile(
     r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>",
     re.IGNORECASE | re.DOTALL,
 )
-PRICE_RE = re.compile(r"([0-9]{1,3}(?:[.\s][0-9]{3})*(?:,[0-9]{2})?|[0-9]+(?:[,.][0-9]{2})?)\s*€")
+PRICE_RE = re.compile(
+    r"([0-9]{1,3}(?:[.\s][0-9]{3})*(?:,[0-9]{2})?|[0-9]+(?:[,.][0-9]{2})?)\s*€"
+)
 BLOCKED_RE = re.compile(
     r"(captcha|recaptcha|cf-chl|challenge-platform|cf-browser-verification|attention required|just a moment|sorry, you have been blocked|access denied)",
     re.IGNORECASE,
@@ -70,7 +78,11 @@ class PageEvidence:
 
     @property
     def title_only(self) -> bool:
-        return bool(self.title_similarity >= 0.5 and not self.exact_mpn_found and not self.exact_model_found)
+        return bool(
+            self.title_similarity >= 0.5
+            and not self.exact_mpn_found
+            and not self.exact_model_found
+        )
 
     def to_json(self) -> dict[str, Any]:
         payload = {
@@ -79,7 +91,11 @@ class PageEvidence:
             "canonical_url": self.canonical_url,
             "title": self.title,
             "body_text_sample": self.body_text_sample,
-            "candidate_price": format_decimal_two_places(self.candidate_price) if self.candidate_price is not None else "",
+            "candidate_price": (
+                format_decimal_two_places(self.candidate_price)
+                if self.candidate_price is not None
+                else ""
+            ),
             "mpn": {
                 "expected": "",
                 "found": self.exact_mpn_found,
@@ -109,7 +125,9 @@ class PageEvidence:
             "blocked_or_captcha": self.blocked_or_captcha,
             "error_code": self.error_code,
             "error_message": self.error_message,
-            "jsonld_products": [_compact_jsonld_product(item) for item in self.jsonld_products[:3]],
+            "jsonld_products": [
+                _compact_jsonld_product(item) for item in self.jsonld_products[:3]
+            ],
         }
         if self.provider_provenance:
             payload["provider_provenance"] = self.provider_provenance
@@ -138,7 +156,9 @@ def extract_page_evidence(
     jsonld_text = _jsonld_search_text(jsonld_products)
     canonical_url = _canonical_url(html_text, final_url or requested_url)
     url_text = _url_evidence_text(requested_url, final_url, canonical_url)
-    non_url_search_text = "\n".join((title_text, meta_description, visible_text, jsonld_text))
+    non_url_search_text = "\n".join(
+        (title_text, meta_description, visible_text, jsonld_text)
+    )
     search_text = "\n".join((non_url_search_text, url_text))
     if source.is_product_url(canonical_url):
         canonical = source.canonical_candidate_url(canonical_url)
@@ -181,10 +201,18 @@ def extract_page_evidence(
         if _identifier_source_supports_url_brand(product, mpn_source, model_source)
         else non_url_search_text
     )
-    brand_fragment = _find_brand_fragment(product.manufacturer, brand_haystack, jsonld_products)
-    category_fragment = _find_category_fragment(product.category, search_text, jsonld_products)
+    brand_fragment = _find_brand_fragment(
+        product.manufacturer, brand_haystack, jsonld_products
+    )
+    category_fragment = _find_category_fragment(
+        product.category, search_text, jsonld_products
+    )
     candidate_price = _extract_price(jsonld_products, visible_text)
-    title_evidence = extract_name_evidence(product.name, title_text) if product.name and title_text else None
+    title_evidence = (
+        extract_name_evidence(product.name, title_text)
+        if product.name and title_text
+        else None
+    )
 
     return PageEvidence(
         requested_url=requested_url,
@@ -203,8 +231,12 @@ def extract_page_evidence(
         brand_fragment=brand_fragment,
         category_compatible=bool(category_fragment),
         category_fragment=category_fragment,
-        title_similarity=round(float(title_evidence.score), 4) if title_evidence is not None else 0.0,
-        title_matched_tokens=title_evidence.matched_tokens if title_evidence is not None else (),
+        title_similarity=(
+            round(float(title_evidence.score), 4) if title_evidence is not None else 0.0
+        ),
+        title_matched_tokens=(
+            title_evidence.matched_tokens if title_evidence is not None else ()
+        ),
         price_compatible=_price_compatible(product.price, candidate_price),
         jsonld_products=jsonld_products,
         blocked_or_captcha=bool(BLOCKED_RE.search(combined_text)),
@@ -275,7 +307,9 @@ def error_evidence(
         body_text=body,
         url_text=url_text,
     )
-    brand_fragment = _find_brand_fragment(product.manufacturer, "\n".join((title_text, body, url_text)), ())
+    brand_fragment = _find_brand_fragment(
+        product.manufacturer, "\n".join((title_text, body, url_text)), ()
+    )
     return PageEvidence(
         requested_url=requested_url,
         final_url=final_url or requested_url,
@@ -381,7 +415,14 @@ def _url_evidence_text(*urls: str) -> str:
         if not parsed.netloc:
             continue
         parts.append(unquote(parsed.netloc.replace(".", " ")))
-        parts.append(unquote((parsed.path or "").replace("/", " ").replace("-", " ").replace("_", " ")))
+        parts.append(
+            unquote(
+                (parsed.path or "")
+                .replace("/", " ")
+                .replace("-", " ")
+                .replace("_", " ")
+            )
+        )
         parts.append(unquote(parsed.path or ""))
     return _clean_text(" ".join(parts))
 
@@ -415,18 +456,32 @@ def _append_jsonld(items: list[dict[str, Any]], value: Any) -> None:
 
 
 def _product_jsonld_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    products = [item for item in items if "product" in _jsonld_type_text(item.get("@type"))]
+    products = [
+        item for item in items if "product" in _jsonld_type_text(item.get("@type"))
+    ]
     return products or items
 
 
 def _jsonld_search_text(items: tuple[dict[str, Any], ...]) -> str:
     parts: list[str] = []
     for item in items:
-        for key in ("name", "brand", "manufacturer", "mpn", "model", "sku", "productID", "category"):
+        for key in (
+            "name",
+            "brand",
+            "manufacturer",
+            "mpn",
+            "model",
+            "sku",
+            "productID",
+            "category",
+        ):
             parts.append(_jsonld_text(item.get(key)))
         offers = item.get("offers")
         if isinstance(offers, dict):
-            parts.extend(_jsonld_text(offers.get(key)) for key in ("price", "priceCurrency", "availability"))
+            parts.extend(
+                _jsonld_text(offers.get(key))
+                for key in ("price", "priceCurrency", "availability")
+            )
     return _clean_text(" ".join(part for part in parts if part))
 
 
@@ -460,7 +515,9 @@ def _find_identifier_fragment(identifier: str, haystack: str) -> str:
     if not parts:
         return ""
     normalized_needle_pattern = r"\s+".join(parts)
-    pattern = re.compile(rf"(?<![A-Za-z0-9]){normalized_needle_pattern}(?![A-Za-z0-9])", re.IGNORECASE)
+    pattern = re.compile(
+        rf"(?<![A-Za-z0-9]){normalized_needle_pattern}(?![A-Za-z0-9])", re.IGNORECASE
+    )
     match = pattern.search(haystack or "")
     if match is not None:
         return match.group(0)
@@ -476,16 +533,22 @@ def _find_identifier_fragment(identifier: str, haystack: str) -> str:
 
 
 def _identifier_key(value: str) -> str:
-    return "".join(character.casefold() for character in str(value or "") if character.isalnum())
+    return "".join(
+        character.casefold() for character in str(value or "") if character.isalnum()
+    )
 
 
-def _identifier_source_supports_url_brand(product: AgentProduct, mpn_source: str, model_source: str) -> bool:
+def _identifier_source_supports_url_brand(
+    product: AgentProduct, mpn_source: str, model_source: str
+) -> bool:
     if mpn_source == "url":
         return True
     return not str(product.mpn or "").strip() and model_source == "url"
 
 
-def _find_brand_fragment(manufacturer: str, haystack: str, jsonld_products: tuple[dict[str, Any], ...]) -> str:
+def _find_brand_fragment(
+    manufacturer: str, haystack: str, jsonld_products: tuple[dict[str, Any], ...]
+) -> str:
     brand = _clean_text(manufacturer)
     if not brand:
         return ""
@@ -500,10 +563,14 @@ def _find_brand_fragment(manufacturer: str, haystack: str, jsonld_products: tupl
     return match.group(0) if match is not None else ""
 
 
-def _find_category_fragment(category: str, haystack: str, jsonld_products: tuple[dict[str, Any], ...]) -> str:
+def _find_category_fragment(
+    category: str, haystack: str, jsonld_products: tuple[dict[str, Any], ...]
+) -> str:
     category_values = [_jsonld_text(item.get("category")) for item in jsonld_products]
     category_text = " ".join([category, *category_values])
-    expected_tokens = [token for token in product_tokens(category_text) if len(token) >= 4]
+    expected_tokens = [
+        token for token in product_tokens(category_text) if len(token) >= 4
+    ]
     if not expected_tokens:
         return ""
     haystack_tokens = set(product_tokens(haystack))
@@ -513,14 +580,18 @@ def _find_category_fragment(category: str, haystack: str, jsonld_products: tuple
     return matched[0] if matched and len(expected_tokens) <= 2 else ""
 
 
-def _extract_price(jsonld_products: tuple[dict[str, Any], ...], body_text: str) -> Decimal | None:
+def _extract_price(
+    jsonld_products: tuple[dict[str, Any], ...], body_text: str
+) -> Decimal | None:
     for item in jsonld_products:
         offers = item.get("offers")
         offer_items = offers if isinstance(offers, list) else [offers]
         for offer in offer_items:
             if not isinstance(offer, dict):
                 continue
-            value = offer.get("price") or offer.get("lowPrice") or offer.get("highPrice")
+            value = (
+                offer.get("price") or offer.get("lowPrice") or offer.get("highPrice")
+            )
             price = _decimal_from_text(value)
             if price is not None and price > 0:
                 return price
@@ -530,8 +601,15 @@ def _extract_price(jsonld_products: tuple[dict[str, Any], ...], body_text: str) 
     return _decimal_from_text(match.group(0))
 
 
-def _price_compatible(own_price: Decimal | None, candidate_price: Decimal | None) -> bool | None:
-    if own_price is None or candidate_price is None or own_price <= 0 or candidate_price <= 0:
+def _price_compatible(
+    own_price: Decimal | None, candidate_price: Decimal | None
+) -> bool | None:
+    if (
+        own_price is None
+        or candidate_price is None
+        or own_price <= 0
+        or candidate_price <= 0
+    ):
         return None
     delta = abs(candidate_price - own_price) / own_price
     return delta <= Decimal("0.40")
@@ -553,7 +631,17 @@ def _decimal_from_text(value: object) -> Decimal | None:
 def _compact_jsonld_product(item: dict[str, Any]) -> dict[str, Any]:
     return {
         key: _jsonld_text(item.get(key))
-        for key in ("@type", "name", "brand", "manufacturer", "mpn", "model", "sku", "productID", "category")
+        for key in (
+            "@type",
+            "name",
+            "brand",
+            "manufacturer",
+            "mpn",
+            "model",
+            "sku",
+            "productID",
+            "category",
+        )
         if _jsonld_text(item.get(key))
     }
 
@@ -578,7 +666,12 @@ def _jsonld_text(value: object) -> str:
 
 
 def _remove_script_blocks(html_text: str) -> str:
-    return re.sub(r"<(?:script|style)[^>]*>.*?</(?:script|style)>", " ", html_text or "", flags=re.IGNORECASE | re.DOTALL)
+    return re.sub(
+        r"<(?:script|style)[^>]*>.*?</(?:script|style)>",
+        " ",
+        html_text or "",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
 
 
 def _clean_text(value: object) -> str:

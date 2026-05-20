@@ -8,7 +8,11 @@ from pathlib import Path
 
 from ecommerce.catalog.source_catalog import is_atomic_model
 from ecommerce.ignore.product_ignore import load_ignored_products
-from ecommerce.price_monitoring.review import PriceReviewError, PriceReviewRow, _money_text
+from ecommerce.price_monitoring.review import (
+    PriceReviewError,
+    PriceReviewRow,
+    _money_text,
+)
 
 OPENCART_PRICE_UPDATE_COLUMNS = ["model", "price"]
 
@@ -29,7 +33,11 @@ def export_price_update_csv(
     """Write a manual OpenCart price update CSV from reviewed rows."""
 
     run_dir = Path(run_dir)
-    output = Path(output_path) if output_path is not None else run_dir / "opencart_price_update.csv"
+    output = (
+        Path(output_path)
+        if output_path is not None
+        else run_dir / "opencart_price_update.csv"
+    )
     ignored_models = {product.model for product in load_ignored_products()}
     export_rows: list[dict[str, str]] = []
 
@@ -49,7 +57,9 @@ def export_price_update_csv(
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=OPENCART_PRICE_UPDATE_COLUMNS, extrasaction="ignore")
+        writer = csv.DictWriter(
+            f, fieldnames=OPENCART_PRICE_UPDATE_COLUMNS, extrasaction="ignore"
+        )
         writer.writeheader()
         writer.writerows(export_rows)
 

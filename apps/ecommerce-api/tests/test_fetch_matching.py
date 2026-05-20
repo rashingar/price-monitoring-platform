@@ -4,7 +4,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from ecommerce.source_url_agent.matching import extract_mpn_evidence, extract_name_evidence
+from ecommerce.source_url_agent.matching import (
+    extract_mpn_evidence,
+    extract_name_evidence,
+)
 from ecommerce.utils.text import build_product_search_queries
 
 
@@ -58,5 +61,8 @@ def test_build_product_search_queries_adds_a_clean_normalized_query() -> None:
         "Miele SNRF3 – Σκούπα Ηλεκτρική Boost CX1 125 Edition Lotus White (12433990)",
     )
 
-    assert queries[0] == "Miele SNRF3 – Σκούπα Ηλεκτρική Boost CX1 125 Edition Lotus White (12433990)"
+    assert (
+        queries[0]
+        == "Miele SNRF3 – Σκούπα Ηλεκτρική Boost CX1 125 Edition Lotus White (12433990)"
+    )
     assert "Miele boost cx1 125 edition lotus white" in queries

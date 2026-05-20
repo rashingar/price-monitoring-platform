@@ -9,7 +9,9 @@ from ecommerce.source_capture.firecrawl_health import firecrawl_health_flags
 from ecommerce.source_capture.types import CaptureResult
 
 
-def update_source_health(source: ProductSource, result: CaptureResult, snapshot: SourceCaptureSnapshot) -> None:
+def update_source_health(
+    source: ProductSource, result: CaptureResult, snapshot: SourceCaptureSnapshot
+) -> None:
     now = _now()
     source.last_seen_at = now
     source.last_fetch_status = result.status

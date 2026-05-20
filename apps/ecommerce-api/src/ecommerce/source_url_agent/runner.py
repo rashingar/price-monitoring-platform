@@ -8,17 +8,33 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from ecommerce.source_url_agent.artifacts import build_summary_payload, write_run_artifacts
-from ecommerce.source_url_agent.candidate_results import candidates_for_candidate_storage
-from ecommerce.source_url_agent.candidates import MIN_CANDIDATE_CONFIDENCE_TO_KEEP, SourceUrlAgentCandidate
-from ecommerce.source_url_agent.options import Resolver, SourceUrlAgentOptions, SourceUrlAgentResult
+from ecommerce.source_url_agent.artifacts import (
+    build_summary_payload,
+    write_run_artifacts,
+)
+from ecommerce.source_url_agent.candidate_results import (
+    candidates_for_candidate_storage,
+)
+from ecommerce.source_url_agent.candidates import (
+    MIN_CANDIDATE_CONFIDENCE_TO_KEEP,
+    SourceUrlAgentCandidate,
+)
+from ecommerce.source_url_agent.options import (
+    Resolver,
+    SourceUrlAgentOptions,
+    SourceUrlAgentResult,
+)
 from ecommerce.source_url_agent.persistence import (
     apply_high_confidence_source_urls,
     persist_candidate_rows,
     persist_discovery_run,
 )
 from ecommerce.source_url_agent.products import AgentProduct
-from ecommerce.source_url_agent.sources import SourceDefinition, SourceRegistry, load_source_registry
+from ecommerce.source_url_agent.sources import (
+    SourceDefinition,
+    SourceRegistry,
+    load_source_registry,
+)
 from ecommerce.source_url_agent.task_execution import (
     browser_unavailable_candidates,
     progress_details,
@@ -110,7 +126,9 @@ def run_source_url_agent(
             warnings=warnings,
         )
 
-    apply_source_urls = bool(options.apply_high_confidence and not options.dry_run and session is not None)
+    apply_source_urls = bool(
+        options.apply_high_confidence and not options.dry_run and session is not None
+    )
     write_results = []
     if apply_source_urls:
         if progress is not None:
@@ -120,23 +138,38 @@ def run_source_url_agent(
                     selected_products,
                     sources,
                     candidates,
-                    completed_product_source_task_count=len(selected_products) * len(sources),
+                    completed_product_source_task_count=len(selected_products)
+                    * len(sources),
                     applied_high_confidence_url_count=0,
                     persisted_candidate_count=0,
                 ),
             )
-        write_results = apply_high_confidence_source_urls(session, candidates, apply=True)
-        accepted_indexes = {item.candidate_index for item in write_results if item.action in {"created", "updated", "duplicate"}}
+        write_results = apply_high_confidence_source_urls(
+            session, candidates, apply=True
+        )
+        accepted_indexes = {
+            item.candidate_index
+            for item in write_results
+            if item.action in {"created", "updated", "duplicate"}
+        }
         candidates = [
-            replace(candidate, status="accepted") if index in accepted_indexes else candidate
+            (
+                replace(candidate, status="accepted")
+                if index in accepted_indexes
+                else candidate
+            )
             for index, candidate in enumerate(candidates)
         ]
         skipped_reasons = [item.reason for item in write_results if item.reason]
         if skipped_reasons:
-            warnings.extend(f"source_url_write_skipped: {reason}" for reason in skipped_reasons)
+            warnings.extend(
+                f"source_url_write_skipped: {reason}" for reason in skipped_reasons
+            )
             if progress is not None:
                 for reason in skipped_reasons:
-                    progress.add_warning(f"source_url_write_skipped: {reason}", {"run_id": run_id})
+                    progress.add_warning(
+                        f"source_url_write_skipped: {reason}", {"run_id": run_id}
+                    )
         if progress is not None:
             progress.report(
                 "high_confidence_apply_completed",
@@ -144,7 +177,8 @@ def run_source_url_agent(
                     selected_products,
                     sources,
                     candidates,
-                    completed_product_source_task_count=len(selected_products) * len(sources),
+                    completed_product_source_task_count=len(selected_products)
+                    * len(sources),
                     applied_high_confidence_url_count=len(accepted_indexes),
                     persisted_candidate_count=0,
                 ),
@@ -173,8 +207,12 @@ def run_source_url_agent(
         warnings=warnings,
     )
     summary["source_url_write_results"] = [item.__dict__ for item in write_results]
-    summary["persisted_candidate_count"] = len(candidates_to_persist) if session is not None else 0
-    summary["discarded_low_confidence_candidate_count"] = len(candidates) - len(candidates_to_persist)
+    summary["persisted_candidate_count"] = (
+        len(candidates_to_persist) if session is not None else 0
+    )
+    summary["discarded_low_confidence_candidate_count"] = len(candidates) - len(
+        candidates_to_persist
+    )
     summary["candidate_retention_min_confidence"] = MIN_CANDIDATE_CONFIDENCE_TO_KEEP
     if progress is not None:
         progress.report(
@@ -183,16 +221,26 @@ def run_source_url_agent(
                 selected_products,
                 sources,
                 candidates,
-                completed_product_source_task_count=len(selected_products) * len(sources),
+                completed_product_source_task_count=len(selected_products)
+                * len(sources),
                 applied_high_confidence_url_count=_applied_write_count(write_results),
-                persisted_candidate_count=len(candidates_to_persist) if session is not None else 0,
+                persisted_candidate_count=(
+                    len(candidates_to_persist) if session is not None else 0
+                ),
             ),
         )
     try:
-        artifacts = write_run_artifacts(run_id=run_id, candidates=candidates_to_persist, summary=summary, output_dir=options.output_dir)
+        artifacts = write_run_artifacts(
+            run_id=run_id,
+            candidates=candidates_to_persist,
+            summary=summary,
+            output_dir=options.output_dir,
+        )
     except Exception as exc:
         if progress is not None:
-            progress.add_error(str(exc).strip() or exc.__class__.__name__, {"run_id": run_id})
+            progress.add_error(
+                str(exc).strip() or exc.__class__.__name__, {"run_id": run_id}
+            )
         raise
     if progress is not None:
         progress.report(
@@ -202,9 +250,14 @@ def run_source_url_agent(
                     selected_products,
                     sources,
                     candidates,
-                    completed_product_source_task_count=len(selected_products) * len(sources),
-                    applied_high_confidence_url_count=_applied_write_count(write_results),
-                    persisted_candidate_count=len(candidates_to_persist) if session is not None else 0,
+                    completed_product_source_task_count=len(selected_products)
+                    * len(sources),
+                    applied_high_confidence_url_count=_applied_write_count(
+                        write_results
+                    ),
+                    persisted_candidate_count=(
+                        len(candidates_to_persist) if session is not None else 0
+                    ),
                 ),
                 "run_dir": artifacts.run_dir,
             },
@@ -218,8 +271,11 @@ def run_source_url_agent(
                     selected_products,
                     sources,
                     candidates,
-                    completed_product_source_task_count=len(selected_products) * len(sources),
-                    applied_high_confidence_url_count=_applied_write_count(write_results),
+                    completed_product_source_task_count=len(selected_products)
+                    * len(sources),
+                    applied_high_confidence_url_count=_applied_write_count(
+                        write_results
+                    ),
                     persisted_candidate_count=0,
                 ),
             )
@@ -235,7 +291,9 @@ def run_source_url_agent(
                 persist_candidate_rows(session, candidates_to_persist)
         except Exception as exc:
             if progress is not None:
-                progress.add_error(str(exc).strip() or exc.__class__.__name__, {"run_id": run_id})
+                progress.add_error(
+                    str(exc).strip() or exc.__class__.__name__, {"run_id": run_id}
+                )
             raise
         if progress is not None:
             progress.report(
@@ -244,8 +302,11 @@ def run_source_url_agent(
                     selected_products,
                     sources,
                     candidates,
-                    completed_product_source_task_count=len(selected_products) * len(sources),
-                    applied_high_confidence_url_count=_applied_write_count(write_results),
+                    completed_product_source_task_count=len(selected_products)
+                    * len(sources),
+                    applied_high_confidence_url_count=_applied_write_count(
+                        write_results
+                    ),
                     persisted_candidate_count=len(candidates_to_persist),
                 ),
             )
@@ -256,14 +317,23 @@ def run_source_url_agent(
                 selected_products,
                 sources,
                 candidates,
-                completed_product_source_task_count=len(selected_products) * len(sources),
+                completed_product_source_task_count=len(selected_products)
+                * len(sources),
                 applied_high_confidence_url_count=_applied_write_count(write_results),
-                persisted_candidate_count=len(candidates_to_persist) if session is not None else 0,
+                persisted_candidate_count=(
+                    len(candidates_to_persist) if session is not None else 0
+                ),
             ),
             warnings=warnings,
         )
 
-    return SourceUrlAgentResult(run_id=run_id, summary=summary, candidates=candidates, artifacts=artifacts, warnings=warnings)
+    return SourceUrlAgentResult(
+        run_id=run_id,
+        summary=summary,
+        candidates=candidates,
+        artifacts=artifacts,
+        warnings=warnings,
+    )
 
 
 def _run_browser_tasks(
@@ -288,20 +358,32 @@ def _run_browser_tasks(
         warnings.append(warning)
         if options.progress_reporter is not None:
             options.progress_reporter.add_error(warning, {"run_id": run_id})
-        return browser_unavailable_candidates(run_id, products, sources, options, str(exc) or exc.__class__.__name__)
+        return browser_unavailable_candidates(
+            run_id, products, sources, options, str(exc) or exc.__class__.__name__
+        )
 
 
-def _limited_products(products: list[AgentProduct], options: SourceUrlAgentOptions) -> list[AgentProduct]:
+def _limited_products(
+    products: list[AgentProduct], options: SourceUrlAgentOptions
+) -> list[AgentProduct]:
     limit = options.limit
     if options.max_products_per_batch is not None:
-        limit = min(limit, options.max_products_per_batch) if limit is not None else options.max_products_per_batch
+        limit = (
+            min(limit, options.max_products_per_batch)
+            if limit is not None
+            else options.max_products_per_batch
+        )
     if limit is None:
         return products
     return products[: max(0, limit)]
 
 
 def _applied_write_count(write_results: list) -> int:
-    return sum(1 for item in write_results if item.action in {"created", "updated", "duplicate"})
+    return sum(
+        1
+        for item in write_results
+        if item.action in {"created", "updated", "duplicate"}
+    )
 
 
 def _filters_json(options: SourceUrlAgentOptions) -> dict:

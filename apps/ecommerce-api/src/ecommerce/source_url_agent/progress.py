@@ -14,22 +14,38 @@ SOURCE_URL_AGENT_HEARTBEAT_INTERVAL_SECONDS = 30
 
 SOURCE_URL_AGENT_PROGRESS_STEP_DEFINITIONS: tuple[JobProgressStepDefinition, ...] = (
     JobProgressStepDefinition("product_selection_started", "Product selection started"),
-    JobProgressStepDefinition("product_selection_completed", "Product selection completed"),
+    JobProgressStepDefinition(
+        "product_selection_completed", "Product selection completed"
+    ),
     JobProgressStepDefinition("source_registry_loaded", "Source registry loaded"),
     JobProgressStepDefinition("discovery_started", "Discovery started"),
     JobProgressStepDefinition("product_source_started", "Product-source started"),
     JobProgressStepDefinition("product_source_completed", "Product-source completed"),
     JobProgressStepDefinition("candidate_scoring_started", "Candidate scoring started"),
-    JobProgressStepDefinition("candidate_scoring_completed", "Candidate scoring completed"),
-    JobProgressStepDefinition("high_confidence_apply_started", "High-confidence apply started"),
-    JobProgressStepDefinition("high_confidence_apply_completed", "High-confidence apply completed"),
+    JobProgressStepDefinition(
+        "candidate_scoring_completed", "Candidate scoring completed"
+    ),
+    JobProgressStepDefinition(
+        "high_confidence_apply_started", "High-confidence apply started"
+    ),
+    JobProgressStepDefinition(
+        "high_confidence_apply_completed", "High-confidence apply completed"
+    ),
     JobProgressStepDefinition("artifact_writing_started", "Artifact writing started"),
-    JobProgressStepDefinition("artifact_writing_completed", "Artifact writing completed"),
-    JobProgressStepDefinition("candidate_persistence_started", "Candidate persistence started"),
-    JobProgressStepDefinition("candidate_persistence_completed", "Candidate persistence completed"),
+    JobProgressStepDefinition(
+        "artifact_writing_completed", "Artifact writing completed"
+    ),
+    JobProgressStepDefinition(
+        "candidate_persistence_started", "Candidate persistence started"
+    ),
+    JobProgressStepDefinition(
+        "candidate_persistence_completed", "Candidate persistence completed"
+    ),
     JobProgressStepDefinition("run_completed", "Run completed"),
 )
-SOURCE_URL_AGENT_PROGRESS_STEP_IDS = tuple(definition.id for definition in SOURCE_URL_AGENT_PROGRESS_STEP_DEFINITIONS)
+SOURCE_URL_AGENT_PROGRESS_STEP_IDS = tuple(
+    definition.id for definition in SOURCE_URL_AGENT_PROGRESS_STEP_DEFINITIONS
+)
 SOURCE_URL_AGENT_PROGRESS_STEP_LABELS = {
     definition.id: definition.label
     for definition in SOURCE_URL_AGENT_PROGRESS_STEP_DEFINITIONS
@@ -55,7 +71,9 @@ class SourceUrlAgentProgressReporter(JobProgressReporter):
         )
 
 
-def sanitize_source_url_agent_progress_details(details: dict[str, Any] | None) -> dict[str, Any]:
+def sanitize_source_url_agent_progress_details(
+    details: dict[str, Any] | None,
+) -> dict[str, Any]:
     if not details:
         return {}
     sanitized: dict[str, Any] = {}
@@ -113,6 +131,17 @@ def _sanitize_url(value: str) -> str:
 
 def _is_sensitive_key(key: str) -> bool:
     normalized = key.strip().casefold().replace("-", "_")
-    if normalized in {"html", "raw_html", "body", "body_text", "body_text_sample", "page_content", "headers"}:
+    if normalized in {
+        "html",
+        "raw_html",
+        "body",
+        "body_text",
+        "body_text_sample",
+        "page_content",
+        "headers",
+    }:
         return True
-    return any(part in normalized for part in ("authorization", "cookie", "password", "secret", "token"))
+    return any(
+        part in normalized
+        for part in ("authorization", "cookie", "password", "secret", "token")
+    )

@@ -64,13 +64,24 @@ _MODULE_MARKERS: dict[str, tuple[str, ...]] = {
     "test_source_url_import.py": ("integration", "db_contract"),
     "test_source_url_import_api.py": ("smoke", "integration", "db_integration"),
     "test_source_urls_api.py": ("smoke",),
-    "test_vendor_sources_snapshots.py": ("contract", "integration", "db_contract", "golden"),
+    "test_vendor_sources_snapshots.py": (
+        "contract",
+        "integration",
+        "db_contract",
+        "golden",
+    ),
     "test_vendor_sources_capture.py": ("integration", "db_integration", "runtime"),
 }
 
 _TEST_MARKERS: dict[tuple[str, str], tuple[str, ...]] = {
-    ("test_price_monitoring_alerts.py", "test_fetch_integration_evaluates_active_alert_rules"): ("runtime",),
-    ("test_price_monitoring_alerts.py", "test_fetch_integration_skips_when_no_active_rules"): ("runtime",),
+    (
+        "test_price_monitoring_alerts.py",
+        "test_fetch_integration_evaluates_active_alert_rules",
+    ): ("runtime",),
+    (
+        "test_price_monitoring_alerts.py",
+        "test_fetch_integration_skips_when_no_active_rules",
+    ): ("runtime",),
 }
 
 _FAST_EXCLUDED_MARKERS = {
@@ -82,7 +93,14 @@ _FAST_EXCLUDED_MARKERS = {
     "db_integration",
     "postgres_required",
 }
-_RUNTIME_GUARD_ALLOWED_MARKERS = {"runtime", "integration", "slow", "e2e", "external", "postgres_required"}
+_RUNTIME_GUARD_ALLOWED_MARKERS = {
+    "runtime",
+    "integration",
+    "slow",
+    "e2e",
+    "external",
+    "postgres_required",
+}
 _RUNTIME_GUARD_MESSAGE = (
     "subprocess calls are blocked in fast tests. "
     "If this runtime behavior is intentional, mark the test as runtime, integration, slow, e2e, external, "
@@ -90,12 +108,17 @@ _RUNTIME_GUARD_MESSAGE = (
 )
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     del config
     for item in items:
         path = Path(str(getattr(item, "path", item.fspath)))
         test_name = getattr(item, "originalname", None) or item.name.split("[", 1)[0]
-        markers = (*_MODULE_MARKERS.get(path.name, ()), *_TEST_MARKERS.get((path.name, test_name), ()))
+        markers = (
+            *_MODULE_MARKERS.get(path.name, ()),
+            *_TEST_MARKERS.get((path.name, test_name), ()),
+        )
         for marker in dict.fromkeys(markers):
             item.add_marker(getattr(pytest.mark, marker))
 
@@ -105,7 +128,9 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 
 @pytest.fixture(autouse=True)
-def _block_runtime_subprocess_calls_in_fast_tests(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest):
+def _block_runtime_subprocess_calls_in_fast_tests(
+    monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+):
     marker_names = {marker.name for marker in request.node.iter_markers()}
     if not marker_names.isdisjoint(_RUNTIME_GUARD_ALLOWED_MARKERS):
         yield

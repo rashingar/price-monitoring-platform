@@ -9,11 +9,17 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ecommerce.db.models.product_factory_batch import ProductFactoryBatch, ProductFactoryBatchRow
+from ecommerce.db.models.product_factory_batch import (
+    ProductFactoryBatch,
+    ProductFactoryBatchRow,
+)
 from ecommerce.db.repositories.common import _now
 from ecommerce.db.session import session_scope
 from ecommerce.product_factory_batch import repository
-from ecommerce.product_factory_batch.csv_parser import ProductFactoryBatchCsvError, parse_product_factory_batch_csv
+from ecommerce.product_factory_batch.csv_parser import (
+    ProductFactoryBatchCsvError,
+    parse_product_factory_batch_csv,
+)
 from ecommerce.product_factory_source_resolution import (
     ProductFactorySourceResolver,
     SourceResolutionCandidate,
@@ -23,8 +29,9 @@ from ecommerce.product_factory_source_resolution import (
     classify_supported_product_url,
     load_source_resolution_config,
 )
-from ecommerce.product_factory_source_resolution.config import SourceResolutionConfigError
-
+from ecommerce.product_factory_source_resolution.config import (
+    SourceResolutionConfigError,
+)
 
 SUPPORTED_BATCH_SOURCE_NAMES = ("skroutz", "bestprice", "electronet")
 SOURCE_LABELS = {
@@ -32,7 +39,13 @@ SOURCE_LABELS = {
     "bestprice": "BestPrice",
     "electronet": "Electronet",
 }
-ELIGIBLE_RERESOLVE_STATUSES = {"pending", "resolving_source", "resolution_failed", "no_usable_source", "needs_review"}
+ELIGIBLE_RERESOLVE_STATUSES = {
+    "pending",
+    "resolving_source",
+    "resolution_failed",
+    "no_usable_source",
+    "needs_review",
+}
 RESOLUTION_STALE_AFTER = timedelta(minutes=30)
 
 
@@ -59,12 +72,16 @@ class RowResolutionSnapshot:
     name: str
 
 
-def create_batch_from_csv(session: Session, *, content: bytes, filename: str | None) -> ProductFactoryBatch:
+def create_batch_from_csv(
+    session: Session, *, content: bytes, filename: str | None
+) -> ProductFactoryBatch:
     parsed = parse_product_factory_batch_csv(content)
     return repository.create_batch(session, parsed=parsed, filename=filename)
 
 
-def normalize_batch_source_names(source_names: list[str] | tuple[str, ...] | None) -> tuple[str, ...]:
+def normalize_batch_source_names(
+    source_names: list[str] | tuple[str, ...] | None,
+) -> tuple[str, ...]:
     if source_names is None:
         return SUPPORTED_BATCH_SOURCE_NAMES
     normalized: list[str] = []
@@ -99,11 +116,15 @@ def prepare_batch_resolution(
 ) -> BatchResolutionStart:
     selected_source_names = normalize_batch_source_names(source_names)
     metadata = dict(batch.metadata_json or {})
-    existing_source_names = tuple(str(item).casefold() for item in metadata.get("selected_source_names") or [])
+    existing_source_names = tuple(
+        str(item).casefold() for item in metadata.get("selected_source_names") or []
+    )
     now = _now()
     if batch.status == "resolving" and not _is_stale_resolving_batch(batch):
         if existing_source_names == selected_source_names:
-            return BatchResolutionStart(batch=batch, source_names=selected_source_names, should_start=False)
+            return BatchResolutionStart(
+                batch=batch, source_names=selected_source_names, should_start=False
+            )
         raise ProductFactoryBatchError(
             "batch_resolution_conflict",
             "This batch is already resolving with different search sources.",
@@ -113,7 +134,9 @@ def prepare_batch_resolution(
     metadata.update(
         {
             "selected_source_names": list(selected_source_names),
-            "selected_source_labels": [SOURCE_LABELS[source_name] for source_name in selected_source_names],
+            "selected_source_labels": [
+                SOURCE_LABELS[source_name] for source_name in selected_source_names
+            ],
             "source_selection_updated_at": now.isoformat(),
         }
     )
@@ -123,7 +146,9 @@ def prepare_batch_resolution(
     batch.status = "resolving"
     batch.updated_at = now
     session.flush()
-    return BatchResolutionStart(batch=batch, source_names=selected_source_names, should_start=True)
+    return BatchResolutionStart(
+        batch=batch, source_names=selected_source_names, should_start=True
+    )
 
 
 def resolve_batch(
@@ -135,12 +160,16 @@ def resolve_batch(
     source_names: list[str] | tuple[str, ...] | None = None,
 ) -> ProductFactoryBatch:
     selected_source_names = normalize_batch_source_names(source_names)
-    resolver = resolver or _batch_resolver(config_path, source_names=selected_source_names)
+    resolver = resolver or _batch_resolver(
+        config_path, source_names=selected_source_names
+    )
     for row in repository.list_batch_rows(session, batch.id):
         if not _row_is_eligible_for_resolution(row, selected_source_names):
             continue
         _mark_row_resolving(session, row=row)
-        _apply_resolved_row(session, row=row, result=_resolve_snapshot(_snapshot_row(row), resolver))
+        _apply_resolved_row(
+            session, row=row, result=_resolve_snapshot(_snapshot_row(row), resolver)
+        )
         repository.refresh_batch_counts(session, batch)
         session.flush()
     return repository.refresh_batch_counts(session, batch)
@@ -156,12 +185,16 @@ def run_batch_resolution_background(
     try:
         resolver = _batch_resolver(config_path, source_names=selected_source_names)
     except Exception as exc:
-        _mark_batch_failed(batch_id=batch_id, code="source_resolution_config_error", message=str(exc))
+        _mark_batch_failed(
+            batch_id=batch_id, code="source_resolution_config_error", message=str(exc)
+        )
         return
 
     progressed = False
     try:
-        for row_id in _eligible_row_ids(batch_id=batch_id, source_names=selected_source_names):
+        for row_id in _eligible_row_ids(
+            batch_id=batch_id, source_names=selected_source_names
+        ):
             snapshot = _mark_row_resolving_by_id(batch_id=batch_id, row_id=row_id)
             if snapshot is None:
                 continue
@@ -188,25 +221,42 @@ def select_source_for_row(
     config_path: str | Path | None = None,
 ) -> ProductFactoryBatchRow:
     if bool(candidate_url) == bool(manual_url):
-        raise ProductFactoryBatchError("invalid_selection_request", "Provide exactly one of candidate_url or manual_url.")
+        raise ProductFactoryBatchError(
+            "invalid_selection_request",
+            "Provide exactly one of candidate_url or manual_url.",
+        )
     config = _batch_config(config_path)
     now = _now()
     if candidate_url:
         candidate = _candidate_by_url(row, candidate_url)
         if candidate is None:
-            raise ProductFactoryBatchError("candidate_not_found", "Selected candidate URL does not exist on this row.")
-        classified = classify_supported_product_url(str(candidate.get("url") or ""), config)
+            raise ProductFactoryBatchError(
+                "candidate_not_found",
+                "Selected candidate URL does not exist on this row.",
+            )
+        classified = classify_supported_product_url(
+            str(candidate.get("url") or ""), config
+        )
         if classified is None:
-            raise ProductFactoryBatchError("unsupported_source_url", "Selected candidate URL is not a supported Product Factory product URL.")
+            raise ProductFactoryBatchError(
+                "unsupported_source_url",
+                "Selected candidate URL is not a supported Product Factory product URL.",
+            )
         source, normalized_url = classified
         row.selected_url = normalized_url
         row.selected_source = source.source_name
         row.confidence = _int_or_none(candidate.get("confidence"))
-        row.selection_metadata_json = {"selection_method": "candidate_manual", "candidate": candidate}
+        row.selection_metadata_json = {
+            "selection_method": "candidate_manual",
+            "candidate": candidate,
+        }
     else:
         classified = classify_supported_product_url(str(manual_url or ""), config)
         if classified is None:
-            raise ProductFactoryBatchError("unsupported_source_url", "Manual URL is not a supported Product Factory product URL.")
+            raise ProductFactoryBatchError(
+                "unsupported_source_url",
+                "Manual URL is not a supported Product Factory product URL.",
+            )
         source, normalized_url = classified
         row.selected_url = normalized_url
         row.selected_source = source.source_name
@@ -221,7 +271,9 @@ def select_source_for_row(
     return row
 
 
-def skip_row(session: Session, *, batch: ProductFactoryBatch, row: ProductFactoryBatchRow) -> ProductFactoryBatchRow:
+def skip_row(
+    session: Session, *, batch: ProductFactoryBatch, row: ProductFactoryBatchRow
+) -> ProductFactoryBatchRow:
     row.status = "skipped"
     row.updated_at = _now()
     row.selection_metadata_json = {"selection_method": "skipped"}
@@ -231,11 +283,17 @@ def skip_row(session: Session, *, batch: ProductFactoryBatch, row: ProductFactor
 
 
 def _snapshot_row(row: ProductFactoryBatchRow) -> RowResolutionSnapshot:
-    return RowResolutionSnapshot(id=row.id, model=row.model, brand=row.brand, name=row.name)
+    return RowResolutionSnapshot(
+        id=row.id, model=row.model, brand=row.brand, name=row.name
+    )
 
 
-def _resolve_snapshot(snapshot: RowResolutionSnapshot, resolver: ProductFactorySourceResolver) -> dict[str, Any]:
-    product = SourceResolutionProduct(model=snapshot.model, name=snapshot.name, brand=snapshot.brand)
+def _resolve_snapshot(
+    snapshot: RowResolutionSnapshot, resolver: ProductFactorySourceResolver
+) -> dict[str, Any]:
+    product = SourceResolutionProduct(
+        model=snapshot.model, name=snapshot.name, brand=snapshot.brand
+    )
     try:
         result = resolver.resolve(product=product, source_scoped_queries=True)
     except (SourceResolutionConfigError, SourceResolutionError) as exc:
@@ -299,15 +357,31 @@ def _mark_row_resolving(session: Session, *, row: ProductFactoryBatchRow) -> Non
     session.flush()
 
 
-def _apply_resolved_row(session: Session, *, row: ProductFactoryBatchRow, result: dict[str, Any]) -> None:
+def _apply_resolved_row(
+    session: Session, *, row: ProductFactoryBatchRow, result: dict[str, Any]
+) -> None:
     row.status = str(result.get("status") or "resolution_failed")
     row.queries_json = list(result.get("queries") or [])
     row.candidate_urls_json = list(result.get("candidates") or [])
-    row.selected_url = result.get("selected_url") if isinstance(result.get("selected_url"), str) else None
-    row.selected_source = result.get("selected_source") if isinstance(result.get("selected_source"), str) else None
+    row.selected_url = (
+        result.get("selected_url")
+        if isinstance(result.get("selected_url"), str)
+        else None
+    )
+    row.selected_source = (
+        result.get("selected_source")
+        if isinstance(result.get("selected_source"), str)
+        else None
+    )
     row.confidence = _int_or_none(result.get("confidence"))
-    row.error_code = result.get("error_code") if isinstance(result.get("error_code"), str) else None
-    row.error_message = result.get("error_message") if isinstance(result.get("error_message"), str) else None
+    row.error_code = (
+        result.get("error_code") if isinstance(result.get("error_code"), str) else None
+    )
+    row.error_message = (
+        result.get("error_message")
+        if isinstance(result.get("error_message"), str)
+        else None
+    )
     metadata = result.get("selection_metadata")
     row.selection_metadata_json = metadata if isinstance(metadata, dict) else None
     row.updated_at = _now()
@@ -326,11 +400,17 @@ def _eligible_row_ids(*, batch_id: int, source_names: tuple[str, ...]) -> list[i
         ]
 
 
-def _mark_row_resolving_by_id(*, batch_id: int, row_id: int) -> RowResolutionSnapshot | None:
+def _mark_row_resolving_by_id(
+    *, batch_id: int, row_id: int
+) -> RowResolutionSnapshot | None:
     with session_scope() as session:
         row = repository.get_batch_row(session, batch_id=batch_id, row_id=row_id)
         batch = repository.get_batch(session, batch_id)
-        if row is None or batch is None or row.status in {"skipped", "manually_selected"}:
+        if (
+            row is None
+            or batch is None
+            or row.status in {"skipped", "manually_selected"}
+        ):
             return None
         _mark_row_resolving(session, row=row)
         repository.refresh_batch_counts(session, batch)
@@ -341,7 +421,11 @@ def _store_resolved_row(*, batch_id: int, row_id: int, result: dict[str, Any]) -
     with session_scope() as session:
         row = repository.get_batch_row(session, batch_id=batch_id, row_id=row_id)
         batch = repository.get_batch(session, batch_id)
-        if row is None or batch is None or row.status in {"skipped", "manually_selected"}:
+        if (
+            row is None
+            or batch is None
+            or row.status in {"skipped", "manually_selected"}
+        ):
             return
         _apply_resolved_row(session, row=row, result=result)
         repository.refresh_batch_counts(session, batch)
@@ -355,13 +439,19 @@ def _finalize_batch_resolution(*, batch_id: int) -> None:
         repository.refresh_batch_counts(session, batch)
 
 
-def _mark_batch_failed(*, batch_id: int, code: str, message: str, progressed: bool = False) -> None:
+def _mark_batch_failed(
+    *, batch_id: int, code: str, message: str, progressed: bool = False
+) -> None:
     with session_scope() as session:
         batch = repository.get_batch(session, batch_id)
         if batch is None:
             return
         metadata = dict(batch.metadata_json or {})
-        metadata["resolution_error"] = {"code": code, "message": message, "progressed": progressed}
+        metadata["resolution_error"] = {
+            "code": code,
+            "message": message,
+            "progressed": progressed,
+        }
         metadata["resolution_failed_at"] = _now().isoformat()
         batch.metadata_json = metadata
         if progressed:
@@ -375,13 +465,17 @@ def _mark_batch_failed(*, batch_id: int, code: str, message: str, progressed: bo
             session.flush()
 
 
-def _row_is_eligible_for_resolution(row: ProductFactoryBatchRow, source_names: tuple[str, ...]) -> bool:
+def _row_is_eligible_for_resolution(
+    row: ProductFactoryBatchRow, source_names: tuple[str, ...]
+) -> bool:
     if row.status in ELIGIBLE_RERESOLVE_STATUSES:
         return True
     if row.status != "auto_selected":
         return False
     metadata = row.selection_metadata_json or {}
-    previous_sources = tuple(str(item).casefold() for item in metadata.get("source_names") or [])
+    previous_sources = tuple(
+        str(item).casefold() for item in metadata.get("source_names") or []
+    )
     return previous_sources != source_names
 
 
@@ -392,8 +486,15 @@ def _is_stale_resolving_batch(batch: ProductFactoryBatch) -> bool:
     return _now() - updated_at > RESOLUTION_STALE_AFTER
 
 
-def _batch_resolver(config_path: str | Path | None, *, source_names: list[str] | tuple[str, ...] | None = None) -> ProductFactorySourceResolver:
-    return ProductFactorySourceResolver(config=_batch_config(config_path, source_names=source_names), source_scoped_queries=True)
+def _batch_resolver(
+    config_path: str | Path | None,
+    *,
+    source_names: list[str] | tuple[str, ...] | None = None,
+) -> ProductFactorySourceResolver:
+    return ProductFactorySourceResolver(
+        config=_batch_config(config_path, source_names=source_names),
+        source_scoped_queries=True,
+    )
 
 
 def _batch_config(
@@ -401,7 +502,9 @@ def _batch_config(
     *,
     source_names: list[str] | tuple[str, ...] | None = None,
 ) -> SourceResolutionConfig:
-    return load_source_resolution_config(config_path).with_preferred_sources(normalize_batch_source_names(source_names))
+    return load_source_resolution_config(config_path).with_preferred_sources(
+        normalize_batch_source_names(source_names)
+    )
 
 
 def _candidate_payload(candidate: SourceResolutionCandidate) -> dict[str, Any]:

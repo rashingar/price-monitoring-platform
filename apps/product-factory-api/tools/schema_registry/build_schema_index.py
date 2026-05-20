@@ -11,7 +11,6 @@ from tools.schema_registry.build_electronet_schema_library import (
     normalize_whitespace,
 )
 
-
 DEFAULT_INDEX_PATH = REPO_ROOT / "resources" / "schemas" / "schema_index.csv"
 FIELDNAMES = [
     "schema_id",
@@ -73,13 +72,17 @@ def _expect_scalar(schema: dict[str, Any], key: str) -> str:
         return ""
     if isinstance(value, (str, int, float)):
         return str(value)
-    raise ValueError(f"schema {schema.get('schema_id', '<unknown>')}: field {key!r} must be scalar")
+    raise ValueError(
+        f"schema {schema.get('schema_id', '<unknown>')}: field {key!r} must be scalar"
+    )
 
 
 def _expect_int(schema: dict[str, Any], key: str) -> int:
     value = schema.get(key)
     if not isinstance(value, int):
-        raise ValueError(f"schema {schema.get('schema_id', '<unknown>')}: field {key!r} must be an integer")
+        raise ValueError(
+            f"schema {schema.get('schema_id', '<unknown>')}: field {key!r} must be an integer"
+        )
     return value
 
 
@@ -88,15 +91,21 @@ def _flatten_examples(schema: dict[str, Any]) -> tuple[int, str]:
     if examples is None:
         return 0, ""
     if not isinstance(examples, list):
-        raise ValueError(f"schema {schema.get('schema_id', '<unknown>')}: electronet_examples must be a list")
-    normalized = [normalize_whitespace(item) for item in examples if normalize_whitespace(item)]
+        raise ValueError(
+            f"schema {schema.get('schema_id', '<unknown>')}: electronet_examples must be a list"
+        )
+    normalized = [
+        normalize_whitespace(item) for item in examples if normalize_whitespace(item)
+    ]
     return len(normalized), (normalized[0] if normalized else "")
 
 
 def _flatten_sentinel(schema: dict[str, Any]) -> tuple[str, str]:
     sentinel = schema.get("sentinel")
     if not isinstance(sentinel, dict):
-        raise ValueError(f"schema {schema.get('schema_id', '<unknown>')}: sentinel must be an object")
+        raise ValueError(
+            f"schema {schema.get('schema_id', '<unknown>')}: sentinel must be an object"
+        )
     last_section = normalize_whitespace(sentinel.get("last_section"))
     last_label = normalize_whitespace(sentinel.get("last_label"))
     return last_section, last_label

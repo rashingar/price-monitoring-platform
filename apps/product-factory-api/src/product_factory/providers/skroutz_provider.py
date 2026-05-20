@@ -19,7 +19,11 @@ from .models import (
     ProviderSnapshotKind,
     ProviderStage,
 )
-from .skroutz_fetcher import SkroutzFetchStatus, SkroutzSnapshotFetcher, is_skroutz_challenge_html
+from .skroutz_fetcher import (
+    SkroutzFetchStatus,
+    SkroutzSnapshotFetcher,
+    is_skroutz_challenge_html,
+)
 
 SKROUTZ_CHALLENGE_REASON = SkroutzFetchStatus.BLOCKED_BY_CHALLENGE.value
 SKROUTZ_CHALLENGE_WARNING = "skroutz_snapshot_blocked_by_challenge"
@@ -50,7 +54,9 @@ class SkroutzProvider(ProductProvider):
         fetcher: SkroutzSnapshotFetcher | None = None,
         parser: SkroutzProductParser | None = None,
     ) -> None:
-        self._fixture_html_by_url = {url: Path(path) for url, path in (fixture_html_by_url or {}).items()}
+        self._fixture_html_by_url = {
+            url: Path(path) for url, path in (fixture_html_by_url or {}).items()
+        }
         self._fetcher = fetcher or SkroutzSnapshotFetcher()
         self._parser = parser or SkroutzProductParser()
 
@@ -102,7 +108,9 @@ class SkroutzProvider(ProductProvider):
             },
         )
 
-    def _snapshot_from_fixture(self, identity: ProviderInputIdentity, url: str, fixture_path: Path) -> ProviderSnapshot:
+    def _snapshot_from_fixture(
+        self, identity: ProviderInputIdentity, url: str, fixture_path: Path
+    ) -> ProviderSnapshot:
 
         if not fixture_path.exists():
             raise ProviderError.build(
@@ -139,13 +147,19 @@ class SkroutzProvider(ProductProvider):
                 "fetch_method": "fixture",
                 "fallback_used": False,
                 "fixture_path": str(fixture_path),
-                "fetch_status": SKROUTZ_CHALLENGE_REASON if challenge_blocked else SkroutzFetchStatus.OK.value,
+                "fetch_status": (
+                    SKROUTZ_CHALLENGE_REASON
+                    if challenge_blocked
+                    else SkroutzFetchStatus.OK.value
+                ),
                 "blocked": challenge_blocked,
                 "blocked_reason": SKROUTZ_CHALLENGE_REASON if challenge_blocked else "",
             },
         )
 
-    def normalize(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+    def normalize(
+        self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity
+    ) -> ProviderResult:
         if self._snapshot_blocked_by_challenge(snapshot):
             return self._blocked_provider_result(snapshot, identity)
         try:
@@ -178,7 +192,9 @@ class SkroutzProvider(ProductProvider):
             headers=dict(snapshot.headers),
         )
 
-    def _blocked_provider_result(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+    def _blocked_provider_result(
+        self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity
+    ) -> ProviderResult:
         url = snapshot.final_url or snapshot.requested_url or identity.url
         source = SourceProductData(
             source_name=self.definition.source_name,

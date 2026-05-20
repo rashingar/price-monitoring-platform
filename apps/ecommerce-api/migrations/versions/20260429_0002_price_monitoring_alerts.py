@@ -25,7 +25,12 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("name", sa.String(), nullable=True),
         sa.Column("rule_type", sa.String(), nullable=False),
-        sa.Column("product_id", sa.Integer(), sa.ForeignKey("products.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "product_id",
+            sa.Integer(),
+            sa.ForeignKey("products.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("catalog_source", sa.String(), nullable=True),
         sa.Column("model", sa.String(), nullable=True),
         sa.Column("mpn", sa.String(), nullable=True),
@@ -34,24 +39,58 @@ def upgrade() -> None:
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint("rule_type = 'competitor_below_own_price'", name="ck_alert_rules_rule_type"),
-        sa.CheckConstraint("threshold_amount IS NULL OR threshold_amount > 0", name="ck_alert_rules_threshold_amount_positive"),
-        sa.CheckConstraint("threshold_percent IS NULL OR threshold_percent > 0", name="ck_alert_rules_threshold_percent_positive"),
+        sa.CheckConstraint(
+            "rule_type = 'competitor_below_own_price'", name="ck_alert_rules_rule_type"
+        ),
+        sa.CheckConstraint(
+            "threshold_amount IS NULL OR threshold_amount > 0",
+            name="ck_alert_rules_threshold_amount_positive",
+        ),
+        sa.CheckConstraint(
+            "threshold_percent IS NULL OR threshold_percent > 0",
+            name="ck_alert_rules_threshold_percent_positive",
+        ),
     )
     op.create_index("ix_alert_rules_active", "alert_rules", ["active"])
     op.create_index("ix_alert_rules_rule_type", "alert_rules", ["rule_type"])
     op.create_index("ix_alert_rules_product_id", "alert_rules", ["product_id"])
-    op.create_index("ix_alert_rules_catalog_source_model", "alert_rules", ["catalog_source", "model"])
-    op.create_index("ix_alert_rules_catalog_source_mpn", "alert_rules", ["catalog_source", "mpn"])
+    op.create_index(
+        "ix_alert_rules_catalog_source_model",
+        "alert_rules",
+        ["catalog_source", "model"],
+    )
+    op.create_index(
+        "ix_alert_rules_catalog_source_mpn", "alert_rules", ["catalog_source", "mpn"]
+    )
     op.create_index("ix_alert_rules_created_at", "alert_rules", ["created_at"])
 
     op.create_table(
         "alert_events",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("alert_rule_id", sa.Integer(), sa.ForeignKey("alert_rules.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("monitoring_run_id", sa.Integer(), sa.ForeignKey("monitoring_runs.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("price_observation_id", sa.Integer(), sa.ForeignKey("price_observations.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("product_id", sa.Integer(), sa.ForeignKey("products.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "alert_rule_id",
+            sa.Integer(),
+            sa.ForeignKey("alert_rules.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "monitoring_run_id",
+            sa.Integer(),
+            sa.ForeignKey("monitoring_runs.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "price_observation_id",
+            sa.Integer(),
+            sa.ForeignKey("price_observations.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "product_id",
+            sa.Integer(),
+            sa.ForeignKey("products.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("run_id", sa.String(), nullable=False),
         sa.Column("catalog_source", sa.String(), nullable=True),
         sa.Column("model", sa.String(), nullable=True),
@@ -74,7 +113,10 @@ def upgrade() -> None:
         sa.Column("raw_context", _json_document(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint("status IN ('open', 'acknowledged', 'resolved')", name="ck_alert_events_status"),
+        sa.CheckConstraint(
+            "status IN ('open', 'acknowledged', 'resolved')",
+            name="ck_alert_events_status",
+        ),
         sa.CheckConstraint("severity = 'warning'", name="ck_alert_events_severity"),
     )
     op.create_index("ix_alert_events_alert_rule_id", "alert_events", ["alert_rule_id"])
@@ -82,7 +124,9 @@ def upgrade() -> None:
     op.create_index("ix_alert_events_run_id", "alert_events", ["run_id"])
     op.create_index("ix_alert_events_status", "alert_events", ["status"])
     op.create_index("ix_alert_events_triggered_at", "alert_events", ["triggered_at"])
-    op.create_index("uq_alert_events_dedupe_key", "alert_events", ["dedupe_key"], unique=True)
+    op.create_index(
+        "uq_alert_events_dedupe_key", "alert_events", ["dedupe_key"], unique=True
+    )
 
 
 def downgrade() -> None:

@@ -35,7 +35,9 @@ def _database(tmp_path: Path, monkeypatch) -> str:
     return database_url
 
 
-def _catalog_product(session, *, model: str = "005606", mpn: str = "MR25GB") -> CatalogProductRow:
+def _catalog_product(
+    session, *, model: str = "005606", mpn: str = "MR25GB"
+) -> CatalogProductRow:
     row = CatalogProductRow(
         catalog_source="sourceCata",
         model=model,
@@ -104,7 +106,9 @@ def test_accept_candidate_promotes_candidate_url(tmp_path: Path, monkeypatch) ->
         result = review_source_url_agent_candidate(
             session,
             candidate.id,
-            SourceUrlCandidateReviewCommand(decision="accept", reviewed_by="tester", reviewed_at=REVIEWED_AT),
+            SourceUrlCandidateReviewCommand(
+                decision="accept", reviewed_by="tester", reviewed_at=REVIEWED_AT
+            ),
         )
 
         assert result.candidate.status == "accepted"
@@ -116,7 +120,9 @@ def test_accept_candidate_promotes_candidate_url(tmp_path: Path, monkeypatch) ->
         assert stored.url == "https://www.bestprice.gr/item/1/lg-remote.html"
 
 
-def test_accept_candidate_with_reviewed_url_promotes_reviewed_url(tmp_path: Path, monkeypatch) -> None:
+def test_accept_candidate_with_reviewed_url_promotes_reviewed_url(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database(tmp_path, monkeypatch)
     reviewed_url = "https://www.bestprice.gr/item/2/reviewed.html"
     with session_scope(database_url) as session:
@@ -125,7 +131,9 @@ def test_accept_candidate_with_reviewed_url_promotes_reviewed_url(tmp_path: Path
         result = review_source_url_agent_candidate(
             session,
             candidate.id,
-            SourceUrlCandidateReviewCommand(decision="accept", reviewed_url=reviewed_url, reviewed_at=REVIEWED_AT),
+            SourceUrlCandidateReviewCommand(
+                decision="accept", reviewed_url=reviewed_url, reviewed_at=REVIEWED_AT
+            ),
         )
 
         assert result.source_url_promotion is not None
@@ -135,14 +143,19 @@ def test_accept_candidate_with_reviewed_url_promotes_reviewed_url(tmp_path: Path
 
 def test_replace_url_requires_reviewed_url(tmp_path: Path, monkeypatch) -> None:
     database_url = _database(tmp_path, monkeypatch)
-    with pytest.raises(InvalidSourceUrlCandidateReviewError, match="reviewed_url is required for replace_url."):
+    with pytest.raises(
+        InvalidSourceUrlCandidateReviewError,
+        match="reviewed_url is required for replace_url.",
+    ):
         with session_scope(database_url) as session:
             product = _catalog_product(session)
             candidate = _candidate(session, product)
             review_source_url_agent_candidate(
                 session,
                 candidate.id,
-                SourceUrlCandidateReviewCommand(decision="replace_url", reviewed_at=REVIEWED_AT),
+                SourceUrlCandidateReviewCommand(
+                    decision="replace_url", reviewed_at=REVIEWED_AT
+                ),
             )
 
 
@@ -155,7 +168,11 @@ def test_replace_url_promotes_reviewed_url(tmp_path: Path, monkeypatch) -> None:
         result = review_source_url_agent_candidate(
             session,
             candidate.id,
-            SourceUrlCandidateReviewCommand(decision="replace_url", reviewed_url=reviewed_url, reviewed_at=REVIEWED_AT),
+            SourceUrlCandidateReviewCommand(
+                decision="replace_url",
+                reviewed_url=reviewed_url,
+                reviewed_at=REVIEWED_AT,
+            ),
         )
 
         assert result.candidate.status == "accepted"
@@ -191,7 +208,9 @@ def test_reviewed_by_defaults_to_operator(tmp_path: Path, monkeypatch) -> None:
         result = review_source_url_agent_candidate(
             session,
             candidate.id,
-            SourceUrlCandidateReviewCommand(decision="reject", reviewed_by=" ", reviewed_at=REVIEWED_AT),
+            SourceUrlCandidateReviewCommand(
+                decision="reject", reviewed_by=" ", reviewed_at=REVIEWED_AT
+            ),
         )
 
         assert result.candidate.reviewed_by == "operator"
@@ -205,39 +224,61 @@ def test_review_notes_are_appended(tmp_path: Path, monkeypatch) -> None:
         result = review_source_url_agent_candidate(
             session,
             candidate.id,
-            SourceUrlCandidateReviewCommand(decision="reject", review_notes="not a match", reviewed_by="tester", reviewed_at=REVIEWED_AT),
+            SourceUrlCandidateReviewCommand(
+                decision="reject",
+                review_notes="not a match",
+                reviewed_by="tester",
+                reviewed_at=REVIEWED_AT,
+            ),
         )
 
-        assert result.candidate.notes == f"initial note\nReview reject by tester at {REVIEWED_AT.isoformat()}: not a match"
+        assert (
+            result.candidate.notes
+            == f"initial note\nReview reject by tester at {REVIEWED_AT.isoformat()}: not a match"
+        )
         assert result.candidate.updated_at == REVIEWED_AT
 
 
-def test_missing_catalog_product_id_blocks_promotion(tmp_path: Path, monkeypatch) -> None:
+def test_missing_catalog_product_id_blocks_promotion(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database(tmp_path, monkeypatch)
-    with pytest.raises(SourceUrlCandidatePromotionError, match="catalog_product_id is required to promote a source URL."):
+    with pytest.raises(
+        SourceUrlCandidatePromotionError,
+        match="catalog_product_id is required to promote a source URL.",
+    ):
         with session_scope(database_url) as session:
             candidate = _candidate(session, None)
             review_source_url_agent_candidate(
                 session,
                 candidate.id,
-                SourceUrlCandidateReviewCommand(decision="accept", reviewed_at=REVIEWED_AT),
+                SourceUrlCandidateReviewCommand(
+                    decision="accept", reviewed_at=REVIEWED_AT
+                ),
             )
 
 
 def test_missing_promoted_url_blocks_promotion(tmp_path: Path, monkeypatch) -> None:
     database_url = _database(tmp_path, monkeypatch)
-    with pytest.raises(SourceUrlCandidatePromotionError, match="candidate_url is required to promote a source URL."):
+    with pytest.raises(
+        SourceUrlCandidatePromotionError,
+        match="candidate_url is required to promote a source URL.",
+    ):
         with session_scope(database_url) as session:
             product = _catalog_product(session)
             candidate = _candidate(session, product, url=None)
             review_source_url_agent_candidate(
                 session,
                 candidate.id,
-                SourceUrlCandidateReviewCommand(decision="accept", reviewed_at=REVIEWED_AT),
+                SourceUrlCandidateReviewCommand(
+                    decision="accept", reviewed_at=REVIEWED_AT
+                ),
             )
 
 
-def test_promotion_uses_manual_trust_level_and_discovered_url_type(tmp_path: Path, monkeypatch) -> None:
+def test_promotion_uses_manual_trust_level_and_discovered_url_type(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         product = _catalog_product(session)
@@ -254,7 +295,9 @@ def test_promotion_uses_manual_trust_level_and_discovered_url_type(tmp_path: Pat
         assert stored.url_type == "discovered"
 
 
-def test_promotion_uses_review_timestamp_for_last_seen_and_success(tmp_path: Path, monkeypatch) -> None:
+def test_promotion_uses_review_timestamp_for_last_seen_and_success(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         product = _catalog_product(session)

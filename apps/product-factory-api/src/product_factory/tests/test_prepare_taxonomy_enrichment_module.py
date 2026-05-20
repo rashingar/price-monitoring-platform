@@ -4,8 +4,17 @@ from pathlib import Path
 
 import pytest
 
-from product_factory.models import ParsedProduct, SourceProductData, SpecItem, SpecSection, TaxonomyResolution
-from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult, resolve_prepare_taxonomy_enrichment
+from product_factory.models import (
+    ParsedProduct,
+    SourceProductData,
+    SpecItem,
+    SpecSection,
+    TaxonomyResolution,
+)
+from product_factory.prepare_taxonomy_enrichment import (
+    PrepareTaxonomyEnrichmentResult,
+    resolve_prepare_taxonomy_enrichment,
+)
 
 
 def _build_source(
@@ -49,9 +58,13 @@ class DummyFetcher:
     pass
 
 
-def test_resolve_prepare_taxonomy_enrichment_calls_resolver_with_current_prepare_stage_inputs(tmp_path: Path) -> None:
+def test_resolve_prepare_taxonomy_enrichment_calls_resolver_with_current_prepare_stage_inputs(
+    tmp_path: Path,
+) -> None:
     key_specs = [SpecItem(label="Power", value="2200 W")]
-    spec_sections = [SpecSection(section="Specs", items=[SpecItem(label="Color", value="Black")])]
+    spec_sections = [
+        SpecSection(section="Specs", items=[SpecItem(label="Color", value="Black")])
+    ]
     source = _build_source(
         source_name="electronet",
         url="https://www.electronet.gr/example",
@@ -67,7 +80,9 @@ def test_resolve_prepare_taxonomy_enrichment_calls_resolver_with_current_prepare
         sub_category="Kettles",
         reason="resolver_reason",
     )
-    taxonomy_candidates = [{"taxonomy_path": "Home > Small Appliances > Kettles", "confidence": 0.91}]
+    taxonomy_candidates = [
+        {"taxonomy_path": "Home > Small Appliances > Kettles", "confidence": 0.91}
+    ]
     resolver_calls: list[dict[str, object]] = []
 
     class RecordingResolver:
@@ -101,7 +116,9 @@ def test_resolve_prepare_taxonomy_enrichment_calls_resolver_with_current_prepare
 def test_resolve_prepare_taxonomy_enrichment_skips_skroutz_manufacturer_enrichment_when_disabled(
     tmp_path: Path,
 ) -> None:
-    source = _build_source(source_name="skroutz", url="https://www.skroutz.gr/s/143051/example.html")
+    source = _build_source(
+        source_name="skroutz", url="https://www.skroutz.gr/s/143051/example.html"
+    )
     parsed = _build_parsed(source)
     taxonomy = TaxonomyResolution(
         parent_category="Image & Sound",
@@ -117,7 +134,9 @@ def test_resolve_prepare_taxonomy_enrichment_skips_skroutz_manufacturer_enrichme
 
     def fake_enrich_source_from_manufacturer_docs(**kwargs) -> dict[str, object]:
         enrichment_calls.append(kwargs)
-        raise AssertionError("manufacturer enrichment is disabled and should not be called")
+        raise AssertionError(
+            "manufacturer enrichment is disabled and should not be called"
+        )
 
     result = resolve_prepare_taxonomy_enrichment(
         source="skroutz",
@@ -161,12 +180,21 @@ def test_resolve_prepare_taxonomy_enrichment_uses_disabled_default_shape(
     source_name: str,
     fallback_reason: str,
 ) -> None:
-    source = _build_source(source_name=source_name, url=f"https://example.com/{source_name}")
+    source = _build_source(
+        source_name=source_name, url=f"https://example.com/{source_name}"
+    )
     parsed = _build_parsed(source)
 
     class StaticResolver:
         def resolve(self, **_kwargs):
-            return TaxonomyResolution(parent_category="Home", leaf_category="Appliances", sub_category="Category"), []
+            return (
+                TaxonomyResolution(
+                    parent_category="Home",
+                    leaf_category="Appliances",
+                    sub_category="Category",
+                ),
+                [],
+            )
 
     result = resolve_prepare_taxonomy_enrichment(
         source=source_name,
@@ -175,7 +203,9 @@ def test_resolve_prepare_taxonomy_enrichment_uses_disabled_default_shape(
         model_dir=tmp_path / "100001",
         taxonomy_resolver_factory=lambda: StaticResolver(),
         enrich_source_from_manufacturer_docs_fn=lambda **_kwargs: (_ for _ in ()).throw(
-            AssertionError("manufacturer enrichment should not be called for non-skroutz sources")
+            AssertionError(
+                "manufacturer enrichment should not be called for non-skroutz sources"
+            )
         ),
     )
 

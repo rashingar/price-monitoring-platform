@@ -5,7 +5,6 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-
 CAPTURE_VERSION = "source-capture-v1"
 
 

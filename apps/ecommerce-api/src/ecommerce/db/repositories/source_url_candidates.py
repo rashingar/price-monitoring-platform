@@ -12,7 +12,11 @@ from sqlalchemy.orm import Session
 
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.catalog import CatalogProductRow
-from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryRun
+from ecommerce.db.models.source_urls import (
+    SourceUrl,
+    SourceUrlCandidate,
+    SourceUrlDiscoveryRun,
+)
 from ecommerce.source_urls import normalize_source_url
 
 SOURCE_URL_CANDIDATE_STATUS_ORDER = {
@@ -78,7 +82,11 @@ def list_source_url_agent_candidates(
     offset: int,
 ) -> SourceUrlCandidateListPage:
     query_filters = source_url_agent_candidate_filters(filters)
-    total = int(session.execute(select(func.count(SourceUrlCandidate.id)).where(*query_filters)).scalar_one())
+    total = int(
+        session.execute(
+            select(func.count(SourceUrlCandidate.id)).where(*query_filters)
+        ).scalar_one()
+    )
     statement = (
         select(SourceUrlCandidate)
         .where(*query_filters)
@@ -87,27 +95,39 @@ def list_source_url_agent_candidates(
         .offset(offset)
     )
     items = list(session.execute(statement).scalars().all())
-    return SourceUrlCandidateListPage(items=items, total=total, limit=limit, offset=offset)
+    return SourceUrlCandidateListPage(
+        items=items, total=total, limit=limit, offset=offset
+    )
 
 
-def source_url_agent_candidate_filters(filters: SourceUrlCandidateListFilters) -> list[Any]:
+def source_url_agent_candidate_filters(
+    filters: SourceUrlCandidateListFilters,
+) -> list[Any]:
     query_filters: list[Any] = []
     status_text = _optional_text(filters.status)
     if status_text and status_text.casefold() != "all":
         query_filters.append(SourceUrlCandidate.status == status_text)
     source_text = _optional_text(filters.source_name)
     if source_text:
-        query_filters.append(SourceUrlCandidate.source_name.ilike(_contains_pattern(source_text), escape="\\"))
+        query_filters.append(
+            SourceUrlCandidate.source_name.ilike(
+                _contains_pattern(source_text), escape="\\"
+            )
+        )
     run_id_text = _optional_text(filters.run_id)
     if run_id_text:
         query_filters.append(SourceUrlCandidate.run_id == run_id_text)
     model_text = _optional_text(filters.model)
     if model_text:
-        query_filters.append(SourceUrlCandidate.model.ilike(_contains_pattern(model_text), escape="\\"))
+        query_filters.append(
+            SourceUrlCandidate.model.ilike(_contains_pattern(model_text), escape="\\")
+        )
     product_id_text = _optional_text(filters.catalog_product_id)
     if product_id_text:
         try:
-            query_filters.append(SourceUrlCandidate.catalog_product_id == int(product_id_text))
+            query_filters.append(
+                SourceUrlCandidate.catalog_product_id == int(product_id_text)
+            )
         except ValueError:
             raise ValueError("catalog_product_id must be an integer.") from None
     min_value = _optional_decimal(filters.min_confidence, "min_confidence")
@@ -119,11 +139,15 @@ def source_url_agent_candidate_filters(filters: SourceUrlCandidateListFilters) -
     return query_filters
 
 
-def get_source_url_agent_candidate(session: Session, candidate_id: int) -> SourceUrlCandidate | None:
+def get_source_url_agent_candidate(
+    session: Session, candidate_id: int
+) -> SourceUrlCandidate | None:
     return session.get(SourceUrlCandidate, candidate_id)
 
 
-def matching_source_url_id_for_candidate(session: Session, candidate: SourceUrlCandidate) -> int | None:
+def matching_source_url_id_for_candidate(
+    session: Session, candidate: SourceUrlCandidate
+) -> int | None:
     if candidate.catalog_product_id is None or not candidate.candidate_url:
         return None
     try:
@@ -168,7 +192,9 @@ def get_product_source_url_candidate_history(
         session.execute(
             select(SourceUrlCandidate)
             .where(SourceUrlCandidate.catalog_product_id == catalog_product_id)
-            .order_by(SourceUrlCandidate.created_at.desc(), SourceUrlCandidate.id.desc())
+            .order_by(
+                SourceUrlCandidate.created_at.desc(), SourceUrlCandidate.id.desc()
+            )
         )
         .scalars()
         .all()
@@ -186,7 +212,9 @@ def get_product_source_url_candidate_history(
     runs_by_id = {
         row.run_id: row
         for row in session.execute(
-            select(SourceUrlDiscoveryRun).where(SourceUrlDiscoveryRun.run_id.in_(run_ids))
+            select(SourceUrlDiscoveryRun).where(
+                SourceUrlDiscoveryRun.run_id.in_(run_ids)
+            )
         )
         .scalars()
         .all()
@@ -256,16 +284,30 @@ def _candidate_status_counts(candidates: list[SourceUrlCandidate]) -> dict[str, 
 
 
 def _candidate_sort_key(candidate: SourceUrlCandidate) -> tuple[int, float, int]:
-    status_rank = SOURCE_URL_CANDIDATE_STATUS_ORDER.get(candidate.status or "", len(SOURCE_URL_CANDIDATE_STATUS_ORDER))
-    return (status_rank, _datetime_sort_value(candidate.created_at), int(candidate.id or 0))
+    status_rank = SOURCE_URL_CANDIDATE_STATUS_ORDER.get(
+        candidate.status or "", len(SOURCE_URL_CANDIDATE_STATUS_ORDER)
+    )
+    return (
+        status_rank,
+        _datetime_sort_value(candidate.created_at),
+        int(candidate.id or 0),
+    )
 
 
-def _latest_candidate_created_at(candidates: list[SourceUrlCandidate]) -> datetime | None:
-    values = [candidate.created_at for candidate in candidates if candidate.created_at is not None]
+def _latest_candidate_created_at(
+    candidates: list[SourceUrlCandidate],
+) -> datetime | None:
+    values = [
+        candidate.created_at
+        for candidate in candidates
+        if candidate.created_at is not None
+    ]
     return max(values) if values else None
 
 
-def _run_group_sort_key(group: ProductSourceUrlCandidateRunGroup) -> tuple[float, float, str]:
+def _run_group_sort_key(
+    group: ProductSourceUrlCandidateRunGroup,
+) -> tuple[float, float, str]:
     run_created_at = group.run.created_at if group.run is not None else None
     sort_created_at = run_created_at or group.latest_candidate_created_at
     return (

@@ -8,7 +8,10 @@ from .fetcher import FetchError
 from .html_builders import extract_presentation_blocks
 from .models import GalleryImage
 from .normalize import normalize_for_match
-from .skroutz_sections import build_skroutz_presentation_source_html, extract_skroutz_section_window
+from .skroutz_sections import (
+    build_skroutz_presentation_source_html,
+    extract_skroutz_section_window,
+)
 
 
 @dataclass(slots=True)
@@ -58,7 +61,9 @@ def _select_skroutz_image_backed_sections(
         block_title = normalize_for_match(str(block.get("title", "")))
         rendered_title = normalize_for_match(str(rendered_section.get("title", "")))
         if block_title != rendered_title:
-            raise RuntimeError("Skroutz section title order mismatch between rendered DOM and parsed description")
+            raise RuntimeError(
+                "Skroutz section title order mismatch between rendered DOM and parsed description"
+            )
 
         resolved_image_url = str(rendered_section.get("resolved_image_url", "")).strip()
         if not resolved_image_url:
@@ -103,7 +108,9 @@ def _section_image_candidates_for_block(block: dict[str, Any]) -> list[str]:
     return [image_url] if image_url else []
 
 
-def build_section_image_candidates(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_section_image_candidates(
+    blocks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     return [
         {
             "position": index,
@@ -114,7 +121,9 @@ def build_section_image_candidates(blocks: list[dict[str, Any]]) -> list[dict[st
     ]
 
 
-def build_section_image_urls_resolved(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_section_image_urls_resolved(
+    blocks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     return [
         {
             "position": index,
@@ -165,7 +174,9 @@ def resolve_skroutz_section_assets(
     output_dir: Path,
 ) -> PrepareSectionAssetsResult:
     if requested_sections <= 0:
-        return PrepareSectionAssetsResult(section_extraction_window=_default_section_extraction_window())
+        return PrepareSectionAssetsResult(
+            section_extraction_window=_default_section_extraction_window()
+        )
 
     base_url = canonical_url or url
     section_extraction_window = _default_section_extraction_window()
@@ -180,19 +191,27 @@ def resolve_skroutz_section_assets(
     if len(manufacturer_blocks) >= requested_sections:
         selected_presentation_blocks = manufacturer_blocks[:requested_sections]
         selected_besco_images = [
-            GalleryImage(url=block["image_url"], alt=block["title"], position=section_index)
+            GalleryImage(
+                url=block["image_url"], alt=block["title"], position=section_index
+            )
             for section_index, block in enumerate(selected_presentation_blocks, start=1)
             if block.get("image_url")
         ]
-        section_image_candidates = build_section_image_candidates(selected_presentation_blocks)
-        section_image_urls_resolved = build_section_image_urls_resolved(selected_presentation_blocks)
+        section_image_candidates = build_section_image_candidates(
+            selected_presentation_blocks
+        )
+        section_image_urls_resolved = build_section_image_urls_resolved(
+            selected_presentation_blocks
+        )
         section_extraction_window = {
             "candidate_count": len(manufacturer_blocks),
             "duplicate_signatures_skipped": 0,
             "selected_container_index": "manufacturer_html",
             "start_anchor": "manufacturer_presentation",
             "stop_anchor": "",
-            "title_signature": [block["title"] for block in selected_presentation_blocks],
+            "title_signature": [
+                block["title"] for block in selected_presentation_blocks
+            ],
         }
         sections_artifact_payload = build_sections_artifact_payload(
             source="manufacturer",
@@ -205,11 +224,15 @@ def resolve_skroutz_section_assets(
     else:
         extracted_window = extract_skroutz_section_window(fetch_html, base_url=base_url)
         section_warnings = list(extracted_window.get("warnings", []))
-        section_extraction_window = dict(extracted_window.get("window", section_extraction_window))
+        section_extraction_window = dict(
+            extracted_window.get("window", section_extraction_window)
+        )
         all_sections = list(extracted_window.get("sections", []))
         rendered_section_data: dict[str, Any] = {"window": {}, "sections": []}
         try:
-            rendered_section_data = fetcher.extract_skroutz_section_image_records(final_url)
+            rendered_section_data = fetcher.extract_skroutz_section_image_records(
+                final_url
+            )
         except FetchError as exc:
             section_warnings.append(f"skroutz_rendered_section_extraction_failed:{exc}")
         rendered_sections = list(rendered_section_data.get("sections", []))
@@ -223,38 +246,63 @@ def resolve_skroutz_section_assets(
                     int(rendered_window.get("candidate_count", 0) or 0),
                 ),
                 "duplicate_signatures_skipped": max(
-                    int(section_extraction_window.get("duplicate_signatures_skipped", 0) or 0),
+                    int(
+                        section_extraction_window.get("duplicate_signatures_skipped", 0)
+                        or 0
+                    ),
                     int(rendered_window.get("duplicate_signatures_skipped", 0) or 0),
                 ),
             }
         if rendered_sections:
-            selected_presentation_blocks, rendered_sections = _select_skroutz_image_backed_sections(
-                all_sections=all_sections,
-                rendered_sections=rendered_sections,
-                requested_sections=requested_sections,
+            selected_presentation_blocks, rendered_sections = (
+                _select_skroutz_image_backed_sections(
+                    all_sections=all_sections,
+                    rendered_sections=rendered_sections,
+                    requested_sections=requested_sections,
+                )
             )
         else:
-            selected_presentation_blocks, rendered_sections = _select_static_image_backed_sections(
-                all_sections=all_sections,
-                requested_sections=requested_sections,
+            selected_presentation_blocks, rendered_sections = (
+                _select_static_image_backed_sections(
+                    all_sections=all_sections,
+                    requested_sections=requested_sections,
+                )
             )
         if len(all_sections) < requested_sections:
-            section_warnings.append(f"skroutz_sections_clamped:{len(all_sections)}/{requested_sections}")
+            section_warnings.append(
+                f"skroutz_sections_clamped:{len(all_sections)}/{requested_sections}"
+            )
         if len(rendered_sections) < requested_sections:
-            section_warnings.append(f"skroutz_rendered_sections_clamped:{len(rendered_sections)}/{requested_sections}")
+            section_warnings.append(
+                f"skroutz_rendered_sections_clamped:{len(rendered_sections)}/{requested_sections}"
+            )
         if len(selected_presentation_blocks) < requested_sections:
-            section_warnings.append(f"skroutz_image_backed_sections_clamped:{len(selected_presentation_blocks)}/{requested_sections}")
-        section_image_candidates = build_section_image_candidates(selected_presentation_blocks)
+            section_warnings.append(
+                f"skroutz_image_backed_sections_clamped:{len(selected_presentation_blocks)}/{requested_sections}"
+            )
+        section_image_candidates = build_section_image_candidates(
+            selected_presentation_blocks
+        )
         selected_besco_images = []
         for section_index, block in enumerate(selected_presentation_blocks, start=1):
             rendered_section = rendered_sections[section_index - 1]
-            resolved_image_url = str(rendered_section.get("resolved_image_url", "")).strip()
+            resolved_image_url = str(
+                rendered_section.get("resolved_image_url", "")
+            ).strip()
             block["image_url"] = resolved_image_url
-            selected_besco_images.append(GalleryImage(url=resolved_image_url, alt=block["title"], position=section_index))
-        section_image_urls_resolved = build_section_image_urls_resolved(selected_presentation_blocks)
+            selected_besco_images.append(
+                GalleryImage(
+                    url=resolved_image_url, alt=block["title"], position=section_index
+                )
+            )
+        section_image_urls_resolved = build_section_image_urls_resolved(
+            selected_presentation_blocks
+        )
         presentation_source_html_override = None
         if not manufacturer_enrichment.get("presentation_applied"):
-            presentation_source_html_override = build_skroutz_presentation_source_html(selected_presentation_blocks)
+            presentation_source_html_override = build_skroutz_presentation_source_html(
+                selected_presentation_blocks
+            )
         sections_artifact_payload = build_sections_artifact_payload(
             source="skroutz",
             requested_sections=requested_sections,
@@ -308,9 +356,15 @@ def download_section_assets(
     except FetchError as exc:
         if strict:
             raise RuntimeError(f"Skroutz besco image download failed: {exc}") from exc
-        return SectionAssetDownloadResult(besco_warnings=[f"besco_download_failed:{exc}"])
+        return SectionAssetDownloadResult(
+            besco_warnings=[f"besco_download_failed:{exc}"]
+        )
 
-    if strict and strict_expected_count is not None and len(downloaded_besco) < strict_expected_count:
+    if (
+        strict
+        and strict_expected_count is not None
+        and len(downloaded_besco) < strict_expected_count
+    ):
         raise RuntimeError(
             f"Skroutz besco image download incomplete: expected {strict_expected_count}, downloaded {len(downloaded_besco)}"
         )
@@ -319,5 +373,7 @@ def download_section_assets(
         downloaded_besco=downloaded_besco,
         besco_warnings=besco_warnings,
         besco_files=besco_files,
-        besco_filenames_by_section={image.position: image.local_filename for image in downloaded_besco},
+        besco_filenames_by_section={
+            image.position: image.local_filename for image in downloaded_besco
+        },
     )

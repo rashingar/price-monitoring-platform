@@ -12,7 +12,13 @@ from product_factory.llm_contract import (
     validate_intro_text_output,
     validate_seo_meta_output,
 )
-from product_factory.models import CLIInput, ParsedProduct, SourceProductData, SpecItem, TaxonomyResolution
+from product_factory.models import (
+    CLIInput,
+    ParsedProduct,
+    SourceProductData,
+    SpecItem,
+    TaxonomyResolution,
+)
 from product_factory.repo_paths import REPO_ROOT
 
 
@@ -33,7 +39,9 @@ def test_build_intro_text_context_excludes_section_generation() -> None:
                 presentation_source_html="<section><h3>Τίτλος</h3><p>Κείμενο</p></section>",
             )
         ),
-        taxonomy=TaxonomyResolution(leaf_category="Ψυγεία & Καταψύκτες", sub_category="Ψυγεία Ντουλάπες"),
+        taxonomy=TaxonomyResolution(
+            leaf_category="Ψυγεία & Καταψύκτες", sub_category="Ψυγεία Ντουλάπες"
+        ),
         deterministic_product={
             "name": "LG GSGV80PYLL – Ψυγείο Ντουλάπα 635Lt",
             "brand": "LG",
@@ -46,11 +54,24 @@ def test_build_intro_text_context_excludes_section_generation() -> None:
     assert context["task"] == "intro_text"
     assert context["writer_rules"]["llm_owned_fields"] == ["intro_text"]
     assert context["writer_rules"]["plain_text_only"] is False
-    assert context["writer_rules"]["output_format"] == "single_greek_paragraph_with_limited_strong_html"
+    assert (
+        context["writer_rules"]["output_format"]
+        == "single_greek_paragraph_with_limited_strong_html"
+    )
     assert context["writer_rules"]["allowed_inline_html_tags"] == ["strong"]
-    assert context["writer_rules"]["forbidden_outputs"] == ["json", "markdown", "bullets", "cta_language", "unsupported_html"]
-    assert context["writer_rules"]["emphasis_policy"]["scope"] == "generic_all_categories"
-    assert context["writer_rules"]["emphasis_policy"]["max_emphasized_word_ratio"] == 0.35
+    assert context["writer_rules"]["forbidden_outputs"] == [
+        "json",
+        "markdown",
+        "bullets",
+        "cta_language",
+        "unsupported_html",
+    ]
+    assert (
+        context["writer_rules"]["emphasis_policy"]["scope"] == "generic_all_categories"
+    )
+    assert (
+        context["writer_rules"]["emphasis_policy"]["max_emphasized_word_ratio"] == 0.35
+    )
     assert "presentation_source_sections" not in context
     assert "sections" not in context
 
@@ -67,7 +88,9 @@ def test_build_seo_meta_context_includes_required_keyword_evidence() -> None:
                 key_specs=[SpecItem(label="Χωρητικότητα", value="635Lt")],
             )
         ),
-        taxonomy=TaxonomyResolution(leaf_category="Ψυγεία & Καταψύκτες", sub_category="Ψυγεία Ντουλάπες"),
+        taxonomy=TaxonomyResolution(
+            leaf_category="Ψυγεία & Καταψύκτες", sub_category="Ψυγεία Ντουλάπες"
+        ),
         deterministic_product={
             "name": "LG GSGV80PYLL – Ψυγείο Ντουλάπα 635Lt",
             "brand": "LG",
@@ -81,7 +104,10 @@ def test_build_seo_meta_context_includes_required_keyword_evidence() -> None:
     )
 
     assert context["task"] == "seo_meta"
-    assert context["writer_rules"]["llm_owned_fields"] == ["product.meta_description", "product.meta_keywords"]
+    assert context["writer_rules"]["llm_owned_fields"] == [
+        "product.meta_description",
+        "product.meta_keywords",
+    ]
     assert context["writer_rules"]["required_keywords"] == ["LG", "GSGV80PYLL"]
     assert set(context["evidence"]) >= {
         "meta_description_draft",
@@ -89,11 +115,24 @@ def test_build_seo_meta_context_includes_required_keyword_evidence() -> None:
         "key_specs",
         "deterministic_differentiators",
     }
-    assert context["product"]["meta_title"] == "LG GSGV80PYLL Ψυγείο Ντουλάπα 635Lt | eTranoulis"
-    assert context["evidence"]["meta_description_draft"] == "Το LG GSGV80PYLL είναι ψυγείο ντουλάπα με 635Lt."
-    assert "2 natural Greek sentences" in context["writer_rules"]["meta_description_rule"]
-    assert "Exactly one sentence" not in context["writer_rules"]["meta_description_rule"]
-    assert "Smooth the Greek grammar" not in context["writer_rules"]["meta_description_rule"]
+    assert (
+        context["product"]["meta_title"]
+        == "LG GSGV80PYLL Ψυγείο Ντουλάπα 635Lt | eTranoulis"
+    )
+    assert (
+        context["evidence"]["meta_description_draft"]
+        == "Το LG GSGV80PYLL είναι ψυγείο ντουλάπα με 635Lt."
+    )
+    assert (
+        "2 natural Greek sentences" in context["writer_rules"]["meta_description_rule"]
+    )
+    assert (
+        "Exactly one sentence" not in context["writer_rules"]["meta_description_rule"]
+    )
+    assert (
+        "Smooth the Greek grammar"
+        not in context["writer_rules"]["meta_description_rule"]
+    )
 
 
 def test_build_intro_text_context_prefers_model_name_over_raw_mpn() -> None:
@@ -107,7 +146,9 @@ def test_build_intro_text_context_prefers_model_name_over_raw_mpn() -> None:
                 hero_summary="Steam cleaner for home use.",
             )
         ),
-        taxonomy=TaxonomyResolution(leaf_category="Steam Cleaner", sub_category="Cleaning"),
+        taxonomy=TaxonomyResolution(
+            leaf_category="Steam Cleaner", sub_category="Cleaning"
+        ),
         deterministic_product={
             "name": "Ariete 00P414520AR0 Steam Cleaner",
             "brand": "Ariete",
@@ -133,7 +174,9 @@ def test_build_seo_meta_context_requires_model_name_when_available() -> None:
                 hero_summary="Steam cleaner for home use.",
             )
         ),
-        taxonomy=TaxonomyResolution(leaf_category="Steam Cleaner", sub_category="Cleaning"),
+        taxonomy=TaxonomyResolution(
+            leaf_category="Steam Cleaner", sub_category="Cleaning"
+        ),
         deterministic_product={
             "name": "Ariete 00P414520AR0 Steam Cleaner",
             "brand": "Ariete",
@@ -146,12 +189,17 @@ def test_build_seo_meta_context_requires_model_name_when_available() -> None:
     assert context["product"]["model_name"] == "XVapor Comfort"
     assert context["product"]["copy_name"] == "Ariete XVapor Comfort Steam Cleaner"
     assert context["product"]["preferred_identifier"] == "XVapor Comfort"
-    assert context["evidence"]["meta_description_draft"] == "The Ariete XVapor Comfort is a Steam Cleaner."
+    assert (
+        context["evidence"]["meta_description_draft"]
+        == "The Ariete XVapor Comfort is a Steam Cleaner."
+    )
     assert context["writer_rules"]["required_keywords"] == ["Ariete", "XVapor Comfort"]
     assert "instead of the raw MPN" in context["writer_rules"]["meta_description_rule"]
 
 
-def test_build_intro_text_context_ignores_internal_skroutz_family_as_model_name() -> None:
+def test_build_intro_text_context_ignores_internal_skroutz_family_as_model_name() -> (
+    None
+):
     context = build_intro_text_context(
         cli=CLIInput(model="415376", url="https://www.skroutz.gr/s/example.html"),
         parsed=ParsedProduct(
@@ -163,7 +211,9 @@ def test_build_intro_text_context_ignores_internal_skroutz_family_as_model_name(
                 hero_summary="Air Green με AI EcoMaster.",
             )
         ),
-        taxonomy=TaxonomyResolution(leaf_category="Κλιματιστικό", sub_category="Τοίχου"),
+        taxonomy=TaxonomyResolution(
+            leaf_category="Κλιματιστικό", sub_category="Τοίχου"
+        ),
         deterministic_product={
             "name": "Midea AIRGRN-21HRFN8-I - Κλιματιστικό 21000 BTU",
             "brand": "Midea",
@@ -178,7 +228,9 @@ def test_build_intro_text_context_ignores_internal_skroutz_family_as_model_name(
 
 
 def test_validate_intro_text_output_accepts_plain_text_only() -> None:
-    normalized, errors = validate_intro_text_output(" ".join(["λέξη"] * INTRO_MIN_WORDS))
+    normalized, errors = validate_intro_text_output(
+        " ".join(["λέξη"] * INTRO_MIN_WORDS)
+    )
 
     assert errors == []
     assert normalized.startswith("λέξη")
@@ -199,7 +251,10 @@ def test_validate_intro_text_output_accepts_safe_strong_emphasis() -> None:
 
     assert errors == []
     assert "<strong>Acme AX100</strong>" in normalized
-    assert count_plain_text_words(normalized) == summarize_intro_text_emphasis(normalized)["visible_word_count"]
+    assert (
+        count_plain_text_words(normalized)
+        == summarize_intro_text_emphasis(normalized)["visible_word_count"]
+    )
 
 
 def test_intro_word_count_ignores_strong_tags() -> None:
@@ -215,7 +270,9 @@ def test_validate_intro_text_output_rejects_short_intro() -> None:
 
 
 def test_validate_intro_text_output_rejects_html() -> None:
-    _, errors = validate_intro_text_output("<p>λέξη</p> " + " ".join(["λέξη"] * (INTRO_MIN_WORDS - 1)))
+    _, errors = validate_intro_text_output(
+        "<p>λέξη</p> " + " ".join(["λέξη"] * (INTRO_MIN_WORDS - 1))
+    )
 
     assert "llm_intro_text_html_invalid" in errors
 
@@ -230,7 +287,8 @@ def test_validate_intro_text_output_rejects_html() -> None:
         "<strong></strong> " + " ".join(["λέξη"] * INTRO_MIN_WORDS),
         "**λέξη** " + " ".join(["λέξη"] * INTRO_MIN_WORDS),
         "[λέξη](https://example.test) " + " ".join(["λέξη"] * INTRO_MIN_WORDS),
-        "![λέξη](https://example.test/image.jpg) " + " ".join(["λέξη"] * INTRO_MIN_WORDS),
+        "![λέξη](https://example.test/image.jpg) "
+        + " ".join(["λέξη"] * INTRO_MIN_WORDS),
         "# Τίτλος " + " ".join(["λέξη"] * INTRO_MIN_WORDS),
         "- λέξη " + " ".join(["λέξη"] * INTRO_MIN_WORDS),
     ],
@@ -245,7 +303,9 @@ def test_validate_intro_text_output_rejects_overused_emphasis() -> None:
     bold_words = " ".join(["λέξη"] * 40)
     plain_words = " ".join(["λέξη"] * 60)
 
-    _, errors = validate_intro_text_output(f"<strong>{bold_words}</strong> {plain_words}")
+    _, errors = validate_intro_text_output(
+        f"<strong>{bold_words}</strong> {plain_words}"
+    )
 
     assert "llm_intro_text_emphasis_overused" in errors
 
@@ -262,7 +322,9 @@ def test_validate_intro_text_output_uses_configured_emphasis_ratio() -> None:
     assert errors == []
 
 
-def test_validate_intro_text_output_allows_many_short_emphasis_spans_under_ratio_limit() -> None:
+def test_validate_intro_text_output_allows_many_short_emphasis_spans_under_ratio_limit() -> (
+    None
+):
     emphasized = " ".join(["<strong>word</strong>"] * 11)
     plain_words = " ".join(["word"] * 75)
 
@@ -304,7 +366,11 @@ def test_validate_seo_meta_output_accepts_product_meta_only_shape() -> None:
     )
 
     assert errors == []
-    assert normalized["product"]["meta_keywords"] == ["LG", "GSGV80PYLL", "Ψυγείο Ντουλάπα"]
+    assert normalized["product"]["meta_keywords"] == [
+        "LG",
+        "GSGV80PYLL",
+        "Ψυγείο Ντουλάπα",
+    ]
 
 
 def test_validate_seo_meta_output_accepts_two_sentence_meta_description() -> None:
@@ -353,7 +419,9 @@ def test_validate_seo_meta_output_rejects_encoding_corruption() -> None:
     assert "llm_seo_meta_description_encoding_invalid" in errors
 
 
-def test_seo_meta_prompt_source_uses_repo_root_relative_path_and_updated_guidance() -> None:
+def test_seo_meta_prompt_source_uses_repo_root_relative_path_and_updated_guidance() -> (
+    None
+):
     prompt_path = REPO_ROOT / "resources" / "prompts" / "seo_meta_prompt.txt"
     prompt = Path(prompt_path).read_text(encoding="utf-8")
     lowered = prompt.casefold()
@@ -364,4 +432,3 @@ def test_seo_meta_prompt_source_uses_repo_root_relative_path_and_updated_guidanc
     assert "product.copy_name" in prompt
     assert "preferred_identifier" in prompt
     assert "return json only" in lowered
-

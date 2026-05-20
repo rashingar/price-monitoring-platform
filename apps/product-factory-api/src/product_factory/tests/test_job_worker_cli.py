@@ -37,10 +37,18 @@ def test_worker_cli_missing_job_returns_nonzero(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("job_type", "runner_name", "payload"),
     [
-        (JobType.PREPARE, "run_prepare_job", {"model": "233541", "url": "https://example.invalid"}),
+        (
+            JobType.PREPARE,
+            "run_prepare_job",
+            {"model": "233541", "url": "https://example.invalid"},
+        ),
         (JobType.RENDER, "run_render_job", {"model": "233541"}),
         (JobType.PUBLISH, "run_publish_job", {"model": "233541"}),
-        (JobType.FULL_PIPELINE, "run_full_pipeline_job", {"model": "233541", "source_url": "https://www.electronet.gr/example"}),
+        (
+            JobType.FULL_PIPELINE,
+            "run_full_pipeline_job",
+            {"model": "233541", "source_url": "https://www.electronet.gr/example"},
+        ),
     ],
 )
 def test_worker_cli_runs_queued_job_through_stub_service(
@@ -63,7 +71,9 @@ def test_worker_cli_runs_queued_job_through_stub_service(
 
     monkeypatch.setattr(run_product_factory_job, runner_name, stub_runner)
 
-    exit_code = run_product_factory_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
+    exit_code = run_product_factory_job.main(
+        ["--job-id", record.job_id, "--job-root", str(store.jobs_dir)]
+    )
 
     loaded = store.get_job(record.job_id)
     assert exit_code == 0
@@ -73,17 +83,26 @@ def test_worker_cli_runs_queued_job_through_stub_service(
     assert "stub service ran" in store.read_logs(record.job_id)
 
 
-def test_worker_cli_failure_writes_failed_metadata_and_exits_nonzero(tmp_path: Path, monkeypatch) -> None:
+def test_worker_cli_failure_writes_failed_metadata_and_exits_nonzero(
+    tmp_path: Path, monkeypatch
+) -> None:
     store = JobStore(tmp_path / "jobs")
     record = store.enqueue(JobType.RENDER, {"model": "233541"}, job_id="job-1")
 
     def stub_runner(_record, log):
         log("stub service failed")
-        return JobRunResult(status=JobStatus.FAILED, message="stub failed", error="boom", error_code="TEST")
+        return JobRunResult(
+            status=JobStatus.FAILED,
+            message="stub failed",
+            error="boom",
+            error_code="TEST",
+        )
 
     monkeypatch.setattr(run_product_factory_job, "run_render_job", stub_runner)
 
-    exit_code = run_product_factory_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
+    exit_code = run_product_factory_job.main(
+        ["--job-id", record.job_id, "--job-root", str(store.jobs_dir)]
+    )
 
     loaded = store.get_job(record.job_id)
     assert exit_code != 0
@@ -94,7 +113,9 @@ def test_worker_cli_failure_writes_failed_metadata_and_exits_nonzero(tmp_path: P
     assert "stub service failed" in store.read_logs(record.job_id)
 
 
-def test_worker_cli_does_not_overwrite_cancelled_job(tmp_path: Path, monkeypatch) -> None:
+def test_worker_cli_does_not_overwrite_cancelled_job(
+    tmp_path: Path, monkeypatch
+) -> None:
     store = JobStore(tmp_path / "jobs")
     record = store.enqueue(JobType.RENDER, {"model": "233541"}, job_id="job-1")
 
@@ -105,10 +126,14 @@ def test_worker_cli_does_not_overwrite_cancelled_job(tmp_path: Path, monkeypatch
 
     monkeypatch.setattr(run_product_factory_job, "run_render_job", stub_runner)
 
-    exit_code = run_product_factory_job.main(["--job-id", record.job_id, "--job-root", str(store.jobs_dir)])
+    exit_code = run_product_factory_job.main(
+        ["--job-id", record.job_id, "--job-root", str(store.jobs_dir)]
+    )
 
     loaded = store.get_job(record.job_id)
     assert exit_code != 0
     assert loaded.status == JobStatus.CANCELLED
     assert loaded.message == "Job stopped by operator."
-    assert "Worker will not overwrite terminal cancelled status." in store.read_logs(record.job_id)
+    assert "Worker will not overwrite terminal cancelled status." in store.read_logs(
+        record.job_id
+    )

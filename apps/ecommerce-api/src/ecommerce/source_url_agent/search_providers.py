@@ -11,8 +11,12 @@ from ecommerce.source_url_agent.browser import PageSnapshot, SourceUrlBrowserSes
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.sources import SourceDefinition
 
-
-DEFAULT_SEARCH_PROVIDER_REGISTRY_PATH = Path(__file__).resolve().parents[3] / "config" / "source_url_agent" / "search_providers.json"
+DEFAULT_SEARCH_PROVIDER_REGISTRY_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "config"
+    / "source_url_agent"
+    / "search_providers.json"
+)
 BROWSER_FALLBACK_PROVIDER_NAME = "browser_fallback"
 
 
@@ -49,15 +53,25 @@ class SearchProviderDefinition:
             provider_name=provider_name,
             provider_type=provider_type,
             enabled=bool(payload.get("enabled", True)),
-            allow_high_confidence_auto_apply=bool(payload.get("allow_high_confidence_auto_apply", False)),
+            allow_high_confidence_auto_apply=bool(
+                payload.get("allow_high_confidence_auto_apply", False)
+            ),
             search_url_template=str(payload.get("search_url_template") or "").strip(),
             max_results_per_query=max(1, int(payload.get("max_results_per_query", 10))),
-            stop_after_first_query_with_candidates=bool(payload.get("stop_after_first_query_with_candidates", True)),
+            stop_after_first_query_with_candidates=bool(
+                payload.get("stop_after_first_query_with_candidates", True)
+            ),
             endpoint_url=str(payload.get("endpoint_url") or "").strip(),
             country=str(payload.get("country") or "GR").strip(),
             search_lang=str(payload.get("search_lang") or "el").strip(),
             ui_lang=str(payload.get("ui_lang") or "el-GR").strip(),
-            count=min(20, max(1, int(payload.get("count", payload.get("max_results_per_query", 10))))),
+            count=min(
+                20,
+                max(
+                    1,
+                    int(payload.get("count", payload.get("max_results_per_query", 10))),
+                ),
+            ),
             offset=max(0, int(payload.get("offset", 0))),
             safesearch=str(payload.get("safesearch") or "moderate").strip(),
             result_filter=str(payload.get("result_filter") or "web").strip(),
@@ -107,7 +121,11 @@ class SearchProviderCandidate:
 
     @property
     def has_provider_text(self) -> bool:
-        return bool(self.provider_title or self.provider_description or self.provider_extra_snippets)
+        return bool(
+            self.provider_title
+            or self.provider_description
+            or self.provider_extra_snippets
+        )
 
     def provider_evidence_json(self) -> dict[str, Any]:
         payload: dict[str, Any] = {}
@@ -159,8 +177,7 @@ class SourceUrlSearchProvider(Protocol):
         max_searches: int | None,
         max_candidates: int | None,
         rate_limit_seconds: float | None,
-    ) -> SearchProviderResult:
-        ...
+    ) -> SearchProviderResult: ...
 
 
 @dataclass(frozen=True)
@@ -174,7 +191,9 @@ class SearchProviderRegistry:
         try:
             return self.providers[normalized]
         except KeyError as exc:
-            raise ValueError(f"Unknown source URL search provider: {provider_name}") from exc
+            raise ValueError(
+                f"Unknown source URL search provider: {provider_name}"
+            ) from exc
 
     def cascade_for_source(self, source_name: str) -> list[SearchProviderDefinition]:
         normalized = source_name.strip().lower()
@@ -185,9 +204,13 @@ class SearchProviderRegistry:
 class BrowserFallbackSearchProvider:
     def __init__(self, definition: SearchProviderDefinition) -> None:
         if definition.provider_name != BROWSER_FALLBACK_PROVIDER_NAME:
-            raise ValueError(f"Browser fallback provider requires provider_name={BROWSER_FALLBACK_PROVIDER_NAME}.")
+            raise ValueError(
+                f"Browser fallback provider requires provider_name={BROWSER_FALLBACK_PROVIDER_NAME}."
+            )
         if definition.provider_type != "browser":
-            raise ValueError("Browser fallback provider requires provider_type=browser.")
+            raise ValueError(
+                "Browser fallback provider requires provider_type=browser."
+            )
         self.definition = definition
 
     def discover(
@@ -202,8 +225,16 @@ class BrowserFallbackSearchProvider:
         rate_limit_seconds: float | None,
     ) -> SearchProviderResult:
         del product
-        search_limit = max_searches if max_searches is not None else source.max_searches_per_product
-        candidate_limit = max_candidates if max_candidates is not None else source.max_candidates_per_product
+        search_limit = (
+            max_searches
+            if max_searches is not None
+            else source.max_searches_per_product
+        )
+        candidate_limit = (
+            max_candidates
+            if max_candidates is not None
+            else source.max_candidates_per_product
+        )
         query_items = queries[:search_limit]
         search_items = _search_url_query_items(source, query_items)
         searched_urls = [item.search_url for item in search_items]
@@ -273,9 +304,13 @@ class BrowserFallbackSearchProvider:
 def load_search_provider_registry(path: Path | None = None) -> SearchProviderRegistry:
     registry_path = path or DEFAULT_SEARCH_PROVIDER_REGISTRY_PATH
     payload = json.loads(registry_path.read_text(encoding="utf-8"))
-    raw_default_cascade = _string_list(payload.get("default_provider_order")) or _string_list(payload.get("default_cascade"))
+    raw_default_cascade = _string_list(
+        payload.get("default_provider_order")
+    ) or _string_list(payload.get("default_cascade"))
     if not raw_default_cascade:
-        raise ValueError("Search provider registry must contain default_provider_order.")
+        raise ValueError(
+            "Search provider registry must contain default_provider_order."
+        )
     raw_providers = payload.get("providers")
     if isinstance(raw_providers, dict):
         provider_items = [
@@ -284,12 +319,18 @@ def load_search_provider_registry(path: Path | None = None) -> SearchProviderReg
             if isinstance(item, dict)
         ]
     elif isinstance(raw_providers, list):
-        provider_items = [SearchProviderDefinition.from_dict(item) for item in raw_providers if isinstance(item, dict)]
+        provider_items = [
+            SearchProviderDefinition.from_dict(item)
+            for item in raw_providers
+            if isinstance(item, dict)
+        ]
     else:
         raise ValueError("Search provider registry must contain providers.")
     providers = {item.provider_name: item for item in provider_items}
     if len(providers) != len(provider_items):
-        raise ValueError("Search provider registry contains duplicate provider_name values.")
+        raise ValueError(
+            "Search provider registry contains duplicate provider_name values."
+        )
     source_cascades = _source_cascades(payload.get("source_cascades"))
     registry = SearchProviderRegistry(
         default_cascade=tuple(raw_default_cascade),
@@ -313,11 +354,21 @@ def discover_with_provider_cascade(
     max_candidates: int | None = None,
     rate_limit_seconds: float | None = None,
 ) -> SearchProviderResult:
-    candidate_limit = max_candidates if max_candidates is not None else source.max_candidates_per_product
+    candidate_limit = (
+        max_candidates
+        if max_candidates is not None
+        else source.max_candidates_per_product
+    )
     all_candidates: list[SearchProviderCandidate] = []
     all_errors: list[str] = []
     all_provider_errors: list[SearchProviderError] = []
-    searched_queries = queries[: (max_searches if max_searches is not None else source.max_searches_per_product)]
+    searched_queries = queries[
+        : (
+            max_searches
+            if max_searches is not None
+            else source.max_searches_per_product
+        )
+    ]
     searched_urls: list[str] = []
 
     for definition in registry.cascade_for_source(source.source_name):
@@ -336,14 +387,21 @@ def discover_with_provider_cascade(
                 rate_limit_seconds=rate_limit_seconds,
             )
         except Exception as exc:
-            all_errors.append(f"{definition.provider_name}: {str(exc).strip() or exc.__class__.__name__}")
+            all_errors.append(
+                f"{definition.provider_name}: {str(exc).strip() or exc.__class__.__name__}"
+            )
             continue
         searched_queries = result.searched_queries or searched_queries
-        searched_urls.extend(url for url in result.searched_urls if url not in searched_urls)
+        searched_urls.extend(
+            url for url in result.searched_urls if url not in searched_urls
+        )
         all_errors.extend(result.errors)
         all_provider_errors.extend(result.provider_errors)
         for candidate in result.candidates:
-            if any(existing.candidate_url == candidate.candidate_url for existing in all_candidates):
+            if any(
+                existing.candidate_url == candidate.candidate_url
+                for existing in all_candidates
+            ):
                 continue
             all_candidates.append(candidate)
             if len(all_candidates) >= candidate_limit:
@@ -366,24 +424,43 @@ class _SearchUrlQueryItem:
     search_url: str
 
 
-def _provider_for_definition(definition: SearchProviderDefinition) -> SourceUrlSearchProvider:
-    if definition.provider_name == BROWSER_FALLBACK_PROVIDER_NAME and definition.provider_type == "browser":
+def _provider_for_definition(
+    definition: SearchProviderDefinition,
+) -> SourceUrlSearchProvider:
+    if (
+        definition.provider_name == BROWSER_FALLBACK_PROVIDER_NAME
+        and definition.provider_type == "browser"
+    ):
         return BrowserFallbackSearchProvider(definition)
-    if definition.provider_name == "brave_search" and definition.provider_type == "brave":
+    if (
+        definition.provider_name == "brave_search"
+        and definition.provider_type == "brave"
+    ):
         from ecommerce.source_url_agent.brave_search import BraveSearchProvider
 
         return BraveSearchProvider(definition)
-    raise ValueError(f"Unsupported source URL search provider: {definition.provider_name} ({definition.provider_type})")
+    raise ValueError(
+        f"Unsupported source URL search provider: {definition.provider_name} ({definition.provider_type})"
+    )
 
 
 def supports_product_level_discovery(definition: SearchProviderDefinition) -> bool:
-    return definition.provider_name == "brave_search" and definition.provider_type == "brave"
+    return (
+        definition.provider_name == "brave_search"
+        and definition.provider_type == "brave"
+    )
 
 
-def uses_product_level_search_provider(registry: SearchProviderRegistry, sources: list[SourceDefinition]) -> bool:
+def uses_product_level_search_provider(
+    registry: SearchProviderRegistry, sources: list[SourceDefinition]
+) -> bool:
     first_provider_name = ""
     for source in sources:
-        enabled = [definition for definition in registry.cascade_for_source(source.source_name) if definition.enabled]
+        enabled = [
+            definition
+            for definition in registry.cascade_for_source(source.source_name)
+            if definition.enabled
+        ]
         if not enabled or not supports_product_level_discovery(enabled[0]):
             return False
         if not first_provider_name:
@@ -393,7 +470,9 @@ def uses_product_level_search_provider(registry: SearchProviderRegistry, sources
     return True
 
 
-def _search_url_query_items(source: SourceDefinition, queries: list[str]) -> list[_SearchUrlQueryItem]:
+def _search_url_query_items(
+    source: SourceDefinition, queries: list[str]
+) -> list[_SearchUrlQueryItem]:
     items: list[_SearchUrlQueryItem] = []
     seen: set[str] = set()
     for query in queries:
@@ -405,7 +484,9 @@ def _search_url_query_items(source: SourceDefinition, queries: list[str]) -> lis
     return items
 
 
-def _candidate_urls_from_snapshot(source: SourceDefinition, snapshot: PageSnapshot) -> list[str]:
+def _candidate_urls_from_snapshot(
+    source: SourceDefinition, snapshot: PageSnapshot
+) -> list[str]:
     urls = [snapshot.final_url, *snapshot.links]
     candidates: list[str] = []
     seen: set[str] = set()
@@ -462,10 +543,14 @@ def _source_cascades(value: object) -> dict[str, tuple[str, ...]]:
     return out
 
 
-def _validate_cascade_names(cascade: tuple[str, ...], providers: dict[str, SearchProviderDefinition]) -> None:
+def _validate_cascade_names(
+    cascade: tuple[str, ...], providers: dict[str, SearchProviderDefinition]
+) -> None:
     for provider_name in cascade:
         if provider_name not in providers:
-            raise ValueError(f"Unknown source URL search provider in cascade: {provider_name}")
+            raise ValueError(
+                f"Unknown source URL search provider in cascade: {provider_name}"
+            )
 
 
 def _required_text(value: object, field_name: str) -> str:

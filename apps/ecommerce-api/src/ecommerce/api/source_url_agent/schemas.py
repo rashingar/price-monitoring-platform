@@ -32,7 +32,9 @@ class SourceUrlAgentRunRequest(BaseModel):
     active_only: bool = True
     dry_run: bool = True
     apply_high_confidence: bool = False
-    max_products_per_batch: int | None = Field(default=None, ge=1, le=MAX_API_SOURCE_URL_AGENT_LIMIT)
+    max_products_per_batch: int | None = Field(
+        default=None, ge=1, le=MAX_API_SOURCE_URL_AGENT_LIMIT
+    )
     max_searches_per_product_source: int | None = Field(default=None, ge=1, le=20)
     rate_limit_seconds: float | None = Field(default=None, ge=0)
     headed: bool = False

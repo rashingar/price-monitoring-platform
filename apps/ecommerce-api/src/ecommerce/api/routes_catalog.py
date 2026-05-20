@@ -21,7 +21,9 @@ from ecommerce.db.repositories.catalog import (
 )
 from ecommerce.db.session import session_scope
 from ecommerce.ignore import MissingIgnoreColumnsError, load_ignored_products
-from ecommerce.source_url_agent.candidate_history_service import product_source_url_candidate_history_payload
+from ecommerce.source_url_agent.candidate_history_service import (
+    product_source_url_candidate_history_payload,
+)
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
@@ -78,9 +80,13 @@ def get_products(
     started_at = perf_counter()
     try:
         with session_scope() as session:
-            result = list_catalog_products_page(session, filters, ignored_models=ignored_models)
+            result = list_catalog_products_page(
+                session, filters, ignored_models=ignored_models
+            )
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}"
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Catalog DB query failed.") from exc
 
@@ -117,7 +123,9 @@ def get_product_detail(catalog_product_id: int) -> dict:
                 ignored_models=ignored_models,
             )
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}"
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Catalog DB query failed.") from exc
 
@@ -136,13 +144,19 @@ def get_product_source_url_candidate_history(catalog_product_id: int) -> dict:
     require_database_ready_for_catalog()
     try:
         with session_scope() as session:
-            payload = product_source_url_candidate_history_payload(session, catalog_product_id)
+            payload = product_source_url_candidate_history_payload(
+                session, catalog_product_id
+            )
             if not payload.product_exists:
-                raise HTTPException(status_code=404, detail="Catalog product not found.")
+                raise HTTPException(
+                    status_code=404, detail="Catalog product not found."
+                )
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}"
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Catalog DB query failed.") from exc
 
@@ -175,7 +189,9 @@ def _catalog_query_or_raise(query_func) -> dict:
         with session_scope() as session:
             return query_func(session)
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Catalog DB query failed: {_safe_db_error(exc)}"
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Catalog DB query failed.") from exc
 
@@ -186,15 +202,21 @@ def _load_ignored_models_or_raise() -> set[str]:
     except MissingIgnoreColumnsError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Ignore list loading failed.") from exc
+        raise HTTPException(
+            status_code=500, detail="Ignore list loading failed."
+        ) from exc
 
 
 def _empty_catalog_warning_from_total(total: int) -> dict[str, str]:
     if total:
         return {}
-    return {"warning": "Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog."}
+    return {
+        "warning": "Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog."
+    }
 
 
 def _safe_db_error(exc: Exception) -> str:
-    message = str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    message = (
+        str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    )
     return sanitize_database_error(message) or exc.__class__.__name__

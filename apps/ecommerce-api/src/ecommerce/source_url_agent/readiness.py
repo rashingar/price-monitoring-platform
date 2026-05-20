@@ -8,7 +8,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from ecommerce.source_url_agent.brave_search import BRAVE_SEARCH_API_KEY_ENV_VAR, BRAVE_SEARCH_PROVIDER_NAME
+from ecommerce.source_url_agent.brave_search import (
+    BRAVE_SEARCH_API_KEY_ENV_VAR,
+    BRAVE_SEARCH_PROVIDER_NAME,
+)
 from ecommerce.source_url_agent.search_providers import (
     BROWSER_FALLBACK_PROVIDER_NAME,
     SearchProviderDefinition,
@@ -49,14 +52,20 @@ def get_source_url_agent_readiness() -> SourceUrlAgentReadinessResponse:
             default_provider_order=[],
             source_cascades={},
             warnings=[],
-            blocking_reasons=["Source URL Agent search provider registry could not be loaded."],
+            blocking_reasons=[
+                "Source URL Agent search provider registry could not be loaded."
+            ],
         )
 
     return source_url_agent_readiness(registry)
 
 
-def source_url_agent_readiness(registry: SearchProviderRegistry) -> SourceUrlAgentReadinessResponse:
-    providers = [_provider_readiness(definition) for definition in registry.providers.values()]
+def source_url_agent_readiness(
+    registry: SearchProviderRegistry,
+) -> SourceUrlAgentReadinessResponse:
+    providers = [
+        _provider_readiness(definition) for definition in registry.providers.values()
+    ]
     provider_by_name = {provider.provider_name: provider for provider in providers}
     warnings = _provider_warnings(providers)
     warnings.extend(_source_cascade_warnings(registry))
@@ -78,10 +87,18 @@ def source_url_agent_readiness(registry: SearchProviderRegistry) -> SourceUrlAge
     )
 
 
-def _provider_readiness(definition: SearchProviderDefinition) -> SourceUrlAgentProviderReadiness:
+def _provider_readiness(
+    definition: SearchProviderDefinition,
+) -> SourceUrlAgentProviderReadiness:
     required_env_keys = _required_env_keys(definition)
-    missing_env_keys = [key for key in required_env_keys if not _env_key_is_present(key)]
-    configured = _configured(definition, required_env_keys=required_env_keys, missing_env_keys=missing_env_keys)
+    missing_env_keys = [
+        key for key in required_env_keys if not _env_key_is_present(key)
+    ]
+    configured = _configured(
+        definition,
+        required_env_keys=required_env_keys,
+        missing_env_keys=missing_env_keys,
+    )
     return SourceUrlAgentProviderReadiness(
         provider_name=definition.provider_name,
         provider_type=definition.provider_type,
@@ -95,9 +112,15 @@ def _provider_readiness(definition: SearchProviderDefinition) -> SourceUrlAgentP
 
 
 def _required_env_keys(definition: SearchProviderDefinition) -> list[str]:
-    if definition.provider_name == BRAVE_SEARCH_PROVIDER_NAME and definition.provider_type == "brave":
+    if (
+        definition.provider_name == BRAVE_SEARCH_PROVIDER_NAME
+        and definition.provider_type == "brave"
+    ):
         return [BRAVE_SEARCH_API_KEY_ENV_VAR]
-    if definition.provider_name == BROWSER_FALLBACK_PROVIDER_NAME and definition.provider_type == "browser":
+    if (
+        definition.provider_name == BROWSER_FALLBACK_PROVIDER_NAME
+        and definition.provider_type == "browser"
+    ):
         return []
     return []
 
@@ -108,9 +131,15 @@ def _configured(
     required_env_keys: list[str],
     missing_env_keys: list[str],
 ) -> bool:
-    if definition.provider_name == BRAVE_SEARCH_PROVIDER_NAME and definition.provider_type == "brave":
+    if (
+        definition.provider_name == BRAVE_SEARCH_PROVIDER_NAME
+        and definition.provider_type == "brave"
+    ):
         return not missing_env_keys
-    if definition.provider_name == BROWSER_FALLBACK_PROVIDER_NAME and definition.provider_type == "browser":
+    if (
+        definition.provider_name == BROWSER_FALLBACK_PROVIDER_NAME
+        and definition.provider_type == "browser"
+    ):
         return bool(definition.enabled)
     if _is_known_provider_type(definition):
         return not missing_env_keys
@@ -131,7 +160,9 @@ def _source_cascade_warnings(registry: SearchProviderRegistry) -> list[str]:
     warnings: list[str] = []
     for source_name, cascade in registry.source_cascades.items():
         if not cascade:
-            warnings.append(f"Source URL Agent source cascade for {source_name} is empty.")
+            warnings.append(
+                f"Source URL Agent source cascade for {source_name} is empty."
+            )
     return warnings
 
 
@@ -147,7 +178,9 @@ def _blocking_reasons(
     if any(provider.configured for provider in enabled_default_providers):
         return []
     if not enabled_default_providers:
-        return ["No enabled Source URL Agent search provider is present in the default provider order."]
+        return [
+            "No enabled Source URL Agent search provider is present in the default provider order."
+        ]
 
     missing_keys = _ordered_missing_env_keys(enabled_default_providers)
     if missing_keys:
@@ -155,10 +188,14 @@ def _blocking_reasons(
             "No enabled configured Source URL Agent search provider is available in the default provider order; "
             f"missing required environment keys: {', '.join(missing_keys)}."
         ]
-    return ["No enabled configured Source URL Agent search provider is available in the default provider order."]
+    return [
+        "No enabled configured Source URL Agent search provider is available in the default provider order."
+    ]
 
 
-def _ordered_missing_env_keys(providers: list[SourceUrlAgentProviderReadiness]) -> list[str]:
+def _ordered_missing_env_keys(
+    providers: list[SourceUrlAgentProviderReadiness],
+) -> list[str]:
     keys: list[str] = []
     for provider in providers:
         for key in provider.missing_env_keys:
@@ -167,8 +204,13 @@ def _ordered_missing_env_keys(providers: list[SourceUrlAgentProviderReadiness]) 
     return keys
 
 
-def _serialized_source_cascades(registry: SearchProviderRegistry) -> dict[str, list[str]]:
-    return {source_name: list(cascade) for source_name, cascade in registry.source_cascades.items()}
+def _serialized_source_cascades(
+    registry: SearchProviderRegistry,
+) -> dict[str, list[str]]:
+    return {
+        source_name: list(cascade)
+        for source_name, cascade in registry.source_cascades.items()
+    }
 
 
 def _env_key_is_present(key: str) -> bool:
@@ -197,6 +239,12 @@ def _safe_text(value: str) -> str:
     text = str(value or "").strip()
     if not text:
         return ""
-    text = re.sub(r"(?i)(password|secret|token|api[_-]?key)\s*[:=]\s*\S+", r"\1=<redacted>", text)
-    text = re.sub(r"(?i)\b[a-z][a-z0-9+.-]*://[^@\s]+@[^/\s]+", "<redacted-connection-string>", text)
+    text = re.sub(
+        r"(?i)(password|secret|token|api[_-]?key)\s*[:=]\s*\S+", r"\1=<redacted>", text
+    )
+    text = re.sub(
+        r"(?i)\b[a-z][a-z0-9+.-]*://[^@\s]+@[^/\s]+",
+        "<redacted-connection-string>",
+        text,
+    )
     return text[:500]

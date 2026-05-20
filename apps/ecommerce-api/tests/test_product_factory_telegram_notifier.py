@@ -7,7 +7,11 @@ from typing import Any
 import pytest
 
 from ecommerce.product_factory_telegram import audit
-from ecommerce.product_factory_telegram.client import ProductFactoryClientError, ProductFactoryJob, TelegramDeliveryError
+from ecommerce.product_factory_telegram.client import (
+    ProductFactoryClientError,
+    ProductFactoryJob,
+    TelegramDeliveryError,
+)
 from ecommerce.product_factory_telegram.config import ProductFactoryTelegramConfig
 from ecommerce.product_factory_telegram.notifier import (
     POLL_FAILED_EVENT,
@@ -39,11 +43,20 @@ def test_finds_enqueued_telegram_jobs_from_audit_log(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "event_type",
-    ["product_factory_terminal_notification_sent", "product_factory_terminal_notification_failed"],
+    [
+        "product_factory_terminal_notification_sent",
+        "product_factory_terminal_notification_failed",
+    ],
 )
 def test_ignores_jobs_already_notified(event_type: str, tmp_path: Path) -> None:
     path = tmp_path / "audit.jsonl"
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", chat_id="-100", model="012345", job_id="job-1")
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id="-100",
+        model="012345",
+        job_id="job-1",
+    )
     audit.append_event(
         path=path,
         event_type=event_type,
@@ -68,9 +81,22 @@ def test_ignores_jobs_already_notified(event_type: str, tmp_path: Path) -> None:
 
 def test_ignores_non_terminal_jobs(tmp_path: Path) -> None:
     path = tmp_path / "audit.jsonl"
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", chat_id="-100", model="012345", job_id="job-1")
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id="-100",
+        model="012345",
+        job_id="job-1",
+    )
     product_factory = FakeProductFactoryClient(
-        {"job-1": ProductFactoryJob(job_id="job-1", status="running", raw={"job_id": "job-1"}, model="012345")}
+        {
+            "job-1": ProductFactoryJob(
+                job_id="job-1",
+                status="running",
+                raw={"job_id": "job-1"},
+                model="012345",
+            )
+        }
     )
     telegram = FakeTelegramClient()
 
@@ -89,7 +115,13 @@ def test_ignores_non_terminal_jobs(tmp_path: Path) -> None:
 @pytest.mark.parametrize("status", ["succeeded", "cancelled", "killed"])
 def test_sends_notification_for_terminal_statuses(status: str, tmp_path: Path) -> None:
     path = tmp_path / "audit.jsonl"
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", chat_id="-100", model="012345", job_id="job-1")
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id="-100",
+        model="012345",
+        job_id="job-1",
+    )
     product_factory = FakeProductFactoryClient(
         {
             "job-1": ProductFactoryJob(
@@ -126,7 +158,9 @@ def test_sends_notification_for_terminal_statuses(status: str, tmp_path: Path) -
     ]
 
 
-def test_sends_notification_for_failed_with_message_error_and_error_code(tmp_path: Path) -> None:
+def test_sends_notification_for_failed_with_message_error_and_error_code(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "audit.jsonl"
     audit.append_event(
         path=path,
@@ -182,7 +216,14 @@ def test_does_not_fetch_logs_or_include_source_selection_fields(tmp_path: Path) 
         job_id="job-1",
     )
     product_factory = FakeProductFactoryClient(
-        {"job-1": ProductFactoryJob(job_id="job-1", status="succeeded", raw={"job_id": "job-1"}, model="012345")}
+        {
+            "job-1": ProductFactoryJob(
+                job_id="job-1",
+                status="succeeded",
+                raw={"job_id": "job-1"},
+                model="012345",
+            )
+        }
     )
     telegram = FakeTelegramClient()
 
@@ -202,7 +243,13 @@ def test_does_not_fetch_logs_or_include_source_selection_fields(tmp_path: Path) 
 
 def test_writes_sent_audit_event_after_successful_delivery(tmp_path: Path) -> None:
     path = tmp_path / "audit.jsonl"
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", chat_id="-100", model="012345", job_id="job-1")
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id="-100",
+        model="012345",
+        job_id="job-1",
+    )
     product_factory = FakeProductFactoryClient(
         {
             "job-1": ProductFactoryJob(
@@ -235,9 +282,22 @@ def test_writes_sent_audit_event_after_successful_delivery(tmp_path: Path) -> No
 
 def test_writes_failed_audit_event_after_delivery_failure(tmp_path: Path) -> None:
     path = tmp_path / "audit.jsonl"
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", chat_id="-100", model="012345", job_id="job-1")
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id="-100",
+        model="012345",
+        job_id="job-1",
+    )
     product_factory = FakeProductFactoryClient(
-        {"job-1": ProductFactoryJob(job_id="job-1", status="succeeded", raw={"job_id": "job-1"}, model="012345")}
+        {
+            "job-1": ProductFactoryJob(
+                job_id="job-1",
+                status="succeeded",
+                raw={"job_id": "job-1"},
+                model="012345",
+            )
+        }
     )
 
     summary = run_once(
@@ -258,21 +318,46 @@ def test_writes_failed_audit_event_after_delivery_failure(tmp_path: Path) -> Non
 
 def test_does_not_send_duplicate_notifications_on_second_pass(tmp_path: Path) -> None:
     path = tmp_path / "audit.jsonl"
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", chat_id="-100", model="012345", job_id="job-1")
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id="-100",
+        model="012345",
+        job_id="job-1",
+    )
     product_factory = FakeProductFactoryClient(
-        {"job-1": ProductFactoryJob(job_id="job-1", status="succeeded", raw={"job_id": "job-1"}, model="012345")}
+        {
+            "job-1": ProductFactoryJob(
+                job_id="job-1",
+                status="succeeded",
+                raw={"job_id": "job-1"},
+                model="012345",
+            )
+        }
     )
     telegram = FakeTelegramClient()
     config = _config(path)
 
-    run_once(config=config, product_factory_client=product_factory, telegram_client=telegram, output=lambda _line: None)
-    run_once(config=config, product_factory_client=product_factory, telegram_client=telegram, output=lambda _line: None)
+    run_once(
+        config=config,
+        product_factory_client=product_factory,
+        telegram_client=telegram,
+        output=lambda _line: None,
+    )
+    run_once(
+        config=config,
+        product_factory_client=product_factory,
+        telegram_client=telegram,
+        output=lambda _line: None,
+    )
 
     assert len(telegram.messages) == 1
     assert product_factory.get_job_calls == ["job-1"]
 
 
-def test_once_runs_one_pass_and_exits(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_once_runs_one_pass_and_exits(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.chdir(tmp_path)
     calls: list[int] = []
 
@@ -286,10 +371,29 @@ def test_once_runs_one_pass_and_exits(monkeypatch: pytest.MonkeyPatch, tmp_path:
 
 def test_polling_errors_for_one_job_do_not_stop_other_jobs(tmp_path: Path) -> None:
     path = tmp_path / "audit.jsonl"
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", chat_id="-100", model="012345", job_id="job-bad")
-    audit.append_event(path=path, event_type="product_factory_enqueue_succeeded", chat_id="-200", model="999999", job_id="job-good")
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id="-100",
+        model="012345",
+        job_id="job-bad",
+    )
+    audit.append_event(
+        path=path,
+        event_type="product_factory_enqueue_succeeded",
+        chat_id="-200",
+        model="999999",
+        job_id="job-good",
+    )
     product_factory = FakeProductFactoryClient(
-        {"job-good": ProductFactoryJob(job_id="job-good", status="succeeded", raw={"job_id": "job-good"}, model="999999")},
+        {
+            "job-good": ProductFactoryJob(
+                job_id="job-good",
+                status="succeeded",
+                raw={"job_id": "job-good"},
+                model="999999",
+            )
+        },
         fail_job_ids={"job-bad"},
     )
     telegram = FakeTelegramClient()
@@ -314,14 +418,23 @@ class FakeTelegramClient:
         self.fail = fail
         self.messages: list[dict[str, Any]] = []
 
-    def send_message(self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None) -> None:
+    def send_message(
+        self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None
+    ) -> None:
         if self.fail:
             raise TelegramDeliveryError("Telegram message delivery failed.")
-        self.messages.append({"chat_id": chat_id, "text": text, "reply_markup": reply_markup})
+        self.messages.append(
+            {"chat_id": chat_id, "text": text, "reply_markup": reply_markup}
+        )
 
 
 class FakeProductFactoryClient:
-    def __init__(self, jobs: dict[str, ProductFactoryJob] | None = None, *, fail_job_ids: set[str] | None = None) -> None:
+    def __init__(
+        self,
+        jobs: dict[str, ProductFactoryJob] | None = None,
+        *,
+        fail_job_ids: set[str] | None = None,
+    ) -> None:
         self.jobs = jobs or {}
         self.fail_job_ids = fail_job_ids or set()
         self.get_job_calls: list[str] = []
@@ -330,7 +443,9 @@ class FakeProductFactoryClient:
     def get_job(self, job_id: str) -> ProductFactoryJob:
         self.get_job_calls.append(job_id)
         if job_id in self.fail_job_ids:
-            raise ProductFactoryClientError("Product Factory API is unavailable; job status could not be fetched.")
+            raise ProductFactoryClientError(
+                "Product Factory API is unavailable; job status could not be fetched."
+            )
         return self.jobs[job_id]
 
     def get_job_logs(self, job_id: str) -> list[str]:
@@ -340,7 +455,9 @@ class FakeProductFactoryClient:
 
 
 def _config(path: Path) -> ProductFactoryTelegramConfig:
-    return replace(ProductFactoryTelegramConfig(), audit_log_path=str(path), bot_token="token")
+    return replace(
+        ProductFactoryTelegramConfig(), audit_log_path=str(path), bot_token="token"
+    )
 
 
 def _events(path: Path) -> list[dict[str, Any]]:

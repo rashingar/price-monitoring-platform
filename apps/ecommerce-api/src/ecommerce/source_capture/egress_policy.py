@@ -75,7 +75,9 @@ def validate_outbound_url(
     if not scheme:
         raise EgressPolicyError("invalid_url", "URL must include http:// or https://.")
     if scheme not in {"http", "https"}:
-        raise EgressPolicyError("unsupported_scheme", "URL must start with http:// or https://.")
+        raise EgressPolicyError(
+            "unsupported_scheme", "URL must start with http:// or https://."
+        )
     if not parsed.hostname:
         raise EgressPolicyError("invalid_url", "URL must include a host.")
 
@@ -83,13 +85,21 @@ def validate_outbound_url(
     if any(character.isspace() for character in host):
         raise EgressPolicyError("invalid_url", "URL host is malformed.")
     if _is_private_or_reserved_host(host):
-        raise EgressPolicyError("blocked_private_host", "URL host is not eligible for outbound Ecommerce requests.")
+        raise EgressPolicyError(
+            "blocked_private_host",
+            "URL host is not eligible for outbound Ecommerce requests.",
+        )
 
     vendor_slug = VENDOR_SLUG_BY_DOMAIN.get(host)
     if require_known_vendor and vendor_slug is None:
-        raise EgressPolicyError("unknown_vendor", "URL host is not registered for Ecommerce capture.")
+        raise EgressPolicyError(
+            "unknown_vendor", "URL host is not registered for Ecommerce capture."
+        )
     if expected_vendor_slug is not None and vendor_slug != expected_vendor_slug:
-        raise EgressPolicyError("unknown_vendor", f"URL host is not registered for {expected_vendor_slug} capture.")
+        raise EgressPolicyError(
+            "unknown_vendor",
+            f"URL host is not registered for {expected_vendor_slug} capture.",
+        )
 
     return EgressPolicyDecision(
         url=_normalized_url(parsed, host),
@@ -98,13 +108,21 @@ def validate_outbound_url(
     )
 
 
-def validate_redirect_target(initial: EgressPolicyDecision, final_url: str) -> EgressPolicyDecision:
+def validate_redirect_target(
+    initial: EgressPolicyDecision, final_url: str
+) -> EgressPolicyDecision:
     try:
-        final = validate_outbound_url(final_url, require_known_vendor=initial.vendor_slug is not None)
+        final = validate_outbound_url(
+            final_url, require_known_vendor=initial.vendor_slug is not None
+        )
     except EgressPolicyError as exc:
-        raise EgressPolicyError("redirect_blocked", f"Redirect target blocked: {exc.message}") from exc
+        raise EgressPolicyError(
+            "redirect_blocked", f"Redirect target blocked: {exc.message}"
+        ) from exc
     if initial.vendor_slug is not None and final.vendor_slug != initial.vendor_slug:
-        raise EgressPolicyError("redirect_blocked", "Redirect target changed to a different vendor domain.")
+        raise EgressPolicyError(
+            "redirect_blocked", "Redirect target changed to a different vendor domain."
+        )
     return final
 
 
@@ -152,9 +170,13 @@ def safe_get(
                             continue
 
                     final = validate_redirect_target(decision, str(response.url))
-                    content = _read_bounded_response(response, max_response_bytes=max_response_bytes)
+                    content = _read_bounded_response(
+                        response, max_response_bytes=max_response_bytes
+                    )
                     if raise_for_status and response.status_code >= 400:
-                        raise EgressPolicyError("http_error", f"URL returned HTTP {response.status_code}.")
+                        raise EgressPolicyError(
+                            "http_error", f"URL returned HTTP {response.status_code}."
+                        )
                     return SafeFetchResponse(
                         url=decision.url,
                         final_url=final.url,
@@ -164,7 +186,9 @@ def safe_get(
                         content=content,
                         vendor_slug=final.vendor_slug,
                     )
-            raise EgressPolicyError("redirect_blocked", "URL exceeded the maximum redirect limit.")
+            raise EgressPolicyError(
+                "redirect_blocked", "URL exceeded the maximum redirect limit."
+            )
     except EgressPolicyError:
         raise
     except httpx.TimeoutException as exc:
@@ -174,12 +198,17 @@ def safe_get(
         raise EgressPolicyError("network_error", _short_message(message)) from exc
 
 
-def _read_bounded_response(response: httpx.Response, *, max_response_bytes: int) -> bytes:
+def _read_bounded_response(
+    response: httpx.Response, *, max_response_bytes: int
+) -> bytes:
     content_length = response.headers.get("content-length")
     if content_length is not None:
         try:
             if int(content_length) > max_response_bytes:
-                raise EgressPolicyError("response_too_large", "Response body is larger than the configured maximum.")
+                raise EgressPolicyError(
+                    "response_too_large",
+                    "Response body is larger than the configured maximum.",
+                )
         except ValueError:
             pass
 
@@ -188,7 +217,10 @@ def _read_bounded_response(response: httpx.Response, *, max_response_bytes: int)
     for chunk in response.iter_bytes():
         total += len(chunk)
         if total > max_response_bytes:
-            raise EgressPolicyError("response_too_large", "Response body is larger than the configured maximum.")
+            raise EgressPolicyError(
+                "response_too_large",
+                "Response body is larger than the configured maximum.",
+            )
         chunks.append(chunk)
     return b"".join(chunks)
 
@@ -205,11 +237,17 @@ def _normalized_url(parsed, host: str) -> str:
         raise EgressPolicyError("invalid_url", "URL has an invalid port.") from exc
     if port is not None:
         netloc = f"{netloc}:{port}"
-    return urlunsplit((parsed.scheme.lower(), netloc, parsed.path or "", parsed.query or "", ""))
+    return urlunsplit(
+        (parsed.scheme.lower(), netloc, parsed.path or "", parsed.query or "", "")
+    )
 
 
 def _is_private_or_reserved_host(host: str) -> bool:
-    if host in {"localhost", "localhost.localdomain"} or host.endswith(".localhost") or host.endswith(".local"):
+    if (
+        host in {"localhost", "localhost.localdomain"}
+        or host.endswith(".localhost")
+        or host.endswith(".local")
+    ):
         return True
     try:
         address = ip_address(host)

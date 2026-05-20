@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-
 TRACKING_PARAMS = {
     "utm_source",
     "utm_medium",

@@ -37,7 +37,9 @@ def is_placeholder_image_url(url: str | None) -> bool:
     return any(marker in normalized for marker in PLACEHOLDER_IMAGE_MARKERS)
 
 
-def resolve_skroutz_section_image_url(record: dict[str, Any], base_url: str = "") -> str:
+def resolve_skroutz_section_image_url(
+    record: dict[str, Any], base_url: str = ""
+) -> str:
     for raw_value in _ordered_record_candidates(record):
         candidate = _normalize_image_candidate(raw_value, base_url)
         if candidate and not is_placeholder_image_url(candidate):
@@ -68,8 +70,16 @@ def extract_skroutz_section_window(html: str, base_url: str = "") -> dict[str, A
                 "container_index": container_index,
                 "sections": sections,
                 "container_html": str(container),
-                "start_anchor": _find_adjacent_heading_text(first_heading, backward=True) if isinstance(first_heading, Tag) else "",
-                "stop_anchor": _find_adjacent_heading_text(last_heading, backward=False) if isinstance(last_heading, Tag) else "",
+                "start_anchor": (
+                    _find_adjacent_heading_text(first_heading, backward=True)
+                    if isinstance(first_heading, Tag)
+                    else ""
+                ),
+                "stop_anchor": (
+                    _find_adjacent_heading_text(last_heading, backward=False)
+                    if isinstance(last_heading, Tag)
+                    else ""
+                ),
                 "signature": signature,
             }
         )
@@ -88,11 +98,19 @@ def extract_skroutz_section_window(html: str, base_url: str = "") -> dict[str, A
             },
         }
 
-    selected = max(candidates, key=lambda candidate: (len(candidate["sections"]), candidate["container_index"]))
+    selected = max(
+        candidates,
+        key=lambda candidate: (
+            len(candidate["sections"]),
+            candidate["container_index"],
+        ),
+    )
     return {
         "sections": selected["sections"],
         "container_html": selected["container_html"],
-        "warnings": ["skroutz_duplicate_section_windows_deduped"] if duplicates_skipped else [],
+        "warnings": (
+            ["skroutz_duplicate_section_windows_deduped"] if duplicates_skipped else []
+        ),
         "window": {
             "candidate_count": len(candidates),
             "duplicate_signatures_skipped": duplicates_skipped,
@@ -111,7 +129,9 @@ def build_skroutz_presentation_source_html(sections: list[dict[str, str]]) -> st
         parts.append(f'<section class="{section_class}">')
         parts.append('<div class="column">')
         parts.append(f"<h2>{escape(section['title'])}</h2>")
-        parts.append(f'<div class="body-text"><p>{escape(section["paragraph"])}</p></div>')
+        parts.append(
+            f'<div class="body-text"><p>{escape(section["paragraph"])}</p></div>'
+        )
         parts.append("</div>")
         if section.get("image_url"):
             parts.append('<figure class="column">')
@@ -137,7 +157,9 @@ def _ordered_record_candidates(record: dict[str, Any]) -> list[str]:
             for key in IMAGE_DATA_ATTRS:
                 value = group.get(key)
                 if isinstance(value, str) and value:
-                    candidates.append(_extract_best_srcset_url(value) if "srcset" in key else value)
+                    candidates.append(
+                        _extract_best_srcset_url(value) if "srcset" in key else value
+                    )
 
     img_attrs = record.get("img_attrs")
     if isinstance(img_attrs, dict):
@@ -148,7 +170,11 @@ def _ordered_record_candidates(record: dict[str, Any]) -> list[str]:
         if isinstance(srcset, str) and srcset:
             candidates.append(_extract_best_srcset_url(srcset))
 
-    for value in record.get("source_srcsets", []) if isinstance(record.get("source_srcsets"), list) else []:
+    for value in (
+        record.get("source_srcsets", [])
+        if isinstance(record.get("source_srcsets"), list)
+        else []
+    ):
         if isinstance(value, str) and value:
             candidates.append(_extract_best_srcset_url(value))
 
@@ -163,18 +189,26 @@ def _normalize_image_candidate(value: str, base_url: str) -> str:
 
 
 def _extract_best_srcset_url(value: str) -> str:
-    parts = [normalize_whitespace(part) for part in value.split(",") if normalize_whitespace(part)]
+    parts = [
+        normalize_whitespace(part)
+        for part in value.split(",")
+        if normalize_whitespace(part)
+    ]
     if not parts:
         return ""
     best = parts[-1]
     return normalize_whitespace(best.split(" ")[0])
 
 
-def _extract_section_blocks_from_container(container: Tag, base_url: str) -> list[dict[str, Any]]:
+def _extract_section_blocks_from_container(
+    container: Tag, base_url: str
+) -> list[dict[str, Any]]:
     blocks: list[dict[str, Any]] = []
     rich_components = container.select_one("div.rich-components")
     root = rich_components if isinstance(rich_components, Tag) else container
-    for section in root.select("section.two-column, section[class*='two-column'], section.one-column, section[class*='one-column']"):
+    for section in root.select(
+        "section.two-column, section[class*='two-column'], section.one-column, section[class*='one-column']"
+    ):
         block = _extract_section_block(section, base_url)
         if block:
             blocks.append(block)
@@ -183,7 +217,9 @@ def _extract_section_blocks_from_container(container: Tag, base_url: str) -> lis
 
 def _extract_section_block(section: Tag, base_url: str) -> dict[str, Any] | None:
     title_node = section.find(["h1", "h2", "h3", "h4"])
-    title = normalize_whitespace(title_node.get_text(" ", strip=True) if isinstance(title_node, Tag) else "")
+    title = normalize_whitespace(
+        title_node.get_text(" ", strip=True) if isinstance(title_node, Tag) else ""
+    )
     if not title:
         return None
     if normalize_for_match(title) in SKIPPED_SECTION_TITLES:
@@ -197,7 +233,14 @@ def _extract_section_block(section: Tag, base_url: str) -> dict[str, Any] | None
     return {
         "title": title,
         "paragraph": body,
-        "image_url": next((candidate for candidate in static_candidates if not is_placeholder_image_url(candidate)), ""),
+        "image_url": next(
+            (
+                candidate
+                for candidate in static_candidates
+                if not is_placeholder_image_url(candidate)
+            ),
+            "",
+        ),
         "image_candidates": static_candidates,
     }
 
@@ -273,10 +316,22 @@ def _collect_tag_image_candidates(tag: Tag, base_url: str) -> list[str]:
 
 def _find_adjacent_heading_text(node: Tag, backward: bool) -> str:
     cursor = node.find_previous if backward else node.find_next
-    candidate = cursor(lambda item: isinstance(item, Tag) and item.name in {"h1", "h2", "h3", "h4"})
+    candidate = cursor(
+        lambda item: isinstance(item, Tag) and item.name in {"h1", "h2", "h3", "h4"}
+    )
     while isinstance(candidate, Tag):
         text = normalize_whitespace(candidate.get_text(" ", strip=True))
         if text:
             return text
-        candidate = candidate.find_previous(lambda item: isinstance(item, Tag) and item.name in {"h1", "h2", "h3", "h4"}) if backward else candidate.find_next(lambda item: isinstance(item, Tag) and item.name in {"h1", "h2", "h3", "h4"})
+        candidate = (
+            candidate.find_previous(
+                lambda item: isinstance(item, Tag)
+                and item.name in {"h1", "h2", "h3", "h4"}
+            )
+            if backward
+            else candidate.find_next(
+                lambda item: isinstance(item, Tag)
+                and item.name in {"h1", "h2", "h3", "h4"}
+            )
+        )
     return ""

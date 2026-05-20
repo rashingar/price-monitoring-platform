@@ -10,8 +10,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
-from ecommerce.platform_health import collectors as platform_health_collectors  # noqa: E402
-from ecommerce.source_url_agent.brave_search import BRAVE_SEARCH_API_KEY_ENV_VAR  # noqa: E402
+from ecommerce.platform_health import (
+    collectors as platform_health_collectors,
+)  # noqa: E402
+from ecommerce.source_url_agent.brave_search import (
+    BRAVE_SEARCH_API_KEY_ENV_VAR,
+)  # noqa: E402
 
 
 def _client(monkeypatch) -> TestClient:
@@ -20,12 +24,30 @@ def _client(monkeypatch) -> TestClient:
 
 
 def _install_ready_collectors(monkeypatch) -> None:
-    monkeypatch.setattr(platform_health_collectors, "collect_catalog_database_readiness", lambda: _catalog_ready())
-    monkeypatch.setattr(platform_health_collectors, "collect_price_monitoring_database_readiness", lambda: _price_ready())
-    monkeypatch.setattr(platform_health_collectors, "get_source_url_agent_readiness", lambda: _source_ready())
-    monkeypatch.setattr(platform_health_collectors, "_latest_catalog_update_job", lambda: None)
-    monkeypatch.setattr(platform_health_collectors, "_active_skroutz_source_url_count", lambda: 0)
-    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: None)
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "collect_catalog_database_readiness",
+        lambda: _catalog_ready(),
+    )
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "collect_price_monitoring_database_readiness",
+        lambda: _price_ready(),
+    )
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "get_source_url_agent_readiness",
+        lambda: _source_ready(),
+    )
+    monkeypatch.setattr(
+        platform_health_collectors, "_latest_catalog_update_job", lambda: None
+    )
+    monkeypatch.setattr(
+        platform_health_collectors, "_active_skroutz_source_url_count", lambda: 0
+    )
+    monkeypatch.setattr(
+        platform_health_collectors, "_durable_job_backlog_summary", lambda: None
+    )
 
 
 def _set_opencart_config(monkeypatch, *, secret: str = "opencart-secret-value") -> None:
@@ -129,12 +151,16 @@ def _backlog_summary(*, queued_total: int = 0, stale_total: int = 0) -> dict:
     return {
         "queued_total": queued_total,
         "queued_by_job_type": queued_by_job_type,
-        "oldest_queued_at": datetime(2026, 5, 17, 10, 0, tzinfo=timezone.utc) if queued_total else None,
+        "oldest_queued_at": (
+            datetime(2026, 5, 17, 10, 0, tzinfo=timezone.utc) if queued_total else None
+        ),
         "oldest_queued_age_seconds": 3661 if queued_total else None,
         "running_total": 1,
         "running_by_job_type": {"source_url_agent_run": 1},
         "stale_running_candidates_total": stale_total,
-        "stale_running_candidates_by_job_type": {"source_url_agent_run": stale_total} if stale_total else {},
+        "stale_running_candidates_by_job_type": (
+            {"source_url_agent_run": stale_total} if stale_total else {}
+        ),
     }
 
 
@@ -164,27 +190,48 @@ def test_platform_health_reports_durable_execution_policy(monkeypatch) -> None:
     ) in group["details"]
 
 
-def test_platform_health_inline_enabled_reports_backlog_without_worker_only_warning(monkeypatch) -> None:
+def test_platform_health_inline_enabled_reports_backlog_without_worker_only_warning(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv("ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE", "true")
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
     client = _client(monkeypatch)
-    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: _backlog_summary(queued_total=2))
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "_durable_job_backlog_summary",
+        lambda: _backlog_summary(queued_total=2),
+    )
 
     response = client.get("/api/platform/health")
 
     group = _groups(response.json())["ecommerce_api"]
-    assert "Durable job backlog: queued=2, running=1, stale_running_candidates=0." in group["details"]
-    assert "Durable queued by job type: catalog_update_from_opencart=1, source_url_agent_run=1." in group["details"]
-    assert not any("worker-only mode requires a running durable worker" in warning for warning in group["warnings"])
+    assert (
+        "Durable job backlog: queued=2, running=1, stale_running_candidates=0."
+        in group["details"]
+    )
+    assert (
+        "Durable queued by job type: catalog_update_from_opencart=1, source_url_agent_run=1."
+        in group["details"]
+    )
+    assert not any(
+        "worker-only mode requires a running durable worker" in warning
+        for warning in group["warnings"]
+    )
 
 
-def test_platform_health_inline_disabled_without_queue_has_no_backlog_warning(monkeypatch) -> None:
+def test_platform_health_inline_disabled_without_queue_has_no_backlog_warning(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv("ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE", "false")
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
     client = _client(monkeypatch)
-    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: _backlog_summary(queued_total=0))
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "_durable_job_backlog_summary",
+        lambda: _backlog_summary(queued_total=0),
+    )
 
     response = client.get("/api/platform/health")
 
@@ -193,22 +240,37 @@ def test_platform_health_inline_disabled_without_queue_has_no_backlog_warning(mo
         "API inline durable execution fallback: disabled "
         "(ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE=false)."
     ) in group["details"]
-    assert not any("worker-only mode requires a running durable worker" in warning for warning in group["warnings"])
+    assert not any(
+        "worker-only mode requires a running durable worker" in warning
+        for warning in group["warnings"]
+    )
 
 
-def test_platform_health_inline_disabled_with_queue_warns_about_worker_only_mode(monkeypatch) -> None:
+def test_platform_health_inline_disabled_with_queue_warns_about_worker_only_mode(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv("ECOMMERCE_API_EXECUTE_DURABLE_JOBS_INLINE", "false")
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
     client = _client(monkeypatch)
-    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: _backlog_summary(queued_total=1))
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "_durable_job_backlog_summary",
+        lambda: _backlog_summary(queued_total=1),
+    )
 
     response = client.get("/api/platform/health")
 
     group = _groups(response.json())["ecommerce_api"]
     assert group["status"] == "warning"
-    assert any("worker-only mode requires a running durable worker" in warning for warning in group["warnings"])
-    assert any(detail.startswith("Oldest queued durable job: 2026-05-17T10:00:00+00:00") for detail in group["details"])
+    assert any(
+        "worker-only mode requires a running durable worker" in warning
+        for warning in group["warnings"]
+    )
+    assert any(
+        detail.startswith("Oldest queued durable job: 2026-05-17T10:00:00+00:00")
+        for detail in group["details"]
+    )
 
 
 def test_platform_health_stale_running_candidates_warn(monkeypatch) -> None:
@@ -216,14 +278,23 @@ def test_platform_health_stale_running_candidates_warn(monkeypatch) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
     client = _client(monkeypatch)
-    monkeypatch.setattr(platform_health_collectors, "_durable_job_backlog_summary", lambda: _backlog_summary(stale_total=1))
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "_durable_job_backlog_summary",
+        lambda: _backlog_summary(stale_total=1),
+    )
 
     response = client.get("/api/platform/health")
 
     group = _groups(response.json())["ecommerce_api"]
     assert group["status"] == "warning"
-    assert "Durable running jobs include 1 stale-running candidate." in group["warnings"]
-    assert "Durable stale-running candidates by job type: source_url_agent_run=1." in group["details"]
+    assert (
+        "Durable running jobs include 1 stale-running candidate." in group["warnings"]
+    )
+    assert (
+        "Durable stale-running candidates by job type: source_url_agent_run=1."
+        in group["details"]
+    )
 
 
 def test_platform_health_collectors_do_not_import_api_readiness_modules() -> None:
@@ -232,14 +303,20 @@ def test_platform_health_collectors_do_not_import_api_readiness_modules() -> Non
     assert "ecommerce.api.source_url_agent.readiness" not in source
 
 
-def test_platform_health_source_url_agent_reflects_ready_and_blocked(monkeypatch) -> None:
+def test_platform_health_source_url_agent_reflects_ready_and_blocked(
+    monkeypatch,
+) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
     client = _client(monkeypatch)
     ready = _groups(client.get("/api/platform/health").json())["source_url_agent"]
     assert ready["status"] == "ready"
 
-    monkeypatch.setattr(platform_health_collectors, "get_source_url_agent_readiness", lambda: _source_blocked())
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "get_source_url_agent_readiness",
+        lambda: _source_blocked(),
+    )
     blocked_response = client.get("/api/platform/health")
     blocked = _groups(blocked_response.json())["source_url_agent"]
     assert blocked["status"] == "blocked"
@@ -247,7 +324,9 @@ def test_platform_health_source_url_agent_reflects_ready_and_blocked(monkeypatch
     assert blocked_response.json()["status"] == "blocked"
 
 
-def test_platform_health_missing_opencart_config_returns_safe_key_names(monkeypatch) -> None:
+def test_platform_health_missing_opencart_config_returns_safe_key_names(
+    monkeypatch,
+) -> None:
     for key in platform_health_collectors.OPENCART_REQUIRED_KEYS:
         monkeypatch.delenv(key, raising=False)
     _clear_product_factory_config(monkeypatch)
@@ -256,17 +335,23 @@ def test_platform_health_missing_opencart_config_returns_safe_key_names(monkeypa
 
     group = _groups(response.json())["catalog_update_opencart"]
     assert group["status"] == "blocked"
-    assert sorted(reason.rsplit(": ", 1)[-1].rstrip(".") for reason in group["blocking_reasons"]) == sorted(
-        platform_health_collectors.OPENCART_REQUIRED_KEYS
-    )
+    assert sorted(
+        reason.rsplit(": ", 1)[-1].rstrip(".") for reason in group["blocking_reasons"]
+    ) == sorted(platform_health_collectors.OPENCART_REQUIRED_KEYS)
     assert "OPENCART_ADMIN_PASS" in response.text
 
 
 def test_platform_health_does_not_return_env_values_or_secrets(monkeypatch) -> None:
     secret = "do-not-leak-this-value"
     _set_opencart_config(monkeypatch, secret=secret)
-    monkeypatch.setenv("PRODUCT_FACTORY_API_BASE_URL", f"http://user:{secret}@127.0.0.1:9")
-    monkeypatch.setattr(platform_health_collectors, "get_source_url_agent_readiness", lambda: _source_ready())
+    monkeypatch.setenv(
+        "PRODUCT_FACTORY_API_BASE_URL", f"http://user:{secret}@127.0.0.1:9"
+    )
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "get_source_url_agent_readiness",
+        lambda: _source_ready(),
+    )
     monkeypatch.setattr(
         platform_health_collectors.httpx,
         "get",
@@ -281,7 +366,9 @@ def test_platform_health_does_not_return_env_values_or_secrets(monkeypatch) -> N
     assert "PRODUCT_FACTORY_API_BASE_URL" in response.text
 
 
-def test_platform_health_product_factory_unconfigured_warns_without_crashing(monkeypatch) -> None:
+def test_platform_health_product_factory_unconfigured_warns_without_crashing(
+    monkeypatch,
+) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
 
@@ -292,7 +379,9 @@ def test_platform_health_product_factory_unconfigured_warns_without_crashing(mon
     assert group["warnings"]
 
 
-def test_platform_health_vendor_sources_capture_reports_firecrawl_readiness(monkeypatch) -> None:
+def test_platform_health_vendor_sources_capture_reports_firecrawl_readiness(
+    monkeypatch,
+) -> None:
     secret = "fc-secret-value"
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
@@ -309,26 +398,42 @@ def test_platform_health_vendor_sources_capture_reports_firecrawl_readiness(monk
     assert secret not in response.text
 
 
-def test_platform_health_vendor_sources_capture_blocks_when_skroutz_sources_need_missing_key(monkeypatch) -> None:
+def test_platform_health_vendor_sources_capture_blocks_when_skroutz_sources_need_missing_key(
+    monkeypatch,
+) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
     monkeypatch.setenv("FIRECRAWL_API_KEY", "")
     client = _client(monkeypatch)
-    monkeypatch.setattr(platform_health_collectors, "_active_skroutz_source_url_count", lambda: 3)
+    monkeypatch.setattr(
+        platform_health_collectors, "_active_skroutz_source_url_count", lambda: 3
+    )
 
     response = client.get("/api/platform/health")
 
     group = _groups(response.json())["vendor_sources_capture"]
     assert group["status"] == "blocked"
-    assert group["blocking_reasons"] == ["FIRECRAWL_API_KEY is missing for Skroutz Firecrawl capture."]
+    assert group["blocking_reasons"] == [
+        "FIRECRAWL_API_KEY is missing for Skroutz Firecrawl capture."
+    ]
     assert "Firecrawl API key configured: no." in group["details"]
 
 
-def test_platform_health_overall_blocked_when_required_group_blocked(monkeypatch) -> None:
+def test_platform_health_overall_blocked_when_required_group_blocked(
+    monkeypatch,
+) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
-    monkeypatch.setattr(platform_health_collectors, "collect_catalog_database_readiness", lambda: _db_blocked())
-    monkeypatch.setattr(platform_health_collectors, "collect_price_monitoring_database_readiness", lambda: _db_blocked())
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "collect_catalog_database_readiness",
+        lambda: _db_blocked(),
+    )
+    monkeypatch.setattr(
+        platform_health_collectors,
+        "collect_price_monitoring_database_readiness",
+        lambda: _db_blocked(),
+    )
 
     response = TestClient(create_app()).get("/api/platform/health")
 
@@ -336,7 +441,9 @@ def test_platform_health_overall_blocked_when_required_group_blocked(monkeypatch
     assert response.json()["status"] == "blocked"
 
 
-def test_platform_health_overall_warning_when_no_blocked_but_warning_exists(monkeypatch) -> None:
+def test_platform_health_overall_warning_when_no_blocked_but_warning_exists(
+    monkeypatch,
+) -> None:
     _set_opencart_config(monkeypatch)
     _clear_product_factory_config(monkeypatch)
 

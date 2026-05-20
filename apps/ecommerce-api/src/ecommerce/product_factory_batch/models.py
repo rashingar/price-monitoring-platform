@@ -8,7 +8,6 @@ from typing import Any
 
 from pydantic import BaseModel
 
-
 BATCH_ROW_STATUSES = {
     "pending",
     "resolving_source",

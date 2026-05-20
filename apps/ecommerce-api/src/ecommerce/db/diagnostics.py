@@ -11,7 +11,11 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Connection, Engine
 
-from ecommerce.db.config import get_database_url, sanitize_database_error, sanitize_database_url
+from ecommerce.db.config import (
+    get_database_url,
+    sanitize_database_error,
+    sanitize_database_url,
+)
 from ecommerce.db.session import get_engine
 
 PRICE_MONITORING_DB_REQUIRED_FUTURE = True
@@ -34,6 +38,7 @@ REQUIRED_PRICE_MONITORING_TABLES = (
     "source_url_candidates",
     "ecommerce_jobs",
 )
+
 
 def get_alembic_head_revision() -> str | None:
     try:
@@ -64,7 +69,9 @@ def collect_database_status(database_url: str | None = None) -> dict[str, Any]:
         with engine.connect() as connection:
             connection.execute(text("select 1"))
             try:
-                return _reachable_status(connection, engine, raw_url, sanitized_url, head_revision)
+                return _reachable_status(
+                    connection, engine, raw_url, sanitized_url, head_revision
+                )
             except Exception as exc:
                 return _base_status(
                     configured=True,
@@ -73,7 +80,8 @@ def collect_database_status(database_url: str | None = None) -> dict[str, Any]:
                     sanitized_database_url=sanitized_url,
                     alembic_head_revision=head_revision,
                     price_monitoring_database_mode="error",
-                    error=sanitize_database_error(_first_line(exc), raw_url) or exc.__class__.__name__,
+                    error=sanitize_database_error(_first_line(exc), raw_url)
+                    or exc.__class__.__name__,
                 )
     except Exception as exc:
         return _base_status(
@@ -82,11 +90,14 @@ def collect_database_status(database_url: str | None = None) -> dict[str, Any]:
             sanitized_database_url=sanitized_url,
             alembic_head_revision=head_revision,
             price_monitoring_database_mode="unreachable",
-            error=sanitize_database_error(_first_line(exc), raw_url) or exc.__class__.__name__,
+            error=sanitize_database_error(_first_line(exc), raw_url)
+            or exc.__class__.__name__,
         )
 
 
-def collect_run_persistence_status(run_id: str, database_url: str | None = None) -> dict[str, Any]:
+def collect_run_persistence_status(
+    run_id: str, database_url: str | None = None
+) -> dict[str, Any]:
     raw_url = database_url or get_database_url()
     if raw_url is None:
         return {
@@ -125,7 +136,8 @@ def collect_run_persistence_status(run_id: str, database_url: str | None = None)
             "configured": True,
             "reachable": False,
             "persistence_status": "error",
-            "error": sanitize_database_error(_first_line(exc), raw_url) or exc.__class__.__name__,
+            "error": sanitize_database_error(_first_line(exc), raw_url)
+            or exc.__class__.__name__,
         }
 
 
@@ -138,13 +150,24 @@ def _reachable_status(
 ) -> dict[str, Any]:
     inspector = inspect(connection)
     existing_tables = set(inspector.get_table_names())
-    required_tables = {table_name: table_name in existing_tables for table_name in REQUIRED_PRICE_MONITORING_TABLES}
+    required_tables = {
+        table_name: table_name in existing_tables
+        for table_name in REQUIRED_PRICE_MONITORING_TABLES
+    }
     required_tables_present = all(required_tables.values())
     current_revision = _current_alembic_revision(connection, raw_url)
-    alembic_up_to_date = current_revision == head_revision if current_revision and head_revision else None
-    row_counts = _row_counts(connection, required_tables) if required_tables_present else None
+    alembic_up_to_date = (
+        current_revision == head_revision
+        if current_revision and head_revision
+        else None
+    )
+    row_counts = (
+        _row_counts(connection, required_tables) if required_tables_present else None
+    )
     active_catalog_count = _active_catalog_count(connection, existing_tables)
-    active_catalog_imported_at = _active_catalog_imported_at(connection, existing_tables)
+    active_catalog_imported_at = _active_catalog_imported_at(
+        connection, existing_tables
+    )
 
     mode = "incomplete"
     if required_tables_present and alembic_up_to_date and row_counts is not None:
@@ -186,8 +209,14 @@ def _base_status(
     error: str | None = None,
     warnings: list[str] | None = None,
 ) -> dict[str, Any]:
-    normalized_required_tables = required_tables or {table_name: False for table_name in REQUIRED_PRICE_MONITORING_TABLES}
-    missing_tables = [table_name for table_name in REQUIRED_PRICE_MONITORING_TABLES if not normalized_required_tables.get(table_name)]
+    normalized_required_tables = required_tables or {
+        table_name: False for table_name in REQUIRED_PRICE_MONITORING_TABLES
+    }
+    missing_tables = [
+        table_name
+        for table_name in REQUIRED_PRICE_MONITORING_TABLES
+        if not normalized_required_tables.get(table_name)
+    ]
     setup_hints = _setup_hints(
         configured=configured,
         reachable=reachable,
@@ -195,7 +224,12 @@ def _base_status(
         alembic_up_to_date=alembic_up_to_date,
         error=error,
     )
-    db_ready = configured and reachable and required_tables_present and alembic_up_to_date is not False
+    db_ready = (
+        configured
+        and reachable
+        and required_tables_present
+        and alembic_up_to_date is not False
+    )
     catalog_ready = db_ready
     price_monitoring_ready = db_ready and int(active_catalog_count or 0) > 0
     return {
@@ -225,7 +259,13 @@ def _base_status(
             alembic_up_to_date=alembic_up_to_date,
         ),
         "non_db_workflows_available": True,
-        "required_for": ["catalog", "price_monitoring", "alerts", "observations", "history"],
+        "required_for": [
+            "catalog",
+            "price_monitoring",
+            "alerts",
+            "observations",
+            "history",
+        ],
         "error": error,
         "setup_hints": setup_hints,
         "warnings": warnings or [],
@@ -242,28 +282,44 @@ def _current_alembic_revision(connection: Connection, raw_url: str) -> str | Non
         return None
 
 
-def _row_counts(connection: Connection, required_tables: dict[str, bool]) -> dict[str, int]:
+def _row_counts(
+    connection: Connection, required_tables: dict[str, bool]
+) -> dict[str, int]:
     counts: dict[str, int] = {}
     for table_name in REQUIRED_PRICE_MONITORING_TABLES:
         if required_tables.get(table_name):
-            counts[table_name] = int(connection.execute(text(f"select count(*) from {table_name}")).scalar_one())
+            counts[table_name] = int(
+                connection.execute(
+                    text(f"select count(*) from {table_name}")
+                ).scalar_one()
+            )
     return counts
 
 
 def _active_catalog_count(connection: Connection, table_names: set[str]) -> int | None:
     if "catalog_products" not in table_names:
         return None
-    return int(connection.execute(text("select count(*) from catalog_products where active = true")).scalar_one())
+    return int(
+        connection.execute(
+            text("select count(*) from catalog_products where active = true")
+        ).scalar_one()
+    )
 
 
-def _active_catalog_imported_at(connection: Connection, table_names: set[str]) -> str | None:
+def _active_catalog_imported_at(
+    connection: Connection, table_names: set[str]
+) -> str | None:
     if "catalog_products" not in table_names:
         return None
-    value = connection.execute(text("select max(imported_at) from catalog_products where active = true")).scalar_one()
+    value = connection.execute(
+        text("select max(imported_at) from catalog_products where active = true")
+    ).scalar_one()
     return str(value) if value is not None else None
 
 
-def _run_persistence_counts(connection: Connection, run_id: str, table_names: set[str]) -> dict[str, Any]:
+def _run_persistence_counts(
+    connection: Connection, run_id: str, table_names: set[str]
+) -> dict[str, Any]:
     monitoring_run_id = connection.execute(
         text("select id from monitoring_runs where run_id = :run_id limit 1"),
         {"run_id": run_id},
@@ -276,13 +332,17 @@ def _run_persistence_counts(connection: Connection, run_id: str, table_names: se
     )
     matched_count = int(
         connection.execute(
-            text("select count(*) from price_observations where run_id = :run_id and match_status = 'matched'"),
+            text(
+                "select count(*) from price_observations where run_id = :run_id and match_status = 'matched'"
+            ),
             {"run_id": run_id},
         ).scalar_one()
     )
     unmatched_count = int(
         connection.execute(
-            text("select count(*) from price_observations where run_id = :run_id and match_status = 'unmatched'"),
+            text(
+                "select count(*) from price_observations where run_id = :run_id and match_status = 'unmatched'"
+            ),
             {"run_id": run_id},
         ).scalar_one()
     )
@@ -295,7 +355,9 @@ def _run_persistence_counts(connection: Connection, run_id: str, table_names: se
             ).scalar_one()
         )
     monitoring_run_exists = monitoring_run_id is not None
-    persistence_status = "persisted" if monitoring_run_exists and observation_count > 0 else "missing"
+    persistence_status = (
+        "persisted" if monitoring_run_exists and observation_count > 0 else "missing"
+    )
     return {
         "configured": True,
         "reachable": True,
@@ -337,16 +399,22 @@ def _setup_hints(
         )
         return hints
     if not reachable:
-        hints.append("Check that PostgreSQL is running and that ECOMMERCE_DATABASE_URL credentials are correct.")
+        hints.append(
+            "Check that PostgreSQL is running and that ECOMMERCE_DATABASE_URL credentials are correct."
+        )
         if error:
-            hints.append("Review the sanitized connection error shown in this response.")
+            hints.append(
+                "Review the sanitized connection error shown in this response."
+            )
         return hints
     if not required_tables_present:
         hints.append("Run alembic upgrade head from the ecommerce-api backend repo.")
     if alembic_up_to_date is False:
         hints.append("Run alembic upgrade head from the ecommerce-api backend repo.")
     if alembic_up_to_date is None:
-        hints.append("Migration revision could not be confirmed; run alembic current and alembic heads if needed.")
+        hints.append(
+            "Migration revision could not be confirmed; run alembic current and alembic heads if needed."
+        )
     return list(dict.fromkeys(hints))
 
 

@@ -16,7 +16,6 @@ from tools.schema_registry.build_electronet_schema_library import (
     normalize_whitespace,
 )
 
-
 DEFAULT_OUTPUT_PATH = REPO_ROOT / "docs" / "audits" / "electronet_template_coverage.md"
 DEFAULT_FILTER_MAP_PATH = REPO_ROOT / "resources" / "mappings" / "filter_map.json"
 
@@ -48,7 +47,9 @@ def _display_template_file(path: Path) -> str:
         return path.name
 
 
-def _expected_label(parent_category: str, leaf_category: str, sub_category: str | None) -> str:
+def _expected_label(
+    parent_category: str, leaf_category: str, sub_category: str | None
+) -> str:
     return sub_category or leaf_category
 
 
@@ -62,7 +63,9 @@ def _render_coverage_label(expected: ExpectedCategory, counts: Counter[str]) -> 
     return f"{expected.label} [{_coverage_label_context(expected)}]"
 
 
-def _rendered_coverage_labels(expected_categories: list[ExpectedCategory]) -> dict[str, str]:
+def _rendered_coverage_labels(
+    expected_categories: list[ExpectedCategory],
+) -> dict[str, str]:
     label_counts = Counter(expected.label for expected in expected_categories)
     return {
         expected.category_path: _render_coverage_label(expected, label_counts)
@@ -75,7 +78,9 @@ def load_expected_categories(
     filter_map_path: Path = DEFAULT_FILTER_MAP_PATH,
 ) -> list[ExpectedCategory]:
     taxonomy_payload = load_json(taxonomy_path)
-    if not isinstance(taxonomy_payload, dict) or not isinstance(taxonomy_payload.get("paths"), list):
+    if not isinstance(taxonomy_payload, dict) or not isinstance(
+        taxonomy_payload.get("paths"), list
+    ):
         raise ValueError(f"Taxonomy payload is malformed: {taxonomy_path}")
 
     filter_payload = load_json(filter_map_path)
@@ -135,7 +140,15 @@ def load_observed_templates(
     for template in _load_templates(template_root):
         try:
             binding = _resolve_taxonomy_binding(template, taxonomy_paths)
-            observed.append(_observed_from_binding(template.template_id, template.source_template_file, template.template_status, template.electronet_examples, binding))
+            observed.append(
+                _observed_from_binding(
+                    template.template_id,
+                    template.source_template_file,
+                    template.template_status,
+                    template.electronet_examples,
+                    binding,
+                )
+            )
         except ValueError:
             orphans.append(
                 ObservedTemplate(
@@ -147,7 +160,9 @@ def load_observed_templates(
                 )
             )
 
-    observed.sort(key=lambda item: (item.category_path, item.template_status, item.template_file))
+    observed.sort(
+        key=lambda item: (item.category_path, item.template_status, item.template_file)
+    )
     orphans.sort(key=lambda item: item.template_file)
     return observed, orphans
 
@@ -164,7 +179,9 @@ def _observed_from_binding(
         template_file=Path(template_file).name,
         category_path=binding.category_path,
         template_status=template_status,
-        examples=tuple(normalize_whitespace(url) for url in examples if normalize_whitespace(url)),
+        examples=tuple(
+            normalize_whitespace(url) for url in examples if normalize_whitespace(url)
+        ),
     )
 
 
@@ -206,12 +223,20 @@ def assess_template_coverage(
     for expected in expected_categories:
         templates = sorted(
             observed_by_path.get(expected.category_path, []),
-            key=lambda item: (item.template_status, item.template_file, item.template_id),
+            key=lambda item: (
+                item.template_status,
+                item.template_file,
+                item.template_id,
+            ),
         )
         rows.append(
             {
                 "CTA Leaf Category": rendered_labels[expected.category_path],
-                "File": "<br>".join(template.template_file for template in templates) if templates else "-",
+                "File": (
+                    "<br>".join(template.template_file for template in templates)
+                    if templates
+                    else "-"
+                ),
                 "Status": _status_for_templates(templates),
                 "Electronet Examples": _join_examples(templates),
                 "_sort_path": expected.category_path,
@@ -229,7 +254,9 @@ def assess_template_coverage(
             }
         )
 
-    rows.sort(key=lambda row: (row["_sort_path"], row["CTA Leaf Category"], row["File"]))
+    rows.sort(
+        key=lambda row: (row["_sort_path"], row["CTA Leaf Category"], row["File"])
+    )
     return rows
 
 
@@ -253,7 +280,9 @@ def write_report(markdown: str, output_path: Path = DEFAULT_OUTPUT_PATH) -> None
 def main() -> None:
     expected_categories = load_expected_categories()
     observed_templates, orphan_templates = load_observed_templates()
-    rows = assess_template_coverage(expected_categories, observed_templates, orphan_templates)
+    rows = assess_template_coverage(
+        expected_categories, observed_templates, orphan_templates
+    )
     write_report(build_markdown_table(rows), DEFAULT_OUTPUT_PATH)
 
 

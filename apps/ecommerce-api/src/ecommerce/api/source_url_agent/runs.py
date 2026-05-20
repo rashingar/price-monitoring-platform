@@ -9,7 +9,10 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.db.repositories.source_urls import get_source_url_discovery_run, list_source_url_discovery_run_page
+from ecommerce.db.repositories.source_urls import (
+    get_source_url_discovery_run,
+    list_source_url_discovery_run_page,
+)
 from ecommerce.db.session import session_scope
 from ecommerce.jobs.execution_policy import api_execute_durable_jobs_inline_enabled
 from ecommerce.source_url_agent.enqueue_service import (
@@ -18,14 +21,25 @@ from ecommerce.source_url_agent.enqueue_service import (
 )
 from ecommerce.source_url_agent.job_handler import execute_source_url_agent_job
 from ecommerce.source_url_agent.options import SourceUrlAgentOptions
-from ecommerce.source_url_agent.products import SourceUrlAgentInputError, read_products_from_catalog, read_products_from_csv
+from ecommerce.source_url_agent.products import (
+    SourceUrlAgentInputError,
+    read_products_from_catalog,
+    read_products_from_csv,
+)
 from ecommerce.source_url_agent.runner import run_source_url_agent
 from ecommerce.source_url_agent.sources import load_source_registry
 
-from .artifacts import source_url_agent_artifact_items, source_url_agent_artifact_listing
+from .artifacts import (
+    source_url_agent_artifact_items,
+    source_url_agent_artifact_listing,
+)
 from .errors import safe_db_error
 from .schemas import SourceUrlAgentRunRequest
-from .serializers import discovery_run_to_dict, source_definition_to_dict, source_url_agent_result_payload
+from .serializers import (
+    discovery_run_to_dict,
+    source_definition_to_dict,
+    source_url_agent_result_payload,
+)
 from .state import get_api_resolver
 from .validation import (
     api_run_limit,
@@ -42,7 +56,12 @@ router = APIRouter()
 
 @router.get("/sources")
 def list_source_url_agent_sources() -> dict[str, Any]:
-    return {"items": [source_definition_to_dict(source) for source in load_source_registry().sources.values()]}
+    return {
+        "items": [
+            source_definition_to_dict(source)
+            for source in load_source_registry().sources.values()
+        ]
+    }
 
 
 @router.post("/runs/sync")
@@ -50,10 +69,14 @@ def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, 
     require_source_url_agent_run_database_ready()
     validate_source_choice(request.source)
     if request.apply_high_confidence and request.dry_run:
-        raise HTTPException(status_code=400, detail="apply_high_confidence requires dry_run=false.")
+        raise HTTPException(
+            status_code=400, detail="apply_high_confidence requires dry_run=false."
+        )
 
     limit = api_run_limit(request)
-    max_products_per_batch = request.max_products_per_batch or default_api_max_products_per_batch()
+    max_products_per_batch = (
+        request.max_products_per_batch or default_api_max_products_per_batch()
+    )
     input_path = source_url_agent_input_path(request)
     request_selected_models = selected_models(request.selected_models)
     options = SourceUrlAgentOptions(
@@ -109,16 +132,22 @@ def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, 
     except (FileNotFoundError, SourceUrlAgentInputError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL Agent run failed: {safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Source URL Agent run failed: {safe_db_error(exc)}"
+        ) from exc
     return source_url_agent_result_payload(result)
 
 
 @router.post("/runs")
-def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
+def enqueue_source_url_agent_run(
+    request: SourceUrlAgentRunRequest, background_tasks: BackgroundTasks
+) -> dict[str, Any]:
     require_source_url_agent_run_database_ready()
     validate_source_choice(request.source)
     if request.apply_high_confidence and request.dry_run:
-        raise HTTPException(status_code=400, detail="apply_high_confidence requires dry_run=false.")
+        raise HTTPException(
+            status_code=400, detail="apply_high_confidence requires dry_run=false."
+        )
 
     limit = api_run_limit(request)
     input_path = source_url_agent_input_path(request)
@@ -149,14 +178,21 @@ def enqueue_source_url_agent_run(request: SourceUrlAgentRunRequest, background_t
                     request_payload=_request_payload(request),
                 ),
             )
-            payload = discovery_run_to_dict(result.run, session=session, include_tasks=True)
+            payload = discovery_run_to_dict(
+                result.run, session=session, include_tasks=True
+            )
     except (FileNotFoundError, SourceUrlAgentInputError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL Agent run enqueue failed: {safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source URL Agent run enqueue failed: {safe_db_error(exc)}",
+        ) from exc
 
     if api_execute_durable_jobs_inline_enabled():
-        background_tasks.add_task(execute_source_url_agent_job, payload["run_id"], resolver=get_api_resolver())
+        background_tasks.add_task(
+            execute_source_url_agent_job, payload["run_id"], resolver=get_api_resolver()
+        )
     return payload
 
 
@@ -168,11 +204,21 @@ def list_source_url_agent_runs(
     require_source_url_agent_run_database_ready()
     try:
         with session_scope() as session:
-            page = list_source_url_discovery_run_page(session, limit=limit, offset=offset)
+            page = list_source_url_discovery_run_page(
+                session, limit=limit, offset=offset
+            )
             items = [discovery_run_to_dict(row, session=session) for row in page.items]
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL Agent run history query failed: {safe_db_error(exc)}") from exc
-    return {"items": items, "total": page.total, "limit": page.limit, "offset": page.offset}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source URL Agent run history query failed: {safe_db_error(exc)}",
+        ) from exc
+    return {
+        "items": items,
+        "total": page.total,
+        "limit": page.limit,
+        "offset": page.offset,
+    }
 
 
 @router.get("/runs/{run_id}")
@@ -182,14 +228,19 @@ def get_source_url_agent_run(run_id: str) -> dict[str, Any]:
         with session_scope() as session:
             row = get_source_url_discovery_run(session, run_id)
             if row is None:
-                raise HTTPException(status_code=404, detail="Source URL Agent run not found.")
+                raise HTTPException(
+                    status_code=404, detail="Source URL Agent run not found."
+                )
             payload = discovery_run_to_dict(row, session=session, include_tasks=True)
             payload["artifacts"] = source_url_agent_artifact_items(run_id)
             return payload
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL Agent run query failed: {safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source URL Agent run query failed: {safe_db_error(exc)}",
+        ) from exc
 
 
 @router.get("/runs/{run_id}/artifacts")

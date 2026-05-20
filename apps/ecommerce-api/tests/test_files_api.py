@@ -24,10 +24,14 @@ def test_files_roots_endpoint(tmp_path: Path, monkeypatch) -> None:
     response = client.get("/api/files/roots")
 
     assert response.status_code == 200
-    assert response.json() == {"roots": [{"path": str(root.resolve(strict=False)), "exists": True}]}
+    assert response.json() == {
+        "roots": [{"path": str(root.resolve(strict=False)), "exists": True}]
+    }
 
 
-def test_files_list_endpoint_lists_csv_files_and_folders(tmp_path: Path, monkeypatch) -> None:
+def test_files_list_endpoint_lists_csv_files_and_folders(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, root = _client_with_file_root(tmp_path, monkeypatch)
     (root / "b.csv").write_text("model\n2\n", encoding="utf-8")
     (root / "a.txt").write_text("ignored\n", encoding="utf-8")
@@ -47,7 +51,9 @@ def test_files_list_endpoint_lists_csv_files_and_folders(tmp_path: Path, monkeyp
 def test_files_list_rejects_path_traversal(tmp_path: Path, monkeypatch) -> None:
     client, root = _client_with_file_root(tmp_path, monkeypatch)
 
-    response = client.get("/api/files/list", params={"root": str(root), "relative_path": ".."})
+    response = client.get(
+        "/api/files/list", params={"root": str(root), "relative_path": ".."}
+    )
 
     assert response.status_code == 403
 
@@ -55,9 +61,14 @@ def test_files_list_rejects_path_traversal(tmp_path: Path, monkeypatch) -> None:
 def test_files_read_endpoint(tmp_path: Path, monkeypatch) -> None:
     client, root = _client_with_file_root(tmp_path, monkeypatch)
     csv_path = root / "source.csv"
-    csv_path.write_text("model,mpn,name\n005606,ABC123,Product\n123456,,\n", encoding="utf-8-sig")
+    csv_path.write_text(
+        "model,mpn,name\n005606,ABC123,Product\n123456,,\n", encoding="utf-8-sig"
+    )
 
-    response = client.post("/api/files/read", json={"path": str(csv_path), "delimiter": None, "max_rows": 1})
+    response = client.post(
+        "/api/files/read",
+        json={"path": str(csv_path), "delimiter": None, "max_rows": 1},
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -110,7 +121,12 @@ def test_files_save_rejects_non_csv_extension(tmp_path: Path, monkeypatch) -> No
 
     response = client.post(
         "/api/files/save",
-        json={"path": str(root / "edited.txt"), "columns": ["model"], "rows": [], "delimiter": ","},
+        json={
+            "path": str(root / "edited.txt"),
+            "columns": ["model"],
+            "rows": [],
+            "delimiter": ",",
+        },
     )
 
     assert response.status_code == 400

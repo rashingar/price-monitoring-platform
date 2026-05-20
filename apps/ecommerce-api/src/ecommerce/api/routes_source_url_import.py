@@ -16,8 +16,15 @@ from ecommerce.db.policy import require_database_ready_for_catalog
 from ecommerce.db.repositories.source_urls import source_url_summary
 from ecommerce.db.session import session_scope
 from ecommerce.file_editor import get_allowed_roots, is_path_allowed
-from ecommerce.product_factory_handoff import ProductFactoryHandoffImportResult, import_product_factory_handoff
-from ecommerce.source_url_import import SUMMARY_COUNTERS, SourceUrlImportResult, import_source_urls
+from ecommerce.product_factory_handoff import (
+    ProductFactoryHandoffImportResult,
+    import_product_factory_handoff,
+)
+from ecommerce.source_url_import import (
+    SUMMARY_COUNTERS,
+    SourceUrlImportResult,
+    import_source_urls,
+)
 
 router = APIRouter(prefix="/api/catalog/source-urls", tags=["catalog-source-urls"])
 
@@ -101,14 +108,18 @@ class SourceUrlSummaryResponse(BaseModel):
 
 
 @router.get("/summary", response_model=SourceUrlSummaryResponse)
-def get_source_url_summary(catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+def get_source_url_summary(
+    catalog_source: str = DEFAULT_CATALOG_SOURCE,
+) -> dict[str, Any]:
     _require_catalog_database_ready()
     catalog_source = _validated_catalog_source(catalog_source)
     try:
         with session_scope() as session:
             return source_url_summary(session, catalog_source)
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL summary failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Source URL summary failed: {_safe_db_error(exc)}"
+        ) from exc
 
 
 @router.post("/import/preview", response_model=SourceUrlImportResponse)
@@ -122,12 +133,16 @@ def apply_source_url_import(request: SourceUrlImportRequest) -> dict[str, Any]:
 
 
 @router.post("/import/product-factory/preview", response_model=SourceUrlImportResponse)
-def preview_product_factory_handoff_import(request: ProductFactoryHandoffImportRequest) -> dict[str, Any]:
+def preview_product_factory_handoff_import(
+    request: ProductFactoryHandoffImportRequest,
+) -> dict[str, Any]:
     return _run_product_factory_handoff_import(request, apply=False)
 
 
 @router.post("/import/product-factory/apply", response_model=SourceUrlImportResponse)
-def apply_product_factory_handoff_import(request: ProductFactoryHandoffImportRequest) -> dict[str, Any]:
+def apply_product_factory_handoff_import(
+    request: ProductFactoryHandoffImportRequest,
+) -> dict[str, Any]:
     return _run_product_factory_handoff_import(request, apply=True)
 
 
@@ -147,7 +162,9 @@ def get_source_url_import_options() -> dict[str, Any]:
     }
 
 
-def _run_source_url_import(request: SourceUrlImportRequest, *, apply: bool) -> dict[str, Any]:
+def _run_source_url_import(
+    request: SourceUrlImportRequest, *, apply: bool
+) -> dict[str, Any]:
     _require_catalog_database_ready()
     payload = _validated_import_request(request)
     try:
@@ -160,18 +177,26 @@ def _run_source_url_import(request: SourceUrlImportRequest, *, apply: bool) -> d
                 include_artifacts=payload["include_artifacts"],
                 limit=payload["limit"],
             )
-            return _import_response(result, apply=apply, report_items_limit=payload["report_items_limit"])
+            return _import_response(
+                result, apply=apply, report_items_limit=payload["report_items_limit"]
+            )
     except HTTPException:
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL import failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Source URL import failed: {_safe_db_error(exc)}"
+        ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Source URL import failed: {type(exc).__name__}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Source URL import failed: {type(exc).__name__}"
+        ) from exc
 
 
-def _run_product_factory_handoff_import(request: ProductFactoryHandoffImportRequest, *, apply: bool) -> dict[str, Any]:
+def _run_product_factory_handoff_import(
+    request: ProductFactoryHandoffImportRequest, *, apply: bool
+) -> dict[str, Any]:
     _require_catalog_database_ready()
     payload = _validated_product_factory_handoff_request(request)
     try:
@@ -184,18 +209,28 @@ def _run_product_factory_handoff_import(request: ProductFactoryHandoffImportRequ
                 persist_initial_capture=payload["persist_initial_capture"],
                 limit=payload["limit"],
             )
-            return _handoff_import_response(result, apply=apply, report_items_limit=payload["report_items_limit"])
+            return _handoff_import_response(
+                result, apply=apply, report_items_limit=payload["report_items_limit"]
+            )
     except HTTPException:
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SQLAlchemyError as exc:
-        raise HTTPException(status_code=500, detail=f"Product Factory handoff import failed: {_safe_db_error(exc)}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Product Factory handoff import failed: {_safe_db_error(exc)}",
+        ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Product Factory handoff import failed: {type(exc).__name__}") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Product Factory handoff import failed: {type(exc).__name__}",
+        ) from exc
 
 
-def _import_response(result: SourceUrlImportResult, *, apply: bool, report_items_limit: int) -> dict[str, Any]:
+def _import_response(
+    result: SourceUrlImportResult, *, apply: bool, report_items_limit: int
+) -> dict[str, Any]:
     items = [_api_report_item(item, apply=apply) for item in result.report_items]
     truncated = len(items) > report_items_limit
     if truncated:
@@ -239,7 +274,9 @@ def _source_stats(result: SourceUrlImportResult) -> dict[str, dict[str, int]]:
 def _api_report_item(item: dict[str, Any], *, apply: bool) -> dict[str, Any]:
     action = str(item.get("action") or "")
     if not apply:
-        action = {"created": "would_import", "updated": "would_update"}.get(action, action)
+        action = {"created": "would_import", "updated": "would_update"}.get(
+            action, action
+        )
     else:
         action = {"created": "imported"}.get(action, action)
     return {
@@ -282,7 +319,9 @@ def _handoff_import_response(
     }
 
 
-def _handoff_import_summary(result: ProductFactoryHandoffImportResult, *, apply: bool) -> dict[str, int]:
+def _handoff_import_summary(
+    result: ProductFactoryHandoffImportResult, *, apply: bool
+) -> dict[str, int]:
     counters = {key: int(result.counters.get(key, 0)) for key in SUMMARY_COUNTERS}
     summary = dict(counters)
     if apply:
@@ -296,7 +335,9 @@ def _handoff_import_summary(result: ProductFactoryHandoffImportResult, *, apply:
     return summary
 
 
-def _handoff_source_stats(result: ProductFactoryHandoffImportResult) -> dict[str, dict[str, int]]:
+def _handoff_source_stats(
+    result: ProductFactoryHandoffImportResult,
+) -> dict[str, dict[str, int]]:
     stats = result.source_stats.get("product_factory_handoff", {})
     return {
         "product_factory_handoff": {
@@ -312,20 +353,28 @@ def _validated_import_request(request: SourceUrlImportRequest) -> dict[str, Any]
     include_observations = bool(payload.get("include_observations", True))
     include_artifacts = bool(payload.get("include_artifacts", True))
     if not include_observations and not include_artifacts:
-        raise HTTPException(status_code=400, detail="At least one import source must be enabled.")
+        raise HTTPException(
+            status_code=400, detail="At least one import source must be enabled."
+        )
 
     return {
         "catalog_source": catalog_source,
         "include_observations": include_observations,
         "include_artifacts": include_artifacts,
         "limit": _validated_optional_positive_int(payload.get("limit"), "limit"),
-        "report_items_limit": _validated_report_items_limit(payload.get("report_items_limit")),
+        "report_items_limit": _validated_report_items_limit(
+            payload.get("report_items_limit")
+        ),
     }
 
 
-def _validated_product_factory_handoff_request(request: ProductFactoryHandoffImportRequest) -> dict[str, Any]:
+def _validated_product_factory_handoff_request(
+    request: ProductFactoryHandoffImportRequest,
+) -> dict[str, Any]:
     payload = _model_payload(request, exclude_unset=False)
-    file_path = _optional_text(payload.get("file_path")) or _optional_text(payload.get("file"))
+    file_path = _optional_text(payload.get("file_path")) or _optional_text(
+        payload.get("file")
+    )
     if not file_path:
         raise HTTPException(status_code=400, detail="file is required.")
     path = _validated_product_factory_handoff_path(file_path)
@@ -334,25 +383,36 @@ def _validated_product_factory_handoff_request(request: ProductFactoryHandoffImp
         "catalog_source": _validated_catalog_source(payload.get("catalog_source")),
         "persist_initial_capture": bool(payload.get("persist_initial_capture", True)),
         "limit": _validated_optional_positive_int(payload.get("limit"), "limit"),
-        "report_items_limit": _validated_report_items_limit(payload.get("report_items_limit")),
+        "report_items_limit": _validated_report_items_limit(
+            payload.get("report_items_limit")
+        ),
     }
 
 
 def _validated_product_factory_handoff_path(value: str) -> Path:
     requested = Path(value)
     if requested.name != "ecommerce_source_handoff.json":
-        raise HTTPException(status_code=400, detail="file must be a ecommerce_source_handoff.json artifact.")
+        raise HTTPException(
+            status_code=400,
+            detail="file must be a ecommerce_source_handoff.json artifact.",
+        )
     if _contains_parent_reference(requested):
-        raise HTTPException(status_code=400, detail="file must not contain path traversal.")
+        raise HTTPException(
+            status_code=400, detail="file must not contain path traversal."
+        )
     path = requested.expanduser().resolve(strict=False)
     if not _product_factory_handoff_path_allowed(path):
-        allowed = ", ".join(_display_path(root) for root in _product_factory_handoff_allowed_roots())
+        allowed = ", ".join(
+            _display_path(root) for root in _product_factory_handoff_allowed_roots()
+        )
         raise HTTPException(
             status_code=400,
             detail=f"file must be inside allowed artifact roots or configured file roots. Allowed roots: {allowed}",
         )
     if not path.exists() or not path.is_file():
-        raise HTTPException(status_code=400, detail="file must be an existing handoff JSON file.")
+        raise HTTPException(
+            status_code=400, detail="file must be an existing handoff JSON file."
+        )
     return path
 
 
@@ -379,9 +439,13 @@ def _validated_optional_positive_int(value: object, field_name: str) -> int | No
     try:
         number = int(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail=f"{field_name} must be an integer.") from None
+        raise HTTPException(
+            status_code=400, detail=f"{field_name} must be an integer."
+        ) from None
     if number < 1:
-        raise HTTPException(status_code=400, detail=f"{field_name} must be greater than 0.")
+        raise HTTPException(
+            status_code=400, detail=f"{field_name} must be greater than 0."
+        )
     return number
 
 
@@ -389,9 +453,13 @@ def _validated_report_items_limit(value: object) -> int:
     try:
         number = int(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="report_items_limit must be an integer.") from None
+        raise HTTPException(
+            status_code=400, detail="report_items_limit must be an integer."
+        ) from None
     if number < 0 or number > 1000:
-        raise HTTPException(status_code=400, detail="report_items_limit must be between 0 and 1000.")
+        raise HTTPException(
+            status_code=400, detail="report_items_limit must be between 0 and 1000."
+        )
     return number
 
 
@@ -437,5 +505,7 @@ def _model_payload(model: BaseModel, *, exclude_unset: bool) -> dict[str, Any]:
 
 
 def _safe_db_error(exc: Exception) -> str:
-    message = str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    message = (
+        str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+    )
     return sanitize_database_error(message) or exc.__class__.__name__

@@ -25,11 +25,14 @@ def build_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument("--refresh-after-minutes", type=int, default=360)
     capture_parser.add_argument("--limit", type=int, default=50)
     capture_parser.add_argument("--vendor", required=False)
-    capture_parser.add_argument("--product-source-id", action="append", type=int, default=[])
+    capture_parser.add_argument(
+        "--product-source-id", action="append", type=int, default=[]
+    )
     capture_parser.add_argument("--include-not-due", action="store_true")
     capture_parser.set_defaults(handler=_handle_capture_sources)
 
     return parser
+
 
 def _handle_price(args: argparse.Namespace) -> int:
     run_price(

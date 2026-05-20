@@ -10,7 +10,6 @@ from ecommerce.source_url_agent.evidence import PageEvidence
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.utils.text import normalize_product_text
 
-
 COMPOSITE_PHRASE_MARKERS: tuple[str, ...] = (
     "me esties",
     "me epagogikes",
@@ -21,9 +20,19 @@ COMPOSITE_PHRASE_MARKERS: tuple[str, ...] = (
     "fournos me esties",
     "mazi me",
 )
-BUNDLE_WORD_MARKERS: tuple[str, ...] = ("set", "kit", "bundle", "combo", "syndyasmos", "paketo", "package")
+BUNDLE_WORD_MARKERS: tuple[str, ...] = (
+    "set",
+    "kit",
+    "bundle",
+    "combo",
+    "syndyasmos",
+    "paketo",
+    "package",
+)
 CONNECTOR_MARKERS: tuple[str, ...] = ("+", "&", "kai", "and", "with", "me", "mazi")
-IDENTIFIER_RE = re.compile(r"(?<![A-Za-z0-9])(?=[A-Za-z0-9]{5,})(?:[A-Za-z]*\d){2,}[A-Za-z0-9]*(?![A-Za-z0-9])")
+IDENTIFIER_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?=[A-Za-z0-9]{5,})(?:[A-Za-z]*\d){2,}[A-Za-z0-9]*(?![A-Za-z0-9])"
+)
 
 
 @dataclass(frozen=True)
@@ -42,7 +51,9 @@ class CompositeMismatchResult:
         }
 
 
-def detect_composite_mismatch(product: AgentProduct, evidence: PageEvidence) -> CompositeMismatchResult:
+def detect_composite_mismatch(
+    product: AgentProduct, evidence: PageEvidence
+) -> CompositeMismatchResult:
     expected_identifiers = catalog_product_identifiers(product)
     if not expected_identifiers:
         return _no_mismatch()
@@ -50,9 +61,15 @@ def detect_composite_mismatch(product: AgentProduct, evidence: PageEvidence) -> 
     candidate_texts = _candidate_texts(evidence)
     candidate_text = " ".join(candidate_texts)
     candidate_identifiers = extract_product_code_identifiers(candidate_text)
-    extra_identifiers = tuple(identifier for identifier in candidate_identifiers if identifier not in expected_identifiers)
+    extra_identifiers = tuple(
+        identifier
+        for identifier in candidate_identifiers
+        if identifier not in expected_identifiers
+    )
     has_expected_identifier = evidence.exact_mpn_found or any(
-        _identifier_in_text(identifier, text) for identifier in expected_identifiers for text in candidate_texts
+        _identifier_in_text(identifier, text)
+        for identifier in expected_identifiers
+        for text in candidate_texts
     )
     if not has_expected_identifier:
         return _no_mismatch()
@@ -61,7 +78,9 @@ def detect_composite_mismatch(product: AgentProduct, evidence: PageEvidence) -> 
     phrase_markers = _composite_phrase_markers(candidate_text)
     if phrase_markers:
         markers.extend(phrase_markers)
-    if extra_identifiers and _expected_and_extra_are_connected(candidate_texts, expected_identifiers, extra_identifiers):
+    if extra_identifiers and _expected_and_extra_are_connected(
+        candidate_texts, expected_identifiers, extra_identifiers
+    ):
         markers.append("expected_identifier_joined_with_extra_identifier")
     if extra_identifiers:
         markers.extend(_bundle_word_markers(candidate_text))
@@ -170,7 +189,9 @@ def _composite_phrase_markers(value: str) -> tuple[str, ...]:
 
 def _bundle_word_markers(value: str) -> tuple[str, ...]:
     tokens = set(normalize_product_text(value).split())
-    return tuple(dict.fromkeys(marker for marker in BUNDLE_WORD_MARKERS if marker in tokens))
+    return tuple(
+        dict.fromkeys(marker for marker in BUNDLE_WORD_MARKERS if marker in tokens)
+    )
 
 
 def _expected_and_extra_are_connected(
@@ -184,12 +205,16 @@ def _expected_and_extra_are_connected(
         tokens = normalize_product_text(text).split()
         for expected in expected_identifiers:
             expected_token = expected.casefold()
-            expected_positions = [index for index, token in enumerate(tokens) if token == expected_token]
+            expected_positions = [
+                index for index, token in enumerate(tokens) if token == expected_token
+            ]
             if not expected_positions:
                 continue
             for extra in extra_identifiers:
                 extra_token = extra.casefold()
-                extra_positions = [index for index, token in enumerate(tokens) if token == extra_token]
+                extra_positions = [
+                    index for index, token in enumerate(tokens) if token == extra_token
+                ]
                 for left in expected_positions:
                     for right in extra_positions:
                         if left == right or abs(left - right) > 6:
@@ -208,15 +233,25 @@ def _raw_plus_or_ampersand_join(
     normalized = str(text or "")
     for expected in expected_identifiers:
         for extra in extra_identifiers:
-            if re.search(rf"\b{re.escape(expected)}\b\s*[+&]\s*\b{re.escape(extra)}\b", normalized, flags=re.IGNORECASE):
+            if re.search(
+                rf"\b{re.escape(expected)}\b\s*[+&]\s*\b{re.escape(extra)}\b",
+                normalized,
+                flags=re.IGNORECASE,
+            ):
                 return True
-            if re.search(rf"\b{re.escape(extra)}\b\s*[+&]\s*\b{re.escape(expected)}\b", normalized, flags=re.IGNORECASE):
+            if re.search(
+                rf"\b{re.escape(extra)}\b\s*[+&]\s*\b{re.escape(expected)}\b",
+                normalized,
+                flags=re.IGNORECASE,
+            ):
                 return True
     return False
 
 
 def _identifier_in_text(identifier: str, text: str) -> bool:
-    return any(candidate == identifier for candidate in extract_product_code_identifiers(text))
+    return any(
+        candidate == identifier for candidate in extract_product_code_identifiers(text)
+    )
 
 
 def _normalize_identifier(value: str) -> str:
@@ -234,4 +269,6 @@ def _reason(markers: tuple[str, ...], extra_identifiers: tuple[str, ...]) -> str
 
 
 def _no_mismatch() -> CompositeMismatchResult:
-    return CompositeMismatchResult(is_mismatch=False, reason="", markers=(), extra_identifiers=())
+    return CompositeMismatchResult(
+        is_mismatch=False, reason="", markers=(), extra_identifiers=()
+    )

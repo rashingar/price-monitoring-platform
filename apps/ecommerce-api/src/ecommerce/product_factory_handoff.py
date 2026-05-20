@@ -19,14 +19,27 @@ from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSn
 from ecommerce.db.repositories.capture_persistence import persist_capture_result
 from ecommerce.db.repositories.products import product_source_to_dict
 from ecommerce.db.repositories.common import json_safe_value
-from ecommerce.db.repositories.source_convergence import sync_source_url_to_product_source
-from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, source_url_to_dict
+from ecommerce.db.repositories.source_convergence import (
+    sync_source_url_to_product_source,
+)
+from ecommerce.db.repositories.source_urls import (
+    create_or_update_imported_source_url,
+    source_url_to_dict,
+)
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_capture.sanitize import content_hash, sanitize_json
-from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedPriceObservation
+from ecommerce.source_capture.types import (
+    CaptureResult,
+    CaptureSnapshotPayload,
+    ParsedPriceObservation,
+)
 from ecommerce.source_capture.vendor_registry import VENDORS_BY_SLUG
-from ecommerce.source_urls import SourceUrlValidationError, extract_source_domain, infer_source_name, normalize_source_url
-
+from ecommerce.source_urls import (
+    SourceUrlValidationError,
+    extract_source_domain,
+    infer_source_name,
+    normalize_source_url,
+)
 
 PRODUCT_FACTORY_HANDOFF_IMPORT_VERSION = "product_factory_source_handoff_import_v1"
 SOURCE_CONFIDENCE_ACTIVE_THRESHOLD = Decimal("0.85")
@@ -97,12 +110,16 @@ class ProductFactoryHandoffImportResult:
         payload: dict[str, Any] = {
             "apply": self.apply,
             "file_path": self.file_path,
-            "counters": {key: int(value) for key, value in sorted(self.counters.items())},
+            "counters": {
+                key: int(value) for key, value in sorted(self.counters.items())
+            },
             "warnings": list(self.warnings),
             "skipped_reasons": dict(self.skipped_reasons),
             "changed_source_urls": list(self.changed_source_urls),
             "changed_product_sources": list(self.changed_product_sources),
-            "source_stats": {key: dict(value) for key, value in self.source_stats.items()},
+            "source_stats": {
+                key: dict(value) for key, value in self.source_stats.items()
+            },
         }
         if include_items:
             payload["items"] = list(self.report_items)
@@ -114,9 +131,13 @@ def parse_product_factory_handoff(path: Path | str) -> ProductFactoryHandoff:
     try:
         payload = json.loads(artifact_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"Could not read Product Factory handoff artifact {artifact_path}: {exc}") from exc
+        raise ValueError(
+            f"Could not read Product Factory handoff artifact {artifact_path}: {exc}"
+        ) from exc
     if not isinstance(payload, dict):
-        raise ValueError(f"Product Factory handoff artifact is not a JSON object: {artifact_path}")
+        raise ValueError(
+            f"Product Factory handoff artifact is not a JSON object: {artifact_path}"
+        )
 
     version = _first_text(
         payload.get("schema_version"),
@@ -125,13 +146,19 @@ def parse_product_factory_handoff(path: Path | str) -> ProductFactoryHandoff:
         "v1",
     ).lower()
     if version not in {"1", "v1", "schema_v1"}:
-        raise ValueError(f"Unsupported Product Factory handoff schema version: {version}")
+        raise ValueError(
+            f"Unsupported Product Factory handoff schema version: {version}"
+        )
 
     identity = _parse_identity(payload, artifact_path)
     sources = tuple(_iter_handoff_sources(payload))
     if not sources:
-        raise ValueError(f"Product Factory handoff contains no source URLs: {artifact_path}")
-    return ProductFactoryHandoff(path=artifact_path, payload=payload, identity=identity, sources=sources)
+        raise ValueError(
+            f"Product Factory handoff contains no source URLs: {artifact_path}"
+        )
+    return ProductFactoryHandoff(
+        path=artifact_path, payload=payload, identity=identity, sources=sources
+    )
 
 
 def import_product_factory_handoff(
@@ -157,7 +184,11 @@ def import_product_factory_handoff(
 
     resolution = resolve_catalog_product_for_handoff(session, identity)
     if resolution.product is None:
-        reason = "ambiguous_identity" if resolution.match_type.startswith("ambiguous") else "unresolved_identity"
+        reason = (
+            "ambiguous_identity"
+            if resolution.match_type.startswith("ambiguous")
+            else "unresolved_identity"
+        )
         for source in handoff.sources[: limit or None]:
             _skip(
                 result,
@@ -194,18 +225,40 @@ def import_product_factory_handoff(
     return result
 
 
-def resolve_catalog_product_for_handoff(session: Session, identity: HandoffIdentity) -> CatalogProductResolution:
+def resolve_catalog_product_for_handoff(
+    session: Session, identity: HandoffIdentity
+) -> CatalogProductResolution:
     catalog_source = identity.catalog_source or DEFAULT_CATALOG_SOURCE
     if identity.catalog_product_id is not None:
         product = session.get(CatalogProductRow, identity.catalog_product_id)
         if product is None or not product.active:
-            return CatalogProductResolution(None, "missing_catalog_product_id", "none", "catalog_product_id not found or inactive")
+            return CatalogProductResolution(
+                None,
+                "missing_catalog_product_id",
+                "none",
+                "catalog_product_id not found or inactive",
+            )
         if product.catalog_source != catalog_source:
-            return CatalogProductResolution(None, "ambiguous_catalog_product_id", "none", "catalog_source does not match catalog_product_id")
+            return CatalogProductResolution(
+                None,
+                "ambiguous_catalog_product_id",
+                "none",
+                "catalog_source does not match catalog_product_id",
+            )
         if identity.model and product.model != identity.model:
-            return CatalogProductResolution(None, "ambiguous_catalog_product_id", "none", "model does not match catalog_product_id")
+            return CatalogProductResolution(
+                None,
+                "ambiguous_catalog_product_id",
+                "none",
+                "model does not match catalog_product_id",
+            )
         if identity.mpn and product.mpn and product.mpn != identity.mpn:
-            return CatalogProductResolution(None, "ambiguous_catalog_product_id", "none", "MPN does not match catalog_product_id")
+            return CatalogProductResolution(
+                None,
+                "ambiguous_catalog_product_id",
+                "none",
+                "MPN does not match catalog_product_id",
+            )
         return CatalogProductResolution(product, "catalog_product_id", "exact")
 
     if identity.model:
@@ -236,11 +289,23 @@ def resolve_catalog_product_for_handoff(session: Session, identity: HandoffIdent
         if len(matches) == 1:
             return CatalogProductResolution(matches[0], "mpn", "weak")
         if len(matches) > 1:
-            return CatalogProductResolution(None, "ambiguous_mpn", "none", "multiple active catalog products matched MPN")
+            return CatalogProductResolution(
+                None,
+                "ambiguous_mpn",
+                "none",
+                "multiple active catalog products matched MPN",
+            )
 
     if not identity.model and not identity.mpn:
-        return CatalogProductResolution(None, "missing_identity", "none", "missing catalog_product_id, model, and MPN")
-    return CatalogProductResolution(None, "unresolved", "none", "no active catalog product matched")
+        return CatalogProductResolution(
+            None,
+            "missing_identity",
+            "none",
+            "missing catalog_product_id, model, and MPN",
+        )
+    return CatalogProductResolution(
+        None, "unresolved", "none", "no active catalog product matched"
+    )
 
 
 def _process_source(
@@ -264,7 +329,13 @@ def _process_source(
             result,
             "invalid_url",
             f"{handoff.path}: {exc}",
-            item=_report_item(identity=identity, source=source, action="skipped", reason="invalid_url", resolution=resolution),
+            item=_report_item(
+                identity=identity,
+                source=source,
+                action="skipped",
+                reason="invalid_url",
+                resolution=resolution,
+            ),
         )
         return
 
@@ -274,7 +345,13 @@ def _process_source(
             result,
             "invalid_url",
             f"{handoff.path}: unsupported source URL host {domain}",
-            item=_report_item(identity=identity, source=source, action="skipped", reason="invalid_url", resolution=resolution),
+            item=_report_item(
+                identity=identity,
+                source=source,
+                action="skipped",
+                reason="invalid_url",
+                resolution=resolution,
+            ),
         )
         return
 
@@ -306,7 +383,11 @@ def _process_source(
         trust_level="high_confidence" if status == "active" else "imported",
         status=status,
         last_seen_at=_observed_at(source),
-        last_success_at=_observed_at(source) if source.price is not None and source.price.price is not None else None,
+        last_success_at=(
+            _observed_at(source)
+            if source.price is not None and source.price.price is not None
+            else None
+        ),
         notes="Imported from Product Factory source handoff",
         apply=apply,
     )
@@ -322,12 +403,18 @@ def _process_source(
     if apply and upsert.row is not None:
         if upsert.action in {"created", "updated"}:
             result.changed_source_urls.append(
-                {"action": upsert.action, "changed_fields": upsert.changed_fields, "source_url": source_url_to_dict(upsert.row)}
+                {
+                    "action": upsert.action,
+                    "changed_fields": upsert.changed_fields,
+                    "source_url": source_url_to_dict(upsert.row),
+                }
             )
         if status == "active":
             product_source = sync_source_url_to_product_source(session, upsert.row)
             if product_source is not None and upsert.action in {"created", "updated"}:
-                result.changed_product_sources.append(product_source_to_dict(product_source))
+                result.changed_product_sources.append(
+                    product_source_to_dict(product_source)
+                )
     elif upsert.action in {"created", "updated"}:
         result.changed_source_urls.append(
             {
@@ -342,11 +429,15 @@ def _process_source(
     snapshot_id = None
     if persist_initial_capture and status == "active" and source.price is not None:
         if apply and product_source is not None:
-            snapshot = _persist_initial_capture(session, handoff, source, source_index, product_source)
+            snapshot = _persist_initial_capture(
+                session, handoff, source, source_index, product_source
+            )
             if snapshot is not None:
                 snapshot_id = snapshot.id
                 result.counters["snapshot_count"] += 1
-                result.counters["price_observation_count"] += 1 if source.price.price is not None else 0
+                result.counters["price_observation_count"] += (
+                    1 if source.price.price is not None else 0
+                )
             else:
                 result.counters["duplicate_snapshot_count"] += 1
         else:
@@ -378,9 +469,15 @@ def _persist_initial_capture(
     source_index: int,
     product_source: ProductSource,
 ) -> SourceCaptureSnapshot | None:
-    artifact_ref = json.dumps({"handoff": str(handoff.path), "source_index": source_index}, sort_keys=True)
-    digest = content_hash(source.raw_html or json.dumps(source.raw, ensure_ascii=False, sort_keys=True))
-    if _snapshot_already_imported(session, source=product_source, artifact_ref=artifact_ref, digest=digest):
+    artifact_ref = json.dumps(
+        {"handoff": str(handoff.path), "source_index": source_index}, sort_keys=True
+    )
+    digest = content_hash(
+        source.raw_html or json.dumps(source.raw, ensure_ascii=False, sort_keys=True)
+    )
+    if _snapshot_already_imported(
+        session, source=product_source, artifact_ref=artifact_ref, digest=digest
+    ):
         return None
 
     db_product = session.get(Product, product_source.product_id)
@@ -398,9 +495,19 @@ def _persist_initial_capture(
                 stock_status=price.stock_status,
                 delivery_text=price.delivery_text,
                 product_name=price.product_name,
-                raw_observation={"source": "product_factory_source_handoff", "confidence": json_safe_value(price.confidence), **price.raw},
-                timestamp_source="product_factory_handoff.observed_at" if price.observed_at is not None else "import_time",
-                timestamp_quality="exact" if price.observed_at is not None else "fallback",
+                raw_observation={
+                    "source": "product_factory_source_handoff",
+                    "confidence": json_safe_value(price.confidence),
+                    **price.raw,
+                },
+                timestamp_source=(
+                    "product_factory_handoff.observed_at"
+                    if price.observed_at is not None
+                    else "import_time"
+                ),
+                timestamp_quality=(
+                    "exact" if price.observed_at is not None else "fallback"
+                ),
             ),
         )
     snapshot_payload = source.capture_snapshot
@@ -409,32 +516,57 @@ def _persist_initial_capture(
     capture = CaptureSnapshotPayload(
         capture_strategy=f"product_factory_handoff_{vendor_slug}",
         page_url=source.url,
-        final_url=_first_text(snapshot_payload.get("final_url"), snapshot_payload.get("page_url"), source.url),
+        final_url=_first_text(
+            snapshot_payload.get("final_url"),
+            snapshot_payload.get("page_url"),
+            source.url,
+        ),
         request_url=_optional_text(snapshot_payload.get("request_url")),
         request_method=_optional_text(snapshot_payload.get("request_method")) or "GET",
-        response_status=_optional_int(snapshot_payload.get("response_status") or snapshot_payload.get("status_code")),
-        response_content_type=_optional_text(snapshot_payload.get("response_content_type")) or ("text/html; charset=utf-8" if source.raw_html else "application/json"),
+        response_status=_optional_int(
+            snapshot_payload.get("response_status")
+            or snapshot_payload.get("status_code")
+        ),
+        response_content_type=_optional_text(
+            snapshot_payload.get("response_content_type")
+        )
+        or ("text/html; charset=utf-8" if source.raw_html else "application/json"),
         response_body_json={
             "handoff": sanitize_json(handoff.payload),
             "source": sanitize_json(source.raw),
-            "importer": {"name": "product_factory_source_handoff_import", "version": PRODUCT_FACTORY_HANDOFF_IMPORT_VERSION},
+            "importer": {
+                "name": "product_factory_source_handoff_import",
+                "version": PRODUCT_FACTORY_HANDOFF_IMPORT_VERSION,
+            },
         },
         raw_html=source.raw_html,
         artifact_ref=artifact_ref,
         content_hash=digest,
         parser_version=PRODUCT_FACTORY_HANDOFF_IMPORT_VERSION,
-        fetch_status_code=_optional_int(snapshot_payload.get("fetch_status_code") or snapshot_payload.get("response_status")),
+        fetch_status_code=_optional_int(
+            snapshot_payload.get("fetch_status_code")
+            or snapshot_payload.get("response_status")
+        ),
         data_quality_flags=_data_quality_flags(source),
         captured_at=observed_at or _parse_datetime(snapshot_payload.get("captured_at")),
         fetched_at=observed_at or _parse_datetime(snapshot_payload.get("fetched_at")),
         parsed_at=observed_at or _parse_datetime(snapshot_payload.get("parsed_at")),
         imported_at=now,
     )
-    result = CaptureResult(vendor_slug=vendor_slug, status="success", snapshot=capture, price_observations=observations)
-    return persist_capture_result(session, product=db_product, source=product_source, result=result)
+    result = CaptureResult(
+        vendor_slug=vendor_slug,
+        status="success",
+        snapshot=capture,
+        price_observations=observations,
+    )
+    return persist_capture_result(
+        session, product=db_product, source=product_source, result=result
+    )
 
 
-def _snapshot_already_imported(session: Session, *, source: ProductSource, artifact_ref: str, digest: str | None) -> bool:
+def _snapshot_already_imported(
+    session: Session, *, source: ProductSource, artifact_ref: str, digest: str | None
+) -> bool:
     statement = select(SourceCaptureSnapshot.id).where(
         SourceCaptureSnapshot.product_source_id == source.id,
         SourceCaptureSnapshot.capture_strategy.like("product_factory_handoff%"),
@@ -462,16 +594,29 @@ def _parse_identity(payload: dict[str, Any], path: Path) -> HandoffIdentity:
             product.get("model"),
             identity.get("model"),
             _nested(payload, ("input", "model")),
-            path.parent.parent.name if path.parent.name.casefold() == "integrations" else "",
+            (
+                path.parent.parent.name
+                if path.parent.name.casefold() == "integrations"
+                else ""
+            ),
         )
     )
     return HandoffIdentity(
         catalog_source=catalog_source,
         catalog_product_id=_optional_int(
-            payload.get("catalog_product_id") or product.get("catalog_product_id") or identity.get("catalog_product_id")
+            payload.get("catalog_product_id")
+            or product.get("catalog_product_id")
+            or identity.get("catalog_product_id")
         ),
         model=model,
-        mpn=_empty_to_none(_first_text(payload.get("mpn"), product.get("mpn"), identity.get("mpn"), _nested(payload, ("input", "mpn")))),
+        mpn=_empty_to_none(
+            _first_text(
+                payload.get("mpn"),
+                product.get("mpn"),
+                identity.get("mpn"),
+                _nested(payload, ("input", "mpn")),
+            )
+        ),
     )
 
 
@@ -500,11 +645,25 @@ def _iter_handoff_sources(payload: dict[str, Any]) -> Iterable[HandoffSource]:
         )
         if not url:
             continue
-        capture_snapshot = _dict_value(source_payload.get("capture_snapshot") or source_payload.get("snapshot") or payload.get("capture_snapshot"))
-        raw_html = _optional_text(source_payload.get("raw_html") or capture_snapshot.get("raw_html") or payload.get("raw_html"))
+        capture_snapshot = _dict_value(
+            source_payload.get("capture_snapshot")
+            or source_payload.get("snapshot")
+            or payload.get("capture_snapshot")
+        )
+        raw_html = _optional_text(
+            source_payload.get("raw_html")
+            or capture_snapshot.get("raw_html")
+            or payload.get("raw_html")
+        )
         yield HandoffSource(
             url=url,
-            source_name=_empty_to_none(_first_text(source_payload.get("source_name"), source_payload.get("vendor"), source_payload.get("source"))),
+            source_name=_empty_to_none(
+                _first_text(
+                    source_payload.get("source_name"),
+                    source_payload.get("vendor"),
+                    source_payload.get("source"),
+                )
+            ),
             confidence=_decimal_value(
                 source_payload.get("confidence")
                 or source_payload.get("match_confidence")
@@ -518,7 +677,9 @@ def _iter_handoff_sources(payload: dict[str, Any]) -> Iterable[HandoffSource]:
         )
 
 
-def _price_evidence_from_payload(payload: dict[str, Any]) -> HandoffPriceEvidence | None:
+def _price_evidence_from_payload(
+    payload: dict[str, Any],
+) -> HandoffPriceEvidence | None:
     if isinstance(payload.get("price_evidence"), dict):
         price_payload = _dict_value(payload.get("price_evidence"))
     elif isinstance(payload.get("price"), dict):
@@ -529,19 +690,45 @@ def _price_evidence_from_payload(payload: dict[str, Any]) -> HandoffPriceEvidenc
         price_payload.get("price")
         or price_payload.get("price_value")
         or payload.get("price_value")
-        or (payload.get("price") if not isinstance(payload.get("price"), dict) else None)
+        or (
+            payload.get("price") if not isinstance(payload.get("price"), dict) else None
+        )
     )
     if price is None:
         return None
     return HandoffPriceEvidence(
         price=price,
-        currency=_first_text(price_payload.get("currency"), payload.get("currency"), "EUR"),
-        observed_at=_parse_datetime(price_payload.get("observed_at") or price_payload.get("scraped_at") or payload.get("observed_at") or payload.get("scraped_at")),
-        confidence=_decimal_value(price_payload.get("confidence") or payload.get("price_confidence")),
-        availability=_empty_to_none(_first_text(price_payload.get("availability"), payload.get("availability"))),
-        stock_status=_empty_to_none(_first_text(price_payload.get("stock_status"), payload.get("stock_status"))),
-        delivery_text=_empty_to_none(_first_text(price_payload.get("delivery_text"), payload.get("delivery_text"))),
-        product_name=_empty_to_none(_first_text(price_payload.get("product_name"), price_payload.get("name"), payload.get("product_name"), payload.get("name"))),
+        currency=_first_text(
+            price_payload.get("currency"), payload.get("currency"), "EUR"
+        ),
+        observed_at=_parse_datetime(
+            price_payload.get("observed_at")
+            or price_payload.get("scraped_at")
+            or payload.get("observed_at")
+            or payload.get("scraped_at")
+        ),
+        confidence=_decimal_value(
+            price_payload.get("confidence") or payload.get("price_confidence")
+        ),
+        availability=_empty_to_none(
+            _first_text(price_payload.get("availability"), payload.get("availability"))
+        ),
+        stock_status=_empty_to_none(
+            _first_text(price_payload.get("stock_status"), payload.get("stock_status"))
+        ),
+        delivery_text=_empty_to_none(
+            _first_text(
+                price_payload.get("delivery_text"), payload.get("delivery_text")
+            )
+        ),
+        product_name=_empty_to_none(
+            _first_text(
+                price_payload.get("product_name"),
+                price_payload.get("name"),
+                payload.get("product_name"),
+                payload.get("name"),
+            )
+        ),
         raw=price_payload,
     )
 
@@ -550,10 +737,18 @@ def _source_status(resolution: CatalogProductResolution, source: HandoffSource) 
     exact_identity = resolution.match_type in {"catalog_product_id", "model"}
     if not exact_identity:
         return "needs_review"
-    if source.confidence is not None and source.confidence >= SOURCE_CONFIDENCE_ACTIVE_THRESHOLD:
+    if (
+        source.confidence is not None
+        and source.confidence >= SOURCE_CONFIDENCE_ACTIVE_THRESHOLD
+    ):
         return "active"
-    evidence_text = " ".join(str(value).casefold() for value in source.evidence.values())
-    if any(token in evidence_text for token in ("exact", "confirmed", "high_confidence", "strong")):
+    evidence_text = " ".join(
+        str(value).casefold() for value in source.evidence.values()
+    )
+    if any(
+        token in evidence_text
+        for token in ("exact", "confirmed", "high_confidence", "strong")
+    ):
         return "active"
     return "needs_review"
 
@@ -561,7 +756,9 @@ def _source_status(resolution: CatalogProductResolution, source: HandoffSource) 
 def _observed_at(source: HandoffSource) -> datetime | None:
     if source.price is not None and source.price.observed_at is not None:
         return source.price.observed_at
-    return _parse_datetime(source.raw.get("observed_at") or source.raw.get("scraped_at"))
+    return _parse_datetime(
+        source.raw.get("observed_at") or source.raw.get("scraped_at")
+    )
 
 
 def _supported_source(vendor_slug: str) -> bool:
@@ -571,9 +768,16 @@ def _supported_source(vendor_slug: str) -> bool:
 
 def _data_quality_flags(source: HandoffSource) -> list[str]:
     flags: list[str] = []
-    if source.confidence is not None and source.confidence < SOURCE_CONFIDENCE_ACTIVE_THRESHOLD:
+    if (
+        source.confidence is not None
+        and source.confidence < SOURCE_CONFIDENCE_ACTIVE_THRESHOLD
+    ):
         flags.append("SOURCE_CONFIDENCE_LOW")
-    if source.price is not None and source.price.confidence is not None and source.price.confidence < SOURCE_CONFIDENCE_ACTIVE_THRESHOLD:
+    if (
+        source.price is not None
+        and source.price.confidence is not None
+        and source.price.confidence < SOURCE_CONFIDENCE_ACTIVE_THRESHOLD
+    ):
         flags.append("PRICE_CONFIDENCE_LOW")
     if not source.raw_html:
         flags.append("RAW_HTML_MISSING")
@@ -620,7 +824,11 @@ def _report_item(
         "source_name": source.source_name,
         "source_domain": source_domain,
         "catalog_source": identity.catalog_source,
-        "catalog_product_id": resolution.product.id if resolution.product is not None else identity.catalog_product_id,
+        "catalog_product_id": (
+            resolution.product.id
+            if resolution.product is not None
+            else identity.catalog_product_id
+        ),
         "source_url_id": source_url_id,
         "product_source_id": product_source_id,
         "source_capture_snapshot_id": snapshot_id,
@@ -628,16 +836,24 @@ def _report_item(
         "mpn": identity.mpn,
         "status": status,
         "action": action,
-        "confidence": str(source.confidence) if source.confidence is not None else resolution.confidence,
+        "confidence": (
+            str(source.confidence)
+            if source.confidence is not None
+            else resolution.confidence
+        ),
         "identity_match_type": resolution.match_type,
         "evidence_source": "product_factory_handoff",
         "evidence_detail": str(source.evidence or {}),
         "reason": reason,
-        "price": json_safe_value(source.price.price) if source.price is not None else None,
+        "price": (
+            json_safe_value(source.price.price) if source.price is not None else None
+        ),
     }
 
 
-def _source_stat(result: ProductFactoryHandoffImportResult, key: str, field_name: str) -> None:
+def _source_stat(
+    result: ProductFactoryHandoffImportResult, key: str, field_name: str
+) -> None:
     result.source_stats.setdefault(key, Counter())[field_name] += 1
 
 
@@ -658,7 +874,14 @@ def _decimal_value(value: object) -> Decimal | None:
     text = _first_text(value)
     if not text:
         return None
-    normalized = text.replace("EUR", "").replace("eur", "").replace("€", "").replace("β‚¬", "").replace(" ", "").strip()
+    normalized = (
+        text.replace("EUR", "")
+        .replace("eur", "")
+        .replace("€", "")
+        .replace("β‚¬", "")
+        .replace(" ", "")
+        .strip()
+    )
     if "," in normalized and "." in normalized:
         normalized = normalized.replace(".", "").replace(",", ".")
     else:

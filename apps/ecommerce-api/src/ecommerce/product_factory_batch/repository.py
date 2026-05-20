@@ -8,12 +8,17 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from ecommerce.db.models.product_factory_batch import ProductFactoryBatch, ProductFactoryBatchRow
+from ecommerce.db.models.product_factory_batch import (
+    ProductFactoryBatch,
+    ProductFactoryBatchRow,
+)
 from ecommerce.db.repositories.common import _now
 from ecommerce.product_factory_batch.models import ParsedBatchCsv
 
 
-def create_batch(session: Session, *, parsed: ParsedBatchCsv, filename: str | None) -> ProductFactoryBatch:
+def create_batch(
+    session: Session, *, parsed: ParsedBatchCsv, filename: str | None
+) -> ProductFactoryBatch:
     now = _now()
     batch = ProductFactoryBatch(
         filename=filename,
@@ -44,11 +49,15 @@ def create_batch(session: Session, *, parsed: ParsedBatchCsv, filename: str | No
     return batch
 
 
-def list_batches(session: Session, *, limit: int = 100, offset: int = 0) -> list[ProductFactoryBatch]:
+def list_batches(
+    session: Session, *, limit: int = 100, offset: int = 0
+) -> list[ProductFactoryBatch]:
     return list(
         session.execute(
             select(ProductFactoryBatch)
-            .order_by(ProductFactoryBatch.created_at.desc(), ProductFactoryBatch.id.desc())
+            .order_by(
+                ProductFactoryBatch.created_at.desc(), ProductFactoryBatch.id.desc()
+            )
             .limit(limit)
             .offset(offset)
         )
@@ -57,7 +66,9 @@ def list_batches(session: Session, *, limit: int = 100, offset: int = 0) -> list
     )
 
 
-def get_batch(session: Session, batch_id: int, *, with_rows: bool = False) -> ProductFactoryBatch | None:
+def get_batch(
+    session: Session, batch_id: int, *, with_rows: bool = False
+) -> ProductFactoryBatch | None:
     statement = select(ProductFactoryBatch).where(ProductFactoryBatch.id == batch_id)
     if with_rows:
         statement = statement.options(selectinload(ProductFactoryBatch.rows))
@@ -69,14 +80,18 @@ def list_batch_rows(session: Session, batch_id: int) -> list[ProductFactoryBatch
         session.execute(
             select(ProductFactoryBatchRow)
             .where(ProductFactoryBatchRow.batch_id == batch_id)
-            .order_by(ProductFactoryBatchRow.row_number.asc(), ProductFactoryBatchRow.id.asc())
+            .order_by(
+                ProductFactoryBatchRow.row_number.asc(), ProductFactoryBatchRow.id.asc()
+            )
         )
         .scalars()
         .all()
     )
 
 
-def get_batch_row(session: Session, *, batch_id: int, row_id: int) -> ProductFactoryBatchRow | None:
+def get_batch_row(
+    session: Session, *, batch_id: int, row_id: int
+) -> ProductFactoryBatchRow | None:
     return session.execute(
         select(ProductFactoryBatchRow).where(
             ProductFactoryBatchRow.batch_id == batch_id,
@@ -85,16 +100,26 @@ def get_batch_row(session: Session, *, batch_id: int, row_id: int) -> ProductFac
     ).scalar_one_or_none()
 
 
-def refresh_batch_counts(session: Session, batch: ProductFactoryBatch) -> ProductFactoryBatch:
+def refresh_batch_counts(
+    session: Session, batch: ProductFactoryBatch
+) -> ProductFactoryBatch:
     counts = Counter(
         str(status)
         for status in session.execute(
-            select(ProductFactoryBatchRow.status).where(ProductFactoryBatchRow.batch_id == batch.id)
+            select(ProductFactoryBatchRow.status).where(
+                ProductFactoryBatchRow.batch_id == batch.id
+            )
         )
         .scalars()
         .all()
     )
-    batch.total_rows = int(session.execute(select(func.count(ProductFactoryBatchRow.id)).where(ProductFactoryBatchRow.batch_id == batch.id)).scalar_one())
+    batch.total_rows = int(
+        session.execute(
+            select(func.count(ProductFactoryBatchRow.id)).where(
+                ProductFactoryBatchRow.batch_id == batch.id
+            )
+        ).scalar_one()
+    )
     batch.pending_count = counts.get("pending", 0)
     batch.auto_selected_count = counts.get("auto_selected", 0)
     batch.manually_selected_count = counts.get("manually_selected", 0)

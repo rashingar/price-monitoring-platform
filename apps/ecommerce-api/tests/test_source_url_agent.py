@@ -61,7 +61,9 @@ def _product(**overrides) -> AgentProduct:
     return AgentProduct(**values)
 
 
-def test_csv_input_preserves_leading_zero_model_and_filters_active(tmp_path: Path) -> None:
+def test_csv_input_preserves_leading_zero_model_and_filters_active(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "input.csv"
     path.write_text(
         "model,mpn,name,category,manufacturer,price,quantity,status,date_added,bestprice_status,skroutz_status\n"
@@ -83,7 +85,11 @@ def test_source_registry_loading() -> None:
 
     assert registry.get("bestprice").source_domain == "www.bestprice.gr"
     assert registry.get("electronet").source_type == "direct_vendor"
-    assert {source.source_name for source in registry.selected("all")} >= {"bestprice", "skroutz", "electronet"}
+    assert {source.source_name for source in registry.selected("all")} >= {
+        "bestprice",
+        "skroutz",
+        "electronet",
+    }
 
 
 def test_search_provider_registry_loading_and_source_specific_cascade() -> None:
@@ -105,10 +111,14 @@ def test_search_provider_registry_loading_and_source_specific_cascade() -> None:
     assert provider.text_decorations is False
     assert provider.include_fetch_metadata is True
     assert provider.operators is True
-    assert [item.provider_name for item in registry.cascade_for_source("bestprice")] == ["brave_search"]
+    assert [
+        item.provider_name for item in registry.cascade_for_source("bestprice")
+    ] == ["brave_search"]
 
 
-def test_search_provider_registry_uses_default_cascade_when_source_is_not_configured(tmp_path: Path) -> None:
+def test_search_provider_registry_uses_default_cascade_when_source_is_not_configured(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "search_providers.json"
     path.write_text(
         json.dumps(
@@ -130,10 +140,14 @@ def test_search_provider_registry_uses_default_cascade_when_source_is_not_config
 
     registry = load_search_provider_registry(path)
 
-    assert [item.provider_name for item in registry.cascade_for_source("electronet")] == ["browser_fallback"]
+    assert [
+        item.provider_name for item in registry.cascade_for_source("electronet")
+    ] == ["browser_fallback"]
 
 
-def test_search_provider_registry_rejects_unknown_provider_in_cascade(tmp_path: Path) -> None:
+def test_search_provider_registry_rejects_unknown_provider_in_cascade(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "search_providers.json"
     path.write_text(
         json.dumps(
@@ -189,8 +203,12 @@ def test_disabled_search_provider_is_skipped_without_fetching() -> None:
     assert browser.fetched_urls == []
 
 
-def test_generate_search_queries_with_full_data_uses_ranked_identifier_variants() -> None:
-    source = replace(load_source_registry().get("electronet"), max_searches_per_product=8)
+def test_generate_search_queries_with_full_data_uses_ranked_identifier_variants() -> (
+    None
+):
+    source = replace(
+        load_source_registry().get("electronet"), max_searches_per_product=8
+    )
 
     assert generate_search_queries(_product(), source) == [
         "Bosch HBA514BS3",
@@ -202,8 +220,12 @@ def test_generate_search_queries_with_full_data_uses_ranked_identifier_variants(
     ]
 
 
-def test_generate_search_queries_without_manufacturer_keeps_identifier_and_name_variants() -> None:
-    source = replace(load_source_registry().get("electronet"), max_searches_per_product=8)
+def test_generate_search_queries_without_manufacturer_keeps_identifier_and_name_variants() -> (
+    None
+):
+    source = replace(
+        load_source_registry().get("electronet"), max_searches_per_product=8
+    )
 
     assert generate_search_queries(_product(manufacturer=""), source) == [
         "HBA514BS3",
@@ -213,7 +235,9 @@ def test_generate_search_queries_without_manufacturer_keeps_identifier_and_name_
 
 
 def test_generate_search_queries_without_mpn_keeps_model_and_name_variants() -> None:
-    source = replace(load_source_registry().get("electronet"), max_searches_per_product=8)
+    source = replace(
+        load_source_registry().get("electronet"), max_searches_per_product=8
+    )
 
     assert generate_search_queries(_product(mpn=""), source) == [
         "Bosch 123456",
@@ -223,14 +247,22 @@ def test_generate_search_queries_without_mpn_keeps_model_and_name_variants() -> 
     ]
 
 
-def test_generate_search_queries_dedupes_case_insensitively_and_respects_bounds() -> None:
-    source = replace(load_source_registry().get("electronet"), max_searches_per_product=2)
-    product = _product(model="mr25gb", mpn="MR25GB", name="LG MR25GB", manufacturer="LG")
+def test_generate_search_queries_dedupes_case_insensitively_and_respects_bounds() -> (
+    None
+):
+    source = replace(
+        load_source_registry().get("electronet"), max_searches_per_product=2
+    )
+    product = _product(
+        model="mr25gb", mpn="MR25GB", name="LG MR25GB", manufacturer="LG"
+    )
 
     assert generate_search_queries(product, source) == ["LG MR25GB", "MR25GB"]
 
 
-def test_generate_search_queries_uses_source_query_templates_before_generic_defaults() -> None:
+def test_generate_search_queries_uses_source_query_templates_before_generic_defaults() -> (
+    None
+):
     source = replace(
         load_source_registry().get("electronet"),
         max_searches_per_product=3,
@@ -244,10 +276,18 @@ def test_generate_search_queries_uses_source_query_templates_before_generic_defa
     ]
 
 
-def test_browser_fallback_provider_uses_source_search_urls_and_product_url_rules() -> None:
-    source = replace(load_source_registry().get("bestprice"), max_searches_per_product=1, max_candidates_per_product=2)
+def test_browser_fallback_provider_uses_source_search_urls_and_product_url_rules() -> (
+    None
+):
+    source = replace(
+        load_source_registry().get("bestprice"),
+        max_searches_per_product=1,
+        max_candidates_per_product=2,
+    )
     search_url = "https://www.bestprice.gr/search?q=Bosch+HBA514BS3"
-    product_url = "https://www.bestprice.gr/item/123/bosch-hba514bs3.html?utm_source=test"
+    product_url = (
+        "https://www.bestprice.gr/item/123/bosch-hba514bs3.html?utm_source=test"
+    )
     browser = _FakeBrowser(
         {
             search_url: PageSnapshot(
@@ -294,9 +334,15 @@ def test_browser_fallback_provider_uses_source_search_urls_and_product_url_rules
     }
 
 
-def test_discover_source_evidence_uses_provider_cascade_and_preserves_provenance() -> None:
+def test_discover_source_evidence_uses_provider_cascade_and_preserves_provenance() -> (
+    None
+):
     product = _product()
-    source = replace(load_source_registry().get("bestprice"), max_searches_per_product=1, max_candidates_per_product=1)
+    source = replace(
+        load_source_registry().get("bestprice"),
+        max_searches_per_product=1,
+        max_candidates_per_product=1,
+    )
     search_url = "https://www.bestprice.gr/search?q=Bosch+HBA514BS3"
     product_url = "https://www.bestprice.gr/item/123/bosch-hba514bs3.html"
     browser = _FakeBrowser(
@@ -350,11 +396,15 @@ def test_discover_source_evidence_uses_provider_cascade_and_preserves_provenance
     assert provenance["candidate_url"] == product_url
 
 
-def test_brave_search_missing_api_key_returns_status_without_candidates(monkeypatch) -> None:
+def test_brave_search_missing_api_key_returns_status_without_candidates(
+    monkeypatch,
+) -> None:
     monkeypatch.delenv(BRAVE_SEARCH_API_KEY_ENV_VAR, raising=False)
     definition = _brave_definition()
 
-    result = BraveSearchProvider(definition, client=_FakeBraveClient(_brave_response())).discover_product(
+    result = BraveSearchProvider(
+        definition, client=_FakeBraveClient(_brave_response())
+    ).discover_product(
         product=_product(mpn="UTG-12CH", manufacturer="Toyotomi"),
         sources=load_source_registry().selected("all"),
     )
@@ -365,9 +415,15 @@ def test_brave_search_missing_api_key_returns_status_without_candidates(monkeypa
 
 
 def test_brave_search_query_generation_uses_model_or_mpn_then_brand() -> None:
-    assert build_brave_product_queries(_product(mpn="55C8L", manufacturer="TCL")) == ["55C8L TCL"]
-    assert build_brave_product_queries(_product(mpn="UTG-12CH", manufacturer="Toyotomi")) == ["UTG-12CH Toyotomi"]
-    assert build_brave_product_queries(_product(mpn="", model="HBA514BS3", manufacturer="Bosch")) == ["HBA514BS3 Bosch"]
+    assert build_brave_product_queries(_product(mpn="55C8L", manufacturer="TCL")) == [
+        "55C8L TCL"
+    ]
+    assert build_brave_product_queries(
+        _product(mpn="UTG-12CH", manufacturer="Toyotomi")
+    ) == ["UTG-12CH Toyotomi"]
+    assert build_brave_product_queries(
+        _product(mpn="", model="HBA514BS3", manufacturer="Bosch")
+    ) == ["HBA514BS3 Bosch"]
     assert build_brave_product_queries(
         _product(mpn="UTG-12CH", manufacturer="Toyotomi"),
         source=load_source_registry().get("bestprice"),
@@ -422,7 +478,9 @@ def test_brave_http_client_sends_subscription_token_header(monkeypatch) -> None:
             captured["headers"] = headers
             return _FakeBraveResponse(_brave_response())
 
-    monkeypatch.setattr("ecommerce.source_url_agent.brave_search.httpx.Client", FakeHttpxClient)
+    monkeypatch.setattr(
+        "ecommerce.source_url_agent.brave_search.httpx.Client", FakeHttpxClient
+    )
 
     response = HttpxBraveSearchClient().search(
         definition=_brave_definition(
@@ -456,7 +514,10 @@ def test_brave_http_client_sends_subscription_token_header(monkeypatch) -> None:
 def test_brave_json_response_parsing_from_web_results() -> None:
     items = brave_web_results(_brave_response(), max_results=10)
 
-    assert [(item.rank, item.url, item.title, item.description, item.extra_snippets) for item in items[:2]] == [
+    assert [
+        (item.rank, item.url, item.title, item.description, item.extra_snippets)
+        for item in items[:2]
+    ] == [
         (
             1,
             "https://www.skroutz.gr/s/123456/Toyotomi-UTG-12CH.html?utm_source=brave",
@@ -473,7 +534,10 @@ def test_brave_json_response_parsing_from_web_results() -> None:
         ),
     ]
     assert items[0].profile == {"name": "Skroutz", "long_name": "Skroutz.gr"}
-    assert items[0].fetch_metadata == {"page_fetched": "2026-05-01T10:00:00Z", "page_age": "May 1, 2026"}
+    assert items[0].fetch_metadata == {
+        "page_fetched": "2026-05-01T10:00:00Z",
+        "page_age": "May 1, 2026",
+    }
 
 
 def test_known_source_classification_and_product_url_filtering() -> None:
@@ -483,16 +547,27 @@ def test_known_source_classification_and_product_url_filtering() -> None:
     product_filter = SourceProductUrlFilter()
     skroutz = registry.get("skroutz")
 
-    assert classifier.classify("https://www.skroutz.gr/s/123/toyotomi.html").source_name == "skroutz"
-    assert classifier.classify("https://unknown.example/product") is None
-    assert product_filter.keep(skroutz, "https://www.skroutz.gr/s/123/toyotomi.html?utm_source=x") == (
-        "https://www.skroutz.gr/s/123/toyotomi.html"
+    assert (
+        classifier.classify("https://www.skroutz.gr/s/123/toyotomi.html").source_name
+        == "skroutz"
     )
-    assert product_filter.keep(skroutz, "https://www.skroutz.gr/c/1492/klimatistika.html") == ""
-    assert product_filter.keep(skroutz, "https://www.skroutz.gr/search?keyphrase=UTG-12CH") == ""
+    assert classifier.classify("https://unknown.example/product") is None
+    assert product_filter.keep(
+        skroutz, "https://www.skroutz.gr/s/123/toyotomi.html?utm_source=x"
+    ) == ("https://www.skroutz.gr/s/123/toyotomi.html")
+    assert (
+        product_filter.keep(skroutz, "https://www.skroutz.gr/c/1492/klimatistika.html")
+        == ""
+    )
+    assert (
+        product_filter.keep(skroutz, "https://www.skroutz.gr/search?keyphrase=UTG-12CH")
+        == ""
+    )
 
 
-def test_brave_search_provider_keeps_known_product_urls_grouped_by_source(monkeypatch) -> None:
+def test_brave_search_provider_keeps_known_product_urls_grouped_by_source(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
     registry = load_source_registry()
     sources = registry.selected("all")
@@ -511,28 +586,50 @@ def test_brave_search_provider_keeps_known_product_urls_grouped_by_source(monkey
         "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html",
         "https://www.plaisio.gr/product/oikiakes-syskeues/klimatistika/toyotomi/klimatistiko-toyotomi-utg-12ch",
     ]
-    assert result.kept_candidates_by_source == {"skroutz": 1, "bestprice": 1, "plaisio": 1}
+    assert result.kept_candidates_by_source == {
+        "skroutz": 1,
+        "bestprice": 1,
+        "plaisio": 1,
+    }
     assert result.discarded_count == 2
-    assert result.to_summary()["kept_candidates_by_source"] == {"skroutz": 1, "bestprice": 1, "plaisio": 1}
+    assert result.to_summary()["kept_candidates_by_source"] == {
+        "skroutz": 1,
+        "bestprice": 1,
+        "plaisio": 1,
+    }
     provenance = result.candidates[0].provenance.to_json()
     assert provenance["provider_name"] == BRAVE_SEARCH_PROVIDER_NAME
     assert provenance["discovery_method"] == BRAVE_DISCOVERY_METHOD
-    assert provenance["search_url"].startswith("https://api.search.brave.com/res/v1/web/search?")
+    assert provenance["search_url"].startswith(
+        "https://api.search.brave.com/res/v1/web/search?"
+    )
     assert "fake-token" not in provenance["search_url"]
     assert result.candidates[0].provider_evidence_json() == {
         "provider_title": "Toyotomi UTG-12CH | Skroutz",
         "provider_description": "Skroutz product page",
-        "provider_extra_snippets": ["Toyotomi UTG-12CH air conditioner", "MPN UTG-12CH by Toyotomi"],
+        "provider_extra_snippets": [
+            "Toyotomi UTG-12CH air conditioner",
+            "MPN UTG-12CH by Toyotomi",
+        ],
         "provider_profile": {"name": "Skroutz", "long_name": "Skroutz.gr"},
-        "provider_fetch_metadata": {"page_fetched": "2026-05-01T10:00:00Z", "page_age": "May 1, 2026"},
+        "provider_fetch_metadata": {
+            "page_fetched": "2026-05-01T10:00:00Z",
+            "page_age": "May 1, 2026",
+        },
     }
 
 
-def test_brave_search_product_evidence_fetches_only_kept_candidates(monkeypatch) -> None:
+def test_brave_search_product_evidence_fetches_only_kept_candidates(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
     registry = load_source_registry()
     sources = registry.selected("all")
-    product = _product(mpn="UTG-12CH", manufacturer="Toyotomi", name="Toyotomi UTG-12CH air conditioner")
+    product = _product(
+        mpn="UTG-12CH",
+        manufacturer="Toyotomi",
+        name="Toyotomi UTG-12CH air conditioner",
+    )
     provider_registry = SearchProviderRegistry(
         default_cascade=("brave_search",),
         providers={
@@ -552,9 +649,27 @@ def test_brave_search_product_evidence_fetches_only_kept_candidates(monkeypatch)
     product_html = "<html><head><title>Toyotomi UTG-12CH</title></head><body>Toyotomi UTG-12CH</body></html>"
     browser = _FakeBrowser(
         {
-            skroutz_url: PageSnapshot(skroutz_url, skroutz_url, "Toyotomi UTG-12CH", product_html, "Toyotomi UTG-12CH"),
-            bestprice_url: PageSnapshot(bestprice_url, bestprice_url, "Toyotomi UTG-12CH", product_html, "Toyotomi UTG-12CH"),
-            plaisio_url: PageSnapshot(plaisio_url, plaisio_url, "Toyotomi UTG-12CH", product_html, "Toyotomi UTG-12CH"),
+            skroutz_url: PageSnapshot(
+                skroutz_url,
+                skroutz_url,
+                "Toyotomi UTG-12CH",
+                product_html,
+                "Toyotomi UTG-12CH",
+            ),
+            bestprice_url: PageSnapshot(
+                bestprice_url,
+                bestprice_url,
+                "Toyotomi UTG-12CH",
+                product_html,
+                "Toyotomi UTG-12CH",
+            ),
+            plaisio_url: PageSnapshot(
+                plaisio_url,
+                plaisio_url,
+                "Toyotomi UTG-12CH",
+                product_html,
+                "Toyotomi UTG-12CH",
+            ),
         }
     )
     client = _FakeBraveClient(_brave_response())
@@ -586,10 +701,16 @@ def test_brave_search_product_evidence_fetches_only_kept_candidates(monkeypatch)
     }
 
 
-def test_brave_search_snippet_fallback_scores_for_review_when_page_fetch_fails(monkeypatch) -> None:
+def test_brave_search_snippet_fallback_scores_for_review_when_page_fetch_fails(
+    monkeypatch,
+) -> None:
     monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
     source = load_source_registry().get("bestprice")
-    product = _product(mpn="UTG-12CH", manufacturer="Toyotomi", name="Toyotomi UTG-12CH air conditioner")
+    product = _product(
+        mpn="UTG-12CH",
+        manufacturer="Toyotomi",
+        name="Toyotomi UTG-12CH air conditioner",
+    )
     bestprice_url = "https://www.bestprice.gr/item/987654/toyotomi-utg-12ch.html"
     provider_registry = SearchProviderRegistry(
         default_cascade=("brave_search",),
@@ -635,8 +756,14 @@ def test_brave_search_snippet_fallback_scores_for_review_when_page_fetch_fails(m
     score = score_candidate(product=product, source=source, evidence=evidence)
 
     assert evidence.evidence_source == "provider_search_result"
-    assert evidence.to_json()["provider_provenance"]["provider_title"] == "Toyotomi UTG-12CH | BestPrice"
-    assert evidence.to_json()["provider_provenance"]["page_fetch_error_code"] == "inaccessible"
+    assert (
+        evidence.to_json()["provider_provenance"]["provider_title"]
+        == "Toyotomi UTG-12CH | BestPrice"
+    )
+    assert (
+        evidence.to_json()["provider_provenance"]["page_fetch_error_code"]
+        == "inaccessible"
+    )
     assert evidence.exact_mpn_found
     assert evidence.brand_found
     assert score.match_status == "needs_review"
@@ -644,9 +771,15 @@ def test_brave_search_snippet_fallback_scores_for_review_when_page_fetch_fails(m
     assert score.match_status != "matched"
 
 
-def test_product_level_execution_calls_brave_once_per_product_not_per_source(monkeypatch, tmp_path: Path) -> None:
+def test_product_level_execution_calls_brave_once_per_product_not_per_source(
+    monkeypatch, tmp_path: Path
+) -> None:
     registry = load_source_registry()
-    sources = [registry.get("skroutz"), registry.get("bestprice"), registry.get("plaisio")]
+    sources = [
+        registry.get("skroutz"),
+        registry.get("bestprice"),
+        registry.get("plaisio"),
+    ]
     calls: list[tuple[str, tuple[str, ...]]] = []
 
     class FakeBrowserSession:
@@ -659,7 +792,15 @@ def test_product_level_execution_calls_brave_once_per_product_not_per_source(mon
         def __exit__(self, exc_type, exc, traceback) -> None:
             return None
 
-    def fake_product_level_evidence(*, product, sources, browser, provider_registry, max_candidates, rate_limit_seconds):
+    def fake_product_level_evidence(
+        *,
+        product,
+        sources,
+        browser,
+        provider_registry,
+        max_candidates,
+        rate_limit_seconds,
+    ):
         del browser, provider_registry, max_candidates, rate_limit_seconds
         calls.append((product.model, tuple(source.source_name for source in sources)))
         return {
@@ -673,13 +814,19 @@ def test_product_level_execution_calls_brave_once_per_product_not_per_source(mon
         }
 
     monkeypatch.setattr(task_execution, "SourceUrlBrowserSession", FakeBrowserSession)
-    monkeypatch.setattr(task_execution, "discover_product_level_search_evidence", fake_product_level_evidence)
+    monkeypatch.setattr(
+        task_execution,
+        "discover_product_level_search_evidence",
+        fake_product_level_evidence,
+    )
 
     task_execution.run_with_browser(
         run_id="run-1",
         products=[_product(model="111111", mpn="UTG-12CH", manufacturer="Toyotomi")],
         sources=sources,
-        options=SourceUrlAgentOptions(mode="catalog", source="all", output_dir=tmp_path, dry_run=True),
+        options=SourceUrlAgentOptions(
+            mode="catalog", source="all", output_dir=tmp_path, dry_run=True
+        ),
         session=None,
     )
 
@@ -707,7 +854,9 @@ def test_brave_search_provider_dedupes_and_stops_after_one_query(monkeypatch) ->
     )
 
     assert len(client.requests) == 1
-    assert [candidate.candidate_url for candidate in result.candidates] == ["https://www.skroutz.gr/s/1/toyotomi.html"]
+    assert [candidate.candidate_url for candidate in result.candidates] == [
+        "https://www.skroutz.gr/s/1/toyotomi.html"
+    ]
 
 
 def test_brave_search_http_error_statuses(monkeypatch) -> None:
@@ -715,12 +864,12 @@ def test_brave_search_http_error_statuses(monkeypatch) -> None:
     product = _product(mpn="UTG-12CH", manufacturer="Toyotomi")
     source = load_source_registry().get("skroutz")
 
-    unauthorized = BraveSearchProvider(_brave_definition(), client=_FakeBraveClient({}, status_code=401)).discover_product(
-        product=product, sources=[source]
-    )
-    rate_limited = BraveSearchProvider(_brave_definition(), client=_FakeBraveClient({}, status_code=429)).discover_product(
-        product=product, sources=[source]
-    )
+    unauthorized = BraveSearchProvider(
+        _brave_definition(), client=_FakeBraveClient({}, status_code=401)
+    ).discover_product(product=product, sources=[source])
+    rate_limited = BraveSearchProvider(
+        _brave_definition(), client=_FakeBraveClient({}, status_code=429)
+    ).discover_product(product=product, sources=[source])
 
     assert unauthorized.status == "unauthorized"
     assert unauthorized.candidates == []
@@ -733,10 +882,12 @@ def test_brave_search_timeout_and_invalid_json_statuses(monkeypatch) -> None:
     product = _product(mpn="UTG-12CH", manufacturer="Toyotomi")
     source = load_source_registry().get("skroutz")
 
-    timeout = BraveSearchProvider(_brave_definition(), client=_TimeoutBraveClient()).discover_product(product=product, sources=[source])
-    invalid_json = BraveSearchProvider(_brave_definition(), client=_InvalidJsonBraveClient()).discover_product(
-        product=product, sources=[source]
-    )
+    timeout = BraveSearchProvider(
+        _brave_definition(), client=_TimeoutBraveClient()
+    ).discover_product(product=product, sources=[source])
+    invalid_json = BraveSearchProvider(
+        _brave_definition(), client=_InvalidJsonBraveClient()
+    ).discover_product(product=product, sources=[source])
 
     assert timeout.status == "timeout"
     assert timeout.candidates == []
@@ -776,7 +927,12 @@ def _brave_response() -> dict:
                         "<strong>Toyotomi</strong> UTG-12CH air conditioner",
                         "MPN <strong>UTG-12CH</strong> by Toyotomi",
                     ],
-                    "profile": {"name": "Skroutz", "long_name": "Skroutz.gr", "img": None, "nested": {"ignored": True}},
+                    "profile": {
+                        "name": "Skroutz",
+                        "long_name": "Skroutz.gr",
+                        "img": None,
+                        "nested": {"ignored": True},
+                    },
                     "page_fetched": "2026-05-01T10:00:00Z",
                     "page_age": "May 1, 2026",
                 },
@@ -856,7 +1012,9 @@ class _FakeBrowser:
         self.snapshots = snapshots
         self.fetched_urls: list[str] = []
 
-    def fetch_snapshot(self, url: str, *, rate_limit_seconds: float | None = None) -> PageSnapshot:
+    def fetch_snapshot(
+        self, url: str, *, rate_limit_seconds: float | None = None
+    ) -> PageSnapshot:
         del rate_limit_seconds
         self.fetched_urls.append(url)
         try:

@@ -8,10 +8,15 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from ecommerce.source_url_agent.artifacts import SOURCE_URL_AGENT_RUNS_DIR, build_rule_suggestions
+from ecommerce.source_url_agent.artifacts import (
+    SOURCE_URL_AGENT_RUNS_DIR,
+    build_rule_suggestions,
+)
 
 
-def analyze_run_artifacts(run_id: str, *, output_dir: Path | None = None) -> dict[str, Any]:
+def analyze_run_artifacts(
+    run_id: str, *, output_dir: Path | None = None
+) -> dict[str, Any]:
     root = output_dir or SOURCE_URL_AGENT_RUNS_DIR
     run_dir = Path(root) / _safe_run_id(run_id)
     results_path = run_dir / "source_url_results.csv"
@@ -20,8 +25,12 @@ def analyze_run_artifacts(run_id: str, *, output_dir: Path | None = None) -> dic
     rows = _read_csv(results_path)
     by_status = Counter(row.get("match_status", "") for row in rows)
     by_source = _counter_by(rows, "source_name", "match_status")
-    repeated_errors = _counter_by(rows, "source_name", "match_method", status_filter="error")
-    title_only_count = sum(1 for row in rows if "Title-only matches" in (row.get("notes") or ""))
+    repeated_errors = _counter_by(
+        rows, "source_name", "match_method", status_filter="error"
+    )
+    title_only_count = sum(
+        1 for row in rows if "Title-only matches" in (row.get("notes") or "")
+    )
     missing_identifier_count = sum(
         1
         for row in rows
@@ -34,13 +43,19 @@ def analyze_run_artifacts(run_id: str, *, output_dir: Path | None = None) -> dic
         "candidate_count": len(rows),
         "by_status": dict(by_status),
         "by_source": {source: dict(counter) for source, counter in by_source.items()},
-        "repeated_errors": {source: dict(counter) for source, counter in repeated_errors.items()},
+        "repeated_errors": {
+            source: dict(counter) for source, counter in repeated_errors.items()
+        },
         "title_only_count": title_only_count,
         "missing_identifier_count": missing_identifier_count,
-        "recommendations": _recommendations(by_status, repeated_errors, title_only_count, missing_identifier_count),
+        "recommendations": _recommendations(
+            by_status, repeated_errors, title_only_count, missing_identifier_count
+        ),
     }
     output_path = run_dir / "analysis_summary.json"
-    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    output_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     return payload
 
 
@@ -49,7 +64,13 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return [dict(row) for row in csv.DictReader(handle)]
 
 
-def _counter_by(rows: list[dict[str, str]], group_key: str, value_key: str, *, status_filter: str | None = None) -> dict[str, Counter[str]]:
+def _counter_by(
+    rows: list[dict[str, str]],
+    group_key: str,
+    value_key: str,
+    *,
+    status_filter: str | None = None,
+) -> dict[str, Counter[str]]:
     grouped: dict[str, Counter[str]] = {}
     for row in rows:
         if status_filter is not None and row.get("match_status") != status_filter:

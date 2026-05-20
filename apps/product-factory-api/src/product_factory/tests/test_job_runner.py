@@ -7,9 +7,17 @@ from pathlib import Path
 
 from product_factory.jobs import runner as job_runner
 from product_factory.jobs.models import JobRecord, JobStatus, JobType
-from product_factory.jobs.runner import LogCallback, SequentialJobRunner, run_full_pipeline_job
+from product_factory.jobs.runner import (
+    LogCallback,
+    SequentialJobRunner,
+    run_full_pipeline_job,
+)
 from product_factory.jobs.store import JobStore
-from product_factory.services.authoring_service import AuthoringStatus, IntroTextTaskStatus, SeoMetaTaskStatus
+from product_factory.services.authoring_service import (
+    AuthoringStatus,
+    IntroTextTaskStatus,
+    SeoMetaTaskStatus,
+)
 from product_factory.services import (
     PrepareRequest,
     PublishRequest,
@@ -110,7 +118,9 @@ def test_runner_marks_job_failed_when_callback_raises(tmp_path: Path) -> None:
     assert "Failed publish job: boom" in logs
 
 
-def test_runner_stop_active_job_preserves_cancelled_after_callback_finishes(tmp_path: Path) -> None:
+def test_runner_stop_active_job_preserves_cancelled_after_callback_finishes(
+    tmp_path: Path,
+) -> None:
     store = JobStore(tmp_path / "jobs")
     callback_started = threading.Event()
     release_callback = threading.Event()
@@ -143,7 +153,9 @@ def test_runner_stop_active_job_preserves_cancelled_after_callback_finishes(tmp_
     assert "Job finished after stop request; preserving cancelled status." in logs
 
 
-def test_runner_stop_terminal_jobs_is_idempotent_and_does_not_append_logs(tmp_path: Path) -> None:
+def test_runner_stop_terminal_jobs_is_idempotent_and_does_not_append_logs(
+    tmp_path: Path,
+) -> None:
     store = JobStore(tmp_path / "jobs")
     runner = SequentialJobRunner(store, job_runner.service_runner_callback)
     succeeded = store.enqueue(JobType.PREPARE, {"model": "111111"}, job_id="succeeded")
@@ -177,7 +189,9 @@ def test_runner_stop_terminal_jobs_is_idempotent_and_does_not_append_logs(tmp_pa
     } == before_logs
 
 
-def test_default_runner_calls_prepare_service_and_captures_artifacts(tmp_path: Path, monkeypatch) -> None:
+def test_default_runner_calls_prepare_service_and_captures_artifacts(
+    tmp_path: Path, monkeypatch
+) -> None:
     store = JobStore(tmp_path / "jobs")
     calls: list[PrepareRequest] = []
 
@@ -195,8 +209,16 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(tmp_path: P
             artifacts=RunArtifacts(
                 scrape_dir=tmp_path / "work" / request.model / "scrape",
                 llm_dir=tmp_path / "work" / request.model / "llm",
-                source_json_path=tmp_path / "work" / request.model / "scrape" / f"{request.model}.source.json",
-                llm_task_manifest_path=tmp_path / "work" / request.model / "llm" / "task_manifest.json",
+                source_json_path=tmp_path
+                / "work"
+                / request.model
+                / "scrape"
+                / f"{request.model}.source.json",
+                llm_task_manifest_path=tmp_path
+                / "work"
+                / request.model
+                / "llm"
+                / "task_manifest.json",
                 metadata_path=tmp_path / "work" / request.model / "prepare.run.json",
             ),
             details={
@@ -257,24 +279,39 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(tmp_path: P
     assert loaded.artifacts == {
         "scrape_dir": str(tmp_path / "work" / "233541" / "scrape"),
         "llm_dir": str(tmp_path / "work" / "233541" / "llm"),
-        "source_json_path": str(tmp_path / "work" / "233541" / "scrape" / "233541.source.json"),
-        "llm_task_manifest_path": str(tmp_path / "work" / "233541" / "llm" / "task_manifest.json"),
+        "source_json_path": str(
+            tmp_path / "work" / "233541" / "scrape" / "233541.source.json"
+        ),
+        "llm_task_manifest_path": str(
+            tmp_path / "work" / "233541" / "llm" / "task_manifest.json"
+        ),
         "metadata_path": str(tmp_path / "work" / "233541" / "prepare.run.json"),
     }
     assert "Calling prepare service." in logs
     assert "Prepare gallery_url provided: True" in logs
-    assert "Prepare gallery image extraction URL: https://www.electronet.gr/gallery" in logs
+    assert (
+        "Prepare gallery image extraction URL: https://www.electronet.gr/gallery"
+        in logs
+    )
     assert "Prepare characteristics_url provided: True" in logs
-    assert "Prepare characteristics/specifications extraction URL: https://www.electronet.gr/specs" in logs
+    assert (
+        "Prepare characteristics/specifications extraction URL: https://www.electronet.gr/specs"
+        in logs
+    )
     assert "Requested second OpenCart image index: 4" in logs
     assert "Prepare service returned status: completed" in logs
     assert "Prepare warning: prepare warning" in logs
     assert "Prepare whole-gallery mode confirmed by artifacts." in logs
     assert "Prepare gallery source-filter counts: before=4, after=3" in logs
-    assert "Prepare Skroutz skip-last gallery rule applied for source domain: skroutz.gr" in logs
+    assert (
+        "Prepare Skroutz skip-last gallery rule applied for source domain: skroutz.gr"
+        in logs
+    )
 
 
-def test_default_runner_marks_prepare_service_error_failed(tmp_path: Path, monkeypatch) -> None:
+def test_default_runner_marks_prepare_service_error_failed(
+    tmp_path: Path, monkeypatch
+) -> None:
     store = JobStore(tmp_path / "jobs")
 
     def fake_prepare_product(_request: PrepareRequest) -> ServiceResult:
@@ -304,7 +341,9 @@ def test_default_runner_marks_prepare_service_error_failed(tmp_path: Path, monke
     assert "Failed prepare job [parse_failure]: bad source" in logs
 
 
-def test_default_runner_calls_render_service_and_captures_artifacts(tmp_path: Path, monkeypatch) -> None:
+def test_default_runner_calls_render_service_and_captures_artifacts(
+    tmp_path: Path, monkeypatch
+) -> None:
     store = JobStore(tmp_path / "jobs")
     calls: list[RenderRequest] = []
 
@@ -318,9 +357,17 @@ def test_default_runner_calls_render_service_and_captures_artifacts(tmp_path: Pa
             ),
             artifacts=RunArtifacts(
                 candidate_dir=tmp_path / "work" / request.model / "candidate",
-                candidate_csv_path=tmp_path / "work" / request.model / "candidate" / f"{request.model}.csv",
+                candidate_csv_path=tmp_path
+                / "work"
+                / request.model
+                / "candidate"
+                / f"{request.model}.csv",
                 published_csv_path=tmp_path / "products" / f"{request.model}.csv",
-                validation_report_path=tmp_path / "work" / request.model / "candidate" / f"{request.model}.validation.json",
+                validation_report_path=tmp_path
+                / "work"
+                / request.model
+                / "candidate"
+                / f"{request.model}.validation.json",
                 metadata_path=tmp_path / "work" / request.model / "render.run.json",
             ),
             details={"validation_ok": True, "published": True},
@@ -344,16 +391,22 @@ def test_default_runner_calls_render_service_and_captures_artifacts(tmp_path: Pa
     assert loaded.message == "Render job succeeded."
     assert loaded.artifacts == {
         "candidate_dir": str(tmp_path / "work" / "233541" / "candidate"),
-        "candidate_csv_path": str(tmp_path / "work" / "233541" / "candidate" / "233541.csv"),
+        "candidate_csv_path": str(
+            tmp_path / "work" / "233541" / "candidate" / "233541.csv"
+        ),
         "published_csv_path": str(tmp_path / "products" / "233541.csv"),
-        "validation_report_path": str(tmp_path / "work" / "233541" / "candidate" / "233541.validation.json"),
+        "validation_report_path": str(
+            tmp_path / "work" / "233541" / "candidate" / "233541.validation.json"
+        ),
         "metadata_path": str(tmp_path / "work" / "233541" / "render.run.json"),
     }
     assert "Calling render service." in logs
     assert "Render service returned status: completed" in logs
 
 
-def test_default_runner_marks_render_service_failed_status_failed(tmp_path: Path, monkeypatch) -> None:
+def test_default_runner_marks_render_service_failed_status_failed(
+    tmp_path: Path, monkeypatch
+) -> None:
     store = JobStore(tmp_path / "jobs")
 
     def fake_render_product(request: RenderRequest) -> ServiceResult:
@@ -366,7 +419,11 @@ def test_default_runner_marks_render_service_failed_status_failed(tmp_path: Path
                 error_detail="Candidate validation failed",
             ),
             artifacts=RunArtifacts(
-                validation_report_path=tmp_path / "work" / request.model / "candidate" / f"{request.model}.validation.json",
+                validation_report_path=tmp_path
+                / "work"
+                / request.model
+                / "candidate"
+                / f"{request.model}.validation.json",
             ),
         )
 
@@ -386,11 +443,15 @@ def test_default_runner_marks_render_service_failed_status_failed(tmp_path: Path
     assert failed.error == "Candidate validation failed"
     assert failed.error_code == ServiceErrorCode.VALIDATION_FAILURE.value
     assert failed.artifacts == {
-        "validation_report_path": str(tmp_path / "work" / "233541" / "candidate" / "233541.validation.json")
+        "validation_report_path": str(
+            tmp_path / "work" / "233541" / "candidate" / "233541.validation.json"
+        )
     }
 
 
-def test_default_runner_calls_publish_service_and_captures_artifacts(tmp_path: Path, monkeypatch) -> None:
+def test_default_runner_calls_publish_service_and_captures_artifacts(
+    tmp_path: Path, monkeypatch
+) -> None:
     store = JobStore(tmp_path / "jobs")
     calls: list[PublishRequest] = []
 
@@ -409,8 +470,12 @@ def test_default_runner_calls_publish_service_and_captures_artifacts(tmp_path: P
             ),
             details={
                 "publish_status": "success",
-                "upload_report_path": str(tmp_path / "work" / request.model / "upload.opencart.json"),
-                "import_report_path": str(tmp_path / "work" / request.model / "import.opencart.json"),
+                "upload_report_path": str(
+                    tmp_path / "work" / request.model / "upload.opencart.json"
+                ),
+                "import_report_path": str(
+                    tmp_path / "work" / request.model / "import.opencart.json"
+                ),
             },
         )
 
@@ -435,21 +500,29 @@ def test_default_runner_calls_publish_service_and_captures_artifacts(tmp_path: P
 
     loaded = store.get_job(record.job_id)
     logs = store.read_logs(record.job_id)
-    assert calls == [PublishRequest(model="233541", current_job_product_file=product_file)]
+    assert calls == [
+        PublishRequest(model="233541", current_job_product_file=product_file)
+    ]
     assert loaded.status == JobStatus.SUCCEEDED
     assert loaded.message == "Publish job succeeded."
     assert loaded.artifacts == {
         "model_root": str(tmp_path / "work" / "233541"),
         "published_csv_path": str(product_file),
         "metadata_path": str(tmp_path / "work" / "233541" / "publish.run.json"),
-        "upload_report_path": str(tmp_path / "work" / "233541" / "upload.opencart.json"),
-        "import_report_path": str(tmp_path / "work" / "233541" / "import.opencart.json"),
+        "upload_report_path": str(
+            tmp_path / "work" / "233541" / "upload.opencart.json"
+        ),
+        "import_report_path": str(
+            tmp_path / "work" / "233541" / "import.opencart.json"
+        ),
     }
     assert "Calling publish service." in logs
     assert "Publish service returned status: completed" in logs
 
 
-def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(tmp_path: Path) -> None:
+def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(
+    tmp_path: Path,
+) -> None:
     model = "233541"
     source_url = "https://www.electronet.gr/example"
     record = JobRecord(
@@ -479,11 +552,21 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(tmp_path
         or _service_result(
             request.model,
             RunType.PREPARE,
-            artifacts=RunArtifacts(source_json_path=tmp_path / "work" / model / "scrape" / f"{model}.source.json"),
+            artifacts=RunArtifacts(
+                source_json_path=tmp_path
+                / "work"
+                / model
+                / "scrape"
+                / f"{model}.source.json"
+            ),
         ),
-        run_intro_text_authoring_fn=lambda model, retry=False: calls.append(("intro", model, retry))
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append(
+            ("intro", model, retry)
+        )
         or _authoring_status(tmp_path / "work" / model / "llm", model=model),
-        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append(("seo", model, retry))
+        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append(
+            ("seo", model, retry)
+        )
         or _authoring_status(tmp_path / "work" / model / "llm", model=model),
         render_product_fn=lambda request: calls.append(request)
         or _service_result(
@@ -517,7 +600,9 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(tmp_path
         ("seo", model, False),
         RenderRequest(model=model),
     ]
-    assert calls[4] == PublishRequest(model=model, current_job_product_file=product_file)
+    assert calls[4] == PublishRequest(
+        model=model, current_job_product_file=product_file
+    )
     assert "Full pipeline stage prepare starting." in logs
     assert "Prepare whole-gallery mode active." in logs
     assert "Full pipeline stage publish succeeded." in logs
@@ -551,9 +636,13 @@ def test_full_pipeline_retry_from_artifacts_skips_prepare_and_reruns_remaining_s
         logs.append,
         prepare_product_fn=lambda request: calls.append(request)
         or _service_result(request.model, RunType.PREPARE),
-        run_intro_text_authoring_fn=lambda model, retry=False: calls.append(("intro", model, retry))
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append(
+            ("intro", model, retry)
+        )
         or _authoring_status(tmp_path / "work" / model / "llm", model=model),
-        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append(("seo", model, retry))
+        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append(
+            ("seo", model, retry)
+        )
         or _authoring_status(tmp_path / "work" / model / "llm", model=model),
         render_product_fn=lambda request: calls.append(request)
         or _service_result(
@@ -576,7 +665,10 @@ def test_full_pipeline_retry_from_artifacts_skips_prepare_and_reruns_remaining_s
         RenderRequest(model=model),
         PublishRequest(model=model, current_job_product_file=product_file),
     ]
-    assert "Retry from prepared artifacts active; skipping prepare/source scraping." in logs
+    assert (
+        "Retry from prepared artifacts active; skipping prepare/source scraping."
+        in logs
+    )
     assert "Full pipeline stage prepare starting." not in logs
 
 
@@ -617,9 +709,15 @@ def test_full_pipeline_retry_from_artifacts_fails_when_prepared_artifacts_are_mi
 
     assert result.status == JobStatus.FAILED
     assert result.error_code == "prepared_artifacts_missing"
-    assert result.message == "Cannot retry without scraping because prepared artifacts are missing."
+    assert (
+        result.message
+        == "Cannot retry without scraping because prepared artifacts are missing."
+    )
     assert calls == []
-    assert "Retry from prepared artifacts active; skipping prepare/source scraping." in logs
+    assert (
+        "Retry from prepared artifacts active; skipping prepare/source scraping."
+        in logs
+    )
     assert any("Prepared artifacts missing for retry:" in line for line in logs)
 
 
@@ -666,7 +764,9 @@ def test_full_pipeline_publish_failure_preserves_render_success() -> None:
     assert "Full pipeline publish warning: publish failed" in logs
 
 
-def test_subprocess_runner_launches_child_and_records_process_metadata(tmp_path: Path) -> None:
+def test_subprocess_runner_launches_child_and_records_process_metadata(
+    tmp_path: Path,
+) -> None:
     store = JobStore(tmp_path / "jobs")
     code = (
         "import sys;"
@@ -679,7 +779,14 @@ def test_subprocess_runner_launches_child_and_records_process_metadata(tmp_path:
     )
 
     def command(record: JobRecord) -> list[str]:
-        return [sys.executable, "-c", code, record.job_id, str(store.jobs_dir), str(tmp_path / "meta.json")]
+        return [
+            sys.executable,
+            "-c",
+            code,
+            record.job_id,
+            str(store.jobs_dir),
+            str(tmp_path / "meta.json"),
+        ]
 
     runner = SequentialJobRunner(store, command_builder=command)
     record = store.enqueue(JobType.RENDER, {"model": "233541"}, job_id="job-1")
@@ -703,11 +810,17 @@ def test_subprocess_runner_launches_child_and_records_process_metadata(tmp_path:
     assert "stdout: child stdout" in logs
 
 
-def test_nonzero_child_exit_marks_failed_when_no_terminal_status_exists(tmp_path: Path) -> None:
+def test_nonzero_child_exit_marks_failed_when_no_terminal_status_exists(
+    tmp_path: Path,
+) -> None:
     store = JobStore(tmp_path / "jobs")
     runner = SequentialJobRunner(
         store,
-        command_builder=lambda _record: [sys.executable, "-c", "import sys; sys.exit(7)"],
+        command_builder=lambda _record: [
+            sys.executable,
+            "-c",
+            "import sys; sys.exit(7)",
+        ],
     )
     record = store.enqueue(JobType.PUBLISH, {"model": "233541"}, job_id="job-1")
 
@@ -723,7 +836,9 @@ def test_nonzero_child_exit_marks_failed_when_no_terminal_status_exists(tmp_path
     assert loaded.error == "Job subprocess exited with code 7."
 
 
-def test_parent_preserves_terminal_status_written_by_child_on_nonzero_exit(tmp_path: Path) -> None:
+def test_parent_preserves_terminal_status_written_by_child_on_nonzero_exit(
+    tmp_path: Path,
+) -> None:
     store = JobStore(tmp_path / "jobs")
     code = (
         "import sys;"
@@ -734,9 +849,19 @@ def test_parent_preserves_terminal_status_written_by_child_on_nonzero_exit(tmp_p
     )
     runner = SequentialJobRunner(
         store,
-        command_builder=lambda record: [sys.executable, "-c", code, record.job_id, str(store.jobs_dir)],
+        command_builder=lambda record: [
+            sys.executable,
+            "-c",
+            code,
+            record.job_id,
+            str(store.jobs_dir),
+        ],
     )
-    record = store.enqueue(JobType.PREPARE, {"model": "233541", "url": "https://example.invalid"}, job_id="job-1")
+    record = store.enqueue(
+        JobType.PREPARE,
+        {"model": "233541", "url": "https://example.invalid"},
+        job_id="job-1",
+    )
 
     try:
         runner.enqueue(record.job_id)
@@ -750,14 +875,20 @@ def test_parent_preserves_terminal_status_written_by_child_on_nonzero_exit(tmp_p
     assert loaded.exit_code == 9
 
 
-def test_stop_queued_job_in_runner_queue_marks_cancelled_and_never_launches(tmp_path: Path) -> None:
+def test_stop_queued_job_in_runner_queue_marks_cancelled_and_never_launches(
+    tmp_path: Path,
+) -> None:
     store = JobStore(tmp_path / "jobs")
     marker = tmp_path / "launched.txt"
     sleeper = "import time; time.sleep(0.5)"
     marker_code = f"from pathlib import Path; Path({str(marker)!r}).write_text('launched', encoding='utf-8')"
 
     def command(record: JobRecord) -> list[str]:
-        return [sys.executable, "-c", sleeper if record.job_id == "job-1" else marker_code]
+        return [
+            sys.executable,
+            "-c",
+            sleeper if record.job_id == "job-1" else marker_code,
+        ]
 
     runner = SequentialJobRunner(store, command_builder=command)
     first = store.enqueue(JobType.RENDER, {"model": "111111"}, job_id="job-1")
@@ -776,7 +907,9 @@ def test_stop_queued_job_in_runner_queue_marks_cancelled_and_never_launches(tmp_
     assert stopped.status == JobStatus.CANCELLED
     assert store.get_job(second.job_id).status == JobStatus.CANCELLED
     assert not marker.exists()
-    assert "Stop requested by operator before job started." in store.read_logs(second.job_id)
+    assert "Stop requested by operator before job started." in store.read_logs(
+        second.job_id
+    )
 
 
 def test_stop_running_child_graceful_terminate_marks_cancelled(tmp_path: Path) -> None:
@@ -809,7 +942,9 @@ def test_stop_running_child_graceful_terminate_marks_cancelled(tmp_path: Path) -
     assert final.termination_mode in {"graceful", "process_exited"}
 
 
-def test_stop_running_child_force_kills_after_timeout(tmp_path: Path, monkeypatch) -> None:
+def test_stop_running_child_force_kills_after_timeout(
+    tmp_path: Path, monkeypatch
+) -> None:
     store = JobStore(tmp_path / "jobs")
     code = "import time; print('ready', flush=True); time.sleep(30)"
     monkeypatch.setattr(job_runner, "_terminate_process_tree", lambda _process: None)
@@ -842,7 +977,9 @@ def test_stop_running_child_force_kills_after_timeout(tmp_path: Path, monkeypatc
     assert final.killed_at is not None
 
 
-def test_same_model_jobs_do_not_run_concurrently_with_multiple_workers(tmp_path: Path) -> None:
+def test_same_model_jobs_do_not_run_concurrently_with_multiple_workers(
+    tmp_path: Path,
+) -> None:
     store = JobStore(tmp_path / "jobs")
     code = (
         "import sys,time;"
@@ -855,7 +992,14 @@ def test_same_model_jobs_do_not_run_concurrently_with_multiple_workers(tmp_path:
 
     def command(record: JobRecord) -> list[str]:
         marker = tmp_path / f"{record.job_id}.started"
-        return [sys.executable, "-c", code, str(marker), record.job_id, str(store.jobs_dir)]
+        return [
+            sys.executable,
+            "-c",
+            code,
+            str(marker),
+            record.job_id,
+            str(store.jobs_dir),
+        ]
 
     runner = SequentialJobRunner(store, command_builder=command, max_workers=2)
     first = store.enqueue(JobType.RENDER, {"model": " ABC123 "}, job_id="job-1")

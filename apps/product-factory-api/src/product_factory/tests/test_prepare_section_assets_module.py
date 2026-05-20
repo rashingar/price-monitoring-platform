@@ -34,7 +34,9 @@ class RecordingFetcher:
         return self.download_result
 
 
-def test_download_section_assets_returns_empty_result_without_fetching_when_no_images(tmp_path: Path) -> None:
+def test_download_section_assets_returns_empty_result_without_fetching_when_no_images(
+    tmp_path: Path,
+) -> None:
     fetcher = RecordingFetcher()
 
     result = download_section_assets(
@@ -49,7 +51,9 @@ def test_download_section_assets_returns_empty_result_without_fetching_when_no_i
     assert fetcher.calls == []
 
 
-def test_download_section_assets_keeps_fetch_errors_warning_only_on_non_strict_path(tmp_path: Path) -> None:
+def test_download_section_assets_keeps_fetch_errors_warning_only_on_non_strict_path(
+    tmp_path: Path,
+) -> None:
     fetcher = RecordingFetcher(download_error=FetchError("direct-download-failed"))
     images = [GalleryImage(url="https://cdn.example/one.jpg", alt="One", position=1)]
 
@@ -61,14 +65,18 @@ def test_download_section_assets_keeps_fetch_errors_warning_only_on_non_strict_p
         strict=False,
     )
 
-    assert fetcher.calls == [{"images": images, "output_dir": tmp_path, "requested_sections": 3}]
+    assert fetcher.calls == [
+        {"images": images, "output_dir": tmp_path, "requested_sections": 3}
+    ]
     assert result.downloaded_besco == []
     assert result.besco_warnings == ["besco_download_failed:direct-download-failed"]
     assert result.besco_files == []
     assert result.besco_filenames_by_section == {}
 
 
-def test_download_section_assets_raises_runtime_error_on_strict_fetch_error(tmp_path: Path) -> None:
+def test_download_section_assets_raises_runtime_error_on_strict_fetch_error(
+    tmp_path: Path,
+) -> None:
     fetcher = RecordingFetcher(download_error=FetchError("skroutz-download-failed"))
     images = [GalleryImage(url="https://cdn.example/one.jpg", alt="One", position=1)]
 
@@ -82,14 +90,28 @@ def test_download_section_assets_raises_runtime_error_on_strict_fetch_error(tmp_
             strict_expected_count=2,
         )
 
-    assert str(excinfo.value) == "Skroutz besco image download failed: skroutz-download-failed"
-    assert fetcher.calls == [{"images": images, "output_dir": tmp_path, "requested_sections": 2}]
+    assert (
+        str(excinfo.value)
+        == "Skroutz besco image download failed: skroutz-download-failed"
+    )
+    assert fetcher.calls == [
+        {"images": images, "output_dir": tmp_path, "requested_sections": 2}
+    ]
 
 
-def test_download_section_assets_raises_on_strict_incomplete_download(tmp_path: Path) -> None:
+def test_download_section_assets_raises_on_strict_incomplete_download(
+    tmp_path: Path,
+) -> None:
     fetcher = RecordingFetcher(
         download_result=(
-            [GalleryImage(url="https://cdn.example/one.jpg", alt="One", position=1, local_filename="besco1.jpg")],
+            [
+                GalleryImage(
+                    url="https://cdn.example/one.jpg",
+                    alt="One",
+                    position=1,
+                    local_filename="besco1.jpg",
+                )
+            ],
             [],
             [str(tmp_path / "bescos" / "besco1.jpg")],
         )
@@ -109,20 +131,40 @@ def test_download_section_assets_raises_on_strict_incomplete_download(tmp_path: 
             strict_expected_count=2,
         )
 
-    assert str(excinfo.value) == "Skroutz besco image download incomplete: expected 2, downloaded 1"
-    assert fetcher.calls == [{"images": images, "output_dir": tmp_path, "requested_sections": 2}]
+    assert (
+        str(excinfo.value)
+        == "Skroutz besco image download incomplete: expected 2, downloaded 1"
+    )
+    assert fetcher.calls == [
+        {"images": images, "output_dir": tmp_path, "requested_sections": 2}
+    ]
 
 
-def test_download_section_assets_returns_files_warnings_and_filename_map_on_success(tmp_path: Path) -> None:
+def test_download_section_assets_returns_files_warnings_and_filename_map_on_success(
+    tmp_path: Path,
+) -> None:
     downloaded = [
-        GalleryImage(url="https://cdn.example/one.jpg", alt="One", position=1, local_filename="besco1.jpg"),
-        GalleryImage(url="https://cdn.example/three.jpg", alt="Three", position=3, local_filename="besco3.jpg"),
+        GalleryImage(
+            url="https://cdn.example/one.jpg",
+            alt="One",
+            position=1,
+            local_filename="besco1.jpg",
+        ),
+        GalleryImage(
+            url="https://cdn.example/three.jpg",
+            alt="Three",
+            position=3,
+            local_filename="besco3.jpg",
+        ),
     ]
     fetcher = RecordingFetcher(
         download_result=(
             downloaded,
             ["besco_images_less_than_requested_sections"],
-            [str(tmp_path / "bescos" / "besco1.jpg"), str(tmp_path / "bescos" / "besco3.jpg")],
+            [
+                str(tmp_path / "bescos" / "besco1.jpg"),
+                str(tmp_path / "bescos" / "besco3.jpg"),
+            ],
         )
     )
     images = [
@@ -138,10 +180,15 @@ def test_download_section_assets_returns_files_warnings_and_filename_map_on_succ
         strict=False,
     )
 
-    assert fetcher.calls == [{"images": images, "output_dir": tmp_path, "requested_sections": 3}]
+    assert fetcher.calls == [
+        {"images": images, "output_dir": tmp_path, "requested_sections": 3}
+    ]
     assert result.downloaded_besco == downloaded
     assert result.besco_warnings == ["besco_images_less_than_requested_sections"]
-    assert result.besco_files == [str(tmp_path / "bescos" / "besco1.jpg"), str(tmp_path / "bescos" / "besco3.jpg")]
+    assert result.besco_files == [
+        str(tmp_path / "bescos" / "besco1.jpg"),
+        str(tmp_path / "bescos" / "besco3.jpg"),
+    ]
     assert result.besco_filenames_by_section == {1: "besco1.jpg", 3: "besco3.jpg"}
 
 
@@ -150,7 +197,10 @@ def test_build_section_image_candidates_uses_image_candidates_when_present() -> 
         {
             "title": "Alpha",
             "paragraph": "Alpha body",
-            "image_candidates": ["https://cdn.example/alpha-a.jpg", "https://cdn.example/alpha-b.jpg"],
+            "image_candidates": [
+                "https://cdn.example/alpha-a.jpg",
+                "https://cdn.example/alpha-b.jpg",
+            ],
             "image_url": "https://cdn.example/alpha-resolved.jpg",
         },
         {
@@ -165,7 +215,10 @@ def test_build_section_image_candidates_uses_image_candidates_when_present() -> 
         {
             "position": 1,
             "title": "Alpha",
-            "candidates": ["https://cdn.example/alpha-a.jpg", "https://cdn.example/alpha-b.jpg"],
+            "candidates": [
+                "https://cdn.example/alpha-a.jpg",
+                "https://cdn.example/alpha-b.jpg",
+            ],
         },
         {
             "position": 2,
@@ -175,9 +228,15 @@ def test_build_section_image_candidates_uses_image_candidates_when_present() -> 
     ]
 
 
-def test_build_section_image_candidates_falls_back_to_image_url_for_manufacturer_blocks() -> None:
+def test_build_section_image_candidates_falls_back_to_image_url_for_manufacturer_blocks() -> (
+    None
+):
     blocks = [
-        {"title": "Manufacturer One", "paragraph": "Body 1", "image_url": "https://cdn.example/manufacturer-1.jpg"},
+        {
+            "title": "Manufacturer One",
+            "paragraph": "Body 1",
+            "image_url": "https://cdn.example/manufacturer-1.jpg",
+        },
         {"title": "Manufacturer Two", "paragraph": "Body 2", "image_url": ""},
     ]
 
@@ -195,11 +254,21 @@ def test_build_section_image_candidates_falls_back_to_image_url_for_manufacturer
     ]
 
 
-def test_build_section_image_urls_resolved_only_includes_blocks_with_image_url() -> None:
+def test_build_section_image_urls_resolved_only_includes_blocks_with_image_url() -> (
+    None
+):
     blocks = [
-        {"title": "Alpha", "paragraph": "Alpha body", "image_url": "https://cdn.example/alpha.jpg"},
+        {
+            "title": "Alpha",
+            "paragraph": "Alpha body",
+            "image_url": "https://cdn.example/alpha.jpg",
+        },
         {"title": "Beta", "paragraph": "Beta body", "image_url": ""},
-        {"title": "Gamma", "paragraph": "Gamma body", "image_url": "https://cdn.example/gamma.jpg"},
+        {
+            "title": "Gamma",
+            "paragraph": "Gamma body",
+            "image_url": "https://cdn.example/gamma.jpg",
+        },
     ]
 
     assert build_section_image_urls_resolved(blocks) == [
@@ -216,7 +285,9 @@ def test_build_section_image_urls_resolved_only_includes_blocks_with_image_url()
     ]
 
 
-def test_build_sections_artifact_payload_preserves_exact_shape_and_target_filenames() -> None:
+def test_build_sections_artifact_payload_preserves_exact_shape_and_target_filenames() -> (
+    None
+):
     section_extraction_window = {
         "candidate_count": 5,
         "duplicate_signatures_skipped": 1,
@@ -229,7 +300,10 @@ def test_build_sections_artifact_payload_preserves_exact_shape_and_target_filena
         {
             "title": "Alpha",
             "paragraph": "Alpha body",
-            "image_candidates": ["https://cdn.example/alpha-a.jpg", "https://cdn.example/alpha-b.jpg"],
+            "image_candidates": [
+                "https://cdn.example/alpha-a.jpg",
+                "https://cdn.example/alpha-b.jpg",
+            ],
             "image_url": "https://cdn.example/alpha-resolved.jpg",
         },
         {
@@ -254,7 +328,10 @@ def test_build_sections_artifact_payload_preserves_exact_shape_and_target_filena
                 "position": 1,
                 "title": "Alpha",
                 "body": "Alpha body",
-                "image_candidates": ["https://cdn.example/alpha-a.jpg", "https://cdn.example/alpha-b.jpg"],
+                "image_candidates": [
+                    "https://cdn.example/alpha-a.jpg",
+                    "https://cdn.example/alpha-b.jpg",
+                ],
                 "resolved_image_url": "https://cdn.example/alpha-resolved.jpg",
                 "target_filename": "besco1.jpg",
             },

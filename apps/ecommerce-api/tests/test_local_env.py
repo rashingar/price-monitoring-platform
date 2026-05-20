@@ -11,12 +11,13 @@ from ecommerce.db.config import get_database_url
 from ecommerce.env import load_local_env_if_present
 from ecommerce.jobs import check_db_setup
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_load_local_env_if_present_loads_missing_values_from_repo_root_env(tmp_path: Path, monkeypatch) -> None:
+def test_load_local_env_if_present_loads_missing_values_from_repo_root_env(
+    tmp_path: Path, monkeypatch
+) -> None:
     child = tmp_path / "apps" / "ecommerce-api"
     child.mkdir(parents=True)
     (tmp_path / "AGENTS.md").write_text("# test repo\n", encoding="utf-8")
@@ -53,11 +54,15 @@ def test_load_local_env_if_present_loads_missing_values_from_repo_root_env(tmp_p
     assert get_database_url() == "sqlite+pysqlite:///local.db"
 
 
-def test_load_local_env_if_present_loads_repo_root_env_from_web_app(tmp_path: Path, monkeypatch) -> None:
+def test_load_local_env_if_present_loads_repo_root_env_from_web_app(
+    tmp_path: Path, monkeypatch
+) -> None:
     web_root = tmp_path / "apps" / "web"
     web_root.mkdir(parents=True)
     (tmp_path / "AGENTS.md").write_text("# test repo\n", encoding="utf-8")
-    (tmp_path / ".env").write_text("ECOMMERCE_DATABASE_URL=sqlite+pysqlite:///from-root.db\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(
+        "ECOMMERCE_DATABASE_URL=sqlite+pysqlite:///from-root.db\n", encoding="utf-8"
+    )
     monkeypatch.chdir(web_root)
     monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
 
@@ -68,7 +73,9 @@ def test_load_local_env_if_present_loads_repo_root_env_from_web_app(tmp_path: Pa
     assert get_database_url() == "sqlite+pysqlite:///from-root.db"
 
 
-def test_load_local_env_if_present_keeps_existing_os_environment(tmp_path: Path, monkeypatch) -> None:
+def test_load_local_env_if_present_keeps_existing_os_environment(
+    tmp_path: Path, monkeypatch
+) -> None:
     (tmp_path / "AGENTS.md").write_text("# test repo\n", encoding="utf-8")
     (tmp_path / ".env").write_text(
         "ECOMMERCE_DATABASE_URL=sqlite+pysqlite:///from-dotenv.db\n",
@@ -84,7 +91,9 @@ def test_load_local_env_if_present_keeps_existing_os_environment(tmp_path: Path,
     assert get_database_url() == "sqlite+pysqlite:///from-os.db"
 
 
-def test_deprecated_app_env_fills_only_missing_values(tmp_path: Path, monkeypatch) -> None:
+def test_deprecated_app_env_fills_only_missing_values(
+    tmp_path: Path, monkeypatch
+) -> None:
     app_root = tmp_path / "apps" / "ecommerce-api"
     app_root.mkdir(parents=True)
     (tmp_path / "AGENTS.md").write_text("# test repo\n", encoding="utf-8")
@@ -99,24 +108,35 @@ def test_deprecated_app_env_fills_only_missing_values(tmp_path: Path, monkeypatc
         encoding="utf-8",
     )
     monkeypatch.chdir(app_root)
-    for name in ("ECOMMERCE_DATABASE_URL", "ECOMMERCE_SOURCE_CATA_PATH", "ECOMMERCE_PRICE_IGNORE_PATH"):
+    for name in (
+        "ECOMMERCE_DATABASE_URL",
+        "ECOMMERCE_SOURCE_CATA_PATH",
+        "ECOMMERCE_PRICE_IGNORE_PATH",
+    ):
         monkeypatch.delenv(name, raising=False)
 
     status = load_local_env_if_present()
 
     assert get_database_url() == "sqlite+pysqlite:///from-root.db"
     assert status["deprecated_app_env_detected"] is True
-    assert status["keys_loaded_from_root"] == ["ECOMMERCE_DATABASE_URL", "ECOMMERCE_SOURCE_CATA_PATH"]
+    assert status["keys_loaded_from_root"] == [
+        "ECOMMERCE_DATABASE_URL",
+        "ECOMMERCE_SOURCE_CATA_PATH",
+    ]
     assert status["keys_loaded_from_deprecated_app"] == ["ECOMMERCE_PRICE_IGNORE_PATH"]
     assert status["keys_skipped_deprecated_duplicate"] == ["ECOMMERCE_DATABASE_URL"]
     assert "Deprecated app-local .env detected" in status["warnings"][0]
 
 
-def test_deprecated_app_env_does_not_print_secret_values(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_deprecated_app_env_does_not_print_secret_values(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     app_root = tmp_path / "apps" / "ecommerce-api"
     app_root.mkdir(parents=True)
     (tmp_path / "AGENTS.md").write_text("# test repo\n", encoding="utf-8")
-    (tmp_path / ".env").write_text("OPENCART_ADMIN_PASS=root-secret\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(
+        "OPENCART_ADMIN_PASS=root-secret\n", encoding="utf-8"
+    )
     (app_root / ".env").write_text("OPENCART_ADMIN_PASS=app-secret\n", encoding="utf-8")
     monkeypatch.chdir(app_root)
     monkeypatch.delenv("OPENCART_ADMIN_PASS", raising=False)
@@ -156,7 +176,11 @@ def test_power_shell_root_env_helper_uses_root_before_app_local(tmp_path: Path) 
         "}; $payload | ConvertTo-Json -Depth 3"
     )
     env = os.environ.copy()
-    for key in ("VITE_COMMERCE_API_PROXY_TARGET", "VITE_API_PROXY_TARGET", "OPENCART_ADMIN_PASS"):
+    for key in (
+        "VITE_COMMERCE_API_PROXY_TARGET",
+        "VITE_API_PROXY_TARGET",
+        "OPENCART_ADMIN_PASS",
+    ):
         env.pop(key, None)
 
     completed = subprocess.run(
@@ -177,7 +201,9 @@ def test_power_shell_root_env_helper_uses_root_before_app_local(tmp_path: Path) 
     assert "http://app.example" not in completed.stdout
 
 
-def test_load_local_env_if_present_handles_missing_and_comment_only_env(tmp_path: Path, monkeypatch) -> None:
+def test_load_local_env_if_present_handles_missing_and_comment_only_env(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
 
@@ -198,10 +224,7 @@ def test_load_local_env_if_present_handles_missing_and_comment_only_env(tmp_path
     }
 
     (tmp_path / ".env").write_text(
-        "# comments only\n"
-        "\n"
-        "not a key value line\n"
-        "1INVALID=value\n",
+        "# comments only\n" "\n" "not a key value line\n" "1INVALID=value\n",
         encoding="utf-8",
     )
 
@@ -212,9 +235,13 @@ def test_load_local_env_if_present_handles_missing_and_comment_only_env(tmp_path
     assert get_database_url() is None
 
 
-def test_check_db_setup_loads_dotenv_and_sanitizes_output(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_check_db_setup_loads_dotenv_and_sanitizes_output(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     raw_url = "postgresql+psycopg://ecommerce:super-secret@127.0.0.1:5432/ecommerce"
-    (tmp_path / ".env").write_text(f"ECOMMERCE_DATABASE_URL={raw_url}\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(
+        f"ECOMMERCE_DATABASE_URL={raw_url}\n", encoding="utf-8"
+    )
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("ECOMMERCE_DATABASE_URL", raising=False)
 
@@ -247,7 +274,9 @@ def test_check_db_setup_loads_dotenv_and_sanitizes_output(tmp_path: Path, monkey
     assert "ecommerce:***@127.0.0.1" in output
 
 
-def test_alembic_upgrade_can_read_database_url_from_dotenv(tmp_path: Path, monkeypatch) -> None:
+def test_alembic_upgrade_can_read_database_url_from_dotenv(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_path = tmp_path / "alembic-dotenv.db"
     (tmp_path / ".env").write_text(
         f"ECOMMERCE_DATABASE_URL=sqlite+pysqlite:///{database_path.as_posix()}\n",

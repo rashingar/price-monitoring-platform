@@ -8,11 +8,9 @@ from product_factory.repo_paths import SCHEMA_LIBRARY_PATH
 from product_factory.schema_matcher import SchemaMatcher
 from product_factory.utils import read_json
 
-
 _PAYLOAD = read_json(SCHEMA_LIBRARY_PATH)
 _SCHEMAS_BY_TEMPLATE_ID = {
-    str(schema["template_id"]): schema
-    for schema in _PAYLOAD["schemas"]
+    str(schema["template_id"]): schema for schema in _PAYLOAD["schemas"]
 }
 
 
@@ -34,7 +32,11 @@ def _spec_sections_from_schema(
 
     for raw_section in raw_sections[:max_sections]:
         title = str(raw_section.get("title", "")).strip()
-        labels = [str(label).strip() for label in raw_section.get("labels", []) if str(label).strip()]
+        labels = [
+            str(label).strip()
+            for label in raw_section.get("labels", [])
+            if str(label).strip()
+        ]
         if not title or not labels:
             continue
         limit = labels_per_section or max(2, min(len(labels), target_labels))
@@ -42,7 +44,9 @@ def _spec_sections_from_schema(
         sections.append(
             SpecSection(
                 section=title,
-                items=[SpecItem(label=label, value="fixture") for label in chosen_labels],
+                items=[
+                    SpecItem(label=label, value="fixture") for label in chosen_labels
+                ],
             )
         )
         total_labels += len(chosen_labels)
@@ -52,8 +56,12 @@ def _spec_sections_from_schema(
     return sections
 
 
-def _spec_sections_for_exact_labels(schema: dict[str, object], labels: list[str]) -> list[SpecSection]:
-    normalized_targets = {normalize_for_match(label) for label in labels if normalize_for_match(label)}
+def _spec_sections_for_exact_labels(
+    schema: dict[str, object], labels: list[str]
+) -> list[SpecSection]:
+    normalized_targets = {
+        normalize_for_match(label) for label in labels if normalize_for_match(label)
+    }
     sections: list[SpecSection] = []
     for raw_section in schema.get("sections", []):
         title = str(raw_section.get("title", "")).strip()
@@ -66,14 +74,19 @@ def _spec_sections_for_exact_labels(schema: dict[str, object], labels: list[str]
             sections.append(
                 SpecSection(
                     section=title,
-                    items=[SpecItem(label=label, value="fixture") for label in matched_labels],
+                    items=[
+                        SpecItem(label=label, value="fixture")
+                        for label in matched_labels
+                    ],
                 )
             )
     return sections
 
 
 def _labels_matching(schema: dict[str, object], *tokens: str) -> list[str]:
-    desired = [normalize_for_match(token) for token in tokens if normalize_for_match(token)]
+    desired = [
+        normalize_for_match(token) for token in tokens if normalize_for_match(token)
+    ]
     labels: list[str] = []
     for label in schema.get("label_set_exact", []):
         normalized = normalize_for_match(label)
@@ -94,7 +107,9 @@ def _labels_matching(schema: dict[str, object], *tokens: str) -> list[str]:
         "entoixizomena_psygeia",
     ],
 )
-def test_compiled_library_direct_single_regressions_select_resolved_family(template_id: str) -> None:
+def test_compiled_library_direct_single_regressions_select_resolved_family(
+    template_id: str,
+) -> None:
     schema = _schema(template_id)
     matcher = SchemaMatcher()
 
@@ -116,7 +131,9 @@ def test_compiled_library_direct_single_regressions_select_resolved_family(templ
     assert candidates[0]["gate_status"] == "bypassed_direct_single"
 
 
-def test_compiled_library_generic_washing_machine_labels_cannot_escape_resolved_family() -> None:
+def test_compiled_library_generic_washing_machine_labels_cannot_escape_resolved_family() -> (
+    None
+):
     washing_machine = _schema("plyntiria_rouxwn")
     matcher = SchemaMatcher()
     generic_labels = _labels_matching(
@@ -139,8 +156,14 @@ def test_compiled_library_generic_washing_machine_labels_cannot_escape_resolved_
     assert result.selected_template_id == "plyntiria_rouxwn"
     assert result.fail_reason == ""
     assert result.candidate_template_ids == ["plyntiria_rouxwn"]
-    assert result.selected_template_id not in {"koyzines", "isiotika_mallion", "voyrtses_psalidia_isiotika"}
-    assert {candidate["template_id"] for candidate in candidates} == {"plyntiria_rouxwn"}
+    assert result.selected_template_id not in {
+        "koyzines",
+        "isiotika_mallion",
+        "voyrtses_psalidia_isiotika",
+    }
+    assert {candidate["template_id"] for candidate in candidates} == {
+        "plyntiria_rouxwn"
+    }
 
 
 def test_compiled_library_tv_leaf_family_policy_supports_subcategory_fallback() -> None:
@@ -177,8 +200,12 @@ def test_compiled_library_emits_mixed_family_for_air_conditioners_and_fans() -> 
     assert _schema("orthostatis")["subcategory_match_policy"] == "mixed_family"
     assert _schema("epitrapezioi")["subcategory_match_policy"] == "mixed_family"
     assert _schema("orofis")["subcategory_match_policy"] == "mixed_family"
-    assert _schema("air_coolers_epidapedioi")["subcategory_match_policy"] == "mixed_family"
-    assert _schema("anemisthres_an_toixou")["subcategory_match_policy"] == "mixed_family"
+    assert (
+        _schema("air_coolers_epidapedioi")["subcategory_match_policy"] == "mixed_family"
+    )
+    assert (
+        _schema("anemisthres_an_toixou")["subcategory_match_policy"] == "mixed_family"
+    )
 
 
 def test_compiled_library_mixed_family_exact_pool_wins_for_air_conditioners() -> None:
@@ -201,7 +228,9 @@ def test_compiled_library_mixed_family_exact_pool_wins_for_air_conditioners() ->
     assert {candidate["template_id"] for candidate in candidates} == {"toixoy"}
 
 
-def test_compiled_library_mixed_family_allows_leaf_fallback_for_air_conditioners_when_exact_missing() -> None:
+def test_compiled_library_mixed_family_allows_leaf_fallback_for_air_conditioners_when_exact_missing() -> (
+    None
+):
     air_conditioners = _schema("klimatistika")
     matcher = SchemaMatcher()
 
@@ -223,7 +252,9 @@ def test_compiled_library_mixed_family_allows_leaf_fallback_for_air_conditioners
     assert candidates[0]["subcategory_match_policy"] == "mixed_family"
 
 
-def test_compiled_library_kitchen_specs_cannot_override_washing_machine_category_binding() -> None:
+def test_compiled_library_kitchen_specs_cannot_override_washing_machine_category_binding() -> (
+    None
+):
     washing_machine = _schema("plyntiria_rouxwn")
     kitchen = _schema("koyzines")
     matcher = SchemaMatcher()
@@ -239,7 +270,9 @@ def test_compiled_library_kitchen_specs_cannot_override_washing_machine_category
     assert result.selected_template_id == "plyntiria_rouxwn"
     assert result.fail_reason == ""
     assert result.candidate_template_ids == ["plyntiria_rouxwn"]
-    assert {candidate["template_id"] for candidate in candidates} == {"plyntiria_rouxwn"}
+    assert {candidate["template_id"] for candidate in candidates} == {
+        "plyntiria_rouxwn"
+    }
 
 
 def test_compiled_library_non_exception_subcategory_family_remains_exact() -> None:

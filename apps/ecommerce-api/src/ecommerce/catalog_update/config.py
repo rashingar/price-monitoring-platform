@@ -36,7 +36,9 @@ def load_catalog_update_config() -> CatalogUpdateConfig:
         if not env_text(name)
     ]
     if missing:
-        raise CatalogUpdateConfigError(f"Missing OpenCart export env config: {', '.join(missing)}")
+        raise CatalogUpdateConfigError(
+            f"Missing OpenCart export env config: {', '.join(missing)}"
+        )
 
     return CatalogUpdateConfig(
         store_base=env_text("OPENCART_STORE_BASE") or "",
@@ -44,7 +46,9 @@ def load_catalog_update_config() -> CatalogUpdateConfig:
         admin_user=env_text("OPENCART_ADMIN_USER") or "",
         admin_pass=env_text("OPENCART_ADMIN_PASS") or "",
         export_profile=env_text("OPENCART_EXPORT_PROFILE") or DEFAULT_EXPORT_PROFILE,
-        timeout_seconds=env_int("OPENCART_EXPORT_TIMEOUT_SECONDS", DEFAULT_EXPORT_TIMEOUT_SECONDS),
+        timeout_seconds=env_int(
+            "OPENCART_EXPORT_TIMEOUT_SECONDS", DEFAULT_EXPORT_TIMEOUT_SECONDS
+        ),
         headed=env_bool("OPENCART_EXPORT_HEADED", False),
     )
 

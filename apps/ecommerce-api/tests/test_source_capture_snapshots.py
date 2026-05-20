@@ -13,13 +13,22 @@ from ecommerce.source_capture.parsing import (  # noqa: E402
     parse_skroutz_offers,
     parse_skroutz_price_summary,
 )
-from ecommerce.source_capture.sanitize import sanitize_headers, sanitize_json  # noqa: E402
+from ecommerce.source_capture.sanitize import (
+    sanitize_headers,
+    sanitize_json,
+)  # noqa: E402
 from ecommerce.source_capture.scoring import score_response_candidate  # noqa: E402
-from ecommerce.source_capture.types import ParsedOfferObservation, ParsedPriceObservation, ResponseCandidate  # noqa: E402
+from ecommerce.source_capture.types import (
+    ParsedOfferObservation,
+    ParsedPriceObservation,
+    ResponseCandidate,
+)  # noqa: E402
 
 
 def _snapshot(fixtures_root: Path, *parts: str) -> dict:
-    return json.loads((fixtures_root / "golden_snapshots" / Path(*parts)).read_text(encoding="utf-8"))
+    return json.loads(
+        (fixtures_root / "golden_snapshots" / Path(*parts)).read_text(encoding="utf-8")
+    )
 
 
 def _decimal(value: Decimal | None) -> str | None:
@@ -82,7 +91,9 @@ def test_electronet_parser_snapshots(fixtures_root: Path) -> None:
         "missing_price": _price_observation(missing, missing_flags),
     }
 
-    assert actual == _snapshot(fixtures_root, "source_capture", "electronet_parser", "parser.expected.json")
+    assert actual == _snapshot(
+        fixtures_root, "source_capture", "electronet_parser", "parser.expected.json"
+    )
 
 
 def test_skroutz_parser_snapshots(fixtures_root: Path) -> None:
@@ -97,13 +108,18 @@ def test_skroutz_parser_snapshots(fixtures_root: Path) -> None:
                 }
             ]
         },
-        shops_payload={"shops": [{"id": 10, "name": "Store A", "url": "/m/10/store-a"}]},
+        shops_payload={
+            "shops": [{"id": 10, "name": "Store A", "url": "/m/10/store-a"}]
+        },
     )
     nested, nested_flags = parse_skroutz_offers(
         {
             "cards": [
                 {
-                    "shop": {"name": "Nested Store", "url": "https://seller.example.test"},
+                    "shop": {
+                        "name": "Nested Store",
+                        "url": "https://seller.example.test",
+                    },
                     "pricing": {"final_price": "321.50"},
                     "delivery": {"shipping_cost": "4.90", "text": "1-3 days"},
                     "availability_text": "in stock",
@@ -117,12 +133,18 @@ def test_skroutz_parser_snapshots(fixtures_root: Path) -> None:
     )
 
     actual = {
-        "product_cards_with_shops_details": _offer_observations(product_cards, product_card_flags),
+        "product_cards_with_shops_details": _offer_observations(
+            product_cards, product_card_flags
+        ),
         "nested_shop_pricing": _offer_observations(nested, nested_flags),
-        "price_min_summary": _price_observation(summary, summary_flags) if summary else None,
+        "price_min_summary": (
+            _price_observation(summary, summary_flags) if summary else None
+        ),
     }
 
-    assert actual == _snapshot(fixtures_root, "source_capture", "skroutz_parser", "parser.expected.json")
+    assert actual == _snapshot(
+        fixtures_root, "source_capture", "skroutz_parser", "parser.expected.json"
+    )
 
 
 def test_bestprice_parser_reads_aggregate_offer_low_price() -> None:
@@ -168,7 +190,10 @@ def test_bestprice_parser_reads_aggregate_offer_low_price() -> None:
     assert observation.product_name == "Bella Cucina BC-8013"
     assert observation.raw_observation["offer_count"] == "12"
     assert observation.raw_observation["bestprice_best_store"] == "eTranoulis"
-    assert observation.raw_observation["bestprice_best_store_url"] == "https://www.bestprice.gr/to/160584639/product.html"
+    assert (
+        observation.raw_observation["bestprice_best_store_url"]
+        == "https://www.bestprice.gr/to/160584639/product.html"
+    )
 
 
 def test_bestprice_parser_reads_price_group_offers() -> None:
@@ -208,22 +233,44 @@ def test_bestprice_parser_reads_price_group_offers() -> None:
     )
 
     assert flags == []
-    assert [(offer.seller_name, offer.price, offer.seller_url, offer.shipping_cost) for offer in offers] == [
-        ("Store B", Decimal("181.00"), "https://www.bestprice.gr/to/200/product-b.html?from=1&seq=2", Decimal("0.00")),
-        ("Store A", Decimal("180.90"), "https://www.bestprice.gr/to/100/product-a.html?from=1&seq=1", Decimal("2.90")),
+    assert [
+        (offer.seller_name, offer.price, offer.seller_url, offer.shipping_cost)
+        for offer in offers
+    ] == [
+        (
+            "Store B",
+            Decimal("181.00"),
+            "https://www.bestprice.gr/to/200/product-b.html?from=1&seq=2",
+            Decimal("0.00"),
+        ),
+        (
+            "Store A",
+            Decimal("180.90"),
+            "https://www.bestprice.gr/to/100/product-a.html?from=1&seq=1",
+            Decimal("2.90"),
+        ),
     ]
     assert offers[0].availability == "in_stock"
     assert offers[0].raw_observation["rank"] == 2
 
 
-def test_bestprice_latest_run_fixture_parses_all_store_offers(fixtures_root: Path) -> None:
-    fixture = _snapshot(fixtures_root, "source_capture", "bestprice_html", "latest_run_multi_store.json")
+def test_bestprice_latest_run_fixture_parses_all_store_offers(
+    fixtures_root: Path,
+) -> None:
+    fixture = _snapshot(
+        fixtures_root, "source_capture", "bestprice_html", "latest_run_multi_store.json"
+    )
 
-    offers, flags = parse_bestprice_offers(fixture["html"], page_url="https://www.bestprice.gr/item/2160534094/product.html")
+    offers, flags = parse_bestprice_offers(
+        fixture["html"],
+        page_url="https://www.bestprice.gr/item/2160534094/product.html",
+    )
 
     assert flags == []
     assert len(offers) == 5
-    assert [(offer.seller_name, offer.price, offer.shipping_cost) for offer in offers] == [
+    assert [
+        (offer.seller_name, offer.price, offer.shipping_cost) for offer in offers
+    ] == [
         ("Store A", Decimal("194.80"), Decimal("2.90")),
         ("Store B", Decimal("194.90"), Decimal("0.00")),
         ("Store C", Decimal("195.00"), Decimal("0.00")),
@@ -231,7 +278,10 @@ def test_bestprice_latest_run_fixture_parses_all_store_offers(fixtures_root: Pat
         ("Store E", Decimal("198.00"), None),
     ]
     assert [offer.raw_observation["rank"] for offer in offers] == [1, 2, 3, 4, 5]
-    assert offers[0].seller_url == "https://www.bestprice.gr/to/100001/product-a.html?from=2160534094&seq=1&bpref=itemPage"
+    assert (
+        offers[0].seller_url
+        == "https://www.bestprice.gr/to/100001/product-a.html?from=2160534094&seq=1&bpref=itemPage"
+    )
     assert offers[0].raw_observation["landed_price"] == "197.70"
     assert offers[0].raw_observation["landed_price_source"] == "computed"
     assert offers[2].raw_observation["landed_price"] == "195.00"
@@ -244,7 +294,11 @@ def test_bestprice_latest_run_fixture_parses_all_store_offers(fixtures_root: Pat
 
 def test_source_capture_scoring_snapshot(fixtures_root: Path) -> None:
     candidates = {
-        "analytics": ResponseCandidate(url="https://analytics.example/collect", body_text="ok", content_type="text/plain"),
+        "analytics": ResponseCandidate(
+            url="https://analytics.example/collect",
+            body_text="ok",
+            content_type="text/plain",
+        ),
         "offers": ResponseCandidate(
             url="https://www.skroutz.gr/products/1/offers",
             content_type="application/json",
@@ -274,10 +328,15 @@ def test_source_capture_scoring_snapshot(fixtures_root: Path) -> None:
             "score": scored.score,
             "reasons": list(scored.reasons),
         }
-        for key, scored in ((key, score_response_candidate(candidate)) for key, candidate in candidates.items())
+        for key, scored in (
+            (key, score_response_candidate(candidate))
+            for key, candidate in candidates.items()
+        )
     }
 
-    assert actual == _snapshot(fixtures_root, "source_capture", "scoring", "scoring.expected.json")
+    assert actual == _snapshot(
+        fixtures_root, "source_capture", "scoring", "scoring.expected.json"
+    )
 
 
 def test_source_capture_sanitize_snapshot(fixtures_root: Path) -> None:
@@ -302,4 +361,6 @@ def test_source_capture_sanitize_snapshot(fixtures_root: Path) -> None:
         ),
     }
 
-    assert actual == _snapshot(fixtures_root, "source_capture", "sanitize", "sanitize.expected.json")
+    assert actual == _snapshot(
+        fixtures_root, "source_capture", "sanitize", "sanitize.expected.json"
+    )

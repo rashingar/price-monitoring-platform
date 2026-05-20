@@ -7,12 +7,15 @@ import pytest
 
 from tools.schema_registry.build_electronet_schema_library import build_library_payload
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE_ROOT = REPO_ROOT / "resources" / "templates" / "electronet"
 TAXONOMY_PATH = REPO_ROOT / "resources" / "mappings" / "catalog_taxonomy.json"
-CURRENT_LIBRARY_PATH = REPO_ROOT / "resources" / "schemas" / "electronet_schema_library.json"
-SCHEMA_POLICY_RULES_PATH = REPO_ROOT / "resources" / "mappings" / "schema_policy_rules.json"
+CURRENT_LIBRARY_PATH = (
+    REPO_ROOT / "resources" / "schemas" / "electronet_schema_library.json"
+)
+SCHEMA_POLICY_RULES_PATH = (
+    REPO_ROOT / "resources" / "mappings" / "schema_policy_rules.json"
+)
 
 
 def _repo_payload() -> dict[str, object]:
@@ -161,7 +164,12 @@ def test_build_library_marks_placeholder_templates_manual_only() -> None:
     payload = _repo_payload()
     schemas = _schemas_by_template_id(payload)
 
-    for template_id in ["tv_box", "set", "paraskeyastis_pop_korn", "axesoyar_klimatistikon"]:
+    for template_id in [
+        "tv_box",
+        "set",
+        "paraskeyastis_pop_korn",
+        "axesoyar_klimatistikon",
+    ]:
         schema = schemas[template_id]
         assert schema["template_status"] == "manual_only"
         assert schema["match_mode"] == "manual_only"
@@ -173,7 +181,9 @@ def test_build_library_marks_placeholder_templates_manual_only() -> None:
         assert schema["min_label_overlap"] == 0
 
 
-def test_build_library_emits_explicit_subcategory_match_policy_for_known_exceptions() -> None:
+def test_build_library_emits_explicit_subcategory_match_policy_for_known_exceptions() -> (
+    None
+):
     payload = _repo_payload()
     schemas = _schemas_by_template_id(payload)
 
@@ -181,10 +191,14 @@ def test_build_library_emits_explicit_subcategory_match_policy_for_known_excepti
     assert schemas["koyzines"]["subcategory_match_policy"] == "leaf_family"
     assert schemas["plyntiria_piaton"]["subcategory_match_policy"] == "leaf_family"
     assert schemas["foyrnoi_mikrokymaton"]["subcategory_match_policy"] == "leaf_family"
-    assert schemas["plyntiria_rouxwn"]["subcategory_match_policy"] == "exact_subcategory"
+    assert (
+        schemas["plyntiria_rouxwn"]["subcategory_match_policy"] == "exact_subcategory"
+    )
 
 
-def test_build_library_emits_mixed_family_policy_for_air_conditioners_and_fans() -> None:
+def test_build_library_emits_mixed_family_policy_for_air_conditioners_and_fans() -> (
+    None
+):
     payload = _repo_payload()
     schemas = _schemas_by_template_id(payload)
 
@@ -205,10 +219,14 @@ def test_build_library_emits_mixed_family_policy_for_air_conditioners_and_fans()
         assert schemas[template_id]["subcategory_match_policy"] == "mixed_family"
 
     assert schemas["tileoraseis"]["subcategory_match_policy"] == "leaf_family"
-    assert schemas["plyntiria_rouxwn"]["subcategory_match_policy"] == "exact_subcategory"
+    assert (
+        schemas["plyntiria_rouxwn"]["subcategory_match_policy"] == "exact_subcategory"
+    )
 
 
-def test_build_library_preserves_authored_order_and_normalizes_safe_separators() -> None:
+def test_build_library_preserves_authored_order_and_normalizes_safe_separators() -> (
+    None
+):
     payload = _repo_payload()
     schemas = _schemas_by_template_id(payload)
     washing_machine = schemas["plyntiria_rouxwn"]
@@ -224,13 +242,18 @@ def test_build_library_preserves_authored_order_and_normalizes_safe_separators()
         "Χωρητικότητα Πλύσης",
         "Μέγιστες Στροφές Στυψίματος",
     ]
-    assert "Διαστάσεις Συσκευής σε Εκατοστά (Υ x Π x Β)" in washing_machine["label_set_normalized"]
+    assert (
+        "Διαστάσεις Συσκευής σε Εκατοστά (Υ x Π x Β)"
+        in washing_machine["label_set_normalized"]
+    )
     assert washing_machine["section_label_pairs_normalized"][0] == (
         "Επισκόπηση Προϊόντος || Τρόπος Φόρτωσης Πλυντηρίου"
     )
 
 
-def test_build_library_uses_category_pool_for_multiple_active_siblings(tmp_path: Path) -> None:
+def test_build_library_uses_category_pool_for_multiple_active_siblings(
+    tmp_path: Path,
+) -> None:
     template_root = tmp_path / "templates"
     template_root.mkdir()
     taxonomy_path = tmp_path / "taxonomy.json"
@@ -247,7 +270,9 @@ def test_build_library_uses_category_pool_for_multiple_active_siblings(tmp_path:
             }
         ]
     }
-    taxonomy_path.write_text(json.dumps(taxonomy_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    taxonomy_path.write_text(
+        json.dumps(taxonomy_payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     template_a = {
         "id": "demo_template_a_v1",
@@ -275,8 +300,12 @@ def test_build_library_uses_category_pool_for_multiple_active_siblings(tmp_path:
             }
         ],
     }
-    (template_root / "demo_a.json").write_text(json.dumps(template_a, ensure_ascii=False, indent=2), encoding="utf-8")
-    (template_root / "demo_b.json").write_text(json.dumps(template_b, ensure_ascii=False, indent=2), encoding="utf-8")
+    (template_root / "demo_a.json").write_text(
+        json.dumps(template_a, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (template_root / "demo_b.json").write_text(
+        json.dumps(template_b, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     payload = build_library_payload(
         template_root=template_root,
@@ -302,7 +331,9 @@ def test_build_library_uses_category_pool_for_multiple_active_siblings(tmp_path:
     assert entry_b["forbidden_labels"] == ["Μοναδική Ετικέτα Α"]
 
 
-def test_build_library_is_source_of_truth_pure_against_existing_compiled_library(tmp_path: Path) -> None:
+def test_build_library_is_source_of_truth_pure_against_existing_compiled_library(
+    tmp_path: Path,
+) -> None:
     template_root = tmp_path / "templates"
     template_root.mkdir()
     taxonomy_path = tmp_path / "taxonomy.json"
@@ -320,7 +351,9 @@ def test_build_library_is_source_of_truth_pure_against_existing_compiled_library
             }
         ]
     }
-    taxonomy_path.write_text(json.dumps(taxonomy_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    taxonomy_path.write_text(
+        json.dumps(taxonomy_payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     authored_template = {
         "id": "demo_template_v1",
@@ -339,7 +372,9 @@ def test_build_library_is_source_of_truth_pure_against_existing_compiled_library
             },
         ],
     }
-    (template_root / "demo.json").write_text(json.dumps(authored_template, ensure_ascii=False, indent=2), encoding="utf-8")
+    (template_root / "demo.json").write_text(
+        json.dumps(authored_template, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     existing_library_payload = {
         "version": "stale",
@@ -402,7 +437,9 @@ def test_build_library_is_source_of_truth_pure_against_existing_compiled_library
             "labels": ["Τρίτη Ετικέτα"],
         },
     ]
-    (edited_root / "demo.json").write_text(json.dumps(edited_template, ensure_ascii=False, indent=2), encoding="utf-8")
+    (edited_root / "demo.json").write_text(
+        json.dumps(edited_template, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     edited_payload = build_library_payload(
         template_root=edited_root,

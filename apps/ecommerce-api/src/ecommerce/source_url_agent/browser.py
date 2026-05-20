@@ -74,7 +74,9 @@ class SourceUrlBrowserSession:
         self._browser = None
         self._playwright = None
 
-    def fetch_snapshot(self, url: str, *, rate_limit_seconds: float | None = None) -> PageSnapshot:
+    def fetch_snapshot(
+        self, url: str, *, rate_limit_seconds: float | None = None
+    ) -> PageSnapshot:
         if self._context is None:
             raise RuntimeError("browser session is not open")
         self._throttle(url, rate_limit_seconds)
@@ -89,7 +91,9 @@ class SourceUrlBrowserSession:
             body_text = page.locator("body").inner_text(timeout=5000)
             links = tuple(
                 str(item)
-                for item in page.eval_on_selector_all("a[href]", "elements => elements.map(element => element.href)")
+                for item in page.eval_on_selector_all(
+                    "a[href]", "elements => elements.map(element => element.href)"
+                )
             )
             status_code = response.status if response is not None else None
             if _blocked_or_captcha(title, body_text, html):
@@ -141,7 +145,11 @@ class SourceUrlBrowserSession:
             page.close()
 
     def _throttle(self, url: str, rate_limit_seconds: float | None) -> None:
-        delay = self.default_rate_limit_seconds if rate_limit_seconds is None else max(0.0, float(rate_limit_seconds))
+        delay = (
+            self.default_rate_limit_seconds
+            if rate_limit_seconds is None
+            else max(0.0, float(rate_limit_seconds))
+        )
         if delay <= 0:
             return
         domain = str(urlsplit(url).hostname or "").casefold()

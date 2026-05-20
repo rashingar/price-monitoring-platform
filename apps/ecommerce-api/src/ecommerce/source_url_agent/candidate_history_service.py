@@ -47,11 +47,15 @@ def _history_to_payload(
     items = [
         {
             "run_id": group.run_id,
-            "run": discovery_run_to_dict(group.run, session=session)
-            if group.run is not None
-            else minimal_discovery_run_payload(group.run_id),
+            "run": (
+                discovery_run_to_dict(group.run, session=session)
+                if group.run is not None
+                else minimal_discovery_run_payload(group.run_id)
+            ),
             "counts": group.counts,
-            "candidates": [candidate_to_dict(candidate) for candidate in group.candidates],
+            "candidates": [
+                candidate_to_dict(candidate) for candidate in group.candidates
+            ],
         }
         for group in history.items
     ]

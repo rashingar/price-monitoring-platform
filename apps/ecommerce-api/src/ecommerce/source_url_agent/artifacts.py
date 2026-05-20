@@ -11,7 +11,6 @@ from typing import Any
 
 from ecommerce.source_url_agent.candidates import SourceUrlAgentCandidate
 
-
 SOURCE_URL_AGENT_RUNS_DIR = Path("output") / "ecommerce" / "source-url-agent" / "runs"
 RESULT_COLUMNS = [
     "model",
@@ -77,7 +76,9 @@ class SourceUrlAgentArtifactPaths:
         }
 
 
-def run_artifact_paths(run_id: str, output_dir: Path | None = None) -> SourceUrlAgentArtifactPaths:
+def run_artifact_paths(
+    run_id: str, output_dir: Path | None = None
+) -> SourceUrlAgentArtifactPaths:
     root = output_dir or SOURCE_URL_AGENT_RUNS_DIR
     run_dir = Path(root) / run_id
     return SourceUrlAgentArtifactPaths(
@@ -103,11 +104,19 @@ def write_run_artifacts(
     paths = run_artifact_paths(run_id, output_dir)
     paths.run_dir.mkdir(parents=True, exist_ok=True)
 
-    _write_csv(paths.source_url_results, RESULT_COLUMNS, [candidate.to_artifact_row() for candidate in candidates])
+    _write_csv(
+        paths.source_url_results,
+        RESULT_COLUMNS,
+        [candidate.to_artifact_row() for candidate in candidates],
+    )
     _write_csv(
         paths.approved_source_urls,
         RESULT_COLUMNS,
-        [candidate.to_artifact_row() for candidate in candidates if candidate.match_status == "matched"],
+        [
+            candidate.to_artifact_row()
+            for candidate in candidates
+            if candidate.match_status == "matched"
+        ],
     )
     _write_csv(
         paths.needs_review_source_urls,
@@ -121,17 +130,28 @@ def write_run_artifacts(
     _write_csv(
         paths.not_found_source_urls,
         RESULT_COLUMNS,
-        [candidate.to_artifact_row() for candidate in candidates if candidate.match_status == "not_found"],
+        [
+            candidate.to_artifact_row()
+            for candidate in candidates
+            if candidate.match_status == "not_found"
+        ],
     )
     _write_csv(
         paths.errors,
         RESULT_COLUMNS,
-        [candidate.to_artifact_row() for candidate in candidates if candidate.match_status == "error"],
+        [
+            candidate.to_artifact_row()
+            for candidate in candidates
+            if candidate.match_status == "error"
+        ],
     )
     _write_json(paths.searched_queries, _searched_queries_payload(candidates))
     suggestions = build_rule_suggestions(candidates)
     _write_json(paths.rule_suggestions, suggestions)
-    _write_json(paths.source_url_run_summary, {**summary, "rule_suggestions": suggestions, "artifacts": paths.to_dict()})
+    _write_json(
+        paths.source_url_run_summary,
+        {**summary, "rule_suggestions": suggestions, "artifacts": paths.to_dict()},
+    )
     return paths
 
 
@@ -177,25 +197,47 @@ def build_rule_suggestions(candidates: list[SourceUrlAgentCandidate]) -> dict[st
     title_only: Counter[str] = Counter()
     body_only_marketplace_identifier: Counter[str] = Counter()
     for candidate in candidates:
-        source_counts.setdefault(candidate.source_name, Counter())[candidate.match_status] += 1
+        source_counts.setdefault(candidate.source_name, Counter())[
+            candidate.match_status
+        ] += 1
         evidence = candidate.evidence_json
         if candidate.match_status in {"needs_review", "not_found"}:
-            mpn_found = bool((evidence.get("mpn") or {}).get("found")) if isinstance(evidence.get("mpn"), dict) else False
-            model_found = bool((evidence.get("model") or {}).get("found")) if isinstance(evidence.get("model"), dict) else False
+            mpn_found = (
+                bool((evidence.get("mpn") or {}).get("found"))
+                if isinstance(evidence.get("mpn"), dict)
+                else False
+            )
+            model_found = (
+                bool((evidence.get("model") or {}).get("found"))
+                if isinstance(evidence.get("model"), dict)
+                else False
+            )
             if not mpn_found and not model_found:
                 missing_identifier_count += 1
         if str(evidence.get("error_code") or "") == "blocked_or_captcha":
             blocked_sources[candidate.source_name] += 1
         category = evidence.get("category")
-        if isinstance(category, dict) and not category.get("compatible") and candidate.confidence_score >= 0.5:
+        if (
+            isinstance(category, dict)
+            and not category.get("compatible")
+            and candidate.confidence_score >= 0.5
+        ):
             category_mismatch[candidate.source_name] += 1
         if bool(evidence.get("title_only")):
             title_only[candidate.source_name] += 1
         mpn = evidence.get("mpn")
         model = evidence.get("model")
-        mpn_body_only = isinstance(mpn, dict) and mpn.get("found") and mpn.get("source") == "body"
-        model_body_only = isinstance(model, dict) and model.get("found") and model.get("source") == "body"
-        if candidate.source_type == "marketplace" and (mpn_body_only or model_body_only):
+        mpn_body_only = (
+            isinstance(mpn, dict) and mpn.get("found") and mpn.get("source") == "body"
+        )
+        model_body_only = (
+            isinstance(model, dict)
+            and model.get("found")
+            and model.get("source") == "body"
+        )
+        if candidate.source_type == "marketplace" and (
+            mpn_body_only or model_body_only
+        ):
             body_only_marketplace_identifier[candidate.source_name] += 1
     suggestions = []
     if missing_identifier_count:
@@ -234,13 +276,17 @@ def build_rule_suggestions(candidates: list[SourceUrlAgentCandidate]) -> dict[st
             }
         )
     return {
-        "summary_by_source": {source: dict(counter) for source, counter in source_counts.items()},
+        "summary_by_source": {
+            source: dict(counter) for source, counter in source_counts.items()
+        },
         "category_mismatch_by_source": dict(category_mismatch),
         "suggestions": suggestions,
     }
 
 
-def _searched_queries_payload(candidates: list[SourceUrlAgentCandidate]) -> dict[str, Any]:
+def _searched_queries_payload(
+    candidates: list[SourceUrlAgentCandidate],
+) -> dict[str, Any]:
     items: dict[str, dict[str, Any]] = {}
     for candidate in candidates:
         key = f"{candidate.product.model}|{candidate.source_name}"
@@ -256,16 +302,25 @@ def _searched_queries_payload(candidates: list[SourceUrlAgentCandidate]) -> dict
         )
         item["searched_queries"] = candidate.searched_queries
         provenance = candidate.evidence_json.get("provider_provenance")
-        if isinstance(provenance, dict) and provenance and provenance not in item["provider_provenance"]:
+        if (
+            isinstance(provenance, dict)
+            and provenance
+            and provenance not in item["provider_provenance"]
+        ):
             item["provider_provenance"].append(provenance)
     return {"items": list(items.values())}
 
 
-def _counts_by_source(candidates: list[SourceUrlAgentCandidate]) -> dict[str, dict[str, int]]:
+def _counts_by_source(
+    candidates: list[SourceUrlAgentCandidate],
+) -> dict[str, dict[str, int]]:
     counts: dict[str, Counter[str]] = {}
     for candidate in candidates:
         counts.setdefault(candidate.source_name, Counter())[candidate.match_status] += 1
-    return {source: {key: int(value) for key, value in sorted(counter.items())} for source, counter in counts.items()}
+    return {
+        source: {key: int(value) for key, value in sorted(counter.items())}
+        for source, counter in counts.items()
+    }
 
 
 def _provider_summary(candidates: list[SourceUrlAgentCandidate]) -> dict[str, Any]:
@@ -283,21 +338,35 @@ def _provider_summary(candidates: list[SourceUrlAgentCandidate]) -> dict[str, An
         if not provider_name:
             continue
         if isinstance(provider_summary, dict):
-            provider_statuses.setdefault(provider_name, str(provider_summary.get("status") or ""))
-            provider_queries.setdefault(provider_name, str(provider_summary.get("query") or ""))
+            provider_statuses.setdefault(
+                provider_name, str(provider_summary.get("status") or "")
+            )
+            provider_queries.setdefault(
+                provider_name, str(provider_summary.get("query") or "")
+            )
         if not isinstance(provenance, dict):
             continue
         if not str(provenance.get("candidate_url") or ""):
             continue
         source_name = str(provenance.get("source_name") or candidate.source_name)
         provider_counts.setdefault(provider_name, Counter())[source_name] += 1
-        provider_queries.setdefault(provider_name, str(provenance.get("original_query") or ""))
-    provider_names = set(provider_counts) | set(provider_statuses) | set(provider_queries)
+        provider_queries.setdefault(
+            provider_name, str(provenance.get("original_query") or "")
+        )
+    provider_names = (
+        set(provider_counts) | set(provider_statuses) | set(provider_queries)
+    )
     return {
         provider_name: {
             "query": provider_queries.get(provider_name, ""),
-            "status": "found_candidates" if provider_counts.get(provider_name) else (provider_statuses.get(provider_name) or "no_results"),
-            "kept_candidates_by_source": dict(sorted(provider_counts.get(provider_name, Counter()).items())),
+            "status": (
+                "found_candidates"
+                if provider_counts.get(provider_name)
+                else (provider_statuses.get(provider_name) or "no_results")
+            ),
+            "kept_candidates_by_source": dict(
+                sorted(provider_counts.get(provider_name, Counter()).items())
+            ),
         }
         for provider_name in sorted(provider_names)
     }
@@ -312,7 +381,10 @@ def _write_csv(path: Path, columns: list[str], rows: list[dict[str, Any]]) -> No
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _csv_value(value: object) -> str:

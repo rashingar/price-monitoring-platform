@@ -10,7 +10,9 @@ TV_SIZE_SMALL = "Έως 32''"
 TV_SIZE_MEDIUM = "33''-50''"
 TV_SIZE_LARGE = "50'' & άνω"
 
-TV_INCH_RE = re.compile(r"(?<!\d)(\d{2,3})(?=\s*(?:\"|”|''|ιντσ|inch|in\b))", re.IGNORECASE)
+TV_INCH_RE = re.compile(
+    r"(?<!\d)(\d{2,3})(?=\s*(?:\"|”|''|ιντσ|inch|in\b))", re.IGNORECASE
+)
 TV_URL_INCH_RE = re.compile(r"-(\d{2,3})(?=-|$)")
 WIDTH_RE = re.compile(r"(?<!\d)(\d{2})(?:[.,]\d+)?(?=\s*(?:cm|εκ|x))", re.IGNORECASE)
 
@@ -65,8 +67,14 @@ def serialize_source_category(
     return ":::".join(parts)
 
 
-def build_breadcrumbs(parent_category: str, leaf_category: str, sub_category: str | None = None) -> list[str]:
-    crumbs = ["Αρχική", normalize_whitespace(parent_category), normalize_whitespace(leaf_category)]
+def build_breadcrumbs(
+    parent_category: str, leaf_category: str, sub_category: str | None = None
+) -> list[str]:
+    crumbs = [
+        "Αρχική",
+        normalize_whitespace(parent_category),
+        normalize_whitespace(leaf_category),
+    ]
     if sub_category:
         crumbs.append(normalize_whitespace(sub_category))
     return [item for item in crumbs if item]
@@ -168,7 +176,14 @@ def classify_skroutz_taxonomy(
             sub="Ηχεία",
             matched_rule_id="audio:speaker",
         )
-    if _has_any(context, "kinhta thlefwna", "kinita tilefona", "smartphones", "mobile phones", "iphone"):
+    if _has_any(
+        context,
+        "kinhta thlefwna",
+        "kinita tilefona",
+        "smartphones",
+        "mobile phones",
+        "iphone",
+    ):
         return _classify_smartphone(context)
     if _has_any(context, "aporrofit"):
         return _build_hint(
@@ -439,7 +454,9 @@ def _build_hint(
     source_segments: list[str] | None = None,
     match_type: str = "exact_category",
 ) -> SkroutzTaxonomyHint:
-    source_items = list(source_segments if source_segments is not None else ([sub] if sub else []))
+    source_items = list(
+        source_segments if source_segments is not None else ([sub] if sub else [])
+    )
     return SkroutzTaxonomyHint(
         parent_category=parent,
         leaf_category=leaf,
@@ -474,8 +491,15 @@ def _ambiguous_hint(
 
 
 def _has_any(context: dict[str, str], *needles: str) -> bool:
-    haystacks = [context["tag_norm"], context["slug_norm"], context["title_norm"], context["url_norm"]]
-    normalized_needles = [normalize_for_match(needle) for needle in needles if normalize_for_match(needle)]
+    haystacks = [
+        context["tag_norm"],
+        context["slug_norm"],
+        context["title_norm"],
+        context["url_norm"],
+    ]
+    normalized_needles = [
+        normalize_for_match(needle) for needle in needles if normalize_for_match(needle)
+    ]
     for needle in normalized_needles:
         if any(needle in haystack for haystack in haystacks):
             return True
@@ -487,7 +511,9 @@ def _parse_tv_inches(title: str, url: str) -> int | None:
     if match:
         return int(match.group(1))
     path = normalize_whitespace(urlparse(url).path)
-    candidates = [int(value) for value in TV_URL_INCH_RE.findall(path) if len(value) in {2, 3}]
+    candidates = [
+        int(value) for value in TV_URL_INCH_RE.findall(path) if len(value) in {2, 3}
+    ]
     for value in candidates:
         if 16 <= value <= 110:
             return value

@@ -16,9 +16,20 @@ from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.products import Product
 from ecommerce.db.models.price_monitoring import MonitoringRun, PriceObservation
 from ecommerce.db.repositories.common import json_safe_value
-from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url, source_url_to_dict
-from ecommerce.price_monitoring.observations import ParsedPriceObservation, parse_price_observations_csv
-from ecommerce.source_urls import SourceUrlValidationError, extract_source_domain, infer_source_name, normalize_source_url
+from ecommerce.db.repositories.source_urls import (
+    create_or_update_imported_source_url,
+    source_url_to_dict,
+)
+from ecommerce.price_monitoring.observations import (
+    ParsedPriceObservation,
+    parse_price_observations_csv,
+)
+from ecommerce.source_urls import (
+    SourceUrlValidationError,
+    extract_source_domain,
+    infer_source_name,
+    normalize_source_url,
+)
 
 
 @dataclass(frozen=True)
@@ -88,7 +99,9 @@ class SourceUrlImportResult:
             "warnings": list(self.warnings),
             "skipped_reasons": dict(self.skipped_reasons),
             "changed_source_urls": list(self.changed_source_urls),
-            "source_stats": {key: dict(value) for key, value in self.source_stats.items()},
+            "source_stats": {
+                key: dict(value) for key, value in self.source_stats.items()
+            },
         }
         if include_candidates:
             payload["candidate_evidence"] = list(self.candidate_evidence)
@@ -146,10 +159,20 @@ def resolve_catalog_product_for_import(
     mpn: str | None,
     product_id: int | None = None,
 ) -> CatalogProductResolution:
-    observation_product = session.get(Product, product_id) if product_id is not None else None
-    resolved_catalog_source = _text(catalog_source) or _text(getattr(observation_product, "catalog_source", None)) or DEFAULT_CATALOG_SOURCE
-    resolved_model = _empty_to_none(model) or _empty_to_none(getattr(observation_product, "model", None))
-    resolved_mpn = _empty_to_none(mpn) or _empty_to_none(getattr(observation_product, "mpn", None))
+    observation_product = (
+        session.get(Product, product_id) if product_id is not None else None
+    )
+    resolved_catalog_source = (
+        _text(catalog_source)
+        or _text(getattr(observation_product, "catalog_source", None))
+        or DEFAULT_CATALOG_SOURCE
+    )
+    resolved_model = _empty_to_none(model) or _empty_to_none(
+        getattr(observation_product, "model", None)
+    )
+    resolved_mpn = _empty_to_none(mpn) or _empty_to_none(
+        getattr(observation_product, "mpn", None)
+    )
 
     if resolved_model and not _looks_composite_model(resolved_model):
         product = session.execute(
@@ -160,7 +183,9 @@ def resolve_catalog_product_for_import(
             )
         ).scalar_one_or_none()
         if product is not None:
-            return CatalogProductResolution(product=product, match_type="model", confidence="strong")
+            return CatalogProductResolution(
+                product=product, match_type="model", confidence="strong"
+            )
 
     if resolved_mpn:
         matches = list(
@@ -177,13 +202,30 @@ def resolve_catalog_product_for_import(
             .all()
         )
         if len(matches) == 1:
-            return CatalogProductResolution(product=matches[0], match_type="mpn", confidence="strong")
+            return CatalogProductResolution(
+                product=matches[0], match_type="mpn", confidence="strong"
+            )
         if len(matches) > 1:
-            return CatalogProductResolution(product=None, match_type="ambiguous_mpn", confidence="none", warning="multiple active catalog products matched MPN")
+            return CatalogProductResolution(
+                product=None,
+                match_type="ambiguous_mpn",
+                confidence="none",
+                warning="multiple active catalog products matched MPN",
+            )
 
     if not resolved_model and not resolved_mpn:
-        return CatalogProductResolution(product=None, match_type="missing_identity", confidence="none", warning="missing model and MPN")
-    return CatalogProductResolution(product=None, match_type="unresolved", confidence="none", warning="no active catalog product matched")
+        return CatalogProductResolution(
+            product=None,
+            match_type="missing_identity",
+            confidence="none",
+            warning="missing model and MPN",
+        )
+    return CatalogProductResolution(
+        product=None,
+        match_type="unresolved",
+        confidence="none",
+        warning="no active catalog product matched",
+    )
 
 
 def _iter_candidates(
@@ -196,10 +238,14 @@ def _iter_candidates(
 ) -> Iterable[SourceUrlImportCandidate]:
     if include_observations:
         result.sources_processed.append("price_observations")
-        yield from _iter_observation_candidates(session, catalog_source=catalog_source, result=result)
+        yield from _iter_observation_candidates(
+            session, catalog_source=catalog_source, result=result
+        )
     if include_artifacts:
         result.sources_processed.append("monitoring_runs.enriched_csv_path")
-        yield from _iter_artifact_candidates(session, catalog_source=catalog_source, result=result)
+        yield from _iter_artifact_candidates(
+            session, catalog_source=catalog_source, result=result
+        )
 
 
 def _iter_observation_candidates(
@@ -214,7 +260,9 @@ def _iter_observation_candidates(
     )
     if catalog_source:
         statement = statement.where(PriceObservation.catalog_source == catalog_source)
-    statement = statement.order_by(PriceObservation.observed_at.desc(), PriceObservation.id.desc())
+    statement = statement.order_by(
+        PriceObservation.observed_at.desc(), PriceObservation.id.desc()
+    )
 
     for observation in session.execute(statement).scalars().all():
         _increment_source_stat(result, "observations", "processed")
@@ -226,7 +274,11 @@ def _iter_observation_candidates(
             product_id=observation.product_id,
         )
         if resolution.product is None:
-            reason = "ambiguous_identity" if resolution.match_type == "ambiguous_mpn" else "unresolved_identity"
+            reason = (
+                "ambiguous_identity"
+                if resolution.match_type == "ambiguous_mpn"
+                else "unresolved_identity"
+            )
             _skip(
                 result,
                 reason,
@@ -248,7 +300,10 @@ def _iter_observation_candidates(
             )
             continue
         _increment_source_stat(result, "observations", "candidates")
-        successful = observation.competitor_price is not None or observation.match_status == "matched"
+        successful = (
+            observation.competitor_price is not None
+            or observation.match_status == "matched"
+        )
         yield SourceUrlImportCandidate(
             url=observation.product_url or "",
             source_name=_empty_to_none(observation.source),
@@ -324,7 +379,9 @@ def _parse_artifact_path(
     for observation in parsed.observations:
         if not observation.product_url:
             continue
-        candidate = _artifact_observation_to_candidate(session, observation, evidence_detail, result)
+        candidate = _artifact_observation_to_candidate(
+            session, observation, evidence_detail, result
+        )
         if candidate is not None:
             yield candidate
 
@@ -342,7 +399,11 @@ def _artifact_observation_to_candidate(
         mpn=observation.mpn,
     )
     if resolution.product is None:
-        reason = "ambiguous_identity" if resolution.match_type == "ambiguous_mpn" else "unresolved_identity"
+        reason = (
+            "ambiguous_identity"
+            if resolution.match_type == "ambiguous_mpn"
+            else "unresolved_identity"
+        )
         _skip(
             result,
             reason,
@@ -412,7 +473,9 @@ def _process_candidate(
     domain = extract_source_domain(normalized)
     source_name = candidate.source_name or infer_source_name(domain)
     key = (candidate.catalog_product_id, normalized)
-    result.candidate_evidence.append({**candidate.to_dict(), "url_normalized": normalized, "source_domain": domain})
+    result.candidate_evidence.append(
+        {**candidate.to_dict(), "url_normalized": normalized, "source_domain": domain}
+    )
     if key in seen_keys:
         result.counters["duplicate_count"] += 1
         result.report_items.append(
@@ -437,7 +500,9 @@ def _process_candidate(
         trust_level=candidate.trust_level,
         status=candidate.status,
         last_seen_at=candidate.observed_at,
-        last_success_at=candidate.observed_at if candidate.successful_evidence else None,
+        last_success_at=(
+            candidate.observed_at if candidate.successful_evidence else None
+        ),
         notes=candidate.notes,
         apply=apply,
     )
@@ -482,7 +547,13 @@ def _process_candidate(
     )
 
 
-def _skip(result: SourceUrlImportResult, reason: str, warning: str, *, item: dict[str, Any] | None = None) -> None:
+def _skip(
+    result: SourceUrlImportResult,
+    reason: str,
+    warning: str,
+    *,
+    item: dict[str, Any] | None = None,
+) -> None:
     result.counters["skipped_count"] += 1
     result.skipped_reasons[reason] += 1
     if reason == "invalid_url":
@@ -515,7 +586,9 @@ def _candidate_report_item(
     }
 
 
-def _increment_source_stat(result: SourceUrlImportResult, source_key: str, field_name: str) -> None:
+def _increment_source_stat(
+    result: SourceUrlImportResult, source_key: str, field_name: str
+) -> None:
     stats = result.source_stats.setdefault(source_key, Counter())
     stats[field_name] += 1
 

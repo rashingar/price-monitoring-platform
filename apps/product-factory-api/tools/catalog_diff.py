@@ -50,7 +50,7 @@ def extract_cta_text(html: str) -> str:
     Looks for an anchor tag with border-radius: 12px in its style and
     returns the inner text.
     """
-    match = re.search(r'border-radius:\s*12px[^>]*>([^<]+)</a>', html or "")
+    match = re.search(r"border-radius:\s*12px[^>]*>([^<]+)</a>", html or "")
     return match.group(1).strip() if match else ""
 
 
@@ -127,9 +127,7 @@ def compare_meta_description(catalog_val: str, candidate_val: str) -> dict:
     }
 
 
-def build_report(
-    catalog: dict[str, dict], candidates: dict[str, dict]
-) -> dict:
+def build_report(catalog: dict[str, dict], candidates: dict[str, dict]) -> dict:
     """Build the full diff report."""
     catalog_models = set(catalog.keys())
     candidate_models = set(candidates.keys())
@@ -156,9 +154,7 @@ def build_report(
         fields: dict[str, dict] = {}
 
         # name
-        name_result = compare_name(
-            cat_row.get("name", ""), cand_row.get("name", "")
-        )
+        name_result = compare_name(cat_row.get("name", ""), cand_row.get("name", ""))
         fields["name"] = name_result
         if name_result["status"] == "exact":
             field_stats["name"]["exact_match"] += 1

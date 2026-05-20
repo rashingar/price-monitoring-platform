@@ -13,22 +13,22 @@ def _build_minimal_taxonomy_html(row: dict[str, str]) -> str:
     model = row["model"]
     return (
         "<!DOCTYPE html>"
-        "<html lang=\"el\">"
+        '<html lang="el">'
         "<head>"
-        "<meta charset=\"utf-8\" />"
+        '<meta charset="utf-8" />'
         f"<title>{title}</title>"
-        f"<link rel=\"canonical\" href=\"{url}\" />"
-        "<script id=\"product-schema\" type=\"application/ld+json\">"
+        f'<link rel="canonical" href="{url}" />'
+        '<script id="product-schema" type="application/ld+json">'
         f"{json.dumps({'@context': 'https://schema.org', '@type': 'Product', 'name': title, 'brand': {'@type': 'Brand', 'name': manufacturer}, 'mpn': model, 'sku': model, 'category': category_text, 'image': [f'https://static.skroutz.gr/mock/{model}/1.jpg'], 'offers': {'@type': 'Offer', 'price': '199.00', 'priceCurrency': 'EUR'}}, ensure_ascii=False)}"
         "</script>"
         "</head>"
         "<body>"
-        "<div class=\"sku-title\">"
-        f"<a class=\"category-tag\" href=\"{category_href}\">{category_text}</a>"
-        f"<h1 class=\"page-title\">{title}<small class=\"sku-code\">Κωδικός: {model}</small></h1>"
+        '<div class="sku-title">'
+        f'<a class="category-tag" href="{category_href}">{category_text}</a>'
+        f'<h1 class="page-title">{title}<small class="sku-code">Κωδικός: {model}</small></h1>'
         "</div>"
-        f"<a class=\"brand-page-link\"><span>{manufacturer}</span></a>"
-        f"<div id=\"prices\"><div class=\"product-name\" title=\"{title}\"></div></div>"
+        f'<a class="brand-page-link"><span>{manufacturer}</span></a>'
+        f'<div id="prices"><div class="product-name" title="{title}"></div></div>'
         "</body>"
         "</html>"
     )
@@ -47,7 +47,13 @@ def test_microwave_category_resolves_to_microwave_leaf_taxonomy() -> None:
     }
 
     parsed = parser.parse(_build_minimal_taxonomy_html(row), row["skroutz_product_url"])
-    taxonomy, _ = resolver.resolve(parsed.source.breadcrumbs, parsed.source.canonical_url, parsed.source.name, parsed.source.key_specs, parsed.source.spec_sections)
+    taxonomy, _ = resolver.resolve(
+        parsed.source.breadcrumbs,
+        parsed.source.canonical_url,
+        parsed.source.name,
+        parsed.source.key_specs,
+        parsed.source.spec_sections,
+    )
 
     assert parsed.source.page_type == "product"
     assert parsed.source.skroutz_family == "microwave"

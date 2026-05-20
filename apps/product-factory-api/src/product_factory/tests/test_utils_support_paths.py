@@ -26,16 +26,31 @@ from product_factory.repo_paths import (
 def test_support_files_resolve_from_resources_layout() -> None:
     assert REPO_ROOT.name == "product-factory-api"
     expected_paths = [
-        (PRODUCT_TEMPLATE_PATH, REPO_ROOT / "resources" / "templates" / "product_import_template.csv"),
-        (PRESENTATION_TEMPLATE_PATH, REPO_ROOT / "resources" / "templates" / "TEMPLATE_presentation.html"),
-        (CATALOG_TAXONOMY_PATH, REPO_ROOT / "resources" / "mappings" / "catalog_taxonomy.json"),
-        (SCHEMA_LIBRARY_PATH, REPO_ROOT / "resources" / "schemas" / "electronet_schema_library.json"),
+        (
+            PRODUCT_TEMPLATE_PATH,
+            REPO_ROOT / "resources" / "templates" / "product_import_template.csv",
+        ),
+        (
+            PRESENTATION_TEMPLATE_PATH,
+            REPO_ROOT / "resources" / "templates" / "TEMPLATE_presentation.html",
+        ),
+        (
+            CATALOG_TAXONOMY_PATH,
+            REPO_ROOT / "resources" / "mappings" / "catalog_taxonomy.json",
+        ),
+        (
+            SCHEMA_LIBRARY_PATH,
+            REPO_ROOT / "resources" / "schemas" / "electronet_schema_library.json",
+        ),
         (
             CHARACTERISTICS_TEMPLATES_PATH,
             REPO_ROOT / "resources" / "templates" / "characteristics_templates.json",
         ),
         (FILTER_MAP_PATH, REPO_ROOT / "resources" / "mappings" / "filter_map.json"),
-        (FILTER_MAP_BASE_PATH, REPO_ROOT / "resources" / "mappings" / "filter_map.base.json"),
+        (
+            FILTER_MAP_BASE_PATH,
+            REPO_ROOT / "resources" / "mappings" / "filter_map.base.json",
+        ),
         (
             FILTER_MAP_MANUAL_OVERRIDES_PATH,
             REPO_ROOT / "resources" / "mappings" / "filter_map.manual_overrides.json",
@@ -57,8 +72,14 @@ def test_support_files_resolve_from_resources_layout() -> None:
             DIFFERENTIATOR_PRIORITY_MAP_PATH,
             REPO_ROOT / "resources" / "mappings" / "differentiator_priority_map.csv",
         ),
-        (INTRO_TEXT_PROMPT_PATH, REPO_ROOT / "resources" / "prompts" / "intro_text_prompt.txt"),
-        (SEO_META_PROMPT_PATH, REPO_ROOT / "resources" / "prompts" / "seo_meta_prompt.txt"),
+        (
+            INTRO_TEXT_PROMPT_PATH,
+            REPO_ROOT / "resources" / "prompts" / "intro_text_prompt.txt",
+        ),
+        (
+            SEO_META_PROMPT_PATH,
+            REPO_ROOT / "resources" / "prompts" / "seo_meta_prompt.txt",
+        ),
         (
             MANUFACTURER_SOURCE_MAP_PATH,
             REPO_ROOT / "resources" / "mappings" / "MANUFACTURER_SOURCE_MAP.json",
@@ -77,9 +98,14 @@ def test_support_files_resolve_from_resources_layout() -> None:
 
 def test_filter_map_uses_object_style_category_filters() -> None:
     filter_map = json.loads(FILTER_MAP_PATH.read_text(encoding="utf-8"))
-    rows_with_filters = [row for row in filter_map["subcategories"] if row["filter_groups"]]
+    rows_with_filters = [
+        row for row in filter_map["subcategories"] if row["filter_groups"]
+    ]
 
     assert rows_with_filters
     for row in rows_with_filters[:10]:
         assert all(isinstance(group, dict) for group in row["filter_groups"])
-        assert all({"group_id", "name", "required", "status", "values"} <= set(group) for group in row["filter_groups"])
+        assert all(
+            {"group_id", "name", "required", "status", "values"} <= set(group)
+            for group in row["filter_groups"]
+        )

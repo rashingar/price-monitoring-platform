@@ -8,8 +8,11 @@ from .repo_paths import PRODUCT_TEMPLATE_PATH
 from .utils import load_template_headers
 
 
-
-def write_csv_row(row: dict[str, Any], out_path: str | Path, template_path: str | Path = PRODUCT_TEMPLATE_PATH) -> tuple[list[str], dict[str, Any]]:
+def write_csv_row(
+    row: dict[str, Any],
+    out_path: str | Path,
+    template_path: str | Path = PRODUCT_TEMPLATE_PATH,
+) -> tuple[list[str], dict[str, Any]]:
     base_headers = load_template_headers(template_path)
     dynamic_headers = [
         key

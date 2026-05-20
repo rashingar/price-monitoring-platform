@@ -47,7 +47,6 @@ from ..tools.sync_filter_map import (
     write_manual_overrides,
 )
 
-
 FILTER_PERSISTENCE_LOCK_TIMEOUT_SECONDS = 5.0
 FILTER_PERSISTENCE_LOCK_RETRY_SECONDS = 0.05
 FILTER_MANUAL_METADATA_SCHEMA_VERSION = 1
@@ -99,7 +98,9 @@ class _FilterPersistenceLock:
             "purpose": self.purpose,
             "token": self.token,
         }
-        content = (json.dumps(metadata, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
+        content = (
+            json.dumps(metadata, ensure_ascii=False, sort_keys=True) + "\n"
+        ).encode("utf-8")
 
         while True:
             try:
@@ -158,7 +159,9 @@ def get_filter_category(category_id: str) -> FilterCategoryResponse:
     return _category_response(category, maps=maps)
 
 
-def add_filter_group(category_id: str, request: AddFilterGroupRequest) -> FilterCategoryResponse:
+def add_filter_group(
+    category_id: str, request: AddFilterGroupRequest
+) -> FilterCategoryResponse:
     with _filter_persistence_lock("add_filter_group"):
         maps = _load_maps()
         _validate_expected_revision(request.expected_revision, maps.revision)
@@ -167,16 +170,24 @@ def add_filter_group(category_id: str, request: AddFilterGroupRequest) -> Filter
         group_id = stable_group_id(category_id, group_name)
 
         if _find_group(category, group_id=group_id) is not None:
-            raise FilterManagerError(409, f"Group already exists with group_id: {group_id}")
+            raise FilterManagerError(
+                409, f"Group already exists with group_id: {group_id}"
+            )
         if _find_group(category, name=group_name) is not None:
-            raise FilterManagerError(409, f"Group already exists with name: {group_name}")
+            raise FilterManagerError(
+                409, f"Group already exists with name: {group_name}"
+            )
         if _find_group(category, name=group_name, normalized=True) is not None:
-            raise FilterManagerError(409, f"Normalized duplicate group exists for name: {group_name}")
+            raise FilterManagerError(
+                409, f"Normalized duplicate group exists for name: {group_name}"
+            )
 
         manual = deepcopy(maps.manual)
         updated_at = _utc_now()
         category_override = _ensure_category_override(manual, category)
-        _set_override_metadata(category_override, operation="add_group", updated_at=updated_at)
+        _set_override_metadata(
+            category_override, operation="add_group", updated_at=updated_at
+        )
         groups = category_override.setdefault("groups", {})
         groups[group_id] = {
             "group_id": group_id,
@@ -184,9 +195,13 @@ def add_filter_group(category_id: str, request: AddFilterGroupRequest) -> Filter
             "required": request.required,
             "status": request.status,
             "values": {},
-            "metadata": _override_metadata(operation="add_group", updated_at=updated_at),
+            "metadata": _override_metadata(
+                operation="add_group", updated_at=updated_at
+            ),
         }
-        return _write_manual_sync_and_category(manual, category_id, operation="add_group", updated_at=updated_at)
+        return _write_manual_sync_and_category(
+            manual, category_id, operation="add_group", updated_at=updated_at
+        )
 
 
 def update_filter_group(
@@ -203,9 +218,13 @@ def update_filter_group(
             raise FilterManagerError(404, f"group_id not found: {group_id}")
 
         if request.name is not None:
-            conflicting = _find_group(category, name=request.name, exclude_group_id=group_id)
+            conflicting = _find_group(
+                category, name=request.name, exclude_group_id=group_id
+            )
             if conflicting is not None:
-                raise FilterManagerError(409, f"Group already exists with name: {request.name}")
+                raise FilterManagerError(
+                    409, f"Group already exists with name: {request.name}"
+                )
             normalized_conflict = _find_group(
                 category,
                 name=request.name,
@@ -213,12 +232,16 @@ def update_filter_group(
                 exclude_group_id=group_id,
             )
             if normalized_conflict is not None:
-                raise FilterManagerError(409, f"Normalized duplicate group exists for name: {request.name}")
+                raise FilterManagerError(
+                    409, f"Normalized duplicate group exists for name: {request.name}"
+                )
 
         manual = deepcopy(maps.manual)
         updated_at = _utc_now()
         category_override = _ensure_category_override(manual, category)
-        _set_override_metadata(category_override, operation="update_group", updated_at=updated_at)
+        _set_override_metadata(
+            category_override, operation="update_group", updated_at=updated_at
+        )
         group_override = _ensure_group_override(category_override, group)
         if request.name is not None:
             group_override["name"] = request.name
@@ -226,8 +249,12 @@ def update_filter_group(
             group_override["required"] = request.required
         if request.status is not None:
             group_override["status"] = request.status
-        _set_override_metadata(group_override, operation="update_group", updated_at=updated_at)
-        return _write_manual_sync_and_category(manual, category_id, operation="update_group", updated_at=updated_at)
+        _set_override_metadata(
+            group_override, operation="update_group", updated_at=updated_at
+        )
+        return _write_manual_sync_and_category(
+            manual, category_id, operation="update_group", updated_at=updated_at
+        )
 
 
 def add_filter_value(
@@ -246,25 +273,37 @@ def add_filter_value(
         display_value = request.value.strip()
         value_id = stable_value_id(group_id, display_value)
         if _find_value(group, value_id=value_id) is not None:
-            raise FilterManagerError(409, f"Value already exists with value_id: {value_id}")
+            raise FilterManagerError(
+                409, f"Value already exists with value_id: {value_id}"
+            )
         if _find_value(group, value=display_value) is not None:
             raise FilterManagerError(409, f"Value already exists: {display_value}")
         if _find_value(group, value=display_value, normalized=True) is not None:
-            raise FilterManagerError(409, f"Normalized duplicate value exists for value: {display_value}")
+            raise FilterManagerError(
+                409, f"Normalized duplicate value exists for value: {display_value}"
+            )
 
         manual = deepcopy(maps.manual)
         updated_at = _utc_now()
         category_override = _ensure_category_override(manual, category)
-        _set_override_metadata(category_override, operation="add_value", updated_at=updated_at)
+        _set_override_metadata(
+            category_override, operation="add_value", updated_at=updated_at
+        )
         group_override = _ensure_group_override(category_override, group)
-        _set_override_metadata(group_override, operation="add_value", updated_at=updated_at)
+        _set_override_metadata(
+            group_override, operation="add_value", updated_at=updated_at
+        )
         group_override.setdefault("values", {})[value_id] = {
             "value_id": value_id,
             "value": display_value,
             "status": request.status,
-            "metadata": _override_metadata(operation="add_value", updated_at=updated_at),
+            "metadata": _override_metadata(
+                operation="add_value", updated_at=updated_at
+            ),
         }
-        return _write_manual_sync_and_category(manual, category_id, operation="add_value", updated_at=updated_at)
+        return _write_manual_sync_and_category(
+            manual, category_id, operation="add_value", updated_at=updated_at
+        )
 
 
 def update_filter_value(
@@ -285,7 +324,9 @@ def update_filter_value(
             raise FilterManagerError(404, f"value_id not found: {value_id}")
 
         if request.value is not None:
-            conflicting = _find_value(group, value=request.value, exclude_value_id=value_id)
+            conflicting = _find_value(
+                group, value=request.value, exclude_value_id=value_id
+            )
             if conflicting is not None:
                 raise FilterManagerError(409, f"Value already exists: {request.value}")
             normalized_conflict = _find_value(
@@ -295,21 +336,31 @@ def update_filter_value(
                 exclude_value_id=value_id,
             )
             if normalized_conflict is not None:
-                raise FilterManagerError(409, f"Normalized duplicate value exists for value: {request.value}")
+                raise FilterManagerError(
+                    409, f"Normalized duplicate value exists for value: {request.value}"
+                )
 
         manual = deepcopy(maps.manual)
         updated_at = _utc_now()
         category_override = _ensure_category_override(manual, category)
-        _set_override_metadata(category_override, operation="update_value", updated_at=updated_at)
+        _set_override_metadata(
+            category_override, operation="update_value", updated_at=updated_at
+        )
         group_override = _ensure_group_override(category_override, group)
-        _set_override_metadata(group_override, operation="update_value", updated_at=updated_at)
+        _set_override_metadata(
+            group_override, operation="update_value", updated_at=updated_at
+        )
         value_override = _ensure_value_override(group_override, value)
         if request.value is not None:
             value_override["value"] = request.value
         if request.status is not None:
             value_override["status"] = request.status
-        _set_override_metadata(value_override, operation="update_value", updated_at=updated_at)
-        return _write_manual_sync_and_category(manual, category_id, operation="update_value", updated_at=updated_at)
+        _set_override_metadata(
+            value_override, operation="update_value", updated_at=updated_at
+        )
+        return _write_manual_sync_and_category(
+            manual, category_id, operation="update_value", updated_at=updated_at
+        )
 
 
 def sync_filter_map() -> FilterSyncResponse:
@@ -322,12 +373,16 @@ def sync_filter_map() -> FilterSyncResponse:
                 operation="sync_filter_map",
                 updated_at=updated_at,
             )
-            report = read_json_file(repo_paths.FILTER_MAP_SYNC_REPORT_PATH, default={}) or {}
+            report = (
+                read_json_file(repo_paths.FILTER_MAP_SYNC_REPORT_PATH, default={}) or {}
+            )
         except FilterManagerError:
             raise
         except InvalidFilterOverrideJsonError as exc:
             raise FilterManagerError(409, INVALID_MANUAL_OVERRIDES_MESSAGE) from exc
-        except Exception as exc:  # pragma: no cover - defensive boundary for API callers
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - defensive boundary for API callers
             raise FilterManagerError(500, f"Filter map sync failed: {exc}") from exc
     return _sync_response(final_payload, report, revision=revision)
 
@@ -336,9 +391,13 @@ def get_filter_sync_report() -> FilterSyncReportResponse:
     if not repo_paths.FILTER_MAP_SYNC_REPORT_PATH.exists():
         raise FilterManagerError(404, "Filter sync report not found.")
     try:
-        report = read_json_file(repo_paths.FILTER_MAP_SYNC_REPORT_PATH, default={}) or {}
+        report = (
+            read_json_file(repo_paths.FILTER_MAP_SYNC_REPORT_PATH, default={}) or {}
+        )
     except Exception as exc:  # pragma: no cover - defensive boundary for API callers
-        raise FilterManagerError(500, f"Could not read filter sync report: {exc}") from exc
+        raise FilterManagerError(
+            500, f"Could not read filter sync report: {exc}"
+        ) from exc
     return FilterSyncReportResponse.model_validate(report)
 
 
@@ -349,7 +408,9 @@ def get_filter_status() -> FilterStatusResponse:
         revision = None
     return FilterStatusResponse(
         filter_map_base_path=str(repo_paths.FILTER_MAP_BASE_PATH),
-        filter_map_manual_overrides_path=str(repo_paths.FILTER_MAP_MANUAL_OVERRIDES_PATH),
+        filter_map_manual_overrides_path=str(
+            repo_paths.FILTER_MAP_MANUAL_OVERRIDES_PATH
+        ),
         filter_map_path=str(repo_paths.FILTER_MAP_PATH),
         sync_report_path=str(repo_paths.FILTER_MAP_SYNC_REPORT_PATH),
         valid_statuses=sorted(VALID_STATUSES),
@@ -362,18 +423,26 @@ def list_filter_override_backups() -> FilterBackupsResponse:
     return FilterBackupsResponse(items=items)
 
 
-def restore_filter_override_backup(backup_name: str | None = None) -> FilterBackupRestoreResponse:
+def restore_filter_override_backup(
+    backup_name: str | None = None,
+) -> FilterBackupRestoreResponse:
     with _filter_persistence_lock("restore_filter_override_backup"):
         updated_at = _utc_now()
         backup_path = _select_restore_backup_path(backup_name)
         try:
             manual = load_manual_overrides(backup_path)
         except InvalidFilterOverrideJsonError as exc:
-            raise FilterManagerError(400, f"Filter override backup JSON is invalid: {backup_path.name}") from exc
+            raise FilterManagerError(
+                400, f"Filter override backup JSON is invalid: {backup_path.name}"
+            ) from exc
 
         restored_backup_name = backup_path.name
-        _create_filter_override_backup(operation="restore_filter_override_backup", updated_at=updated_at)
-        _touch_manual_metadata(manual, operation="restore_filter_override_backup", updated_at=updated_at)
+        _create_filter_override_backup(
+            operation="restore_filter_override_backup", updated_at=updated_at
+        )
+        _touch_manual_metadata(
+            manual, operation="restore_filter_override_backup", updated_at=updated_at
+        )
         _sort_manual_overrides(manual)
         try:
             final_payload, revision = _persist_manual_and_sync(
@@ -382,7 +451,9 @@ def restore_filter_override_backup(backup_name: str | None = None) -> FilterBack
                 updated_at=updated_at,
                 create_backup=False,
             )
-            report = read_json_file(repo_paths.FILTER_MAP_SYNC_REPORT_PATH, default={}) or {}
+            report = (
+                read_json_file(repo_paths.FILTER_MAP_SYNC_REPORT_PATH, default={}) or {}
+            )
             report["rollback"] = {
                 "status": "restored",
                 "restored_backup_name": restored_backup_name,
@@ -391,10 +462,16 @@ def restore_filter_override_backup(backup_name: str | None = None) -> FilterBack
             write_json_file(repo_paths.FILTER_MAP_SYNC_REPORT_PATH, report)
         except FilterManagerError as exc:
             if exc.status_code >= 500:
-                raise FilterManagerError(500, f"Filter override restore sync failed: {exc.detail}") from exc
+                raise FilterManagerError(
+                    500, f"Filter override restore sync failed: {exc.detail}"
+                ) from exc
             raise
-        except Exception as exc:  # pragma: no cover - defensive boundary for API callers
-            raise FilterManagerError(500, f"Filter override restore sync failed: {exc}") from exc
+        except (
+            Exception
+        ) as exc:  # pragma: no cover - defensive boundary for API callers
+            raise FilterManagerError(
+                500, f"Filter override restore sync failed: {exc}"
+            ) from exc
     return FilterBackupRestoreResponse(
         status="ok",
         restored_backup_name=restored_backup_name,
@@ -430,7 +507,9 @@ def _write_manual_sync_and_category(
     operation: str,
     updated_at: str,
 ) -> FilterCategoryResponse:
-    final_payload, revision = _persist_manual_and_sync(manual, operation=operation, updated_at=updated_at)
+    final_payload, revision = _persist_manual_and_sync(
+        manual, operation=operation, updated_at=updated_at
+    )
     maps = _FilterMaps(
         base=read_filter_map_json(repo_paths.FILTER_MAP_BASE_PATH),
         manual=manual,
@@ -439,7 +518,9 @@ def _write_manual_sync_and_category(
     )
     category = _find_category(final_payload, category_id)
     if category is None:
-        raise FilterManagerError(500, f"Persisted filter category disappeared: {category_id}")
+        raise FilterManagerError(
+            500, f"Persisted filter category disappeared: {category_id}"
+        )
     return _category_response(category, maps=maps)
 
 
@@ -468,7 +549,9 @@ def _persist_manual_and_sync(
     except InvalidFilterOverrideJsonError as exc:
         raise FilterManagerError(409, INVALID_MANUAL_OVERRIDES_MESSAGE) from exc
     except Exception as exc:  # pragma: no cover - defensive boundary for API callers
-        raise FilterManagerError(500, f"Could not persist filter override: {exc}") from exc
+        raise FilterManagerError(
+            500, f"Could not persist filter override: {exc}"
+        ) from exc
 
 
 def _build_apply_overrides_report(base_payload: dict[str, Any]) -> dict[str, Any]:
@@ -477,7 +560,10 @@ def _build_apply_overrides_report(base_payload: dict[str, Any]) -> dict[str, Any
     report["manual_overrides_path"] = str(repo_paths.FILTER_MAP_MANUAL_OVERRIDES_PATH)
     report["filter_map_path"] = str(repo_paths.FILTER_MAP_PATH)
     report["categories_seen"] = len(base_payload.get("subcategories", []))
-    report["groups_seen"] = sum(len(category.get("filter_groups", [])) for category in base_payload.get("subcategories", []))
+    report["groups_seen"] = sum(
+        len(category.get("filter_groups", []))
+        for category in base_payload.get("subcategories", [])
+    )
     report["values_seen"] = sum(
         len(group.get("values", []))
         for category in base_payload.get("subcategories", [])
@@ -526,11 +612,15 @@ def _create_filter_override_backup(*, operation: str, updated_at: str) -> Path |
     backup_dir = _backup_dir()
     backup_dir.mkdir(parents=True, exist_ok=True)
     if not source_path.exists():
-        return _write_missing_override_marker(backup_dir, operation=operation, updated_at=updated_at)
+        return _write_missing_override_marker(
+            backup_dir, operation=operation, updated_at=updated_at
+        )
 
     revision = _backup_revision_token(source_path)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    backup_path = _unique_backup_path(backup_dir / f"{FILTER_OVERRIDE_BACKUP_PREFIX}.{timestamp}.{revision}.json")
+    backup_path = _unique_backup_path(
+        backup_dir / f"{FILTER_OVERRIDE_BACKUP_PREFIX}.{timestamp}.{revision}.json"
+    )
     temp_path = backup_path.with_name(f".{backup_path.name}.{uuid.uuid4().hex}.tmp")
     try:
         with source_path.open("rb") as source, temp_path.open("wb") as target:
@@ -545,9 +635,14 @@ def _create_filter_override_backup(*, operation: str, updated_at: str) -> Path |
     return backup_path
 
 
-def _write_missing_override_marker(backup_dir: Path, *, operation: str, updated_at: str) -> Path:
+def _write_missing_override_marker(
+    backup_dir: Path, *, operation: str, updated_at: str
+) -> Path:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    marker_path = _unique_backup_path(backup_dir / f"{FILTER_OVERRIDE_BACKUP_PREFIX}.{timestamp}.no-previous.marker.json")
+    marker_path = _unique_backup_path(
+        backup_dir
+        / f"{FILTER_OVERRIDE_BACKUP_PREFIX}.{timestamp}.no-previous.marker.json"
+    )
     write_json_file(
         marker_path,
         {
@@ -585,11 +680,15 @@ def _unique_backup_path(path: Path) -> Path:
         candidate = path.with_name(f"{stem}.{index}{suffix}")
         if not candidate.exists():
             return candidate
-    raise FilterManagerError(500, "Could not allocate a unique filter override backup filename.")
+    raise FilterManagerError(
+        500, "Could not allocate a unique filter override backup filename."
+    )
 
 
 def _prune_filter_override_backups() -> None:
-    for stale_path in _iter_filter_override_backups()[FILTER_OVERRIDE_BACKUP_RETENTION:]:
+    for stale_path in _iter_filter_override_backups()[
+        FILTER_OVERRIDE_BACKUP_RETENTION:
+    ]:
         stale_path.unlink(missing_ok=True)
 
 
@@ -610,25 +709,36 @@ def _select_restore_backup_path(backup_name: str | None) -> Path:
 
 
 def _resolve_named_backup_path(backup_name: str) -> Path:
-    if not backup_name or Path(backup_name).name != backup_name or "/" in backup_name or "\\" in backup_name:
+    if (
+        not backup_name
+        or Path(backup_name).name != backup_name
+        or "/" in backup_name
+        or "\\" in backup_name
+    ):
         raise FilterManagerError(400, "Invalid filter override backup name.")
     backup_dir = _backup_dir().resolve(strict=False)
     backup_path = (backup_dir / backup_name).resolve(strict=False)
     if backup_dir != backup_path and backup_dir not in backup_path.parents:
         raise FilterManagerError(400, "Invalid filter override backup name.")
     if not backup_path.exists() or not backup_path.is_file():
-        raise FilterManagerError(404, f"Filter override backup not found: {backup_name}")
+        raise FilterManagerError(
+            404, f"Filter override backup not found: {backup_name}"
+        )
     return backup_path
 
 
 def _require_category_for_edit(maps: _FilterMaps, category_id: str) -> dict[str, Any]:
-    category = _find_category(maps.effective, category_id) or _find_category(maps.base, category_id)
+    category = _find_category(maps.effective, category_id) or _find_category(
+        maps.base, category_id
+    )
     if category is None:
         raise FilterManagerError(404, f"category_id not found: {category_id}")
     return category
 
 
-def _category_list_item(category: dict[str, Any], *, maps: _FilterMaps) -> FilterCategoryListItem:
+def _category_list_item(
+    category: dict[str, Any], *, maps: _FilterMaps
+) -> FilterCategoryListItem:
     groups = category.get("filter_groups", [])
     return FilterCategoryListItem(
         category_id=str(category.get("category_id", "")),
@@ -638,15 +748,29 @@ def _category_list_item(category: dict[str, Any], *, maps: _FilterMaps) -> Filte
         sub_category=str(category.get("sub_category", "")),
         key=str(category.get("key", "")),
         group_count=len(groups),
-        active_group_count=sum(1 for group in groups if group.get("status", "active") == "active"),
-        required_group_count=sum(1 for group in groups if bool(group.get("required", True))),
-        inactive_group_count=sum(1 for group in groups if group.get("status") == "inactive"),
-        deprecated_group_count=sum(1 for group in groups if group.get("status") == "deprecated"),
-        source=_source(_find_category(maps.base, str(category.get("category_id", ""))) is not None, _manual_category(maps.manual, str(category.get("category_id", ""))) is not None),
+        active_group_count=sum(
+            1 for group in groups if group.get("status", "active") == "active"
+        ),
+        required_group_count=sum(
+            1 for group in groups if bool(group.get("required", True))
+        ),
+        inactive_group_count=sum(
+            1 for group in groups if group.get("status") == "inactive"
+        ),
+        deprecated_group_count=sum(
+            1 for group in groups if group.get("status") == "deprecated"
+        ),
+        source=_source(
+            _find_category(maps.base, str(category.get("category_id", ""))) is not None,
+            _manual_category(maps.manual, str(category.get("category_id", "")))
+            is not None,
+        ),
     )
 
 
-def _category_response(category: dict[str, Any], *, maps: _FilterMaps) -> FilterCategoryResponse:
+def _category_response(
+    category: dict[str, Any], *, maps: _FilterMaps
+) -> FilterCategoryResponse:
     category_id = str(category.get("category_id", ""))
     groups = [
         _group_response(group, category_id=category_id, maps=maps)
@@ -663,7 +787,9 @@ def _category_response(category: dict[str, Any], *, maps: _FilterMaps) -> Filter
     )
 
 
-def _group_response(group: dict[str, Any], *, category_id: str, maps: _FilterMaps) -> FilterGroupResponse:
+def _group_response(
+    group: dict[str, Any], *, category_id: str, maps: _FilterMaps
+) -> FilterGroupResponse:
     group_id = str(group.get("group_id", ""))
     values = [
         _value_response(value, category_id=category_id, group_id=group_id, maps=maps)
@@ -675,7 +801,8 @@ def _group_response(group: dict[str, Any], *, category_id: str, maps: _FilterMap
         required=bool(group.get("required", True)),
         status=group.get("status", "active"),
         source=_source(
-            _find_group(_find_category(maps.base, category_id), group_id=group_id) is not None,
+            _find_group(_find_category(maps.base, category_id), group_id=group_id)
+            is not None,
             _manual_group(maps.manual, category_id, group_id) is not None,
         ),
         values=values,
@@ -710,9 +837,7 @@ def _sync_response(
 ) -> FilterSyncResponse:
     categories = list(_iter_categories(final_payload))
     groups = [
-        group
-        for category in categories
-        for group in category.get("filter_groups", [])
+        group for category in categories for group in category.get("filter_groups", [])
     ]
     return FilterSyncResponse(
         status="ok",
@@ -737,14 +862,23 @@ def _iter_categories(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [category for category in categories if isinstance(category, dict)]
 
 
-def _find_category(payload: dict[str, Any] | None, category_id: str) -> dict[str, Any] | None:
+def _find_category(
+    payload: dict[str, Any] | None, category_id: str
+) -> dict[str, Any] | None:
     if not payload:
         return None
     by_id = payload.get("by_category_id", {})
     category = by_id.get(category_id) if isinstance(by_id, dict) else None
     if isinstance(category, dict):
         return category
-    return next((item for item in _iter_categories(payload) if item.get("category_id") == category_id), None)
+    return next(
+        (
+            item
+            for item in _iter_categories(payload)
+            if item.get("category_id") == category_id
+        ),
+        None,
+    )
 
 
 def _find_group(
@@ -764,7 +898,11 @@ def _find_group(
         if group_id and group.get("group_id") == group_id:
             return group
         if name is not None:
-            candidate = normalize_label_key(group.get("name")) if normalized else group.get("name")
+            candidate = (
+                normalize_label_key(group.get("name"))
+                if normalized
+                else group.get("name")
+            )
             if candidate == needle:
                 return group
     return None
@@ -787,13 +925,19 @@ def _find_value(
         if value_id and item.get("value_id") == value_id:
             return item
         if value is not None:
-            candidate = normalize_label_key(item.get("value")) if normalized else item.get("value")
+            candidate = (
+                normalize_label_key(item.get("value"))
+                if normalized
+                else item.get("value")
+            )
             if candidate == needle:
                 return item
     return None
 
 
-def _ensure_category_override(manual: dict[str, Any], category: dict[str, Any]) -> dict[str, Any]:
+def _ensure_category_override(
+    manual: dict[str, Any], category: dict[str, Any]
+) -> dict[str, Any]:
     category_id = str(category.get("category_id", ""))
     categories = manual.setdefault("categories", {})
     category_override = categories.setdefault(
@@ -810,7 +954,9 @@ def _ensure_category_override(manual: dict[str, Any], category: dict[str, Any]) 
     return category_override
 
 
-def _ensure_group_override(category_override: dict[str, Any], group: dict[str, Any]) -> dict[str, Any]:
+def _ensure_group_override(
+    category_override: dict[str, Any], group: dict[str, Any]
+) -> dict[str, Any]:
     group_id = str(group.get("group_id", ""))
     groups = category_override.setdefault("groups", {})
     group_override = groups.setdefault(
@@ -831,7 +977,9 @@ def _ensure_group_override(category_override: dict[str, Any], group: dict[str, A
     return group_override
 
 
-def _ensure_value_override(group_override: dict[str, Any], value: dict[str, Any]) -> dict[str, Any]:
+def _ensure_value_override(
+    group_override: dict[str, Any], value: dict[str, Any]
+) -> dict[str, Any]:
     value_id = str(value.get("value_id", ""))
     values = group_override.setdefault("values", {})
     value_override = values.setdefault(
@@ -853,7 +1001,9 @@ def _manual_category(manual: dict[str, Any], category_id: str) -> dict[str, Any]
     return item if isinstance(item, dict) else None
 
 
-def _manual_group(manual: dict[str, Any], category_id: str, group_id: str) -> dict[str, Any] | None:
+def _manual_group(
+    manual: dict[str, Any], category_id: str, group_id: str
+) -> dict[str, Any] | None:
     category = _manual_category(manual, category_id)
     if not category:
         return None
@@ -861,7 +1011,9 @@ def _manual_group(manual: dict[str, Any], category_id: str, group_id: str) -> di
     return item if isinstance(item, dict) else None
 
 
-def _manual_value(manual: dict[str, Any], category_id: str, group_id: str, value_id: str) -> dict[str, Any] | None:
+def _manual_value(
+    manual: dict[str, Any], category_id: str, group_id: str, value_id: str
+) -> dict[str, Any] | None:
     group = _manual_group(manual, category_id, group_id)
     if not group:
         return None
@@ -887,7 +1039,9 @@ def _filter_lock_path() -> Path:
     )
 
 
-def _validate_expected_revision(expected_revision: str | None, current_revision: str) -> None:
+def _validate_expected_revision(
+    expected_revision: str | None, current_revision: str
+) -> None:
     if expected_revision is None:
         return
     if expected_revision != current_revision:
@@ -925,10 +1079,17 @@ def _canonical_json_bytes(payload: Any) -> bytes:
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
-def _touch_manual_metadata(manual: dict[str, Any], *, operation: str, updated_at: str) -> None:
+def _touch_manual_metadata(
+    manual: dict[str, Any], *, operation: str, updated_at: str
+) -> None:
     metadata = manual.setdefault("metadata", {})
     if not isinstance(metadata, dict):
         metadata = {}
@@ -945,7 +1106,9 @@ def _override_metadata(*, operation: str, updated_at: str) -> dict[str, str]:
     }
 
 
-def _set_override_metadata(payload: dict[str, Any], *, operation: str, updated_at: str) -> None:
+def _set_override_metadata(
+    payload: dict[str, Any], *, operation: str, updated_at: str
+) -> None:
     payload["metadata"] = _override_metadata(operation=operation, updated_at=updated_at)
 
 

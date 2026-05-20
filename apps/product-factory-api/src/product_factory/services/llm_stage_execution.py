@@ -183,7 +183,9 @@ def run_intro_text_with_retry(
         _persist_text_if_needed(
             intro_text_output_path,
             intro_payload,
-            force_write=force_refresh or attempt > 1 or not intro_text_output_path.exists(),
+            force_write=force_refresh
+            or attempt > 1
+            or not intro_text_output_path.exists(),
         )
         normalized_intro, intro_errors = validate_intro_text_output(
             intro_payload,
@@ -287,7 +289,9 @@ def execute_split_llm_stage(
     resolve_seo_meta_fn: SeoMetaResolver | None = None,
     intro_policy: Any | None = None,
 ) -> SplitLLMStageResult:
-    task_paths = _resolve_split_llm_task_paths(llm_dir=llm_dir, task_manifest_path=task_manifest_path)
+    task_paths = _resolve_split_llm_task_paths(
+        llm_dir=llm_dir, task_manifest_path=task_manifest_path
+    )
     seo_resolver = resolve_seo_meta_fn or _resolve_seo_meta_output
     seo_meta_payload = seo_resolver(
         seo_meta_context_path=task_paths.seo_meta_context_path,
@@ -327,20 +331,40 @@ def execute_split_llm_stage(
     )
 
 
-def _resolve_split_llm_task_paths(*, llm_dir: Path, task_manifest_path: Path) -> SplitLLMTaskPaths:
+def _resolve_split_llm_task_paths(
+    *, llm_dir: Path, task_manifest_path: Path
+) -> SplitLLMTaskPaths:
     manifest = read_json(task_manifest_path) if task_manifest_path.exists() else {}
-    tasks = manifest.get("primary_outputs", {}).get("tasks", {}) if isinstance(manifest, dict) else {}
+    tasks = (
+        manifest.get("primary_outputs", {}).get("tasks", {})
+        if isinstance(manifest, dict)
+        else {}
+    )
     intro_task = tasks.get(INTRO_TEXT_STAGE, {}) if isinstance(tasks, dict) else {}
     seo_task = tasks.get(SEO_META_STAGE, {}) if isinstance(tasks, dict) else {}
-    intro_text_output_path = Path(intro_task.get("expected_output_path", llm_dir / "intro_text.output.txt"))
+    intro_text_output_path = Path(
+        intro_task.get("expected_output_path", llm_dir / "intro_text.output.txt")
+    )
     return SplitLLMTaskPaths(
-        intro_text_context_path=Path(intro_task.get("context_path", llm_dir / "intro_text.context.json")),
-        intro_text_prompt_path=Path(intro_task.get("prompt_path", llm_dir / "intro_text.prompt.txt")),
+        intro_text_context_path=Path(
+            intro_task.get("context_path", llm_dir / "intro_text.context.json")
+        ),
+        intro_text_prompt_path=Path(
+            intro_task.get("prompt_path", llm_dir / "intro_text.prompt.txt")
+        ),
         intro_text_output_path=intro_text_output_path,
-        intro_text_trace_path=intro_text_output_path.with_name("intro_text.retry_trace.json"),
-        seo_meta_context_path=Path(seo_task.get("context_path", llm_dir / "seo_meta.context.json")),
-        seo_meta_prompt_path=Path(seo_task.get("prompt_path", llm_dir / "seo_meta.prompt.txt")),
-        seo_meta_output_path=Path(seo_task.get("expected_output_path", llm_dir / "seo_meta.output.json")),
+        intro_text_trace_path=intro_text_output_path.with_name(
+            "intro_text.retry_trace.json"
+        ),
+        seo_meta_context_path=Path(
+            seo_task.get("context_path", llm_dir / "seo_meta.context.json")
+        ),
+        seo_meta_prompt_path=Path(
+            seo_task.get("prompt_path", llm_dir / "seo_meta.prompt.txt")
+        ),
+        seo_meta_output_path=Path(
+            seo_task.get("expected_output_path", llm_dir / "seo_meta.output.json")
+        ),
     )
 
 
@@ -358,10 +382,14 @@ def _resolve_intro_text_output(
     if intro_text_output_path.exists() and attempt == 1 and not force_refresh:
         return _read_llm_output_text(intro_text_output_path)
     if not intro_text_prompt_path.exists():
-        raise FileNotFoundError(f"Missing intro_text prompt artifact: {intro_text_prompt_path}")
+        raise FileNotFoundError(
+            f"Missing intro_text prompt artifact: {intro_text_prompt_path}"
+        )
     return _request_openai_text(
         prompt_path=intro_text_prompt_path,
-        retry_note=_intro_retry_note(attempt, intro_word_min=intro_word_min, intro_word_max=intro_word_max),
+        retry_note=_intro_retry_note(
+            attempt, intro_word_min=intro_word_min, intro_word_max=intro_word_max
+        ),
     )
 
 
@@ -377,7 +405,9 @@ def _resolve_seo_meta_output(
         payload = json.loads(_read_llm_output_text(seo_meta_output_path))
     else:
         if not seo_meta_prompt_path.exists():
-            raise FileNotFoundError(f"Missing seo_meta prompt artifact: {seo_meta_prompt_path}")
+            raise FileNotFoundError(
+                f"Missing seo_meta prompt artifact: {seo_meta_prompt_path}"
+            )
         payload = json.loads(_request_openai_text(prompt_path=seo_meta_prompt_path))
     if not isinstance(payload, dict):
         raise ServiceError(
@@ -422,7 +452,9 @@ def run_seo_meta_once(
             reason="resolver returned a non-object seo_meta payload",
             output_path=seo_meta_output_path,
         )
-    _persist_json_if_needed(seo_meta_output_path, seo_meta_payload, force_write=force_refresh)
+    _persist_json_if_needed(
+        seo_meta_output_path, seo_meta_payload, force_write=force_refresh
+    )
     normalized_seo, seo_errors = validate_seo_meta_output(seo_meta_payload)
     if seo_errors:
         raise _build_stage_validation_error(
@@ -484,14 +516,18 @@ def _intro_retry_note(
     )
 
 
-def _persist_text_if_needed(path: Path, value: str, *, force_write: bool = False) -> None:
+def _persist_text_if_needed(
+    path: Path, value: str, *, force_write: bool = False
+) -> None:
     has_bom = _has_utf8_bom(path) if path.exists() else False
     current = _read_llm_output_text(path) if path.exists() else None
     if force_write or has_bom or current != value:
         _write_text_atomic(path, value)
 
 
-def _persist_json_if_needed(path: Path, payload: Mapping[str, Any], *, force_write: bool = False) -> None:
+def _persist_json_if_needed(
+    path: Path, payload: Mapping[str, Any], *, force_write: bool = False
+) -> None:
     has_bom = _has_utf8_bom(path) if path.exists() else False
     current = json.loads(_read_llm_output_text(path)) if path.exists() else None
     if force_write or has_bom or current != dict(payload):
@@ -594,7 +630,11 @@ def _policy_float(policy: Any | None, field_name: str, default: float) -> float:
         value = policy.get(field_name, default)
     else:
         value = getattr(policy, field_name, default)
-    return float(value) if isinstance(value, (float, int)) and not isinstance(value, bool) else default
+    return (
+        float(value)
+        if isinstance(value, (float, int)) and not isinstance(value, bool)
+        else default
+    )
 
 
 def _build_stage_validation_error(

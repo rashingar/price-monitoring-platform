@@ -11,26 +11,52 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.api.app import create_app  # noqa: E402
 from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
-from ecommerce.db.repositories.capture_persistence import persist_capture_result  # noqa: E402
+from ecommerce.db.repositories.capture_persistence import (
+    persist_capture_result,
+)  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.models.vendor_sources import Vendor  # noqa: E402
-from ecommerce.db.models.products import ProductSource, SourceCaptureSnapshot  # noqa: E402
-from ecommerce.db.models.price_monitoring import OfferObservation, PriceObservation, PriceObservationListing  # noqa: E402
-from ecommerce.db.repositories.products import create_product_from_source_urls  # noqa: E402
-from ecommerce.db.repositories.price_monitoring import backfill_price_observation_listings_from_offer_observations  # noqa: E402
-from ecommerce.db.repositories.source_urls import create_or_update_imported_source_url  # noqa: E402
+from ecommerce.db.models.products import (
+    ProductSource,
+    SourceCaptureSnapshot,
+)  # noqa: E402
+from ecommerce.db.models.price_monitoring import (
+    OfferObservation,
+    PriceObservation,
+    PriceObservationListing,
+)  # noqa: E402
+from ecommerce.db.repositories.products import (
+    create_product_from_source_urls,
+)  # noqa: E402
+from ecommerce.db.repositories.price_monitoring import (
+    backfill_price_observation_listings_from_offer_observations,
+)  # noqa: E402
+from ecommerce.db.repositories.source_urls import (
+    create_or_update_imported_source_url,
+)  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
-from ecommerce.price_monitoring.selection import SelectedPriceMonitoringProduct  # noqa: E402
-from ecommerce.price_monitoring.source_url_coverage import compute_source_url_coverage  # noqa: E402
-from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url  # noqa: E402
+from ecommerce.price_monitoring.selection import (
+    SelectedPriceMonitoringProduct,
+)  # noqa: E402
+from ecommerce.price_monitoring.source_url_coverage import (
+    compute_source_url_coverage,
+)  # noqa: E402
+from ecommerce.source_capture.canonicalize_url import (
+    canonical_url_hash,
+    canonicalize_url,
+)  # noqa: E402
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug  # noqa: E402
 from ecommerce.source_capture.parsing import parse_bestprice_offers  # noqa: E402
 from ecommerce.source_capture.scheduled import capture_due_product_sources  # noqa: E402
-from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload, ParsedOfferObservation, ParsedPriceObservation  # noqa: E402
+from ecommerce.source_capture.types import (
+    CaptureResult,
+    CaptureSnapshotPayload,
+    ParsedOfferObservation,
+    ParsedPriceObservation,
+)  # noqa: E402
 from ecommerce.vendor_sources.capture import capture_selected_source_urls  # noqa: E402
-
 
 NOW = datetime(2026, 5, 3, tzinfo=timezone.utc)
 
@@ -41,7 +67,9 @@ def _database_url(tmp_path: Path) -> str:
     return database_url
 
 
-def _catalog_product(session, *, model: str, mpn: str = "MPN-SRC-1", now: datetime = NOW) -> CatalogProductRow:
+def _catalog_product(
+    session, *, model: str, mpn: str = "MPN-SRC-1", now: datetime = NOW
+) -> CatalogProductRow:
     row = CatalogProductRow(
         catalog_source="sourceCata",
         model=model,
@@ -68,7 +96,9 @@ def test_vendor_detection_includes_active_and_scaffolded_vendors() -> None:
 
 
 def test_canonicalization_strips_tracking_and_hash_is_stable() -> None:
-    first = canonicalize_url("HTTPS://WWW.Electronet.GR/p/1/?utm_source=x&sku=123&fbclid=y#reviews")
+    first = canonicalize_url(
+        "HTTPS://WWW.Electronet.GR/p/1/?utm_source=x&sku=123&fbclid=y#reviews"
+    )
     second = canonicalize_url("https://www.electronet.gr/p/1?sku=123")
 
     assert first == "https://www.electronet.gr/p/1?sku=123"
@@ -95,12 +125,17 @@ def test_product_source_creation_deduplicates_and_seeds_vendor(tmp_path: Path) -
         assert first.product.id == second.product.id
         assert session.query(ProductSource).count() == 1
         source = session.query(ProductSource).one()
-        assert source.vendor_id == session.query(Vendor).filter_by(slug="electronet").one().id
+        assert (
+            source.vendor_id
+            == session.query(Vendor).filter_by(slug="electronet").one().id
+        )
         assert source.first_seen_at is not None
         assert source.last_seen_at is not None
 
 
-def test_active_catalog_source_url_creates_product_source_for_scheduled_capture(tmp_path: Path) -> None:
+def test_active_catalog_source_url_creates_product_source_for_scheduled_capture(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
 
     with session_scope(database_url) as session:
@@ -122,8 +157,16 @@ def test_active_catalog_source_url_creates_product_source_for_scheduled_capture(
         return CaptureResult(
             vendor_slug=vendor_slug or "skroutz",
             status="success",
-            snapshot=CaptureSnapshotPayload(capture_strategy="source-url-sync-test", page_url=url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
-            offer_observations=(ParsedOfferObservation(seller_name="Store A", price=Decimal("199.99")),),
+            snapshot=CaptureSnapshotPayload(
+                capture_strategy="source-url-sync-test",
+                page_url=url,
+                captured_at=NOW,
+                fetched_at=NOW,
+                parsed_at=NOW,
+            ),
+            offer_observations=(
+                ParsedOfferObservation(seller_name="Store A", price=Decimal("199.99")),
+            ),
         )
 
     with session_scope(database_url) as session:
@@ -136,11 +179,15 @@ def test_active_catalog_source_url_creates_product_source_for_scheduled_capture(
         assert session.query(PriceObservationListing).count() == 1
 
 
-def test_monitoring_source_url_capture_uses_active_source_urls_and_mirrors_product_sources(tmp_path: Path) -> None:
+def test_monitoring_source_url_capture_uses_active_source_urls_and_mirrors_product_sources(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
 
     with session_scope(database_url) as session:
-        catalog_product = _catalog_product(session, model="RUN-SRC-1", mpn="MPN-RUN-SRC-1")
+        catalog_product = _catalog_product(
+            session, model="RUN-SRC-1", mpn="MPN-RUN-SRC-1"
+        )
         create_or_update_imported_source_url(
             session,
             catalog_product_id=catalog_product.id,
@@ -157,8 +204,18 @@ def test_monitoring_source_url_capture_uses_active_source_urls_and_mirrors_produ
             return CaptureResult(
                 vendor_slug=vendor_slug or "skroutz",
                 status="success",
-                snapshot=CaptureSnapshotPayload(capture_strategy="monitoring-source-url-test", page_url=url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
-                offer_observations=(ParsedOfferObservation(seller_name="Store A", price=Decimal("99.90")),),
+                snapshot=CaptureSnapshotPayload(
+                    capture_strategy="monitoring-source-url-test",
+                    page_url=url,
+                    captured_at=NOW,
+                    fetched_at=NOW,
+                    parsed_at=NOW,
+                ),
+                offer_observations=(
+                    ParsedOfferObservation(
+                        seller_name="Store A", price=Decimal("99.90")
+                    ),
+                ),
             )
 
         result = capture_selected_source_urls(
@@ -178,11 +235,15 @@ def test_monitoring_source_url_capture_uses_active_source_urls_and_mirrors_produ
         assert session.query(PriceObservationListing).count() == 1
 
 
-def test_monitoring_source_url_capture_excludes_non_active_statuses(tmp_path: Path) -> None:
+def test_monitoring_source_url_capture_excludes_non_active_statuses(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
 
     with session_scope(database_url) as session:
-        catalog_product = _catalog_product(session, model="RUN-SRC-2", mpn="MPN-RUN-SRC-2")
+        catalog_product = _catalog_product(
+            session, model="RUN-SRC-2", mpn="MPN-RUN-SRC-2"
+        )
         for status, suffix in [
             ("active", "active"),
             ("broken", "broken"),
@@ -206,7 +267,13 @@ def test_monitoring_source_url_capture_excludes_non_active_statuses(tmp_path: Pa
             return CaptureResult(
                 vendor_slug=vendor_slug or "skroutz",
                 status="success",
-                snapshot=CaptureSnapshotPayload(capture_strategy="status-filter-test", page_url=url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
+                snapshot=CaptureSnapshotPayload(
+                    capture_strategy="status-filter-test",
+                    page_url=url,
+                    captured_at=NOW,
+                    fetched_at=NOW,
+                    parsed_at=NOW,
+                ),
             )
 
         result = capture_selected_source_urls(
@@ -222,11 +289,15 @@ def test_monitoring_source_url_capture_excludes_non_active_statuses(tmp_path: Pa
         assert session.query(ProductSource).count() == 1
 
 
-def test_monitoring_source_url_capture_success_appends_price_observation(tmp_path: Path) -> None:
+def test_monitoring_source_url_capture_success_appends_price_observation(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
 
     with session_scope(database_url) as session:
-        catalog_product = _catalog_product(session, model="RUN-SRC-3", mpn="MPN-RUN-SRC-3")
+        catalog_product = _catalog_product(
+            session, model="RUN-SRC-3", mpn="MPN-RUN-SRC-3"
+        )
         create_or_update_imported_source_url(
             session,
             catalog_product_id=catalog_product.id,
@@ -240,8 +311,18 @@ def test_monitoring_source_url_capture_success_appends_price_observation(tmp_pat
             return CaptureResult(
                 vendor_slug=vendor_slug or "electronet",
                 status="success",
-                snapshot=CaptureSnapshotPayload(capture_strategy="price-test", page_url=url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
-                price_observations=(ParsedPriceObservation(price=Decimal("149.90"), availability="available"),),
+                snapshot=CaptureSnapshotPayload(
+                    capture_strategy="price-test",
+                    page_url=url,
+                    captured_at=NOW,
+                    fetched_at=NOW,
+                    parsed_at=NOW,
+                ),
+                price_observations=(
+                    ParsedPriceObservation(
+                        price=Decimal("149.90"), availability="available"
+                    ),
+                ),
             )
 
         result = capture_selected_source_urls(
@@ -258,11 +339,15 @@ def test_monitoring_source_url_capture_success_appends_price_observation(tmp_pat
         assert observed.product_source_id == session.query(ProductSource).one().id
 
 
-def test_monitoring_source_url_capture_failure_updates_health_without_deleting_records(tmp_path: Path) -> None:
+def test_monitoring_source_url_capture_failure_updates_health_without_deleting_records(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
 
     with session_scope(database_url) as session:
-        catalog_product = _catalog_product(session, model="RUN-SRC-4", mpn="MPN-RUN-SRC-4")
+        catalog_product = _catalog_product(
+            session, model="RUN-SRC-4", mpn="MPN-RUN-SRC-4"
+        )
         create_or_update_imported_source_url(
             session,
             catalog_product_id=catalog_product.id,
@@ -272,7 +357,9 @@ def test_monitoring_source_url_capture_failure_updates_health_without_deleting_r
             status="active",
         )
 
-        def failing_capture(url: str, *, vendor_slug: str | None = None) -> CaptureResult:
+        def failing_capture(
+            url: str, *, vendor_slug: str | None = None
+        ) -> CaptureResult:
             return CaptureResult(
                 vendor_slug=vendor_slug or "skroutz",
                 status="failed",
@@ -315,7 +402,9 @@ def test_product_source_creation_mirrors_to_source_url_coverage(tmp_path: Path) 
         create_product_from_source_urls(
             session,
             model="SRC-2",
-            source_urls=["https://www.skroutz.gr/s/456/product-source.html?utm_source=x"],
+            source_urls=[
+                "https://www.skroutz.gr/s/456/product-source.html?utm_source=x"
+            ],
             capture=False,
         )
 
@@ -345,10 +434,15 @@ def test_product_source_creation_mirrors_to_source_url_coverage(tmp_path: Path) 
     assert source_url.status == "active"
     assert source_url.trust_level == "product_source"
     assert coverage.summary.products_with_active_source_urls == 1
-    assert coverage.item_coverage[0].active_source_urls[0]["url_normalized"] == "https://www.skroutz.gr/s/456/product-source.html"
+    assert (
+        coverage.item_coverage[0].active_source_urls[0]["url_normalized"]
+        == "https://www.skroutz.gr/s/456/product-source.html"
+    )
 
 
-def test_initial_capture_failure_preserves_product_and_source_health(tmp_path: Path) -> None:
+def test_initial_capture_failure_preserves_product_and_source_health(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
 
     def failing_capture(url: str, *, vendor_slug: str | None = None) -> CaptureResult:
@@ -386,7 +480,9 @@ def test_initial_capture_failure_preserves_product_and_source_health(tmp_path: P
         assert session.query(SourceCaptureSnapshot).count() == 1
 
 
-def test_price_observations_are_append_only_for_repeated_capture(tmp_path: Path) -> None:
+def test_price_observations_are_append_only_for_repeated_capture(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
     prices = [Decimal("199.99"), Decimal("189.99")]
 
@@ -395,8 +491,17 @@ def test_price_observations_are_append_only_for_repeated_capture(tmp_path: Path)
         return CaptureResult(
             vendor_slug=vendor_slug or "electronet",
             status="success",
-            snapshot=CaptureSnapshotPayload(capture_strategy="test", page_url=url, content_hash=str(price), captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
-            price_observations=(ParsedPriceObservation(price=price, availability="available"),),
+            snapshot=CaptureSnapshotPayload(
+                capture_strategy="test",
+                page_url=url,
+                content_hash=str(price),
+                captured_at=NOW,
+                fetched_at=NOW,
+                parsed_at=NOW,
+            ),
+            price_observations=(
+                ParsedPriceObservation(price=price, availability="available"),
+            ),
         )
 
     with session_scope(database_url) as session:
@@ -413,8 +518,13 @@ def test_price_observations_are_append_only_for_repeated_capture(tmp_path: Path)
             capture_fn=price_capture,
         )
 
-        observed = session.query(PriceObservation).order_by(PriceObservation.id.asc()).all()
-        assert [item.competitor_price for item in observed] == [Decimal("199.99"), Decimal("189.99")]
+        observed = (
+            session.query(PriceObservation).order_by(PriceObservation.id.asc()).all()
+        )
+        assert [item.competitor_price for item in observed] == [
+            Decimal("199.99"),
+            Decimal("189.99"),
+        ]
         assert session.query(SourceCaptureSnapshot).count() == 2
 
 
@@ -425,8 +535,16 @@ def test_offer_observations_persist_for_aggregator_capture(tmp_path: Path) -> No
         return CaptureResult(
             vendor_slug=vendor_slug or "skroutz",
             status="success",
-            snapshot=CaptureSnapshotPayload(capture_strategy="test", page_url=url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
-            offer_observations=(ParsedOfferObservation(seller_name="Store A", price=Decimal("199.99")),),
+            snapshot=CaptureSnapshotPayload(
+                capture_strategy="test",
+                page_url=url,
+                captured_at=NOW,
+                fetched_at=NOW,
+                parsed_at=NOW,
+            ),
+            offer_observations=(
+                ParsedOfferObservation(seller_name="Store A", price=Decimal("199.99")),
+            ),
         )
 
     with session_scope(database_url) as session:
@@ -452,11 +570,25 @@ def test_capture_persists_all_offer_listings_ranked_by_price(tmp_path: Path) -> 
         return CaptureResult(
             vendor_slug=vendor_slug or "skroutz",
             status="success",
-            snapshot=CaptureSnapshotPayload(capture_strategy="test", page_url=url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
-            price_observations=(ParsedPriceObservation(price=Decimal("199.99"), availability="available"),),
+            snapshot=CaptureSnapshotPayload(
+                capture_strategy="test",
+                page_url=url,
+                captured_at=NOW,
+                fetched_at=NOW,
+                parsed_at=NOW,
+            ),
+            price_observations=(
+                ParsedPriceObservation(
+                    price=Decimal("199.99"), availability="available"
+                ),
+            ),
             offer_observations=(
                 ParsedOfferObservation(seller_name="Store C", price=Decimal("205.00")),
-                ParsedOfferObservation(seller_name="Store A", price=Decimal("199.99"), seller_url="https://seller.test/a"),
+                ParsedOfferObservation(
+                    seller_name="Store A",
+                    price=Decimal("199.99"),
+                    seller_url="https://seller.test/a",
+                ),
                 ParsedOfferObservation(seller_name="Store B", price=Decimal("201.00")),
             ),
         )
@@ -469,7 +601,11 @@ def test_capture_persists_all_offer_listings_ranked_by_price(tmp_path: Path) -> 
             capture_fn=offer_capture,
         )
 
-        listings = session.query(PriceObservationListing).order_by(PriceObservationListing.rank.asc()).all()
+        listings = (
+            session.query(PriceObservationListing)
+            .order_by(PriceObservationListing.rank.asc())
+            .all()
+        )
 
     assert [(item.rank, item.seller_name, item.price) for item in listings] == [
         (1, "Store A", Decimal("199.99")),
@@ -479,7 +615,9 @@ def test_capture_persists_all_offer_listings_ranked_by_price(tmp_path: Path) -> 
     assert listings[0].seller_url == "https://seller.test/a"
 
 
-def test_capture_persistence_directly_writes_price_and_listing_rows(tmp_path: Path) -> None:
+def test_capture_persistence_directly_writes_price_and_listing_rows(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
 
     with session_scope(database_url) as session:
@@ -493,16 +631,36 @@ def test_capture_persistence_directly_writes_price_and_listing_rows(tmp_path: Pa
         result = CaptureResult(
             vendor_slug="skroutz",
             status="success",
-            snapshot=CaptureSnapshotPayload(capture_strategy="direct-persistence-test", page_url=source.canonical_url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
-            price_observations=(ParsedPriceObservation(price=Decimal("199.99"), availability="available"),),
+            snapshot=CaptureSnapshotPayload(
+                capture_strategy="direct-persistence-test",
+                page_url=source.canonical_url,
+                captured_at=NOW,
+                fetched_at=NOW,
+                parsed_at=NOW,
+            ),
+            price_observations=(
+                ParsedPriceObservation(
+                    price=Decimal("199.99"), availability="available"
+                ),
+            ),
             offer_observations=(
                 ParsedOfferObservation(seller_name="Store B", price=Decimal("201.00")),
                 ParsedOfferObservation(seller_name="Store A", price=Decimal("199.99")),
             ),
         )
 
-        snapshot = persist_capture_result(session, product=created.product, source=source, result=result, run_id="run-direct")
-        listings = session.query(PriceObservationListing).order_by(PriceObservationListing.rank.asc()).all()
+        snapshot = persist_capture_result(
+            session,
+            product=created.product,
+            source=source,
+            result=result,
+            run_id="run-direct",
+        )
+        listings = (
+            session.query(PriceObservationListing)
+            .order_by(PriceObservationListing.rank.asc())
+            .all()
+        )
 
     assert snapshot.id is not None
     assert [(item.rank, item.seller_name, item.price) for item in listings] == [
@@ -511,14 +669,24 @@ def test_capture_persistence_directly_writes_price_and_listing_rows(tmp_path: Pa
     ]
 
 
-def test_bestprice_fixture_offers_persist_as_listing_rows_with_landed_price_evidence(tmp_path: Path) -> None:
+def test_bestprice_fixture_offers_persist_as_listing_rows_with_landed_price_evidence(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
     fixture = json.loads(
-        (Path(__file__).resolve().parent / "fixtures" / "golden_snapshots" / "source_capture" / "bestprice_html" / "latest_run_multi_store.json").read_text(
-            encoding="utf-8"
-        )
+        (
+            Path(__file__).resolve().parent
+            / "fixtures"
+            / "golden_snapshots"
+            / "source_capture"
+            / "bestprice_html"
+            / "latest_run_multi_store.json"
+        ).read_text(encoding="utf-8")
     )
-    offers, flags = parse_bestprice_offers(fixture["html"], page_url="https://www.bestprice.gr/item/2160534094/product.html")
+    offers, flags = parse_bestprice_offers(
+        fixture["html"],
+        page_url="https://www.bestprice.gr/item/2160534094/product.html",
+    )
 
     assert flags == []
 
@@ -534,7 +702,13 @@ def test_bestprice_fixture_offers_persist_as_listing_rows_with_landed_price_evid
                 parsed_at=NOW,
                 parser_version="bestprice_html_v1",
             ),
-            price_observations=(ParsedPriceObservation(price=Decimal("194.80"), availability="in_stock", seller_name="Store A"),),
+            price_observations=(
+                ParsedPriceObservation(
+                    price=Decimal("194.80"),
+                    availability="in_stock",
+                    seller_name="Store A",
+                ),
+            ),
             offer_observations=tuple(offers),
         )
 
@@ -545,10 +719,17 @@ def test_bestprice_fixture_offers_persist_as_listing_rows_with_landed_price_evid
             source_urls=["https://www.bestprice.gr/item/2160534094/product.html"],
             capture_fn=bestprice_capture,
         )
-        listings = session.query(PriceObservationListing).order_by(PriceObservationListing.rank.asc()).all()
+        listings = (
+            session.query(PriceObservationListing)
+            .order_by(PriceObservationListing.rank.asc())
+            .all()
+        )
 
     assert len(listings) == 5
-    assert [(item.rank, item.seller_name, item.price, item.shipping_cost) for item in listings[:4]] == [
+    assert [
+        (item.rank, item.seller_name, item.price, item.shipping_cost)
+        for item in listings[:4]
+    ] == [
         (1, "Store A", Decimal("194.80"), Decimal("2.90")),
         (2, "Store B", Decimal("194.90"), Decimal("0.00")),
         (3, "Store C", Decimal("195.00"), Decimal("0.00")),
@@ -561,15 +742,27 @@ def test_bestprice_fixture_offers_persist_as_listing_rows_with_landed_price_evid
     assert listings[3].raw_listing["landed_price_source"] == "missing"
 
 
-def test_backfill_price_observation_listings_from_offer_observations_is_idempotent(tmp_path: Path) -> None:
+def test_backfill_price_observation_listings_from_offer_observations_is_idempotent(
+    tmp_path: Path,
+) -> None:
     database_url = _database_url(tmp_path)
 
     def offer_capture(url: str, *, vendor_slug: str | None = None) -> CaptureResult:
         return CaptureResult(
             vendor_slug=vendor_slug or "skroutz",
             status="success",
-            snapshot=CaptureSnapshotPayload(capture_strategy="test", page_url=url, captured_at=NOW, fetched_at=NOW, parsed_at=NOW),
-            price_observations=(ParsedPriceObservation(price=Decimal("199.99"), availability="available"),),
+            snapshot=CaptureSnapshotPayload(
+                capture_strategy="test",
+                page_url=url,
+                captured_at=NOW,
+                fetched_at=NOW,
+                parsed_at=NOW,
+            ),
+            price_observations=(
+                ParsedPriceObservation(
+                    price=Decimal("199.99"), availability="available"
+                ),
+            ),
             offer_observations=(
                 ParsedOfferObservation(seller_name="Store B", price=Decimal("201.00")),
                 ParsedOfferObservation(seller_name="Store A", price=Decimal("199.99")),
@@ -588,20 +781,33 @@ def test_backfill_price_observation_listings_from_offer_observations_is_idempote
 
         first = backfill_price_observation_listings_from_offer_observations(session)
         second = backfill_price_observation_listings_from_offer_observations(session)
-        listings = session.query(PriceObservationListing).order_by(PriceObservationListing.rank.asc()).all()
+        listings = (
+            session.query(PriceObservationListing)
+            .order_by(PriceObservationListing.rank.asc())
+            .all()
+        )
 
     assert first == 2
     assert second == 0
-    assert [(item.rank, item.seller_name) for item in listings] == [(1, "Store A"), (2, "Store B")]
+    assert [(item.rank, item.seller_name) for item in listings] == [
+        (1, "Store A"),
+        (2, "Store B"),
+    ]
 
 
-def test_products_from_source_api_stores_source_without_capture(tmp_path: Path, monkeypatch) -> None:
+def test_products_from_source_api_stores_source_without_capture(
+    tmp_path: Path, monkeypatch
+) -> None:
     database_url = _database_url(tmp_path)
     monkeypatch.setenv(DATABASE_URL_ENV_VAR, database_url)
 
     response = TestClient(create_app()).post(
         "/api/products/from-source",
-        json={"model": "LG OLED55C31LA", "source_urls": ["https://www.electronet.gr/p/1?utm_source=x"], "capture": False},
+        json={
+            "model": "LG OLED55C31LA",
+            "source_urls": ["https://www.electronet.gr/p/1?utm_source=x"],
+            "capture": False,
+        },
     )
 
     assert response.status_code == 200

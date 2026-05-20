@@ -15,8 +15,19 @@ from .category_filters import (
 )
 from .characteristics_pipeline import build_characteristics_for_product
 from .deterministic_fields import build_deterministic_product_fields
-from .html_builders import build_description_html, build_description_html_from_intro_and_sections, build_description_html_from_llm, build_deterministic_cta
-from .models import CLIInput, ParsedProduct, SchemaMatchResult, SourceProductData, TaxonomyResolution
+from .html_builders import (
+    build_description_html,
+    build_description_html_from_intro_and_sections,
+    build_description_html_from_llm,
+    build_deterministic_cta,
+)
+from .models import (
+    CLIInput,
+    ParsedProduct,
+    SchemaMatchResult,
+    SourceProductData,
+    TaxonomyResolution,
+)
 from .normalize import normalize_for_match, normalize_whitespace, slugify_greek_for_seo
 from .utils import as_decimal_string, build_additional_image_value
 
@@ -137,17 +148,19 @@ def build_row(
             besco_filenames_by_section=besco_filenames_by_section,
         )
     elif llm_intro_text is not None or deterministic_presentation_sections is not None:
-        description_html, desc_warnings = build_description_html_from_intro_and_sections(
-            product_name=canonical_name,
-            model=cli.model,
-            cta_url=taxonomy.cta_url,
-            cta_text=cta_text,
-            intro_text=str(llm_intro_text or ""),
-            sections=list(deterministic_presentation_sections or []),
-            besco_filenames_by_section=besco_filenames_by_section,
-            presentation_source_html=source.presentation_source_html,
-            presentation_source_text=source.presentation_source_text,
-            base_url=source.canonical_url or source.url,
+        description_html, desc_warnings = (
+            build_description_html_from_intro_and_sections(
+                product_name=canonical_name,
+                model=cli.model,
+                cta_url=taxonomy.cta_url,
+                cta_text=cta_text,
+                intro_text=str(llm_intro_text or ""),
+                sections=list(deterministic_presentation_sections or []),
+                besco_filenames_by_section=besco_filenames_by_section,
+                presentation_source_html=source.presentation_source_html,
+                presentation_source_text=source.presentation_source_text,
+                base_url=source.canonical_url or source.url,
+            )
         )
     else:
         description_html, desc_warnings = build_description_html(
@@ -163,11 +176,13 @@ def build_row(
             base_url=source.canonical_url or source.url,
         )
     warnings.extend(desc_warnings)
-    characteristics_html, characteristics_diagnostics, characteristics_warnings = build_characteristics_for_product(
-        source=characteristics_source,
-        taxonomy=taxonomy,
-        schema_match=schema_match,
-        raw_html=characteristics_raw_html or source_raw_html,
+    characteristics_html, characteristics_diagnostics, characteristics_warnings = (
+        build_characteristics_for_product(
+            source=characteristics_source,
+            taxonomy=taxonomy,
+            schema_match=schema_match,
+            raw_html=characteristics_raw_html or source_raw_html,
+        )
     )
     warnings.extend(characteristics_warnings)
 
@@ -183,7 +198,9 @@ def build_row(
     if taxonomy.parent_category and taxonomy.leaf_category:
         from .taxonomy import TaxonomyResolver
 
-        category_value = TaxonomyResolver().serialize_category(taxonomy, cli.boxnow, source=source)
+        category_value = TaxonomyResolver().serialize_category(
+            taxonomy, cli.boxnow, source=source
+        )
 
     image_count_for_csv = cli.photos
     if downloaded_image_count is not None and downloaded_image_count > 0:
@@ -199,7 +216,9 @@ def build_row(
         "characteristics": characteristics_html,
         "category": category_value,
         "image": f"catalog/01_main/{cli.model}/{cli.model}-1.jpg",
-        "additional_image": build_additional_image_value(cli.model, image_count_for_csv),
+        "additional_image": build_additional_image_value(
+            cli.model, image_count_for_csv
+        ),
         "manufacturer": manufacturer,
         "price": as_decimal_string(final_price),
         "quantity": "0",
@@ -209,9 +228,13 @@ def build_row(
         "status": "0",
         "meta_keyword": serialize_meta_keywords(normalized_meta_keywords),
         "meta_title": meta_title,
-        "meta_description": str(llm_product.get("meta_description", "")).strip() if llm_product else "",
+        "meta_description": (
+            str(llm_product.get("meta_description", "")).strip() if llm_product else ""
+        ),
         "seo_keyword": seo_keyword,
-        "product_url": f"https://www.etranoulis.gr/{seo_keyword}" if seo_keyword else "",
+        "product_url": (
+            f"https://www.etranoulis.gr/{seo_keyword}" if seo_keyword else ""
+        ),
         "related_product": "",
         "bestprice_status": str(cli.bestprice_status),
         "skroutz_status": str(cli.skroutz_status),
@@ -231,16 +254,24 @@ def build_row(
     normalized = {
         "input": cli.to_dict(),
         "source": source.to_dict(),
-        "characteristics_source": characteristics_source.to_dict() if characteristics_source is not source else None,
+        "characteristics_source": (
+            characteristics_source.to_dict()
+            if characteristics_source is not source
+            else None
+        ),
         "taxonomy": taxonomy.to_dict(),
         "schema_match": schema_match.to_dict(),
         "deterministic_product": deterministic,
         "characteristics_diagnostics": characteristics_diagnostics,
         "downloaded_gallery_count": downloaded_image_count or 0,
         "downloaded_besco_count": len(besco_filenames_by_section or {}),
-        "llm_product": {**(llm_product or {}), "meta_keywords": normalized_meta_keywords},
+        "llm_product": {
+            **(llm_product or {}),
+            "meta_keywords": normalized_meta_keywords,
+        },
         "llm_intro_text": str(llm_intro_text or ""),
-        "deterministic_presentation_sections": deterministic_presentation_sections or [],
+        "deterministic_presentation_sections": deterministic_presentation_sections
+        or [],
         "llm_presentation": llm_presentation or {},
         "category_filters": category_filter_resolution.to_dict(),
         "csv_row": row,
@@ -249,24 +280,40 @@ def build_row(
 
 
 def _cta_label_for_taxonomy(taxonomy: TaxonomyResolution) -> str:
-    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Τηλεοράσεις"):
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match(
+        "Τηλεοράσεις"
+    ):
         return taxonomy.leaf_category
-    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Κλιματιστικά"):
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match(
+        "Κλιματιστικά"
+    ):
         return taxonomy.leaf_category
-    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Φούρνοι Μικροκυμάτων"):
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match(
+        "Φούρνοι Μικροκυμάτων"
+    ):
         return taxonomy.leaf_category
     return taxonomy.sub_category or taxonomy.leaf_category
 
 
 def _cta_text_for_taxonomy(taxonomy: TaxonomyResolution) -> str:
-    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Τηλεοράσεις"):
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match(
+        "Τηλεοράσεις"
+    ):
         return build_deterministic_cta("fem", taxonomy.leaf_category)
-    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Κλιματιστικά"):
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match(
+        "Κλιματιστικά"
+    ):
         return build_deterministic_cta("neut", taxonomy.leaf_category)
-    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Φούρνοι Μικροκυμάτων"):
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match(
+        "Φούρνοι Μικροκυμάτων"
+    ):
         return "Δείτε περισσότερους Φούρνους Μικροκυμάτων εδώ"
-    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match("Ανεμιστήρες"):
-        if normalize_for_match(taxonomy.sub_category) == normalize_for_match("Ορθοστάτης"):
+    if normalize_for_match(taxonomy.leaf_category) == normalize_for_match(
+        "Ανεμιστήρες"
+    ):
+        if normalize_for_match(taxonomy.sub_category) == normalize_for_match(
+            "Ορθοστάτης"
+        ):
             return "Δείτε περισσότερους Ανεμιστήρες Ορθοστάτες εδώ"
         if normalize_for_match(taxonomy.sub_category) == normalize_for_match("Οροφής"):
             return "Δείτε περισσότερους Ανεμιστήρες Οροφής εδώ"

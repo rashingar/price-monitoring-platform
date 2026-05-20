@@ -22,8 +22,12 @@ from ecommerce.api.routes_paths import router as paths_router
 from ecommerce.api.routes_price_alerts import router as price_alerts_router
 from ecommerce.api.routes_price_monitoring import router as price_monitoring_router
 from ecommerce.api.routes_platform_health import router as platform_health_router
-from ecommerce.api.routes_product_factory_batches import router as product_factory_batches_router
-from ecommerce.api.routes_product_factory_telegram import router as product_factory_telegram_router
+from ecommerce.api.routes_product_factory_batches import (
+    router as product_factory_batches_router,
+)
+from ecommerce.api.routes_product_factory_telegram import (
+    router as product_factory_telegram_router,
+)
 from ecommerce.api.routes_product_sources import router as product_sources_router
 from ecommerce.api.routes_source_url_agent import router as source_url_agent_router
 from ecommerce.api.routes_source_url_import import router as source_url_import_router

@@ -7,11 +7,18 @@ from typing import Any
 from sqlalchemy import delete, select, update
 
 from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
-from ecommerce.catalog_update.types import CatalogExclusionCleanupResult, CatalogUpdateError
+from ecommerce.catalog_update.types import (
+    CatalogExclusionCleanupResult,
+    CatalogUpdateError,
+)
 from ecommerce.db.config import sanitize_database_error
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.products import Product, ProductSource
-from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate, SourceUrlDiscoveryTask
+from ecommerce.db.models.source_urls import (
+    SourceUrl,
+    SourceUrlCandidate,
+    SourceUrlDiscoveryTask,
+)
 from ecommerce.db.session import session_scope
 
 
@@ -20,7 +27,9 @@ def purge_excluded_catalog_state(
     *,
     catalog_source: str = DEFAULT_CATALOG_SOURCE,
 ) -> CatalogExclusionCleanupResult:
-    models = frozenset(str(item).strip() for item in excluded_models if str(item).strip())
+    models = frozenset(
+        str(item).strip() for item in excluded_models if str(item).strip()
+    )
     if not models:
         return CatalogExclusionCleanupResult()
 
@@ -34,7 +43,9 @@ def purge_excluded_catalog_state(
     try:
         with session_scope() as session:
             for batch in model_batches(models):
-                product_ids = select(Product.id).where(Product.catalog_source == catalog_source, Product.model.in_(batch))
+                product_ids = select(Product.id).where(
+                    Product.catalog_source == catalog_source, Product.model.in_(batch)
+                )
                 purged_product_sources += rowcount(
                     session.execute(
                         delete(ProductSource)
@@ -46,16 +57,21 @@ def purge_excluded_catalog_state(
                 purged_source_urls += rowcount(
                     session.execute(
                         delete(SourceUrl)
-                        .where(SourceUrl.catalog_source == catalog_source, SourceUrl.model.in_(batch))
+                        .where(
+                            SourceUrl.catalog_source == catalog_source,
+                            SourceUrl.model.in_(batch),
+                        )
                         .execution_options(synchronize_session=False)
                     )
                 )
                 purged_source_url_candidates += rowcount(
                     session.execute(
-                        delete(SourceUrlCandidate).where(
+                        delete(SourceUrlCandidate)
+                        .where(
                             SourceUrlCandidate.catalog_source == catalog_source,
                             SourceUrlCandidate.model.in_(batch),
-                        ).execution_options(synchronize_session=False)
+                        )
+                        .execution_options(synchronize_session=False)
                     )
                 )
                 purged_source_url_discovery_tasks += rowcount(
@@ -68,21 +84,29 @@ def purge_excluded_catalog_state(
                 deactivated_products += rowcount(
                     session.execute(
                         update(Product)
-                        .where(Product.catalog_source == catalog_source, Product.model.in_(batch), Product.active.is_(True))
+                        .where(
+                            Product.catalog_source == catalog_source,
+                            Product.model.in_(batch),
+                            Product.active.is_(True),
+                        )
                         .values(active=False)
                         .execution_options(synchronize_session=False)
                     )
                 )
                 purged_catalog_products += rowcount(
                     session.execute(
-                        delete(CatalogProductRow).where(
+                        delete(CatalogProductRow)
+                        .where(
                             CatalogProductRow.catalog_source == catalog_source,
                             CatalogProductRow.model.in_(batch),
-                        ).execution_options(synchronize_session=False)
+                        )
+                        .execution_options(synchronize_session=False)
                     )
                 )
     except Exception as exc:
-        raise CatalogUpdateError(f"Catalog exclusion cleanup failed: {sanitize_database_error(exc)}") from exc
+        raise CatalogUpdateError(
+            f"Catalog exclusion cleanup failed: {sanitize_database_error(exc)}"
+        ) from exc
 
     return CatalogExclusionCleanupResult(
         purged_catalog_products=purged_catalog_products,
@@ -94,7 +118,9 @@ def purge_excluded_catalog_state(
     )
 
 
-def model_batches(models: frozenset[str] | set[str], size: int = 500) -> list[list[str]]:
+def model_batches(
+    models: frozenset[str] | set[str], size: int = 500
+) -> list[list[str]]:
     ordered = sorted(models)
     return [ordered[index : index + size] for index in range(0, len(ordered), size)]
 

@@ -18,15 +18,21 @@ from .utils import dedupe_strings, ensure_directory, read_json, write_bytes, wri
 
 try:  # pragma: no cover - dependency availability is environment-dependent
     from pypdf import PdfReader
-except Exception as exc:  # pragma: no cover - dependency availability is environment-dependent
+except (
+    Exception
+) as exc:  # pragma: no cover - dependency availability is environment-dependent
     PdfReader = None
     PDF_IMPORT_ERROR = str(exc)
 else:  # pragma: no cover - simple import success branch
     PDF_IMPORT_ERROR = ""
 
 
-NEFF_SPECSHEET_URL = "https://media3.neff-international.com/Documents/specsheet/el-GR/{mpn}.pdf"
-BOSCH_SPECSHEET_URL = "https://media3.bosch-home.com/Documents/specsheet/el-GR/{mpn}.pdf"
+NEFF_SPECSHEET_URL = (
+    "https://media3.neff-international.com/Documents/specsheet/el-GR/{mpn}.pdf"
+)
+BOSCH_SPECSHEET_URL = (
+    "https://media3.bosch-home.com/Documents/specsheet/el-GR/{mpn}.pdf"
+)
 TEFAL_SHOP_BASE_URL = "https://shop.tefal.gr/"
 TEFAL_SHOP_SEARCH_URL = (
     "https://shop.tefal.gr/search/suggest.json"
@@ -77,10 +83,18 @@ class OfficialDocAdapter:
     def matches(self, source: SourceProductData) -> bool:
         raise NotImplementedError
 
-    def discover(self, source: SourceProductData, taxonomy: TaxonomyResolution, fetcher=None) -> list[OfficialDocumentCandidate]:
+    def discover(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution, fetcher=None
+    ) -> list[OfficialDocumentCandidate]:
         raise NotImplementedError
 
-    def parse(self, candidate: OfficialDocumentCandidate, payload: bytes | str, source: SourceProductData, taxonomy: TaxonomyResolution) -> EnrichmentResult:
+    def parse(
+        self,
+        candidate: OfficialDocumentCandidate,
+        payload: bytes | str,
+        source: SourceProductData,
+        taxonomy: TaxonomyResolution,
+    ) -> EnrichmentResult:
         raise NotImplementedError
 
 
@@ -91,7 +105,9 @@ class _StaticPdfAdapter(OfficialDocAdapter):
     def matches(self, source: SourceProductData) -> bool:
         return bool(normalize_whitespace(source.mpn))
 
-    def discover(self, source: SourceProductData, taxonomy: TaxonomyResolution, fetcher=None) -> list[OfficialDocumentCandidate]:
+    def discover(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution, fetcher=None
+    ) -> list[OfficialDocumentCandidate]:
         mpn = normalize_whitespace(source.mpn)
         if not mpn or not self.url_template:
             return []
@@ -106,9 +122,17 @@ class _StaticPdfAdapter(OfficialDocAdapter):
             )
         ]
 
-    def parse(self, candidate: OfficialDocumentCandidate, payload: bytes | str, source: SourceProductData, taxonomy: TaxonomyResolution) -> EnrichmentResult:
+    def parse(
+        self,
+        candidate: OfficialDocumentCandidate,
+        payload: bytes | str,
+        source: SourceProductData,
+        taxonomy: TaxonomyResolution,
+    ) -> EnrichmentResult:
         if PdfReader is None:
-            raise RuntimeError(f"manufacturer_pdf_parser_unavailable:{PDF_IMPORT_ERROR}")
+            raise RuntimeError(
+                f"manufacturer_pdf_parser_unavailable:{PDF_IMPORT_ERROR}"
+            )
         if not isinstance(payload, (bytes, bytearray)):
             raise RuntimeError("manufacturer_pdf_payload_invalid")
         text = _extract_pdf_text(bytes(payload))
@@ -125,7 +149,9 @@ class BoschSpecsheetAdapter(_StaticPdfAdapter):
     parser = staticmethod(lambda text: _parse_bosch_specsheet(text))
 
     def matches(self, source: SourceProductData) -> bool:
-        return normalize_for_match(source.brand) == normalize_for_match("Bosch") and super().matches(source)
+        return normalize_for_match(source.brand) == normalize_for_match(
+            "Bosch"
+        ) and super().matches(source)
 
 
 class NeffSpecsheetAdapter(_StaticPdfAdapter):
@@ -134,16 +160,22 @@ class NeffSpecsheetAdapter(_StaticPdfAdapter):
     parser = staticmethod(lambda text: _parse_neff_specsheet(text))
 
     def matches(self, source: SourceProductData) -> bool:
-        return normalize_for_match(source.brand) == normalize_for_match("Neff") and super().matches(source)
+        return normalize_for_match(source.brand) == normalize_for_match(
+            "Neff"
+        ) and super().matches(source)
 
 
 class TefalShopAdapter(OfficialDocAdapter):
     provider_id = "tefal_shop"
 
     def matches(self, source: SourceProductData) -> bool:
-        return normalize_for_match(source.brand) == normalize_for_match("Tefal") and bool(normalize_whitespace(source.mpn))
+        return normalize_for_match(source.brand) == normalize_for_match(
+            "Tefal"
+        ) and bool(normalize_whitespace(source.mpn))
 
-    def discover(self, source: SourceProductData, taxonomy: TaxonomyResolution, fetcher=None) -> list[OfficialDocumentCandidate]:
+    def discover(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution, fetcher=None
+    ) -> list[OfficialDocumentCandidate]:
         del taxonomy
         if fetcher is None:
             raise RuntimeError("manufacturer_fetcher_required")
@@ -174,11 +206,20 @@ class TefalShopAdapter(OfficialDocAdapter):
         ranked.sort(key=lambda item: (-item[0], item[1].url))
         return [candidate for _, candidate in ranked[:3]]
 
-    def parse(self, candidate: OfficialDocumentCandidate, payload: bytes | str, source: SourceProductData, taxonomy: TaxonomyResolution) -> EnrichmentResult:
+    def parse(
+        self,
+        candidate: OfficialDocumentCandidate,
+        payload: bytes | str,
+        source: SourceProductData,
+        taxonomy: TaxonomyResolution,
+    ) -> EnrichmentResult:
         del source, taxonomy
         if not isinstance(payload, str):
             raise RuntimeError("manufacturer_html_payload_invalid")
-        return _parse_tefal_shop_product_page(payload, search_body_html=str(candidate.metadata.get("search_body_html", "")))
+        return _parse_tefal_shop_product_page(
+            payload,
+            search_body_html=str(candidate.metadata.get("search_body_html", "")),
+        )
 
 
 class ManufacturerMappedHtmlAdapter(OfficialDocAdapter):
@@ -187,23 +228,36 @@ class ManufacturerMappedHtmlAdapter(OfficialDocAdapter):
     def matches(self, source: SourceProductData) -> bool:
         return bool(self._matching_entries(source))
 
-    def discover(self, source: SourceProductData, taxonomy: TaxonomyResolution, fetcher=None) -> list[OfficialDocumentCandidate]:
+    def discover(
+        self, source: SourceProductData, taxonomy: TaxonomyResolution, fetcher=None
+    ) -> list[OfficialDocumentCandidate]:
         del taxonomy, fetcher
         candidates: list[OfficialDocumentCandidate] = []
         for entry in self._matching_entries(source):
             candidates.append(
                 OfficialDocumentCandidate(
-                    provider_id=str(entry.get("provider_id", self.provider_id)).strip() or self.provider_id,
+                    provider_id=str(entry.get("provider_id", self.provider_id)).strip()
+                    or self.provider_id,
                     document_type="html",
                     url=str(entry.get("url", "")).strip(),
-                    name=str(entry.get("name", "product_page")).strip() or "product_page",
-                    content_type_hint=str(entry.get("content_type_hint", "text/html")).strip() or "text/html",
+                    name=str(entry.get("name", "product_page")).strip()
+                    or "product_page",
+                    content_type_hint=str(
+                        entry.get("content_type_hint", "text/html")
+                    ).strip()
+                    or "text/html",
                     priority=int(entry.get("priority", 20) or 20),
                 )
             )
         return candidates
 
-    def parse(self, candidate: OfficialDocumentCandidate, payload: bytes | str, source: SourceProductData, taxonomy: TaxonomyResolution) -> EnrichmentResult:
+    def parse(
+        self,
+        candidate: OfficialDocumentCandidate,
+        payload: bytes | str,
+        source: SourceProductData,
+        taxonomy: TaxonomyResolution,
+    ) -> EnrichmentResult:
         del candidate, source, taxonomy
         if not isinstance(payload, str):
             raise RuntimeError("manufacturer_html_payload_invalid")
@@ -227,7 +281,12 @@ class ManufacturerMappedHtmlAdapter(OfficialDocAdapter):
 
 
 def get_official_doc_adapters() -> list[OfficialDocAdapter]:
-    return [BoschSpecsheetAdapter(), NeffSpecsheetAdapter(), TefalShopAdapter(), ManufacturerMappedHtmlAdapter()]
+    return [
+        BoschSpecsheetAdapter(),
+        NeffSpecsheetAdapter(),
+        TefalShopAdapter(),
+        ManufacturerMappedHtmlAdapter(),
+    ]
 
 
 def _adapter_accepts_fetcher_argument(adapter: OfficialDocAdapter) -> bool:
@@ -237,7 +296,10 @@ def _adapter_accepts_fetcher_argument(adapter: OfficialDocAdapter) -> bool:
         return True
     if "fetcher" in signature.parameters:
         return True
-    return any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in signature.parameters.values())
+    return any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in signature.parameters.values()
+    )
 
 
 def enrich_source_from_manufacturer_docs(
@@ -273,7 +335,9 @@ def enrich_source_from_manufacturer_docs(
     adapters = get_official_doc_adapters()
     diagnostics["providers_considered"] = [adapter.provider_id for adapter in adapters]
     matched_adapters = [adapter for adapter in adapters if adapter.matches(source)]
-    diagnostics["matched_providers"] = [adapter.provider_id for adapter in matched_adapters]
+    diagnostics["matched_providers"] = [
+        adapter.provider_id for adapter in matched_adapters
+    ]
     diagnostics["provider"] = ",".join(diagnostics["matched_providers"])
 
     if not normalize_whitespace(source.mpn):
@@ -300,10 +364,16 @@ def enrich_source_from_manufacturer_docs(
                 discovered = adapter.discover(source, taxonomy)
             candidates = sorted(
                 discovered,
-                key=lambda candidate: (candidate.priority, candidate.name, candidate.url),
+                key=lambda candidate: (
+                    candidate.priority,
+                    candidate.name,
+                    candidate.url,
+                ),
             )
         except Exception as exc:
-            diagnostics["warnings"].append(f"manufacturer_doc_discover_failed:{adapter.provider_id}:{exc}")
+            diagnostics["warnings"].append(
+                f"manufacturer_doc_discover_failed:{adapter.provider_id}:{exc}"
+            )
             continue
         diagnostics["documents_discovered"] += len(candidates)
         for index, candidate in enumerate(candidates, start=1):
@@ -313,23 +383,31 @@ def enrich_source_from_manufacturer_docs(
                 payload, content_type, final_url = _fetch_candidate(fetcher, candidate)
             except Exception as exc:
                 document_entry["warnings"].append(f"fetch_failed:{exc}")
-                diagnostics["warnings"].append(f"manufacturer_doc_fetch_failed:{candidate.name}")
+                diagnostics["warnings"].append(
+                    f"manufacturer_doc_fetch_failed:{candidate.name}"
+                )
                 continue
 
             document_entry["available"] = True
             document_entry["content_type"] = content_type
             document_entry["final_url"] = final_url
-            local_path = _write_document_payload(provider_dir, candidate, payload, index)
+            local_path = _write_document_payload(
+                provider_dir, candidate, payload, index
+            )
             document_entry["local_path"] = str(local_path)
 
             try:
                 result = adapter.parse(candidate, payload, source, taxonomy)
             except Exception as exc:
                 document_entry["warnings"].append(f"parse_failed:{exc}")
-                diagnostics["warnings"].append(f"manufacturer_doc_parse_failed:{candidate.name}")
+                diagnostics["warnings"].append(
+                    f"manufacturer_doc_parse_failed:{candidate.name}"
+                )
                 continue
 
-            text_payload = normalize_whitespace(result.manufacturer_source_text) or _fallback_document_text(candidate, payload)
+            text_payload = normalize_whitespace(
+                result.manufacturer_source_text
+            ) or _fallback_document_text(candidate, payload)
             if text_payload:
                 text_path = provider_dir / f"{local_path.stem}.txt"
                 write_text(text_path, text_payload)
@@ -355,13 +433,17 @@ def enrich_source_from_manufacturer_docs(
             hero_summary = normalize_whitespace(result.hero_summary)
             if hero_summary and len(hero_summary) > len(enriched_hero_summary):
                 enriched_hero_summary = hero_summary
-            presentation_blocks = _count_presentation_blocks(result.presentation_source_html, result.presentation_source_text)
+            presentation_blocks = _count_presentation_blocks(
+                result.presentation_source_html, result.presentation_source_text
+            )
             if presentation_blocks > enriched_presentation_blocks:
                 enriched_presentation_blocks = presentation_blocks
                 enriched_presentation_html = result.presentation_source_html
                 enriched_presentation_text = result.presentation_source_text
 
-    merged_text = normalize_whitespace(" ".join(part for part in merged_text_parts if part))
+    merged_text = normalize_whitespace(
+        " ".join(part for part in merged_text_parts if part)
+    )
     source.manufacturer_spec_sections = merged_sections
     source.manufacturer_source_text = merged_text
     source.manufacturer_documents = diagnostics["documents"]
@@ -374,7 +456,9 @@ def enrich_source_from_manufacturer_docs(
         diagnostics["presentation_applied"] = True
         diagnostics["presentation_block_count"] = enriched_presentation_blocks
 
-    diagnostics["provider"] = ",".join(dedupe_strings(successful_providers or diagnostics["matched_providers"]))
+    diagnostics["provider"] = ",".join(
+        dedupe_strings(successful_providers or diagnostics["matched_providers"])
+    )
     diagnostics["section_count"] = len(merged_sections)
     diagnostics["field_count"] = sum(len(section.items) for section in merged_sections)
     diagnostics["applied"] = diagnostics["field_count"] > 0
@@ -407,7 +491,9 @@ def _create_document_entry(candidate: OfficialDocumentCandidate) -> dict[str, An
     }
 
 
-def _fetch_candidate(fetcher, candidate: OfficialDocumentCandidate) -> tuple[bytes | str, str, str]:
+def _fetch_candidate(
+    fetcher, candidate: OfficialDocumentCandidate
+) -> tuple[bytes | str, str, str]:
     document_type = normalize_for_match(candidate.document_type)
     if document_type == "pdf":
         payload, content_type = fetcher.fetch_binary(candidate.url)
@@ -418,11 +504,23 @@ def _fetch_candidate(fetcher, candidate: OfficialDocumentCandidate) -> tuple[byt
     raise RuntimeError(f"unsupported_document_type:{candidate.document_type}")
 
 
-def _write_document_payload(output_dir: Path, candidate: OfficialDocumentCandidate, payload: bytes | str, index: int) -> Path:
-    safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", candidate.name or f"document_{index}").strip("._") or f"document_{index}"
+def _write_document_payload(
+    output_dir: Path,
+    candidate: OfficialDocumentCandidate,
+    payload: bytes | str,
+    index: int,
+) -> Path:
+    safe_name = (
+        re.sub(r"[^A-Za-z0-9_.-]+", "_", candidate.name or f"document_{index}").strip(
+            "._"
+        )
+        or f"document_{index}"
+    )
     if index > 1:
         safe_name = f"{safe_name}_{index}"
-    suffix = ".pdf" if normalize_for_match(candidate.document_type) == "pdf" else ".html"
+    suffix = (
+        ".pdf" if normalize_for_match(candidate.document_type) == "pdf" else ".html"
+    )
     local_path = output_dir / f"{safe_name}{suffix}"
     if isinstance(payload, (bytes, bytearray)):
         write_bytes(local_path, bytes(payload))
@@ -431,8 +529,12 @@ def _write_document_payload(output_dir: Path, candidate: OfficialDocumentCandida
     return local_path
 
 
-def _fallback_document_text(candidate: OfficialDocumentCandidate, payload: bytes | str) -> str:
-    if normalize_for_match(candidate.document_type) == "html" and isinstance(payload, str):
+def _fallback_document_text(
+    candidate: OfficialDocumentCandidate, payload: bytes | str
+) -> str:
+    if normalize_for_match(candidate.document_type) == "html" and isinstance(
+        payload, str
+    ):
         return _extract_html_text(payload)
     return ""
 
@@ -446,7 +548,9 @@ def _load_mapped_product_pages() -> list[dict[str, Any]]:
     return [entry for entry in entries if isinstance(entry, dict)]
 
 
-def _merge_sections(existing: list[SpecSection], incoming: list[SpecSection]) -> list[SpecSection]:
+def _merge_sections(
+    existing: list[SpecSection], incoming: list[SpecSection]
+) -> list[SpecSection]:
     grouped: dict[str, list[SpecItem]] = {}
     ordered_titles: list[str] = []
     for section in [*existing, *incoming]:
@@ -458,7 +562,12 @@ def _merge_sections(existing: list[SpecSection], incoming: list[SpecSection]) ->
             grouped[key] = []
             ordered_titles.append(title)
         grouped[key].extend(section.items)
-    return [SpecSection(section=title, items=_dedupe_items(grouped[normalize_for_match(title)])) for title in ordered_titles]
+    return [
+        SpecSection(
+            section=title, items=_dedupe_items(grouped[normalize_for_match(title)])
+        )
+        for title in ordered_titles
+    ]
 
 
 def _dedupe_sections(sections: list[SpecSection]) -> list[SpecSection]:
@@ -481,18 +590,26 @@ def _parse_tefal_shop_product_html(html: str) -> list[SpecSection]:
         return []
 
     items: list[SpecItem] = []
-    for row in container.select("div.u-flex.u-justify-between.u-items-center.u-py-16.u-border-b"):
+    for row in container.select(
+        "div.u-flex.u-justify-between.u-items-center.u-py-16.u-border-b"
+    ):
         label_node = row.select_one("span")
         value_node = row.select_one("div.t-text")
-        label = normalize_whitespace(label_node.get_text(" ", strip=True) if label_node else "")
-        value = normalize_whitespace(value_node.get_text(" ", strip=True) if value_node else "")
+        label = normalize_whitespace(
+            label_node.get_text(" ", strip=True) if label_node else ""
+        )
+        value = normalize_whitespace(
+            value_node.get_text(" ", strip=True) if value_node else ""
+        )
         if not label or not value:
             continue
         items.append(SpecItem(label=label, value=value))
 
     if not items:
         return []
-    return [SpecSection(section="Χαρακτηριστικά Κατασκευαστή", items=_dedupe_items(items))]
+    return [
+        SpecSection(section="Χαρακτηριστικά Κατασκευαστή", items=_dedupe_items(items))
+    ]
 
 
 def _parse_neff_specsheet(text: str) -> list[SpecSection]:
@@ -507,9 +624,15 @@ def _parse_neff_specsheet(text: str) -> list[SpecSection]:
         label, value = _split_label_value(line)
         if not label or not value:
             continue
-        grouped.setdefault(current_section, []).append(SpecItem(label=label, value=value))
+        grouped.setdefault(current_section, []).append(
+            SpecItem(label=label, value=value)
+        )
 
-    return [SpecSection(section=section, items=_dedupe_items(items)) for section, items in grouped.items() if items]
+    return [
+        SpecSection(section=section, items=_dedupe_items(items))
+        for section, items in grouped.items()
+        if items
+    ]
 
 
 def _parse_bosch_specsheet(text: str) -> list[SpecSection]:
@@ -524,15 +647,25 @@ def _parse_bosch_specsheet(text: str) -> list[SpecSection]:
         if line.startswith("- "):
             label, value = _split_label_value(line[2:].strip())
             if label and value:
-                grouped.setdefault(current_section, []).append(SpecItem(label=label, value=value))
+                grouped.setdefault(current_section, []).append(
+                    SpecItem(label=label, value=value)
+                )
             else:
-                grouped.setdefault(current_section, []).append(SpecItem(label="Ξ£Ξ·ΞΌΞµΞ―Ο‰ΟƒΞ·", value=line[2:].strip()))
+                grouped.setdefault(current_section, []).append(
+                    SpecItem(label="Ξ£Ξ·ΞΌΞµΞ―Ο‰ΟƒΞ·", value=line[2:].strip())
+                )
             continue
         label, value = _split_label_value(line)
         if label and value:
-            grouped.setdefault(current_section, []).append(SpecItem(label=label, value=value))
+            grouped.setdefault(current_section, []).append(
+                SpecItem(label=label, value=value)
+            )
 
-    return [SpecSection(section=section, items=_dedupe_items(items)) for section, items in grouped.items() if items]
+    return [
+        SpecSection(section=section, items=_dedupe_items(items))
+        for section, items in grouped.items()
+        if items
+    ]
 
 
 def _normalize_bosch_pdf_lines(text: str) -> list[str]:
@@ -562,7 +695,9 @@ def _normalize_pdf_lines(text: str) -> list[str]:
     combined: list[str] = []
     for line in raw_lines:
         if line.startswith("• :") and combined:
-            combined[-1] = normalize_whitespace(f"{combined[-1].rstrip(':')} {line[3:].lstrip(': ').strip()}")
+            combined[-1] = normalize_whitespace(
+                f"{combined[-1].rstrip(':')} {line[3:].lstrip(': ').strip()}"
+            )
             continue
         if combined and _should_join_pdf_line(combined[-1], line):
             combined[-1] = normalize_whitespace(f"{combined[-1]} {line}")
@@ -597,7 +732,9 @@ def _ignore_pdf_line(line: str) -> bool:
         normalize_for_match("Αυτόνομη ηλεκτρική εστία με TwistPadΒ®"),
     }:
         return True
-    if normalized.startswith(normalize_for_match("Z1365WX0")) or normalized.startswith(normalize_for_match("Z943SE0")):
+    if normalized.startswith(normalize_for_match("Z1365WX0")) or normalized.startswith(
+        normalize_for_match("Z943SE0")
+    ):
         return True
     return False
 
@@ -637,35 +774,49 @@ def _parse_tefal_shop_spec_sections(soup: BeautifulSoup) -> list[SpecSection]:
         return []
 
     items: list[SpecItem] = []
-    for row in container.select("div.u-flex.u-justify-between.u-items-center.u-py-16.u-border-b"):
+    for row in container.select(
+        "div.u-flex.u-justify-between.u-items-center.u-py-16.u-border-b"
+    ):
         label_node = row.select_one("span")
         value_node = row.select_one("div.t-text")
-        label = normalize_whitespace(label_node.get_text(" ", strip=True) if label_node else "")
-        value = normalize_whitespace(value_node.get_text(" ", strip=True) if value_node else "")
+        label = normalize_whitespace(
+            label_node.get_text(" ", strip=True) if label_node else ""
+        )
+        value = normalize_whitespace(
+            value_node.get_text(" ", strip=True) if value_node else ""
+        )
         if not label or not value:
             continue
         items.append(SpecItem(label=label, value=value))
 
     if not items:
         return []
-    return [SpecSection(section="Χαρακτηριστικά Κατασκευαστή", items=_dedupe_items(items))]
+    return [
+        SpecSection(section="Χαρακτηριστικά Κατασκευαστή", items=_dedupe_items(items))
+    ]
 
 
-def _parse_tefal_shop_product_page(html: str, search_body_html: str = "") -> EnrichmentResult:
+def _parse_tefal_shop_product_page(
+    html: str, search_body_html: str = ""
+) -> EnrichmentResult:
     soup = BeautifulSoup(html, "lxml")
     spec_sections = _parse_tefal_shop_spec_sections(soup)
     hero_summary = _extract_tefal_intro_summary(soup, search_body_html=search_body_html)
     presentation_blocks = _extract_tefal_presentation_blocks(soup)
     return EnrichmentResult(
         manufacturer_spec_sections=spec_sections,
-        manufacturer_source_text=_build_tefal_manufacturer_text(hero_summary, presentation_blocks, spec_sections),
+        manufacturer_source_text=_build_tefal_manufacturer_text(
+            hero_summary, presentation_blocks, spec_sections
+        ),
         hero_summary=hero_summary,
         presentation_source_html=_build_presentation_source_html(presentation_blocks),
         presentation_source_text=_build_presentation_source_text(presentation_blocks),
     )
 
 
-def _score_tefal_shop_product(source: SourceProductData, product: dict[str, Any]) -> int:
+def _score_tefal_shop_product(
+    source: SourceProductData, product: dict[str, Any]
+) -> int:
     brand = normalize_for_match(source.brand)
     mpn = normalize_for_match(source.mpn)
     haystack = normalize_for_match(
@@ -692,9 +843,15 @@ def _score_tefal_shop_product(source: SourceProductData, product: dict[str, Any]
     return score
 
 
-def _discover_tefal_shop_urls_from_sitemaps(source: SourceProductData, fetcher) -> list[str]:
+def _discover_tefal_shop_urls_from_sitemaps(
+    source: SourceProductData, fetcher
+) -> list[str]:
     sitemap_index = fetcher.fetch_httpx("https://shop.tefal.gr/sitemap.xml").html
-    sitemap_urls = [url for url in _extract_xml_locs(sitemap_index) if "sitemap_products" in url.lower()]
+    sitemap_urls = [
+        url
+        for url in _extract_xml_locs(sitemap_index)
+        if "sitemap_products" in url.lower()
+    ]
     if not sitemap_urls:
         return []
 
@@ -714,7 +871,9 @@ def _discover_tefal_shop_urls_from_sitemaps(source: SourceProductData, fetcher) 
 def _extract_xml_locs(xml_text: str) -> list[str]:
     return [
         normalize_whitespace(match.replace("&amp;", "&"))
-        for match in re.findall(r"<loc>(.*?)</loc>", xml_text or "", flags=re.IGNORECASE | re.DOTALL)
+        for match in re.findall(
+            r"<loc>(.*?)</loc>", xml_text or "", flags=re.IGNORECASE | re.DOTALL
+        )
         if normalize_whitespace(match.replace("&amp;", "&"))
     ]
 
@@ -737,23 +896,35 @@ def _score_tefal_shop_url(source: SourceProductData, product_url: str) -> int:
     return score
 
 
-def _extract_tefal_intro_summary(soup: BeautifulSoup, search_body_html: str = "") -> str:
+def _extract_tefal_intro_summary(
+    soup: BeautifulSoup, search_body_html: str = ""
+) -> str:
     intro_section = soup.select_one("section[id*='product_title_description']")
     intro_title = ""
     intro_body = ""
     if isinstance(intro_section, Tag):
         title_node = intro_section.select_one("h1, h2, h3, h4")
-        intro_title = normalize_whitespace(title_node.get_text(" ", strip=True) if title_node else "")
+        intro_title = normalize_whitespace(
+            title_node.get_text(" ", strip=True) if title_node else ""
+        )
         intro_body = _extract_text_from_tefal_copy(intro_section)
     sidebar_body = _extract_tefal_description_sidebar_text(soup)
     search_body_text = _extract_tefal_list_text(search_body_html)
-    return normalize_whitespace(" ".join(part for part in [intro_title, intro_body, sidebar_body, search_body_text] if part))
+    return normalize_whitespace(
+        " ".join(
+            part
+            for part in [intro_title, intro_body, sidebar_body, search_body_text]
+            if part
+        )
+    )
 
 
 def _extract_tefal_presentation_blocks(soup: BeautifulSoup) -> list[dict[str, str]]:
     blocks: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
-    for section in soup.select("section[id*='product_push_highlight'], section[id*='product_edito_blog_']"):
+    for section in soup.select(
+        "section[id*='product_push_highlight'], section[id*='product_edito_blog_']"
+    ):
         section_id = normalize_whitespace(section.get("id", ""))
         if "product_push_highlight" in section_id:
             for card in section.select("li.push-card"):
@@ -763,7 +934,9 @@ def _extract_tefal_presentation_blocks(soup: BeautifulSoup) -> list[dict[str, st
     return blocks
 
 
-def _register_tefal_block(blocks: list[dict[str, str]], seen: set[tuple[str, str]], block: dict[str, str]) -> None:
+def _register_tefal_block(
+    blocks: list[dict[str, str]], seen: set[tuple[str, str]], block: dict[str, str]
+) -> None:
     title = normalize_whitespace(block.get("title", ""))
     paragraph = normalize_whitespace(block.get("paragraph", ""))
     if not title or not paragraph:
@@ -785,8 +958,12 @@ def _build_tefal_card_block(container: Tag) -> dict[str, str]:
     title_node = container.select_one("h2, h3, h4")
     copy_node = container.select_one(".t-text")
     return {
-        "title": normalize_whitespace(title_node.get_text(" ", strip=True) if title_node else ""),
-        "paragraph": normalize_whitespace(copy_node.get_text(" ", strip=True) if copy_node else ""),
+        "title": normalize_whitespace(
+            title_node.get_text(" ", strip=True) if title_node else ""
+        ),
+        "paragraph": normalize_whitespace(
+            copy_node.get_text(" ", strip=True) if copy_node else ""
+        ),
         "image_url": _extract_tefal_image_url(container),
     }
 
@@ -795,9 +972,13 @@ def _build_tefal_edito_block(section: Tag) -> dict[str, str]:
     text_container = section.select_one(".strate-edito-blog__text") or section
     title_node = text_container.select_one("h2, h3, h4")
     return {
-        "title": normalize_whitespace(title_node.get_text(" ", strip=True) if title_node else ""),
+        "title": normalize_whitespace(
+            title_node.get_text(" ", strip=True) if title_node else ""
+        ),
         "paragraph": _extract_text_from_tefal_copy(text_container),
-        "image_url": _extract_tefal_image_url(section.select_one(".strate-edito-blog__image") or section),
+        "image_url": _extract_tefal_image_url(
+            section.select_one(".strate-edito-blog__image") or section
+        ),
     }
 
 
@@ -862,7 +1043,9 @@ def _extract_tefal_image_url(container: Tag) -> str:
                     or ""
                 )
             if not raw:
-                raw = _pick_first_srcset_candidate(node.get("srcset", "") or node.get("data-srcset", ""))
+                raw = _pick_first_srcset_candidate(
+                    node.get("srcset", "") or node.get("data-srcset", "")
+                )
             image_url = make_absolute_url(raw, TEFAL_SHOP_BASE_URL) if raw else ""
             if image_url:
                 return image_url
@@ -880,13 +1063,15 @@ def _pick_first_srcset_candidate(srcset: str) -> str:
 def _build_presentation_source_html(blocks: list[dict[str, str]]) -> str:
     if not blocks:
         return ""
-    parts = ["<div class=\"manufacturer-presentation\">"]
+    parts = ['<div class="manufacturer-presentation">']
     for block in blocks:
         parts.append("<section>")
         parts.append(f"<h2>{block['title']}</h2>")
         parts.append(f"<p>{block['paragraph']}</p>")
         if block.get("image_url"):
-            parts.append(f"<img src=\"{block['image_url']}\" alt=\"{block['title']}\" />")
+            parts.append(
+                f"<img src=\"{block['image_url']}\" alt=\"{block['title']}\" />"
+            )
         parts.append("</section>")
     parts.append("</div>")
     return "".join(parts)
@@ -932,5 +1117,9 @@ def _count_presentation_blocks(source_html: str, source_text: str) -> int:
             return count
     if not source_text:
         return 0
-    chunks = [chunk for chunk in re.split(r"\s{2,}", source_text) if normalize_whitespace(chunk)]
+    chunks = [
+        chunk
+        for chunk in re.split(r"\s{2,}", source_text)
+        if normalize_whitespace(chunk)
+    ]
     return len(chunks)

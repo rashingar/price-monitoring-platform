@@ -1,6 +1,9 @@
 """Shared source capture layer for product source ingestion and monitoring."""
 
-from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
+from ecommerce.source_capture.canonicalize_url import (
+    canonical_url_hash,
+    canonicalize_url,
+)
 from ecommerce.source_capture.detect_vendor import detect_vendor_slug
 from ecommerce.source_capture.runner import CaptureError, capture_source_url
 from ecommerce.source_capture.scoring import score_response_candidate

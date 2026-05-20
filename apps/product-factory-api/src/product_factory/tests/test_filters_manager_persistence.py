@@ -34,7 +34,9 @@ from product_factory.tools.sync_filter_map import (
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -93,7 +95,9 @@ def filter_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, P
     }
     monkeypatch.setattr(repo_paths, "FILTER_MAP_BASE_PATH", paths["base"])
     monkeypatch.setattr(repo_paths, "FILTER_MAP_MANUAL_OVERRIDES_PATH", paths["manual"])
-    monkeypatch.setattr(repo_paths, "FILTER_MAP_MANUAL_OVERRIDES_BACKUP_DIR", paths["backups"])
+    monkeypatch.setattr(
+        repo_paths, "FILTER_MAP_MANUAL_OVERRIDES_BACKUP_DIR", paths["backups"]
+    )
     monkeypatch.setattr(repo_paths, "FILTER_MAP_PATH", paths["final"])
     monkeypatch.setattr(repo_paths, "FILTER_MAP_SYNC_REPORT_PATH", paths["report"])
     _write_json(paths["base"], build_filter_map_payload([_category()], source="test"))
@@ -112,10 +116,14 @@ def client(filter_paths: dict[str, Path]) -> TestClient:
     return TestClient(create_app())
 
 
-def test_filter_persistence_lock_acquires_writes_metadata_and_releases(tmp_path: Path) -> None:
+def test_filter_persistence_lock_acquires_writes_metadata_and_releases(
+    tmp_path: Path,
+) -> None:
     lock_path = tmp_path / "filter_map.manual_overrides.json.lock"
 
-    with _FilterPersistenceLock(lock_path, purpose="test", timeout_seconds=0.2, retry_seconds=0.01):
+    with _FilterPersistenceLock(
+        lock_path, purpose="test", timeout_seconds=0.2, retry_seconds=0.01
+    ):
         payload = _read_json(lock_path)
         assert payload["purpose"] == "test"
         assert payload["pid"]
@@ -124,12 +132,16 @@ def test_filter_persistence_lock_acquires_writes_metadata_and_releases(tmp_path:
     assert not lock_path.exists()
 
 
-def test_filter_persistence_lock_timeout_returns_controlled_error(tmp_path: Path) -> None:
+def test_filter_persistence_lock_timeout_returns_controlled_error(
+    tmp_path: Path,
+) -> None:
     lock_path = tmp_path / "filter_map.manual_overrides.json.lock"
     _write_json(lock_path, {"pid": 999999, "token": "other", "purpose": "busy"})
 
     with pytest.raises(FilterManagerError) as excinfo:
-        with _FilterPersistenceLock(lock_path, purpose="test", timeout_seconds=0.01, retry_seconds=0.001):
+        with _FilterPersistenceLock(
+            lock_path, purpose="test", timeout_seconds=0.01, retry_seconds=0.001
+        ):
             pass
 
     assert excinfo.value.status_code == 409
@@ -141,7 +153,9 @@ def test_add_group_updates_manual_overrides_effective_map_and_audit_metadata(
     filter_paths: dict[str, Path],
 ) -> None:
     ids = _ids()
-    response = client.put(f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"})
+    response = client.put(
+        f"/api/filters/categories/{ids['category_id']}/groups", json={"name": "Color"}
+    )
 
     assert response.status_code == 200
     group_id = stable_group_id(ids["category_id"], "Color")
@@ -151,14 +165,18 @@ def test_add_group_updates_manual_overrides_effective_map_and_audit_metadata(
     assert group["metadata"]["operation"] == "add_group"
     assert manual["metadata"]["last_operation"] == "add_group"
     assert manual["metadata"]["revision"] == response.json()["revision"]
-    final_groups = _read_json(filter_paths["final"])["by_category_id"][ids["category_id"]]["filter_groups"]
+    final_groups = _read_json(filter_paths["final"])["by_category_id"][
+        ids["category_id"]
+    ]["filter_groups"]
     assert any(group["group_id"] == group_id for group in final_groups)
     assert not Path(str(filter_paths["manual"]) + ".lock").exists()
 
 
 def test_update_group_updates_revision(client: TestClient) -> None:
     ids = _ids()
-    before = client.get(f"/api/filters/categories/{ids['category_id']}").json()["revision"]
+    before = client.get(f"/api/filters/categories/{ids['category_id']}").json()[
+        "revision"
+    ]
 
     response = client.patch(
         f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}",
@@ -171,7 +189,9 @@ def test_update_group_updates_revision(client: TestClient) -> None:
 
 def test_add_value_updates_revision(client: TestClient) -> None:
     ids = _ids()
-    before = client.get(f"/api/filters/categories/{ids['category_id']}").json()["revision"]
+    before = client.get(f"/api/filters/categories/{ids['category_id']}").json()[
+        "revision"
+    ]
 
     response = client.put(
         f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}/values",
@@ -184,7 +204,9 @@ def test_add_value_updates_revision(client: TestClient) -> None:
 
 def test_update_value_updates_revision(client: TestClient) -> None:
     ids = _ids()
-    before = client.get(f"/api/filters/categories/{ids['category_id']}").json()["revision"]
+    before = client.get(f"/api/filters/categories/{ids['category_id']}").json()[
+        "revision"
+    ]
 
     response = client.patch(
         f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}/values/{ids['value_id']}",
@@ -212,9 +234,13 @@ def test_stale_expected_revision_returns_409_and_does_not_modify_manual_override
     assert filter_paths["manual"].read_text(encoding="utf-8") == before_manual
 
 
-def test_matching_expected_revision_succeeds_and_returns_new_revision(client: TestClient) -> None:
+def test_matching_expected_revision_succeeds_and_returns_new_revision(
+    client: TestClient,
+) -> None:
     ids = _ids()
-    before = client.get(f"/api/filters/categories/{ids['category_id']}").json()["revision"]
+    before = client.get(f"/api/filters/categories/{ids['category_id']}").json()[
+        "revision"
+    ]
 
     response = client.put(
         f"/api/filters/categories/{ids['category_id']}/groups/{ids['group_id']}/values",
@@ -225,7 +251,9 @@ def test_matching_expected_revision_succeeds_and_returns_new_revision(client: Te
     assert response.json()["revision"] != before
 
 
-def test_omitted_expected_revision_succeeds_for_current_clients(client: TestClient) -> None:
+def test_omitted_expected_revision_succeeds_for_current_clients(
+    client: TestClient,
+) -> None:
     ids = _ids()
 
     response = client.put(
@@ -268,13 +296,19 @@ def test_sync_ignores_manual_metadata_fields(filter_paths: dict[str, Path]) -> N
                     "name": "Memory RAM",
                     "required": False,
                     "status": "active",
-                    "metadata": {"updated_at": "2026-05-02T00:00:00Z", "operation": "test"},
+                    "metadata": {
+                        "updated_at": "2026-05-02T00:00:00Z",
+                        "operation": "test",
+                    },
                     "values": {
                         ids["value_id"]: {
                             "value_id": ids["value_id"],
                             "value": "16GB",
                             "status": "deprecated",
-                            "metadata": {"updated_at": "2026-05-02T00:00:00Z", "operation": "test"},
+                            "metadata": {
+                                "updated_at": "2026-05-02T00:00:00Z",
+                                "operation": "test",
+                            },
                         }
                     },
                 }
@@ -292,13 +326,17 @@ def test_sync_ignores_manual_metadata_fields(filter_paths: dict[str, Path]) -> N
     )
 
     assert result == 0
-    final_group = _read_json(filter_paths["final"])["by_category_id"][ids["category_id"]]["filter_groups"][0]
+    final_group = _read_json(filter_paths["final"])["by_category_id"][
+        ids["category_id"]
+    ]["filter_groups"][0]
     assert final_group["name"] == "Memory RAM"
     assert "metadata" not in final_group
     assert "metadata" not in final_group["values"][0]
 
 
-def test_concurrent_filter_writes_do_not_drop_updates(filter_paths: dict[str, Path]) -> None:
+def test_concurrent_filter_writes_do_not_drop_updates(
+    filter_paths: dict[str, Path],
+) -> None:
     ids = _ids()
     errors: list[BaseException] = []
 
@@ -318,8 +356,12 @@ def test_concurrent_filter_writes_do_not_drop_updates(filter_paths: dict[str, Pa
         thread.join()
 
     assert errors == []
-    manual_groups = _read_json(filter_paths["manual"])["categories"][ids["category_id"]]["groups"]
-    final_groups = _read_json(filter_paths["final"])["by_category_id"][ids["category_id"]]["filter_groups"]
+    manual_groups = _read_json(filter_paths["manual"])["categories"][
+        ids["category_id"]
+    ]["groups"]
+    final_groups = _read_json(filter_paths["final"])["by_category_id"][
+        ids["category_id"]
+    ]["filter_groups"]
     assert stable_group_id(ids["category_id"], "Color") in manual_groups
     assert stable_group_id(ids["category_id"], "Screen Size") in manual_groups
     assert {group["name"] for group in final_groups} >= {"Color", "Screen Size"}
@@ -338,11 +380,15 @@ def test_successful_write_creates_backup_of_previous_manual_overrides(
     assert _read_json(backups[0]) == before_manual
 
 
-def test_backup_retention_removes_old_backups_beyond_cap(filter_paths: dict[str, Path]) -> None:
+def test_backup_retention_removes_old_backups_beyond_cap(
+    filter_paths: dict[str, Path],
+) -> None:
     ids = _ids()
 
     for index in range(FILTER_OVERRIDE_BACKUP_RETENTION + 3):
-        add_filter_group(ids["category_id"], AddFilterGroupRequest(name=f"Group {index}"))
+        add_filter_group(
+            ids["category_id"], AddFilterGroupRequest(name=f"Group {index}")
+        )
 
     backups = sorted(filter_paths["backups"].glob("filter_map.manual_overrides.*.json"))
     assert len(backups) == FILTER_OVERRIDE_BACKUP_RETENTION
@@ -368,7 +414,9 @@ def test_manual_override_write_is_atomic_when_replace_fails(
 
     assert excinfo.value.status_code == 500
     assert filter_paths["manual"].read_text(encoding="utf-8") == before_manual
-    assert not list(filter_paths["manual"].parent.glob(".filter_map.manual_overrides.json.*.tmp"))
+    assert not list(
+        filter_paths["manual"].parent.glob(".filter_map.manual_overrides.json.*.tmp")
+    )
 
 
 def test_corrupt_current_manual_override_json_returns_controlled_error_and_preserves_file(
@@ -398,7 +446,9 @@ def test_latest_valid_backup_can_be_restored(filter_paths: dict[str, Path]) -> N
     assert response.status == "ok"
     assert restored["categories"] == after_color["categories"]
     assert restored["metadata"]["revision"] == response.revision
-    final_groups = _read_json(filter_paths["final"])["by_category_id"][ids["category_id"]]["filter_groups"]
+    final_groups = _read_json(filter_paths["final"])["by_category_id"][
+        ids["category_id"]
+    ]["filter_groups"]
     assert {group["name"] for group in final_groups} >= {"Color"}
     assert all(group["name"] != "Screen Size" for group in final_groups)
     assert _read_json(filter_paths["report"])["rollback"]["status"] == "restored"
@@ -413,7 +463,12 @@ def test_specific_named_backup_can_be_restored(filter_paths: dict[str, Path]) ->
     response = restore_filter_override_backup(first_backup)
 
     assert response.restored_backup_name == first_backup
-    manual_groups = _read_json(filter_paths["manual"]).get("categories", {}).get(ids["category_id"], {}).get("groups", {})
+    manual_groups = (
+        _read_json(filter_paths["manual"])
+        .get("categories", {})
+        .get(ids["category_id"], {})
+        .get("groups", {})
+    )
     assert stable_group_id(ids["category_id"], "Color") not in manual_groups
     assert stable_group_id(ids["category_id"], "Screen Size") not in manual_groups
 
@@ -440,13 +495,17 @@ def test_restore_rejects_invalid_backup_json(filter_paths: dict[str, Path]) -> N
 
 def test_restore_updates_revision(filter_paths: dict[str, Path]) -> None:
     ids = _ids()
-    before = add_filter_group(ids["category_id"], AddFilterGroupRequest(name="Color")).revision
+    before = add_filter_group(
+        ids["category_id"], AddFilterGroupRequest(name="Color")
+    ).revision
     add_filter_group(ids["category_id"], AddFilterGroupRequest(name="Screen Size"))
 
     response = restore_filter_override_backup()
 
     assert response.revision != before
-    assert _read_json(filter_paths["manual"])["metadata"]["revision"] == response.revision
+    assert (
+        _read_json(filter_paths["manual"])["metadata"]["revision"] == response.revision
+    )
 
 
 def test_sync_failure_during_normal_write_leaves_previous_manual_recoverable(
@@ -461,7 +520,10 @@ def test_sync_failure_during_normal_write_leaves_previous_manual_recoverable(
         write_filter_map_json(path, payload)
 
     patcher = pytest.MonkeyPatch()
-    patcher.setattr("product_factory.services.filters_manager_service.write_filter_map_json", failing_write)
+    patcher.setattr(
+        "product_factory.services.filters_manager_service.write_filter_map_json",
+        failing_write,
+    )
 
     try:
         with pytest.raises(FilterManagerError) as excinfo:
@@ -473,4 +535,6 @@ def test_sync_failure_during_normal_write_leaves_previous_manual_recoverable(
     backup = list(filter_paths["backups"].glob("filter_map.manual_overrides.*.json"))[0]
     assert _read_json(backup) == before_manual
     restore_filter_override_backup(backup.name)
-    assert _read_json(filter_paths["manual"])["categories"] == before_manual["categories"]
+    assert (
+        _read_json(filter_paths["manual"])["categories"] == before_manual["categories"]
+    )

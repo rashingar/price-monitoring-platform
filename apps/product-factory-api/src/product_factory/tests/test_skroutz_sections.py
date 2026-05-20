@@ -7,7 +7,11 @@ import product_factory.prepare_section_assets as section_assets_module
 from product_factory.fetcher import ElectronetFetcher
 from product_factory.models import GalleryImage
 from product_factory.prepare_section_assets import resolve_skroutz_section_assets
-from product_factory.skroutz_sections import extract_skroutz_section_window, is_placeholder_image_url, resolve_skroutz_section_image_url
+from product_factory.skroutz_sections import (
+    extract_skroutz_section_window,
+    is_placeholder_image_url,
+    resolve_skroutz_section_image_url,
+)
 
 SAMPLE = {
     "model": "143481",
@@ -31,7 +35,9 @@ EXPECTED_TITLES = [
 ]
 
 
-def test_143481_html_fixture_resolves_9_sections_in_stable_order(skroutz_fixtures_root: Path) -> None:
+def test_143481_html_fixture_resolves_9_sections_in_stable_order(
+    skroutz_fixtures_root: Path,
+) -> None:
     html = (skroutz_fixtures_root / "html" / "143481.html").read_text(encoding="utf-8")
     extracted = extract_skroutz_section_window(html, SAMPLE["url"])
 
@@ -41,13 +47,26 @@ def test_143481_html_fixture_resolves_9_sections_in_stable_order(skroutz_fixture
     assert [section["title"] for section in extracted["sections"]] == EXPECTED_TITLES
     assert len(extracted["sections"]) == 9
     assert "Χρυσή γωνία 60°" in extracted["sections"][3]["paragraph"]
-    assert "Εξαιρετικά υψηλός ρυθμός ανάκλασης υπερήχων" in extracted["sections"][3]["paragraph"]
+    assert (
+        "Εξαιρετικά υψηλός ρυθμός ανάκλασης υπερήχων"
+        in extracted["sections"][3]["paragraph"]
+    )
     assert extracted["sections"][0]["image_candidates"][0].endswith("transparent.gif")
 
 
-def test_placeholder_urls_are_rejected_for_resolved_section_images(skroutz_fixtures_root: Path) -> None:
-    rendered = json.loads((skroutz_fixtures_root / "rendered_sections" / "143481.rendered_sections.json").read_text(encoding="utf-8"))
-    lazy_attr = rendered["sections"][0]["image_record"]["lazy_attrs"]["data-lazy-media-src-value"]
+def test_placeholder_urls_are_rejected_for_resolved_section_images(
+    skroutz_fixtures_root: Path,
+) -> None:
+    rendered = json.loads(
+        (
+            skroutz_fixtures_root
+            / "rendered_sections"
+            / "143481.rendered_sections.json"
+        ).read_text(encoding="utf-8")
+    )
+    lazy_attr = rendered["sections"][0]["image_record"]["lazy_attrs"][
+        "data-lazy-media-src-value"
+    ]
     record = {
         "currentSrc": "",
         "img_attrs": {"src": "//www.skroutz.gr/assets/transparent.gif"},
@@ -60,10 +79,15 @@ def test_placeholder_urls_are_rejected_for_resolved_section_images(skroutz_fixtu
     assert is_placeholder_image_url(record["img_attrs"]["src"]) is True
     assert is_placeholder_image_url(resolved) is False
     assert resolved.endswith(".png")
-    assert all(is_placeholder_image_url(section["resolved_image_url"]) is False for section in rendered["sections"])
+    assert all(
+        is_placeholder_image_url(section["resolved_image_url"]) is False
+        for section in rendered["sections"]
+    )
 
 
-def test_resolve_skroutz_section_assets_skips_text_only_interludes(monkeypatch, tmp_path: Path) -> None:
+def test_resolve_skroutz_section_assets_skips_text_only_interludes(
+    monkeypatch, tmp_path: Path
+) -> None:
     all_sections = [
         {"title": "Section 1", "paragraph": "Body 1", "image_candidates": []},
         {"title": "Section 2", "paragraph": "Body 2", "image_candidates": []},
@@ -91,7 +115,9 @@ def test_resolve_skroutz_section_assets_skips_text_only_interludes(monkeypatch, 
                     "selected_container_index": 0,
                     "start_anchor": "Description",
                     "stop_anchor": "Manufacturer",
-                    "title_signature": [section["title"] for section in rendered_sections],
+                    "title_signature": [
+                        section["title"] for section in rendered_sections
+                    ],
                 },
                 "sections": rendered_sections,
             }
@@ -144,7 +170,11 @@ def test_resolve_skroutz_section_assets_skips_text_only_interludes(monkeypatch, 
     )
 
     assert fetcher.rendered_calls == [SAMPLE["url"]]
-    assert [section["title"] for section in result.selected_presentation_blocks] == ["Section 1", "Section 3", "Section 4"]
+    assert [section["title"] for section in result.selected_presentation_blocks] == [
+        "Section 1",
+        "Section 3",
+        "Section 4",
+    ]
     assert [image.url for image in result.selected_besco_images] == [
         "https://example.com/1.jpg",
         "https://example.com/3.jpg",
@@ -157,7 +187,9 @@ def test_resolve_skroutz_section_assets_skips_text_only_interludes(monkeypatch, 
     ]
 
 
-def test_rendered_section_extraction_skips_non_presentation_titles_and_tolerates_networkidle_timeout(monkeypatch) -> None:
+def test_rendered_section_extraction_skips_non_presentation_titles_and_tolerates_networkidle_timeout(
+    monkeypatch,
+) -> None:
     class FakeSimpleLocator:
         def __init__(self, count: int = 0, text: str = "", payload: dict | None = None):
             self._count = count
@@ -231,7 +263,9 @@ def test_rendered_section_extraction_skips_non_presentation_titles_and_tolerates
             image_record = {
                 "currentSrc": "",
                 "img_attrs": {"src": "//www.skroutz.gr/assets/transparent.gif"},
-                "lazy_attrs": {"data-lazy-media-src-value": "https://b.scdn.gr/test-image.png"},
+                "lazy_attrs": {
+                    "data-lazy-media-src-value": "https://b.scdn.gr/test-image.png"
+                },
                 "ancestor_data_attrs": {},
                 "source_srcsets": [],
             }
@@ -247,7 +281,9 @@ def test_rendered_section_extraction_skips_non_presentation_titles_and_tolerates
                 },
                 sections=[
                     FakeSectionLocator("Με μια ματιά", "skip", image_record),
-                    FakeSectionLocator("Κανονική Ενότητα", "Περιγραφή ενότητας", image_record),
+                    FakeSectionLocator(
+                        "Κανονική Ενότητα", "Περιγραφή ενότητας", image_record
+                    ),
                     FakeSectionLocator("Οι χρήστες είπαν:", "skip", image_record),
                 ],
             )
@@ -291,13 +327,21 @@ def test_rendered_section_extraction_skips_non_presentation_titles_and_tolerates
         def __exit__(self, exc_type, exc, tb):
             return False
 
-    fake_sync_api = types.SimpleNamespace(sync_playwright=lambda: FakePlaywrightContextManager())
+    fake_sync_api = types.SimpleNamespace(
+        sync_playwright=lambda: FakePlaywrightContextManager()
+    )
     monkeypatch.setitem(sys.modules, "playwright.sync_api", fake_sync_api)
 
     fetcher = ElectronetFetcher()
-    monkeypatch.setattr(fetcher, "_robots_allowed", lambda url: (True, "robots_unavailable"))
+    monkeypatch.setattr(
+        fetcher, "_robots_allowed", lambda url: (True, "robots_unavailable")
+    )
     rendered = fetcher.extract_skroutz_section_image_records(SAMPLE["url"])
 
-    assert [section["title"] for section in rendered["sections"]] == ["Κανονική Ενότητα"]
-    assert rendered["sections"][0]["resolved_image_url"] == "https://b.scdn.gr/test-image.png"
-
+    assert [section["title"] for section in rendered["sections"]] == [
+        "Κανονική Ενότητα"
+    ]
+    assert (
+        rendered["sections"][0]["resolved_image_url"]
+        == "https://b.scdn.gr/test-image.png"
+    )

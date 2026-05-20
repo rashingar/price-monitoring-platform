@@ -7,7 +7,6 @@ from urllib.parse import unquote, urlsplit
 
 from ecommerce.utils.text import collapse_internal_spaces
 
-
 REVIEW_TITLE_RE = re.compile(r"(\breview\b|Αξιολόγησε|Αξιολογήστε)", re.IGNORECASE)
 BLOCKED_URL_WORD_RE = re.compile(r"(collection|promo|campaign|banner)", re.IGNORECASE)
 
@@ -27,7 +26,9 @@ def url_rejection_reason(url: str) -> str:
     return ""
 
 
-def review_page_rejection_reason(*, candidate_url: str = "", canonical_url: str = "", title: str = "") -> str:
+def review_page_rejection_reason(
+    *, candidate_url: str = "", canonical_url: str = "", title: str = ""
+) -> str:
     candidate_reason = url_rejection_reason(candidate_url)
     if candidate_reason:
         return f"candidate_{candidate_reason}"

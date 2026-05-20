@@ -7,12 +7,14 @@ from typing import Any
 
 import httpx
 
-from ecommerce.source_capture.egress_policy import EgressPolicyError, validate_outbound_url
+from ecommerce.source_capture.egress_policy import (
+    EgressPolicyError,
+    validate_outbound_url,
+)
 from ecommerce.source_capture.firecrawl_health import firecrawl_health_flags
 from ecommerce.source_capture.parsing import parse_skroutz_firecrawl_content
 from ecommerce.source_capture.sanitize import content_hash, sanitize_json
 from ecommerce.source_capture.types import CaptureResult, CaptureSnapshotPayload
-
 
 CAPTURE_STRATEGY = "skroutz_firecrawl"
 PARSER_VERSION = "skroutz_firecrawl_v1"
@@ -46,7 +48,9 @@ def capture_skroutz_firecrawl(
     body_text = ""
 
     try:
-        source_decision = validate_outbound_url(url, expected_vendor_slug="skroutz", require_known_vendor=True)
+        source_decision = validate_outbound_url(
+            url, expected_vendor_slug="skroutz", require_known_vendor=True
+        )
         validate_outbound_url(api_endpoint)
     except EgressPolicyError as exc:
         return _failed_result(
@@ -133,7 +137,9 @@ def capture_skroutz_firecrawl(
 
     content = _extract_content_text(payload)
     data = payload.get("data") if isinstance(payload, dict) else payload
-    offers, price_observation, flags = parse_skroutz_firecrawl_content(content, page_url=final_url, data=data)
+    offers, price_observation, flags = parse_skroutz_firecrawl_content(
+        content, page_url=final_url, data=data
+    )
     parsed_at = _now()
     if offers:
         snapshot = _snapshot(
@@ -143,7 +149,12 @@ def capture_skroutz_firecrawl(
             parsed_at=parsed_at,
             content_text=content,
         )
-        return CaptureResult(vendor_slug="skroutz", status="success", snapshot=snapshot, offer_observations=tuple(offers))
+        return CaptureResult(
+            vendor_slug="skroutz",
+            status="success",
+            snapshot=snapshot,
+            offer_observations=tuple(offers),
+        )
     if price_observation is not None:
         snapshot = _snapshot(
             **snapshot_base,
@@ -190,7 +201,9 @@ def _snapshot(
 ) -> CaptureSnapshotPayload:
     del started
     fetched = fetched_at or _now()
-    persisted_json = _bounded_firecrawl_payload(payload) if payload is not None else None
+    persisted_json = (
+        _bounded_firecrawl_payload(payload) if payload is not None else None
+    )
     return CaptureSnapshotPayload(
         capture_strategy=CAPTURE_STRATEGY,
         page_url=url,
@@ -199,13 +212,19 @@ def _snapshot(
         request_method="POST" if request_url else None,
         response_status=response_status,
         response_content_type=response_content_type,
-        response_body_json=persisted_json if isinstance(persisted_json, (dict, list)) else None,
+        response_body_json=(
+            persisted_json if isinstance(persisted_json, (dict, list)) else None
+        ),
         response_body_text=_bounded_text(body_text) if persisted_json is None else None,
         content_hash=content_hash(content_text or body_text),
         parser_version=PARSER_VERSION,
         fetch_status_code=response_status,
         fetch_latency_ms=latency_ms,
-        data_quality_flags=list(dict.fromkeys(data_quality_flags or ([] if error_code is None else [error_code]))),
+        data_quality_flags=list(
+            dict.fromkeys(
+                data_quality_flags or ([] if error_code is None else [error_code])
+            )
+        ),
         error_code=error_code,
         error_message=error_message,
         captured_at=fetched,
@@ -266,13 +285,21 @@ def _failed_result(
 
 
 def _firecrawl_scrape_endpoint() -> str:
-    base_url = os.getenv("FIRECRAWL_API_BASE_URL", DEFAULT_FIRECRAWL_API_BASE_URL).strip().rstrip("/")
+    base_url = (
+        os.getenv("FIRECRAWL_API_BASE_URL", DEFAULT_FIRECRAWL_API_BASE_URL)
+        .strip()
+        .rstrip("/")
+    )
     return f"{base_url}/scrape"
 
 
 def _effective_timeout(timeout_seconds: float) -> float:
-    configured = _float_env("FIRECRAWL_TIMEOUT_SECONDS", DEFAULT_FIRECRAWL_TIMEOUT_SECONDS)
-    requested = timeout_seconds if timeout_seconds > 0 else DEFAULT_FIRECRAWL_TIMEOUT_SECONDS
+    configured = _float_env(
+        "FIRECRAWL_TIMEOUT_SECONDS", DEFAULT_FIRECRAWL_TIMEOUT_SECONDS
+    )
+    requested = (
+        timeout_seconds if timeout_seconds > 0 else DEFAULT_FIRECRAWL_TIMEOUT_SECONDS
+    )
     return max(1.0, min(configured, requested, 120.0))
 
 
@@ -286,7 +313,10 @@ def _float_env(name: str, default: float) -> float:
 
 def _api_error(payload: Any, status_code: int | None) -> tuple[str, str] | None:
     if status_code is not None and status_code >= 400:
-        return FIRECRAWL_API_FAILED, f"Firecrawl returned HTTP {status_code}: {_payload_message(payload)}"
+        return (
+            FIRECRAWL_API_FAILED,
+            f"Firecrawl returned HTTP {status_code}: {_payload_message(payload)}",
+        )
     if isinstance(payload, dict) and payload.get("success") is False:
         return FIRECRAWL_API_FAILED, _payload_message(payload)
     return None
@@ -306,7 +336,9 @@ def _extract_content_text(payload: Any) -> str:
     for value in _walk_json(payload):
         if not isinstance(value, dict):
             continue
-        normalized = {str(key).casefold().replace("_", ""): item for key, item in value.items()}
+        normalized = {
+            str(key).casefold().replace("_", ""): item for key, item in value.items()
+        }
         for key in ("markdown", "html", "rawhtml", "text", "content"):
             item = normalized.get(key)
             if isinstance(item, str) and item.strip():
@@ -351,7 +383,9 @@ def _bound_json(value: Any) -> Any:
     return value
 
 
-def _bounded_text(value: str | None, *, limit: int = MAX_PERSISTED_TEXT_CHARS) -> str | None:
+def _bounded_text(
+    value: str | None, *, limit: int = MAX_PERSISTED_TEXT_CHARS
+) -> str | None:
     if value is None:
         return None
     single_line = " ".join(value.split())

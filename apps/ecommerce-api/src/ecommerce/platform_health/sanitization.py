@@ -4,15 +4,25 @@ from __future__ import annotations
 
 import re
 
-from ecommerce.platform_health.models import HealthStatus, PlatformHealthGroup, PlatformHealthLink
+from ecommerce.platform_health.models import (
+    HealthStatus,
+    PlatformHealthGroup,
+    PlatformHealthLink,
+)
 
 
 def safe_text(value: object) -> str:
     text = str(value or "").strip()
     if not text:
         return ""
-    text = re.sub(r"(?i)(password|secret|token|api[_-]?key)\s*[:=]\s*\S+", r"\1=<redacted>", text)
-    text = re.sub(r"(?i)\b[a-z][a-z0-9+.-]*://[^@\s]+@[^/\s]+", "<redacted-connection-string>", text)
+    text = re.sub(
+        r"(?i)(password|secret|token|api[_-]?key)\s*[:=]\s*\S+", r"\1=<redacted>", text
+    )
+    text = re.sub(
+        r"(?i)\b[a-z][a-z0-9+.-]*://[^@\s]+@[^/\s]+",
+        "<redacted-connection-string>",
+        text,
+    )
     return text[:500]
 
 
@@ -59,9 +69,17 @@ def group(
         label=label,
         status=status,
         summary=safe_text(summary) or "No summary available.",
-        details=[item for item in (safe_text(value) for value in (details or [])) if item],
-        blocking_reasons=[item for item in (safe_text(value) for value in (blocking_reasons or [])) if item],
-        warnings=[item for item in (safe_text(value) for value in (warnings or [])) if item],
+        details=[
+            item for item in (safe_text(value) for value in (details or [])) if item
+        ],
+        blocking_reasons=[
+            item
+            for item in (safe_text(value) for value in (blocking_reasons or []))
+            if item
+        ],
+        warnings=[
+            item for item in (safe_text(value) for value in (warnings or [])) if item
+        ],
         links=links or [],
     )
 

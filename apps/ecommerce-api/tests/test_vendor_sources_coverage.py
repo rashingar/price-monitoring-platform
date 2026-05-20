@@ -14,7 +14,6 @@ from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 
-
 NOW = datetime(2026, 5, 12, 8, tzinfo=timezone.utc)
 
 
@@ -74,17 +73,39 @@ def _source_url(
     return row
 
 
-def test_vendor_source_url_summary_reports_coverage_and_grouped_counters(tmp_path: Path, monkeypatch) -> None:
+def test_vendor_source_url_summary_reports_coverage_and_grouped_counters(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         first = _catalog_product(session, model="005606")
         second = _catalog_product(session, model="123456")
         third = _catalog_product(session, model="999999")
         inactive = _catalog_product(session, model="OLD", active=False)
-        _source_url(session, first, source_name="bestprice", status="active", url_type="manual")
-        _source_url(session, first, source_name="skroutz", status="needs_review", url_type="imported")
-        _source_url(session, second, source_name="bestprice", status="disabled", url_type="imported")
-        _source_url(session, inactive, source_name="bestprice", status="active", url_type="manual")
+        _source_url(
+            session, first, source_name="bestprice", status="active", url_type="manual"
+        )
+        _source_url(
+            session,
+            first,
+            source_name="skroutz",
+            status="needs_review",
+            url_type="imported",
+        )
+        _source_url(
+            session,
+            second,
+            source_name="bestprice",
+            status="disabled",
+            url_type="imported",
+        )
+        _source_url(
+            session,
+            inactive,
+            source_name="bestprice",
+            status="active",
+            url_type="manual",
+        )
 
     response = client.get("/api/vendor-sources/source-urls/summary")
 
@@ -104,17 +125,31 @@ def test_vendor_source_url_summary_reports_coverage_and_grouped_counters(tmp_pat
     assert payload["missing_source_url_models"] == [second.model, third.model]
 
 
-def test_vendor_source_url_summary_filters_by_source_name(tmp_path: Path, monkeypatch) -> None:
+def test_vendor_source_url_summary_filters_by_source_name(
+    tmp_path: Path, monkeypatch
+) -> None:
     client, database_url = _client(tmp_path, monkeypatch)
     with session_scope(database_url) as session:
         first = _catalog_product(session, model="005606")
         second = _catalog_product(session, model="123456")
         third = _catalog_product(session, model="999999")
-        _source_url(session, first, source_name="bestprice", status="active", url_type="manual")
-        _source_url(session, first, source_name="skroutz", status="active", url_type="manual")
-        _source_url(session, second, source_name="bestprice", status="disabled", url_type="imported")
+        _source_url(
+            session, first, source_name="bestprice", status="active", url_type="manual"
+        )
+        _source_url(
+            session, first, source_name="skroutz", status="active", url_type="manual"
+        )
+        _source_url(
+            session,
+            second,
+            source_name="bestprice",
+            status="disabled",
+            url_type="imported",
+        )
 
-    response = client.get("/api/vendor-sources/source-urls/summary?source_name=bestprice")
+    response = client.get(
+        "/api/vendor-sources/source-urls/summary?source_name=bestprice"
+    )
 
     assert response.status_code == 200
     payload = response.json()

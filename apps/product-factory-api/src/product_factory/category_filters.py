@@ -8,7 +8,13 @@ from typing import Any
 
 from .description_enrichment import build_description_spec_items
 from .models import SourceProductData, SpecItem, SpecSection, TaxonomyResolution
-from .normalize import candidate_label_keys, label_aliases_for, normalize_for_match, normalize_label_key, nullify_dash_values
+from .normalize import (
+    candidate_label_keys,
+    label_aliases_for,
+    normalize_for_match,
+    normalize_label_key,
+    nullify_dash_values,
+)
 from .repo_paths import FILTER_MAP_PATH, category_filter_review_path_for_model_root
 from .utils import read_json
 
@@ -69,9 +75,19 @@ def load_filter_map(path: str | Path = FILTER_MAP_PATH) -> dict[str, Any]:
 
 def canonical_taxonomy_path(taxonomy: TaxonomyResolution) -> str:
     if taxonomy.taxonomy_path:
-        return " > ".join(segment.strip() for segment in taxonomy.taxonomy_path.split(">") if segment.strip())
-    segments = [taxonomy.parent_category, taxonomy.leaf_category, taxonomy.sub_category or ""]
-    return " > ".join(str(segment).strip() for segment in segments if str(segment or "").strip())
+        return " > ".join(
+            segment.strip()
+            for segment in taxonomy.taxonomy_path.split(">")
+            if segment.strip()
+        )
+    segments = [
+        taxonomy.parent_category,
+        taxonomy.leaf_category,
+        taxonomy.sub_category or "",
+    ]
+    return " > ".join(
+        str(segment).strip() for segment in segments if str(segment or "").strip()
+    )
 
 
 def find_filter_category(
@@ -85,7 +101,10 @@ def find_filter_category(
         if isinstance(by_id, dict) and isinstance(by_id.get(category_id), dict):
             return by_id[category_id]
         for category in filter_map.get("subcategories", []):
-            if isinstance(category, dict) and category.get("category_id") == category_id:
+            if (
+                isinstance(category, dict)
+                and category.get("category_id") == category_id
+            ):
                 return category
 
     normalized_path = normalize_for_match(canonicalize_path(taxonomy_path))
@@ -94,19 +113,29 @@ def find_filter_category(
     by_path = filter_map.get("by_path", {})
     if isinstance(by_path, dict):
         for path, category in by_path.items():
-            if normalize_for_match(canonicalize_path(str(path))) == normalized_path and isinstance(category, dict):
+            if normalize_for_match(
+                canonicalize_path(str(path))
+            ) == normalized_path and isinstance(category, dict):
                 return category
     for category in filter_map.get("subcategories", []):
-        if isinstance(category, dict) and normalize_for_match(canonicalize_path(category.get("path", ""))) == normalized_path:
+        if (
+            isinstance(category, dict)
+            and normalize_for_match(canonicalize_path(category.get("path", "")))
+            == normalized_path
+        ):
             return category
     return None
 
 
 def canonicalize_path(path: str) -> str:
-    return " > ".join(segment.strip() for segment in str(path or "").split(">") if segment.strip())
+    return " > ".join(
+        segment.strip() for segment in str(path or "").split(">") if segment.strip()
+    )
 
 
-def get_filter_group_names(category: dict[str, Any], include_inactive: bool = False) -> list[str]:
+def get_filter_group_names(
+    category: dict[str, Any], include_inactive: bool = False
+) -> list[str]:
     names: list[str] = []
     for group in category.get("filter_groups", []):
         if not isinstance(group, dict):
@@ -120,7 +149,9 @@ def get_filter_group_names(category: dict[str, Any], include_inactive: bool = Fa
     return names
 
 
-def get_filter_group_value_map(category: dict[str, Any], include_inactive: bool = False) -> dict[str, list[str]]:
+def get_filter_group_value_map(
+    category: dict[str, Any], include_inactive: bool = False
+) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
     for group in category.get("filter_groups", []):
         if not isinstance(group, dict):
@@ -161,10 +192,18 @@ def resolve_category_filter_values(
     filter_category: dict[str, Any],
     review_values: dict[str, str] | None = None,
 ) -> CategoryFilterResolution:
-    taxonomy_path = canonical_taxonomy_path(taxonomy) or str(filter_category.get("path", "") or "")
+    taxonomy_path = canonical_taxonomy_path(taxonomy) or str(
+        filter_category.get("path", "") or ""
+    )
     category_id = str(filter_category.get("category_id") or taxonomy.category_id or "")
-    exact_source, exact_manufacturer, exact_description, normalized_lookup = _build_resolution_lookups(source)
-    review_exact = {str(key): str(value).strip() for key, value in (review_values or {}).items() if str(value or "").strip()}
+    exact_source, exact_manufacturer, exact_description, normalized_lookup = (
+        _build_resolution_lookups(source)
+    )
+    review_exact = {
+        str(key): str(value).strip()
+        for key, value in (review_values or {}).items()
+        if str(value or "").strip()
+    }
     review_normalized = {
         normalized_key: value
         for key, value in review_exact.items()
@@ -185,7 +224,9 @@ def resolve_category_filter_values(
         group_name = str(group.get("name", "") or "")
         group_status = str(group.get("status", "active") or "active")
         required = bool(group.get("required", True)) and group_status == "active"
-        allowed_values, value_status_by_exact, value_aliases_by_normalized = _allowed_values(group)
+        allowed_values, value_status_by_exact, value_aliases_by_normalized = (
+            _allowed_values(group)
+        )
         resolved_value, resolved_from = _resolve_group_value(
             group_id=group_id,
             group_name=group_name,
@@ -200,10 +241,16 @@ def resolve_category_filter_values(
         if group_status == "inactive" and resolved_from != "approved_review":
             resolved_value = ""
             resolved_from = ""
-        resolved_value = _canonical_filter_value(resolved_value, value_aliases_by_normalized)
+        resolved_value = _canonical_filter_value(
+            resolved_value, value_aliases_by_normalized
+        )
         emitted = bool(resolved_value) and group_status == "active"
         inactive_group = group_status == "inactive"
-        if resolved_value and group_status == "inactive" and resolved_from == "approved_review":
+        if (
+            resolved_value
+            and group_status == "inactive"
+            and resolved_from == "approved_review"
+        ):
             emitted = True
         if resolved_value and group_status == "deprecated":
             emitted = True
@@ -211,7 +258,11 @@ def resolve_category_filter_values(
         value_status = value_status_by_exact.get(resolved_value, "")
         deprecated_value = value_status == "deprecated"
         allowed_active_or_deprecated = set(value_status_by_exact)
-        outside_allowed = bool(resolved_value) and bool(allowed_active_or_deprecated) and resolved_value not in allowed_active_or_deprecated
+        outside_allowed = (
+            bool(resolved_value)
+            and bool(allowed_active_or_deprecated)
+            and resolved_value not in allowed_active_or_deprecated
+        )
         missing_required = required and not resolved_value
 
         diagnostic = CategoryFilterValueResolution(
@@ -244,11 +295,17 @@ def resolve_category_filter_values(
         if resolved_value and group_status == "inactive":
             resolution.warnings.append(f"inactive_category_filter_used:{group_name}")
         if resolved_value and group_status == "deprecated":
-            resolution.warnings.append(f"deprecated_category_filter_group_used:{group_name}")
+            resolution.warnings.append(
+                f"deprecated_category_filter_group_used:{group_name}"
+            )
         if deprecated_value:
-            resolution.warnings.append(f"deprecated_category_filter_value_used:{group_name}")
+            resolution.warnings.append(
+                f"deprecated_category_filter_value_used:{group_name}"
+            )
         if outside_allowed:
-            resolution.warnings.append(f"category_filter_value_outside_allowed:{group_name}")
+            resolution.warnings.append(
+                f"category_filter_value_outside_allowed:{group_name}"
+            )
 
     return resolution
 
@@ -300,7 +357,9 @@ def _add_lookup_value(lookup: dict[str, str], item: SpecItem) -> None:
         lookup[label] = value
 
 
-def _build_resolution_lookups(source: SourceProductData) -> tuple[dict[str, str], dict[str, str], dict[str, str], dict[str, tuple[str, str]]]:
+def _build_resolution_lookups(
+    source: SourceProductData,
+) -> tuple[dict[str, str], dict[str, str], dict[str, str], dict[str, tuple[str, str]]]:
     exact_source: dict[str, str] = {}
     exact_manufacturer: dict[str, str] = {}
     exact_description: dict[str, str] = {}
@@ -313,11 +372,15 @@ def _build_resolution_lookups(source: SourceProductData) -> tuple[dict[str, str]
             _add_exact_and_normalized(exact_source, normalized, item, "source")
     for section in source.manufacturer_spec_sections:
         for item in section.items:
-            _add_exact_and_normalized(exact_manufacturer, normalized, item, "manufacturer")
+            _add_exact_and_normalized(
+                exact_manufacturer, normalized, item, "manufacturer"
+            )
     _add_source_derived_filter_hints(source, exact_source, normalized)
     if normalize_for_match(source.source_name) == "skroutz":
         for item in build_description_spec_items(source):
-            _add_exact_and_normalized(exact_description, normalized, item, "description")
+            _add_exact_and_normalized(
+                exact_description, normalized, item, "description"
+            )
     return exact_source, exact_manufacturer, exact_description, normalized
 
 
@@ -355,27 +418,45 @@ def _add_source_derived_filter_hints(
     source_text_key = normalize_label_key(source_text)
     spec_lookup = {normalize_label_key(label): value for label, value in exact.items()}
 
-    if "smart" in title_key or any(key in spec_lookup for key in ("λογισμικο", "υποστηριζομενες εφαρμογες")):
-        _add_exact_and_normalized(exact, normalized, SpecItem("Smart Tv", "Υποστηρίζεται"), "derived")
+    if "smart" in title_key or any(
+        key in spec_lookup for key in ("λογισμικο", "υποστηριζομενες εφαρμογες")
+    ):
+        _add_exact_and_normalized(
+            exact, normalized, SpecItem("Smart Tv", "Υποστηρίζεται"), "derived"
+        )
     if "wifi" in source_text_key or "wi fi" in source_text_key:
-        _add_exact_and_normalized(exact, normalized, SpecItem("Wifi", "Υποστηρίζεται"), "derived")
+        _add_exact_and_normalized(
+            exact, normalized, SpecItem("Wifi", "Υποστηρίζεται"), "derived"
+        )
     wifi_value = spec_lookup.get("wi fi") or spec_lookup.get("wifi")
     if wifi_value and _normalize_filter_yes_no(wifi_value) != "Όχι":
-        _add_exact_and_normalized(exact, normalized, SpecItem("Wifi", "Υποστηρίζεται"), "derived")
+        _add_exact_and_normalized(
+            exact, normalized, SpecItem("Wifi", "Υποστηρίζεται"), "derived"
+        )
     btu_capacity = _extract_btu_capacity_hint(source_text)
     if btu_capacity:
-        _add_exact_and_normalized(exact, normalized, SpecItem("Ονομαστική Απόδοση", btu_capacity), "derived")
+        _add_exact_and_normalized(
+            exact, normalized, SpecItem("Ονομαστική Απόδοση", btu_capacity), "derived"
+        )
     if "grill" in title_key or "γκριλ" in title_key:
-        _add_exact_and_normalized(exact, normalized, SpecItem("Με Grill", "Ναι"), "derived")
+        _add_exact_and_normalized(
+            exact, normalized, SpecItem("Με Grill", "Ναι"), "derived"
+        )
     grill_value = spec_lookup.get("λειτουργια grill")
     if grill_value and _normalize_filter_yes_no(grill_value) == "Ναι":
-        _add_exact_and_normalized(exact, normalized, SpecItem("Με Grill", "Ναι"), "derived")
+        _add_exact_and_normalized(
+            exact, normalized, SpecItem("Με Grill", "Ναι"), "derived"
+        )
     if "βραστηρας αυγ" in title_key or "βραστηρα αυγ" in title_key:
-        _add_exact_and_normalized(exact, normalized, SpecItem("Βραστήρας Αυγών", "Ναι"), "derived")
+        _add_exact_and_normalized(
+            exact, normalized, SpecItem("Βραστήρας Αυγών", "Ναι"), "derived"
+        )
 
     energy = _extract_energy_class_hint(source.name)
     if energy:
-        _add_exact_and_normalized(exact, normalized, SpecItem("Ενεργειακή Κλάση", energy), "derived")
+        _add_exact_and_normalized(
+            exact, normalized, SpecItem("Ενεργειακή Κλάση", energy), "derived"
+        )
 
 
 def _resolve_group_value(
@@ -417,15 +498,23 @@ def _resolve_group_value(
     for label in candidate_labels:
         value = exact_source.get(label)
         if value:
-            return value, "source_spec_exact" if label == group_name else "source_spec_alias"
+            return value, (
+                "source_spec_exact" if label == group_name else "source_spec_alias"
+            )
     for label in candidate_labels:
         value = exact_manufacturer.get(label)
         if value:
-            return value, "manufacturer_spec_exact" if label == group_name else "manufacturer_spec_alias"
+            return value, (
+                "manufacturer_spec_exact"
+                if label == group_name
+                else "manufacturer_spec_alias"
+            )
     for label in candidate_labels:
         value = exact_description.get(label)
         if value:
-            return value, "description_exact" if label == group_name else "description_alias"
+            return value, (
+                "description_exact" if label == group_name else "description_alias"
+            )
     for label in candidate_labels:
         for normalized_key in candidate_label_keys(label):
             normalized = normalized_lookup.get(normalized_key)
@@ -446,17 +535,34 @@ def _candidate_source_labels(group_name: str, *, taxonomy_path: str = "") -> lis
     normalized_taxonomy = normalize_label_key(taxonomy_path)
     if "κιλα πλυσης" in normalized_group:
         aliases.extend(["Χωρητικότητα", "Χωρητικότητα Πλύσης"])
-    if "κιλα στεγνωματος" in normalized_group and "στεγνωτηρια ρουχων" in normalized_taxonomy:
+    if (
+        "κιλα στεγνωματος" in normalized_group
+        and "στεγνωτηρια ρουχων" in normalized_taxonomy
+    ):
         aliases.extend(["Χωρητικότητα", "Χωρητικότητα Στεγνώματος"])
     if "στροφες στυψιματος" in normalized_group:
         aliases.extend(["Στροφές", "Μέγιστη ταχύτητα στυψίματος"])
     if "τροπος φορτωσης" in normalized_group:
         aliases.extend(["Τύπος", "Τύπος φόρτωσης"])
-    if "χωρητικοτητα" in normalized_group and ("λιτρα" in normalized_group or "φουρνου" in normalized_group):
+    if "χωρητικοτητα" in normalized_group and (
+        "λιτρα" in normalized_group or "φουρνου" in normalized_group
+    ):
         aliases.append("Χωρητικότητα")
-    if "χωρητικοτητα" in normalized_group and "λιτρα" in normalized_group and "φριτεζες" in normalized_taxonomy:
-        aliases.extend(["Χωρητικότητα Κάδου Μαγειρέματος σε Κιλά", "Χωρητικότητα Κάδου Μαγειρέματος"])
-    if normalized_group == normalize_label_key("Ισχύς (Watt)") and "φουρνοι μικροκυματων" in normalized_taxonomy:
+    if (
+        "χωρητικοτητα" in normalized_group
+        and "λιτρα" in normalized_group
+        and "φριτεζες" in normalized_taxonomy
+    ):
+        aliases.extend(
+            [
+                "Χωρητικότητα Κάδου Μαγειρέματος σε Κιλά",
+                "Χωρητικότητα Κάδου Μαγειρέματος",
+            ]
+        )
+    if (
+        normalized_group == normalize_label_key("Ισχύς (Watt)")
+        and "φουρνοι μικροκυματων" in normalized_taxonomy
+    ):
         aliases.extend(["Ισχύς Μικροκυμάτων (Watt)", "Ισχύς Μικροκυμάτων"])
     if normalized_group == "με grill":
         aliases.extend(["Grill", "Λειτουργία Grill"])
@@ -472,7 +578,9 @@ def _candidate_source_labels(group_name: str, *, taxonomy_path: str = "") -> lis
     return candidates
 
 
-def _allowed_values(group: dict[str, Any]) -> tuple[list[str], dict[str, str], dict[str, str]]:
+def _allowed_values(
+    group: dict[str, Any],
+) -> tuple[list[str], dict[str, str], dict[str, str]]:
     values: list[str] = []
     statuses: dict[str, str] = {}
     aliases_by_normalized: dict[str, str] = {}
@@ -504,7 +612,8 @@ def _canonical_filter_value(value: str, aliases_by_normalized: dict[str, str]) -
         matches = {
             canonical
             for alias_key, canonical in aliases_by_normalized.items()
-            if len(alias_key) > 2 and _normalized_contains_phrase(normalized_value, alias_key)
+            if len(alias_key) > 2
+            and _normalized_contains_phrase(normalized_value, alias_key)
         }
         if len(matches) == 1:
             return next(iter(matches))
@@ -555,7 +664,9 @@ def _normalize_filter_value_units(value: str) -> str:
 
 
 def _single_numeric_value(value: str) -> str:
-    match = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*(?:w|kw|lt|l|kg|gr|g|cm|mm|db|btu|rpm)", value)
+    match = re.fullmatch(
+        r"(\d+(?:[.,]\d+)?)\s*(?:w|kw|lt|l|kg|gr|g|cm|mm|db|btu|rpm)", value
+    )
     return match.group(1) if match else ""
 
 
@@ -625,12 +736,20 @@ def _latin_energy_class(value: str) -> str:
 
 
 def _extract_energy_class_hint(text: str) -> str:
-    match = re.search(r"\b([A-GΑ-Η](?:\+{1,3})?)(?:\s*/\s*[A-GΑ-Η](?:\+{1,3})?)?\b", str(text or ""), flags=re.IGNORECASE)
+    match = re.search(
+        r"\b([A-GΑ-Η](?:\+{1,3})?)(?:\s*/\s*[A-GΑ-Η](?:\+{1,3})?)?\b",
+        str(text or ""),
+        flags=re.IGNORECASE,
+    )
     return match.group(1).upper() if match else ""
 
 
 def _extract_btu_capacity_hint(text: str) -> str:
-    match = re.search(r"\b(\d{1,2}(?:[.\s]?\d{3})|\d{4,5})\s*btu\b", str(text or ""), flags=re.IGNORECASE)
+    match = re.search(
+        r"\b(\d{1,2}(?:[.\s]?\d{3})|\d{4,5})\s*btu\b",
+        str(text or ""),
+        flags=re.IGNORECASE,
+    )
     if not match:
         return ""
     value = re.sub(r"\D", "", match.group(1))
@@ -639,7 +758,9 @@ def _extract_btu_capacity_hint(text: str) -> str:
 
 def _normalize_filter_yes_no(value: str) -> str:
     normalized = normalize_label_key(value)
-    if any(token in normalized for token in ("ναι", "yes", "υποστηριζεται", "ενσωματωμενο")):
+    if any(
+        token in normalized for token in ("ναι", "yes", "υποστηριζεται", "ενσωματωμενο")
+    ):
         return "Ναι"
     if any(token in normalized for token in ("οχι", "no", "δεν")):
         return "Όχι"
@@ -654,11 +775,17 @@ def _resolve_derived_group_value(
     exact_manufacturer: dict[str, str],
 ) -> tuple[str, str]:
     if _is_width_cm_group(group_name):
-        for source_name, lookup in (("source", exact_source), ("manufacturer", exact_manufacturer)):
+        for source_name, lookup in (
+            ("source", exact_source),
+            ("manufacturer", exact_manufacturer),
+        ):
             width = _width_from_named_width_labels(lookup, taxonomy_path=taxonomy_path)
             if width:
                 return width, f"{source_name}_width_label"
-        for source_name, lookup in (("source", exact_source), ("manufacturer", exact_manufacturer)):
+        for source_name, lookup in (
+            ("source", exact_source),
+            ("manufacturer", exact_manufacturer),
+        ):
             width = _width_from_dimension_triplets(lookup)
             if width:
                 return width, f"{source_name}_dimension_triplet"
@@ -673,10 +800,19 @@ def _resolve_hob_zone_group_value(
 ) -> tuple[str, str]:
     if normalize_label_key(group_name) != "αριθμος ζωνων":
         return "", ""
-    for source_name, lookup in (("source", exact_source), ("manufacturer", exact_manufacturer)):
+    for source_name, lookup in (
+        ("source", exact_source),
+        ("manufacturer", exact_manufacturer),
+    ):
         count = _first_lookup_value(
             lookup,
-            ("Αριθμός Ζωνών", "Αριθμός εστιών", "Εστίες", "Ζώνες", "Ζώνες Μαγειρέματος"),
+            (
+                "Αριθμός Ζωνών",
+                "Αριθμός εστιών",
+                "Εστίες",
+                "Ζώνες",
+                "Ζώνες Μαγειρέματος",
+            ),
         )
         technology = _first_lookup_value(
             lookup,
@@ -693,7 +829,9 @@ def _first_lookup_value(lookup: dict[str, str], labels: tuple[str, ...]) -> str:
         value = lookup.get(label)
         if value:
             return value
-    normalized_lookup = {normalize_label_key(label): value for label, value in lookup.items()}
+    normalized_lookup = {
+        normalize_label_key(label): value for label, value in lookup.items()
+    }
     for label in labels:
         value = normalized_lookup.get(normalize_label_key(label))
         if value:
@@ -721,7 +859,9 @@ def _is_width_cm_group(group_name: str) -> bool:
     return "πλατος" in key and "cm" in key
 
 
-def _width_from_named_width_labels(lookup: dict[str, str], *, taxonomy_path: str) -> str:
+def _width_from_named_width_labels(
+    lookup: dict[str, str], *, taxonomy_path: str
+) -> str:
     preferred: list[str] = []
     fallback: list[str] = []
     taxonomy_key = normalize_label_key(taxonomy_path)

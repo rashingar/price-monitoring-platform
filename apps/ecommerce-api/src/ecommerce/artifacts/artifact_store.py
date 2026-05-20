@@ -85,17 +85,27 @@ def get_artifact_roots() -> list[Path]:
     roots = list(DEFAULT_ARTIFACT_ROOTS)
     configured = os.environ.get(ARTIFACT_ROOTS_ENV_VAR)
     if configured:
-        roots.extend(Path(part.strip()) for part in configured.split(";") if part.strip())
+        roots.extend(
+            Path(part.strip()) for part in configured.split(";") if part.strip()
+        )
     return _dedupe_paths(roots)
 
 
 def get_artifact_root_entries() -> list[dict]:
     load_local_env_if_present()
-    entries = [_root_entry(root, "default", is_default=True, is_configured=False) for root in DEFAULT_ARTIFACT_ROOTS]
+    entries = [
+        _root_entry(root, "default", is_default=True, is_configured=False)
+        for root in DEFAULT_ARTIFACT_ROOTS
+    ]
     configured = os.environ.get(ARTIFACT_ROOTS_ENV_VAR)
     if configured:
         entries.extend(
-            _root_entry(Path(part.strip()), ARTIFACT_ROOTS_ENV_VAR, is_default=False, is_configured=True)
+            _root_entry(
+                Path(part.strip()),
+                ARTIFACT_ROOTS_ENV_VAR,
+                is_default=False,
+                is_configured=True,
+            )
             for part in configured.split(";")
             if part.strip()
         )
@@ -108,27 +118,39 @@ def resolve_artifact_path(path: str | Path) -> Path:
         raise ArtifactPathError("Path traversal is not allowed.")
     resolved = _resolve_path(requested)
     if not is_artifact_path_allowed(resolved):
-        raise ArtifactPathForbiddenError(f"Path is outside allowed artifact roots: {_display_path(resolved)}")
+        raise ArtifactPathForbiddenError(
+            f"Path is outside allowed artifact roots: {_display_path(resolved)}"
+        )
     return resolved
 
 
 def is_artifact_path_allowed(path: Path) -> bool:
     resolved = _resolve_path(path)
-    return any(_same_or_child(resolved, _resolve_path(root)) for root in get_artifact_roots())
+    return any(
+        _same_or_child(resolved, _resolve_path(root)) for root in get_artifact_roots()
+    )
 
 
 def list_run_artifacts(run_type: str, run_id: str) -> ArtifactListResult:
     normalized_run_type = _normalize_run_type(run_type)
     safe_run_id = _validate_run_id(run_id)
-    candidates = [_resolve_path(root / safe_run_id) for root in _run_roots(normalized_run_type)]
-    run_dir = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
+    candidates = [
+        _resolve_path(root / safe_run_id) for root in _run_roots(normalized_run_type)
+    ]
+    run_dir = next(
+        (candidate for candidate in candidates if candidate.exists()), candidates[0]
+    )
 
     if not is_artifact_path_allowed(run_dir):
-        raise ArtifactPathForbiddenError("Run folder is outside allowed artifact roots.")
+        raise ArtifactPathForbiddenError(
+            "Run folder is outside allowed artifact roots."
+        )
     if not run_dir.exists():
         raise FileNotFoundError(f"Run folder not found: {_display_path(run_dir)}")
     if not run_dir.is_dir():
-        raise ArtifactPathError(f"Run path is not a directory: {_display_path(run_dir)}")
+        raise ArtifactPathError(
+            f"Run path is not a directory: {_display_path(run_dir)}"
+        )
 
     items = []
     for child in run_dir.iterdir():
@@ -138,7 +160,11 @@ def list_run_artifacts(run_type: str, run_id: str) -> ArtifactListResult:
     items.sort(key=lambda item: item.name.casefold())
     return ArtifactListResult(
         run_id=safe_run_id,
-        run_type="price-monitoring" if normalized_run_type == "price_monitoring" else normalized_run_type,
+        run_type=(
+            "price-monitoring"
+            if normalized_run_type == "price_monitoring"
+            else normalized_run_type
+        ),
         run_dir=run_dir,
         items=items,
     )
@@ -187,7 +213,9 @@ def artifact_link_payload(path: Path, include_forbidden_links: bool = False) -> 
     return {
         "name": Path(path).name,
         "path": display_path,
-        "download_url": f"/api/artifacts/download?path={encoded_path}" if can_access else "",
+        "download_url": (
+            f"/api/artifacts/download?path={encoded_path}" if can_access else ""
+        ),
         "read_url": f"/api/artifacts/read?path={encoded_path}" if can_access else "",
         "is_allowed": is_allowed,
         "can_read": is_allowed,
@@ -210,14 +238,21 @@ def _artifact_item(path: Path) -> ArtifactItem:
 def _normalize_run_type(run_type: str) -> str:
     normalized = run_type.strip().lower().replace("-", "_")
     if normalized not in RUN_TYPE_ROOTS:
-        raise ArtifactPathError("run_type must be one of: price_monitoring, source_url_agent, vendor_sources")
+        raise ArtifactPathError(
+            "run_type must be one of: price_monitoring, source_url_agent, vendor_sources"
+        )
     return normalized
 
 
 def _validate_run_id(run_id: str) -> str:
     value = run_id.strip()
     parts = Path(value).parts
-    if not value or len(parts) != 1 or value in {".", ".."} or _contains_parent_reference(Path(value)):
+    if (
+        not value
+        or len(parts) != 1
+        or value in {".", ".."}
+        or _contains_parent_reference(Path(value))
+    ):
         raise ArtifactPathError("Invalid run_id.")
     return value
 
@@ -229,7 +264,9 @@ def _run_roots(run_type: str) -> list[Path]:
     configured = os.environ.get(ARTIFACT_ROOTS_ENV_VAR)
     if configured:
         expected_parent = RUN_TYPE_PATH_SEGMENTS[run_type]
-        env_roots = [Path(part.strip()) for part in configured.split(";") if part.strip()]
+        env_roots = [
+            Path(part.strip()) for part in configured.split(";") if part.strip()
+        ]
         matching_env_roots = [
             root
             for root in env_roots
@@ -263,7 +300,9 @@ def _dedupe_root_entries(entries: list[dict]) -> list[dict]:
     return result
 
 
-def _root_entry(path: Path, source: str, *, is_default: bool, is_configured: bool) -> dict:
+def _root_entry(
+    path: Path, source: str, *, is_default: bool, is_configured: bool
+) -> dict:
     resolved = _resolve_path(path)
     return {
         "path": str(resolved),

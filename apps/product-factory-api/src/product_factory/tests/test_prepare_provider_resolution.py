@@ -3,7 +3,10 @@ from __future__ import annotations
 import pytest
 
 from product_factory.models import CLIInput, SourceProductData, SpecItem, SpecSection
-from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult, resolve_prepare_provider_resolution
+from product_factory.prepare_provider_resolution import (
+    PrepareProviderResolutionResult,
+    resolve_prepare_provider_resolution,
+)
 from product_factory.providers import (
     ProductProvider,
     ProviderDefinition,
@@ -59,7 +62,12 @@ def _build_source(
         name=name,
         mpn=mpn,
         taxonomy_escalation_reason=taxonomy_escalation_reason,
-        spec_sections=[SpecSection(section="Χαρακτηριστικά", items=[SpecItem(label="Ισχύς", value="2200 W")])],
+        spec_sections=[
+            SpecSection(
+                section="Χαρακτηριστικά",
+                items=[SpecItem(label="Ισχύς", value="2200 W")],
+            )
+        ],
     )
 
 
@@ -75,7 +83,11 @@ class StaticProvider(ProductProvider):
         fetch_error: ProviderError | None = None,
         normalize_error: ProviderError | None = None,
     ) -> None:
-        kind = ProviderKind.MANUFACTURER_SITE if source_name.startswith("manufacturer_") else ProviderKind.VENDOR_SITE
+        kind = (
+            ProviderKind.MANUFACTURER_SITE
+            if source_name.startswith("manufacturer_")
+            else ProviderKind.VENDOR_SITE
+        )
         self.definition = ProviderDefinition(
             provider_id=provider_id,
             source_name=source_name,
@@ -102,7 +114,9 @@ class StaticProvider(ProductProvider):
             metadata={"fetch_method": self._fetch_method, "fallback_used": False},
         )
 
-    def normalize(self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity) -> ProviderResult:
+    def normalize(
+        self, snapshot: ProviderSnapshot, identity: ProviderInputIdentity
+    ) -> ProviderResult:
         if self._normalize_error is not None:
             raise self._normalize_error
         return ProviderResult(
@@ -113,7 +127,12 @@ class StaticProvider(ProductProvider):
         )
 
 
-def _build_provider_error(message: str, *, provider_id: str = "skroutz", stage: ProviderStage = ProviderStage.FETCH) -> ProviderError:
+def _build_provider_error(
+    message: str,
+    *,
+    provider_id: str = "skroutz",
+    stage: ProviderStage = ProviderStage.FETCH,
+) -> ProviderError:
     return ProviderError.build(
         provider_id=provider_id,
         code=ProviderErrorCode.FETCH_FAILED,
@@ -144,15 +163,23 @@ def _resolve_with_registry(
     )
 
 
-def test_prepare_provider_resolution_fails_when_supported_source_has_no_provider_mapping() -> None:
+def test_prepare_provider_resolution_fails_when_supported_source_has_no_provider_mapping() -> (
+    None
+):
     cli = _build_cli("https://www.skroutz.gr/s/123456/example.html")
 
-    with pytest.raises(RuntimeError, match="No provider configured for supported source: skroutz"):
+    with pytest.raises(
+        RuntimeError, match="No provider configured for supported source: skroutz"
+    ):
         _resolve_with_registry(
             cli,
             ProviderRegistry(),
             source="skroutz",
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
             source_to_provider_id_fn=lambda _source: None,
         )
 
@@ -165,7 +192,11 @@ def test_prepare_provider_resolution_fails_when_registry_provider_is_missing() -
             cli,
             ProviderRegistry(),
             source="skroutz",
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
         )
 
 
@@ -197,7 +228,11 @@ def test_prepare_provider_resolution_preserves_provider_error_runtime_behavior(
             cli,
             registry,
             source="skroutz",
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
         )
 
     assert exc_info.value.__cause__ is provider_error
@@ -217,18 +252,25 @@ def test_prepare_provider_resolution_fails_when_final_url_scope_mismatches() -> 
         )
     )
 
-    with pytest.raises(RuntimeError, match="Resolved URL is not a supported product page"):
+    with pytest.raises(
+        RuntimeError, match="Resolved URL is not a supported product page"
+    ):
         _resolve_with_registry(
             cli,
             registry,
             source="skroutz",
-            validate_url_scope_fn=lambda url: (validated_urls.append(url) or ("skroutz", False, "skroutz_non_product_path")),
+            validate_url_scope_fn=lambda url: (
+                validated_urls.append(url)
+                or ("skroutz", False, "skroutz_non_product_path")
+            ),
         )
 
     assert validated_urls == [final_url]
 
 
-def test_prepare_provider_resolution_keeps_electronet_product_code_mismatch_as_warning() -> None:
+def test_prepare_provider_resolution_keeps_electronet_product_code_mismatch_as_warning() -> (
+    None
+):
     cli = _build_cli("https://www.electronet.gr/example")
     registry = ProviderRegistry()
     registry.register(
@@ -255,10 +297,14 @@ def test_prepare_provider_resolution_keeps_electronet_product_code_mismatch_as_w
     assert result.source == "electronet"
     assert result.provider_id == "electronet"
     assert result.fetch.method == "httpx"
-    assert result.parsed.warnings == ["source_product_code_mismatch:input=123456:page=654321"]
+    assert result.parsed.warnings == [
+        "source_product_code_mismatch:input=123456:page=654321"
+    ]
 
 
-def test_prepare_provider_resolution_keeps_missing_electronet_product_code_as_warning() -> None:
+def test_prepare_provider_resolution_keeps_missing_electronet_product_code_as_warning() -> (
+    None
+):
     cli = _build_cli("https://www.electronet.gr/example")
     registry = ProviderRegistry()
     registry.register(
@@ -303,12 +349,19 @@ def test_prepare_provider_resolution_fails_for_skroutz_non_product_page() -> Non
         )
     )
 
-    with pytest.raises(RuntimeError, match="Unsupported Skroutz page type: unsupported_skroutz_page_type"):
+    with pytest.raises(
+        RuntimeError,
+        match="Unsupported Skroutz page type: unsupported_skroutz_page_type",
+    ):
         _resolve_with_registry(
             cli,
             registry,
             source="skroutz",
-            validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
         )
 
 
@@ -328,10 +381,17 @@ def test_prepare_provider_resolution_fails_for_manufacturer_non_product_page() -
         )
     )
 
-    with pytest.raises(RuntimeError, match="Unsupported manufacturer page type: unsupported_manufacturer_page_type"):
+    with pytest.raises(
+        RuntimeError,
+        match="Unsupported manufacturer page type: unsupported_manufacturer_page_type",
+    ):
         _resolve_with_registry(
             cli,
             registry,
             source="manufacturer_tefal",
-            validate_url_scope_fn=lambda _url: ("manufacturer_tefal", True, "manufacturer_tefal_product_path"),
+            validate_url_scope_fn=lambda _url: (
+                "manufacturer_tefal",
+                True,
+                "manufacturer_tefal_product_path",
+            ),
         )

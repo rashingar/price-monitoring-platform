@@ -1,5 +1,9 @@
 from product_factory.characteristics_pipeline import CharacteristicsTemplateRegistry
-from product_factory.models import SchemaMatchResult, SourceProductData, TaxonomyResolution
+from product_factory.models import (
+    SchemaMatchResult,
+    SourceProductData,
+    TaxonomyResolution,
+)
 from product_factory.repo_paths import SCHEMA_LIBRARY_PATH
 from product_factory.utils import read_json
 
@@ -33,7 +37,9 @@ def test_characteristics_registry_prefers_robot_vacuum_schema_for_skroutz() -> N
     template = registry.select_template(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=ROBOT_VACUUM_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=ROBOT_VACUUM_SCHEMA_ID, score=0.9
+        ),
     )
 
     assert preferred_source_files == ["skoypes_rompot.json"]
@@ -57,7 +63,9 @@ def test_characteristics_registry_prefers_steam_cleaner_schema_for_skroutz() -> 
     template = registry.select_template(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=STEAM_CLEANER_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=STEAM_CLEANER_SCHEMA_ID, score=0.9
+        ),
     )
 
     assert preferred_source_files == ["atmokatharistes.json"]
@@ -81,7 +89,9 @@ def test_characteristics_registry_prefers_stick_vacuum_schema_for_skroutz() -> N
     template = registry.select_template(
         source,
         taxonomy,
-        schema_match=SchemaMatchResult(matched_schema_id=STICK_VACUUM_SCHEMA_ID, score=0.9),
+        schema_match=SchemaMatchResult(
+            matched_schema_id=STICK_VACUUM_SCHEMA_ID, score=0.9
+        ),
     )
 
     assert preferred_source_files == ["skoypes_stick.json"]
@@ -114,4 +124,3 @@ def test_characteristics_registry_prefers_fryer_schema_for_skroutz() -> None:
     assert template["preferred_schema_source_files"] == ["fritezes.json"]
     assert template["template_source"] == "schema_library_with_custom_overrides"
     assert template["custom_template_id"] == "skroutz_fryer_v1"
-

@@ -46,26 +46,53 @@ def test_formula_with_rounding_rule_matches_sample_like_default() -> None:
 
 
 def test_rounding_modes_and_negative_clamp() -> None:
-    assert compute_new_price(
-        PricingRule("formula_with_rounding", {"formula": "skroutz_price + 0.6"}, "floor"),
-        Decimal("100.00"),
-    ) == "100"
-    assert compute_new_price(
-        PricingRule("formula_with_rounding", {"formula": "skroutz_price + 0.1"}, "ceil"),
-        Decimal("100.00"),
-    ) == "101"
-    assert compute_new_price(
-        PricingRule("formula_with_rounding", {"formula": "skroutz_price + 0.5"}, "nearest"),
-        Decimal("100.00"),
-    ) == "101"
-    assert compute_new_price(
-        PricingRule("formula_with_rounding", {"formula": "skroutz_price + 0.99"}, "minus_one_if_decimal_79_99"),
-        Decimal("100.00"),
-    ) == "100"
-    assert compute_new_price(
-        PricingRule("formula_with_rounding", {"formula": "skroutz_price - 500"}, "nearest"),
-        Decimal("100.00"),
-    ) == "0"
+    assert (
+        compute_new_price(
+            PricingRule(
+                "formula_with_rounding", {"formula": "skroutz_price + 0.6"}, "floor"
+            ),
+            Decimal("100.00"),
+        )
+        == "100"
+    )
+    assert (
+        compute_new_price(
+            PricingRule(
+                "formula_with_rounding", {"formula": "skroutz_price + 0.1"}, "ceil"
+            ),
+            Decimal("100.00"),
+        )
+        == "101"
+    )
+    assert (
+        compute_new_price(
+            PricingRule(
+                "formula_with_rounding", {"formula": "skroutz_price + 0.5"}, "nearest"
+            ),
+            Decimal("100.00"),
+        )
+        == "101"
+    )
+    assert (
+        compute_new_price(
+            PricingRule(
+                "formula_with_rounding",
+                {"formula": "skroutz_price + 0.99"},
+                "minus_one_if_decimal_79_99",
+            ),
+            Decimal("100.00"),
+        )
+        == "100"
+    )
+    assert (
+        compute_new_price(
+            PricingRule(
+                "formula_with_rounding", {"formula": "skroutz_price - 500"}, "nearest"
+            ),
+            Decimal("100.00"),
+        )
+        == "0"
+    )
 
 
 def test_keep_two_decimal_rounding_mode_supports_exact_offset_pricing() -> None:
@@ -77,7 +104,9 @@ def test_keep_two_decimal_rounding_mode_supports_exact_offset_pricing() -> None:
     assert compute_new_price(rule, Decimal("171.90")) == "171.80"
 
 
-def test_bestprice_store_positioning_undercuts_market_when_own_store_is_not_best() -> None:
+def test_bestprice_store_positioning_undercuts_market_when_own_store_is_not_best() -> (
+    None
+):
     rule = PricingRule(
         rule_family="bestprice_store_positioning",
         parameters={
@@ -107,7 +136,9 @@ def test_bestprice_store_positioning_undercuts_market_when_own_store_is_not_best
     assert new_price == "209.90"
 
 
-def test_bestprice_store_positioning_keeps_live_price_when_own_store_is_best_within_gap_window() -> None:
+def test_bestprice_store_positioning_keeps_live_price_when_own_store_is_best_within_gap_window() -> (
+    None
+):
     rule = PricingRule(
         rule_family="bestprice_store_positioning",
         parameters={
@@ -137,7 +168,9 @@ def test_bestprice_store_positioning_keeps_live_price_when_own_store_is_best_wit
     assert new_price == "397.00"
 
 
-def test_bestprice_store_positioning_can_raise_price_when_own_store_gap_is_too_large() -> None:
+def test_bestprice_store_positioning_can_raise_price_when_own_store_gap_is_too_large() -> (
+    None
+):
     rule = PricingRule(
         rule_family="bestprice_store_positioning",
         parameters={

@@ -39,18 +39,26 @@ class BraveSearchResultFetcher:
             raise SourceResolutionError("Missing Brave Search API key.")
         definition = replace(self.definition, count=min(20, max(1, max_results)))
         try:
-            response = self.client.search(definition=definition, query=query, api_key=api_key)
+            response = self.client.search(
+                definition=definition, query=query, api_key=api_key
+            )
         except httpx.TimeoutException as exc:
             raise SourceResolutionError("Brave Search API request timed out.") from exc
         except Exception as exc:
-            raise SourceResolutionError(str(exc).strip() or exc.__class__.__name__) from exc
+            raise SourceResolutionError(
+                str(exc).strip() or exc.__class__.__name__
+            ) from exc
         status_code = int(getattr(response, "status_code", 0) or 0)
         if status_code >= 400:
-            raise SourceResolutionError(f"Brave Search API returned HTTP {status_code}.")
+            raise SourceResolutionError(
+                f"Brave Search API returned HTTP {status_code}."
+            )
         try:
             payload = response.json()
         except Exception as exc:
-            raise SourceResolutionError("Brave Search API returned invalid JSON.") from exc
+            raise SourceResolutionError(
+                "Brave Search API returned invalid JSON."
+            ) from exc
         return brave_web_results(payload, max_results=max_results)
 
 

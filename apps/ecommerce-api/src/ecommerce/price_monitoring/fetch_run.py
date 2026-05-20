@@ -23,7 +23,9 @@ SourceCaptureRunner = Callable[..., Any]
 class PriceMonitoringFetchError(RuntimeError):
     """Raised when live fetch execution fails for a Price Monitoring run."""
 
-    def __init__(self, message: str, result: "PriceMonitoringFetchResult | None" = None) -> None:
+    def __init__(
+        self, message: str, result: "PriceMonitoringFetchResult | None" = None
+    ) -> None:
         super().__init__(message)
         self.result = result
 
@@ -57,13 +59,21 @@ class PriceMonitoringFetchResult:
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
         payload["input_csv_path"] = str(self.input_csv_path)
-        payload["enriched_csv_path"] = str(self.enriched_csv_path) if self.enriched_csv_path is not None else ""
-        payload["fetch_summary_path"] = str(self.fetch_summary_path) if self.fetch_summary_path is not None else ""
+        payload["enriched_csv_path"] = (
+            str(self.enriched_csv_path) if self.enriched_csv_path is not None else ""
+        )
+        payload["fetch_summary_path"] = (
+            str(self.fetch_summary_path) if self.fetch_summary_path is not None else ""
+        )
         payload["fetch_result_path"] = str(self.fetch_result_path)
         payload["source_url_capture_result_path"] = (
-            str(self.source_url_capture_result_path) if self.source_url_capture_result_path is not None else ""
+            str(self.source_url_capture_result_path)
+            if self.source_url_capture_result_path is not None
+            else ""
         )
-        payload["source_url_capture_warnings"] = list(self.source_url_capture_warnings or [])
+        payload["source_url_capture_warnings"] = list(
+            self.source_url_capture_warnings or []
+        )
         return payload
 
 
@@ -83,7 +93,9 @@ def run_price_monitoring_fetch(
 
     input_csv_path = run_dir / "input.csv"
     if not input_csv_path.exists():
-        raise FileNotFoundError(f"Price monitoring input.csv not found: {input_csv_path}")
+        raise FileNotFoundError(
+            f"Price monitoring input.csv not found: {input_csv_path}"
+        )
 
     resolved_source = resolve_price_monitoring_fetch_source(run_dir, source)
     fetch_result_path = run_dir / FETCH_RESULT_FILENAME
@@ -171,7 +183,9 @@ def load_price_monitoring_fetch_result(run_dir: Path) -> PriceMonitoringFetchRes
     run_dir = Path(run_dir)
     result_path = run_dir / FETCH_RESULT_FILENAME
     if not result_path.exists():
-        raise FileNotFoundError(f"Price monitoring fetch result not found: {result_path}")
+        raise FileNotFoundError(
+            f"Price monitoring fetch result not found: {result_path}"
+        )
 
     with result_path.open("r", encoding="utf-8") as f:
         payload = json.load(f)
@@ -188,28 +202,51 @@ def load_price_monitoring_fetch_result(run_dir: Path) -> PriceMonitoringFetchRes
         stdout=str(payload.get("stdout", "")),
         warnings=[str(item) for item in payload.get("warnings", [])],
         error=str(payload.get("error", "")),
-        source_filter=_source_filter(str(payload.get("source_filter") or payload.get("source") or "")),
+        source_filter=_source_filter(
+            str(payload.get("source_filter") or payload.get("source") or "")
+        ),
         fetch_input_mode=str(payload.get("fetch_input_mode") or "source_urls"),
         source_url_capture_used=bool(payload.get("source_url_capture_used", False)),
-        source_url_capture_status=str(payload.get("source_url_capture_status") or "not_run"),
-        source_url_capture_selected_count=_int_value(payload.get("source_url_capture_selected_count")),
-        source_url_capture_succeeded_count=_int_value(payload.get("source_url_capture_succeeded_count")),
-        source_url_capture_failed_count=_int_value(payload.get("source_url_capture_failed_count")),
-        source_url_capture_result_path=_path_or_none(payload.get("source_url_capture_result_path")),
-        source_url_capture_warnings=[str(item) for item in _list_value(payload.get("source_url_capture_warnings"))],
+        source_url_capture_status=str(
+            payload.get("source_url_capture_status") or "not_run"
+        ),
+        source_url_capture_selected_count=_int_value(
+            payload.get("source_url_capture_selected_count")
+        ),
+        source_url_capture_succeeded_count=_int_value(
+            payload.get("source_url_capture_succeeded_count")
+        ),
+        source_url_capture_failed_count=_int_value(
+            payload.get("source_url_capture_failed_count")
+        ),
+        source_url_capture_result_path=_path_or_none(
+            payload.get("source_url_capture_result_path")
+        ),
+        source_url_capture_warnings=[
+            str(item)
+            for item in _list_value(payload.get("source_url_capture_warnings"))
+        ],
         source_url_capture_run_id=str(payload.get("source_url_capture_run_id") or ""),
-        observation_batch_id=str(payload.get("observation_batch_id") or payload.get("source_url_capture_observation_batch_id") or ""),
+        observation_batch_id=str(
+            payload.get("observation_batch_id")
+            or payload.get("source_url_capture_observation_batch_id")
+            or ""
+        ),
     )
 
 
-def resolve_price_monitoring_fetch_source(run_dir: Path, explicit_source: str | None) -> str:
+def resolve_price_monitoring_fetch_source(
+    run_dir: Path, explicit_source: str | None
+) -> str:
     source = _optional_text(explicit_source)
     if source:
         return _validate_source(source)
 
     summary_path = run_dir / "selection_summary.json"
     if not summary_path.exists():
-        raise ValueError("Price Monitoring requires one source/vendor in selection_summary.json before fetch.")
+        raise ValueError(
+            "Price Monitoring requires one source/vendor in selection_summary.json before fetch."
+        )
 
     try:
         with summary_path.open("r", encoding="utf-8-sig") as f:
@@ -217,17 +254,28 @@ def resolve_price_monitoring_fetch_source(run_dir: Path, explicit_source: str | 
     except json.JSONDecodeError as exc:
         raise ValueError("selection_summary.json is malformed JSON") from exc
 
-    return _validate_source(str(payload.get("source_filter") or payload.get("source_name") or payload.get("source") or ""))
+    return _validate_source(
+        str(
+            payload.get("source_filter")
+            or payload.get("source_name")
+            or payload.get("source")
+            or ""
+        )
+    )
 
 
 def _validate_source(source: str) -> str:
     normalized = _optional_text(source).lower()
     if not normalized or normalized == "all":
-        raise ValueError("Price Monitoring requires exactly one source/vendor; source=all is not allowed.")
+        raise ValueError(
+            "Price Monitoring requires exactly one source/vendor; source=all is not allowed."
+        )
     return normalized
 
 
-def write_price_monitoring_fetch_result(path: Path, result: PriceMonitoringFetchResult) -> None:
+def write_price_monitoring_fetch_result(
+    path: Path, result: PriceMonitoringFetchResult
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_name(f"{path.name}.tmp")
     with tmp_path.open("w", encoding="utf-8") as f:
@@ -289,7 +337,9 @@ def _run_source_url_capture(
         )
 
 
-def _source_capture_result_fields(result: SourceUrlCaptureRunResult) -> dict[str, object]:
+def _source_capture_result_fields(
+    result: SourceUrlCaptureRunResult,
+) -> dict[str, object]:
     return {
         "fetch_input_mode": "source_urls",
         "source_url_capture_used": result.selected_source_url_count > 0,
@@ -325,7 +375,9 @@ def _first_capture_error_code(result: SourceUrlCaptureRunResult) -> str:
 def _source_filter(source: str | None) -> str | None:
     text = _optional_text(source).lower()
     if not text or text == "all":
-        raise ValueError("Price Monitoring requires exactly one source/vendor; source=all is not allowed.")
+        raise ValueError(
+            "Price Monitoring requires exactly one source/vendor; source=all is not allowed."
+        )
     return text
 
 

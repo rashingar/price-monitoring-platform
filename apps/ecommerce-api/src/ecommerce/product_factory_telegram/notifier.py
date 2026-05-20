@@ -12,8 +12,10 @@ from ecommerce.env import load_local_env_if_present
 
 from .audit import append_event, iter_events
 from .client import ProductFactoryClient, ProductFactoryJob, TelegramBotClient
-from .config import ProductFactoryTelegramConfig, product_factory_telegram_config_from_env
-
+from .config import (
+    ProductFactoryTelegramConfig,
+    product_factory_telegram_config_from_env,
+)
 
 TERMINAL_STATUSES = frozenset({"succeeded", "failed", "cancelled", "killed"})
 TERMINAL_NOTIFICATION_EVENTS = frozenset(
@@ -30,7 +32,9 @@ class ProductFactoryStatusClient(Protocol):
 
 
 class TelegramMessageClient(Protocol):
-    def send_message(self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None) -> None: ...
+    def send_message(
+        self, chat_id: str, text: str, *, reply_markup: dict[str, Any] | None = None
+    ) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -71,7 +75,10 @@ def terminal_notification_candidates(
             notified_job_ids.add(job_id)
             candidates_by_job_id.pop(job_id, None)
             continue
-        if event_type != "product_factory_enqueue_succeeded" or job_id in notified_job_ids:
+        if (
+            event_type != "product_factory_enqueue_succeeded"
+            or job_id in notified_job_ids
+        ):
             continue
 
         chat_id = str(event.get("chat_id") or "").strip()
@@ -96,7 +103,9 @@ def run_once(
     output: Callable[[str], None] = print,
 ) -> NotifierPassSummary:
     config = config or product_factory_telegram_config_from_env()
-    product_factory_client = product_factory_client or ProductFactoryClient(config.product_factory_api_base_url)
+    product_factory_client = product_factory_client or ProductFactoryClient(
+        config.product_factory_api_base_url
+    )
     telegram_client = telegram_client or TelegramBotClient(config.bot_token)
     candidates = terminal_notification_candidates(config.audit_log_path, limit=limit)
     summary = NotifierPassSummary(candidates=len(candidates))
@@ -141,7 +150,9 @@ def run_once(
     return summary
 
 
-def terminal_notification_message(job: ProductFactoryJob, *, fallback_model: str = "") -> str:
+def terminal_notification_message(
+    job: ProductFactoryJob, *, fallback_model: str = ""
+) -> str:
     lines = [
         "Product Factory job finished",
         f"model: {_job_model(job, fallback_model) or '-'}",
@@ -182,15 +193,30 @@ def main(
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Notify Telegram when Telegram-started Product Factory jobs finish.")
+    parser = argparse.ArgumentParser(
+        description="Notify Telegram when Telegram-started Product Factory jobs finish."
+    )
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--once", action="store_true", help="Run one polling pass and exit.")
-    mode.add_argument("--poll-seconds", type=_positive_int, help="Run continuously, sleeping N seconds between passes.")
-    parser.add_argument("--limit", type=_positive_int, default=50, help="Maximum jobs to check per pass.")
+    mode.add_argument(
+        "--once", action="store_true", help="Run one polling pass and exit."
+    )
+    mode.add_argument(
+        "--poll-seconds",
+        type=_positive_int,
+        help="Run continuously, sleeping N seconds between passes.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=_positive_int,
+        default=50,
+        help="Maximum jobs to check per pass.",
+    )
     return parser
 
 
-def _append_poll_failed(audit_log_path: str, candidate: NotificationCandidate, exc: Exception) -> None:
+def _append_poll_failed(
+    audit_log_path: str, candidate: NotificationCandidate, exc: Exception
+) -> None:
     append_event(
         path=audit_log_path,
         event_type=POLL_FAILED_EVENT,

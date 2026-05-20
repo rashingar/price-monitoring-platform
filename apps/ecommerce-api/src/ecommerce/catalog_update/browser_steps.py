@@ -8,11 +8,20 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, urlparse
 
-from ecommerce.catalog_update.progress import CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS, CatalogUpdateStepTracker
+from ecommerce.catalog_update.progress import (
+    CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS,
+    CatalogUpdateStepTracker,
+)
 from ecommerce.catalog_update.paths import safe_filename
-from ecommerce.catalog_update.types import DEFAULT_EXPORT_PROFILE, CatalogUpdateConfig, CatalogUpdateError
+from ecommerce.catalog_update.types import (
+    DEFAULT_EXPORT_PROFILE,
+    CatalogUpdateConfig,
+    CatalogUpdateError,
+)
 
-CSV_PRODUCT_EXPORT_ROUTE = "extension/ka_extensions/csv_product_export/ka_product_export"
+CSV_PRODUCT_EXPORT_ROUTE = (
+    "extension/ka_extensions/csv_product_export/ka_product_export"
+)
 
 
 def login_to_opencart(page: Any, config: CatalogUpdateConfig, timeout_ms: int) -> None:
@@ -41,14 +50,18 @@ def append_session_token(target_url: str, current_url: str) -> str:
     return f"{target_url}{separator}user_token={quote(user_token, safe='')}"
 
 
-def open_csv_product_export(page: Any, config: CatalogUpdateConfig, timeout_ms: int) -> None:
+def open_csv_product_export(
+    page: Any, config: CatalogUpdateConfig, timeout_ms: int
+) -> None:
     export_url = append_session_token(
         f"{config.admin_index_url}?route={CSV_PRODUCT_EXPORT_ROUTE}",
         page.url,
     )
     page.goto(export_url, wait_until="domcontentloaded", timeout=timeout_ms)
     page.wait_for_load_state("networkidle", timeout=timeout_ms)
-    page.locator('select[name="profile_id"]').wait_for(state="visible", timeout=timeout_ms)
+    page.locator('select[name="profile_id"]').wait_for(
+        state="visible", timeout=timeout_ms
+    )
 
 
 def navigate_to_csv_product_export(page: Any) -> None:
@@ -56,7 +69,9 @@ def navigate_to_csv_product_export(page: Any) -> None:
         if try_click_text(page, label):
             break
     if not try_click_text(page, "CSV Product Export"):
-        raise CatalogUpdateError("OpenCart export failed: CSV Product Export menu item not found.")
+        raise CatalogUpdateError(
+            "OpenCart export failed: CSV Product Export menu item not found."
+        )
     wait_for_text(page, ("STEP 1", "Step 1", "ΒΗΜΑ 1"))
 
 
@@ -110,7 +125,10 @@ def download_export(
     with page.expect_download() as download_info:
         download_control.click()
     download = download_info.value
-    filename = safe_filename(download.suggested_filename or f"{DEFAULT_EXPORT_PROFILE}.csv", default=f"{DEFAULT_EXPORT_PROFILE}.csv")
+    filename = safe_filename(
+        download.suggested_filename or f"{DEFAULT_EXPORT_PROFILE}.csv",
+        default=f"{DEFAULT_EXPORT_PROFILE}.csv",
+    )
     downloaded_path = output_dir / filename
     if step_tracker is not None:
         step_tracker.mark("save_download")
@@ -128,14 +146,18 @@ def download_export(
     return downloaded_path
 
 
-def download_locator(page: Any, timeout_ms: int, *, step_tracker: CatalogUpdateStepTracker | None = None) -> Any:
+def download_locator(
+    page: Any, timeout_ms: int, *, step_tracker: CatalogUpdateStepTracker | None = None
+) -> Any:
     pattern = re.compile(r"download", re.IGNORECASE)
     deadline = time.monotonic() + max(1, timeout_ms / 1000)
     next_heartbeat = time.monotonic()
     while time.monotonic() < deadline:
         if step_tracker is not None and time.monotonic() >= next_heartbeat:
             step_tracker.mark("wait_for_download")
-            next_heartbeat = time.monotonic() + CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS
+            next_heartbeat = (
+                time.monotonic() + CATALOG_UPDATE_HEARTBEAT_INTERVAL_SECONDS
+            )
         candidates = (
             page.get_by_role("link", name=pattern),
             page.get_by_role("button", name=pattern),
@@ -159,13 +181,19 @@ def fill_first(page: Any, selectors: tuple[str, ...], value: str) -> None:
         if locator.count() > 0:
             locator.fill(value)
             return
-    raise CatalogUpdateError(f"OpenCart login failed: field not found for selectors {', '.join(selectors)}.")
+    raise CatalogUpdateError(
+        f"OpenCart login failed: field not found for selectors {', '.join(selectors)}."
+    )
 
 
-def click_by_role_or_text(page: Any, labels: tuple[str, ...], *, roles: tuple[str, ...]) -> None:
+def click_by_role_or_text(
+    page: Any, labels: tuple[str, ...], *, roles: tuple[str, ...]
+) -> None:
     for role in roles:
         for label in labels:
-            locator = page.get_by_role(role, name=re.compile(re.escape(label), re.IGNORECASE))
+            locator = page.get_by_role(
+                role, name=re.compile(re.escape(label), re.IGNORECASE)
+            )
             if locator.count() > 0:
                 locator.first.click()
                 return
@@ -188,7 +216,9 @@ def wait_for_text(page: Any, labels: tuple[str, ...]) -> None:
     page.get_by_text(pattern).first.wait_for(state="visible")
 
 
-def click_first_locator(page: Any, selectors: tuple[str, ...], error_message: str) -> None:
+def click_first_locator(
+    page: Any, selectors: tuple[str, ...], error_message: str
+) -> None:
     for selector in selectors:
         locator = page.locator(selector)
         if locator.count() > 0:

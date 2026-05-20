@@ -53,7 +53,9 @@ def build_intro_text_context(
         "evidence": {
             "hero_summary": normalize_whitespace(source.hero_summary),
             "key_specs": _compact_key_specs(source.key_specs),
-            "deterministic_differentiators": _compact_values(deterministic_product.get("name_differentiators", [])),
+            "deterministic_differentiators": _compact_values(
+                deterministic_product.get("name_differentiators", [])
+            ),
         },
         "writer_rules": {
             "language": "Greek",
@@ -63,7 +65,13 @@ def build_intro_text_context(
             "allowed_inline_html_tags": ["strong"],
             "paragraphs": 1,
             "word_count_range": {"min": intro_word_min, "max": intro_word_max},
-            "forbidden_outputs": ["json", "markdown", "bullets", "cta_language", "unsupported_html"],
+            "forbidden_outputs": [
+                "json",
+                "markdown",
+                "bullets",
+                "cta_language",
+                "unsupported_html",
+            ],
             "emphasis_policy": {
                 "scope": "generic_all_categories",
                 "purpose": "human_readability_and_topical_clarity",
@@ -96,8 +104,12 @@ def build_seo_meta_context(
         "product": {
             **product_identity,
             "sub_category": str(taxonomy.sub_category or "").strip(),
-            "meta_title": str(deterministic_product.get("meta_title", "") or "").strip(),
-            "seo_keyword": str(deterministic_product.get("seo_keyword", "") or "").strip(),
+            "meta_title": str(
+                deterministic_product.get("meta_title", "") or ""
+            ).strip(),
+            "seo_keyword": str(
+                deterministic_product.get("seo_keyword", "") or ""
+            ).strip(),
         },
         "evidence": {
             "meta_description_draft": _apply_preferred_identifier(
@@ -106,7 +118,9 @@ def build_seo_meta_context(
             ),
             "hero_summary": normalize_whitespace(source.hero_summary),
             "key_specs": _compact_key_specs(source.key_specs),
-            "deterministic_differentiators": _compact_values(deterministic_product.get("name_differentiators", [])),
+            "deterministic_differentiators": _compact_values(
+                deterministic_product.get("name_differentiators", [])
+            ),
         },
         "writer_rules": {
             "language": "Greek",
@@ -117,11 +131,13 @@ def build_seo_meta_context(
                 "When product.model_name is present, preferred_identifier is the model name and must be used in prose instead of the raw MPN. "
                 "Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context, with evidence priority: "
                 "1. `hero_summary` 2. `key_specs` 3. `deterministic_differentiators`. "
-                "For TVs prefer `115 ιντσών` rather than `115\"`; if `4K` is verified, prefer `4K Ultra HD ανάλυση`; if `8K` is verified, prefer `8K Ultra HD ανάλυση`. "
+                'For TVs prefer `115 ιντσών` rather than `115"`; if `4K` is verified, prefer `4K Ultra HD ανάλυση`; if `8K` is verified, prefer `8K Ultra HD ανάλυση`. '
                 "Aim for roughly `160-260` characters unless verified detail clearly justifies somewhat more."
             ),
             "meta_keywords_rule": "Return a structured JSON array of verified keywords only. Do not serialize as CSV. Always include brand and preferred_identifier; when product.model_name is present, prefer it over product.mpn.",
-            "required_keywords": [value for value in [brand, preferred_identifier] if value],
+            "required_keywords": [
+                value for value in [brand, preferred_identifier] if value
+            ],
         },
     }
 
@@ -154,7 +170,10 @@ def build_task_manifest(
                     "prompt_path": seo_meta_prompt_path,
                     "expected_output_path": seo_meta_output_path,
                     "output_mode": "json",
-                    "llm_owned_fields": ["product.meta_description", "product.meta_keywords"],
+                    "llm_owned_fields": [
+                        "product.meta_description",
+                        "product.meta_keywords",
+                    ],
                 },
             },
         },
@@ -182,7 +201,8 @@ def validate_intro_text_output(
         max_emphasized_word_ratio=intro_max_emphasized_word_ratio,
     )
     unsupported_tags = [
-        tag for tag in HTML_DETECT_RE.findall(value)
+        tag
+        for tag in HTML_DETECT_RE.findall(value)
         if tag.lower() not in {"<strong>", "</strong>"}
     ]
     if unsupported_tags:
@@ -197,7 +217,9 @@ def validate_intro_text_output(
     return normalized, _unique_codes(errors)
 
 
-def validate_seo_meta_output(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+def validate_seo_meta_output(
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     if not isinstance(payload, dict):
         return {}, ["llm_seo_meta_not_object"]
@@ -207,7 +229,10 @@ def validate_seo_meta_output(payload: dict[str, Any]) -> tuple[dict[str, Any], l
     if not isinstance(product, dict):
         return {}, ["llm_seo_meta_product_invalid"]
     product_keys = set(product)
-    if product_keys not in ({"meta_description", "meta_keywords"}, {"meta_description", "meta_keywords", "name_tail_polished"}):
+    if product_keys not in (
+        {"meta_description", "meta_keywords"},
+        {"meta_description", "meta_keywords", "name_tail_polished"},
+    ):
         errors.append("llm_seo_meta_shape_invalid")
     meta_description = product.get("meta_description", "")
     meta_keywords = product.get("meta_keywords", [])
@@ -215,14 +240,20 @@ def validate_seo_meta_output(payload: dict[str, Any]) -> tuple[dict[str, Any], l
         errors.append("llm_seo_meta_description_invalid")
     elif detect_text_issues(meta_description):
         errors.append("llm_seo_meta_description_encoding_invalid")
-    if not isinstance(meta_keywords, list) or any(not isinstance(item, str) for item in meta_keywords):
+    if not isinstance(meta_keywords, list) or any(
+        not isinstance(item, str) for item in meta_keywords
+    ):
         errors.append("llm_seo_meta_keywords_invalid")
     elif any(detect_text_issues(item) for item in meta_keywords):
         errors.append("llm_seo_meta_keywords_encoding_invalid")
     return {
         "product": {
             "meta_description": normalize_whitespace(meta_description),
-            "meta_keywords": [normalize_whitespace(item) for item in meta_keywords if normalize_whitespace(item)],
+            "meta_keywords": [
+                normalize_whitespace(item)
+                for item in meta_keywords
+                if normalize_whitespace(item)
+            ],
             "meta_keyword_csv": serialize_meta_keywords(meta_keywords),
         }
     }, errors
@@ -240,7 +271,9 @@ def _build_product_identity(
     name = str(deterministic_product.get("name", "") or source.name or "").strip()
     brand = str(deterministic_product.get("brand", "") or source.brand or "").strip()
     mpn = str(deterministic_product.get("mpn", "") or source.mpn or "").strip()
-    category = str(deterministic_product.get("category_phrase", "") or taxonomy.leaf_category or "").strip()
+    category = str(
+        deterministic_product.get("category_phrase", "") or taxonomy.leaf_category or ""
+    ).strip()
     model_name = _extract_model_name(source, deterministic_product, brand, mpn)
     preferred_identifier = model_name or mpn
     copy_name = _build_copy_name(name, brand, preferred_identifier, category)
@@ -255,7 +288,12 @@ def _build_product_identity(
     }
 
 
-def _extract_model_name(source: SourceProductData, deterministic_product: dict[str, Any], brand: str, mpn: str) -> str:
+def _extract_model_name(
+    source: SourceProductData,
+    deterministic_product: dict[str, Any],
+    brand: str,
+    mpn: str,
+) -> str:
     explicit_candidates = [
         deterministic_product.get("model_name", ""),
         deterministic_product.get("commercial_model_name", ""),
@@ -266,18 +304,27 @@ def _extract_model_name(source: SourceProductData, deterministic_product: dict[s
         if _looks_like_model_name(model_name, brand, mpn):
             return model_name
 
-    for title in [source.name, deterministic_product.get("source_name", ""), deterministic_product.get("name", "")]:
+    for title in [
+        source.name,
+        deterministic_product.get("source_name", ""),
+        deterministic_product.get("name", ""),
+    ]:
         family = extract_commercial_family_from_title(str(title or ""), brand, mpn)
         if _looks_like_model_name(family, brand, mpn):
             return family
     return ""
 
 
-def _build_copy_name(name: str, brand: str, preferred_identifier: str, category: str) -> str:
+def _build_copy_name(
+    name: str, brand: str, preferred_identifier: str, category: str
+) -> str:
     if not brand or not preferred_identifier:
         return name
     parts = [brand, preferred_identifier]
-    if category and category.casefold() not in {brand.casefold(), preferred_identifier.casefold()}:
+    if category and category.casefold() not in {
+        brand.casefold(),
+        preferred_identifier.casefold(),
+    }:
         parts.append(category)
     return normalize_whitespace(" ".join(parts))
 
@@ -288,7 +335,9 @@ def _apply_preferred_identifier(value: str, product_identity: dict[str, str]) ->
     mpn = product_identity.get("mpn", "")
     if not normalized or not model_name or not mpn:
         return normalized
-    return normalize_whitespace(re.sub(re.escape(mpn), model_name, normalized, flags=re.IGNORECASE))
+    return normalize_whitespace(
+        re.sub(re.escape(mpn), model_name, normalized, flags=re.IGNORECASE)
+    )
 
 
 def _looks_like_model_name(value: str, brand: str, mpn: str) -> bool:
@@ -362,7 +411,11 @@ def _policy_float(policy: Any | None, field_name: str, default: float) -> float:
         value = policy.get(field_name, default)
     else:
         value = getattr(policy, field_name, default)
-    return float(value) if isinstance(value, (float, int)) and not isinstance(value, bool) else default
+    return (
+        float(value)
+        if isinstance(value, (float, int)) and not isinstance(value, bool)
+        else default
+    )
 
 
 def _unique_codes(codes: list[str]) -> list[str]:

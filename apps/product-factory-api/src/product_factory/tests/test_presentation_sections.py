@@ -60,7 +60,7 @@ def test_normalize_presentation_sections_marks_missing_image_only() -> None:
         [
             {
                 "title": "Εικόνα μόνο",
-                "paragraph": "<div><img src=\"https://example.com/image.jpg\" /></div>",
+                "paragraph": '<div><img src="https://example.com/image.jpg" /></div>',
                 "image_url": "https://example.com/image.jpg",
             }
         ]
@@ -91,27 +91,29 @@ def test_normalize_presentation_sections_marks_weak_missing_title() -> None:
     assert section.reason == "weak_missing_title"
 
 
-def test_normalize_presentation_sections_marks_duplicate_against_previously_accepted_sections() -> None:
+def test_normalize_presentation_sections_marks_duplicate_against_previously_accepted_sections() -> (
+    None
+):
     sections = normalize_presentation_sections(
         [
-                {
-                    "title": "Άνετη χρήση",
-                    "paragraph": (
-                        "Η ευέλικτη διάταξη βοηθά την καθημερινή χρήση και κρατά τα βασικά σημεία εύκολα προσβάσιμα "
-                        "για πιο ξεκούραστη και σταθερή εμπειρία σε κάθε κύκλο λειτουργίας, ενώ η πρακτική οργάνωση "
-                        "διευκολύνει την τοποθέτηση των απαραίτητων αντικειμένων και υποστηρίζει σταθερή απόδοση "
-                        "κατά τη συχνή χρήση στο σπίτι."
-                    ),
-                },
-                {
-                    "title": "Άνεση κάθε μέρα",
-                    "paragraph": (
-                        "Η ευέλικτη διάταξη βοηθά την καθημερινή χρήση και κρατά τα βασικά σημεία εύκολα προσβάσιμα "
-                        "για πιο ξεκούραστη και σταθερή εμπειρία σε κάθε κύκλο λειτουργίας, ενώ η πρακτική οργάνωση "
-                        "διευκολύνει την τοποθέτηση των απαραίτητων αντικειμένων και υποστηρίζει σταθερή απόδοση "
-                        "κατά τη συχνή χρήση στο σπίτι."
-                    ),
-                },
+            {
+                "title": "Άνετη χρήση",
+                "paragraph": (
+                    "Η ευέλικτη διάταξη βοηθά την καθημερινή χρήση και κρατά τα βασικά σημεία εύκολα προσβάσιμα "
+                    "για πιο ξεκούραστη και σταθερή εμπειρία σε κάθε κύκλο λειτουργίας, ενώ η πρακτική οργάνωση "
+                    "διευκολύνει την τοποθέτηση των απαραίτητων αντικειμένων και υποστηρίζει σταθερή απόδοση "
+                    "κατά τη συχνή χρήση στο σπίτι."
+                ),
+            },
+            {
+                "title": "Άνεση κάθε μέρα",
+                "paragraph": (
+                    "Η ευέλικτη διάταξη βοηθά την καθημερινή χρήση και κρατά τα βασικά σημεία εύκολα προσβάσιμα "
+                    "για πιο ξεκούραστη και σταθερή εμπειρία σε κάθε κύκλο λειτουργίας, ενώ η πρακτική οργάνωση "
+                    "διευκολύνει την τοποθέτηση των απαραίτητων αντικειμένων και υποστηρίζει σταθερή απόδοση "
+                    "κατά τη συχνή χρήση στο σπίτι."
+                ),
+            },
         ]
     )
 
@@ -124,8 +126,14 @@ def test_normalize_presentation_sections_marks_duplicate_against_previously_acce
 def test_normalize_presentation_sections_preserves_source_order() -> None:
     sections = normalize_presentation_sections(
         [
-            {"title": "Πρώτο", "paragraph": "Αυτό είναι το πρώτο τμήμα με αρκετό περιεχόμενο για καθαρή ταξινόμηση και σταθερή σειρά."},
-            {"title": "Δεύτερο", "paragraph": "Αυτό είναι το δεύτερο τμήμα με αρκετό περιεχόμενο για καθαρή ταξινόμηση και σταθερή σειρά."},
+            {
+                "title": "Πρώτο",
+                "paragraph": "Αυτό είναι το πρώτο τμήμα με αρκετό περιεχόμενο για καθαρή ταξινόμηση και σταθερή σειρά.",
+            },
+            {
+                "title": "Δεύτερο",
+                "paragraph": "Αυτό είναι το δεύτερο τμήμα με αρκετό περιεχόμενο για καθαρή ταξινόμηση και σταθερή σειρά.",
+            },
         ]
     )
 
@@ -143,7 +151,10 @@ def test_normalize_presentation_sections_preserves_wording_after_cleaning() -> N
         ]
     )
 
-    assert sections[0].body_text == "Διατηρεί την ίδια διατύπωση χωρίς αναδιατύπωση ή σύνοψη."
+    assert (
+        sections[0].body_text
+        == "Διατηρεί την ίδια διατύπωση χωρίς αναδιατύπωση ή σύνοψη."
+    )
 
 
 def test_normalize_presentation_sections_cleans_whitespace_and_html() -> None:
@@ -160,9 +171,16 @@ def test_normalize_presentation_sections_cleans_whitespace_and_html() -> None:
     assert sections[0].body_text == "Πρώτη πρόταση. Δεύτερη πρόταση."
 
 
-def test_normalize_presentation_sections_pads_missing_extraction_when_requested_count_exceeds_source() -> None:
+def test_normalize_presentation_sections_pads_missing_extraction_when_requested_count_exceeds_source() -> (
+    None
+):
     sections = normalize_presentation_sections(
-        [{"title": "Μόνο ένα", "paragraph": "Υπάρχει μόνο ένα διαθέσιμο τμήμα με επαρκές σώμα για έλεγχο."}],
+        [
+            {
+                "title": "Μόνο ένα",
+                "paragraph": "Υπάρχει μόνο ένα διαθέσιμο τμήμα με επαρκές σώμα για έλεγχο.",
+            }
+        ],
         sections_requested=2,
     )
 

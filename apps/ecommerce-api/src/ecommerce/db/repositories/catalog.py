@@ -15,7 +15,10 @@ from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.models.source_urls import SourceUrl
 from ecommerce.db.repositories.common import json_safe_value
-from ecommerce.source_capture.canonicalize_url import canonical_url_hash, canonicalize_url
+from ecommerce.source_capture.canonicalize_url import (
+    canonical_url_hash,
+    canonicalize_url,
+)
 
 MarketplaceFilter = Literal["bestprice", "skroutz", "both", "none"]
 SortBy = Literal["model", "name", "manufacturer", "category", "price", "quantity"]
@@ -80,7 +83,9 @@ def list_catalog_products_page(
         CatalogProductRow.active.is_(True),
     ]
     total = _count_products(session, base_filters)
-    product_filters, filters_applied = _product_filters(filters, ignored_models, source_filter)
+    product_filters, filters_applied = _product_filters(
+        filters, ignored_models, source_filter
+    )
     filtered_clauses = [*base_filters, *product_filters]
     filtered_total = _count_products(session, filtered_clauses)
 
@@ -92,7 +97,9 @@ def list_catalog_products_page(
         .limit(filters.page_size)
     )
     rows = list(session.execute(statement).scalars().all())
-    status_counts = _source_url_status_counts(session, [row.id for row in rows], source_filter)
+    status_counts = _source_url_status_counts(
+        session, [row.id for row in rows], source_filter
+    )
     items = [
         _catalog_product_payload(
             row,
@@ -139,7 +146,9 @@ def get_catalog_product_detail(
         .all()
     )
     source_filter = None
-    status_counts = _source_url_status_counts(session, [int(row.id)], source_filter).get(
+    status_counts = _source_url_status_counts(
+        session, [int(row.id)], source_filter
+    ).get(
         int(row.id),
         _empty_status_counts(),
     )
@@ -151,7 +160,9 @@ def get_catalog_product_detail(
     )
     product_sources = _product_sources_for_catalog_product(session, row)
     latest_snapshots = _latest_snapshots_by_product_source(session, product_sources)
-    product_source_by_hash = {source.canonical_url_hash: source for source in product_sources}
+    product_source_by_hash = {
+        source.canonical_url_hash: source for source in product_sources
+    }
     source_url_payloads = [
         _source_url_lifecycle_payload(
             source_url,
@@ -168,7 +179,9 @@ def get_catalog_product_detail(
     )
 
 
-def get_catalog_categories(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+def get_catalog_categories(
+    session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE
+) -> dict[str, Any]:
     rows = _active_catalog_rows(session, catalog_source=catalog_source)
     counts = Counter(str(row.category or "") for row in rows if row.category)
     first_row_by_category: dict[str, CatalogProductRow] = {}
@@ -178,14 +191,18 @@ def get_catalog_categories(session: Session, *, catalog_source: str = DEFAULT_CA
             first_row_by_category[category] = row
     return {
         "items": [
-            _category_to_response(first_row_by_category[category], category, counts[category])
+            _category_to_response(
+                first_row_by_category[category], category, counts[category]
+            )
             for category in sorted(counts)
         ],
         **_empty_catalog_warning_from_total(len(rows)),
     }
 
 
-def get_catalog_category_hierarchy(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+def get_catalog_category_hierarchy(
+    session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE
+) -> dict[str, Any]:
     rows = _active_catalog_rows(session, catalog_source=catalog_source)
     hierarchy: dict[str, dict[str, dict[str, dict[str, object]]]] = {}
 
@@ -197,7 +214,9 @@ def get_catalog_category_hierarchy(session: Session, *, catalog_source: str = DE
         sub_category = _row_text(row.sub_category)
         family_node = hierarchy.setdefault(family, {})
         category_node = family_node.setdefault(category_name, {})
-        sub_node = category_node.setdefault(sub_category, {"count": 0, "raw_categories": set()})
+        sub_node = category_node.setdefault(
+            sub_category, {"count": 0, "raw_categories": set()}
+        )
         sub_node["count"] = int(sub_node["count"]) + 1
         raw_category = _row_text(row.raw_category)
         if raw_category:
@@ -221,7 +240,11 @@ def get_catalog_category_hierarchy(session: Session, *, catalog_source: str = DE
                     {
                         "sub_category": sub_category,
                         "count": sub_count,
-                        "raw_categories": sorted(raw_categories) if isinstance(raw_categories, set) else [],
+                        "raw_categories": (
+                            sorted(raw_categories)
+                            if isinstance(raw_categories, set)
+                            else []
+                        ),
                     }
                 )
             family_count += category_count
@@ -232,12 +255,16 @@ def get_catalog_category_hierarchy(session: Session, *, catalog_source: str = DE
                     "sub_categories": sub_category_items,
                 }
             )
-        items.append({"family": family, "count": family_count, "categories": category_items})
+        items.append(
+            {"family": family, "count": family_count, "categories": category_items}
+        )
 
     return {"items": items, **_empty_catalog_warning_from_total(len(rows))}
 
 
-def get_catalog_brands(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+def get_catalog_brands(
+    session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE
+) -> dict[str, Any]:
     rows = _active_catalog_rows(session, catalog_source=catalog_source)
     counts = Counter(str(row.manufacturer or "") for row in rows if row.manufacturer)
     return {
@@ -249,7 +276,9 @@ def get_catalog_brands(session: Session, *, catalog_source: str = DEFAULT_CATALO
     }
 
 
-def get_catalog_summary(session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE) -> dict[str, Any]:
+def get_catalog_summary(
+    session: Session, *, catalog_source: str = DEFAULT_CATALOG_SOURCE
+) -> dict[str, Any]:
     rows = _active_catalog_rows(session, catalog_source=catalog_source)
     categories = {_row_text(row.category) for row in rows if row.category}
     families = {_row_text(row.family) for row in rows if row.family}
@@ -260,7 +289,9 @@ def get_catalog_summary(session: Session, *, catalog_source: str = DEFAULT_CATAL
         "total_products": len(rows),
         "active_products": sum(1 for row in rows if row.status == 1),
         "atomic_products": sum(1 for row in rows if bool(row.is_atomic_model)),
-        "composite_or_invalid_models": sum(1 for row in rows if not bool(row.is_atomic_model)),
+        "composite_or_invalid_models": sum(
+            1 for row in rows if not bool(row.is_atomic_model)
+        ),
         "bestprice_products": sum(1 for row in rows if row.bestprice_status == 1),
         "skroutz_products": sum(1 for row in rows if row.skroutz_status == 1),
         "missing_mpn": sum(1 for row in rows if not row.mpn),
@@ -274,10 +305,16 @@ def get_catalog_summary(session: Session, *, catalog_source: str = DEFAULT_CATAL
 
 
 def _count_products(session: Session, clauses: list[Any]) -> int:
-    return int(session.execute(select(func.count(CatalogProductRow.id)).where(*clauses)).scalar_one())
+    return int(
+        session.execute(
+            select(func.count(CatalogProductRow.id)).where(*clauses)
+        ).scalar_one()
+    )
 
 
-def _active_catalog_rows(session: Session, *, catalog_source: str) -> list[CatalogProductRow]:
+def _active_catalog_rows(
+    session: Session, *, catalog_source: str
+) -> list[CatalogProductRow]:
     return list(
         session.execute(
             select(CatalogProductRow)
@@ -292,7 +329,9 @@ def _active_catalog_rows(session: Session, *, catalog_source: str) -> list[Catal
     )
 
 
-def _category_to_response(row: CatalogProductRow, category: str, count: int) -> dict[str, Any]:
+def _category_to_response(
+    row: CatalogProductRow, category: str, count: int
+) -> dict[str, Any]:
     return {
         "category": category,
         "raw_category": _row_text(row.raw_category),
@@ -307,7 +346,9 @@ def _category_to_response(row: CatalogProductRow, category: str, count: int) -> 
 def _empty_catalog_warning_from_total(total: int) -> dict[str, str]:
     if total:
         return {}
-    return {"warning": "Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog."}
+    return {
+        "warning": "Active catalog is empty. Run python -m ecommerce.jobs.ingest_catalog."
+    }
 
 
 def _product_filters(
@@ -348,12 +389,18 @@ def _product_filters(
         applied.append("marketplace")
 
     if filters.has_mpn is not None:
-        clauses.append(CatalogProductRow.mpn != "" if filters.has_mpn else CatalogProductRow.mpn == "")
+        clauses.append(
+            CatalogProductRow.mpn != ""
+            if filters.has_mpn
+            else CatalogProductRow.mpn == ""
+        )
         applied.append("has_mpn")
 
     if filters.has_source_url is not None:
         has_source_url_clause = _has_active_source_url_clause(source_filter)
-        clauses.append(has_source_url_clause if filters.has_source_url else ~has_source_url_clause)
+        clauses.append(
+            has_source_url_clause if filters.has_source_url else ~has_source_url_clause
+        )
         applied.append("has_source_url")
         if source_filter:
             applied.append("source_name")
@@ -375,7 +422,9 @@ def _product_filters(
             clauses.append(CatalogProductRow.model.notin_(ignored_models))
         applied.append("ignored")
     elif filters.ignored == "only":
-        clauses.append(CatalogProductRow.model.in_(ignored_models) if ignored_models else false())
+        clauses.append(
+            CatalogProductRow.model.in_(ignored_models) if ignored_models else false()
+        )
         applied.append("ignored")
 
     if filters.atomic_only:
@@ -401,8 +450,14 @@ def _marketplace_filter(marketplace: MarketplaceFilter) -> Any:
     if marketplace == "both":
         return and_(bestprice, skroutz)
     return and_(
-        or_(CatalogProductRow.bestprice_status != 1, CatalogProductRow.bestprice_status.is_(None)),
-        or_(CatalogProductRow.skroutz_status != 1, CatalogProductRow.skroutz_status.is_(None)),
+        or_(
+            CatalogProductRow.bestprice_status != 1,
+            CatalogProductRow.bestprice_status.is_(None),
+        ),
+        or_(
+            CatalogProductRow.skroutz_status != 1,
+            CatalogProductRow.skroutz_status.is_(None),
+        ),
     )
 
 
@@ -436,7 +491,11 @@ def _sort_expressions(sort_by: SortBy | None, sort_dir: SortDir) -> list[Any]:
             else column.desc()
         )
         return [desc(null_rank), value_expr, CatalogProductRow.id.asc()]
-    value_expr = func.lower(column).asc() if sort_by in {"model", "name", "manufacturer", "category"} else column.asc()
+    value_expr = (
+        func.lower(column).asc()
+        if sort_by in {"model", "name", "manufacturer", "category"}
+        else column.asc()
+    )
     return [null_rank.asc(), value_expr, CatalogProductRow.id.asc()]
 
 
@@ -445,7 +504,13 @@ def _source_url_status_counts(
     catalog_product_ids: list[int],
     source_filter: str | None,
 ) -> dict[int, dict[str, int]]:
-    product_ids = sorted({int(product_id) for product_id in catalog_product_ids if product_id is not None})
+    product_ids = sorted(
+        {
+            int(product_id)
+            for product_id in catalog_product_ids
+            if product_id is not None
+        }
+    )
     if not product_ids:
         return {}
     statement = (
@@ -501,7 +566,9 @@ def _catalog_product_payload(
             "source": source_filter or "all",
             "has_active_source_url": active_count > 0,
             "active_source_url_count": active_count,
-            "needs_review_source_url_count": int(source_counts.get("needs_review") or 0),
+            "needs_review_source_url_count": int(
+                source_counts.get("needs_review") or 0
+            ),
             "broken_source_url_count": int(source_counts.get("broken") or 0),
             "disabled_source_url_count": int(source_counts.get("disabled") or 0),
             "redirected_source_url_count": int(source_counts.get("redirected") or 0),
@@ -510,7 +577,9 @@ def _catalog_product_payload(
     }
 
 
-def _product_sources_for_catalog_product(session: Session, row: CatalogProductRow) -> list[ProductSource]:
+def _product_sources_for_catalog_product(
+    session: Session, row: CatalogProductRow
+) -> list[ProductSource]:
     product = None
     if row.model:
         product = session.execute(
@@ -579,10 +648,16 @@ def _source_url_lifecycle_payload(
     latest_snapshots: dict[int, SourceCaptureSnapshot],
 ) -> dict[str, Any]:
     product_source = _matching_product_source(row, product_source_by_hash)
-    snapshot = latest_snapshots.get(int(product_source.id)) if product_source is not None else None
+    snapshot = (
+        latest_snapshots.get(int(product_source.id))
+        if product_source is not None
+        else None
+    )
     source_capture_snapshot_id = snapshot.id if snapshot is not None else None
     artifact_ref = _artifact_ref(snapshot)
-    last_fetch_status = product_source.last_fetch_status if product_source is not None else None
+    last_fetch_status = (
+        product_source.last_fetch_status if product_source is not None else None
+    )
     payload: dict[str, Any] = {
         "id": row.id,
         "source_url_id": row.id,
@@ -609,9 +684,15 @@ def _source_url_lifecycle_payload(
         "capture_status": last_fetch_status,
         "last_fetch_status": last_fetch_status,
         "last_capture_status": last_fetch_status,
-        "last_capture_strategy": product_source.last_capture_strategy if product_source is not None else None,
-        "last_capture_at": json_safe_value(snapshot.captured_at if snapshot is not None else None),
-        "last_fetched_at": json_safe_value(snapshot.fetched_at if snapshot is not None else None),
+        "last_capture_strategy": (
+            product_source.last_capture_strategy if product_source is not None else None
+        ),
+        "last_capture_at": json_safe_value(
+            snapshot.captured_at if snapshot is not None else None
+        ),
+        "last_fetched_at": json_safe_value(
+            snapshot.fetched_at if snapshot is not None else None
+        ),
         "source_capture_snapshot_id": source_capture_snapshot_id,
         "last_capture_snapshot_id": source_capture_snapshot_id,
         "artifact_ref": artifact_ref,

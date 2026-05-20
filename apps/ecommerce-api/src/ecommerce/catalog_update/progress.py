@@ -48,23 +48,76 @@ WORKFLOW_PHASES: tuple[CatalogUpdateWorkflowPhase, ...] = (
     CatalogUpdateWorkflowPhase("purge_exclusions", "Purge exclusions"),
 )
 PROGRESS_EVENTS: tuple[CatalogUpdateProgressEvent, ...] = (
-    CatalogUpdateProgressEvent("config_loaded", "Config loaded", "config_loaded", "completed"),
-    CatalogUpdateProgressEvent("alembic_upgrade_started", "Alembic upgrade started", "alembic_upgrade", "started"),
-    CatalogUpdateProgressEvent("alembic_upgrade_completed", "Alembic upgrade completed", "alembic_upgrade", "completed"),
-    CatalogUpdateProgressEvent("playwright_started", "Playwright started", "playwright_start", "started"),
+    CatalogUpdateProgressEvent(
+        "config_loaded", "Config loaded", "config_loaded", "completed"
+    ),
+    CatalogUpdateProgressEvent(
+        "alembic_upgrade_started",
+        "Alembic upgrade started",
+        "alembic_upgrade",
+        "started",
+    ),
+    CatalogUpdateProgressEvent(
+        "alembic_upgrade_completed",
+        "Alembic upgrade completed",
+        "alembic_upgrade",
+        "completed",
+    ),
+    CatalogUpdateProgressEvent(
+        "playwright_started", "Playwright started", "playwright_start", "started"
+    ),
     CatalogUpdateProgressEvent("login_started", "Login started", "login", "started"),
-    CatalogUpdateProgressEvent("login_completed", "Login completed", "login", "completed"),
-    CatalogUpdateProgressEvent("export_page_opened", "Export page opened", "open_csv_product_export", "completed"),
-    CatalogUpdateProgressEvent("profile_loaded", "Profile loaded", "load_profile", "completed"),
-    CatalogUpdateProgressEvent("export_step_advanced", "Export step advanced", "step_2_next", "completed"),
-    CatalogUpdateProgressEvent("download_waiting", "Download waiting", "wait_for_download", "started"),
-    CatalogUpdateProgressEvent("download_saved", "Download saved", "wait_for_download", "completed"),
-    CatalogUpdateProgressEvent("exclusion_filtering_started", "Exclusion filtering started", "filter_exclusions", "started"),
-    CatalogUpdateProgressEvent("exclusion_filtering_completed", "Exclusion filtering completed", "filter_exclusions", "completed"),
-    CatalogUpdateProgressEvent("ingest_started", "Ingest started", "ingest_catalog", "started"),
-    CatalogUpdateProgressEvent("ingest_completed", "Ingest completed", "ingest_catalog", "completed"),
-    CatalogUpdateProgressEvent("exclusion_purge_started", "Exclusion purge started", "purge_exclusions", "started"),
-    CatalogUpdateProgressEvent("exclusion_purge_completed", "Exclusion purge completed", "purge_exclusions", "completed"),
+    CatalogUpdateProgressEvent(
+        "login_completed", "Login completed", "login", "completed"
+    ),
+    CatalogUpdateProgressEvent(
+        "export_page_opened",
+        "Export page opened",
+        "open_csv_product_export",
+        "completed",
+    ),
+    CatalogUpdateProgressEvent(
+        "profile_loaded", "Profile loaded", "load_profile", "completed"
+    ),
+    CatalogUpdateProgressEvent(
+        "export_step_advanced", "Export step advanced", "step_2_next", "completed"
+    ),
+    CatalogUpdateProgressEvent(
+        "download_waiting", "Download waiting", "wait_for_download", "started"
+    ),
+    CatalogUpdateProgressEvent(
+        "download_saved", "Download saved", "wait_for_download", "completed"
+    ),
+    CatalogUpdateProgressEvent(
+        "exclusion_filtering_started",
+        "Exclusion filtering started",
+        "filter_exclusions",
+        "started",
+    ),
+    CatalogUpdateProgressEvent(
+        "exclusion_filtering_completed",
+        "Exclusion filtering completed",
+        "filter_exclusions",
+        "completed",
+    ),
+    CatalogUpdateProgressEvent(
+        "ingest_started", "Ingest started", "ingest_catalog", "started"
+    ),
+    CatalogUpdateProgressEvent(
+        "ingest_completed", "Ingest completed", "ingest_catalog", "completed"
+    ),
+    CatalogUpdateProgressEvent(
+        "exclusion_purge_started",
+        "Exclusion purge started",
+        "purge_exclusions",
+        "started",
+    ),
+    CatalogUpdateProgressEvent(
+        "exclusion_purge_completed",
+        "Exclusion purge completed",
+        "purge_exclusions",
+        "completed",
+    ),
 )
 WORKFLOW_PHASE_LABELS = {phase.id: phase.label for phase in WORKFLOW_PHASES}
 PROGRESS_EVENT_LABELS = {event.id: event.label for event in PROGRESS_EVENTS}
@@ -88,27 +141,38 @@ class CatalogUpdateStepTracker:
         if phase_id not in WORKFLOW_PHASE_LABELS:
             raise ValueError(f"Unsupported catalog update workflow phase: {phase_id}")
         self.current_step = phase_id
-        selected_event_id = progress_event_id or (phase_id if phase_id in PROGRESS_EVENT_LABELS else None)
+        selected_event_id = progress_event_id or (
+            phase_id if phase_id in PROGRESS_EVENT_LABELS else None
+        )
         if selected_event_id is not None:
             self.emit_progress_event(selected_event_id, details=details)
 
-    def emit_progress_event(self, event_id: str, *, details: dict[str, Any] | None = None) -> None:
+    def emit_progress_event(
+        self, event_id: str, *, details: dict[str, Any] | None = None
+    ) -> None:
         if event_id not in PROGRESS_EVENT_LABELS:
             raise ValueError(f"Unsupported catalog update progress event: {event_id}")
         if self.progress_callback is not None:
             self.progress_callback(event_id, details)
 
-    def mark(self, step: str, *, progress_step: str | None = None, details: dict[str, Any] | None = None) -> None:
+    def mark(
+        self,
+        step: str,
+        *,
+        progress_step: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
         self.mark_workflow_phase(step, progress_event_id=progress_step, details=details)
 
-    def emit_progress(self, progress_step: str, *, details: dict[str, Any] | None = None) -> None:
+    def emit_progress(
+        self, progress_step: str, *, details: dict[str, Any] | None = None
+    ) -> None:
         self.emit_progress_event(progress_step, details=details)
 
 
 CatalogUpdateCompletedStep = JobProgressCompletedStep
 CATALOG_UPDATE_PROGRESS_STEP_DEFINITIONS = tuple(
-    JobProgressStepDefinition(event.id, event.label)
-    for event in PROGRESS_EVENTS
+    JobProgressStepDefinition(event.id, event.label) for event in PROGRESS_EVENTS
 )
 
 

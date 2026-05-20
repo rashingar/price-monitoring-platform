@@ -49,7 +49,10 @@ class SourceResolutionResult:
 
     @property
     def status(self) -> str:
-        if self.selected is not None and self.selected.confidence >= self.config.minimum_confidence:
+        if (
+            self.selected is not None
+            and self.selected.confidence >= self.config.minimum_confidence
+        ):
             return "selected"
         if self.candidates:
             return "suggestions"

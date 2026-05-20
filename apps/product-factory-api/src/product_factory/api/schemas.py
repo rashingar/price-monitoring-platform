@@ -110,7 +110,9 @@ class FullPipelineJobRequest(BaseModel):
             raise ValueError("model must not be empty")
         return value
 
-    @field_validator("product_name", "trigger_source", "telegram_chat_id", mode="before")
+    @field_validator(
+        "product_name", "trigger_source", "telegram_chat_id", mode="before"
+    )
     @classmethod
     def _normalize_optional_text(cls, value: object) -> object:
         if value is None:
@@ -136,9 +138,13 @@ class FullPipelineJobRequest(BaseModel):
         try:
             _source, scope_ok, _reason = validate_url_scope(value)
         except ValueError as exc:
-            raise ValueError("source_url must be a supported Product Factory source URL") from exc
+            raise ValueError(
+                "source_url must be a supported Product Factory source URL"
+            ) from exc
         if not scope_ok:
-            raise ValueError("source_url must be a supported Product Factory source URL")
+            raise ValueError(
+                "source_url must be a supported Product Factory source URL"
+            )
         return value
 
 
@@ -198,7 +204,9 @@ class JobArtifactsResponse(BaseModel):
     artifacts: list[JobArtifact] = Field(default_factory=list)
 
     @classmethod
-    def from_artifacts(cls, job_id: str, artifacts: list[ResolvedArtifact]) -> JobArtifactsResponse:
+    def from_artifacts(
+        cls, job_id: str, artifacts: list[ResolvedArtifact]
+    ) -> JobArtifactsResponse:
         return cls(
             job_id=job_id,
             artifacts=[

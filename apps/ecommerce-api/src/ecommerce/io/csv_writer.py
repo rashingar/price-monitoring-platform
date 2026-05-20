@@ -10,7 +10,9 @@ from typing import TextIO
 class IncrementalCsvWriter:
     """Open a CSV once, write the header immediately, and append rows incrementally."""
 
-    def __init__(self, path: Path, fieldnames: list[str], encoding: str, delimiter: str = ",") -> None:
+    def __init__(
+        self, path: Path, fieldnames: list[str], encoding: str, delimiter: str = ","
+    ) -> None:
         self.path = path
         self.fieldnames = fieldnames
         self.encoding = encoding

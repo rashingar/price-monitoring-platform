@@ -8,13 +8,25 @@ from html import unescape
 from typing import Any, Iterable
 from urllib.parse import urljoin
 
-from ecommerce.source_capture.types import ParsedOfferObservation, ParsedPriceObservation
-
+from ecommerce.source_capture.types import (
+    ParsedOfferObservation,
+    ParsedPriceObservation,
+)
 
 BESTPRICE_BASE_URL = "https://www.bestprice.gr"
 SKROUTZ_BASE_URL = "https://www.skroutz.gr"
 
-PRICE_KEYS = ("price", "final_price", "finalprice", "current_price", "currentprice", "sale_price", "saleprice", "amount", "price_with_vat")
+PRICE_KEYS = (
+    "price",
+    "final_price",
+    "finalprice",
+    "current_price",
+    "currentprice",
+    "sale_price",
+    "saleprice",
+    "amount",
+    "price_with_vat",
+)
 LANDED_PRICE_KEYS = (
     "landed_price",
     "landedprice",
@@ -26,9 +38,37 @@ LANDED_PRICE_KEYS = (
     "price_with_shipping",
     "total_with_shipping",
 )
-PRICE_SUMMARY_KEYS = ("price_min", "min_price", "minimum_price", "lowest_price", "lowestprice", "low_price", "lowprice", "best_price")
-ORIGINAL_PRICE_KEYS = ("original_price", "originalprice", "old_price", "oldprice", "initial_price", "list_price", "retail_price")
-SELLER_KEYS = ("seller", "seller_name", "sellername", "shop", "shop_name", "shopname", "store", "store_name", "storename", "merchant")
+PRICE_SUMMARY_KEYS = (
+    "price_min",
+    "min_price",
+    "minimum_price",
+    "lowest_price",
+    "lowestprice",
+    "low_price",
+    "lowprice",
+    "best_price",
+)
+ORIGINAL_PRICE_KEYS = (
+    "original_price",
+    "originalprice",
+    "old_price",
+    "oldprice",
+    "initial_price",
+    "list_price",
+    "retail_price",
+)
+SELLER_KEYS = (
+    "seller",
+    "seller_name",
+    "sellername",
+    "shop",
+    "shop_name",
+    "shopname",
+    "store",
+    "store_name",
+    "storename",
+    "merchant",
+)
 AVAILABILITY_KEYS = (
     "availability",
     "availability_label",
@@ -38,7 +78,15 @@ AVAILABILITY_KEYS = (
     "stock_status",
     "stockstatus",
 )
-SHIPPING_KEYS = ("shipping", "shipping_cost", "shippingcost", "delivery_cost", "deliverycost", "shipping_price", "shippingprice")
+SHIPPING_KEYS = (
+    "shipping",
+    "shipping_cost",
+    "shippingcost",
+    "delivery_cost",
+    "deliverycost",
+    "shipping_price",
+    "shippingprice",
+)
 DELIVERY_KEYS = (
     "delivery",
     "delivery_text",
@@ -52,7 +100,9 @@ DELIVERY_KEYS = (
 SELLER_URL_KEYS = ("seller_url", "shop_url", "url", "path", "web_uri", "relative_url")
 
 
-def parse_electronet_html(html: str, *, page_url: str) -> tuple[ParsedPriceObservation, list[str]]:
+def parse_electronet_html(
+    html: str, *, page_url: str
+) -> tuple[ParsedPriceObservation, list[str]]:
     flags: list[str] = []
     structured = _extract_product_structured_data(html)
     title = _first_text_from_keys(structured, ("name", "title")) or _first_match(
@@ -102,12 +152,20 @@ def parse_electronet_html(html: str, *, page_url: str) -> tuple[ParsedPriceObser
     return observation, flags
 
 
-def parse_bestprice_html(html: str, *, page_url: str) -> tuple[ParsedPriceObservation, list[str]]:
+def parse_bestprice_html(
+    html: str, *, page_url: str
+) -> tuple[ParsedPriceObservation, list[str]]:
     flags: list[str] = []
     structured = _extract_product_structured_data(html)
     page_data = _extract_bestprice_page_data(html)
-    page_payload = page_data.get("PAGE") if isinstance(page_data.get("PAGE"), dict) else {}
-    best_price_data = page_payload.get("bestPrice") if isinstance(page_payload.get("bestPrice"), dict) else {}
+    page_payload = (
+        page_data.get("PAGE") if isinstance(page_data.get("PAGE"), dict) else {}
+    )
+    best_price_data = (
+        page_payload.get("bestPrice")
+        if isinstance(page_payload.get("bestPrice"), dict)
+        else {}
+    )
     offers = _nested_dict(structured, ("offers",))
     title = _first_text_from_keys(structured, ("name", "title")) or _first_match(
         html,
@@ -120,7 +178,10 @@ def parse_bestprice_html(html: str, *, page_url: str) -> tuple[ParsedPriceObserv
     price = (
         _bestprice_cents_to_decimal(best_price_data.get("price"))
         or _first_decimal_from_keys(offers, PRICE_SUMMARY_KEYS + PRICE_KEYS)
-        or _first_decimal_from_keys(structured, tuple(f"offers_{key}" for key in PRICE_SUMMARY_KEYS + PRICE_KEYS))
+        or _first_decimal_from_keys(
+            structured,
+            tuple(f"offers_{key}" for key in PRICE_SUMMARY_KEYS + PRICE_KEYS),
+        )
         or _first_decimal(
             _first_match(
                 html,
@@ -134,21 +195,28 @@ def parse_bestprice_html(html: str, *, page_url: str) -> tuple[ParsedPriceObserv
         )
     )
     merchant = _clean_html_text(best_price_data.get("merchant"))
-    merchant_link = _absolute_bestprice_url(_clean_html_text(best_price_data.get("link")))
+    merchant_link = _absolute_bestprice_url(
+        _clean_html_text(best_price_data.get("link"))
+    )
     if price is None:
         flags.append("PRICE_MISSING")
     if not merchant:
         flags.append("MERCHANT_MISSING")
     availability = _normalize_availability(
-        _first_text_from_keys(offers, AVAILABILITY_KEYS) or _first_text_from_keys(structured, ("offers_availability", "availability"))
+        _first_text_from_keys(offers, AVAILABILITY_KEYS)
+        or _first_text_from_keys(structured, ("offers_availability", "availability"))
     )
-    offer_count = _first_text_from_keys(offers, ("offer_count", "offercount")) or _first_text_from_keys(
+    offer_count = _first_text_from_keys(
+        offers, ("offer_count", "offercount")
+    ) or _first_text_from_keys(
         structured,
         ("offers_offercount", "offercount"),
     )
     observation = ParsedPriceObservation(
         price=price,
-        currency=_first_text_from_keys(offers, ("price_currency", "pricecurrency", "currency"))
+        currency=_first_text_from_keys(
+            offers, ("price_currency", "pricecurrency", "currency")
+        )
         or _first_text_from_keys(structured, ("offers_pricecurrency", "currency"))
         or "EUR",
         availability=availability,
@@ -171,17 +239,27 @@ def parse_bestprice_html(html: str, *, page_url: str) -> tuple[ParsedPriceObserv
     return observation, flags
 
 
-def parse_bestprice_offers(html: str, *, page_url: str) -> tuple[list[ParsedOfferObservation], list[str]]:
+def parse_bestprice_offers(
+    html: str, *, page_url: str
+) -> tuple[list[ParsedOfferObservation], list[str]]:
     del page_url
     offers: list[ParsedOfferObservation] = []
-    for group_index, (group_start, group_tag) in enumerate(_tag_spans_with_class(html, "prices__group")):
+    for group_index, (group_start, group_tag) in enumerate(
+        _tag_spans_with_class(html, "prices__group")
+    ):
         group_attrs = _html_attrs(group_tag)
-        group_end = _next_tag_with_class_start(html, "prices__group", group_start + len(group_tag))
-        group_html = html[group_start : group_end if group_end is not None else len(html)]
+        group_end = _next_tag_with_class_start(
+            html, "prices__group", group_start + len(group_tag)
+        )
+        group_html = html[
+            group_start : group_end if group_end is not None else len(html)
+        ]
         group_rank = _int_text(group_attrs.get("data-id")) or group_index + 1
         group_price = _bestprice_cents_to_decimal(group_attrs.get("data-price"))
         seller_name = _bestprice_group_seller_name(group_html)
-        seller_url = _absolute_bestprice_url(_first_match(group_html, (r"href=[\"']([^\"']*/to/[^\"']+)[\"']",)))
+        seller_url = _absolute_bestprice_url(
+            _first_match(group_html, (r"href=[\"']([^\"']*/to/[^\"']+)[\"']",))
+        )
 
         product_tag_spans = list(_tag_spans_with_class(group_html, "prices__product"))
         if not product_tag_spans:
@@ -190,38 +268,64 @@ def parse_bestprice_offers(html: str, *, page_url: str) -> tuple[list[ParsedOffe
                 seller_url=seller_url,
                 price=group_price,
                 rank=group_rank,
-                raw={"parser": "bestprice_html_v1", "rank": group_rank, "group": _bestprice_raw_attrs(group_attrs)},
+                raw={
+                    "parser": "bestprice_html_v1",
+                    "rank": group_rank,
+                    "group": _bestprice_raw_attrs(group_attrs),
+                },
             )
             if offer is not None:
                 offers.append(offer)
             continue
 
-        for product_index, (product_start, product_tag) in enumerate(product_tag_spans, start=1):
+        for product_index, (product_start, product_tag) in enumerate(
+            product_tag_spans, start=1
+        ):
             product_attrs = _html_attrs(product_tag)
-            product_end = _next_tag_with_class_start(group_html, "prices__product", product_start + len(product_tag))
-            product_html = group_html[product_start : product_end if product_end is not None else len(group_html)]
+            product_end = _next_tag_with_class_start(
+                group_html, "prices__product", product_start + len(product_tag)
+            )
+            product_html = group_html[
+                product_start : (
+                    product_end if product_end is not None else len(group_html)
+                )
+            ]
             product_link_attrs = _bestprice_product_link_attrs(product_html)
-            product_url = _absolute_bestprice_url(product_link_attrs.get("href")) or seller_url
-            product_price = _bestprice_cents_to_decimal(product_attrs.get("data-price")) or _bestprice_cents_to_decimal(
-                product_link_attrs.get("data-price")
-            ) or group_price
-            original_price = _bestprice_cents_to_decimal(product_attrs.get("data-original-price")) or _bestprice_cents_to_decimal(
+            product_url = (
+                _absolute_bestprice_url(product_link_attrs.get("href")) or seller_url
+            )
+            product_price = (
+                _bestprice_cents_to_decimal(product_attrs.get("data-price"))
+                or _bestprice_cents_to_decimal(product_link_attrs.get("data-price"))
+                or group_price
+            )
+            original_price = _bestprice_cents_to_decimal(
+                product_attrs.get("data-original-price")
+            ) or _bestprice_cents_to_decimal(
                 product_link_attrs.get("data-original-price")
             )
-            product_title = _clean_html_text(product_link_attrs.get("title")) or _clean_html_text(
-                _first_match(product_html, (r"<h3[^>]*>(.*?)</h3>",))
-            )
+            product_title = _clean_html_text(
+                product_link_attrs.get("title")
+            ) or _clean_html_text(_first_match(product_html, (r"<h3[^>]*>(.*?)</h3>",)))
             availability = _bestprice_availability(product_html, product_attrs)
-            shipping_cost = _bestprice_cents_to_decimal_allow_zero(product_attrs.get("data-shipping-cost"))
-            landed_price, landed_price_source, landed_field = _bestprice_landed_price(product_price, shipping_cost, product_attrs, product_link_attrs)
+            shipping_cost = _bestprice_cents_to_decimal_allow_zero(
+                product_attrs.get("data-shipping-cost")
+            )
+            landed_price, landed_price_source, landed_field = _bestprice_landed_price(
+                product_price, shipping_cost, product_attrs, product_link_attrs
+            )
             raw = {
                 "parser": "bestprice_html_v1",
                 "rank": group_rank,
                 "product_index": product_index,
                 "product_title": product_title,
                 "item_price": str(product_price) if product_price is not None else None,
-                "original_price": str(original_price) if original_price is not None else None,
-                "shipping_cost": str(shipping_cost) if shipping_cost is not None else None,
+                "original_price": (
+                    str(original_price) if original_price is not None else None
+                ),
+                "shipping_cost": (
+                    str(shipping_cost) if shipping_cost is not None else None
+                ),
                 "landed_price": str(landed_price) if landed_price is not None else None,
                 "landed_price_source": landed_price_source,
                 "landed_price_field": landed_field,
@@ -245,7 +349,9 @@ def parse_bestprice_offers(html: str, *, page_url: str) -> tuple[list[ParsedOffe
     return offers, flags
 
 
-def parse_skroutz_offers(payload: Any, *, shops_payload: Any = None) -> tuple[list[ParsedOfferObservation], list[str]]:
+def parse_skroutz_offers(
+    payload: Any, *, shops_payload: Any = None
+) -> tuple[list[ParsedOfferObservation], list[str]]:
     data = _json_payload(payload)
     shops = _skroutz_shop_details_by_id(_json_payload(shops_payload))
     offers = _parse_skroutz_product_cards(data, shops)
@@ -256,8 +362,12 @@ def parse_skroutz_offers(payload: Any, *, shops_payload: Any = None) -> tuple[li
     for node in _walk_json(data):
         if not isinstance(node, dict):
             continue
-        price = _first_decimal_from_keys(node, PRICE_KEYS) or _first_decimal_from_keys(_nested_dict(node, ("price", "pricing")), PRICE_KEYS)
-        seller = _first_text_from_keys(node, SELLER_KEYS) or _first_text_from_keys(_nested_dict(node, ("seller", "shop", "store")), ("name", "title"))
+        price = _first_decimal_from_keys(node, PRICE_KEYS) or _first_decimal_from_keys(
+            _nested_dict(node, ("price", "pricing")), PRICE_KEYS
+        )
+        seller = _first_text_from_keys(node, SELLER_KEYS) or _first_text_from_keys(
+            _nested_dict(node, ("seller", "shop", "store")), ("name", "title")
+        )
         if price is None or not seller:
             continue
         offers.append(
@@ -269,10 +379,18 @@ def parse_skroutz_offers(payload: Any, *, shops_payload: Any = None) -> tuple[li
                 availability=_first_text_from_keys(node, AVAILABILITY_KEYS),
                 stock_status=_first_text_from_keys(node, AVAILABILITY_KEYS),
                 shipping_cost=_first_decimal_from_keys(node, SHIPPING_KEYS)
-                or _first_decimal_from_keys(_nested_dict(node, ("shipping", "delivery")), SHIPPING_KEYS + PRICE_KEYS),
+                or _first_decimal_from_keys(
+                    _nested_dict(node, ("shipping", "delivery")),
+                    SHIPPING_KEYS + PRICE_KEYS,
+                ),
                 delivery_text=_first_text_from_keys(node, DELIVERY_KEYS)
-                or _first_text_from_keys(_nested_dict(node, ("shipping", "delivery")), DELIVERY_KEYS + ("text", "title", "description")),
-                seller_url=_absolute_skroutz_url(_first_text_from_keys(node, SELLER_URL_KEYS)),
+                or _first_text_from_keys(
+                    _nested_dict(node, ("shipping", "delivery")),
+                    DELIVERY_KEYS + ("text", "title", "description"),
+                ),
+                seller_url=_absolute_skroutz_url(
+                    _first_text_from_keys(node, SELLER_URL_KEYS)
+                ),
                 raw_observation=node,
             )
         )
@@ -280,7 +398,9 @@ def parse_skroutz_offers(payload: Any, *, shops_payload: Any = None) -> tuple[li
     return offers, flags
 
 
-def parse_skroutz_price_summary(payload: Any, *, page_url: str) -> tuple[ParsedPriceObservation | None, list[str]]:
+def parse_skroutz_price_summary(
+    payload: Any, *, page_url: str
+) -> tuple[ParsedPriceObservation | None, list[str]]:
     data = _json_payload(payload)
     for node in _walk_json(data):
         if not isinstance(node, dict):
@@ -295,7 +415,9 @@ def parse_skroutz_price_summary(payload: Any, *, page_url: str) -> tuple[ParsedP
                 currency=_first_text_from_keys(node, ("currency",)) or "EUR",
                 availability=availability,
                 stock_status=availability,
-                product_name=_first_text_from_keys(node, ("name", "title", "product_name", "productname")),
+                product_name=_first_text_from_keys(
+                    node, ("name", "title", "product_name", "productname")
+                ),
                 raw_observation={
                     "page_url": page_url,
                     "parser": "skroutz_json_summary_v1",
@@ -324,7 +446,11 @@ def parse_skroutz_firecrawl_content(
     for payload in _json_ld_payloads(content):
         offers, offer_flags = parse_skroutz_offers(payload)
         if offers:
-            return _firecrawl_offers(offers, source="firecrawl_json_ld"), None, [flag for flag in offer_flags if flag not in flags]
+            return (
+                _firecrawl_offers(offers, source="firecrawl_json_ld"),
+                None,
+                [flag for flag in offer_flags if flag not in flags],
+            )
         flags.extend(flag for flag in offer_flags if flag not in flags)
 
     table_offers = _parse_skroutz_firecrawl_tables(content, page_url=page_url)
@@ -335,14 +461,20 @@ def parse_skroutz_firecrawl_content(
     if line_offers:
         return line_offers, None, []
 
-    price_observation, price_flags = parse_skroutz_price_summary(data, page_url=page_url)
+    price_observation, price_flags = parse_skroutz_price_summary(
+        data, page_url=page_url
+    )
     if price_observation is None:
         for payload in _json_ld_payloads(content):
-            price_observation, price_flags = parse_skroutz_price_summary(payload, page_url=page_url)
+            price_observation, price_flags = parse_skroutz_price_summary(
+                payload, page_url=page_url
+            )
             if price_observation is not None:
                 break
     if price_observation is None:
-        price_observation = _parse_skroutz_firecrawl_price_summary(content, page_url=page_url)
+        price_observation = _parse_skroutz_firecrawl_price_summary(
+            content, page_url=page_url
+        )
         price_flags = [] if price_observation is not None else price_flags
     if price_observation is not None:
         price_observation = replace(
@@ -358,10 +490,16 @@ def parse_skroutz_firecrawl_content(
         return [], price_observation, list(dict.fromkeys(flags))
 
     flags.extend(flag for flag in price_flags if flag not in flags)
-    return [], None, list(dict.fromkeys(flags or ["NO_OFFER_OBSERVATIONS_PARSED", "PRICE_MISSING"]))
+    return (
+        [],
+        None,
+        list(dict.fromkeys(flags or ["NO_OFFER_OBSERVATIONS_PARSED", "PRICE_MISSING"])),
+    )
 
 
-def _parse_skroutz_firecrawl_tables(content: str, *, page_url: str) -> list[ParsedOfferObservation]:
+def _parse_skroutz_firecrawl_tables(
+    content: str, *, page_url: str
+) -> list[ParsedOfferObservation]:
     offers: list[ParsedOfferObservation] = []
     headers: list[str] = []
     for line in (content or "").splitlines():
@@ -369,7 +507,9 @@ def _parse_skroutz_firecrawl_tables(content: str, *, page_url: str) -> list[Pars
             if line.strip():
                 headers = []
             continue
-        cells = [_clean_html_text(cell) or "" for cell in line.strip().strip("|").split("|")]
+        cells = [
+            _clean_html_text(cell) or "" for cell in line.strip().strip("|").split("|")
+        ]
         if not cells or all(set(cell) <= {"-", ":", " "} for cell in cells):
             continue
         if not any(_first_decimal(cell) for cell in cells):
@@ -378,10 +518,21 @@ def _parse_skroutz_firecrawl_tables(content: str, *, page_url: str) -> list[Pars
         if "€" not in line and not headers:
             continue
 
-        seller_index = _first_header_index(headers, ("store", "shop", "seller", "merchant", "καταστημα", "πωλητης")) or 0
-        price_index = _first_header_index(headers, ("item_price", "price", "τιμη")) or _first_price_cell_index(cells)
-        shipping_index = _first_header_index(headers, ("shipping", "shipping_cost", "μεταφορικα", "αποστολη"))
-        landed_index = _first_header_index(headers, ("landed", "total", "final", "συνολο", "τελικη"))
+        seller_index = (
+            _first_header_index(
+                headers, ("store", "shop", "seller", "merchant", "καταστημα", "πωλητης")
+            )
+            or 0
+        )
+        price_index = _first_header_index(
+            headers, ("item_price", "price", "τιμη")
+        ) or _first_price_cell_index(cells)
+        shipping_index = _first_header_index(
+            headers, ("shipping", "shipping_cost", "μεταφορικα", "αποστολη")
+        )
+        landed_index = _first_header_index(
+            headers, ("landed", "total", "final", "συνολο", "τελικη")
+        )
         if price_index is None:
             continue
 
@@ -389,14 +540,29 @@ def _parse_skroutz_firecrawl_tables(content: str, *, page_url: str) -> list[Pars
         price = _first_decimal(cells[price_index])
         if price is None:
             continue
-        shipping = _first_decimal(cells[shipping_index]) if shipping_index is not None and shipping_index < len(cells) else None
-        landed = _first_decimal(cells[landed_index]) if landed_index is not None and landed_index < len(cells) else None
-        landed_source = "explicit" if landed is not None else "computed" if price is not None and shipping is not None else "missing"
+        shipping = (
+            _first_decimal(cells[shipping_index])
+            if shipping_index is not None and shipping_index < len(cells)
+            else None
+        )
+        landed = (
+            _first_decimal(cells[landed_index])
+            if landed_index is not None and landed_index < len(cells)
+            else None
+        )
+        landed_source = (
+            "explicit"
+            if landed is not None
+            else "computed" if price is not None and shipping is not None else "missing"
+        )
         if landed is None and shipping is not None:
             landed = (price + shipping).quantize(Decimal("0.01"))
 
         seller_name = _markdown_link_text(seller_cell) or seller_cell
-        seller_url = _absolute_skroutz_url(_markdown_link_url(seller_cell) or _first_match(seller_cell, (r"href=[\"']([^\"']+)[\"']",)))
+        seller_url = _absolute_skroutz_url(
+            _markdown_link_url(seller_cell)
+            or _first_match(seller_cell, (r"href=[\"']([^\"']+)[\"']",))
+        )
         offers.append(
             ParsedOfferObservation(
                 seller_name=_clean_html_text(seller_name),
@@ -418,7 +584,9 @@ def _parse_skroutz_firecrawl_tables(content: str, *, page_url: str) -> list[Pars
     return offers
 
 
-def _firecrawl_offers(offers: list[ParsedOfferObservation], *, source: str) -> list[ParsedOfferObservation]:
+def _firecrawl_offers(
+    offers: list[ParsedOfferObservation], *, source: str
+) -> list[ParsedOfferObservation]:
     return [
         replace(
             offer,
@@ -432,7 +600,9 @@ def _firecrawl_offers(offers: list[ParsedOfferObservation], *, source: str) -> l
     ]
 
 
-def _parse_skroutz_firecrawl_lines(content: str, *, page_url: str) -> list[ParsedOfferObservation]:
+def _parse_skroutz_firecrawl_lines(
+    content: str, *, page_url: str
+) -> list[ParsedOfferObservation]:
     offers: list[ParsedOfferObservation] = []
     for line in (content or "").splitlines():
         text = _clean_html_text(line)
@@ -450,8 +620,19 @@ def _parse_skroutz_firecrawl_lines(content: str, *, page_url: str) -> list[Parse
         if not seller or price is None:
             continue
         after_price = text[match.end() :]
-        shipping = _first_decimal(_first_match(after_price, (r"(?:shipping|μεταφορικά|μεταφορικα|αποστολή|αποστολη)[^\d]{0,20}([0-9]+(?:[.,][0-9]{1,2})?)",)))
-        landed = (price + shipping).quantize(Decimal("0.01")) if shipping is not None else None
+        shipping = _first_decimal(
+            _first_match(
+                after_price,
+                (
+                    r"(?:shipping|μεταφορικά|μεταφορικα|αποστολή|αποστολη)[^\d]{0,20}([0-9]+(?:[.,][0-9]{1,2})?)",
+                ),
+            )
+        )
+        landed = (
+            (price + shipping).quantize(Decimal("0.01"))
+            if shipping is not None
+            else None
+        )
         offers.append(
             ParsedOfferObservation(
                 seller_name=seller,
@@ -466,18 +647,27 @@ def _parse_skroutz_firecrawl_lines(content: str, *, page_url: str) -> list[Parse
                     "source": "firecrawl_line",
                     "line": text,
                     "landed_price": str(landed) if landed is not None else None,
-                    "landed_price_source": "computed" if landed is not None else "missing",
+                    "landed_price_source": (
+                        "computed" if landed is not None else "missing"
+                    ),
                 },
             )
         )
     return offers
 
 
-def _parse_skroutz_firecrawl_price_summary(content: str, *, page_url: str) -> ParsedPriceObservation | None:
+def _parse_skroutz_firecrawl_price_summary(
+    content: str, *, page_url: str
+) -> ParsedPriceObservation | None:
     text = _clean_html_text(content)
     if not text:
         return None
-    price = _first_decimal(_first_match(text, (r"(?:από|from|lowest|τιμή)[^\d]{0,40}([0-9]+(?:[.,][0-9]{1,2})?)\s*€",)))
+    price = _first_decimal(
+        _first_match(
+            text,
+            (r"(?:από|from|lowest|τιμή)[^\d]{0,40}([0-9]+(?:[.,][0-9]{1,2})?)\s*€",),
+        )
+    )
     if price is None:
         return None
     return ParsedPriceObservation(
@@ -513,29 +703,41 @@ def _markdown_link_url(value: str) -> str | None:
     return _first_match(value, (r"\[[^\]]+\]\(([^)]+)\)",))
 
 
-def _parse_skroutz_product_cards(data: Any, shops: dict[str, dict[str, Any]]) -> list[ParsedOfferObservation]:
+def _parse_skroutz_product_cards(
+    data: Any, shops: dict[str, dict[str, Any]]
+) -> list[ParsedOfferObservation]:
     if not isinstance(data, dict) or not isinstance(data.get("product_cards"), list):
         return []
     offers: list[ParsedOfferObservation] = []
     for card in data["product_cards"]:
         if not isinstance(card, dict):
             continue
-        price = _first_decimal_from_keys(card, PRICE_KEYS) or _first_decimal_from_keys(_nested_dict(card, ("pricing", "price")), PRICE_KEYS)
+        price = _first_decimal_from_keys(card, PRICE_KEYS) or _first_decimal_from_keys(
+            _nested_dict(card, ("pricing", "price")), PRICE_KEYS
+        )
         if price is None:
             continue
         shop_id = _shop_id(card)
         shop = shops.get(shop_id or "", {})
         seller = (
             _first_text_from_keys(card, SELLER_KEYS)
-            or _first_text_from_keys(_nested_dict(card, ("seller", "shop", "store")), ("name", "title"))
-            or _first_text_from_keys(shop, ("name", "title", "shop_name", "display_name"))
+            or _first_text_from_keys(
+                _nested_dict(card, ("seller", "shop", "store")), ("name", "title")
+            )
+            or _first_text_from_keys(
+                shop, ("name", "title", "shop_name", "display_name")
+            )
         )
         seller_url = _absolute_skroutz_url(
             _first_text_from_keys(card, SELLER_URL_KEYS)
-            or _first_text_from_keys(_nested_dict(card, ("seller", "shop", "store")), SELLER_URL_KEYS)
+            or _first_text_from_keys(
+                _nested_dict(card, ("seller", "shop", "store")), SELLER_URL_KEYS
+            )
             or _first_text_from_keys(shop, SELLER_URL_KEYS)
         )
-        availability = _first_text_from_keys(card, AVAILABILITY_KEYS) or _first_text_from_keys(
+        availability = _first_text_from_keys(
+            card, AVAILABILITY_KEYS
+        ) or _first_text_from_keys(
             _nested_dict(card, ("availability", "stock")),
             AVAILABILITY_KEYS + ("text", "title", "label"),
         )
@@ -546,14 +748,18 @@ def _parse_skroutz_product_cards(data: Any, shops: dict[str, dict[str, Any]]) ->
                 seller_name=seller,
                 seller_url=seller_url,
                 price=price,
-                original_price=_first_decimal_from_keys(card, ORIGINAL_PRICE_KEYS) or _first_decimal_from_keys(pricing_node, ORIGINAL_PRICE_KEYS),
+                original_price=_first_decimal_from_keys(card, ORIGINAL_PRICE_KEYS)
+                or _first_decimal_from_keys(pricing_node, ORIGINAL_PRICE_KEYS),
                 currency=_first_text_from_keys(card, ("currency",)) or "EUR",
                 availability=availability,
                 stock_status=availability,
                 shipping_cost=_first_decimal_from_keys(card, SHIPPING_KEYS)
                 or _first_decimal_from_keys(shipping_node, SHIPPING_KEYS + PRICE_KEYS),
                 delivery_text=_first_text_from_keys(card, DELIVERY_KEYS)
-                or _first_text_from_keys(shipping_node, DELIVERY_KEYS + ("text", "title", "description", "label")),
+                or _first_text_from_keys(
+                    shipping_node,
+                    DELIVERY_KEYS + ("text", "title", "description", "label"),
+                ),
                 raw_observation={
                     "parser": "skroutz_json_offer_v1",
                     "shop_id": shop_id,
@@ -637,30 +843,52 @@ def _bestprice_offer_from_values(
 def _bestprice_group_seller_name(group_html: str) -> str | None:
     for class_name in ("prices__merchant-logo", "prices__merchant-link"):
         attrs = _first_attrs_with_class(group_html, class_name)
-        seller = _clean_html_text(attrs.get("aria-label") or attrs.get("title") or attrs.get("alt"))
+        seller = _clean_html_text(
+            attrs.get("aria-label") or attrs.get("title") or attrs.get("alt")
+        )
         if seller:
             return seller
-    seller = _first_match(group_html, (r"<em[^>]*>(.*?)</em>", r"<img[^>]+(?:alt|title)=[\"']([^\"']+)[\"'][^>]*>"))
+    seller = _first_match(
+        group_html,
+        (r"<em[^>]*>(.*?)</em>", r"<img[^>]+(?:alt|title)=[\"']([^\"']+)[\"'][^>]*>"),
+    )
     return _clean_html_text(seller)
 
 
 def _bestprice_product_link_attrs(product_html: str) -> dict[str, str]:
-    to_link_match = re.search(r"<a\b(?=[^>]+href=[\"'][^\"']*/to/[^\"']+[\"'])[^>]*>", product_html or "", flags=re.IGNORECASE | re.DOTALL)
+    to_link_match = re.search(
+        r"<a\b(?=[^>]+href=[\"'][^\"']*/to/[^\"']+[\"'])[^>]*>",
+        product_html or "",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     if to_link_match:
         return _html_attrs(to_link_match.group(0))
-    price_link_match = re.search(r"<a\b(?=[^>]+data-price=)[^>]*>", product_html or "", flags=re.IGNORECASE | re.DOTALL)
+    price_link_match = re.search(
+        r"<a\b(?=[^>]+data-price=)[^>]*>",
+        product_html or "",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     if price_link_match:
         return _html_attrs(price_link_match.group(0))
     return {}
 
 
-def _bestprice_availability(product_html: str, product_attrs: dict[str, str]) -> str | None:
+def _bestprice_availability(
+    product_html: str, product_attrs: dict[str, str]
+) -> str | None:
     if "data-in-stock" in product_attrs:
         return "in_stock"
     status = _first_match(product_html, (r"data-status=[\"']([^\"']+)[\"']",))
     if status:
         return _normalize_availability(status)
-    return _clean_html_text(_first_match(product_html, (r"class=[\"'][^\"']*\bav\b[^\"']*[\"'][^>]*>.*?<small[^>]*>(.*?)</small>",)))
+    return _clean_html_text(
+        _first_match(
+            product_html,
+            (
+                r"class=[\"'][^\"']*\bav\b[^\"']*[\"'][^>]*>.*?<small[^>]*>(.*?)</small>",
+            ),
+        )
+    )
 
 
 def _bestprice_raw_attrs(attrs: dict[str, str]) -> dict[str, str]:
@@ -679,7 +907,9 @@ def _bestprice_raw_attrs(attrs: dict[str, str]) -> dict[str, str]:
         "data-product-id",
         "data-av",
     }
-    return {key: value for key, value in attrs.items() if key in allowed and value != ""}
+    return {
+        key: value for key, value in attrs.items() if key in allowed and value != ""
+    }
 
 
 def _bestprice_landed_price(
@@ -751,12 +981,20 @@ def _extract_product_structured_data(html: str) -> dict[str, Any]:
             if not isinstance(node, dict):
                 continue
             type_value = node.get("@type") or node.get("type")
-            type_values = [str(item).lower() for item in type_value] if isinstance(type_value, list) else [str(type_value).lower()]
-            if "product" in type_values or any(key in node for key in ("offers", "price", "sku", "mpn")):
+            type_values = (
+                [str(item).lower() for item in type_value]
+                if isinstance(type_value, list)
+                else [str(type_value).lower()]
+            )
+            if "product" in type_values or any(
+                key in node for key in ("offers", "price", "sku", "mpn")
+            ):
                 flattened = dict(node)
                 offers = node.get("offers")
                 if isinstance(offers, dict):
-                    flattened.update({f"offers_{key}": value for key, value in offers.items()})
+                    flattened.update(
+                        {f"offers_{key}": value for key, value in offers.items()}
+                    )
                     for key, value in offers.items():
                         flattened.setdefault(key, value)
                 return flattened
@@ -805,7 +1043,9 @@ def _nested_dict(node: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
     return {}
 
 
-def _first_decimal_from_keys(node: dict[str, Any], keys: tuple[str, ...]) -> Decimal | None:
+def _first_decimal_from_keys(
+    node: dict[str, Any], keys: tuple[str, ...]
+) -> Decimal | None:
     normalized = {_normalize_key(key): value for key, value in node.items()}
     for key in keys:
         value = normalized.get(_normalize_key(key))
@@ -848,7 +1088,9 @@ def _tags_with_class(html: str, class_name: str) -> Iterable[str]:
 
 
 def _tag_spans_with_class(html: str, class_name: str) -> Iterable[tuple[int, str]]:
-    for match in re.finditer(r"<[a-z0-9]+\b[^>]*>", html or "", flags=re.IGNORECASE | re.DOTALL):
+    for match in re.finditer(
+        r"<[a-z0-9]+\b[^>]*>", html or "", flags=re.IGNORECASE | re.DOTALL
+    ):
         tag = match.group(0)
         attrs = _html_attrs(tag)
         classes = set((attrs.get("class") or "").split())
@@ -857,7 +1099,9 @@ def _tag_spans_with_class(html: str, class_name: str) -> Iterable[tuple[int, str
 
 
 def _next_tag_with_class_start(html: str, class_name: str, start: int) -> int | None:
-    for match in re.finditer(r"<[a-z0-9]+\b[^>]*>", html[start:] or "", flags=re.IGNORECASE | re.DOTALL):
+    for match in re.finditer(
+        r"<[a-z0-9]+\b[^>]*>", html[start:] or "", flags=re.IGNORECASE | re.DOTALL
+    ):
         tag = match.group(0)
         attrs = _html_attrs(tag)
         if class_name in set((attrs.get("class") or "").split()):
@@ -872,7 +1116,11 @@ def _first_attrs_with_class(html: str, class_name: str) -> dict[str, str]:
 
 
 def _html_attrs(tag: str) -> dict[str, str]:
-    match = re.match(r"<\s*[a-z0-9]+\b(?P<attrs>.*?)/?\s*>$", tag or "", flags=re.IGNORECASE | re.DOTALL)
+    match = re.match(
+        r"<\s*[a-z0-9]+\b(?P<attrs>.*?)/?\s*>$",
+        tag or "",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
     if not match:
         return {}
     attrs: dict[str, str] = {}

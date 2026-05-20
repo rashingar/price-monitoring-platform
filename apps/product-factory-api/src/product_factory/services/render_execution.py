@@ -19,9 +19,18 @@ from ..presentation_sections import normalize_presentation_sections
 from ..repo_paths import REPO_ROOT, category_filter_review_path
 from ..utils import ensure_directory, read_json, utcnow_iso, write_json, write_text
 from ..validator import validate_candidate_csv, write_validation_report
-from .execution_models import PreparedProductContext, RenderExecutionResult, RenderExecutionValidationReport
+from .execution_models import (
+    PreparedProductContext,
+    RenderExecutionResult,
+    RenderExecutionValidationReport,
+)
 from .errors import ServiceErrorCode, service_error_from_exception
-from .llm_stage_execution import IntroTextResolver, SeoMetaResolver, SplitLLMStageResult, execute_split_llm_stage
+from .llm_stage_execution import (
+    IntroTextResolver,
+    SeoMetaResolver,
+    SplitLLMStageResult,
+    execute_split_llm_stage,
+)
 from .metadata import maybe_write_run_metadata
 from .models import RunArtifacts, RunStatus, RunType
 from .settings_service import get_intro_text_policy
@@ -92,7 +101,9 @@ def execute_render_workflow(
             resolve_seo_meta_fn=resolve_seo_meta_fn,
             intro_policy=intro_policy,
         )
-        llm_errors = _build_llm_validation_backstop_errors(split_llm_result, intro_policy=intro_policy)
+        llm_errors = _build_llm_validation_backstop_errors(
+            split_llm_result, intro_policy=intro_policy
+        )
         llm_mode = "split_tasks"
         llm_artifact_paths = split_llm_result.artifact_paths
 
@@ -131,7 +142,9 @@ def execute_render_workflow(
         candidate_normalized["csv_ordered_row"] = ordered_row
         candidate_normalized["mapping_warnings"] = mapping_warnings
         candidate_normalized["llm_mode"] = llm_mode
-        candidate_normalized["llm_artifact_paths"] = {key: str(value) for key, value in llm_artifact_paths.items()}
+        candidate_normalized["llm_artifact_paths"] = {
+            key: str(value) for key, value in llm_artifact_paths.items()
+        }
         candidate_normalized["presentation_sections"] = render_sections
         write_json(normalized_candidate_path, candidate_normalized)
         write_text(description_path, row["description"])
@@ -142,11 +155,21 @@ def execute_render_workflow(
             csv_path=candidate_csv_path,
             baseline_path=baseline_path if baseline_path.exists() else None,
             llm_errors=llm_errors,
-            category_filter_errors=list(candidate_normalized.get("category_filters", {}).get("errors", [])),
-            category_filter_warnings=list(candidate_normalized.get("category_filters", {}).get("warnings", [])),
+            category_filter_errors=list(
+                candidate_normalized.get("category_filters", {}).get("errors", [])
+            ),
+            category_filter_warnings=list(
+                candidate_normalized.get("category_filters", {}).get("warnings", [])
+            ),
         )
-        category_filter_warnings = set(candidate_normalized.get("category_filters", {}).get("warnings", []))
-        non_category_mapping_warnings = [warning for warning in mapping_warnings if warning not in category_filter_warnings]
+        category_filter_warnings = set(
+            candidate_normalized.get("category_filters", {}).get("warnings", [])
+        )
+        non_category_mapping_warnings = [
+            warning
+            for warning in mapping_warnings
+            if warning not in category_filter_warnings
+        ]
         if non_category_mapping_warnings:
             validation_report["warnings"].extend(non_category_mapping_warnings)
         if section_warnings:
@@ -178,7 +201,9 @@ def execute_render_workflow(
                 candidate_dir=candidate_dir,
                 source_json_path=source_json,
                 scrape_normalized_json_path=normalized_json,
-                llm_task_manifest_path=task_manifest_json if task_manifest_json.exists() else None,
+                llm_task_manifest_path=(
+                    task_manifest_json if task_manifest_json.exists() else None
+                ),
                 intro_text_output_path=llm_artifact_paths.get("intro_text_output_path"),
                 seo_meta_output_path=llm_artifact_paths.get("seo_meta_output_path"),
                 candidate_csv_path=candidate_csv_path,
@@ -187,19 +212,25 @@ def execute_render_workflow(
                 validation_report_path=validation_report_path,
                 description_html_path=description_path,
                 characteristics_html_path=characteristics_path,
-                category_filter_review_path=review_path if review_path.exists() else None,
+                category_filter_review_path=(
+                    review_path if review_path.exists() else None
+                ),
             ),
             requested_at=requested_at,
             started_at=started_at,
             finished_at=finished_at,
             warnings=run_warnings,
-            error_code=None if validation_ok else ServiceErrorCode.VALIDATION_FAILURE.value,
+            error_code=(
+                None if validation_ok else ServiceErrorCode.VALIDATION_FAILURE.value
+            ),
             error_detail=None if validation_ok else "Candidate validation failed",
             details={
                 "validation_ok": validation_ok,
                 "published": validation_ok,
                 "llm_mode": llm_mode,
-                "intro_text_trace_path": str(llm_artifact_paths["intro_text_trace_path"]),
+                "intro_text_trace_path": str(
+                    llm_artifact_paths["intro_text_trace_path"]
+                ),
             },
         )
 
@@ -212,7 +243,9 @@ def execute_render_workflow(
             validation_report_path=validation_report_path,
             run_status=run_status,
             metadata_path=metadata_path,
-            validation_report=RenderExecutionValidationReport.from_mapping(validation_report),
+            validation_report=RenderExecutionValidationReport.from_mapping(
+                validation_report
+            ),
         )
     except Exception as exc:
         finished_at = utcnow_iso()
@@ -230,8 +263,12 @@ def execute_render_workflow(
                     candidate_dir=candidate_dir,
                     source_json_path=source_json,
                     scrape_normalized_json_path=normalized_json,
-                    llm_task_manifest_path=task_manifest_json if task_manifest_json.exists() else None,
-                    intro_text_output_path=llm_artifact_paths.get("intro_text_output_path"),
+                    llm_task_manifest_path=(
+                        task_manifest_json if task_manifest_json.exists() else None
+                    ),
+                    intro_text_output_path=llm_artifact_paths.get(
+                        "intro_text_output_path"
+                    ),
                     seo_meta_output_path=llm_artifact_paths.get("seo_meta_output_path"),
                     candidate_csv_path=candidate_csv_path,
                     published_csv_path=published_csv_path,
@@ -239,7 +276,9 @@ def execute_render_workflow(
                     validation_report_path=validation_report_path,
                     description_html_path=description_path,
                     characteristics_html_path=characteristics_path,
-                    category_filter_review_path=review_path if review_path.exists() else None,
+                    category_filter_review_path=(
+                        review_path if review_path.exists() else None
+                    ),
                 ),
                 requested_at=requested_at,
                 started_at=started_at,
@@ -293,7 +332,9 @@ def _source_product_from_payload(payload: Mapping[str, Any]) -> SourceProductDat
         installments_text=payload.get("installments_text", ""),
         delivery_text=payload.get("delivery_text", ""),
         pickup_text=payload.get("pickup_text", ""),
-        gallery_images=[GalleryImage(**item) for item in payload.get("gallery_images", [])],
+        gallery_images=[
+            GalleryImage(**item) for item in payload.get("gallery_images", [])
+        ],
         besco_images=[GalleryImage(**item) for item in payload.get("besco_images", [])],
         energy_label_asset_url=payload.get("energy_label_asset_url", ""),
         product_sheet_asset_url=payload.get("product_sheet_asset_url", ""),
@@ -323,17 +364,23 @@ def _source_product_from_payload(payload: Mapping[str, Any]) -> SourceProductDat
     )
 
 
-def _build_llm_validation_backstop_errors(split_llm_result: SplitLLMStageResult, *, intro_policy=None) -> list[str]:
+def _build_llm_validation_backstop_errors(
+    split_llm_result: SplitLLMStageResult, *, intro_policy=None
+) -> list[str]:
     intro_text, intro_errors = validate_intro_text_output(
         split_llm_result.intro_text,
         intro_word_min=getattr(intro_policy, "min_words", INTRO_MIN_WORDS),
         intro_word_max=getattr(intro_policy, "max_words", INTRO_MAX_WORDS),
-        intro_max_emphasized_word_ratio=getattr(intro_policy, "max_emphasized_word_ratio", MAX_EMPHASIZED_WORD_RATIO),
+        intro_max_emphasized_word_ratio=getattr(
+            intro_policy, "max_emphasized_word_ratio", MAX_EMPHASIZED_WORD_RATIO
+        ),
     )
     _, seo_errors = validate_seo_meta_output(
         {
             "product": {
-                "meta_description": split_llm_result.llm_product.get("meta_description", ""),
+                "meta_description": split_llm_result.llm_product.get(
+                    "meta_description", ""
+                ),
                 "meta_keywords": split_llm_result.llm_product.get("meta_keywords", []),
             }
         }
@@ -350,9 +397,13 @@ def _resolve_render_sections(
     if sections_requested <= 0:
         return [], []
     if not extracted_sections:
-        raise ValueError("Missing presentation source sections for requested render sections")
+        raise ValueError(
+            "Missing presentation source sections for requested render sections"
+        )
 
-    normalized_sections = normalize_presentation_sections(extracted_sections, sections_requested=sections_requested)
+    normalized_sections = normalize_presentation_sections(
+        extracted_sections, sections_requested=sections_requested
+    )
     usable_sections = [
         {
             "title": section.title,
@@ -379,16 +430,24 @@ def _resolve_render_sections(
         for section in normalized_sections
         if section.quality == "weak"
     ]
-    missing_count = sum(1 for section in normalized_sections if section.quality == "missing")
+    missing_count = sum(
+        1 for section in normalized_sections if section.quality == "missing"
+    )
     weak_count = sum(1 for section in normalized_sections if section.quality == "weak")
 
     selected_sections = usable_sections[:]
     if len(selected_sections) < sections_requested:
-        selected_sections.extend(weak_sections[: max(sections_requested - len(selected_sections), 0)])
-    selected_sections = sorted(selected_sections, key=lambda section: int(section.get("source_index") or 0))
+        selected_sections.extend(
+            weak_sections[: max(sections_requested - len(selected_sections), 0)]
+        )
+    selected_sections = sorted(
+        selected_sections, key=lambda section: int(section.get("source_index") or 0)
+    )
 
     if not selected_sections:
-        raise ValueError("No usable deterministic presentation sections for requested render sections")
+        raise ValueError(
+            "No usable deterministic presentation sections for requested render sections"
+        )
     warnings: list[str] = []
     if weak_count > 0:
         warnings.append(f"presentation_sections_weak:{weak_count}")

@@ -30,9 +30,27 @@ CAPTURE_STRATEGY = "skroutz_browser_network_diagnostic"
 MAX_BODY_SAMPLE_CHARS = 1000
 MAX_SUMMARY_KEYS = 40
 MAX_PARSE_BYTES = 2_000_000
-SENSITIVE_QUERY_PARAMS = {"token", "csrf", "session", "sig", "signature", "key", "auth", "authorization"}
+SENSITIVE_QUERY_PARAMS = {
+    "token",
+    "csrf",
+    "session",
+    "sig",
+    "signature",
+    "key",
+    "auth",
+    "authorization",
+}
 
-OFFER_KEY_MARKERS = ("price", "offer", "shop", "seller", "availability", "stock", "shipping", "merchant")
+OFFER_KEY_MARKERS = (
+    "price",
+    "offer",
+    "shop",
+    "seller",
+    "availability",
+    "stock",
+    "shipping",
+    "merchant",
+)
 REVIEW_KEY_MARKERS = ("review", "rating", "ratings", "stars", "score")
 RECOMMENDATION_KEY_MARKERS = ("recommend", "recommendation", "similar", "related")
 BLOCKED_MARKERS = (
@@ -76,7 +94,9 @@ class SkroutzNetworkDiagnosticReport:
     timeout_seconds: int
     headed: bool
     derived_endpoints: dict[str, str]
-    captured_responses: list[SkroutzNetworkCapturedResponse] = field(default_factory=list)
+    captured_responses: list[SkroutzNetworkCapturedResponse] = field(
+        default_factory=list
+    )
     observed_filter_products_url: bool = False
     observed_shops_details_url: bool = False
     exact_match_count: int = 0
@@ -94,7 +114,11 @@ def extract_skroutz_product_id(url: str) -> str | None:
     parsed = urlparse(str(url or "").strip())
     segments = [segment for segment in parsed.path.split("/") if segment]
     for index, segment in enumerate(segments):
-        if segment == "s" and index + 1 < len(segments) and segments[index + 1].isdigit():
+        if (
+            segment == "s"
+            and index + 1 < len(segments)
+            and segments[index + 1].isdigit()
+        ):
             return segments[index + 1]
     return None
 
@@ -109,7 +133,9 @@ def derived_skroutz_endpoint_urls(url: str) -> dict[str, str]:
     }
 
 
-def classify_skroutz_network_endpoint(url: str, payload: object | None, body_text: str) -> str:
+def classify_skroutz_network_endpoint(
+    url: str, payload: object | None, body_text: str
+) -> str:
     lowered_url = str(url or "").lower()
     lowered_body = str(body_text or "").lower()
     if _looks_blocked(lowered_body, lowered_url):
@@ -153,7 +179,9 @@ def run_skroutz_network_diagnostic(
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
         from playwright.sync_api import sync_playwright
     except Exception as exc:  # pragma: no cover - environment dependent
-        raise PlaywrightUnavailableError("Playwright is not installed for ecommerce-api.") from exc
+        raise PlaywrightUnavailableError(
+            "Playwright is not installed for ecommerce-api."
+        ) from exc
 
     started = _now()
     safe_timeout_seconds = max(5, min(int(timeout_seconds), 180))
@@ -173,7 +201,9 @@ def run_skroutz_network_diagnostic(
                     resource_type = str(request.resource_type or "")
                     content_type = str(response.headers.get("content-type", ""))
                     response_url = str(response.url or "")
-                    if not _should_capture_response(response_url, content_type, resource_type):
+                    if not _should_capture_response(
+                        response_url, content_type, resource_type
+                    ):
                         return
                     captured.append(_response_summary(response, derived))
                 except Exception:
@@ -206,10 +236,14 @@ def run_skroutz_network_diagnostic(
             captured=captured,
             status="success",
         )
-    except PlaywrightError as exc:  # pragma: no cover - depends on local browser installation
+    except (
+        PlaywrightError
+    ) as exc:  # pragma: no cover - depends on local browser installation
         message = str(exc).strip() or exc.__class__.__name__
         if "Executable doesn't exist" in message or "playwright install" in message:
-            raise PlaywrightUnavailableError("Playwright Chromium is not installed. Run: python -m playwright install chromium") from exc
+            raise PlaywrightUnavailableError(
+                "Playwright Chromium is not installed. Run: python -m playwright install chromium"
+            ) from exc
         return _build_report(
             source_url=source_url,
             started_at=started,
@@ -229,7 +263,9 @@ def run_skroutz_network_diagnostic(
                 pass
 
 
-def _response_summary(response: Any, derived: dict[str, str]) -> SkroutzNetworkCapturedResponse:
+def _response_summary(
+    response: Any, derived: dict[str, str]
+) -> SkroutzNetworkCapturedResponse:
     request = response.request
     method = str(request.method or "")
     resource_type = str(request.resource_type or "")
@@ -237,7 +273,9 @@ def _response_summary(response: Any, derived: dict[str, str]) -> SkroutzNetworkC
     url = sanitize_diagnostic_url(str(response.url or ""))
     body_bytes = response.body()
     body_size = len(body_bytes)
-    body_sample = body_bytes[: MAX_BODY_SAMPLE_CHARS * 4].decode("utf-8", errors="replace")[:MAX_BODY_SAMPLE_CHARS]
+    body_sample = body_bytes[: MAX_BODY_SAMPLE_CHARS * 4].decode(
+        "utf-8", errors="replace"
+    )[:MAX_BODY_SAMPLE_CHARS]
     payload: Any | None = None
     parse_error: str | None = None
     if body_size <= MAX_PARSE_BYTES:
@@ -279,8 +317,12 @@ def _build_report(
     summary: dict[str, int] = {}
     for item in captured:
         summary[item.classification] = summary.get(item.classification, 0) + 1
-    observed_filter = any(item.matched_derived_endpoint == "filter_products" for item in captured)
-    observed_shops = any(item.matched_derived_endpoint == "shops_details" for item in captured)
+    observed_filter = any(
+        item.matched_derived_endpoint == "filter_products" for item in captured
+    )
+    observed_shops = any(
+        item.matched_derived_endpoint == "shops_details" for item in captured
+    )
     candidate, reason = _best_product_candidate(captured, derived)
     return SkroutzNetworkDiagnosticReport(
         source_url=sanitize_diagnostic_url(source_url),
@@ -293,7 +335,9 @@ def _build_report(
         captured_responses=captured,
         observed_filter_products_url=observed_filter,
         observed_shops_details_url=observed_shops,
-        exact_match_count=sum(1 for item in captured if item.matched_derived_endpoint is not None),
+        exact_match_count=sum(
+            1 for item in captured if item.matched_derived_endpoint is not None
+        ),
         product_data_candidate_url=candidate,
         product_data_candidate_reason=reason,
         classifications_summary=dict(sorted(summary.items())),
@@ -302,7 +346,9 @@ def _build_report(
     )
 
 
-def _best_product_candidate(captured: list[SkroutzNetworkCapturedResponse], derived: dict[str, str]) -> tuple[str | None, str | None]:
+def _best_product_candidate(
+    captured: list[SkroutzNetworkCapturedResponse], derived: dict[str, str]
+) -> tuple[str | None, str | None]:
     priority = {
         PRIMARY_CANDIDATE_PRODUCT_OFFERS: 0,
         POSSIBLE_PRODUCT_OR_OFFER_DATA: 1,
@@ -311,12 +357,23 @@ def _best_product_candidate(captured: list[SkroutzNetworkCapturedResponse], deri
     candidates = [item for item in captured if item.classification in priority]
     if not candidates:
         return None, "No product, offer, or shop-detail endpoint was classified."
-    candidates.sort(key=lambda item: (priority[item.classification], item.matched_derived_endpoint is None, -(item.body_size or 0)))
+    candidates.sort(
+        key=lambda item: (
+            priority[item.classification],
+            item.matched_derived_endpoint is None,
+            -(item.body_size or 0),
+        )
+    )
     item = candidates[0]
     reason = item.classification
     if item.matched_derived_endpoint:
-        reason = f"{reason}: exact derived {item.matched_derived_endpoint} endpoint observed"
-    elif item.classification == PRIMARY_CANDIDATE_PRODUCT_OFFERS and item.json_summary.get("has_product_cards"):
+        reason = (
+            f"{reason}: exact derived {item.matched_derived_endpoint} endpoint observed"
+        )
+    elif (
+        item.classification == PRIMARY_CANDIDATE_PRODUCT_OFFERS
+        and item.json_summary.get("has_product_cards")
+    ):
         reason = f"{reason}: browser-observed endpoint has product_cards and differs from derived endpoints"
     elif item.url not in set(derived.values()):
         reason = f"{reason}: browser-observed endpoint differs from currently derived endpoints"
@@ -333,7 +390,9 @@ def _trigger_lazy_requests(page: Any, playwright_error: type[Exception]) -> None
     labels = ("καταστήματα", "τιμές", "προσφορές", "Δες", "αγορά")
     for label in labels:
         try:
-            locator = page.get_by_text(re.compile(re.escape(label), re.IGNORECASE)).first
+            locator = page.get_by_text(
+                re.compile(re.escape(label), re.IGNORECASE)
+            ).first
             if locator.count() > 0:
                 locator.click(timeout=1500)
                 page.wait_for_timeout(700)
@@ -345,7 +404,11 @@ def _should_capture_response(url: str, content_type: str, resource_type: str) ->
     lowered_url = url.lower()
     lowered_content_type = content_type.lower()
     lowered_resource_type = resource_type.lower()
-    return "json" in lowered_content_type or ".json" in lowered_url or lowered_resource_type in {"xhr", "fetch"}
+    return (
+        "json" in lowered_content_type
+        or ".json" in lowered_url
+        or lowered_resource_type in {"xhr", "fetch"}
+    )
 
 
 def _json_summary(payload: Any) -> dict[str, Any]:
@@ -357,7 +420,9 @@ def _json_summary(payload: Any) -> dict[str, Any]:
             "top_level_keys": keys[:MAX_SUMMARY_KEYS],
             "top_level_key_count": len(keys),
             "has_product_cards": isinstance(product_cards, list),
-            "product_cards_count": len(product_cards) if isinstance(product_cards, list) else 0,
+            "product_cards_count": (
+                len(product_cards) if isinstance(product_cards, list) else 0
+            ),
         }
     if isinstance(payload, list):
         first_item = payload[0] if payload else None
@@ -368,7 +433,11 @@ def _json_summary(payload: Any) -> dict[str, Any]:
             "has_product_cards": False,
             "product_cards_count": 0,
             "array_length": len(payload),
-            "first_item_keys": list(first_item.keys())[:MAX_SUMMARY_KEYS] if isinstance(first_item, dict) else [],
+            "first_item_keys": (
+                list(first_item.keys())[:MAX_SUMMARY_KEYS]
+                if isinstance(first_item, dict)
+                else []
+            ),
         }
     return {
         "top_level_type": "none",
@@ -408,14 +477,18 @@ def _payload_has_key_marker(payload: object | None, markers: tuple[str, ...]) ->
                 if isinstance(value, (dict, list)):
                     stack.append(value)
         elif isinstance(current, list):
-            stack.extend(item for item in current[:50] if isinstance(item, (dict, list)))
+            stack.extend(
+                item for item in current[:50] if isinstance(item, (dict, list))
+            )
     return False
 
 
 def _looks_blocked(lowered_body: str, lowered_url: str) -> bool:
     if "challenge-platform" in lowered_url:
         return True
-    if "<html" not in lowered_body and not any(marker in lowered_body for marker in ("captcha", "cf-chl")):
+    if "<html" not in lowered_body and not any(
+        marker in lowered_body for marker in ("captcha", "cf-chl")
+    ):
         return False
     return any(marker in lowered_body for marker in BLOCKED_MARKERS)
 
