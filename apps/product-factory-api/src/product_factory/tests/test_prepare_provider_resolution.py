@@ -365,6 +365,40 @@ def test_prepare_provider_resolution_fails_for_skroutz_non_product_page() -> Non
         )
 
 
+def test_prepare_provider_resolution_fails_for_empty_skroutz_product_extraction() -> None:
+    cli = _build_cli("https://www.skroutz.gr/s/123456/example.html")
+    source = _build_source(
+        source_name="skroutz",
+        url=cli.url,
+        page_type="product",
+        name="Σύγκριση τιμών E-Shopping",
+    )
+    source.mpn = ""
+    source.gallery_images = []
+    source.spec_sections = []
+    source.key_specs = []
+    registry = ProviderRegistry()
+    registry.register(
+        StaticProvider(
+            provider_id="skroutz",
+            source_name="skroutz",
+            product=source,
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="Skroutz product extraction incomplete"):
+        _resolve_with_registry(
+            cli,
+            registry,
+            source="skroutz",
+            validate_url_scope_fn=lambda _url: (
+                "skroutz",
+                True,
+                "skroutz_product_path",
+            ),
+        )
+
+
 def test_prepare_provider_resolution_fails_for_manufacturer_non_product_page() -> None:
     cli = _build_cli("https://shop.tefal.gr/products/example")
     registry = ProviderRegistry()

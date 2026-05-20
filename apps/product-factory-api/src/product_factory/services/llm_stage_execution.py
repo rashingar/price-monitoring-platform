@@ -207,32 +207,17 @@ def run_intro_text_with_retry(
             )
             _write_intro_trace(trace_path, attempt_trace)
             return normalized_intro
-        if any(error != INTRO_TEXT_WORD_COUNT_ERROR for error in intro_errors):
-            failure_reason = "intro validation failed with a non-retryable error"
-            attempt_trace.append(
-                IntroTextAttemptTrace(
-                    attempt=attempt,
-                    word_count=word_count,
-                    error_codes=list(intro_errors),
-                    status="failed",
-                    reason=failure_reason,
-                    output_path=intro_text_output_path,
-                )
+        only_word_count_error = all(
+            error == INTRO_TEXT_WORD_COUNT_ERROR for error in intro_errors
+        )
+        failure_reason = (
+            _build_intro_word_count_reason(
+                normalized_intro,
+                intro_word_min=intro_word_min,
+                intro_word_max=intro_word_max,
             )
-            _write_intro_trace(trace_path, attempt_trace)
-            raise _build_stage_validation_error(
-                stage=INTRO_TEXT_STAGE,
-                error_codes=intro_errors,
-                attempt=attempt,
-                reason=failure_reason,
-                output_path=intro_text_output_path,
-                trace_path=trace_path,
-                attempt_trace=attempt_trace,
-            )
-        failure_reason = _build_intro_word_count_reason(
-            normalized_intro,
-            intro_word_min=intro_word_min,
-            intro_word_max=intro_word_max,
+            if only_word_count_error
+            else f"intro validation failed: {', '.join(intro_errors)}"
         )
         if attempt >= resolved_max_attempts:
             attempt_trace.append(
@@ -246,6 +231,16 @@ def run_intro_text_with_retry(
                 )
             )
             _write_intro_trace(trace_path, attempt_trace)
+            if not only_word_count_error:
+                raise _build_stage_validation_error(
+                    stage=INTRO_TEXT_STAGE,
+                    error_codes=intro_errors,
+                    attempt=attempt,
+                    reason=failure_reason,
+                    output_path=intro_text_output_path,
+                    trace_path=trace_path,
+                    attempt_trace=attempt_trace,
+                )
             raise IntroTextRetryExhaustedError(
                 IntroTextRetryFailure(
                     stage=INTRO_TEXT_STAGE,

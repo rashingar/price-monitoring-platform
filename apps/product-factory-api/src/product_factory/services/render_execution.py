@@ -397,9 +397,10 @@ def _resolve_render_sections(
     if sections_requested <= 0:
         return [], []
     if not extracted_sections:
-        raise ValueError(
-            "Missing presentation source sections for requested render sections"
-        )
+        return [], [
+            f"presentation_sections_missing:{sections_requested}",
+            "requested_sections_reduced:0",
+        ]
 
     normalized_sections = normalize_presentation_sections(
         extracted_sections, sections_requested=sections_requested
@@ -444,10 +445,6 @@ def _resolve_render_sections(
         selected_sections, key=lambda section: int(section.get("source_index") or 0)
     )
 
-    if not selected_sections:
-        raise ValueError(
-            "No usable deterministic presentation sections for requested render sections"
-        )
     warnings: list[str] = []
     if weak_count > 0:
         warnings.append(f"presentation_sections_weak:{weak_count}")

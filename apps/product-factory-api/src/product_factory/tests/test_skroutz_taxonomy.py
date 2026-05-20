@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from product_factory.parser_product_skroutz import SkroutzProductParser
+from product_factory.skroutz_taxonomy import classify_skroutz_taxonomy
 from product_factory.taxonomy import TaxonomyResolver
 
 
@@ -104,6 +105,20 @@ def test_taxonomy_regression_fixture_resolves_expected_categories(
         assert (taxonomy.sub_category or "") == row["expected_sub_category"]
         assert parsed.source.taxonomy_source_category == row["expected_source_category"]
         assert parsed.source.taxonomy_match_type == row["expected_match_type"]
+
+
+def test_taxonomy_classifies_inventor_vi32_model_urls_as_wall_air_conditioners() -> None:
+    hint = classify_skroutz_taxonomy(
+        category_tag_text="",
+        category_tag_href="",
+        title="Inventor Life Pro WiFi L4VI32-12WiFiR / L4VO32-12 - Skroutz.gr",
+        url="https://www.skroutz.gr/s/12818615/Inventor-Life-Pro-WiFi-L4VI32-12WiFiR-L4VO32-12.html",
+        brand="Inventor",
+    )
+
+    assert hint is not None
+    assert not hint.ambiguous
+    assert hint.matched_rule_id == "air_conditioner:wall"
 
 
 def test_representative_taxonomy_html_fixtures_cover_supported_skroutz_combos(

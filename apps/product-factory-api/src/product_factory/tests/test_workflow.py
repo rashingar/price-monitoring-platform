@@ -1636,12 +1636,13 @@ def test_execute_publish_workflow_fails_preflight_when_main_image_is_missing(
     assert "missing gallery image" in str(result["publish_message"])
 
 
-def test_render_workflow_fails_when_source_sections_are_missing_entirely(
+def test_render_workflow_warns_and_continues_when_source_sections_are_missing_entirely(
     tmp_path: Path, monkeypatch
 ) -> None:
     from product_factory import workflow
 
     monkeypatch.setattr(workflow, "WORK_ROOT", tmp_path / "work")
+    monkeypatch.setattr(workflow, "PRODUCTS_ROOT", tmp_path / "products")
     model = "233541"
     scrape_dir = tmp_path / "work" / model / "scrape"
     scrape_dir.mkdir(parents=True)
@@ -1652,6 +1653,12 @@ def test_render_workflow_fails_when_source_sections_are_missing_entirely(
         brand="LG",
         mpn="GSGV80PYLL",
         name="LG Example",
+        spec_sections=[
+            SpecSection(
+                section="Ξ’Ξ±ΟƒΞΉΞΊΞ¬ Ξ§Ξ±ΟΞ±ΞΊΟ„Ξ·ΟΞΉΟƒΟ„ΞΉΞΊΞ¬",
+                items=[SpecItem(label="Ξ¤ΟΟ€ΞΏΟ‚ Ξ¨Ο…Ξ³ΞµΞ―ΞΏΟ…", value="ΞΟ„ΞΏΟ…Ξ»Ξ¬Ο€Ξ±")],
+            )
+        ],
     )
     (scrape_dir / f"{model}.source.json").write_text(
         json.dumps(source.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
@@ -1685,13 +1692,11 @@ def test_render_workflow_fails_when_source_sections_are_missing_entirely(
         meta_keywords=["LG", "GSGV80PYLL"],
     )
 
-    with pytest.raises(ValueError) as excinfo:
-        render_workflow(model)
+    result = render_workflow(model)
 
-    assert (
-        str(excinfo.value)
-        == "Missing presentation source sections for requested render sections"
-    )
+    assert "presentation_sections_missing:1" in result.validation_report.warnings
+    assert "requested_sections_reduced:0" in result.validation_report.warnings
+    assert result.metadata_path.exists()
 
 
 def test_render_workflow_warns_and_continues_when_one_requested_section_is_missing(

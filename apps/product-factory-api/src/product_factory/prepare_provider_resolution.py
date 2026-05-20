@@ -113,6 +113,13 @@ def validate_prepare_provider_resolution_result(
                 or "unsupported_skroutz_page_type"
             )
             raise RuntimeError(f"Unsupported Skroutz page type: {detail}")
+        if (
+            not parsed.source.mpn
+            and not parsed.source.gallery_images
+            and not parsed.source.spec_sections
+            and not parsed.source.key_specs
+        ):
+            raise RuntimeError("Skroutz product extraction incomplete")
     elif source == "bestprice":
         if parsed.source.page_type != "product":
             detail = (

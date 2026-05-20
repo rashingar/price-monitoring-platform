@@ -337,31 +337,34 @@ def test_run_intro_text_with_retry_stops_after_three_invalid_attempts(
     assert [item["status"] for item in trace] == ["retry", "retry", "failed"]
 
 
-def test_run_intro_text_with_retry_does_not_retry_unrelated_intro_failure(
+def test_run_intro_text_with_retry_retries_intro_markup_failures(
     tmp_path: Path,
 ) -> None:
     llm_dir = tmp_path / "work" / "233541" / "llm"
     _write_task_manifest(llm_dir)
     attempts: list[int] = []
+    valid_intro = _build_intro(120)
 
     def resolve_intro_text(**kwargs):
         attempts.append(kwargs["attempt"])
-        return f"<p>{_build_intro(120)}</p>"
+        if kwargs["attempt"] == 1:
+            return f"<em>{valid_intro}</em>"
+        return valid_intro
 
-    with pytest.raises(ServiceError) as excinfo:
-        run_intro_text_with_retry(
-            intro_text_context_path=llm_dir / "intro_text.context.json",
-            intro_text_prompt_path=llm_dir / "intro_text.prompt.txt",
-            intro_text_output_path=llm_dir / "intro_text.output.txt",
-            resolve_intro_text_fn=resolve_intro_text,
-        )
+    result = run_intro_text_with_retry(
+        intro_text_context_path=llm_dir / "intro_text.context.json",
+        intro_text_prompt_path=llm_dir / "intro_text.prompt.txt",
+        intro_text_output_path=llm_dir / "intro_text.output.txt",
+        resolve_intro_text_fn=resolve_intro_text,
+    )
 
-    assert attempts == [1]
-    assert excinfo.value.code == ServiceErrorCode.VALIDATION_FAILURE.value
-    assert excinfo.value.details["stage"] == "intro_text"
-    error_codes = excinfo.value.details["error_codes"]
-    assert isinstance(error_codes, list)
-    assert "llm_intro_text_html_invalid" in error_codes
+    assert result == valid_intro
+    assert attempts == [1, 2]
+    trace = json.loads(
+        (llm_dir / "intro_text.retry_trace.json").read_text(encoding="utf-8")
+    )
+    assert [item["status"] for item in trace] == ["retry", "success"]
+    assert "llm_intro_text_html_invalid" in trace[0]["error_codes"]
 
 
 def test_execute_split_llm_stage_keeps_seo_meta_single_pass_during_intro_retries(

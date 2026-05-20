@@ -14,6 +14,10 @@ TV_INCH_RE = re.compile(
     r"(?<!\d)(\d{2,3})(?=\s*(?:\"|”|''|ιντσ|inch|in\b))", re.IGNORECASE
 )
 TV_URL_INCH_RE = re.compile(r"-(\d{2,3})(?=-|$)")
+AIR_CONDITIONER_MODEL_RE = re.compile(
+    r"(?:^|[-\s/])[a-z0-9]*(?:m?vi32|m?vo32)\s*[-\s]\s*\d{2}(?:\s*wifi[a-z]?)?(?=$|[-\s/])",
+    re.IGNORECASE,
+)
 WIDTH_RE = re.compile(r"(?<!\d)(\d{2})(?:[.,]\d+)?(?=\s*(?:cm|εκ|x))", re.IGNORECASE)
 
 
@@ -209,7 +213,9 @@ def classify_skroutz_taxonomy(
             sub=None,
             matched_rule_id="heat_pump:leaf_only",
         )
-    if _has_any(context, "klimatist", "κλιματισ", "air condition", "btu", "inverter"):
+    if _has_any(
+        context, "klimatist", "κλιματισ", "air condition", "btu", "inverter"
+    ) or _looks_like_air_conditioner_model(context):
         return _classify_air_conditioner(context)
     if _has_any(context, "mikrokym", "μικροκυμα", "microwave"):
         return _classify_microwave(context)
@@ -316,6 +322,14 @@ def _classify_air_conditioner(context: dict[str, str]) -> SkroutzTaxonomyHint:
         sub=sub,
         matched_rule_id=rule_id,
     )
+
+
+def _looks_like_air_conditioner_model(context: dict[str, str]) -> bool:
+    haystack = " ".join(
+        str(context.get(key, ""))
+        for key in ("title_norm", "url_norm", "category_tag_slug")
+    )
+    return bool(AIR_CONDITIONER_MODEL_RE.search(haystack))
 
 
 def _classify_cooker(context: dict[str, str]) -> SkroutzTaxonomyHint:
