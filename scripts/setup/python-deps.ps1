@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
+$devRequirements = Join-Path $repoRoot "requirements-dev.txt"
 $productFactoryRoot = Join-Path $repoRoot "apps\product-factory-api"
 $ecommerceRoot = Join-Path $repoRoot "apps\ecommerce-api"
 
@@ -42,6 +43,10 @@ Invoke-NativeCommand { & $python -m pip install -r (Join-Path $ecommerceRoot "re
 Write-Host ""
 Write-Host "Installing Ecommerce API editable package..."
 Invoke-NativeCommand { & $python -m pip install -e $ecommerceRoot --no-deps } "Ecommerce API editable install failed."
+
+Write-Host ""
+Write-Host "Installing root developer requirements..."
+Invoke-NativeCommand { & $python -m pip install -r $devRequirements } "Root developer requirements install failed."
 
 Write-Host ""
 Write-Host "Python dependency setup complete. No unified Python lockfile was created."

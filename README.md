@@ -119,9 +119,10 @@ From the repository root in PowerShell:
 ```
 
 These scripts create the root `.venv` if needed, install both backend projects
-into that root `.venv`, run `npm ci` in `apps/web`, and verify local setup
-prerequisites. They do not create a unified Python lockfile, start servers,
-mutate PostgreSQL, or commit generated dependency folders.
+and root developer tools into that root `.venv`, run `npm ci` in `apps/web`,
+and verify local setup prerequisites. They do not create a unified Python
+lockfile, start servers, mutate PostgreSQL, or commit generated dependency
+folders.
 
 Manual equivalent:
 
@@ -133,6 +134,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
 .\.venv\Scripts\python.exe -m pip install -r apps\ecommerce-api\requirements-lock.txt
 .\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 Push-Location apps\web
 npm ci
 Pop-Location
@@ -307,6 +309,21 @@ Run hygiene before committing:
 .\scripts\check\hygiene.ps1
 ```
 
+Hygiene includes Black formatting checks. Black is installed by
+`.\scripts\setup\python-deps.ps1` from the root developer requirements file.
+
+Check Python formatting:
+
+```powershell
+.\.venv\Scripts\python.exe -m black --check apps\ecommerce-api apps\product-factory-api scripts
+```
+
+Format Python files:
+
+```powershell
+.\.venv\Scripts\python.exe -m black apps\ecommerce-api apps\product-factory-api scripts
+```
+
 For staged-only path and whitespace checks:
 
 ```powershell
@@ -413,6 +430,22 @@ Frontend type errors after backend response changes
 - Update manual types in `apps/web/src/api/*Types.ts` when needed.
 - Regenerate generated OpenAPI types; do not hand-edit
   `apps/web/src/api/generated/*.ts`.
+
+Pip warns about invalid `~...` distributions in `.venv\Lib\site-packages`
+
+- These are stale local package folders left by interrupted or replaced pip
+  installs. Do not commit `.venv` changes.
+- Inspect them first:
+
+```powershell
+Get-ChildItem .venv\Lib\site-packages -Force | Where-Object { $_.Name -like "~*" } | Select-Object FullName
+```
+
+- After visual confirmation, remove only those stale local folders:
+
+```powershell
+Get-ChildItem .venv\Lib\site-packages -Force | Where-Object { $_.Name -like "~*" } | Remove-Item -Recurse -Force
+```
 
 ## Artifact Policy
 

@@ -89,6 +89,13 @@ Invoke-LocalCheck "Ecommerce API editable import" {
     Invoke-NativeCommand { & $python -c $ecommerceImportCheck } "Ecommerce API import check failed. Run: .\scripts\setup\python-deps.ps1"
 }
 
+Invoke-LocalCheck "Black developer tool" {
+    if (-not (Test-Path -LiteralPath $python)) {
+        throw "Cannot check Black because root .venv is missing."
+    }
+    Invoke-NativeCommand { & $python -m black --version } "Black check failed. Run: .\scripts\setup\python-deps.ps1"
+}
+
 Invoke-LocalCheck "Web node_modules" {
     if (-not (Test-Path -LiteralPath $nodeModules)) {
         throw "Missing web dependencies: $nodeModules. Run: .\scripts\setup\web.ps1"

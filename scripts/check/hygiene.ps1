@@ -5,7 +5,13 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 $webNodeModules = Join-Path $repoRoot "apps\web\node_modules"
+$blackPaths = @(
+    "apps\ecommerce-api",
+    "apps\product-factory-api",
+    "scripts"
+)
 $failures = 0
 
 function Invoke-HygieneCheck {
@@ -122,6 +128,19 @@ Invoke-HygieneCheck "No unsafe tracked paths" {
         "(^|/)(raw|capture|captures|html-capture|html-captures)[^/]*\.html$",
         "(^|/)[^/]*(raw-provider|provider-raw|provider-capture|provider-html-capture)[^/]*\.html$"
     )
+}
+
+Invoke-HygieneCheck "Black formatting" {
+    if (-not (Test-Path -LiteralPath $python)) {
+        throw "Missing root virtual environment Python: $python. Run: .\scripts\setup\root-venv.ps1; .\scripts\setup\python-deps.ps1"
+    }
+    Push-Location $repoRoot
+    try {
+        Invoke-NativeCommand { & $python -m black --check @blackPaths } "Black formatting check failed."
+    }
+    finally {
+        Pop-Location
+    }
 }
 
 Invoke-HygieneCheck "Mirrored OpenAPI contracts" {
