@@ -338,6 +338,108 @@ def test_air_conditioner_filters_derive_btu_and_wifi_from_product_text() -> None
     assert resolved["Wifi"] == "Υποστηρίζεται"
 
 
+def _energy_class_category() -> dict:
+    return {
+        "category_id": "cat_wall_ac",
+        "key": "Τοίχου",
+        "path": "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Κλιματιστικά > Τοίχου",
+        "filter_groups": [
+            {
+                "group_id": "fg_energy",
+                "name": "Ενεργειακή Κλάση",
+                "required": True,
+                "status": "active",
+                "values": [
+                    {
+                        "value_id": "fv_a_triple_plus",
+                        "value": "A+++",
+                        "status": "active",
+                    },
+                    {
+                        "value_id": "fv_a_double_plus",
+                        "value": "A++",
+                        "status": "active",
+                    },
+                    {"value_id": "fv_a_plus", "value": "A+", "status": "active"},
+                    {"value_id": "fv_a", "value": "A", "status": "active"},
+                ],
+            }
+        ],
+    }
+
+
+def _energy_class_taxonomy() -> TaxonomyResolution:
+    return TaxonomyResolution(
+        category_id="cat_wall_ac",
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Τοίχου",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Κλιματιστικά > Τοίχου",
+    )
+
+
+def test_air_conditioner_energy_class_pair_keeps_double_plus_from_name() -> None:
+    result = resolve_category_filter_values(
+        SourceProductData(name="A/C Inventor 12000BTU A++/A+ WiFi"),
+        _energy_class_taxonomy(),
+        _energy_class_category(),
+    )
+
+    energy = result.groups[0]
+    assert energy.resolved_value == "A++"
+    assert energy.resolved_value != "A+++"
+
+
+def test_air_conditioner_energy_class_pair_keeps_single_plus_from_name() -> None:
+    result = resolve_category_filter_values(
+        SourceProductData(name="A/C Inventor 12000BTU A+/A WiFi"),
+        _energy_class_taxonomy(),
+        _energy_class_category(),
+    )
+
+    energy = result.groups[0]
+    assert energy.resolved_value == "A+"
+    assert energy.resolved_value != "A+++"
+
+
+def test_air_conditioner_energy_class_triple_plus_from_name() -> None:
+    result = resolve_category_filter_values(
+        SourceProductData(name="A/C Inventor 12000BTU A+++ WiFi"),
+        _energy_class_taxonomy(),
+        _energy_class_category(),
+    )
+
+    assert result.groups[0].resolved_value == "A+++"
+
+
+def test_energy_class_direct_spec_value_keeps_double_plus() -> None:
+    result = resolve_category_filter_values(
+        SourceProductData(
+            name="A/C Inventor 12000BTU WiFi",
+            key_specs=[SpecItem(label="Ενεργειακή Κλάση", value="A++")],
+        ),
+        _energy_class_taxonomy(),
+        _energy_class_category(),
+    )
+
+    energy = result.groups[0]
+    assert energy.resolved_value == "A++"
+    assert energy.resolved_value != "A+++"
+
+
+def test_energy_class_direct_spec_value_keeps_plain_a() -> None:
+    result = resolve_category_filter_values(
+        SourceProductData(
+            name="A/C Inventor 12000BTU WiFi",
+            key_specs=[SpecItem(label="Ενεργειακή Κλάση", value="A")],
+        ),
+        _energy_class_taxonomy(),
+        _energy_class_category(),
+    )
+
+    assert result.groups[0].resolved_value == "A"
+
+
 def test_watt_filter_group_resolves_from_power_source_label() -> None:
     category = {
         "category_id": "cat_soundbar",

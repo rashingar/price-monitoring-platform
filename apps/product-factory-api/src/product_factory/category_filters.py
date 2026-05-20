@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
 import re
+import unicodedata
 from typing import Any
 
 from .description_enrichment import build_description_spec_items
@@ -14,6 +15,7 @@ from .normalize import (
     normalize_for_match,
     normalize_label_key,
     nullify_dash_values,
+    repair_mojibake_text,
 )
 from .repo_paths import FILTER_MAP_PATH, category_filter_review_path_for_model_root
 from .utils import read_json
@@ -622,9 +624,12 @@ def _canonical_filter_value(value: str, aliases_by_normalized: dict[str, str]) -
 
 def _filter_value_alias_keys(value: str) -> list[str]:
     normalized = normalize_label_key(value)
-    if not normalized:
+    energy_key = _energy_class_alias_key(value)
+    if not normalized and not energy_key:
         return []
-    aliases = [normalized]
+    aliases = [energy_key] if energy_key else []
+    if normalized and normalized not in aliases:
+        aliases.append(normalized)
     compact_units = re.sub(
         r"\b(\d+(?:[.,]\d+)?)\s+(w|watt|watts|kw|lt|l|kg|gr|g|cm|mm|db|btu|rpm)\b",
         r"\1\2",
@@ -645,7 +650,9 @@ def _filter_value_alias_keys(value: str) -> list[str]:
     numeric = _single_numeric_value(normalized_units or spaced_units)
     if numeric and numeric not in aliases:
         aliases.append(numeric)
-    for extra in _semantic_filter_value_aliases(normalized_units or spaced_units):
+    for extra in _semantic_filter_value_aliases(
+        normalized_units or spaced_units, include_energy=not energy_key
+    ):
         if extra not in aliases:
             aliases.append(extra)
     return aliases
@@ -670,7 +677,9 @@ def _single_numeric_value(value: str) -> str:
     return match.group(1) if match else ""
 
 
-def _semantic_filter_value_aliases(value: str) -> list[str]:
+def _semantic_filter_value_aliases(
+    value: str, *, include_energy: bool = True
+) -> list[str]:
     aliases: list[str] = []
     color_aliases = {
         "ivory": "μπεζ",
@@ -685,9 +694,10 @@ def _semantic_filter_value_aliases(value: str) -> list[str]:
     mapped = color_aliases.get(value)
     if mapped:
         aliases.append(mapped)
-    energy = _latin_energy_class(value)
-    if energy:
-        aliases.extend([energy, f"({energy})"])
+    if include_energy:
+        energy = _latin_energy_class(value)
+        if energy:
+            aliases.extend([_energy_class_alias_key(value), energy, f"({energy})"])
     if re.fullmatch(r"\d+(?:[.,]\d+)?", value):
         aliases.append(f"{value} kg")
         aliases.append(f"{value}lt")
@@ -716,10 +726,27 @@ def _semantic_filter_value_aliases(value: str) -> list[str]:
     return aliases
 
 
+def _energy_class_alias_key(value: str) -> str:
+    energy = _latin_energy_class(value)
+    return f"energy:{energy}" if energy else ""
+
+
 def _latin_energy_class(value: str) -> str:
-    normalized = normalize_label_key(value)
-    normalized = normalized.strip("()")
+    normalized = repair_mojibake_text(value)
+    normalized = unicodedata.normalize("NFD", normalized)
+    normalized = "".join(
+        char for char in normalized if unicodedata.category(char) != "Mn"
+    )
+    normalized = unicodedata.normalize("NFC", normalized)
+    normalized = re.sub(r"\s+", "", normalized.strip().strip("()[]{}"))
     greek_to_latin = {
+        "Α": "A",
+        "Β": "B",
+        "Γ": "C",
+        "Δ": "D",
+        "Ε": "E",
+        "Ζ": "F",
+        "Η": "G",
         "α": "A",
         "β": "B",
         "γ": "C",
@@ -728,7 +755,10 @@ def _latin_energy_class(value: str) -> str:
         "ζ": "F",
         "η": "G",
     }
-    match = re.fullmatch(r"([a-gαβγδεζη])(\+{0,3})", normalized)
+    match = re.fullmatch(
+        r"([A-Ga-gΑ-Ηα-η])(\+{0,3})(?:/[A-Ga-gΑ-Ηα-η]\+{0,3})?",
+        normalized,
+    )
     if not match:
         return ""
     letter = greek_to_latin.get(match.group(1), match.group(1).upper())
@@ -736,12 +766,26 @@ def _latin_energy_class(value: str) -> str:
 
 
 def _extract_energy_class_hint(text: str) -> str:
-    match = re.search(
-        r"\b([A-GΑ-Η](?:\+{1,3})?)(?:\s*/\s*[A-GΑ-Η](?:\+{1,3})?)?\b",
-        str(text or ""),
+    matches = re.finditer(
+        r"(?<![A-Za-zΑ-Ωα-ω])"
+        r"([A-GΑ-Ηα-η](?:\+{0,3})(?:\s*/\s*[A-GΑ-Ηα-η](?:\+{0,3}))?)"
+        r"(?![A-Za-zΑ-Ωα-ω+])",
+        repair_mojibake_text(text),
         flags=re.IGNORECASE,
     )
-    return match.group(1).upper() if match else ""
+    fallback = ""
+    for match in matches:
+        raw = match.group(1)
+        if "/" in raw and "+" not in raw:
+            continue
+        energy = _latin_energy_class(raw)
+        if not energy:
+            continue
+        if "+" in energy:
+            return energy
+        if not fallback:
+            fallback = energy
+    return fallback
 
 
 def _extract_btu_capacity_hint(text: str) -> str:
