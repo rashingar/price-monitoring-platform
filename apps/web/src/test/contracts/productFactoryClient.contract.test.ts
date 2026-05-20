@@ -323,6 +323,16 @@ describe("Product Factory API client contract fixtures", () => {
         path: "/api/jobs/job-succeeded-1/stop",
         response: { job: { job_id: "job-succeeded-1", status: "cancelled" } },
       },
+      {
+        method: "POST",
+        path: "/api/jobs/job-full-pipeline-succeeded-1/retry",
+        response: { job: { job_id: "full-pipeline-retry-1", status: "queued" } },
+      },
+      {
+        method: "POST",
+        path: "/api/jobs/job-full-pipeline-succeeded-1/start",
+        response: { job: { job_id: "full-pipeline-start-1", status: "queued" } },
+      },
     ]);
 
     const renderPayload = { model: "005606" } satisfies RenderJobRequest;
@@ -338,10 +348,14 @@ describe("Product Factory API client contract fixtures", () => {
     await apiClient.createRenderJob(generatedRenderPayload);
     await apiClient.createPublishJob(generatedPublishPayload);
     await apiClient.stopJob("job-succeeded-1", generatedStopPayload.reason ?? undefined);
+    await apiClient.retryJob("job-full-pipeline-succeeded-1");
+    await apiClient.startJob("job-full-pipeline-succeeded-1");
 
     expect(mock.requests[0]?.body).toEqual(renderPayload);
     expect(mock.requests[1]?.body).toEqual(publishPayload);
     expect(mock.requests[2]?.body).toEqual(stopPayload);
+    expect(mock.requests[3]?.pathname).toBe("/api/jobs/job-full-pipeline-succeeded-1/retry");
+    expect(mock.requests[4]?.pathname).toBe("/api/jobs/job-full-pipeline-succeeded-1/start");
   });
 
   it("exposes useful API error messages for 409 and 422 responses", async () => {

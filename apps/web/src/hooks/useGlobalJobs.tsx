@@ -27,11 +27,17 @@ interface GlobalJobsState {
   isPolling: boolean;
   lastLoadedAt: Date | null;
   stoppingJobIds: string[];
+  retryingJobIds: string[];
+  startingJobIds: string[];
   stopJobError: string | null;
+  retryJobError: string | null;
+  startJobError: string | null;
   clearStopJobError: () => void;
   reload: () => Promise<void>;
   trackJob: (job: Job) => void;
   stopJob: (jobId: string, reason?: string) => Promise<void>;
+  retryJob: (jobId: string) => Promise<void>;
+  startJob: (jobId: string) => Promise<void>;
 }
 
 const GlobalJobsContext = createContext<GlobalJobsState | null>(null);
@@ -82,7 +88,11 @@ export function GlobalJobsProvider({ children }: { children: ReactNode }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stoppingJobIds, setStoppingJobIds] = useState<string[]>([]);
+  const [retryingJobIds, setRetryingJobIds] = useState<string[]>([]);
+  const [startingJobIds, setStartingJobIds] = useState<string[]>([]);
   const [stopJobError, setStopJobError] = useState<string | null>(null);
+  const [retryJobError, setRetryJobError] = useState<string | null>(null);
+  const [startJobError, setStartJobError] = useState<string | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   const hasActiveJobs = useMemo(() => jobs.some(isActiveJob), [jobs]);
@@ -138,6 +148,40 @@ export function GlobalJobsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const retryJob = useCallback(async (jobId: string) => {
+    setRetryingJobIds((currentIds) =>
+      currentIds.includes(jobId) ? currentIds : [...currentIds, jobId],
+    );
+    setRetryJobError(null);
+
+    try {
+      const retriedJob = await apiClient.retryJob(jobId);
+      setJobs((currentJobs) => mergeJob(currentJobs, retriedJob));
+      setRetryJobError(null);
+    } catch (retryError) {
+      setRetryJobError(getApiErrorMessage(retryError));
+    } finally {
+      setRetryingJobIds((currentIds) => currentIds.filter((currentId) => currentId !== jobId));
+    }
+  }, []);
+
+  const startJob = useCallback(async (jobId: string) => {
+    setStartingJobIds((currentIds) =>
+      currentIds.includes(jobId) ? currentIds : [...currentIds, jobId],
+    );
+    setStartJobError(null);
+
+    try {
+      const startedJob = await apiClient.startJob(jobId);
+      setJobs((currentJobs) => mergeJob(currentJobs, startedJob));
+      setStartJobError(null);
+    } catch (startError) {
+      setStartJobError(getApiErrorMessage(startError));
+    } finally {
+      setStartingJobIds((currentIds) => currentIds.filter((currentId) => currentId !== jobId));
+    }
+  }, []);
+
   const clearStopJobError = useCallback(() => {
     setStopJobError(null);
   }, []);
@@ -169,11 +213,17 @@ export function GlobalJobsProvider({ children }: { children: ReactNode }) {
       isPolling: hasActiveJobs,
       lastLoadedAt,
       stoppingJobIds,
+      retryingJobIds,
+      startingJobIds,
       stopJobError,
+      retryJobError,
+      startJobError,
       clearStopJobError,
       reload: () => loadJobs(undefined, false),
       trackJob,
       stopJob,
+      retryJob,
+      startJob,
     }),
     [
       clearStopJobError,
@@ -184,6 +234,12 @@ export function GlobalJobsProvider({ children }: { children: ReactNode }) {
       jobs,
       lastLoadedAt,
       loadJobs,
+      retryingJobIds,
+      retryJob,
+      retryJobError,
+      startingJobIds,
+      startJob,
+      startJobError,
       stopJob,
       stopJobError,
       stoppingJobIds,

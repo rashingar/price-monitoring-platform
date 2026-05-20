@@ -103,6 +103,10 @@ export interface paths {
     /** Retry Job */
     post: operations["retry_job_api_jobs__job_id__retry_post"];
   };
+  "/api/jobs/{job_id}/start": {
+    /** Start Job */
+    post: operations["start_job_api_jobs__job_id__start_post"];
+  };
   "/api/jobs/{job_id}/stop": {
     /** Stop Job */
     post: operations["stop_job_api_jobs__job_id__stop_post"];
@@ -1660,6 +1664,34 @@ export interface operations {
   };
   /** Retry Job */
   retry_job_api_jobs__job_id__retry_post: {
+    parameters: {
+      path: {
+        job_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["JobResponse"];
+        };
+      };
+      /** @description Job not found. */
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Start Job */
+  start_job_api_jobs__job_id__start_post: {
     parameters: {
       path: {
         job_id: string;

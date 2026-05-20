@@ -4,6 +4,7 @@ import {
   getJobStatusBucket,
   type JobStatusBucket,
 } from "../api/jobUtils";
+import type { Job } from "../api/types";
 import { JobTable } from "../components/jobs/JobTable";
 import { EmptyState, ErrorState, LoadingState } from "../components/layout/StateBlocks";
 import { useJobs } from "../hooks/useJobs";
@@ -28,6 +29,12 @@ export function JobsPage() {
     jobs,
     lastLoadedAt,
     reload,
+    retryJob,
+    retryJobError,
+    retryingJobIds,
+    startJob,
+    startJobError,
+    startingJobIds,
     stopJob,
     stopJobError,
     stoppingJobIds,
@@ -62,7 +69,7 @@ export function JobsPage() {
     [jobs, statusFilter],
   );
 
-  const handleStopJob = async (job: Parameters<typeof getJobIdentifier>[0]) => {
+  const handleStopJob = async (job: Job) => {
     const jobId = getJobIdentifier(job);
     if (!jobId) {
       return;
@@ -76,6 +83,38 @@ export function JobsPage() {
     }
 
     await stopJob(jobId, "cancelled from jobs page");
+  };
+
+  const handleRetryJob = async (job: Job) => {
+    const jobId = getJobIdentifier(job);
+    if (!jobId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Retry job ${jobId} without scraping again? This reuses prepared artifacts and reruns authoring/render/publish.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    await retryJob(jobId);
+  };
+
+  const handleStartJob = async (job: Job) => {
+    const jobId = getJobIdentifier(job);
+    if (!jobId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Start job ${jobId} from the beginning? This will scrape the source URL again.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    await startJob(jobId);
   };
 
   return (
@@ -109,6 +148,8 @@ export function JobsPage() {
         ) : null}
         {isRefreshing ? <p className="muted">Refreshing active jobs...</p> : null}
         {stopJobError ? <p className="form-error">{stopJobError}</p> : null}
+        {retryJobError ? <p className="form-error">{retryJobError}</p> : null}
+        {startJobError ? <p className="form-error">{startJobError}</p> : null}
 
         <div className="filter-button-row" aria-label="Job status filters">
           {FILTERS.map((filter) => (
@@ -135,7 +176,11 @@ export function JobsPage() {
           <JobTable
             jobs={visibleJobs}
             onStopJob={handleStopJob}
+            onRetryJob={handleRetryJob}
+            onStartJob={handleStartJob}
             stoppingJobIds={stoppingJobIds}
+            retryingJobIds={retryingJobIds}
+            startingJobIds={startingJobIds}
           />
         ) : null}
       </section>

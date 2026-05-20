@@ -523,6 +523,106 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(tmp_path
     assert "Full pipeline stage publish succeeded." in logs
 
 
+def test_full_pipeline_retry_from_artifacts_skips_prepare_and_reruns_remaining_stages(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    model = "233541"
+    _write_required_prepared_artifacts(tmp_path, model)
+    monkeypatch.setattr(job_runner.repo_paths, "REPO_ROOT", tmp_path)
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatus.RUNNING,
+        model=model,
+        payload={
+            "model": model,
+            "source_url": "https://www.electronet.gr/example",
+            "skip_prepare": True,
+            "retry_mode": "from_prepared_artifacts",
+        },
+    )
+    calls: list[object] = []
+    logs: list[str] = []
+    product_file = tmp_path / "products" / f"{model}.csv"
+
+    result = run_full_pipeline_job(
+        record,
+        logs.append,
+        prepare_product_fn=lambda request: calls.append(request)
+        or _service_result(request.model, RunType.PREPARE),
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append(("intro", model, retry))
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append(("seo", model, retry))
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        render_product_fn=lambda request: calls.append(request)
+        or _service_result(
+            request.model,
+            RunType.RENDER,
+            artifacts=RunArtifacts(published_csv_path=product_file),
+        ),
+        publish_product_fn=lambda request: calls.append(request)
+        or _service_result(
+            request.model,
+            RunType.PUBLISH,
+            artifacts=RunArtifacts(published_csv_path=request.current_job_product_file),
+        ),
+    )
+
+    assert result.status == JobStatus.SUCCEEDED
+    assert calls == [
+        ("intro", model, True),
+        ("seo", model, True),
+        RenderRequest(model=model),
+        PublishRequest(model=model, current_job_product_file=product_file),
+    ]
+    assert "Retry from prepared artifacts active; skipping prepare/source scraping." in logs
+    assert "Full pipeline stage prepare starting." not in logs
+
+
+def test_full_pipeline_retry_from_artifacts_fails_when_prepared_artifacts_are_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    model = "233541"
+    monkeypatch.setattr(job_runner.repo_paths, "REPO_ROOT", tmp_path)
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatus.RUNNING,
+        model=model,
+        payload={
+            "model": model,
+            "source_url": "https://www.electronet.gr/example",
+            "skip_prepare": True,
+        },
+    )
+    calls: list[str] = []
+    logs: list[str] = []
+
+    result = run_full_pipeline_job(
+        record,
+        logs.append,
+        prepare_product_fn=lambda request: calls.append("prepare")
+        or _service_result(request.model, RunType.PREPARE),
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append("intro")
+        or _authoring_status(Path("work") / model / "llm", model=model),
+        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append("seo")
+        or _authoring_status(Path("work") / model / "llm", model=model),
+        render_product_fn=lambda request: calls.append("render")
+        or _service_result(request.model, RunType.RENDER),
+        publish_product_fn=lambda request: calls.append("publish")
+        or _service_result(request.model, RunType.PUBLISH),
+    )
+
+    assert result.status == JobStatus.FAILED
+    assert result.error_code == "prepared_artifacts_missing"
+    assert result.message == "Cannot retry without scraping because prepared artifacts are missing."
+    assert calls == []
+    assert "Retry from prepared artifacts active; skipping prepare/source scraping." in logs
+    assert any("Prepared artifacts missing for retry:" in line for line in logs)
+
+
 def test_full_pipeline_prepare_failure_stops_later_stages() -> None:
     result, calls, logs = _run_full_pipeline_with_failure("prepare")
 
@@ -818,6 +918,24 @@ def _authoring_status(llm_dir: Path, *, model: str = "233541") -> AuthoringStatu
         ),
         ready_for_render=True,
     )
+
+
+def _write_required_prepared_artifacts(root: Path, model: str) -> None:
+    scrape_dir = root / "work" / model / "scrape"
+    llm_dir = root / "work" / model / "llm"
+    scrape_dir.mkdir(parents=True)
+    llm_dir.mkdir(parents=True)
+    for path in [
+        scrape_dir / f"{model}.source.json",
+        scrape_dir / f"{model}.normalized.json",
+        scrape_dir / f"{model}.report.json",
+        llm_dir / "task_manifest.json",
+        llm_dir / "intro_text.context.json",
+        llm_dir / "seo_meta.context.json",
+    ]:
+        path.write_text("{}\n", encoding="utf-8")
+    (llm_dir / "intro_text.prompt.txt").write_text("intro\n", encoding="utf-8")
+    (llm_dir / "seo_meta.prompt.txt").write_text("seo\n", encoding="utf-8")
 
 
 def _run_full_pipeline_with_failure(stage: str) -> tuple[object, list[str], list[str]]:

@@ -13,6 +13,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from .. import repo_paths
 from ..services import (
     PrepareRequest,
     PublishRequest,
@@ -29,8 +30,10 @@ from ..services.authoring_service import (
     run_intro_text_authoring,
     run_seo_meta_authoring,
 )
+from ..services.execution_models import PreparedProductContext
 from ..services.models import RunStatus
 from .models import JobRecord, JobStatus, JobType, is_terminal_job_status, utc_now_iso
+from .retry import is_full_pipeline_retry_from_artifacts
 from .store import JobStore
 
 
@@ -177,6 +180,7 @@ def run_full_pipeline_job(
 ) -> JobRunResult:
     model = str(record.payload["model"])
     source_url = str(record.payload["source_url"])
+    retry_from_artifacts = is_full_pipeline_retry_from_artifacts(record.payload)
     artifacts: dict[str, str] = {}
 
     log(f"Full pipeline source URL: {source_url}")
@@ -187,25 +191,39 @@ def run_full_pipeline_job(
         f"boxnow_enabled={bool(record.payload.get('boxnow_enabled', False))}"
     )
 
-    prepare_record = _stage_record(
-        record,
-        JobType.PREPARE,
-        _full_pipeline_prepare_payload(record.payload),
-    )
-    prepare_result = _run_full_pipeline_stage(
-        "prepare",
-        log,
-        lambda: run_prepare_job(
-            prepare_record,
+    if retry_from_artifacts:
+        log("Retry from prepared artifacts active; skipping prepare/source scraping.")
+        missing_artifacts = _missing_prepared_artifacts(model)
+        if missing_artifacts:
+            log(f"Prepared artifacts missing for retry: {', '.join(sorted(missing_artifacts))}")
+            return JobRunResult(
+                status=JobStatus.FAILED,
+                message="Cannot retry without scraping because prepared artifacts are missing.",
+                error="Cannot retry without scraping because prepared artifacts are missing.",
+                error_code="prepared_artifacts_missing",
+                artifacts=artifacts,
+            )
+    else:
+        prepare_record = _stage_record(
+            record,
+            JobType.PREPARE,
+            _full_pipeline_prepare_payload(record.payload),
+        )
+        prepare_result = _run_full_pipeline_stage(
+            "prepare",
             log,
-            prepare_product_fn=prepare_product_fn,
-        ),
-    )
-    _merge_stage_artifacts(artifacts, "prepare", prepare_result.artifacts)
-    if prepare_result.status == JobStatus.FAILED:
-        return _full_pipeline_failed_result("prepare", prepare_result, artifacts)
+            lambda: run_prepare_job(
+                prepare_record,
+                log,
+                prepare_product_fn=prepare_product_fn,
+            ),
+        )
+        _merge_stage_artifacts(artifacts, "prepare", prepare_result.artifacts)
+        if prepare_result.status == JobStatus.FAILED:
+            return _full_pipeline_failed_result("prepare", prepare_result, artifacts)
 
-    intro_record = _stage_record(record, JobType.AUTHORING_INTRO, {"model": model})
+    authoring_payload = {"model": model, "retry": retry_from_artifacts}
+    intro_record = _stage_record(record, JobType.AUTHORING_INTRO, authoring_payload)
     intro_result = _run_full_pipeline_stage(
         "intro text authoring",
         log,
@@ -219,7 +237,7 @@ def run_full_pipeline_job(
     if intro_result.status == JobStatus.FAILED:
         return _full_pipeline_failed_result("intro text authoring", intro_result, artifacts)
 
-    seo_record = _stage_record(record, JobType.AUTHORING_SEO, {"model": model})
+    seo_record = _stage_record(record, JobType.AUTHORING_SEO, authoring_payload)
     seo_result = _run_full_pipeline_stage(
         "SEO meta authoring",
         log,
@@ -354,6 +372,27 @@ def _full_pipeline_prepare_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "price": 0,
         "gallery_mode": payload.get("gallery_mode") or "all",
     }
+
+
+def _missing_prepared_artifacts(model: str) -> dict[str, Path]:
+    context = PreparedProductContext.from_model(
+        model,
+        model_root=repo_paths.model_root_path(model),
+    )
+    required_paths = {
+        "model_root": context.model_root,
+        "scrape_dir": context.scrape_dir,
+        "llm_dir": context.llm_dir,
+        "source_json_path": context.source_json_path,
+        "scrape_normalized_json_path": context.scrape_normalized_json_path,
+        "source_report_json_path": context.source_report_json_path,
+        "task_manifest_path": context.task_manifest_path,
+        "intro_text_context_path": context.intro_text_context_path,
+        "intro_text_prompt_path": context.intro_text_prompt_path,
+        "seo_meta_context_path": context.seo_meta_context_path,
+        "seo_meta_prompt_path": context.seo_meta_prompt_path,
+    }
+    return {name: path for name, path in required_paths.items() if not path.exists()}
 
 
 def _log_prepare_gallery_details(result: ServiceResult, log: LogCallback) -> None:

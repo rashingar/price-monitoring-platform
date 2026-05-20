@@ -222,7 +222,7 @@ def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(tmp_p
     assert record.payload["source_resolution"] == {"candidate_id": "abc"}
 
 
-def test_retry_requeues_failed_full_pipeline_with_same_payload(tmp_path: Path) -> None:
+def test_retry_requeues_failed_full_pipeline_from_prepared_artifacts(tmp_path: Path) -> None:
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from product_factory.api.app import create_app
 
@@ -251,7 +251,122 @@ def test_retry_requeues_failed_full_pipeline_with_same_payload(tmp_path: Path) -
     assert response.status_code == 200
     retried = store.get_job(response.json()["job_id"])
     assert response.json()["job_type"] == JobType.FULL_PIPELINE.value
-    assert retried.payload == payload
+    assert retried.payload == {
+        **payload,
+        "retry_source_job_id": failed.job_id,
+        "retry_mode": "from_prepared_artifacts",
+        "skip_prepare": True,
+    }
+
+
+def test_start_requeues_terminal_full_pipeline_from_scratch_without_retry_metadata(tmp_path: Path) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: log(f"queued {record.job_type.value}"))
+    payload = {
+        "model": "233541",
+        "source_url": "https://www.electronet.gr/example",
+        "bestprice_enabled": False,
+        "skroutz_enabled": True,
+        "boxnow_enabled": True,
+        "photos": 100,
+        "sections": 20,
+        "gallery_mode": "all",
+        "source_resolution": {"source": "operator"},
+        "retry_source_job_id": "job-original",
+        "retry_mode": "from_prepared_artifacts",
+        "skip_prepare": True,
+    }
+    failed = store.enqueue(JobType.FULL_PIPELINE, payload, job_id="job-1")
+    store.mark_failed(failed.job_id, "render failed", message="Full pipeline failed during render.")
+    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+
+    try:
+        response = client.post(f"/api/jobs/{failed.job_id}/start")
+    finally:
+        runner.stop()
+
+    assert response.status_code == 200
+    started = store.get_job(response.json()["job_id"])
+    assert response.json()["job_type"] == JobType.FULL_PIPELINE.value
+    assert started.payload == {
+        "model": "233541",
+        "source_url": "https://www.electronet.gr/example",
+        "bestprice_enabled": False,
+        "skroutz_enabled": True,
+        "boxnow_enabled": True,
+        "photos": 100,
+        "sections": 20,
+        "gallery_mode": "all",
+        "source_resolution": {"source": "operator"},
+    }
+
+
+def test_retry_and_start_reject_active_or_missing_jobs(tmp_path: Path) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: None)
+    active = store.enqueue(
+        JobType.FULL_PIPELINE,
+        {"model": "233541", "source_url": "https://www.electronet.gr/example"},
+        job_id="job-1",
+    )
+    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+
+    try:
+        retry_active = client.post(f"/api/jobs/{active.job_id}/retry")
+        start_active = client.post(f"/api/jobs/{active.job_id}/start")
+        retry_missing = client.post("/api/jobs/missing/retry")
+        start_missing = client.post("/api/jobs/missing/start")
+    finally:
+        runner.stop()
+
+    assert retry_active.status_code == 409
+    assert start_active.status_code == 409
+    assert retry_missing.status_code == 404
+    assert start_missing.status_code == 404
+
+
+def test_start_rejects_non_full_pipeline_jobs_intentionally(tmp_path: Path) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: None)
+    record = store.enqueue(JobType.RENDER, {"model": "233541"}, job_id="job-1")
+    store.mark_failed(record.job_id, "validation failed", message="Render job failed.")
+    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+
+    try:
+        response = client.post(f"/api/jobs/{record.job_id}/start")
+    finally:
+        runner.stop()
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Start from scratch is supported only for full_pipeline jobs."
+
+
+def test_start_rejects_full_pipeline_with_missing_original_payload_fields(tmp_path: Path) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: None)
+    record = store.enqueue(JobType.FULL_PIPELINE, {"model": "233541"}, job_id="job-1")
+    store.mark_failed(record.job_id, "bad payload", message="Full pipeline failed.")
+    client = fastapi_testclient.TestClient(create_app(job_store=store, job_runner=runner))
+
+    try:
+        response = client.post(f"/api/jobs/{record.job_id}/start")
+    finally:
+        runner.stop()
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Full pipeline job payload is missing source_url; cannot start job."
 
 
 def test_authoring_intro_runner_dispatches_and_exposes_preview_artifacts(tmp_path: Path) -> None:

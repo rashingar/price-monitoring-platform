@@ -5,6 +5,10 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request, status
 
 from product_factory.jobs.models import JobType, is_terminal_job_status
+from product_factory.jobs.retry import (
+    build_retry_from_artifacts_payload,
+    build_start_from_scratch_payload,
+)
 from product_factory.jobs.runner import SequentialJobRunner
 from product_factory.jobs.store import JobStore
 
@@ -141,7 +145,44 @@ def retry_job(job_id: str, api_request: Request) -> JobResponse:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
     if not is_terminal_job_status(record.status):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only terminal jobs can be retried.")
+    if record.job_type == JobType.FULL_PIPELINE:
+        try:
+            return _enqueue_job(
+                api_request,
+                JobType.FULL_PIPELINE,
+                build_retry_from_artifacts_payload(record),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return _enqueue_job(api_request, record.job_type, record.payload)
+
+
+@router.post("/{job_id}/start", response_model=JobResponse, responses=_NOT_FOUND_RESPONSE)
+def start_job(job_id: str, api_request: Request) -> JobResponse:
+    try:
+        record = _job_store(api_request).get_job(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.") from exc
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
+    if not is_terminal_job_status(record.status):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only terminal jobs can be started again.",
+        )
+    if record.job_type != JobType.FULL_PIPELINE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Start from scratch is supported only for full_pipeline jobs.",
+        )
+    try:
+        return _enqueue_job(
+            api_request,
+            JobType.FULL_PIPELINE,
+            build_start_from_scratch_payload(record),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @router.get("", response_model=JobListResponse)

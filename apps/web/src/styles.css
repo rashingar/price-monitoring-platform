@@ -420,6 +420,16 @@ textarea {
   background: var(--danger-hover-bg);
 }
 
+.button.warning {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.button.warning:hover {
+  background: var(--warning-subtle-bg);
+}
+
 .button.filter-button {
   min-height: 36px;
   border-color: var(--border);
@@ -437,6 +447,18 @@ textarea {
 .compact-button {
   min-height: 32px;
   padding: 6px 10px;
+}
+
+.jobs-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.jobs-action-row .button {
+  min-width: 68px;
+  white-space: nowrap;
 }
 
 .disabled-link {

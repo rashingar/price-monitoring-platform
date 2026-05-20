@@ -75,10 +75,12 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 | GET | `/api/jobs/{job_id}/artifacts` | - | `JobArtifactsResponse` |
 | GET | `/api/jobs/{job_id}/logs` | - | `JobLogsResponse` |
 | POST | `/api/jobs/{job_id}/retry` | - | `JobResponse` |
+| POST | `/api/jobs/{job_id}/start` | - | `JobResponse` |
 | POST | `/api/jobs/{job_id}/stop` | - | `JobResponse` |
 | POST | `/api/jobs/authoring/intro-text` | `AuthoringIntroJobRequest` | `JobResponse` |
 | POST | `/api/jobs/authoring/seo-meta` | `AuthoringSeoJobRequest` | `JobResponse` |
 | GET | `/api/jobs/by-model/{model}` | - | `JobListResponse` |
+| POST | `/api/jobs/full-pipeline` | `FullPipelineJobRequest` | `JobResponse` |
 | POST | `/api/jobs/prepare` | `PrepareJobRequest` | `JobResponse` |
 | POST | `/api/jobs/publish` | `PublishJobRequest` | `JobResponse` |
 | POST | `/api/jobs/render` | `RenderJobRequest` | `JobResponse` |
@@ -93,6 +95,7 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 {
   boxnow?: number; // default: 0
   characteristics_url?: string | null;
+  gallery_mode?: string | null;
   gallery_url?: string | null;
   model: string;
   photos?: number; // default: 1
@@ -151,6 +154,25 @@ Generated from `packages/contracts/openapi.product-factory.json`.
   group_updates?: FilterReviewGroupUpdate[];
   new_groups?: FilterReviewNewGroup[];
   values?: FilterReviewValueUpdate[];
+}
+```
+
+### FullPipelineJobRequest
+
+```ts
+{
+  bestprice_enabled?: boolean; // default: false
+  boxnow_enabled?: boolean; // default: false
+  gallery_mode?: string; // default: "all"
+  model: string;
+  photos?: number; // default: 100
+  product_name?: string | null;
+  sections?: number; // default: 20
+  skroutz_enabled?: boolean; // default: false
+  source_resolution?: object | null;
+  source_url: string;
+  telegram_chat_id?: string | null;
+  trigger_source?: string | null;
 }
 ```
 
@@ -220,6 +242,8 @@ accepts an optional `reason` and should return the updated job.
 
 The UI treats queued and running-like statuses as active. Terminal statuses stop polling.
 `cancelled` is terminal and separate from failed states. `killed` is terminal and failure-like.
+For terminal full-pipeline jobs, Retry means no scrape: it reuses prepared artifacts and reruns
+authoring, render, and publish. Start means scrape again from the original source URL.
 
 Authoring status should report intro-text and SEO metadata task state, output/trace paths,
 warnings, `ready_for_render`, and render block reasons.

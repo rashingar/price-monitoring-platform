@@ -18,6 +18,8 @@ REQUIRED_ENDPOINTS: dict[str, set[str]] = {
     "/api/jobs/publish": {"post"},
     "/api/jobs/{job_id}": {"get"},
     "/api/jobs/{job_id}/stop": {"post"},
+    "/api/jobs/{job_id}/start": {"post"},
+    "/api/jobs/{job_id}/retry": {"post"},
     "/api/jobs/{job_id}/logs": {"get"},
     "/api/jobs/{job_id}/artifacts": {"get"},
     "/api/filters/status": {"get"},

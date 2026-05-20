@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   PRICE_MONITORING_STATE_KEY,
   initialPriceMonitoringWorkflowState,
@@ -20,6 +20,7 @@ import {
   productFactoryFilterRevision,
   productFactoryFixtureRoutes,
   productFactoryHealth,
+  productFactoryJobs,
   productFactorySettings,
 } from "../fixtures/productFactoryApi";
 import { installMockFetch, type MockRoute } from "../mockFetch";
@@ -29,6 +30,8 @@ import { renderWithRouter } from "../renderWithRouter";
 const allRoutes = [...productFactoryFixtureRoutes, ...commerceFixtureRoutes];
 const DASHBOARD_ADVANCED_DIAGNOSTICS_STORAGE_KEY =
   "price-monitoring-platform:dashboard:advanced-diagnostics-open:v1";
+const JOB_RETRY_LABEL = "\u21bb Retry";
+const JOB_START_LABEL = "\u25b6 Start";
 
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -2032,6 +2035,88 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByText("job-failed-1")).toBeInTheDocument();
     expect(screen.getByText("job-cancelled-1")).toBeInTheDocument();
     expect(screen.getByText("job-killed-1")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Stop" }).length).toBeGreaterThan(0);
+    expect(screen.queryByText(JOB_RETRY_LABEL)).not.toBeNull();
+    expect(screen.queryByText(JOB_START_LABEL)).not.toBeNull();
+  });
+
+  it("runs Product Factory job retry and start actions for terminal full pipeline jobs", async () => {
+    const mockFetch = installMockFetch(allRoutes);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    try {
+      renderWithRouter("/jobs");
+
+      const fullPipelineJob = await screen.findByText("job-full-pipeline-succeeded-1");
+      const row = fullPipelineJob.closest("tr");
+      expect(row).not.toBeNull();
+      const retryButton = within(row as HTMLTableRowElement).getByRole("button", { name: JOB_RETRY_LABEL });
+      const startButton = within(row as HTMLTableRowElement).getByRole("button", { name: JOB_START_LABEL });
+
+      expect(retryButton).toHaveClass("warning");
+      expect(startButton).toHaveClass("secondary");
+      expect(screen.getByText("job-running-1").closest("tr")).not.toHaveTextContent(JOB_RETRY_LABEL);
+      expect(screen.getByText("job-running-1").closest("tr")).not.toHaveTextContent(JOB_START_LABEL);
+      expect(screen.getByText("job-succeeded-1").closest("tr")).not.toHaveTextContent(JOB_RETRY_LABEL);
+      expect(screen.getByText("job-succeeded-1").closest("tr")).not.toHaveTextContent(JOB_START_LABEL);
+
+      fireEvent.click(retryButton);
+      await expect(screen.findByText("233541-full_pipeline-retry")).resolves.toBeInTheDocument();
+      fireEvent.click(startButton);
+      await expect(screen.findByText("233541-full_pipeline-start")).resolves.toBeInTheDocument();
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        "Retry job job-full-pipeline-succeeded-1 without scraping again? This reuses prepared artifacts and reruns authoring/render/publish.",
+      );
+      expect(confirmSpy).toHaveBeenCalledWith(
+        "Start job job-full-pipeline-succeeded-1 from the beginning? This will scrape the source URL again.",
+      );
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "POST" &&
+            request.pathname === "/api/jobs/job-full-pipeline-succeeded-1/retry",
+        ),
+      ).toBe(true);
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "POST" &&
+            request.pathname === "/api/jobs/job-full-pipeline-succeeded-1/start",
+        ),
+      ).toBe(true);
+    } finally {
+      confirmSpy.mockRestore();
+    }
+  });
+
+  it("shows Product Factory job action errors", async () => {
+    installMockFetch([
+      { method: "GET", path: "/api/jobs", response: { jobs: productFactoryJobs } },
+      {
+        method: "POST",
+        path: "/api/jobs/job-full-pipeline-succeeded-1/retry",
+        response: {
+          status: 400,
+          body: { detail: "Cannot retry without scraping because prepared artifacts are missing." },
+        },
+      },
+    ]);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    try {
+      renderWithRouter("/jobs");
+
+      const fullPipelineJob = await screen.findByText("job-full-pipeline-succeeded-1");
+      const row = fullPipelineJob.closest("tr") as HTMLTableRowElement;
+      fireEvent.click(within(row).getByRole("button", { name: JOB_RETRY_LABEL }));
+
+      await expect(
+        screen.findByText("Cannot retry without scraping because prepared artifacts are missing."),
+      ).resolves.toBeInTheDocument();
+    } finally {
+      confirmSpy.mockRestore();
+    }
   });
 
   it("renders Filters Manager categories and selected category detail", async () => {

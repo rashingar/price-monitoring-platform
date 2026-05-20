@@ -365,6 +365,14 @@ export const apiClient = {
     );
   },
 
+  async startJob(jobId: string): Promise<Job> {
+    return normalizeJob(
+      await request<unknown>(`/api/jobs/${encodeURIComponent(jobId)}/start`, {
+        method: "POST",
+      }),
+    );
+  },
+
   async getJobLogs(jobId: string, signal?: AbortSignal): Promise<LogEntry[]> {
     return normalizeLogs(
       await request<unknown>(`/api/jobs/${encodeURIComponent(jobId)}/logs`, { signal }),

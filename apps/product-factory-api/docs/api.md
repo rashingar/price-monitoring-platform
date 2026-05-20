@@ -69,7 +69,9 @@ Job metadata is file-backed under `work/api/jobs/`:
 
 Jobs are queued and run in queue order. The default worker count is one active job at a time. If worker count is raised, jobs for the same trimmed/lowercase model are not allowed to run concurrently.
 
-New job IDs are model-first (`{model}-{stage}-{suffix}`), so workflow screens can group prepare, render, and publish attempts by model. Use `GET /api/jobs/by-model/{model}` to open a model workflow history with the newest attempt first. Use `POST /api/jobs/{job_id}/retry` to enqueue the same payload again from a terminal job, including `full_pipeline` jobs.
+New job IDs are model-first (`{model}-{stage}-{suffix}`), so workflow screens can group prepare, render, and publish attempts by model. Use `GET /api/jobs/by-model/{model}` to open a model workflow history with the newest attempt first.
+
+For terminal `full_pipeline` jobs, `POST /api/jobs/{job_id}/retry` retries without scraping by reusing prepared artifacts and rerunning authoring, render, and publish. Use `POST /api/jobs/{job_id}/start` to start from scratch; it enqueues the original full-pipeline payload and scrapes the source URL again.
 
 Runtime knobs:
 
@@ -97,6 +99,7 @@ Jobs:
 - `POST /api/jobs/publish`
 - `POST /api/jobs/{job_id}/stop`
 - `POST /api/jobs/{job_id}/retry`
+- `POST /api/jobs/{job_id}/start`
 - `GET /api/jobs`
 - `GET /api/jobs/by-model/{model}`
 - `GET /api/jobs/{job_id}`

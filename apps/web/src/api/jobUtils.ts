@@ -101,12 +101,34 @@ export function isFailedJob(job: Job | undefined): boolean {
   return FAILURE_STATUSES.has(getNormalizedStatus(job));
 }
 
+export function isTerminalJob(job: Job | undefined): boolean {
+  return Boolean(job && (isSuccessfulJob(job) || isFailedJob(job) || isCancelledJob(job)));
+}
+
 export function canStopJob(job: Job | undefined): boolean {
   return Boolean(job && getJobIdentifier(job) && isActiveJob(job));
 }
 
 export function canRetryJob(job: Job | undefined): boolean {
   return Boolean(job && getJobIdentifier(job) && (isFailedJob(job) || isCancelledJob(job)));
+}
+
+function isFullPipelineJob(job: Job | undefined): boolean {
+  if (!job) {
+    return false;
+  }
+
+  return [job.job_type, job.type, job.kind, job.workflow]
+    .filter((value): value is string => typeof value === "string")
+    .some((value) => value.trim().toLowerCase() === "full_pipeline");
+}
+
+export function canRetryWithoutScraping(job: Job | undefined): boolean {
+  return Boolean(job && getJobIdentifier(job) && isTerminalJob(job) && isFullPipelineJob(job));
+}
+
+export function canStartFromScratch(job: Job | undefined): boolean {
+  return Boolean(job && getJobIdentifier(job) && isTerminalJob(job) && isFullPipelineJob(job));
 }
 
 export function getJobStatusBucket(job: Job | undefined): JobStatusBucket {
