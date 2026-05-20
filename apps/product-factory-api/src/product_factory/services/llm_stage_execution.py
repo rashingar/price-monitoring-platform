@@ -283,6 +283,7 @@ def execute_split_llm_stage(
     resolve_intro_text_fn: IntroTextResolver | None = None,
     resolve_seo_meta_fn: SeoMetaResolver | None = None,
     intro_policy: Any | None = None,
+    seo_policy: Any | None = None,
 ) -> SplitLLMStageResult:
     task_paths = _resolve_split_llm_task_paths(
         llm_dir=llm_dir, task_manifest_path=task_manifest_path
@@ -302,7 +303,12 @@ def execute_split_llm_stage(
             output_path=task_paths.seo_meta_output_path,
         )
     _persist_json_if_needed(task_paths.seo_meta_output_path, seo_meta_payload)
-    normalized_seo, seo_errors = validate_seo_meta_output(seo_meta_payload)
+    normalized_seo, seo_errors = validate_seo_meta_output(
+        seo_meta_payload,
+        meta_description_max_chars=_policy_int(
+            seo_policy, "meta_description_max_chars", 255
+        ),
+    )
     if seo_errors:
         raise _build_stage_validation_error(
             stage=SEO_META_STAGE,
@@ -425,6 +431,7 @@ def run_seo_meta_once(
     seo_meta_output_path: Path,
     resolve_seo_meta_fn: SeoMetaResolver | None = None,
     force_refresh: bool = False,
+    seo_policy: Any | None = None,
 ) -> dict[str, Any]:
     if resolve_seo_meta_fn is None:
         seo_meta_payload = _resolve_seo_meta_output(
@@ -450,7 +457,12 @@ def run_seo_meta_once(
     _persist_json_if_needed(
         seo_meta_output_path, seo_meta_payload, force_write=force_refresh
     )
-    normalized_seo, seo_errors = validate_seo_meta_output(seo_meta_payload)
+    normalized_seo, seo_errors = validate_seo_meta_output(
+        seo_meta_payload,
+        meta_description_max_chars=_policy_int(
+            seo_policy, "meta_description_max_chars", 255
+        ),
+    )
     if seo_errors:
         raise _build_stage_validation_error(
             stage=SEO_META_STAGE,

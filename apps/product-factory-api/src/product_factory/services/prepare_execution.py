@@ -22,7 +22,7 @@ from .execution_models import (
 from .errors import service_error_from_exception
 from .metadata import maybe_write_run_metadata
 from .models import RunArtifacts, RunStatus, RunType
-from .settings_service import get_intro_text_policy
+from .settings_service import get_intro_text_policy, get_seo_meta_policy
 
 WORK_ROOT = REPO_ROOT / "work"
 BLOCKED_BY_CHALLENGE = "blocked_by_challenge"
@@ -150,6 +150,11 @@ def execute_prepare_workflow(
             category_id=str(getattr(taxonomy, "category_id", "") or ""),
             taxonomy_path=str(getattr(taxonomy, "taxonomy_path", "") or ""),
         )
+        seo_policy = get_seo_meta_policy(
+            source=str(stage_result.get("source", "")),
+            category_id=str(getattr(taxonomy, "category_id", "") or ""),
+            taxonomy_path=str(getattr(taxonomy, "taxonomy_path", "") or ""),
+        )
         intro_text_context = build_intro_text_context(
             cli=scrape_cli,
             parsed=parsed,
@@ -162,6 +167,7 @@ def execute_prepare_workflow(
             parsed=parsed,
             taxonomy=taxonomy,
             deterministic_product=deterministic_product,
+            seo_policy=seo_policy,
         )
         intro_text_prompt = INTRO_TEXT_PROMPT_PATH.read_text(encoding="utf-8").replace(
             "{{LLM_CONTEXT_JSON}}",

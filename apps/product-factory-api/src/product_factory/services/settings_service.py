@@ -11,7 +11,7 @@ from ..llm_contract import INTRO_MAX_WORDS, INTRO_MIN_WORDS
 from ..utils import ensure_directory, read_json, write_json
 from .llm_stage_execution import MAX_INTRO_ATTEMPTS
 
-DEFAULT_META_DESCRIPTION_MAX_CHARS = 260
+DEFAULT_META_DESCRIPTION_MAX_CHARS = 255
 DEFAULT_MAX_EMPHASIZED_WORDS_PERCENT = int(MAX_EMPHASIZED_WORD_RATIO * 100)
 
 

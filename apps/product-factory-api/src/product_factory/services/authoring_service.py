@@ -22,7 +22,11 @@ from .llm_stage_execution import (
     run_intro_text_with_retry,
     run_seo_meta_once,
 )
-from .settings_service import IntroTextPolicy, get_intro_text_policy
+from .settings_service import (
+    IntroTextPolicy,
+    get_intro_text_policy,
+    get_seo_meta_policy,
+)
 
 
 class PreparedAuthoringArtifactsNotFoundError(RuntimeError):
@@ -98,11 +102,13 @@ def run_seo_meta_authoring(
     resolve_seo_meta_fn: SeoMetaResolver | None = None,
 ) -> AuthoringStatus:
     context = _load_prepared_authoring_context(model)
+    policy = _seo_policy_for_context(context)
     run_seo_meta_once(
         seo_meta_context_path=context.seo_meta_context_path,
         seo_meta_prompt_path=context.seo_meta_prompt_path,
         seo_meta_output_path=context.seo_meta_output_path,
         resolve_seo_meta_fn=resolve_seo_meta_fn,
+        seo_policy=policy,
         force_refresh=retry,
     )
     return _build_authoring_status(context)
@@ -212,7 +218,11 @@ def _seo_meta_status(context: PreparedProductContext) -> SeoMetaTaskStatus:
         )
     try:
         payload = json.loads(_read_text_no_bom(context.seo_meta_output_path))
-        _, errors = validate_seo_meta_output(payload)
+        policy = _seo_policy_for_context(context)
+        _, errors = validate_seo_meta_output(
+            payload,
+            meta_description_max_chars=policy.meta_description_max_chars,
+        )
     except Exception as exc:
         errors = [f"llm_seo_meta_read_error:{exc}"]
     return SeoMetaTaskStatus(
@@ -224,6 +234,22 @@ def _seo_meta_status(context: PreparedProductContext) -> SeoMetaTaskStatus:
 
 
 def _intro_policy_for_context(context: PreparedProductContext) -> IntroTextPolicy:
+    source, category_id, taxonomy_path = _policy_scope_for_context(context)
+    return get_intro_text_policy(
+        source=source, category_id=category_id, taxonomy_path=taxonomy_path
+    )
+
+
+def _seo_policy_for_context(context: PreparedProductContext):
+    source, category_id, taxonomy_path = _policy_scope_for_context(context)
+    return get_seo_meta_policy(
+        source=source, category_id=category_id, taxonomy_path=taxonomy_path
+    )
+
+
+def _policy_scope_for_context(
+    context: PreparedProductContext,
+) -> tuple[str, str, str]:
     source = ""
     category_id = ""
     taxonomy_path = ""
@@ -242,9 +268,7 @@ def _intro_policy_for_context(context: PreparedProductContext) -> IntroTextPolic
             )
     except Exception:
         pass
-    return get_intro_text_policy(
-        source=source, category_id=category_id, taxonomy_path=taxonomy_path
-    )
+    return source, category_id, taxonomy_path
 
 
 def _read_text_no_bom(path: Path) -> str:

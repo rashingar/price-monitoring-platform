@@ -30,7 +30,8 @@ WRITING RULES
   - prefer `115 ιντσών` rather than `115"`
   - if `4K` is verified, prefer `4K Ultra HD ανάλυση`
   - if `8K` is verified, prefer `8K Ultra HD ανάλυση`
-- Aim for roughly `160-260` characters unless verified detail clearly justifies somewhat more.
+- Keep the final `meta_description` complete and at or below `writer_rules.meta_description_max_chars` characters.
+- End `meta_description` with sentence punctuation. Do not stop mid-sentence, mid-phrase, or after a connector.
 - `meta_keywords`: return a JSON array of verified keywords only, not CSV, and always include the provided brand and preferred_identifier values.
 - Do not invent claims, filters, categories, or extra fields.
 

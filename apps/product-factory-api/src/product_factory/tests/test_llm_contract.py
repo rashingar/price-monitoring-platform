@@ -403,7 +403,34 @@ def test_validate_seo_meta_output_rejects_legacy_presentation_shape() -> None:
         }
     )
 
-    assert errors == ["llm_seo_meta_root_shape_invalid"]
+    assert "llm_seo_meta_root_shape_invalid" in errors
+
+
+def test_validate_seo_meta_output_rejects_overlong_description() -> None:
+    _, errors = validate_seo_meta_output(
+        {
+            "product": {
+                "meta_description": f"{'Valid description text ' * 20}.",
+                "meta_keywords": ["LG", "Example"],
+            }
+        },
+        meta_description_max_chars=120,
+    )
+
+    assert "llm_seo_meta_description_too_long" in errors
+
+
+def test_validate_seo_meta_output_rejects_incomplete_description() -> None:
+    _, errors = validate_seo_meta_output(
+        {
+            "product": {
+                "meta_description": "Valid description text that stops after a connector and",
+                "meta_keywords": ["LG", "Example"],
+            }
+        }
+    )
+
+    assert "llm_seo_meta_description_incomplete" in errors
 
 
 def test_validate_seo_meta_output_rejects_encoding_corruption() -> None:
@@ -431,4 +458,5 @@ def test_seo_meta_prompt_source_uses_repo_root_relative_path_and_updated_guidanc
     assert "verified evidence" in lowered
     assert "product.copy_name" in prompt
     assert "preferred_identifier" in prompt
+    assert "meta_description_max_chars" in prompt
     assert "return json only" in lowered

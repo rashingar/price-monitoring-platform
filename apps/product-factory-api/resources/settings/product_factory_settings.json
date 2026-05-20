@@ -13,7 +13,7 @@
     },
     "seo_meta": {
       "default": {
-        "meta_description_max_chars": 260
+        "meta_description_max_chars": 255
       },
       "by_source": {},
       "by_category": {}

@@ -22,6 +22,8 @@ HTML_DETECT_RE = re.compile(r"<[^>]+>")
 INTRO_TEXT_TASK = "intro_text"
 SEO_META_TASK = "seo_meta"
 MAX_TASK_KEY_SPECS = 6
+SEO_META_DESCRIPTION_MAX_CHARS = 255
+SEO_META_DESCRIPTION_TERMINAL_RE = re.compile(r"[.!;;…]\s*$")
 
 
 def build_intro_text_context(
@@ -90,11 +92,17 @@ def build_seo_meta_context(
     parsed: ParsedProduct,
     taxonomy: TaxonomyResolution,
     deterministic_product: dict[str, Any],
+    seo_policy: Any | None = None,
 ) -> dict[str, Any]:
     source = parsed.source
     product_identity = _build_product_identity(source, deterministic_product, taxonomy)
     brand = product_identity["brand"]
     preferred_identifier = product_identity["preferred_identifier"]
+    meta_description_max_chars = _policy_int(
+        seo_policy,
+        "meta_description_max_chars",
+        SEO_META_DESCRIPTION_MAX_CHARS,
+    )
     return {
         "task": SEO_META_TASK,
         "input": {
@@ -132,8 +140,10 @@ def build_seo_meta_context(
                 "Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context, with evidence priority: "
                 "1. `hero_summary` 2. `key_specs` 3. `deterministic_differentiators`. "
                 'For TVs prefer `115 ιντσών` rather than `115"`; if `4K` is verified, prefer `4K Ultra HD ανάλυση`; if `8K` is verified, prefer `8K Ultra HD ανάλυση`. '
-                "Aim for roughly `160-260` characters unless verified detail clearly justifies somewhat more."
+                f"Keep the final meta_description complete and at or below `{meta_description_max_chars}` characters."
             ),
+            "meta_description_max_chars": meta_description_max_chars,
+            "complete_sentence_required": True,
             "meta_keywords_rule": "Return a structured JSON array of verified keywords only. Do not serialize as CSV. Always include brand and preferred_identifier; when product.model_name is present, prefer it over product.mpn.",
             "required_keywords": [
                 value for value in [brand, preferred_identifier] if value
@@ -219,6 +229,8 @@ def validate_intro_text_output(
 
 def validate_seo_meta_output(
     payload: dict[str, Any],
+    *,
+    meta_description_max_chars: int = SEO_META_DESCRIPTION_MAX_CHARS,
 ) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     if not isinstance(payload, dict):
@@ -236,10 +248,19 @@ def validate_seo_meta_output(
         errors.append("llm_seo_meta_shape_invalid")
     meta_description = product.get("meta_description", "")
     meta_keywords = product.get("meta_keywords", [])
+    normalized_meta_description = (
+        normalize_whitespace(meta_description) if isinstance(meta_description, str) else ""
+    )
     if not isinstance(meta_description, str):
         errors.append("llm_seo_meta_description_invalid")
     elif detect_text_issues(meta_description):
         errors.append("llm_seo_meta_description_encoding_invalid")
+    elif len(normalized_meta_description) > meta_description_max_chars:
+        errors.append("llm_seo_meta_description_too_long")
+    elif normalized_meta_description and not SEO_META_DESCRIPTION_TERMINAL_RE.search(
+        normalized_meta_description
+    ):
+        errors.append("llm_seo_meta_description_incomplete")
     if not isinstance(meta_keywords, list) or any(
         not isinstance(item, str) for item in meta_keywords
     ):
@@ -248,7 +269,7 @@ def validate_seo_meta_output(
         errors.append("llm_seo_meta_keywords_encoding_invalid")
     return {
         "product": {
-            "meta_description": normalize_whitespace(meta_description),
+            "meta_description": normalized_meta_description,
             "meta_keywords": [
                 normalize_whitespace(item)
                 for item in meta_keywords

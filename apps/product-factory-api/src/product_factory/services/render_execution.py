@@ -33,7 +33,7 @@ from .llm_stage_execution import (
 )
 from .metadata import maybe_write_run_metadata
 from .models import RunArtifacts, RunStatus, RunType
-from .settings_service import get_intro_text_policy
+from .settings_service import get_intro_text_policy, get_seo_meta_policy
 
 WORK_ROOT = REPO_ROOT / "work"
 PRODUCTS_ROOT = REPO_ROOT / "products"
@@ -93,6 +93,11 @@ def execute_render_workflow(
             category_id=str(getattr(taxonomy, "category_id", "") or ""),
             taxonomy_path=str(getattr(taxonomy, "taxonomy_path", "") or ""),
         )
+        seo_policy = get_seo_meta_policy(
+            source=source.source_name,
+            category_id=str(getattr(taxonomy, "category_id", "") or ""),
+            taxonomy_path=str(getattr(taxonomy, "taxonomy_path", "") or ""),
+        )
 
         split_llm_result = execute_split_llm_stage(
             llm_dir=llm_dir,
@@ -100,9 +105,10 @@ def execute_render_workflow(
             resolve_intro_text_fn=resolve_intro_text_fn,
             resolve_seo_meta_fn=resolve_seo_meta_fn,
             intro_policy=intro_policy,
+            seo_policy=seo_policy,
         )
         llm_errors = _build_llm_validation_backstop_errors(
-            split_llm_result, intro_policy=intro_policy
+            split_llm_result, intro_policy=intro_policy, seo_policy=seo_policy
         )
         llm_mode = "split_tasks"
         llm_artifact_paths = split_llm_result.artifact_paths
@@ -365,7 +371,7 @@ def _source_product_from_payload(payload: Mapping[str, Any]) -> SourceProductDat
 
 
 def _build_llm_validation_backstop_errors(
-    split_llm_result: SplitLLMStageResult, *, intro_policy=None
+    split_llm_result: SplitLLMStageResult, *, intro_policy=None, seo_policy=None
 ) -> list[str]:
     intro_text, intro_errors = validate_intro_text_output(
         split_llm_result.intro_text,
@@ -383,7 +389,10 @@ def _build_llm_validation_backstop_errors(
                 ),
                 "meta_keywords": split_llm_result.llm_product.get("meta_keywords", []),
             }
-        }
+        },
+        meta_description_max_chars=getattr(
+            seo_policy, "meta_description_max_chars", 255
+        ),
     )
     del intro_text
     return [*intro_errors, *seo_errors]
