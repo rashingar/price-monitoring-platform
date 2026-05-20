@@ -304,7 +304,8 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(
     assert "Prepare whole-gallery mode confirmed by artifacts." in logs
     assert "Prepare gallery source-filter counts: before=4, after=3" in logs
     assert (
-        "Prepare Skroutz skip-last gallery rule applied for source domain: skroutz.gr"
+        "Prepare deprecated Skroutz skip-last gallery metadata observed "
+        "for source domain: skroutz.gr"
         in logs
     )
 

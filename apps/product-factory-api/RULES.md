@@ -131,7 +131,7 @@ Generated runtime folders are ignored by Git and must not be committed.
 - Full-pipeline jobs default to whole-gallery extraction with `gallery_mode=all`.
 - The numeric full-pipeline `photos` default is intentionally large for compatibility with numeric request/render fields; whole-gallery mode uses the actual downloaded count for final image output.
 - Manual prepare defaults remain `photos=1`, `sections=0`, and no whole-gallery mode unless explicitly requested.
-- Skroutz skip-last gallery filtering is based on the actual source/gallery URL domain, not the listing flag.
+- Skroutz source/gallery URLs no longer skip the last gallery image. All extracted Skroutz gallery images remain eligible for normal gallery handling.
 
 ## Validation
 

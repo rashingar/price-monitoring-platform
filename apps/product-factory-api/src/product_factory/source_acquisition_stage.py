@@ -725,19 +725,12 @@ def apply_source_specific_gallery_rules(
         "skroutz_skip_last_applied": False,
         "skipped_url": "",
     }
-    if not _is_skroutz_url(source_url) and not _is_skroutz_url(final_url):
+    if _is_skroutz_url(source_url) or _is_skroutz_url(final_url):
+        # The former Skroutz skip-last rule is deprecated: it excluded valid
+        # product images before normal download caps, deduplication, and
+        # energy-label handling could run.
         return list(images), metadata
-
-    metadata["rule"] = "skroutz_skip_last_gallery_image"
-    if not images:
-        return [], metadata
-    if len(images) == 1:
-        return list(images), metadata
-
-    skipped = images[-1]
-    metadata["skroutz_skip_last_applied"] = True
-    metadata["skipped_url"] = skipped.url
-    return list(images[:-1]), metadata
+    return list(images), metadata
 
 
 def _resolve_requested_gallery_photos(

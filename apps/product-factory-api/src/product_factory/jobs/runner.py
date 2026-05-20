@@ -520,7 +520,8 @@ def _log_prepare_gallery_details(result: ServiceResult, log: LogCallback) -> Non
     if bool(details.get("gallery_skroutz_skip_last_applied", False)):
         domain = str(details.get("gallery_source_filter_domain", "") or "")
         log(
-            f"Prepare Skroutz skip-last gallery rule applied for source domain: {domain}"
+            "Prepare deprecated Skroutz skip-last gallery metadata observed "
+            f"for source domain: {domain}"
         )
 
 

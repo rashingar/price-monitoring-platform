@@ -209,12 +209,9 @@ Manual `POST /api/jobs/prepare` defaults are unchanged (`photos: 1`,
 `sections: 0`, no whole-gallery mode) unless the request explicitly sends
 `gallery_mode: "all"`.
 
-Skroutz gallery filtering is based on the actual gallery/source URL domain, not
-on the `skroutz_enabled` listing flag. When the scraping URL is a Skroutz domain,
-Product Factory skips the last extracted gallery image after extraction and
-before final gallery ordering/deduplication output. This rule does not apply to
-Electronet, BestPrice, or other non-Skroutz URLs, even when `skroutz_enabled` is
-true.
+Skroutz source/gallery URLs no longer skip the last extracted gallery image. All
+extracted Skroutz gallery images remain eligible for normal gallery mode/photo
+cap, deduplication, download success, and energy-label insertion behavior.
 
 `POST /api/jobs/{job_id}/stop` requests cancellation for a queued or running job.
 

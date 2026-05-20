@@ -130,11 +130,10 @@ of images actually downloaded.
 Manual prepare defaults remain `photos: 1`, `sections: 0`, and no whole-gallery
 mode unless the caller explicitly sets `gallery_mode: "all"`.
 
-For Skroutz source URLs, Product Factory skips the last extracted gallery image
-after gallery extraction and before final image ordering/deduplication output.
-The rule is based on the actual source/gallery URL domain, not the
-`skroutz_enabled` listing flag, so it does not apply to Electronet, BestPrice,
-or other non-Skroutz URLs.
+For Skroutz source URLs, Product Factory no longer skips the last extracted
+gallery image. All extracted Skroutz gallery images remain eligible for the
+normal gallery mode/photo cap, deduplication, download success, and energy-label
+insertion behavior.
 
 ## More Documentation
 

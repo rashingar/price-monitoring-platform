@@ -460,7 +460,7 @@ def test_execute_source_acquisition_stage_gallery_mode_all_removes_download_cap(
     assert result.snapshot_provenance["gallery_whole_mode"] is True
 
 
-def test_apply_source_specific_gallery_rules_skroutz_source_url_skips_last_image() -> (
+def test_apply_source_specific_gallery_rules_skroutz_source_url_keeps_all_images() -> (
     None
 ):
     images = [
@@ -477,11 +477,12 @@ def test_apply_source_specific_gallery_rules_skroutz_source_url_skips_last_image
     assert [image.url for image in filtered] == [
         "https://cdn.example/1.jpg",
         "https://cdn.example/2.jpg",
+        "https://cdn.example/3.jpg",
     ]
     assert metadata["domain"] == "skroutz.gr"
-    assert metadata["rule"] == "skroutz_skip_last_gallery_image"
-    assert metadata["skroutz_skip_last_applied"] is True
-    assert metadata["skipped_url"] == "https://cdn.example/3.jpg"
+    assert metadata["rule"] == ""
+    assert metadata["skroutz_skip_last_applied"] is False
+    assert metadata["skipped_url"] == ""
 
 
 def test_apply_source_specific_gallery_rules_skroutz_single_image_keeps_image() -> None:
@@ -493,12 +494,12 @@ def test_apply_source_specific_gallery_rules_skroutz_single_image_keeps_image() 
     )
 
     assert [image.url for image in filtered] == ["https://cdn.example/1.jpg"]
-    assert metadata["rule"] == "skroutz_skip_last_gallery_image"
+    assert metadata["rule"] == ""
     assert metadata["skroutz_skip_last_applied"] is False
     assert metadata["skipped_url"] == ""
 
 
-def test_apply_source_specific_gallery_rules_manual_skroutz_url_skips_last_image() -> (
+def test_apply_source_specific_gallery_rules_manual_skroutz_url_keeps_all_images() -> (
     None
 ):
     images = [
@@ -511,9 +512,38 @@ def test_apply_source_specific_gallery_rules_manual_skroutz_url_skips_last_image
         source_url="https://skroutz.cy/s/123456/example.html",
     )
 
-    assert [image.url for image in filtered] == ["https://cdn.example/1.jpg"]
+    assert [image.url for image in filtered] == [
+        "https://cdn.example/1.jpg",
+        "https://cdn.example/2.jpg",
+    ]
     assert metadata["domain"] == "skroutz.cy"
-    assert metadata["skroutz_skip_last_applied"] is True
+    assert metadata["rule"] == ""
+    assert metadata["skroutz_skip_last_applied"] is False
+    assert metadata["skipped_url"] == ""
+
+
+def test_apply_source_specific_gallery_rules_skroutz_final_url_keeps_all_images() -> (
+    None
+):
+    images = [
+        GalleryImage(url="https://cdn.example/1.jpg"),
+        GalleryImage(url="https://cdn.example/2.jpg"),
+    ]
+
+    filtered, metadata = apply_source_specific_gallery_rules(
+        images,
+        source_url="https://redirect.example/product",
+        final_url="https://www.skroutz.gr/s/123456/example.html",
+    )
+
+    assert [image.url for image in filtered] == [
+        "https://cdn.example/1.jpg",
+        "https://cdn.example/2.jpg",
+    ]
+    assert metadata["domain"] == "skroutz.gr"
+    assert metadata["rule"] == ""
+    assert metadata["skroutz_skip_last_applied"] is False
+    assert metadata["skipped_url"] == ""
 
 
 def test_apply_source_specific_gallery_rules_non_skroutz_source_does_not_skip_last_image() -> (
@@ -588,6 +618,63 @@ def test_execute_source_acquisition_stage_skroutz_enabled_non_skroutz_url_does_n
         result.snapshot_provenance["gallery_extracted_before_source_filter_count"] == 2
     )
     assert result.snapshot_provenance["gallery_after_source_filter_count"] == 2
+
+
+def test_execute_source_acquisition_stage_skroutz_gallery_passes_all_images_to_download(
+    tmp_path: Path,
+) -> None:
+    model = "233541"
+    url = "https://www.skroutz.gr/s/123456/example.html"
+    parsed = ParsedProduct(
+        source=SourceProductData(
+            source_name="skroutz",
+            page_type="product",
+            url=url,
+            canonical_url=url,
+            product_code=model,
+            brand="LG",
+            mpn="GSGV80PYLL",
+            name="LG GSGV80PYLL",
+            gallery_images=[
+                GalleryImage(url="https://cdn.example/1.jpg", position=1),
+                GalleryImage(url="https://cdn.example/2.jpg", position=2),
+                GalleryImage(url="https://cdn.example/3.jpg", position=3),
+            ],
+        )
+    )
+    fetcher = RecordingFetcher()
+
+    result = execute_source_acquisition_stage(
+        model=model,
+        url=url,
+        photos=3,
+        model_dir=tmp_path / model,
+        validate_url_scope_fn=lambda _url: ("skroutz", True, "skroutz_domain"),
+        fetcher_factory=lambda: fetcher,
+        resolve_prepare_provider_input_fn=lambda cli, **_kwargs: _build_provider_resolution_result(
+            source="skroutz",
+            provider_id="skroutz",
+            url=cli.url,
+            parsed=parsed,
+        ),
+        source_capture_sync_fn=lambda _model, _url: SourceCaptureSyncResult(
+            status="skipped", message="not configured"
+        ),
+    )
+
+    assert [image.url for image in fetcher.gallery_download_calls[0]["images"]] == [
+        "https://cdn.example/1.jpg",
+        "https://cdn.example/2.jpg",
+        "https://cdn.example/3.jpg",
+    ]
+    assert result.snapshot_provenance["gallery_source_filter_domain"] == "skroutz.gr"
+    assert result.snapshot_provenance["gallery_source_filter_rule"] == ""
+    assert result.snapshot_provenance["gallery_skroutz_skip_last_applied"] is False
+    assert result.snapshot_provenance["gallery_skroutz_skip_last_skipped_url"] == ""
+    assert (
+        result.snapshot_provenance["gallery_extracted_before_source_filter_count"] == 3
+    )
+    assert result.snapshot_provenance["gallery_after_source_filter_count"] == 3
 
 
 def test_execute_source_acquisition_stage_uses_characteristics_url_only_for_specs(
