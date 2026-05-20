@@ -533,6 +533,10 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(
         payload={
             "model": model,
             "source_url": source_url,
+            "source_resolution": {
+                "method": "batch_intake",
+                "selected_url": source_url,
+            },
             "bestprice_enabled": True,
             "skroutz_enabled": True,
             "boxnow_enabled": True,
@@ -544,6 +548,7 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(
     calls: list[object] = []
     logs: list[str] = []
     product_file = tmp_path / "products" / f"{model}.csv"
+    _write_required_prepared_artifacts(tmp_path, model)
 
     result = run_full_pipeline_job(
         record,
@@ -552,13 +557,7 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(
         or _service_result(
             request.model,
             RunType.PREPARE,
-            artifacts=RunArtifacts(
-                source_json_path=tmp_path
-                / "work"
-                / model
-                / "scrape"
-                / f"{model}.source.json"
-            ),
+            artifacts=_prepared_run_artifacts(tmp_path, model),
         ),
         run_intro_text_authoring_fn=lambda model, retry=False: calls.append(
             ("intro", model, retry)
@@ -721,41 +720,165 @@ def test_full_pipeline_retry_from_artifacts_fails_when_prepared_artifacts_are_mi
     assert any("Prepared artifacts missing for retry:" in line for line in logs)
 
 
-def test_full_pipeline_prepare_failure_stops_later_stages() -> None:
-    result, calls, logs = _run_full_pipeline_with_failure("prepare")
+def test_full_pipeline_fails_before_authoring_when_prepare_artifacts_are_missing(
+    tmp_path: Path,
+) -> None:
+    model = "233541"
+    source_url = "https://www.electronet.gr/example"
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatus.RUNNING,
+        model=model,
+        payload={
+            "model": model,
+            "source_url": source_url,
+            "bestprice_enabled": False,
+            "skroutz_enabled": False,
+            "boxnow_enabled": False,
+        },
+    )
+    calls: list[str] = []
+    logs: list[str] = []
+
+    result = run_full_pipeline_job(
+        record,
+        logs.append,
+        prepare_product_fn=lambda request: calls.append("prepare")
+        or _service_result(request.model, RunType.PREPARE),
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append("intro")
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append("seo")
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        render_product_fn=lambda request: calls.append("render")
+        or _service_result(request.model, RunType.RENDER),
+        publish_product_fn=lambda request: calls.append("publish")
+        or _service_result(request.model, RunType.PUBLISH),
+    )
 
     assert result.status == JobStatus.FAILED
     assert result.message == "Full pipeline failed during prepare."
+    assert result.error_code == "prepare_artifacts_missing"
+    assert "required scrape/authoring artifacts" in (result.error or "")
+    assert calls == ["prepare"]
+    assert any("Full pipeline prepare artifacts missing:" in line for line in logs)
+    assert (
+        "Full pipeline stopping before authoring because source scraping failed."
+        in logs
+    )
+
+
+def test_full_pipeline_batch_payload_uses_source_url_for_prepare(
+    tmp_path: Path,
+) -> None:
+    model = "233541"
+    source_url = "https://www.skroutz.gr/s/123/product.html"
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatus.RUNNING,
+        model=model,
+        payload={
+            "model": model,
+            "product_name": "Batch Product",
+            "source_url": source_url,
+            "source_resolution": {
+                "method": "batch_intake",
+                "batch_id": 7,
+                "row_id": 73,
+                "selected_url": source_url,
+            },
+        },
+    )
+    prepare_requests: list[PrepareRequest] = []
+
+    result = run_full_pipeline_job(
+        record,
+        lambda _line: None,
+        prepare_product_fn=lambda request: prepare_requests.append(request)
+        or _service_result(
+            request.model,
+            RunType.PREPARE,
+            status=RunStatus.FAILED,
+            error_code=ServiceErrorCode.PARSE_FAILURE.value,
+            error_detail="source scrape failed",
+        ),
+        run_intro_text_authoring_fn=lambda model, retry=False: _authoring_status(
+            tmp_path / "work" / model / "llm", model=model
+        ),
+        run_seo_meta_authoring_fn=lambda model, retry=False: _authoring_status(
+            tmp_path / "work" / model / "llm", model=model
+        ),
+        render_product_fn=lambda request: _service_result(
+            request.model, RunType.RENDER
+        ),
+        publish_product_fn=lambda request: _service_result(
+            request.model, RunType.PUBLISH
+        ),
+    )
+
+    assert result.status == JobStatus.FAILED
+    assert prepare_requests == [
+        PrepareRequest(
+            model=model,
+            url=source_url,
+            photos=100,
+            sections=20,
+            bestprice_status=0,
+            skroutz_status=0,
+            boxnow=0,
+            price=0,
+            gallery_mode="all",
+        )
+    ]
+
+
+def test_full_pipeline_prepare_failure_stops_later_stages(
+    tmp_path: Path,
+) -> None:
+    result, calls, logs = _run_full_pipeline_with_failure("prepare", tmp_path)
+
+    assert result.status == JobStatus.FAILED
+    assert result.message == "Full pipeline failed during prepare."
+    assert result.error_code == ServiceErrorCode.VALIDATION_FAILURE.value
     assert calls == ["prepare"]
     assert any("Full pipeline stage prepare failed" in line for line in logs)
 
 
-def test_full_pipeline_intro_authoring_failure_stops_later_stages() -> None:
-    result, calls, _logs = _run_full_pipeline_with_failure("intro text authoring")
+def test_full_pipeline_intro_authoring_failure_stops_later_stages(
+    tmp_path: Path,
+) -> None:
+    result, calls, _logs = _run_full_pipeline_with_failure(
+        "intro text authoring", tmp_path
+    )
 
     assert result.status == JobStatus.FAILED
     assert result.message == "Full pipeline failed during intro text authoring."
     assert calls == ["prepare", "intro"]
 
 
-def test_full_pipeline_seo_authoring_failure_stops_later_stages() -> None:
-    result, calls, _logs = _run_full_pipeline_with_failure("SEO meta authoring")
+def test_full_pipeline_seo_authoring_failure_stops_later_stages(
+    tmp_path: Path,
+) -> None:
+    result, calls, _logs = _run_full_pipeline_with_failure(
+        "SEO meta authoring", tmp_path
+    )
 
     assert result.status == JobStatus.FAILED
     assert result.message == "Full pipeline failed during SEO meta authoring."
     assert calls == ["prepare", "intro", "seo"]
 
 
-def test_full_pipeline_render_failure_stops_publish() -> None:
-    result, calls, _logs = _run_full_pipeline_with_failure("render")
+def test_full_pipeline_render_failure_stops_publish(tmp_path: Path) -> None:
+    result, calls, _logs = _run_full_pipeline_with_failure("render", tmp_path)
 
     assert result.status == JobStatus.FAILED
     assert result.message == "Full pipeline failed during render."
     assert calls == ["prepare", "intro", "seo", "render"]
 
 
-def test_full_pipeline_publish_failure_preserves_render_success() -> None:
-    result, calls, logs = _run_full_pipeline_with_failure("publish")
+def test_full_pipeline_publish_failure_preserves_render_success(tmp_path: Path) -> None:
+    result, calls, logs = _run_full_pipeline_with_failure("publish", tmp_path)
 
     assert result.status == JobStatus.SUCCEEDED
     assert result.message == "Full pipeline job succeeded with publish warning."
@@ -1082,8 +1205,27 @@ def _write_required_prepared_artifacts(root: Path, model: str) -> None:
     (llm_dir / "seo_meta.prompt.txt").write_text("seo\n", encoding="utf-8")
 
 
-def _run_full_pipeline_with_failure(stage: str) -> tuple[object, list[str], list[str]]:
+def _prepared_run_artifacts(root: Path, model: str) -> RunArtifacts:
+    scrape_dir = root / "work" / model / "scrape"
+    llm_dir = root / "work" / model / "llm"
+    return RunArtifacts(
+        source_json_path=scrape_dir / f"{model}.source.json",
+        scrape_normalized_json_path=scrape_dir / f"{model}.normalized.json",
+        source_report_json_path=scrape_dir / f"{model}.report.json",
+        llm_task_manifest_path=llm_dir / "task_manifest.json",
+        intro_text_context_path=llm_dir / "intro_text.context.json",
+        intro_text_prompt_path=llm_dir / "intro_text.prompt.txt",
+        seo_meta_context_path=llm_dir / "seo_meta.context.json",
+        seo_meta_prompt_path=llm_dir / "seo_meta.prompt.txt",
+    )
+
+
+def _run_full_pipeline_with_failure(
+    stage: str, tmp_path: Path
+) -> tuple[object, list[str], list[str]]:
     model = "233541"
+    if stage != "prepare":
+        _write_required_prepared_artifacts(tmp_path, model)
     record = JobRecord(
         job_id="job-1",
         job_type=JobType.FULL_PIPELINE,
@@ -1105,7 +1247,13 @@ def _run_full_pipeline_with_failure(stage: str) -> tuple[object, list[str], list
 
     def prepare_fn(request: PrepareRequest) -> ServiceResult:
         calls.append("prepare")
-        return _stage_service_result(stage, "prepare", request.model, RunType.PREPARE)
+        return _stage_service_result(
+            stage,
+            "prepare",
+            request.model,
+            RunType.PREPARE,
+            artifacts=_prepared_run_artifacts(tmp_path, model),
+        )
 
     def intro_fn(model: str, retry: bool = False) -> AuthoringStatus:
         del retry
@@ -1146,6 +1294,7 @@ def _stage_service_result(
     current_stage: str,
     model: str,
     run_type: RunType,
+    artifacts: RunArtifacts | None = None,
 ) -> ServiceResult:
     if failing_stage == current_stage:
         error_code = (
@@ -1160,9 +1309,9 @@ def _stage_service_result(
             error_code=error_code,
             error_detail=f"{current_stage} failed",
         )
-    artifacts = (
+    success_artifacts = artifacts or (
         RunArtifacts(published_csv_path=Path("products") / f"{model}.csv")
         if current_stage == "render"
         else RunArtifacts()
     )
-    return _service_result(model, run_type, artifacts=artifacts)
+    return _service_result(model, run_type, artifacts=success_artifacts)

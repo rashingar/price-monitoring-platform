@@ -234,6 +234,25 @@ def run_full_pipeline_job(
         _merge_stage_artifacts(artifacts, "prepare", prepare_result.artifacts)
         if prepare_result.status == JobStatus.FAILED:
             return _full_pipeline_failed_result("prepare", prepare_result, artifacts)
+        missing_prepare_artifacts = _missing_full_pipeline_prepare_artifacts(
+            model, prepare_result.artifacts
+        )
+        if missing_prepare_artifacts:
+            missing_summary = _format_missing_artifacts(missing_prepare_artifacts)
+            log(f"Full pipeline prepare artifacts missing: {missing_summary}")
+            log(
+                "Full pipeline stopping before authoring because source scraping failed."
+            )
+            return JobRunResult(
+                status=JobStatus.FAILED,
+                message="Full pipeline failed during prepare.",
+                error=(
+                    "Full pipeline prepare stage did not produce required "
+                    f"scrape/authoring artifacts: {missing_summary}"
+                ),
+                error_code="prepare_artifacts_missing",
+                artifacts=artifacts,
+            )
 
     authoring_payload = {"model": model, "retry": retry_from_artifacts}
     intro_record = _stage_record(record, JobType.AUTHORING_INTRO, authoring_payload)
@@ -420,6 +439,74 @@ def _missing_prepared_artifacts(model: str) -> dict[str, Path]:
     return {name: path for name, path in required_paths.items() if not path.exists()}
 
 
+def _missing_full_pipeline_prepare_artifacts(
+    model: str, prepare_artifacts: dict[str, str]
+) -> dict[str, Path]:
+    context = PreparedProductContext.from_model(
+        model,
+        model_root=repo_paths.model_root_path(model),
+    )
+    required_paths = {
+        "source_json_path": _artifact_path(
+            prepare_artifacts, "source_json_path", context.source_json_path
+        ),
+        "scrape_normalized_json_path": _artifact_path(
+            prepare_artifacts,
+            "scrape_normalized_json_path",
+            context.scrape_normalized_json_path,
+        ),
+        "source_report_json_path": _artifact_path(
+            prepare_artifacts,
+            "source_report_json_path",
+            context.source_report_json_path,
+        ),
+        "llm_task_manifest_path": _artifact_path(
+            prepare_artifacts, "llm_task_manifest_path", context.task_manifest_path
+        ),
+        "intro_text_context_path": _artifact_path(
+            prepare_artifacts,
+            "intro_text_context_path",
+            context.intro_text_context_path,
+        ),
+        "intro_text_prompt_path": _artifact_path(
+            prepare_artifacts, "intro_text_prompt_path", context.intro_text_prompt_path
+        ),
+        "seo_meta_context_path": _artifact_path(
+            prepare_artifacts, "seo_meta_context_path", context.seo_meta_context_path
+        ),
+        "seo_meta_prompt_path": _artifact_path(
+            prepare_artifacts, "seo_meta_prompt_path", context.seo_meta_prompt_path
+        ),
+    }
+    return {
+        name: path
+        for name, path in required_paths.items()
+        if not _required_prepare_artifact_is_usable(path)
+    }
+
+
+def _artifact_path(artifacts: dict[str, str], name: str, default: Path) -> Path:
+    value = artifacts.get(name)
+    if value in (None, ""):
+        return default
+    return Path(value)
+
+
+def _required_prepare_artifact_is_usable(path: Path) -> bool:
+    if not path.exists() or not path.is_file():
+        return False
+    try:
+        return path.stat().st_size > 0
+    except OSError:
+        return False
+
+
+def _format_missing_artifacts(missing_artifacts: dict[str, Path]) -> str:
+    return ", ".join(
+        f"{name}={path}" for name, path in sorted(missing_artifacts.items())
+    )
+
+
 def _log_prepare_gallery_details(result: ServiceResult, log: LogCallback) -> None:
     details = result.details
     if bool(details.get("gallery_whole_mode", False)):
@@ -461,9 +548,11 @@ def _run_full_pipeline_stage(
             error=str(exc),
         )
     if result.status == JobStatus.FAILED:
-        log(
-            f"Full pipeline stage {stage} failed: {result.error or result.message or 'stage failed'}"
-        )
+        error = result.error or result.message or "stage failed"
+        if result.error_code:
+            log(f"Full pipeline stage {stage} failed [{result.error_code}]: {error}")
+        else:
+            log(f"Full pipeline stage {stage} failed: {error}")
     else:
         log(f"Full pipeline stage {stage} succeeded.")
     return result
