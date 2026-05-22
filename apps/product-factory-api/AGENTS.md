@@ -157,7 +157,7 @@ Rules for the completion message:
 ## Source Scope
 
 - The runtime accepts product URLs supported by the repository's source-detection layer.
-- Current supported scope includes Electronet product URLs, Skroutz product URLs, and supported manufacturer product URLs implemented in the codebase.
+- Current supported scope includes Electronet product URLs, Skroutz product URLs, BestPrice product URLs, Kotsovolos product URLs, and supported manufacturer product URLs implemented in the codebase.
 - Do not invent unsupported provider behavior.
 
 ## Full-Pipeline Extraction Defaults

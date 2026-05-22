@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import re
 from urllib.parse import urlparse
 
 ELECTRONET_DOMAINS = {"electronet.gr", "www.electronet.gr"}
 SKROUTZ_DOMAINS = {"skroutz.gr", "www.skroutz.gr", "skroutz.cy", "www.skroutz.cy"}
 BESTPRICE_DOMAINS = {"bestprice.gr", "www.bestprice.gr"}
+KOTSOVOLOS_DOMAINS = {"kotsovolos.gr", "www.kotsovolos.gr"}
 SKROUTZ_PRODUCT_PATH_PREFIX = "/s/"
 BESTPRICE_PRODUCT_PATH_PREFIX = "/item/"
+KOTSOVOLOS_PRODUCT_PATH_RE = re.compile(r"/\d{5,}-", re.IGNORECASE)
 
 
 def normalize_host(url: str) -> str:
@@ -21,8 +24,10 @@ def detect_source(url: str) -> str:
         return "skroutz"
     if host in BESTPRICE_DOMAINS:
         return "bestprice"
+    if host in KOTSOVOLOS_DOMAINS:
+        return "kotsovolos"
     raise ValueError(
-        "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+        "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
     )
 
 
@@ -41,6 +46,14 @@ def is_bestprice_product_url(url: str) -> bool:
     )
 
 
+def is_kotsovolos_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return (
+        parsed.netloc.strip().lower() in KOTSOVOLOS_DOMAINS
+        and bool(KOTSOVOLOS_PRODUCT_PATH_RE.search(parsed.path))
+    )
+
+
 def validate_url_scope(url: str) -> tuple[str, bool, str]:
     source = detect_source(url)
     if source == "electronet":
@@ -53,4 +66,8 @@ def validate_url_scope(url: str) -> tuple[str, bool, str]:
         return source, True, "bestprice_product_path"
     if source == "bestprice":
         return source, False, "bestprice_non_product_path"
+    if is_kotsovolos_product_url(url):
+        return source, True, "kotsovolos_product_path"
+    if source == "kotsovolos":
+        return source, False, "kotsovolos_non_product_path"
     return source, False, "unsupported_source"

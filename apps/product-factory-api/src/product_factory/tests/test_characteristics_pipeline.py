@@ -783,6 +783,158 @@ def test_bestprice_wall_air_conditioner_aliases_fill_electronet_template() -> No
     )
 
 
+def test_kotsovolos_wall_air_conditioner_aliases_fill_electronet_template() -> None:
+    source = SourceProductData(
+        source_name="kotsovolos",
+        url="https://www.kotsovolos.gr/air-condition-heaters/air-condition/7000-to-15000-btu/245318-a-c-in18btu-inventor-ar5vi-18wfi-aria",
+        name="Inventor AR5VI-18WFI Aria 18.000 BTU/h Κλιματιστικό Inverter",
+        brand="Inventor",
+        spec_sections=[
+            SpecSection(
+                section="Χαρακτηριστικά",
+                items=[
+                    SpecItem(label="Ονομαστική απόδοση (Btu/h)", value="18.000"),
+                    SpecItem(label="Ψυκτική (Btu/h)", value="18000 (11.570-20.130)"),
+                    SpecItem(label="Συνδεσιμότητα (WiFi)", value="WiFi"),
+                    SpecItem(label="Ιονιστής", value="Διαθέτει"),
+                    SpecItem(label="Ψυκτική Ισχύς (kW)", value="5.3"),
+                    SpecItem(label="Ενεργειακή Κλάση Ψύξης", value="Α++"),
+                    SpecItem(label="Θερμική Απόδοση (BΤU/h)", value="19000"),
+                    SpecItem(
+                        label="Ενεργειακή Κλάση Θέρμανσης (Θερμής Ζώνης)",
+                        value="A+++",
+                    ),
+                    SpecItem(label="Βαθμός ενεργειακής απόδοσης (SEER)", value="7.0"),
+                    SpecItem(label="Βαθμός θερμικής απόδοσης (SCOP)", value="5.1"),
+                    SpecItem(
+                        label="Κατανάλωση Ενέργειας σε kWh ετησίως (ψύξη)",
+                        value="265",
+                    ),
+                    SpecItem(
+                        label="Κατανάλωση Ενέργειας σε kWh ετησίως (θέρμανση)",
+                        value="1308",
+                    ),
+                    SpecItem(label="Θερμική Ισχύς (kW)", value="4.5"),
+                    SpecItem(
+                        label="Ηχητική Ισχύς Εσωτερικής Μονάδας (dB)",
+                        value="57",
+                    ),
+                    SpecItem(
+                        label="Ηχητική Ισχύς Εξωτερικής Μονάδας (dB)",
+                        value="65",
+                    ),
+                    SpecItem(label="Επιπλέον", value="All DC Inverter, R32 Ψυκτικό Μέσο"),
+                    SpecItem(label="Τύπος Φίλτρου", value="Φιλτράρισμα πέντε σταδίων"),
+                    SpecItem(
+                        label="Διαστάσεις Εσωτερικής Μονάδας (ΥxΠxΒ mm)",
+                        value="319 x 965 x 215",
+                    ),
+                    SpecItem(
+                        label="Διαστάσεις Εξωτερικής Μονάδας (ΥxΠxΒ mm)",
+                        value="554 x 805 x 330",
+                    ),
+                    SpecItem(label="Συνδεσιμότητα", value="Wi-Fi Standard"),
+                ],
+            )
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Τοίχου",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Κλιματιστικά > Τοίχου",
+    )
+
+    _html, diagnostics, _warnings = build_characteristics_for_product(
+        source,
+        taxonomy,
+        schema_match=SchemaMatchResult(
+            matched_schema_id=AIR_CONDITIONER_SCHEMA_ID, score=0.95
+        ),
+    )
+
+    values = {
+        (
+            normalize_for_match(field["section"]),
+            normalize_for_match(field["label"]),
+        ): field["value"]
+        for field in diagnostics["fields"]
+    }
+
+    assert (
+        values[
+            (
+                normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+                normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"),
+            )
+        ]
+        == "18000 (11.570-20.130)"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Φορτίο Σχεδιασμού"),
+                normalize_for_match("Φορτίου Σχεδιασμού Ψύξης ( kW/h )"),
+            )
+        ]
+        == "5.3"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Καταναλώσεις"),
+                normalize_for_match("Ετήσια Κατανάλωση Ψύξης ( kWh / a )"),
+            )
+        ]
+        == "265"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ιονιστής"),
+            )
+        ]
+        == "Ναι"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ψυκτικό Υγρό"),
+            )
+        ]
+        == "R32"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"),
+            )
+        ]
+        == "WiFi"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Ύψος Εσωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "319"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Πλάτος Εξωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "805"
+    )
+
+
 def test_bestprice_wall_air_conditioner_summary_fills_feature_fallbacks() -> None:
     source = SourceProductData(
         source_name="bestprice",

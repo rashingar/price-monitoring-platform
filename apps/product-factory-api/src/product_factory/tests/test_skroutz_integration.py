@@ -85,6 +85,22 @@ def test_validate_input_accepts_bestprice_product_url() -> None:
     assert cli.url == args.url
 
 
+def test_validate_input_accepts_kotsovolos_product_url() -> None:
+    args = argparse.Namespace(
+        model="412917",
+        url="https://www.kotsovolos.gr/air-condition-heaters/air-condition/7000-to-15000-btu/245318-a-c-in18btu-inventor-ar5vi-18wfi-aria",
+        photos=1,
+        sections=0,
+        skroutz_status=0,
+        boxnow=0,
+        price="0",
+        out="out",
+    )
+    cli = validate_input(args)
+    assert cli.model == "412917"
+    assert cli.url == args.url
+
+
 def test_validate_input_rejects_tefal_manufacturer_product_url() -> None:
     args = argparse.Namespace(
         model="344709",
@@ -101,7 +117,7 @@ def test_validate_input_rejects_tefal_manufacturer_product_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+            == "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
         )
     else:
         raise AssertionError("Expected ValueError")
@@ -123,7 +139,7 @@ def test_validate_input_rejects_non_product_skroutz_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+            == "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
         )
     else:
         raise AssertionError("Expected ValueError")
@@ -145,7 +161,7 @@ def test_validate_input_rejects_non_product_tefal_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Skroutz, or BestPrice product URL"
+            == "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
         )
     else:
         raise AssertionError("Expected ValueError")

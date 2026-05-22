@@ -26,8 +26,10 @@ from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmen
 from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import execute_source_acquisition_stage
 from product_factory.parser_product_bestprice import BestPriceProductParser
+from product_factory.parser_product_kotsovolos import KotsovolosProductParser
 from product_factory.providers import (
     BestPriceProvider,
+    KotsovolosProvider,
     ProviderInputIdentity,
     ProviderRegistry,
     bootstrap_runtime_provider_registry,
@@ -54,6 +56,8 @@ SAMPLE_MODEL = "143109"
 SAMPLE_URL = "https://www.skroutz.gr/s/61054853/lg-icheio-dxl7t-mayro.html"
 BESTPRICE_MODEL = "143667"
 BESTPRICE_URL = "https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html"
+KOTSOVOLOS_MODEL = "412917"
+KOTSOVOLOS_URL = "https://www.kotsovolos.gr/air-condition-heaters/air-condition/7000-to-15000-btu/245318-a-c-in18btu-inventor-ar5vi-18wfi-aria"
 MANUFACTURER_MODEL = "344709"
 MANUFACTURER_URL = "https://shop.tefal.gr/products/dolci-%CF%80%CE%B1%CE%B3%CF%89%CF%84%CE%BF%CE%BC%CE%B7%CF%87%CE%B1%CE%BD%CE%AE-ig602a"
 
@@ -241,10 +245,11 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         manufacturer_parser=object(),
     )
 
-    assert registry.ids() == ("bestprice", "electronet", "skroutz")
+    assert registry.ids() == ("bestprice", "electronet", "kotsovolos", "skroutz")
     assert [definition.provider_id for definition in registry.definitions()] == [
         "bestprice",
         "electronet",
+        "kotsovolos",
         "skroutz",
     ]
 
@@ -252,6 +257,7 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
 def test_source_to_provider_id_maps_supported_sources() -> None:
     assert source_to_provider_id("bestprice") == "bestprice"
     assert source_to_provider_id("electronet") == "electronet"
+    assert source_to_provider_id("kotsovolos") == "kotsovolos"
     assert source_to_provider_id("skroutz") == "skroutz"
     assert source_to_provider_id("manufacturer_tefal") is None
     assert source_to_provider_id("manufacturer_bosch") is None
@@ -356,6 +362,101 @@ def test_bestprice_provider_normalize_returns_provider_result(tmp_path: Path) ->
     assert result.product.source_name == "bestprice"
     assert result.product.page_type == "product"
     assert result.metadata["fetch_method"] == "fixture"
+
+
+def test_kotsovolos_parser_normalizes_visible_product_characteristics() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.kotsovolos.gr/air-condition-heaters/air-condition/7000-to-15000-btu/245318-a-c-in18btu-inventor-ar5vi-18wfi-aria">
+        <meta property="og:image" content="https://assets.kotsovolos.gr/product/245318-b.jpg">
+      </head>
+      <body>
+        <h1>Inventor AR5VI-18WFI Aria 18.000 BTU/h Κλιματιστικό Inverter</h1>
+        <div class="product-charactristics-row">Ονομαστική απόδοση (Btu/h)</div>
+        <div class="product-charactristics-row">18.000</div>
+        <div class="product-charactristics-row">Ψυκτική (Btu/h)</div>
+        <div class="product-charactristics-row">18000 (11.570-20.130)</div>
+        <div class="product-charactristics-row">Βαθμός ενεργειακής απόδοσης (SEER)</div>
+        <div class="product-charactristics-row">7.0</div>
+        <div class="product-charactristics-row">Βαθμός θερμικής απόδοσης (SCOP)</div>
+        <div class="product-charactristics-row">5.1</div>
+        <div class="product-charactristics-row">Συνδεσιμότητα</div>
+        <div class="product-charactristics-row">Wi-Fi Standard</div>
+      </body>
+    </html>
+    """
+
+    parsed = KotsovolosProductParser().parse(html, KOTSOVOLOS_URL)
+
+    assert parsed.source.source_name == "kotsovolos"
+    assert parsed.source.product_code == "245318"
+    assert parsed.source.brand == "Inventor"
+    assert parsed.source.mpn == "AR5VI-18WFI"
+    assert parsed.source.name.startswith("Inventor AR5VI-18WFI")
+    assert parsed.source.gallery_images[0].url.endswith("245318-b.jpg")
+    specs = {item.label: item.value for item in parsed.source.spec_sections[0].items}
+    assert specs["Ονομαστική απόδοση (Btu/h)"] == "18.000"
+    assert specs["Βαθμός ενεργειακής απόδοσης (SEER)"] == "7.0"
+    assert specs["Συνδεσιμότητα"] == "Wi-Fi Standard"
+    assert parsed.critical_missing == []
+
+
+def test_kotsovolos_provider_normalize_returns_provider_result(tmp_path: Path) -> None:
+    fixture = tmp_path / "kotsovolos.html"
+    fixture.write_text(
+        """
+        <html>
+          <head>
+            <link rel="canonical" href="https://www.kotsovolos.gr/air-condition-heaters/air-condition/7000-to-15000-btu/245318-a-c-in18btu-inventor-ar5vi-18wfi-aria">
+            <meta property="og:image" content="https://assets.kotsovolos.gr/product/245318-b.jpg">
+          </head>
+          <body>
+            <h1>Inventor AR5VI-18WFI Aria 18.000 BTU/h Κλιματιστικό Inverter</h1>
+            <div class="product-charactristics-row">Ψυκτική (Btu/h)</div>
+            <div class="product-charactristics-row">18000 (11.570-20.130)</div>
+          </body>
+        </html>
+        """,
+        encoding="utf-8",
+    )
+    provider = KotsovolosProvider(fixture_html_by_url={KOTSOVOLOS_URL: fixture})
+    identity = ProviderInputIdentity(model=KOTSOVOLOS_MODEL, url=KOTSOVOLOS_URL)
+
+    snapshot = provider.fetch_snapshot(identity)
+    result = provider.normalize(snapshot, identity)
+
+    assert result.provider.provider_id == "kotsovolos"
+    assert result.product.source_name == "kotsovolos"
+    assert result.product.page_type == "product"
+    assert result.metadata["fetch_method"] == "fixture"
+
+
+def test_kotsovolos_parser_extracts_product_gallery_images_without_og_image() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.kotsovolos.gr/air-condition-heaters/air-condition/7000-to-15000-btu/245318-a-c-in18btu-inventor-ar5vi-18wfi-aria">
+      </head>
+      <body>
+        <h1>Inventor AR5VI-18WFI Aria 18.000 BTU/h Κλιματιστικό Inverter</h1>
+        <img src="https://assets.kotsovolos.gr/assets/images/videoPlacement.png">
+        <img src="https://assets.kotsovolos.gr/product/245318-b.jpg">
+        <img src="https://assets.kotsovolos.gr/product/245318-1-b.jpg">
+        <img src="https://assets.kotsovolos.gr/product/245318-s.jpg">
+        <img src="https://assets.kotsovolos.gr/product/111111-b.jpg">
+        <div class="product-charactristics-row">Ψυκτική (Btu/h)</div>
+        <div class="product-charactristics-row">18000 (11.570-20.130)</div>
+      </body>
+    </html>
+    """
+
+    parsed = KotsovolosProductParser().parse(html, KOTSOVOLOS_URL)
+
+    assert [image.url.rsplit("/", 1)[-1] for image in parsed.source.gallery_images] == [
+        "245318-b.jpg",
+        "245318-1-b.jpg",
+    ]
 
 
 def test_skroutz_provider_fetch_snapshot_reads_fixture_html(
