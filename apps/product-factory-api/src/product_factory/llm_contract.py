@@ -135,7 +135,7 @@ def build_seo_meta_context(
             "llm_owned_fields": ["product.meta_description", "product.meta_keywords"],
             "meta_description_rule": (
                 "Prefer 2 natural Greek sentences using verified evidence only and no HTML. "
-                "Sentence 1 identifies the product using brand + preferred_identifier + category + strongest verified differentiators. "
+                "Sentence 1 identifies the product using product.copy_name plus product.category when natural, without repeating the same category phrase. "
                 "When product.model_name is present, preferred_identifier is the model name and must be used in prose instead of the raw MPN. "
                 "Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context, with evidence priority: "
                 "1. `hero_summary` 2. `key_specs` 3. `deterministic_differentiators`. "
@@ -337,17 +337,11 @@ def _extract_model_name(
 
 
 def _build_copy_name(
-    name: str, brand: str, preferred_identifier: str, category: str
+    name: str, brand: str, preferred_identifier: str, _category: str
 ) -> str:
     if not brand or not preferred_identifier:
         return name
-    parts = [brand, preferred_identifier]
-    if category and category.casefold() not in {
-        brand.casefold(),
-        preferred_identifier.casefold(),
-    }:
-        parts.append(category)
-    return normalize_whitespace(" ".join(parts))
+    return normalize_whitespace(" ".join([brand, preferred_identifier]))
 
 
 def _apply_preferred_identifier(value: str, product_identity: dict[str, str]) -> str:

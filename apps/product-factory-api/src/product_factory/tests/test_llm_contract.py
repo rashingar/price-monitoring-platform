@@ -158,9 +158,10 @@ def test_build_intro_text_context_prefers_model_name_over_raw_mpn() -> None:
     )
 
     assert context["product"]["model_name"] == "XVapor Comfort"
-    assert context["product"]["copy_name"] == "Ariete XVapor Comfort Steam Cleaner"
+    assert context["product"]["copy_name"] == "Ariete XVapor Comfort"
     assert context["product"]["mpn"] == "00P414520AR0"
     assert context["product"]["preferred_identifier"] == "XVapor Comfort"
+    assert context["product"]["category"] == "Steam Cleaner"
 
 
 def test_build_seo_meta_context_requires_model_name_when_available() -> None:
@@ -187,8 +188,9 @@ def test_build_seo_meta_context_requires_model_name_when_available() -> None:
     )
 
     assert context["product"]["model_name"] == "XVapor Comfort"
-    assert context["product"]["copy_name"] == "Ariete XVapor Comfort Steam Cleaner"
+    assert context["product"]["copy_name"] == "Ariete XVapor Comfort"
     assert context["product"]["preferred_identifier"] == "XVapor Comfort"
+    assert context["product"]["category"] == "Steam Cleaner"
     assert (
         context["evidence"]["meta_description_draft"]
         == "The Ariete XVapor Comfort is a Steam Cleaner."
@@ -224,7 +226,63 @@ def test_build_intro_text_context_ignores_internal_skroutz_family_as_model_name(
 
     assert context["product"]["model_name"] == ""
     assert context["product"]["preferred_identifier"] == "AIRGRN-21HRFN8-I"
-    assert context["product"]["copy_name"] == "Midea AIRGRN-21HRFN8-I Κλιματιστικό"
+    assert context["product"]["copy_name"] == "Midea AIRGRN-21HRFN8-I"
+    assert context["product"]["category"] == "Κλιματιστικό"
+
+
+def test_build_intro_text_context_keeps_ac_copy_name_category_free() -> None:
+    context = build_intro_text_context(
+        cli=CLIInput(model="409965", url="https://example.test/ac"),
+        parsed=ParsedProduct(
+            source=SourceProductData(
+                brand="Inventor",
+                mpn="L4VI32-09/L4VO32-09",
+                name="Inventor L4VI32-09/L4VO32-09 - Κλιματιστικό 9000 BTU",
+                hero_summary="Κλιματιστικό τοίχου 9000 BTU.",
+            )
+        ),
+        taxonomy=TaxonomyResolution(
+            leaf_category="Κλιματιστικό", sub_category="Τοίχου"
+        ),
+        deterministic_product={
+            "name": "Inventor L4VI32-09/L4VO32-09 - Κλιματιστικό 9000 BTU",
+            "brand": "Inventor",
+            "mpn": "L4VI32-09/L4VO32-09",
+            "category_phrase": "Κλιματιστικό",
+        },
+    )
+
+    assert context["product"]["copy_name"] == "Inventor L4VI32-09/L4VO32-09"
+    assert context["product"]["category"] == "Κλιματιστικό"
+    assert not context["product"]["copy_name"].endswith("Κλιματιστικό")
+
+
+def test_build_seo_meta_context_keeps_generic_copy_name_category_free() -> None:
+    context = build_seo_meta_context(
+        cli=CLIInput(model="233541", url="https://example.test/fridge"),
+        parsed=ParsedProduct(
+            source=SourceProductData(
+                brand="LG",
+                mpn="GSGV80PYLL",
+                name="LG GSGV80PYLL Ψυγείο Ντουλάπα 635Lt",
+                hero_summary="Ψυγείο ντουλάπα για καθημερινή χρήση.",
+            )
+        ),
+        taxonomy=TaxonomyResolution(
+            leaf_category="Ψυγείο Ντουλάπα", sub_category="Ψυγεία Ντουλάπες"
+        ),
+        deterministic_product={
+            "name": "LG GSGV80PYLL Ψυγείο Ντουλάπα 635Lt",
+            "brand": "LG",
+            "mpn": "GSGV80PYLL",
+            "category_phrase": "Ψυγείο Ντουλάπα",
+            "meta_description_draft": "Το LG GSGV80PYLL είναι Ψυγείο Ντουλάπα.",
+        },
+    )
+
+    assert context["product"]["copy_name"] == "LG GSGV80PYLL"
+    assert context["product"]["category"] == "Ψυγείο Ντουλάπα"
+    assert not context["product"]["copy_name"].endswith("Ψυγείο Ντουλάπα")
 
 
 def test_validate_intro_text_output_accepts_plain_text_only() -> None:

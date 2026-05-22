@@ -18,8 +18,10 @@ YOU MUST RETURN THIS EXACT TOP-LEVEL SHAPE
 
 WRITING RULES
 - `meta_description`: prefer 2 natural Greek sentences, using verified evidence only and no HTML.
-- Use `product.copy_name` as the product name in prose when present.
-- Sentence 1 identifies the product using brand + preferred_identifier + category + strongest verified differentiators.
+- Use `product.copy_name` as the product subject in prose when present.
+- Use `product.category` only when it improves the sentence.
+- Do not repeat `product.category` if it already appears in the same noun phrase.
+- Sentence 1 identifies the product using `product.copy_name` plus `product.category` when natural, without repeating the same category phrase.
 - When `product.model_name` is present, `preferred_identifier` is the model name and must be used in prose instead of the raw MPN.
 - Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context.
 - Evidence priority for sentence 2:

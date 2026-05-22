@@ -18,7 +18,9 @@ WRITING RULES
 - Do not use CTA language or purchase prompts.
 - Do not invent specs, technologies, or claims.
 - Base the copy on the provided product facts, hero summary, and safe key specs only.
-- Use `product.copy_name` as the product name in prose when present.
+- Use `product.copy_name` as the product subject in prose when present.
+- Use `product.category` only when it improves the sentence.
+- Do not repeat `product.category` if it already appears in the same noun phrase.
 - When `product.model_name` is present, use it as the product identifier in prose instead of the raw MPN.
 - Use emphasis only for human readability and topical clarity, not keyword stuffing.
 - Bold only verified facts from context.
