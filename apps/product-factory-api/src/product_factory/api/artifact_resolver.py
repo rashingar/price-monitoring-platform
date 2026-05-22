@@ -60,10 +60,12 @@ def _expected_paths(
         "intro_text_prompt_path": llm_dir / "intro_text.prompt.txt",
         "intro_text_output_path": llm_dir / "intro_text.output.txt",
         "intro_text_trace_path": llm_dir / "intro_text.retry_trace.json",
+        "intro_text_lint_trace_path": llm_dir / "intro_text.lint_trace.json",
         "intro_text_preview_path": llm_dir / "intro_text.preview.html",
         "seo_meta_context_path": llm_dir / "seo_meta.context.json",
         "seo_meta_prompt_path": llm_dir / "seo_meta.prompt.txt",
         "seo_meta_output_path": llm_dir / "seo_meta.output.json",
+        "seo_meta_lint_trace_path": llm_dir / "seo_meta.lint_trace.json",
         "seo_meta_preview_path": llm_dir / "seo_meta.preview.json",
         "category_filter_review_path": review_path,
         "metadata_path": model_root / "prepare.run.json",
@@ -95,6 +97,7 @@ def _expected_paths(
             "intro_text_prompt_path": llm_dir / "intro_text.prompt.txt",
             "intro_text_output_path": llm_dir / "intro_text.output.txt",
             "intro_text_trace_path": llm_dir / "intro_text.retry_trace.json",
+            "intro_text_lint_trace_path": llm_dir / "intro_text.lint_trace.json",
             "intro_text_preview_path": llm_dir / "intro_text.preview.html",
         }
     if job_type == JobType.AUTHORING_SEO:
@@ -105,6 +108,8 @@ def _expected_paths(
             "seo_meta_context_path": llm_dir / "seo_meta.context.json",
             "seo_meta_prompt_path": llm_dir / "seo_meta.prompt.txt",
             "seo_meta_output_path": llm_dir / "seo_meta.output.json",
+            "seo_meta_trace_path": llm_dir / "seo_meta.retry_trace.json",
+            "seo_meta_lint_trace_path": llm_dir / "seo_meta.lint_trace.json",
             "seo_meta_preview_path": llm_dir / "seo_meta.preview.json",
         }
     if job_type == JobType.RENDER:
@@ -118,7 +123,10 @@ def _expected_paths(
             "llm_task_manifest_path": llm_dir / "task_manifest.json",
             "intro_text_output_path": llm_dir / "intro_text.output.txt",
             "intro_text_trace_path": llm_dir / "intro_text.retry_trace.json",
+            "intro_text_lint_trace_path": llm_dir / "intro_text.lint_trace.json",
             "seo_meta_output_path": llm_dir / "seo_meta.output.json",
+            "seo_meta_trace_path": llm_dir / "seo_meta.retry_trace.json",
+            "seo_meta_lint_trace_path": llm_dir / "seo_meta.lint_trace.json",
             "candidate_csv_path": candidate_dir / f"{model}.csv",
             "published_csv_path": products_csv,
             "candidate_normalized_json_path": candidate_dir

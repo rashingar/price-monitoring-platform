@@ -249,6 +249,9 @@ class AuthoringTaskStatus(BaseModel):
     max_attempts: int | None = None
     errors: list[str] = Field(default_factory=list)
     emphasis_warning_codes: list[str] = Field(default_factory=list)
+    lint_trace_path: str | None = None
+    lint_warning_codes: list[str] = Field(default_factory=list)
+    lint_warnings: list[dict[str, str]] = Field(default_factory=list)
     strong_span_count: int | None = None
     emphasized_word_count: int | None = None
     visible_word_count: int | None = None

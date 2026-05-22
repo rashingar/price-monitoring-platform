@@ -23,6 +23,7 @@ from .llm_config import load_openai_llm_config
 INTRO_TEXT_STAGE = "intro_text"
 SEO_META_STAGE = "seo_meta"
 INTRO_TEXT_WORD_COUNT_ERROR = "llm_intro_text_word_count_invalid"
+INTRO_TEXT_ENCODING_ERROR = "llm_intro_text_encoding_invalid"
 MAX_INTRO_ATTEMPTS = 3
 LLM_OUTPUT_ENCODING = "utf-8"
 UTF8_BOM = b"\xef\xbb\xbf"
@@ -219,6 +220,34 @@ def run_intro_text_with_retry(
             if only_word_count_error
             else f"intro validation failed: {', '.join(intro_errors)}"
         )
+        persisted_corrupted_intro = (
+            resolver is None
+            and attempt == 1
+            and not force_refresh
+            and intro_text_output_path.exists()
+            and INTRO_TEXT_ENCODING_ERROR in intro_errors
+        )
+        if persisted_corrupted_intro:
+            attempt_trace.append(
+                IntroTextAttemptTrace(
+                    attempt=attempt,
+                    word_count=word_count,
+                    error_codes=list(intro_errors),
+                    status="failed",
+                    reason=failure_reason,
+                    output_path=intro_text_output_path,
+                )
+            )
+            _write_intro_trace(trace_path, attempt_trace)
+            raise _build_stage_validation_error(
+                stage=INTRO_TEXT_STAGE,
+                error_codes=intro_errors,
+                attempt=attempt,
+                reason=failure_reason,
+                output_path=intro_text_output_path,
+                trace_path=trace_path,
+                attempt_trace=attempt_trace,
+            )
         if attempt >= resolved_max_attempts:
             attempt_trace.append(
                 IntroTextAttemptTrace(
@@ -231,16 +260,6 @@ def run_intro_text_with_retry(
                 )
             )
             _write_intro_trace(trace_path, attempt_trace)
-            if not only_word_count_error:
-                raise _build_stage_validation_error(
-                    stage=INTRO_TEXT_STAGE,
-                    error_codes=intro_errors,
-                    attempt=attempt,
-                    reason=failure_reason,
-                    output_path=intro_text_output_path,
-                    trace_path=trace_path,
-                    attempt_trace=attempt_trace,
-                )
             raise IntroTextRetryExhaustedError(
                 IntroTextRetryFailure(
                     stage=INTRO_TEXT_STAGE,

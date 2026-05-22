@@ -798,6 +798,28 @@ def test_artifact_resolver_includes_authoring_preview_content(tmp_path: Path) ->
     assert preview.content == "Rendered <strong>intro</strong>."
 
 
+def test_artifact_resolver_includes_authoring_lint_trace(tmp_path: Path) -> None:
+    llm_dir = tmp_path / "work" / "000001" / "llm"
+    llm_dir.mkdir(parents=True)
+    lint_path = llm_dir / "intro_text.lint_trace.json"
+    lint_path.write_text(
+        '{"warning_codes":["intro_text_duplicate_category_phrase"]}\n',
+        encoding="utf-8",
+    )
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.AUTHORING_INTRO,
+        status=JobStatus.SUCCEEDED,
+        model="000001",
+    )
+
+    artifacts = resolve_job_artifacts(record, repo_root=tmp_path)
+
+    assert ("intro_text_lint_trace_path", str(lint_path), "file") in [
+        (artifact.name, artifact.path, artifact.kind) for artifact in artifacts
+    ]
+
+
 def _authoring_status(llm_dir: Path) -> AuthoringStatus:
     return AuthoringStatus(
         model="000001",

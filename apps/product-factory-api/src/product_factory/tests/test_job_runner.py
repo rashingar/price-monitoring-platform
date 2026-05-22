@@ -10,6 +10,7 @@ from product_factory.jobs.models import JobRecord, JobStatus, JobType
 from product_factory.jobs.runner import (
     LogCallback,
     SequentialJobRunner,
+    run_authoring_intro_job,
     run_full_pipeline_job,
 )
 from product_factory.jobs.store import JobStore
@@ -606,6 +607,38 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(
     assert "Full pipeline stage prepare starting." in logs
     assert "Prepare whole-gallery mode active." in logs
     assert "Full pipeline stage publish succeeded." in logs
+
+
+def test_authoring_runner_artifacts_include_lint_trace_when_warnings_exist(
+    tmp_path: Path,
+) -> None:
+    llm_dir = tmp_path / "work" / "233541" / "llm"
+    llm_dir.mkdir(parents=True)
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.AUTHORING_INTRO,
+        status=JobStatus.RUNNING,
+        model="233541",
+        payload={"model": "233541"},
+    )
+    status = _authoring_status(llm_dir)
+    status.intro_text.lint_trace_path = str(llm_dir / "intro_text.lint_trace.json")
+    status.intro_text.lint_warning_codes = ["intro_text_duplicate_category_phrase"]
+    logs: list[str] = []
+
+    result = run_authoring_intro_job(
+        record,
+        logs.append,
+        run_intro_text_authoring_fn=lambda model, retry=False: status,
+    )
+
+    assert result.status == JobStatus.SUCCEEDED
+    assert result.artifacts["intro_text_lint_trace_path"] == str(
+        llm_dir / "intro_text.lint_trace.json"
+    )
+    assert result.artifacts["intro_text_output_path"] == str(
+        llm_dir / "intro_text.output.txt"
+    )
 
 
 def test_full_pipeline_retry_from_artifacts_skips_prepare_and_reruns_remaining_stages(

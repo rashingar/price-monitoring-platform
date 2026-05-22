@@ -661,6 +661,11 @@ def _authoring_artifacts(status: AuthoringStatus, stage: str) -> dict[str, str]:
                     if status.intro_text.trace_path
                     else None
                 ),
+                "intro_text_lint_trace_path": (
+                    Path(status.intro_text.lint_trace_path)
+                    if status.intro_text.lint_trace_path
+                    else None
+                ),
                 "intro_text_preview_path": _write_intro_preview(output_path),
             }
         )
@@ -671,7 +676,16 @@ def _authoring_artifacts(status: AuthoringStatus, stage: str) -> dict[str, str]:
                 "seo_meta_output_path": output_path,
                 "seo_meta_prompt_path": llm_dir / "seo_meta.prompt.txt",
                 "seo_meta_context_path": llm_dir / "seo_meta.context.json",
-                "seo_meta_trace_path": llm_dir / "seo_meta.retry_trace.json",
+                "seo_meta_trace_path": (
+                    Path(status.seo_meta.trace_path)
+                    if status.seo_meta.trace_path
+                    else llm_dir / "seo_meta.retry_trace.json"
+                ),
+                "seo_meta_lint_trace_path": (
+                    Path(status.seo_meta.lint_trace_path)
+                    if status.seo_meta.lint_trace_path
+                    else None
+                ),
                 "seo_meta_preview_path": _write_seo_preview(output_path),
             }
         )

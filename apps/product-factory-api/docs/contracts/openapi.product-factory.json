@@ -195,6 +195,34 @@
             "title": "Errors",
             "type": "array"
           },
+          "lint_trace_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lint Trace Path"
+          },
+          "lint_warning_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lint Warning Codes",
+            "type": "array"
+          },
+          "lint_warnings": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Lint Warnings",
+            "type": "array"
+          },
           "max_attempts": {
             "anyOf": [
               {

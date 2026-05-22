@@ -136,9 +136,19 @@ def _write_prepared_authoring_artifacts(repo_root: Path, model: str = MODEL) -> 
             }
         },
     )
-    write_json(llm_dir / "intro_text.context.json", {})
+    authoring_context = {
+        "product": {
+            "brand": "LG",
+            "preferred_identifier": "GSGV80PYLL",
+            "mpn": "GSGV80PYLL",
+            "prose_subject": "LG GSGV80PYLL",
+            "copy_name": "LG GSGV80PYLL",
+            "category": "Ψυγείο",
+        }
+    }
+    write_json(llm_dir / "intro_text.context.json", authoring_context)
     (llm_dir / "intro_text.prompt.txt").write_text("intro prompt", encoding="utf-8")
-    write_json(llm_dir / "seo_meta.context.json", {})
+    write_json(llm_dir / "seo_meta.context.json", authoring_context)
     (llm_dir / "seo_meta.prompt.txt").write_text("seo prompt", encoding="utf-8")
     return model_root
 
@@ -328,6 +338,58 @@ def test_get_authoring_status_reports_missing_and_valid_outputs(
     assert status.intro_text.strong_span_count == 0
     assert status.seo_meta.status == "valid"
     assert status.ready_for_render is True
+    assert status.warnings == []
+    assert status.intro_text.lint_trace_path == str(
+        model_root / "llm" / "intro_text.lint_trace.json"
+    )
+    assert status.seo_meta.lint_trace_path == str(
+        model_root / "llm" / "seo_meta.lint_trace.json"
+    )
+    assert (model_root / "llm" / "intro_text.lint_trace.json").is_file()
+    assert (model_root / "llm" / "seo_meta.lint_trace.json").is_file()
+
+
+def test_authoring_status_stores_lint_warnings_in_trace(
+    isolated_repo: Path,
+) -> None:
+    model_root = _write_prepared_authoring_artifacts(isolated_repo)
+    llm_dir = model_root / "llm"
+    (llm_dir / "intro_text.output.txt").write_text(
+        "Το LG GSGV80PYLL Ψυγείο είναι ένα ψυγείο. "
+        + " ".join(["λέξη"] * 90),
+        encoding="utf-8",
+    )
+    write_json(
+        llm_dir / "seo_meta.output.json",
+        {
+            "product": {
+                "meta_description": (
+                    "Το LG GSGV80PYLL είναι ψυγείο και το LG GSGV80PYLL "
+                    "καλύπτει καθημερινή χρήση."
+                ),
+                "meta_keywords": ["LG", "GSGV80PYLL"],
+            }
+        },
+    )
+
+    status = get_authoring_status(MODEL)
+    intro_trace = json.loads(
+        (llm_dir / "intro_text.lint_trace.json").read_text(encoding="utf-8")
+    )
+    seo_trace = json.loads(
+        (llm_dir / "seo_meta.lint_trace.json").read_text(encoding="utf-8")
+    )
+
+    assert status.ready_for_render is True
+    assert status.intro_text.status == "valid"
+    assert status.seo_meta.status == "valid"
+    assert "intro_text_duplicate_category_phrase" in status.intro_text.lint_warning_codes
+    assert "authoring_duplicate_prose_subject" in status.seo_meta.lint_warning_codes
+    assert "intro_text:intro_text_duplicate_category_phrase" in status.warnings
+    assert "seo_meta:authoring_duplicate_prose_subject" in status.warnings
+    assert "seo_meta:authoring_duplicate_identifier_phrase" in status.warnings
+    assert intro_trace["warning_codes"] == ["intro_text_duplicate_category_phrase"]
+    assert "authoring_duplicate_prose_subject" in seo_trace["warning_codes"]
 
 
 def test_get_authoring_status_reports_invalid_outputs(isolated_repo: Path) -> None:
@@ -381,6 +443,39 @@ def test_intro_authoring_retry_rewrites_only_intro_and_uses_configured_policy(
         encoding="utf-8"
     ) == _build_intro(6)
     assert (llm_dir / "seo_meta.output.json").read_text(encoding="utf-8") == seo_before
+
+
+def test_intro_authoring_succeeds_with_lint_warnings(isolated_repo: Path) -> None:
+    _write_settings(
+        repo_paths.PRODUCT_FACTORY_SETTINGS_PATH,
+        min_words=5,
+        max_words=120,
+        max_attempts=1,
+    )
+    model_root = _write_prepared_authoring_artifacts(isolated_repo)
+    llm_dir = model_root / "llm"
+    write_json(
+        llm_dir / "seo_meta.output.json",
+        {
+            "product": {
+                "meta_description": "Έγκυρη περιγραφή προϊόντος.",
+                "meta_keywords": ["LG"],
+            }
+        },
+    )
+
+    status = run_intro_text_authoring(
+        MODEL,
+        retry=True,
+        resolve_intro_text_fn=lambda **kwargs: (
+            "Το LG GSGV80PYLL Ψυγείο είναι ένα ψυγείο. "
+            + " ".join(["λέξη"] * 12)
+        ),
+    )
+
+    assert status.intro_text.status == "valid"
+    assert status.ready_for_render is True
+    assert "intro_text_duplicate_category_phrase" in status.intro_text.lint_warning_codes
 
 
 def test_seo_authoring_retry_rewrites_only_seo(isolated_repo: Path) -> None:
