@@ -127,6 +127,13 @@ def test_build_seo_meta_context_includes_required_keyword_evidence() -> None:
         "2 natural Greek sentences" in context["writer_rules"]["meta_description_rule"]
     )
     assert (
+        "product.prose_subject" in context["writer_rules"]["meta_description_rule"]
+    )
+    assert (
+        "product.copy_name plus product.category"
+        not in context["writer_rules"]["meta_description_rule"]
+    )
+    assert (
         "Exactly one sentence" not in context["writer_rules"]["meta_description_rule"]
     )
     assert (
@@ -159,6 +166,7 @@ def test_build_intro_text_context_prefers_model_name_over_raw_mpn() -> None:
 
     assert context["product"]["model_name"] == "XVapor Comfort"
     assert context["product"]["copy_name"] == "Ariete XVapor Comfort"
+    assert context["product"]["prose_subject"] == "Ariete XVapor Comfort"
     assert context["product"]["mpn"] == "00P414520AR0"
     assert context["product"]["preferred_identifier"] == "XVapor Comfort"
     assert context["product"]["category"] == "Steam Cleaner"
@@ -189,6 +197,7 @@ def test_build_seo_meta_context_requires_model_name_when_available() -> None:
 
     assert context["product"]["model_name"] == "XVapor Comfort"
     assert context["product"]["copy_name"] == "Ariete XVapor Comfort"
+    assert context["product"]["prose_subject"] == "Ariete XVapor Comfort"
     assert context["product"]["preferred_identifier"] == "XVapor Comfort"
     assert context["product"]["category"] == "Steam Cleaner"
     assert (
@@ -227,6 +236,7 @@ def test_build_intro_text_context_ignores_internal_skroutz_family_as_model_name(
     assert context["product"]["model_name"] == ""
     assert context["product"]["preferred_identifier"] == "AIRGRN-21HRFN8-I"
     assert context["product"]["copy_name"] == "Midea AIRGRN-21HRFN8-I"
+    assert context["product"]["prose_subject"] == "Midea AIRGRN-21HRFN8-I"
     assert context["product"]["category"] == "Κλιματιστικό"
 
 
@@ -253,7 +263,9 @@ def test_build_intro_text_context_keeps_ac_copy_name_category_free() -> None:
     )
 
     assert context["product"]["copy_name"] == "Inventor L4VI32-09/L4VO32-09"
+    assert context["product"]["prose_subject"] == "Inventor L4VI32-09/L4VO32-09"
     assert context["product"]["category"] == "Κλιματιστικό"
+    assert "Κλιματιστικό" not in context["product"]["prose_subject"]
     assert not context["product"]["copy_name"].endswith("Κλιματιστικό")
 
 
@@ -281,7 +293,9 @@ def test_build_seo_meta_context_keeps_generic_copy_name_category_free() -> None:
     )
 
     assert context["product"]["copy_name"] == "LG GSGV80PYLL"
+    assert context["product"]["prose_subject"] == "LG GSGV80PYLL"
     assert context["product"]["category"] == "Ψυγείο Ντουλάπα"
+    assert "Ψυγείο Ντουλάπα" not in context["product"]["prose_subject"]
     assert not context["product"]["copy_name"].endswith("Ψυγείο Ντουλάπα")
 
 
@@ -514,7 +528,23 @@ def test_seo_meta_prompt_source_uses_repo_root_relative_path_and_updated_guidanc
     assert prompt_path.is_file()
     assert "exactly one sentence" not in lowered
     assert "verified evidence" in lowered
-    assert "product.copy_name" in prompt
+    assert "product.prose_subject" in prompt
+    assert "legacy fallback" in lowered
+    assert "Use `product.copy_name` as the product subject" not in prompt
     assert "preferred_identifier" in prompt
     assert "meta_description_max_chars" in prompt
     assert "return json only" in lowered
+
+
+def test_authoring_prompts_prefer_prose_subject_over_copy_name() -> None:
+    prompt_paths = [
+        REPO_ROOT / "resources" / "prompts" / "intro_text_prompt.txt",
+        REPO_ROOT / "resources" / "prompts" / "seo_meta_prompt.txt",
+    ]
+
+    for prompt_path in prompt_paths:
+        prompt = Path(prompt_path).read_text(encoding="utf-8")
+
+        assert "product.prose_subject" in prompt
+        assert "Use `product.copy_name` as the product subject" not in prompt
+        assert "brand + preferred_identifier + category" not in prompt

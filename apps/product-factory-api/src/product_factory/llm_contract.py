@@ -135,7 +135,8 @@ def build_seo_meta_context(
             "llm_owned_fields": ["product.meta_description", "product.meta_keywords"],
             "meta_description_rule": (
                 "Prefer 2 natural Greek sentences using verified evidence only and no HTML. "
-                "Sentence 1 identifies the product using product.copy_name plus product.category when natural, without repeating the same category phrase. "
+                "Sentence 1 identifies the product using product.prose_subject as the subject when present, with product.copy_name only as a legacy fallback. "
+                "Use product.category separately only when natural, without repeating the same category phrase in one noun phrase. "
                 "When product.model_name is present, preferred_identifier is the model name and must be used in prose instead of the raw MPN. "
                 "Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context, with evidence priority: "
                 "1. `hero_summary` 2. `key_specs` 3. `deterministic_differentiators`. "
@@ -297,10 +298,12 @@ def _build_product_identity(
     ).strip()
     model_name = _extract_model_name(source, deterministic_product, brand, mpn)
     preferred_identifier = model_name or mpn
+    prose_subject = _build_prose_subject(name, brand, preferred_identifier)
     copy_name = _build_copy_name(name, brand, preferred_identifier, category)
     return {
         "name": name,
         "copy_name": copy_name,
+        "prose_subject": prose_subject,
         "brand": brand,
         "model_name": model_name,
         "mpn": mpn,
@@ -336,12 +339,16 @@ def _extract_model_name(
     return ""
 
 
-def _build_copy_name(
-    name: str, brand: str, preferred_identifier: str, _category: str
-) -> str:
+def _build_prose_subject(name: str, brand: str, preferred_identifier: str) -> str:
     if not brand or not preferred_identifier:
         return name
     return normalize_whitespace(" ".join([brand, preferred_identifier]))
+
+
+def _build_copy_name(
+    name: str, brand: str, preferred_identifier: str, _category: str
+) -> str:
+    return _build_prose_subject(name, brand, preferred_identifier)
 
 
 def _apply_preferred_identifier(value: str, product_identity: dict[str, str]) -> str:
