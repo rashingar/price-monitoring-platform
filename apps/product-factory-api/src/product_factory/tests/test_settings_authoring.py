@@ -62,7 +62,7 @@ def isolated_repo(tmp_path: Path, monkeypatch):
 def _write_settings(
     path: Path,
     *,
-    min_words=80,
+    min_words=60,
     max_words=180,
     max_attempts=3,
     max_emphasized_words_percent=35,
@@ -197,7 +197,7 @@ def test_existing_settings_file_loads_valid_values(isolated_repo: Path) -> None:
 def test_invalid_settings_are_rejected(
     isolated_repo: Path, overrides: dict[str, int], message: str
 ) -> None:
-    values = {"min_words": 80, "max_words": 180, "max_attempts": 3, **overrides}
+    values = {"min_words": 60, "max_words": 180, "max_attempts": 3, **overrides}
     _write_settings(repo_paths.PRODUCT_FACTORY_SETTINGS_PATH, **values)
 
     with pytest.raises(ProductFactorySettingsError, match=message):

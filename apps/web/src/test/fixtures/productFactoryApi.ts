@@ -124,7 +124,7 @@ export const productFactorySettings = {
   authoring: {
     intro_text: {
       default: {
-        min_words: 80,
+        min_words: 60,
         max_words: 140,
         max_attempts: 3,
         max_emphasized_words_percent: 35,
@@ -141,7 +141,7 @@ export const productFactorySettings = {
     authoring: {
       intro_text: {
         default: {
-          min_words: 80,
+          min_words: 60,
           max_words: 140,
           max_attempts: 3,
           max_emphasized_words_percent: 35,
@@ -377,7 +377,7 @@ export const productFactoryAuthoring = {
     status: "succeeded",
     output_path: "runs/005606/intro.txt",
     word_count: 112,
-    min_words: 80,
+    min_words: 60,
     max_words: 140,
     max_attempts: 3,
     errors: [],
@@ -398,7 +398,7 @@ export const productFactoryAuthoring = {
       status: "succeeded",
       output_path: "runs/005606/intro.txt",
       word_count: 112,
-      min_words: 80,
+      min_words: 60,
       max_words: 140,
       max_attempts: 3,
       errors: [],

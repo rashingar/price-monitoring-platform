@@ -104,7 +104,7 @@ Deterministic code owns:
 
 - `intro_text.output.txt` must contain Greek text with only optional safe inline `<strong>...</strong>` emphasis.
 - Use exactly one paragraph.
-- Use 80-180 words.
+- Use 60-180 words.
 - Use no HTML except `<strong>` and `</strong>` around important verified facts.
 - Use no bullets and no CTA language.
 - Existing generated products/artifacts are not migrated; only newly authored or re-authored intro text artifacts use emphasis.

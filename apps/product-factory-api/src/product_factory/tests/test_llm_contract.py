@@ -72,6 +72,7 @@ def test_build_intro_text_context_excludes_section_generation() -> None:
     assert (
         context["writer_rules"]["emphasis_policy"]["max_emphasized_word_ratio"] == 0.35
     )
+    assert context["writer_rules"]["word_count_range"] == {"min": 60, "max": 180}
     assert "presentation_source_sections" not in context
     assert "sections" not in context
 
@@ -317,6 +318,25 @@ def test_validate_intro_text_output_accepts_plain_text_only() -> None:
     assert normalized.startswith("λέξη")
 
 
+def test_validate_intro_text_output_accepts_updated_word_count_boundaries() -> None:
+    assert INTRO_MIN_WORDS == 60
+    assert INTRO_MAX_WORDS == 180
+
+    _, min_errors = validate_intro_text_output(" ".join(["λέξη"] * 60))
+    _, max_errors = validate_intro_text_output(" ".join(["λέξη"] * 180))
+
+    assert min_errors == []
+    assert max_errors == []
+
+
+def test_validate_intro_text_output_rejects_updated_word_count_boundaries() -> None:
+    _, min_errors = validate_intro_text_output(" ".join(["λέξη"] * 59))
+    _, max_errors = validate_intro_text_output(" ".join(["λέξη"] * 181))
+
+    assert "llm_intro_text_word_count_invalid" in min_errors
+    assert "llm_intro_text_word_count_invalid" in max_errors
+
+
 def test_validate_intro_text_output_accepts_safe_strong_emphasis() -> None:
     intro = (
         "<strong>Acme AX100</strong> είναι <strong>φορητός υπολογιστής</strong> για καθημερινή χρήση "
@@ -541,6 +561,16 @@ def test_seo_meta_prompt_source_uses_repo_root_relative_path_and_updated_guidanc
     assert "product.copy_name" not in prompt
     assert "preferred_identifier" in prompt
     assert "return json only" in lowered
+
+
+def test_intro_text_prompt_source_uses_updated_word_count_range() -> None:
+    prompt_path = REPO_ROOT / "resources" / "prompts" / "intro_text_prompt.txt"
+    prompt = Path(prompt_path).read_text(encoding="utf-8")
+
+    assert prompt_path.is_file()
+    assert "60-180 words" in prompt
+    assert "80" + "-180" not in prompt
+    assert "product.prose_subject" in prompt
 
 
 def test_authoring_prompts_prefer_prose_subject_over_copy_name() -> None:

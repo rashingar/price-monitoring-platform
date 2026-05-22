@@ -68,7 +68,7 @@ describe("Product Factory API client contract fixtures", () => {
     installMockFetch(productFactoryFixtureRoutes);
 
     await expect(apiClient.getSettings()).resolves.toMatchObject({
-      authoring: { intro_text: { default: { min_words: 80 } } },
+      authoring: { intro_text: { default: { min_words: 60 } } },
     });
 
     await expect(apiClient.getFilterStatus()).resolves.toMatchObject({

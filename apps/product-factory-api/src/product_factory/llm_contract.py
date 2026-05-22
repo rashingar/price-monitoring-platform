@@ -15,7 +15,7 @@ from .models import CLIInput, ParsedProduct, SourceProductData, TaxonomyResoluti
 from .normalize import normalize_whitespace
 from .text_health import detect_text_issues
 
-INTRO_MIN_WORDS = 80
+INTRO_MIN_WORDS = 60
 INTRO_MAX_WORDS = 180
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 HTML_DETECT_RE = re.compile(r"<[^>]+>")

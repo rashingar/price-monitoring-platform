@@ -230,7 +230,7 @@ def test_run_intro_text_with_retry_retries_word_count_failures_only(
 
     def resolve_intro_text(**kwargs):
         attempts.append(kwargs["attempt"])
-        return _build_intro(79 if kwargs["attempt"] == 1 else 80)
+        return _build_intro(59 if kwargs["attempt"] == 1 else 80)
 
     result = run_intro_text_with_retry(
         intro_text_context_path=llm_dir / "intro_text.context.json",
@@ -248,7 +248,7 @@ def test_run_intro_text_with_retry_retries_word_count_failures_only(
         (llm_dir / "intro_text.retry_trace.json").read_text(encoding="utf-8")
     )
     assert [item["status"] for item in trace] == ["retry", "success"]
-    assert [item["word_count"] for item in trace] == [79, 80]
+    assert [item["word_count"] for item in trace] == [59, 80]
 
 
 def test_run_intro_text_with_retry_accepts_113_words_immediately(
@@ -303,7 +303,7 @@ def test_run_intro_text_with_retry_stops_after_three_invalid_attempts(
 
     def resolve_intro_text(**kwargs):
         attempts.append(kwargs["attempt"])
-        return _build_intro(79)
+        return _build_intro(59)
 
     with pytest.raises(IntroTextRetryExhaustedError) as excinfo:
         run_intro_text_with_retry(
@@ -321,7 +321,7 @@ def test_run_intro_text_with_retry_stops_after_three_invalid_attempts(
     assert excinfo.value.details["stage"] == "intro_text"
     assert excinfo.value.details["error_code"] == INTRO_TEXT_WORD_COUNT_ERROR
     assert excinfo.value.details["attempt_count"] == 3
-    assert excinfo.value.details["reason"] == "word count 79 is outside 80-180"
+    assert excinfo.value.details["reason"] == "word count 59 is outside 60-180"
     assert excinfo.value.trace_path == llm_dir / "intro_text.retry_trace.json"
     assert [item.status for item in excinfo.value.attempt_trace] == [
         "retry",
@@ -385,7 +385,7 @@ def test_execute_split_llm_stage_keeps_seo_meta_single_pass_during_intro_retries
 
     def resolve_intro_text(**kwargs):
         calls["intro"] += 1
-        return _build_intro(79 if kwargs["attempt"] == 1 else 80)
+        return _build_intro(59 if kwargs["attempt"] == 1 else 80)
 
     result = execute_split_llm_stage(
         llm_dir=llm_dir,
@@ -407,7 +407,7 @@ def test_execute_split_llm_stage_preserves_existing_seo_meta_across_intro_exhaus
     (llm_dir / "seo_meta.output.json").write_text(existing_seo_text, encoding="utf-8")
 
     def resolve_intro_text(**kwargs):
-        return _build_intro(79)
+        return _build_intro(59)
 
     with pytest.raises(IntroTextRetryExhaustedError) as excinfo:
         execute_split_llm_stage(
@@ -578,7 +578,7 @@ def test_run_intro_text_with_retry_writes_output_atomically(
         return real_replace(src, dst)
 
     def resolve_intro_text(**kwargs):
-        return _build_intro(79 if kwargs["attempt"] == 1 else 80)
+        return _build_intro(59 if kwargs["attempt"] == 1 else 80)
 
     monkeypatch.setattr(llm_stage_execution.os, "replace", tracking_replace)
 

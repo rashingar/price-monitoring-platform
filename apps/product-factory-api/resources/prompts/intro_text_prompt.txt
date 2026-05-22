@@ -5,6 +5,7 @@ Use only verified facts from that context.
 
 OUTPUT
 - Return exactly one Greek paragraph.
+- Write 60-180 words.
 - Do not return JSON, Markdown, bullets, or commentary.
 - Use only `<strong>` and `</strong>` for optional inline emphasis.
 

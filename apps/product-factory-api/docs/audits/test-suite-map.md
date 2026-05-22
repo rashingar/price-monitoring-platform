@@ -9,7 +9,7 @@ Baseline commands were run from `apps/product-factory-api/src` with the repo vir
 ..\.venv\Scripts\python.exe -m pytest -q --durations=30 --durations-min=0.05
 ```
 
-Collection found 437 tests. The duration run found 435 passing tests and 2 render authoring failures caused by tests hardcoding the old `80-180` intro range while the editable `resources/settings/product_factory_settings.json` file configured `70-180`. The render tests now derive retry expectations from the active settings policy.
+Collection found 437 tests. The duration run found 435 passing tests and 2 render authoring failures caused by tests hardcoding the old configured intro range while the editable `resources/settings/product_factory_settings.json` file configured `70-180`. The render tests now derive retry expectations from the active settings policy.
 
 ## Layer Strategy
 
