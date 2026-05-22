@@ -123,9 +123,7 @@ def test_build_seo_meta_context_includes_required_keyword_evidence() -> None:
         context["evidence"]["meta_description_draft"]
         == "Το LG GSGV80PYLL είναι ψυγείο ντουλάπα με 635Lt."
     )
-    assert (
-        "2 natural Greek sentences" in context["writer_rules"]["meta_description_rule"]
-    )
+    assert "Write natural Greek" in context["writer_rules"]["meta_description_rule"]
     assert (
         "product.prose_subject" in context["writer_rules"]["meta_description_rule"]
     )
@@ -140,6 +138,15 @@ def test_build_seo_meta_context_includes_required_keyword_evidence() -> None:
         "Smooth the Greek grammar"
         not in context["writer_rules"]["meta_description_rule"]
     )
+    assert context["writer_rules"]["subject_field"] == "product.prose_subject"
+    assert context["writer_rules"]["category_field"] == "product.category"
+    assert context["writer_rules"]["output_schema"] == {
+        "product": {
+            "meta_description": "string",
+            "meta_keywords": "string[]",
+        }
+    }
+    assert "json_shape" in context["writer_rules"]["deterministic_validation"]
 
 
 def test_build_intro_text_context_prefers_model_name_over_raw_mpn() -> None:
@@ -205,7 +212,7 @@ def test_build_seo_meta_context_requires_model_name_when_available() -> None:
         == "The Ariete XVapor Comfort is a Steam Cleaner."
     )
     assert context["writer_rules"]["required_keywords"] == ["Ariete", "XVapor Comfort"]
-    assert "instead of the raw MPN" in context["writer_rules"]["meta_description_rule"]
+    assert context["writer_rules"]["subject_field"] == "product.prose_subject"
 
 
 def test_build_intro_text_context_ignores_internal_skroutz_family_as_model_name() -> (
@@ -267,6 +274,8 @@ def test_build_intro_text_context_keeps_ac_copy_name_category_free() -> None:
     assert context["product"]["category"] == "Κλιματιστικό"
     assert "Κλιματιστικό" not in context["product"]["prose_subject"]
     assert not context["product"]["copy_name"].endswith("Κλιματιστικό")
+    assert context["writer_rules"]["subject_field"] == "product.prose_subject"
+    assert context["writer_rules"]["category_field"] == "product.category"
 
 
 def test_build_seo_meta_context_keeps_generic_copy_name_category_free() -> None:
@@ -527,12 +536,10 @@ def test_seo_meta_prompt_source_uses_repo_root_relative_path_and_updated_guidanc
 
     assert prompt_path.is_file()
     assert "exactly one sentence" not in lowered
-    assert "verified evidence" in lowered
+    assert "verified facts" in lowered
     assert "product.prose_subject" in prompt
-    assert "legacy fallback" in lowered
-    assert "Use `product.copy_name` as the product subject" not in prompt
+    assert "product.copy_name" not in prompt
     assert "preferred_identifier" in prompt
-    assert "meta_description_max_chars" in prompt
     assert "return json only" in lowered
 
 
@@ -546,5 +553,5 @@ def test_authoring_prompts_prefer_prose_subject_over_copy_name() -> None:
         prompt = Path(prompt_path).read_text(encoding="utf-8")
 
         assert "product.prose_subject" in prompt
-        assert "Use `product.copy_name` as the product subject" not in prompt
+        assert "product.copy_name" not in prompt
         assert "brand + preferred_identifier + category" not in prompt

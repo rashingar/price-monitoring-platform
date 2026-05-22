@@ -62,6 +62,13 @@ def build_intro_text_context(
         "writer_rules": {
             "language": "Greek",
             "llm_owned_fields": [INTRO_TEXT_TASK],
+            "subject_field": "product.prose_subject",
+            "category_field": "product.category",
+            "evidence_fields": [
+                "evidence.hero_summary",
+                "evidence.key_specs",
+                "evidence.deterministic_differentiators",
+            ],
             "plain_text_only": False,
             "output_format": "single_greek_paragraph_with_limited_strong_html",
             "allowed_inline_html_tags": ["strong"],
@@ -83,6 +90,14 @@ def build_intro_text_context(
                 "avoid_full_sentence_emphasis": True,
                 "avoid_generic_benefit_emphasis": True,
             },
+            "deterministic_validation": [
+                "word_count_range",
+                "single_paragraph",
+                "allowed_inline_html_tags",
+                "markdown_forbidden",
+                "encoding_validity",
+                "duplicate_phrase_lint_warnings",
+            ],
         },
     }
 
@@ -133,21 +148,37 @@ def build_seo_meta_context(
         "writer_rules": {
             "language": "Greek",
             "llm_owned_fields": ["product.meta_description", "product.meta_keywords"],
+            "subject_field": "product.prose_subject",
+            "category_field": "product.category",
+            "evidence_fields": [
+                "evidence.hero_summary",
+                "evidence.key_specs",
+                "evidence.deterministic_differentiators",
+            ],
             "meta_description_rule": (
-                "Prefer 2 natural Greek sentences using verified evidence only and no HTML. "
-                "Sentence 1 identifies the product using product.prose_subject as the subject when present, with product.copy_name only as a legacy fallback. "
-                "Use product.category separately only when natural, without repeating the same category phrase in one noun phrase. "
-                "When product.model_name is present, preferred_identifier is the model name and must be used in prose instead of the raw MPN. "
-                "Sentence 2 adds 2-4 verified features/benefits only from evidence already present in context, with evidence priority: "
-                "1. `hero_summary` 2. `key_specs` 3. `deterministic_differentiators`. "
-                'For TVs prefer `115 ιντσών` rather than `115"`; if `4K` is verified, prefer `4K Ultra HD ανάλυση`; if `8K` is verified, prefer `8K Ultra HD ανάλυση`. '
-                f"Keep the final meta_description complete and at or below `{meta_description_max_chars}` characters."
+                "Write natural Greek using product.prose_subject as the identity and verified evidence only. "
+                "Use product.category only when natural and non-repetitive. "
+                f"Keep meta_description complete and at or below `{meta_description_max_chars}` characters."
             ),
             "meta_description_max_chars": meta_description_max_chars,
             "complete_sentence_required": True,
-            "meta_keywords_rule": "Return a structured JSON array of verified keywords only. Do not serialize as CSV. Always include brand and preferred_identifier; when product.model_name is present, prefer it over product.mpn.",
+            "output_schema": {
+                "product": {
+                    "meta_description": "string",
+                    "meta_keywords": "string[]",
+                }
+            },
+            "meta_keywords_rule": "Return a structured JSON array of verified keywords only. Include brand and preferred_identifier when available.",
             "required_keywords": [
                 value for value in [brand, preferred_identifier] if value
+            ],
+            "deterministic_validation": [
+                "json_shape",
+                "required_json_keys",
+                "meta_description_max_chars",
+                "complete_sentence_required",
+                "encoding_validity",
+                "duplicate_phrase_lint_warnings",
             ],
         },
     }

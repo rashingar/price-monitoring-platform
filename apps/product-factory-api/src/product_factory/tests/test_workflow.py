@@ -302,10 +302,9 @@ def test_prepare_workflow_writes_prompt_artifacts(tmp_path: Path, monkeypatch) -
     assert intro_text_context["writer_rules"]["allowed_inline_html_tags"] == ["strong"]
     assert intro_text_context["writer_rules"]["llm_owned_fields"] == ["intro_text"]
     assert "presentation_source_sections" not in intro_text_context
-    assert (
-        "Use only `<strong>` and `</strong>` for inline emphasis." in intro_text_prompt
-    )
-    assert "Do not use CTA language" in intro_text_prompt
+    assert "`<strong>` and `</strong>`" in intro_text_prompt
+    assert "cta_language" in intro_text_context["writer_rules"]["forbidden_outputs"]
+    assert "product.prose_subject" in intro_text_prompt
     assert seo_meta_context["task"] == "seo_meta"
     assert seo_meta_context["writer_rules"]["required_keywords"] == ["LG", "GSGV80PYLL"]
     assert (
@@ -313,7 +312,7 @@ def test_prepare_workflow_writes_prompt_artifacts(tmp_path: Path, monkeypatch) -
         == "LG GSGV80PYLL Ψυγείο Ντουλάπα 635Lt | eTranoulis"
     )
     assert (
-        "always include the provided brand and preferred_identifier values"
+        "Include verified brand and preferred identifier keywords when available."
         in seo_meta_prompt
     )
     assert result.metadata_path.name == "prepare.run.json"

@@ -1,36 +1,26 @@
-You are writing the `intro_text` task for the Product Factory product_factory.
+You are writing the `intro_text` task for Product Factory.
 
 You will receive one JSON object in `LLM_CONTEXT_JSON`.
-Use only verified evidence from that context.
+Use only verified facts from that context.
 
-OUTPUT RULE
-- Return one paragraph only.
-- Do not return JSON.
-- Do not return Markdown.
-- Do not add any commentary before or after the paragraph.
-- Use only `<strong>` and `</strong>` for inline emphasis.
-- Do not use any other HTML tags.
+OUTPUT
+- Return exactly one Greek paragraph.
+- Do not return JSON, Markdown, bullets, or commentary.
+- Use only `<strong>` and `</strong>` for optional inline emphasis.
 
-WRITING RULES
-- Write exactly one paragraph in Greek.
-- Keep it between 80 and 180 words.
-- Do not use bullets or numbered lists.
-- Do not use CTA language or purchase prompts.
-- Do not invent specs, technologies, or claims.
-- Base the copy on the provided product facts, hero summary, and safe key specs only.
-- Use `product.prose_subject` as the product subject in prose when present.
-- Use `product.copy_name` only as a legacy fallback if `product.prose_subject` is absent.
-- Use `product.category` separately only when it improves the sentence.
-- Do not repeat `product.category` in the same noun phrase as the product subject.
-- When `product.model_name` is present, use it as the product identifier in prose instead of the raw MPN.
-- Use emphasis only for human readability and topical clarity, not keyword stuffing.
-- Bold only verified facts from context.
-- Prefer bolding the most important factual identifiers and differentiators when verified: brand + model / MPN, product type, size/capacity/dimensions, resolution or performance class, platform/OS/technology family, core technologies, connectivity, energy class, and major verified specs that help a human scan the paragraph.
-- Keep the emphasis policy generic across all categories; do not use category-specific hardcoded examples as rules.
-- Do not bold generic benefit language.
-- Do not bold full sentences.
-- Aim for 3-7 short bold spans when enough verified evidence exists.
-- If evidence is sparse, use fewer bold spans rather than inventing facts.
+SCHEMA TO USE
+- Product subject: `product.prose_subject`
+- Category: `product.category`
+- Brand: `product.brand`
+- Identifier: `product.preferred_identifier`
+- Evidence: `evidence.hero_summary`, `evidence.key_specs`, `evidence.deterministic_differentiators`
+- Limits and validation rules: `writer_rules`
+
+WRITING
+- Start from `product.prose_subject` as the natural subject.
+- Mention `product.category` only when it reads naturally and does not repeat the subject.
+- Write clear, neutral product copy using verified evidence only.
+- Use short `<strong>` spans only for important verified identifiers or specs.
 
 LLM_CONTEXT_JSON
 {{LLM_CONTEXT_JSON}}
