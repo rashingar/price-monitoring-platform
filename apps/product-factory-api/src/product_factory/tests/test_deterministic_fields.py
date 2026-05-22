@@ -176,6 +176,45 @@ def test_skroutz_air_conditioner_omits_ionizer_when_not_supported() -> None:
     assert fields["seo_keyword"] == "toyotomi-gtn-gtg-18cmw-klimatistiko-18000-btu-a-a"
 
 
+def test_kotsovolos_air_conditioner_uses_source_rule_and_dotted_btu() -> None:
+    source = SourceProductData(
+        source_name="kotsovolos",
+        brand="Inventor",
+        mpn="AR5VI-18WFI",
+        name="Inventor AR5VI-18WFI Aria 18.000 BTU/h Κλιματιστικό Inverter",
+        skroutz_family="air_conditioner",
+        key_specs=[
+            SpecItem(label="Ονομαστική απόδοση (Btu/h)", value="18.000"),
+            SpecItem(label="Ιονιστής", value="Διαθέτει"),
+        ],
+        spec_sections=[
+            SpecSection(
+                section="Χαρακτηριστικά",
+                items=[
+                    SpecItem(label="Ενεργειακή Κλάση Ψύξης", value="Α++"),
+                    SpecItem(
+                        label="Ενεργειακή Κλάση Θέρμανσης (Μέσης Ζώνης)",
+                        value="A+",
+                    ),
+                ],
+            )
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Τοίχου",
+    )
+
+    fields = build_deterministic_product_fields(
+        source, taxonomy, "412917", derive_seo_keyword
+    )
+
+    assert "18000 BTU" in fields["name"]
+    assert "18000 BTU" in fields["meta_title"]
+    assert fields["name_differentiators"][0] == "18000 BTU"
+
+
 def test_air_conditioner_energy_detection_ignores_ac_abbreviation() -> None:
     source = SourceProductData(
         source_name="electronet",

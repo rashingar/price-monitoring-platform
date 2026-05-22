@@ -143,7 +143,8 @@
     },
     {
       "source_scope": [
-        "skroutz"
+        "skroutz",
+        "kotsovolos"
       ],
       "match": {
         "family": "air_conditioner"
@@ -169,7 +170,8 @@
     },
     {
       "source_scope": [
-        "skroutz"
+        "skroutz",
+        "kotsovolos"
       ],
       "match": {
         "family": "tabletop_hob"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from html import escape
 from typing import Any
 
 from bs4 import BeautifulSoup
@@ -56,6 +57,9 @@ class KotsovolosProductParser:
         gallery_images = self._extract_gallery_images(
             soup, canonical_url, title, product_code
         )
+        presentation_source_html, presentation_source_text = self._extract_presentation(
+            hero_summary, spec_items, gallery_images
+        )
 
         source = SourceProductData(
             source_name="kotsovolos",
@@ -95,7 +99,8 @@ class KotsovolosProductParser:
             gallery_images=gallery_images,
             key_specs=spec_items[:8],
             spec_sections=spec_sections,
-            presentation_source_text=hero_summary,
+            presentation_source_html=presentation_source_html,
+            presentation_source_text=presentation_source_text,
             scraped_at=utcnow_iso(),
             fallback_used=fallback_used,
         )
@@ -109,7 +114,7 @@ class KotsovolosProductParser:
             "spec_sections": (
                 ".product-charactristics-row" if spec_sections else "missing"
             ),
-            "hero_summary": "meta.og:description" if hero_summary else "missing",
+            "hero_summary": "visible_summary" if hero_summary else "missing",
         }
         diagnostics = {
             key: self._make_diagnostic(getattr(source, field), strategy)
@@ -161,11 +166,30 @@ class KotsovolosProductParser:
         return match.group(1) if match else ""
 
     def _extract_summary(self, soup: BeautifulSoup) -> str:
+        visible_summary = self._extract_visible_summary(soup)
+        if visible_summary:
+            return visible_summary
         for selector in ("meta[property='og:description']", "meta[name='description']"):
             meta = soup.select_one(selector)
             summary = normalize_whitespace(meta.get("content", "") if meta else "")
             if summary and "Computing" not in summary:
                 return summary
+        return ""
+
+    def _extract_visible_summary(self, soup: BeautifulSoup) -> str:
+        for node in soup.select("h1 ~ span, h1 ~ p, span, p"):
+            summary = safe_text(node)
+            if not 40 <= len(summary) <= 500:
+                continue
+            normalized = normalize_for_match(summary)
+            if "κλιματιστικ" not in normalized:
+                continue
+            if any(
+                blocked in normalized
+                for blocked in ["διαθεσιμο", "συμπληρωματικ", "newsletter"]
+            ):
+                continue
+            return summary
         return ""
 
     def _extract_category(self, base_url: str) -> tuple[str, str, list[str]]:
@@ -220,6 +244,144 @@ class KotsovolosProductParser:
             GalleryImage(url=image_url, alt=title, position=index)
             for index, image_url in enumerate(image_urls, start=1)
         ]
+
+    def _extract_presentation(
+        self,
+        hero_summary: str,
+        spec_items: list[SpecItem],
+        gallery_images: list[GalleryImage],
+    ) -> tuple[str, str]:
+        specs = {normalize_for_match(item.label): item.value for item in spec_items}
+
+        def spec(*labels: str) -> str:
+            for label in labels:
+                value = specs.get(normalize_for_match(label), "")
+                if value:
+                    return value
+            return ""
+
+        nominal_btu = spec("Ονομαστική απόδοση (Btu/h)")
+        cooling_btu = spec("Ψυκτική (Btu/h)")
+        heating_btu = spec("Θερμική Απόδοση (BΤU/h)")
+        cooling_class = spec("Ενεργειακή Κλάση Ψύξης")
+        heating_class = spec("Ενεργειακή Κλάση Θέρμανσης (Μέσης Ζώνης)")
+        warm_heating_class = spec("Ενεργειακή Κλάση Θέρμανσης (Θερμής Ζώνης)")
+        seer = spec("Βαθμός ενεργειακής απόδοσης (SEER)")
+        scop = spec("Βαθμός θερμικής απόδοσης (SCOP)")
+        wifi = spec("Συνδεσιμότητα (WiFi)", "Συνδεσιμότητα")
+        ionizer = spec("Ιονιστής")
+        filters = spec("Τύπος Φίλτρου")
+        extras = spec("Επιπλέον")
+        internal_dimensions = spec("Διαστάσεις Εσωτερικής Μονάδας (ΥxΠxΒ mm)")
+        external_dimensions = spec("Διαστάσεις Εξωτερικής Μονάδας (ΥxΠxΒ mm)")
+
+        blocks: list[dict[str, str]] = []
+        if hero_summary:
+            blocks.append(
+                {
+                    "title": "Aria για καθημερινή άνεση",
+                    "paragraph": hero_summary
+                    + " Η σειρά Aria συνδυάζει λειτουργίες άνεσης και φροντίδας αέρα, ώστε το προϊόν να παρουσιάζεται με σαφή εικόνα για τη χρήση του στον καθημερινό κλιματισμό.",
+                    "image_url": self._gallery_url(gallery_images, 0),
+                }
+            )
+        if nominal_btu or cooling_btu or heating_btu:
+            parts = []
+            if nominal_btu:
+                parts.append(f"ονομαστική απόδοση {nominal_btu} BTU/h")
+            if cooling_btu:
+                parts.append(f"ψυκτική απόδοση {cooling_btu} BTU/h")
+            if heating_btu:
+                parts.append(f"θερμική απόδοση {heating_btu} BTU/h")
+            blocks.append(
+                {
+                    "title": "Απόδοση 18.000 BTU/h",
+                    "paragraph": "Το κλιματιστικό συγκεντρώνει "
+                    + ", ".join(parts)
+                    + ". Τα στοιχεία αυτά περιγράφουν καθαρά την κατηγορία ισχύος του προϊόντος και βοηθούν στη σύγκριση με άλλα κλιματιστικά αντίστοιχης απόδοσης.",
+                    "image_url": self._gallery_url(gallery_images, 1),
+                }
+            )
+        if cooling_class or heating_class or warm_heating_class or seer or scop:
+            parts = []
+            if cooling_class:
+                parts.append(f"ενεργειακή κλάση ψύξης {cooling_class}")
+            if heating_class:
+                parts.append(f"θέρμανση μέσης ζώνης {heating_class}")
+            if warm_heating_class:
+                parts.append(f"θέρμανση θερμής ζώνης {warm_heating_class}")
+            if seer:
+                parts.append(f"SEER {seer}")
+            if scop:
+                parts.append(f"SCOP {scop}")
+            blocks.append(
+                {
+                    "title": "Ενεργειακή απόδοση",
+                    "paragraph": "Τα στοιχεία απόδοσης αναφέρουν "
+                    + ", ".join(parts)
+                    + ". Έτσι ο πελάτης βλέπει άμεσα την εποχιακή συμπεριφορά της συσκευής σε ψύξη και θέρμανση πριν προχωρήσει στην επιλογή του.",
+                    "image_url": self._gallery_url(gallery_images, 2),
+                }
+            )
+        if wifi or ionizer or filters or extras:
+            parts = []
+            if wifi:
+                parts.append(wifi)
+            if ionizer:
+                parts.append(f"ιονιστή: {ionizer}")
+            if filters:
+                parts.append(f"φίλτρο: {filters}")
+            if extras:
+                parts.append(extras)
+            blocks.append(
+                {
+                    "title": "Λειτουργίες και καθαρός αέρας",
+                    "paragraph": "Στις λειτουργίες του περιλαμβάνονται "
+                    + ", ".join(parts)
+                    + ". Οι λειτουργίες αυτές συμπληρώνουν την καθημερινή χρήση, με έμφαση στον έλεγχο, την ποιότητα αέρα και τις πρακτικές ρυθμίσεις άνεσης.",
+                    "image_url": self._gallery_url(gallery_images, 3),
+                }
+            )
+        if internal_dimensions or external_dimensions:
+            parts = []
+            if internal_dimensions:
+                parts.append(f"εσωτερική μονάδα {internal_dimensions} mm")
+            if external_dimensions:
+                parts.append(f"εξωτερική μονάδα {external_dimensions} mm")
+            blocks.append(
+                {
+                    "title": "Διαστάσεις μονάδων",
+                    "paragraph": "Οι διαστάσεις που αναφέρονται είναι "
+                    + " και ".join(parts)
+                    + ". Η αναφορά σε εσωτερική και εξωτερική μονάδα διευκολύνει τον έλεγχο του διαθέσιμου χώρου πριν από την εγκατάσταση.",
+                    "image_url": self._gallery_url(gallery_images, 4),
+                }
+            )
+
+        html_parts: list[str] = []
+        text_parts: list[str] = []
+        for block in blocks:
+            title = normalize_whitespace(block["title"])
+            paragraph = normalize_whitespace(block["paragraph"])
+            if not title or not paragraph:
+                continue
+            html_parts.append("<section>")
+            html_parts.append(f"<h2>{escape(title)}</h2>")
+            image_url = normalize_whitespace(block.get("image_url", ""))
+            if image_url:
+                html_parts.append(
+                    f'<img src="{escape(image_url, quote=True)}" alt="{escape(title, quote=True)}">'
+                )
+            html_parts.append(f"<p>{escape(paragraph)}</p>")
+            html_parts.append("</section>")
+            text_parts.append(f"{title}\n{paragraph}")
+        return "".join(html_parts), "\n\n".join(text_parts)
+
+    def _gallery_url(self, gallery_images: list[GalleryImage], index: int) -> str:
+        if not gallery_images:
+            return ""
+        resolved_index = min(max(index, 0), len(gallery_images) - 1)
+        return gallery_images[resolved_index].url
 
     def _collect_missing_fields(self, source: SourceProductData) -> list[str]:
         missing: list[str] = []

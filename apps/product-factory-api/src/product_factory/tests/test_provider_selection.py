@@ -445,8 +445,15 @@ def test_kotsovolos_parser_extracts_product_gallery_images_without_og_image() ->
         <img src="https://assets.kotsovolos.gr/product/245318-1-b.jpg">
         <img src="https://assets.kotsovolos.gr/product/245318-s.jpg">
         <img src="https://assets.kotsovolos.gr/product/111111-b.jpg">
+        <span>Κλιματιστικό Aria AR5 με Ενεργειακή Κλάση Α+++, ιονιστή, φίλτρο αποστείρωσης hepa, φίλτρο τριπλής δράσης & λειτουργία follow me</span>
         <div class="product-charactristics-row">Ψυκτική (Btu/h)</div>
         <div class="product-charactristics-row">18000 (11.570-20.130)</div>
+        <div class="product-charactristics-row">Θερμική Απόδοση (BΤU/h)</div>
+        <div class="product-charactristics-row">19000</div>
+        <div class="product-charactristics-row">Ενεργειακή Κλάση Ψύξης</div>
+        <div class="product-charactristics-row">Α++</div>
+        <div class="product-charactristics-row">Συνδεσιμότητα (WiFi)</div>
+        <div class="product-charactristics-row">WiFi</div>
       </body>
     </html>
     """
@@ -457,6 +464,12 @@ def test_kotsovolos_parser_extracts_product_gallery_images_without_og_image() ->
         "245318-b.jpg",
         "245318-1-b.jpg",
     ]
+    assert parsed.source.hero_summary.startswith("Κλιματιστικό Aria AR5")
+    assert parsed.source.presentation_source_html.count("<section>") >= 3
+    assert "Απόδοση 18.000 BTU/h" in parsed.source.presentation_source_html
+    assert "https://assets.kotsovolos.gr/product/245318-1-b.jpg" in (
+        parsed.source.presentation_source_html
+    )
 
 
 def test_skroutz_provider_fetch_snapshot_reads_fixture_html(

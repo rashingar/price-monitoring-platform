@@ -13,6 +13,7 @@ VALID_SOURCE_SCOPES = frozenset(
     {
         normalize_for_match("any"),
         normalize_for_match("skroutz"),
+        normalize_for_match("kotsovolos"),
         normalize_for_match("manufacturer_tefal"),
     }
 )

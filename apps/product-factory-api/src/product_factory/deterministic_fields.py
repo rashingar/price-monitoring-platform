@@ -2447,10 +2447,13 @@ def _format_air_conditioner_btu(spec_lookup: dict[str, str], raw_title: str) -> 
     candidate = raw or raw_title
     if not candidate:
         return ""
-    match = re.search(r"\b(\d{4,6})\s*BTU\b", candidate, flags=re.IGNORECASE)
+    compact_candidate = re.sub(r"(?<=\d)[.,](?=\d{3}\b)", "", candidate)
+    match = re.search(
+        r"\b(\d{4,6})\s*BTU(?:/h)?\b", compact_candidate, flags=re.IGNORECASE
+    )
     if match:
         return f"{match.group(1)} BTU"
-    number_match = re.search(r"\b(\d{4,6})\b", normalize_whitespace(candidate))
+    number_match = re.search(r"\b(\d{4,6})\b", normalize_whitespace(compact_candidate))
     if raw and number_match:
         return f"{number_match.group(1)} BTU"
     return ""
@@ -2527,6 +2530,7 @@ def _format_air_conditioner_ionizer(
         "ναι",
         "yes",
         "supported",
+        "διαθετει",
         "υποστηριζεται",
     }:
         return "με Ιονιστή"
