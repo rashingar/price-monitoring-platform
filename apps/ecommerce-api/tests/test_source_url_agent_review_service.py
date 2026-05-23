@@ -12,6 +12,7 @@ from ecommerce.db.config import DATABASE_URL_ENV_VAR  # noqa: E402
 from ecommerce.db.models.base import Base  # noqa: E402
 from ecommerce.db.models.catalog import CatalogProductRow  # noqa: E402
 from ecommerce.db.models.source_urls import SourceUrl, SourceUrlCandidate  # noqa: E402
+from ecommerce.db.repositories.source_urls import create_or_update_manual_source_url  # noqa: E402
 from ecommerce.db.session import get_engine, session_scope  # noqa: E402
 from ecommerce.source_url_agent.review_service import (  # noqa: E402
     InvalidSourceUrlCandidateReviewError,
@@ -119,6 +120,44 @@ def test_accept_candidate_promotes_candidate_url(tmp_path: Path, monkeypatch) ->
         stored = session.query(SourceUrl).one()
         assert stored.url == "https://www.bestprice.gr/item/1/lg-remote.html"
         assert stored.provenance == "discovery"
+
+
+def test_accept_candidate_preserves_existing_manual_source_url_provenance(
+    tmp_path: Path, monkeypatch
+) -> None:
+    database_url = _database(tmp_path, monkeypatch)
+    candidate_url = "https://www.bestprice.gr/item/1/lg-remote.html"
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+        create_or_update_manual_source_url(
+            session,
+            int(product.id),
+            {
+                "url": candidate_url,
+                "source_name": "bestprice",
+                "url_type": "manual",
+                "trust_level": "manual",
+                "added_by": "operator",
+            },
+        )
+        candidate = _candidate(session, product, url=candidate_url)
+        result = review_source_url_agent_candidate(
+            session,
+            candidate.id,
+            SourceUrlCandidateReviewCommand(
+                decision="accept", reviewed_by="tester", reviewed_at=REVIEWED_AT
+            ),
+        )
+
+        assert result.candidate.status == "accepted"
+        assert result.source_url_promotion is not None
+        assert result.source_url_promotion.action in {"duplicate", "updated"}
+
+    with session_scope(database_url) as session:
+        stored = session.query(SourceUrl).one()
+        assert stored.url == candidate_url
+        assert stored.url_type == "manual"
+        assert stored.provenance == "manual"
 
 
 def test_accept_candidate_with_reviewed_url_promotes_reviewed_url(

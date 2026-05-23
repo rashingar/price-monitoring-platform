@@ -1093,6 +1093,136 @@ describe("platform mocked page smoke tests", () => {
     ).toBe(afterExtraRefresh);
   });
 
+  it("cancels the terminal-success extra refresh when the drawer closes", async () => {
+    const mockFetch = installMockFetch([
+      {
+        method: "POST",
+        path: "/commerce-api/source-url-agent/runs",
+        response: {
+          run_id: "source-run-close",
+          source: "bestprice",
+          mode: "catalog",
+          status: "queued",
+          selected_count: 1,
+          task_total_count: 1,
+          task_finished_count: 0,
+          created_at: "2026-05-04T10:00:00Z",
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/runs/source-run-close",
+        response: {
+          run_id: "source-run-close",
+          source: "bestprice",
+          mode: "catalog",
+          status: "succeeded",
+          selected_count: 1,
+          task_total_count: 1,
+          task_finished_count: 1,
+          created_at: "2026-05-04T10:00:00Z",
+          completed_at: "2026-05-04T10:01:00Z",
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/catalog");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Source URLs for 005606" }));
+    const drawer = await screen.findByRole("dialog", { name: "Source URLs" });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Find URL" }));
+    await expect(within(drawer).findByText("source-run-close")).resolves.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    const beforeClose =
+      mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length;
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Source URLs" })).not.toBeInTheDocument());
+    await delay(1_700);
+
+    expect(
+      mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length,
+    ).toBe(beforeClose);
+  });
+
+  it("does not run a stale terminal-success extra refresh after switching products", async () => {
+    const mockFetch = installMockFetch([
+      {
+        method: "GET",
+        path: "/commerce-api/catalog/products/2/source-urls",
+        response: { items: [] },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/catalog/products/2/source-url-candidates",
+        response: { catalog_product_id: 2, total_candidates: 0, warnings: [], items: [] },
+      },
+      {
+        method: "POST",
+        path: "/commerce-api/source-url-agent/runs",
+        response: {
+          run_id: "source-run-switch",
+          source: "bestprice",
+          mode: "catalog",
+          status: "queued",
+          selected_count: 1,
+          task_total_count: 1,
+          task_finished_count: 0,
+          created_at: "2026-05-04T10:00:00Z",
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/runs/source-run-switch",
+        response: {
+          run_id: "source-run-switch",
+          source: "bestprice",
+          mode: "catalog",
+          status: "succeeded",
+          selected_count: 1,
+          task_total_count: 1,
+          task_finished_count: 1,
+          created_at: "2026-05-04T10:00:00Z",
+          completed_at: "2026-05-04T10:01:00Z",
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/catalog");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Source URLs for 005606" }));
+    let drawer = await screen.findByRole("dialog", { name: "Source URLs" });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Find URL" }));
+    await expect(within(drawer).findByText("source-run-switch")).resolves.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    const beforeSwitch =
+      mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length;
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Source URLs" })).not.toBeInTheDocument());
+    fireEvent.click(await screen.findByRole("button", { name: "Source URLs for AB-123" }));
+    drawer = await screen.findByRole("dialog", { name: "Source URLs" });
+    await expect(within(drawer).findByText("No source URLs for this product yet.")).resolves.toBeInTheDocument();
+    await delay(1_700);
+
+    expect(
+      mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length,
+    ).toBe(beforeSwitch);
+    expect(
+      mockFetch.requests.some((request) => request.pathname === "/commerce-api/catalog/products/2/source-urls"),
+    ).toBe(true);
+  });
+
   it("reviews drawer discovery candidates inline and refreshes Source URLs", async () => {
     let accepted = false;
     let candidates = [

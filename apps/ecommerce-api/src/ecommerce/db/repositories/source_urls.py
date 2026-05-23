@@ -702,6 +702,8 @@ def _imported_source_url_updates(
         _set_if_changed(updates, row, "url_type", url_type)
         _set_if_changed(updates, row, "provenance", provenance)
         _set_if_changed(updates, row, "trust_level", trust_level)
+    # Manual provenance records the origin of the stored URL row. If discovery
+    # later finds the same normalized URL, keep the original manual origin.
 
     if row.status != "disabled":
         next_status = row.status

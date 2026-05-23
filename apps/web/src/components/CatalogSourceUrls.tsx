@@ -493,6 +493,8 @@ export function CatalogSourceUrlManager({
   const catalogProductId = product?.catalog_product_id;
   const discoveryPollIntervalRef = useRef<number | null>(null);
   const discoveryExtraRefreshTimeoutRef = useRef<number | null>(null);
+  const discoveryRefreshContextRef = useRef<string | null>(null);
+  const onDiscoveryStatusChangeRef = useRef(onDiscoveryStatusChange);
   const [items, setItems] = useState<SourceUrl[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [readinessBlock, setReadinessBlock] = useState<CatalogReadinessBlock | null>(null);
@@ -518,6 +520,10 @@ export function CatalogSourceUrlManager({
   const discoverySource = discoverySourceForDrawer(marketplace, source);
   const automationBlocker = product ? getAutomationBlockerBadges(product)[0]?.label ?? null : null;
   const canFindUrl = canLoad && product?.automation_eligible === true;
+
+  useEffect(() => {
+    onDiscoveryStatusChangeRef.current = onDiscoveryStatusChange;
+  }, [onDiscoveryStatusChange]);
 
   const loadItems = useCallback(
     async (signal?: AbortSignal) => {
@@ -566,7 +572,7 @@ export function CatalogSourceUrlManager({
     [canLoad, catalogProductId],
   );
 
-  const stopDiscoveryPolling = useCallback(() => {
+  const stopDiscoveryPolling = useCallback((clearContext = true) => {
     if (discoveryPollIntervalRef.current !== null) {
       window.clearInterval(discoveryPollIntervalRef.current);
       discoveryPollIntervalRef.current = null;
@@ -575,7 +581,10 @@ export function CatalogSourceUrlManager({
       window.clearTimeout(discoveryExtraRefreshTimeoutRef.current);
       discoveryExtraRefreshTimeoutRef.current = null;
     }
-  }, [discoveryExtraRefreshTimeoutRef, discoveryPollIntervalRef]);
+    if (clearContext) {
+      discoveryRefreshContextRef.current = null;
+    }
+  }, []);
 
   const refreshDiscoveryOutputs = useCallback(async () => {
     await Promise.all([loadItems(), loadCandidateHistory().catch(() => null)]);
@@ -584,25 +593,35 @@ export function CatalogSourceUrlManager({
   const pollDiscoveryRun = useCallback(
     (runId: string) => {
       stopDiscoveryPolling();
+      const contextKey = `${catalogProductId ?? ""}:${discoverySource}:${runId}`;
+      discoveryRefreshContextRef.current = contextKey;
       let extraRefreshScheduled = false;
       const refresh = () => {
         setIsDiscoveryStatusLoading(true);
         commerceClient
           .getSourceUrlAgentRun(runId)
           .then((nextRun) => {
+            if (discoveryRefreshContextRef.current !== contextKey) {
+              return;
+            }
             setLatestDiscoveryRun(nextRun);
             setDiscoveryError(null);
             void loadCandidateHistory().catch(() => null);
             if (isTerminalDiscoveryRun(nextRun)) {
-              stopDiscoveryPolling();
-              onDiscoveryStatusChange?.();
+              stopDiscoveryPolling(false);
+              onDiscoveryStatusChangeRef.current?.();
               void refreshDiscoveryOutputs();
               if (isSuccessfulDiscoveryRun(nextRun) && !extraRefreshScheduled) {
                 extraRefreshScheduled = true;
-                window.setTimeout(() => {
+                const timeoutId = window.setTimeout(() => {
+                  discoveryExtraRefreshTimeoutRef.current = null;
+                  if (discoveryRefreshContextRef.current !== contextKey) {
+                    return;
+                  }
                   void refreshDiscoveryOutputs();
-                  onDiscoveryStatusChange?.();
+                  onDiscoveryStatusChangeRef.current?.();
                 }, 1_500);
+                discoveryExtraRefreshTimeoutRef.current = timeoutId;
               }
             }
           })
@@ -611,7 +630,9 @@ export function CatalogSourceUrlManager({
             stopDiscoveryPolling();
           })
           .finally(() => {
-            setIsDiscoveryStatusLoading(false);
+            if (discoveryRefreshContextRef.current === contextKey) {
+              setIsDiscoveryStatusLoading(false);
+            }
           });
       };
 
@@ -619,11 +640,10 @@ export function CatalogSourceUrlManager({
       discoveryPollIntervalRef.current = window.setInterval(refresh, 4_000);
     },
     [
-      discoveryExtraRefreshTimeoutRef,
-      discoveryPollIntervalRef,
+      catalogProductId,
+      discoverySource,
       loadCandidateHistory,
       refreshDiscoveryOutputs,
-      onDiscoveryStatusChange,
       stopDiscoveryPolling,
     ],
   );
