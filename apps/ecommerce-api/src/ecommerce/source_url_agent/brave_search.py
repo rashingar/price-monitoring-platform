@@ -5,12 +5,13 @@ from __future__ import annotations
 import html
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 from urllib.parse import urlencode
 
 import httpx
 
+from ecommerce.source_url_agent.identifiers import identifier_variants_for_product
 from ecommerce.source_url_agent.products import AgentProduct
 from ecommerce.source_url_agent.result_url_candidates import (
     CandidateUrlNormalizer,
@@ -53,6 +54,10 @@ class BraveSearchProductResult:
     errors: list[str] = field(default_factory=list)
     provider_errors: list[SearchProviderError] = field(default_factory=list)
     discarded_count: int = 0
+    searched_queries: list[str] = field(default_factory=list)
+    searched_identifier_variants: list[str] = field(default_factory=list)
+    executed_query_count: int = 0
+    matched_identifier_variant: str = ""
 
     @property
     def kept_candidates_by_source(self) -> dict[str, int]:
@@ -63,9 +68,14 @@ class BraveSearchProductResult:
         return counts
 
     def to_summary(self) -> dict[str, Any]:
+        searched_queries = self.searched_queries or ([self.query] if self.query else [])
         return {
             "provider_name": BRAVE_SEARCH_PROVIDER_NAME,
             "query": self.query,
+            "searched_queries": searched_queries,
+            "searched_identifier_variants": self.searched_identifier_variants,
+            "executed_query_count": self.executed_query_count,
+            "matched_identifier_variant": self.matched_identifier_variant,
             "status": self.status,
             "kept_candidates_by_source": self.kept_candidates_by_source,
             "discarded_count": self.discarded_count,
@@ -131,7 +141,8 @@ class BraveSearchProvider:
         )
         return SearchProviderResult(
             candidates=result.candidates,
-            searched_queries=[result.query] if result.query else [],
+            searched_queries=result.searched_queries
+            or ([result.query] if result.query else []),
             searched_urls=result.searched_urls,
             errors=result.errors,
             provider_errors=result.provider_errors,
@@ -146,82 +157,193 @@ class BraveSearchProvider:
         max_candidates_per_source: int | None = None,
     ) -> BraveSearchProductResult:
         query_source = sources[0] if len(sources) == 1 else None
-        queries = build_brave_product_queries(product, source=query_source)
-        if not queries:
+        query_items = build_brave_product_query_items(product, source=query_source)
+        if not query_items:
             return BraveSearchProductResult(
-                query="", status="no_query", candidates=[], searched_urls=[]
+                query="",
+                status="no_query",
+                candidates=[],
+                searched_urls=[],
+                searched_queries=[],
+                searched_identifier_variants=[],
+                executed_query_count=0,
             )
-        query = queries[0]
-        request_url = self.request_url(query)
         api_key = str(os.environ.get(BRAVE_SEARCH_API_KEY_ENV_VAR) or "").strip()
         if not api_key:
+            query = query_items[0].query
+            request_url = self.request_url(query)
             return self._error_result(
                 query=query,
                 request_url=request_url,
                 status="missing_api_key",
                 message="Missing Brave Search API key.",
+                searched_identifier_variants=[query_items[0].identifier_variant],
             )
+        searched_queries: list[str] = []
+        searched_urls: list[str] = []
+        searched_variants: list[str] = []
+        last_result: BraveSearchProductResult | None = None
+        accumulated_candidates: list[SearchProviderCandidate] = []
+        found_source_names: set[str] = set()
+        requested_source_names = {source.source_name for source in sources}
+        discarded_count = 0
+        for item in query_items:
+            query = item.query
+            request_url = self.request_url(query)
+            searched_queries.append(query)
+            searched_urls.append(request_url)
+            searched_variants.append(item.identifier_variant)
+            try:
+                response = self.client.search(
+                    definition=self.definition, query=query, api_key=api_key
+                )
+            except httpx.TimeoutException:
+                return self._error_result(
+                    query=query,
+                    request_url=request_url,
+                    status="timeout",
+                    message="Brave Search API request timed out.",
+                    searched_queries=searched_queries,
+                    searched_urls=searched_urls,
+                    searched_identifier_variants=searched_variants,
+                )
+            except Exception as exc:
+                return self._error_result(
+                    query=query,
+                    request_url=request_url,
+                    status="error",
+                    message=str(exc).strip() or exc.__class__.__name__,
+                    searched_queries=searched_queries,
+                    searched_urls=searched_urls,
+                    searched_identifier_variants=searched_variants,
+                )
 
-        try:
-            response = self.client.search(
-                definition=self.definition, query=query, api_key=api_key
-            )
-        except httpx.TimeoutException:
-            return self._error_result(
-                query=query,
-                request_url=request_url,
-                status="timeout",
-                message="Brave Search API request timed out.",
-            )
-        except Exception as exc:
-            return self._error_result(
-                query=query,
-                request_url=request_url,
-                status="error",
-                message=str(exc).strip() or exc.__class__.__name__,
-            )
+            status_code = int(getattr(response, "status_code", 0) or 0)
+            if status_code in {401, 403}:
+                return self._error_result(
+                    query=query,
+                    request_url=request_url,
+                    status="unauthorized",
+                    message=f"Brave Search API returned HTTP {status_code}.",
+                    searched_queries=searched_queries,
+                    searched_urls=searched_urls,
+                    searched_identifier_variants=searched_variants,
+                )
+            if status_code == 429:
+                return self._error_result(
+                    query=query,
+                    request_url=request_url,
+                    status="rate_limited",
+                    message="Brave Search API returned HTTP 429.",
+                    searched_queries=searched_queries,
+                    searched_urls=searched_urls,
+                    searched_identifier_variants=searched_variants,
+                )
+            if status_code >= 400:
+                return self._error_result(
+                    query=query,
+                    request_url=request_url,
+                    status="error",
+                    message=f"Brave Search API returned HTTP {status_code}.",
+                    searched_queries=searched_queries,
+                    searched_urls=searched_urls,
+                    searched_identifier_variants=searched_variants,
+                )
 
-        status_code = int(getattr(response, "status_code", 0) or 0)
-        if status_code in {401, 403}:
-            return self._error_result(
-                query=query,
-                request_url=request_url,
-                status="unauthorized",
-                message=f"Brave Search API returned HTTP {status_code}.",
-            )
-        if status_code == 429:
-            return self._error_result(
-                query=query,
-                request_url=request_url,
-                status="rate_limited",
-                message="Brave Search API returned HTTP 429.",
-            )
-        if status_code >= 400:
-            return self._error_result(
-                query=query,
-                request_url=request_url,
-                status="error",
-                message=f"Brave Search API returned HTTP {status_code}.",
-            )
+            try:
+                payload = response.json()
+            except Exception as exc:
+                return self._error_result(
+                    query=query,
+                    request_url=request_url,
+                    status="error",
+                    message=f"Invalid Brave Search API JSON response: {exc.__class__.__name__}.",
+                    searched_queries=searched_queries,
+                    searched_urls=searched_urls,
+                    searched_identifier_variants=searched_variants,
+                )
 
-        try:
-            payload = response.json()
-        except Exception as exc:
-            return self._error_result(
+            result_items = brave_web_results(payload, max_results=self.definition.count)
+            current = self._candidates_from_results(
+                sources=sources,
                 query=query,
                 request_url=request_url,
-                status="error",
-                message=f"Invalid Brave Search API JSON response: {exc.__class__.__name__}.",
+                result_items=result_items,
+                max_candidates_per_source=max_candidates_per_source,
+                identifier_variant=item.identifier_variant,
             )
+            discarded_count += current.discarded_count
+            last_result = current
+            new_candidates = self._new_source_candidates(
+                current.candidates,
+                found_source_names=found_source_names,
+                multi_source=len(sources) > 1,
+            )
+            accumulated_candidates.extend(new_candidates)
+            if accumulated_candidates and (
+                len(sources) == 1 or requested_source_names <= found_source_names
+            ):
+                matched_variant = (
+                    item.identifier_variant
+                    if item.identifier_variant != query_items[0].identifier_variant
+                    else ""
+                )
+                return self._with_execution_metadata(
+                    replace(
+                        current,
+                        candidates=list(accumulated_candidates),
+                        status="found_candidates",
+                    ),
+                    searched_queries=searched_queries,
+                    searched_urls=searched_urls,
+                    searched_identifier_variants=searched_variants,
+                    discarded_count=discarded_count,
+                    matched_identifier_variant=matched_variant,
+                )
 
-        result_items = brave_web_results(payload, max_results=self.definition.count)
-        return self._candidates_from_results(
-            sources=sources,
-            query=query,
-            request_url=request_url,
-            result_items=result_items,
-            max_candidates_per_source=max_candidates_per_source,
+        if last_result is None:
+            return BraveSearchProductResult(
+                query="",
+                status="no_query",
+                candidates=[],
+                searched_urls=searched_urls,
+                searched_queries=searched_queries,
+                searched_identifier_variants=searched_variants,
+                executed_query_count=len(searched_queries),
+            )
+        result = last_result
+        if accumulated_candidates:
+            result = replace(
+                last_result,
+                candidates=list(accumulated_candidates),
+                status="found_candidates",
+            )
+        return self._with_execution_metadata(
+            result,
+            searched_queries=searched_queries,
+            searched_urls=searched_urls,
+            searched_identifier_variants=searched_variants,
+            discarded_count=discarded_count,
+            matched_identifier_variant="",
         )
+
+    def _new_source_candidates(
+        self,
+        candidates: list[SearchProviderCandidate],
+        *,
+        found_source_names: set[str],
+        multi_source: bool,
+    ) -> list[SearchProviderCandidate]:
+        if not multi_source:
+            return candidates
+        out: list[SearchProviderCandidate] = []
+        for candidate in candidates:
+            source_name = candidate.provenance.source_name
+            if source_name in found_source_names:
+                continue
+            found_source_names.add(source_name)
+            out.append(candidate)
+        return out
 
     def request_url(self, query: str) -> str:
         endpoint = self.definition.endpoint_url or DEFAULT_BRAVE_SEARCH_ENDPOINT_URL
@@ -235,6 +357,7 @@ class BraveSearchProvider:
         request_url: str,
         result_items: list[BraveSearchResultItem],
         max_candidates_per_source: int | None,
+        identifier_variant: str,
     ) -> BraveSearchProductResult:
         classifier = KnownSourceUrlClassifier(sources)
         product_filter = SourceProductUrlFilter()
@@ -284,6 +407,7 @@ class BraveSearchProvider:
                         result_index=item.rank,
                         discovery_method=BRAVE_DISCOVERY_METHOD,
                         allow_high_confidence_auto_apply=self.definition.allow_high_confidence_auto_apply,
+                        identifier_variant=identifier_variant,
                     ),
                     provider_title=item.title,
                     provider_description=item.description,
@@ -307,10 +431,22 @@ class BraveSearchProvider:
             candidates=candidates,
             searched_urls=[request_url],
             discarded_count=discarded_count,
+            searched_queries=[query],
+            searched_identifier_variants=[identifier_variant],
+            executed_query_count=1,
+            matched_identifier_variant=identifier_variant if candidates else "",
         )
 
     def _error_result(
-        self, *, query: str, request_url: str, status: str, message: str
+        self,
+        *,
+        query: str,
+        request_url: str,
+        status: str,
+        message: str,
+        searched_queries: list[str] | None = None,
+        searched_urls: list[str] | None = None,
+        searched_identifier_variants: list[str] | None = None,
     ) -> BraveSearchProductResult:
         error = SearchProviderError(
             provider_name=self.definition.provider_name,
@@ -331,37 +467,84 @@ class BraveSearchProvider:
                 allow_high_confidence_auto_apply=self.definition.allow_high_confidence_auto_apply,
             ),
         )
+        resolved_queries = searched_queries or ([query] if query else [])
+        resolved_urls = searched_urls or ([request_url] if request_url else [])
         return BraveSearchProductResult(
             query=query,
             status=status,
             candidates=[],
-            searched_urls=[request_url] if request_url else [],
+            searched_urls=resolved_urls,
             errors=[f"{BRAVE_SEARCH_PROVIDER_NAME}:{status}"],
             provider_errors=[error],
+            searched_queries=resolved_queries,
+            searched_identifier_variants=searched_identifier_variants or [],
+            executed_query_count=len(resolved_queries),
+        )
+
+    def _with_execution_metadata(
+        self,
+        result: BraveSearchProductResult,
+        *,
+        searched_queries: list[str],
+        searched_urls: list[str],
+        searched_identifier_variants: list[str],
+        discarded_count: int,
+        matched_identifier_variant: str,
+    ) -> BraveSearchProductResult:
+        return BraveSearchProductResult(
+            query=result.query,
+            status=result.status,
+            candidates=result.candidates,
+            searched_urls=list(searched_urls),
+            errors=result.errors,
+            provider_errors=result.provider_errors,
+            discarded_count=discarded_count,
+            searched_queries=list(searched_queries),
+            searched_identifier_variants=list(searched_identifier_variants),
+            executed_query_count=len(searched_queries),
+            matched_identifier_variant=matched_identifier_variant,
         )
 
 
 def build_brave_product_queries(
     product: AgentProduct, *, source: SourceDefinition | None = None
 ) -> list[str]:
+    return [item.query for item in build_brave_product_query_items(product, source=source)]
+
+
+@dataclass(frozen=True)
+class BraveProductQuery:
+    query: str
+    identifier_variant: str
+
+
+def build_brave_product_query_items(
+    product: AgentProduct, *, source: SourceDefinition | None = None
+) -> list[BraveProductQuery]:
     brand = collapse_internal_spaces(product.manufacturer)
-    identifier = collapse_internal_spaces(product.mpn) or collapse_internal_spaces(
-        product.model
-    )
-    if not identifier and brand:
+    identifiers = identifier_variants_for_product(product)
+    if not identifiers and brand:
         name = collapse_internal_spaces(product.name)
         if _name_is_precise_enough(name):
-            identifier = name
-    if not identifier:
+            identifiers = [name]
+    if not identifiers:
         return []
+    queries: list[BraveProductQuery] = []
     if source is not None:
         domain = source.source_domain.removeprefix("www.")
-        source_queries = [f'site:{domain} "{identifier}"']
-        if brand:
-            source_queries.append(f'site:{domain} "{brand}" "{identifier}"')
-        return source_queries
-    query = collapse_internal_spaces(f"{identifier} {brand}") if brand else identifier
-    return [query] if query else []
+        for identifier in identifiers:
+            query = (
+                collapse_internal_spaces(f'site:{domain} {brand} "{identifier}"')
+                if brand
+                else f'site:{domain} "{identifier}"'
+            )
+            queries.append(BraveProductQuery(query=query, identifier_variant=identifier))
+        return queries
+    for identifier in identifiers:
+        query = collapse_internal_spaces(f"{identifier} {brand}") if brand else identifier
+        if query:
+            queries.append(BraveProductQuery(query=query, identifier_variant=identifier))
+    return queries
 
 
 def brave_web_results(

@@ -95,9 +95,10 @@ class SearchProviderProvenance:
     result_index: int | None
     discovery_method: str
     allow_high_confidence_auto_apply: bool
+    identifier_variant: str = ""
 
     def to_json(self) -> dict[str, Any]:
-        return {
+        payload = {
             "provider_name": self.provider_name,
             "source_name": self.source_name,
             "original_query": self.original_query,
@@ -107,6 +108,9 @@ class SearchProviderProvenance:
             "discovery_method": self.discovery_method,
             "allow_high_confidence_auto_apply": self.allow_high_confidence_auto_apply,
         }
+        if self.identifier_variant:
+            payload["identifier_variant"] = self.identifier_variant
+        return payload
 
 
 @dataclass(frozen=True)

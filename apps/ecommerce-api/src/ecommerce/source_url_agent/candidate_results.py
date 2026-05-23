@@ -102,6 +102,7 @@ def candidates_from_search_result(
                 competing_candidates_count=plausible_count,
                 searched_queries=result.searched_queries,
                 status=candidate_status(score.match_status),
+                provider_summary=result.provider_summary,
             )
         )
     return candidates

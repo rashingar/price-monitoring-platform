@@ -11,6 +11,7 @@ from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import unquote, urljoin, urlsplit
 
+from ecommerce.source_url_agent.identifiers import identifier_variants_for_product
 from ecommerce.source_url_agent.matching import extract_name_evidence
 from ecommerce.utils.decimals import format_decimal_two_places
 from ecommerce.source_url_agent.page_rules import review_page_rejection_reason
@@ -75,6 +76,7 @@ class PageEvidence:
     error_message: str = ""
     evidence_source: str = "fetched_page"
     provider_provenance: dict[str, Any] = field(default_factory=dict)
+    exact_mpn_variant: str = ""
 
     @property
     def title_only(self) -> bool:
@@ -131,6 +133,9 @@ class PageEvidence:
         }
         if self.provider_provenance:
             payload["provider_provenance"] = self.provider_provenance
+        if self.exact_mpn_variant:
+            payload["mpn"]["matched_identifier_variant"] = self.exact_mpn_variant
+            payload["matched_identifier_variant"] = self.exact_mpn_variant
         if self.evidence_source == "provider_search_result":
             payload["evidence_source"] = self.evidence_source
         return payload
@@ -180,16 +185,18 @@ def extract_page_evidence(
             provider_provenance=provider_provenance or {},
         )
 
-    mpn_fragment, mpn_source = _find_identifier_evidence(
+    mpn_fragment, mpn_source, mpn_variant = _find_identifier_evidence(
         product.mpn,
+        variants=identifier_variants_for_product(product),
         jsonld_text=jsonld_text,
         title=title_text,
         meta_description=meta_description,
         body_text=visible_text,
         url_text=url_text,
     )
-    model_fragment, model_source = _find_identifier_evidence(
+    model_fragment, model_source, _model_variant = _find_identifier_evidence(
         product.model,
+        variants=[product.model],
         jsonld_text=jsonld_text,
         title=title_text,
         meta_description=meta_description,
@@ -224,6 +231,7 @@ def extract_page_evidence(
         exact_mpn_found=bool(mpn_fragment),
         exact_mpn_fragment=mpn_fragment,
         exact_mpn_source=mpn_source,
+        exact_mpn_variant=mpn_variant,
         exact_model_found=bool(model_fragment),
         exact_model_fragment=model_fragment,
         exact_model_source=model_source,
@@ -291,16 +299,18 @@ def error_evidence(
     url_text = _url_evidence_text(requested_url, final_url, canonical_url)
     title_text = _clean_text(title)
     body = _clean_text(body_text)
-    mpn_fragment, mpn_source = _find_identifier_evidence(
+    mpn_fragment, mpn_source, mpn_variant = _find_identifier_evidence(
         product.mpn,
+        variants=identifier_variants_for_product(product),
         jsonld_text="",
         title=title_text,
         meta_description="",
         body_text=body,
         url_text=url_text,
     )
-    model_fragment, model_source = _find_identifier_evidence(
+    model_fragment, model_source, _model_variant = _find_identifier_evidence(
         product.model,
+        variants=[product.model],
         jsonld_text="",
         title=title_text,
         meta_description="",
@@ -320,6 +330,7 @@ def error_evidence(
         exact_mpn_found=bool(mpn_fragment),
         exact_mpn_fragment=mpn_fragment,
         exact_mpn_source=mpn_source,
+        exact_mpn_variant=mpn_variant,
         exact_model_found=bool(model_fragment),
         exact_model_fragment=model_fragment,
         exact_model_source=model_source,
@@ -359,6 +370,7 @@ def _not_public_product_page_evidence(
         exact_mpn_found=False,
         exact_mpn_fragment="",
         exact_mpn_source="",
+        exact_mpn_variant="",
         exact_model_found=False,
         exact_model_fragment="",
         exact_model_source="",
@@ -488,12 +500,15 @@ def _jsonld_search_text(items: tuple[dict[str, Any], ...]) -> str:
 def _find_identifier_evidence(
     identifier: str,
     *,
+    variants: list[str] | tuple[str, ...] | None = None,
     jsonld_text: str,
     title: str,
     meta_description: str,
     body_text: str,
     url_text: str,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
+    raw_identifier = str(identifier or "").strip()
+    search_variants = list(variants or [raw_identifier])
     for source, haystack in (
         ("jsonld", jsonld_text),
         ("title", title),
@@ -501,10 +516,17 @@ def _find_identifier_evidence(
         ("body", body_text),
         ("url", url_text),
     ):
-        fragment = _find_identifier_fragment(identifier, haystack)
-        if fragment:
-            return fragment, source
-    return "", ""
+        for variant in search_variants:
+            fragment = _find_identifier_fragment(variant, haystack)
+            if fragment:
+                matched_variant = (
+                    variant
+                    if raw_identifier
+                    and variant.casefold() != raw_identifier.casefold()
+                    else ""
+                )
+                return fragment, source, matched_variant
+    return "", "", ""
 
 
 def _find_identifier_fragment(identifier: str, haystack: str) -> str:

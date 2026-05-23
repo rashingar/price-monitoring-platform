@@ -17,6 +17,10 @@ from ecommerce.source_url_agent.brave_search import (  # noqa: E402
     build_brave_product_queries,
     brave_web_results,
 )
+from ecommerce.source_url_agent.identifiers import (  # noqa: E402
+    identifier_variants_for_product,
+)
+from ecommerce.source_url_agent.evidence import extract_page_evidence  # noqa: E402
 from ecommerce.source_url_agent.result_url_candidates import (  # noqa: E402
     KnownSourceUrlClassifier,
     SourceProductUrlFilter,
@@ -427,10 +431,73 @@ def test_brave_search_query_generation_uses_model_or_mpn_then_brand() -> None:
     assert build_brave_product_queries(
         _product(mpn="UTG-12CH", manufacturer="Toyotomi"),
         source=load_source_registry().get("bestprice"),
+    ) == ['site:bestprice.gr Toyotomi "UTG-12CH"']
+
+
+def test_identifier_variants_expand_split_mpn_for_ac_products_only() -> None:
+    assert identifier_variants_for_product(
+        _product(mpn="OTN/OTG-12QINV", category="TV Control")
+    ) == ["OTN/OTG-12QINV"]
+    assert identifier_variants_for_product(
+        _product(mpn="OTN/OTG-12QINV", category="air conditioner")
+    ) == ["OTN/OTG-12QINV", "OTN-12QINV/OTG-12QINV"]
+    assert identifier_variants_for_product(
+        _product(mpn="OTN/OTG-12QINV", category="klimatisitiko")
+    ) == ["OTN/OTG-12QINV", "OTN-12QINV/OTG-12QINV"]
+    assert identifier_variants_for_product(
+        _product(mpn="OTN/OTG-12QINV", category="Κλιματιστικά")
+    ) == ["OTN/OTG-12QINV", "OTN-12QINV/OTG-12QINV"]
+
+
+def test_brave_search_query_generation_uses_ac_split_identifier_variants() -> None:
+    product = _product(
+        mpn="OTN/OTG-12QINV",
+        manufacturer="Toyotomi",
+        category="Κλιματιστικά",
+    )
+
+    assert build_brave_product_queries(
+        product, source=load_source_registry().get("bestprice")
     ) == [
-        'site:bestprice.gr "UTG-12CH"',
-        'site:bestprice.gr "Toyotomi" "UTG-12CH"',
+        'site:bestprice.gr Toyotomi "OTN/OTG-12QINV"',
+        'site:bestprice.gr Toyotomi "OTN-12QINV/OTG-12QINV"',
     ]
+
+
+def test_candidate_matching_accepts_ac_split_identifier_variant() -> None:
+    product = _product(
+        mpn="OTN/OTG-12QINV",
+        manufacturer="Toyotomi",
+        category="Κλιματιστικά",
+    )
+    source = load_source_registry().get("bestprice")
+
+    evidence = extract_page_evidence(
+        product=product,
+        source=source,
+        requested_url=(
+            "https://www.bestprice.gr/item/2159810360/"
+            "toyotomi-otn-12qinv-otg-12qinv.html"
+        ),
+        final_url=(
+            "https://www.bestprice.gr/item/2159810360/"
+            "toyotomi-otn-12qinv-otg-12qinv.html"
+        ),
+        html_text="""
+        <html>
+          <head>
+            <title>Toyotomi Ora OTN-12QINV/OTG-12QINV klimatisitiko inverter 12000 BTU</title>
+            <link rel="canonical" href="https://www.bestprice.gr/item/2159810360/toyotomi-otn-12qinv-otg-12qinv.html" />
+          </head>
+          <body>Toyotomi Ora OTN-12QINV/OTG-12QINV klimatisitiko inverter</body>
+        </html>
+        """,
+    )
+    score = score_candidate(product=product, source=source, evidence=evidence)
+
+    assert evidence.exact_mpn_found
+    assert evidence.exact_mpn_variant == "OTN-12QINV/OTG-12QINV"
+    assert score.confidence_score > 0
 
 
 def test_brave_search_request_uses_configured_api_contract(monkeypatch) -> None:
@@ -446,7 +513,7 @@ def test_brave_search_request_uses_configured_api_contract(monkeypatch) -> None:
     request = client.requests[0]
     assert request["endpoint_url"] == "https://api.search.brave.com/res/v1/web/search"
     assert request["api_key"] == "fake-token"
-    assert request["query"] == 'site:skroutz.gr "UTG-12CH"'
+    assert request["query"] == 'site:skroutz.gr Toyotomi "UTG-12CH"'
     assert request["definition"].country == "GR"
     assert request["definition"].search_lang == "el"
     assert request["definition"].ui_lang == "el-GR"
@@ -695,6 +762,10 @@ def test_brave_search_product_evidence_fetches_only_kept_candidates(
     assert results["skroutz"].provider_summary == {
         "provider_name": "brave_search",
         "query": "UTG-12CH Toyotomi",
+        "searched_queries": ["UTG-12CH Toyotomi"],
+        "searched_identifier_variants": ["UTG-12CH"],
+        "executed_query_count": 1,
+        "matched_identifier_variant": "",
         "status": "found_candidates",
         "kept_candidates_by_source": {"skroutz": 1, "bestprice": 1, "plaisio": 1},
         "discarded_count": 2,
@@ -859,6 +930,124 @@ def test_brave_search_provider_dedupes_and_stops_after_one_query(monkeypatch) ->
     ]
 
 
+def test_brave_search_stops_before_expanded_query_when_raw_query_finds_candidate(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
+    source = load_source_registry().get("bestprice")
+    product = _product(
+        mpn="OTN/OTG-12QINV",
+        manufacturer="Toyotomi",
+        category="Κλιματιστικά",
+    )
+    raw_query = 'site:bestprice.gr Toyotomi "OTN/OTG-12QINV"'
+    expanded_query = 'site:bestprice.gr Toyotomi "OTN-12QINV/OTG-12QINV"'
+    client = _QueryBraveClient(
+        {
+            raw_query: _brave_bestprice_response("toyotomi-otnotg-12qinv.html"),
+            expanded_query: _brave_bestprice_response(
+                "toyotomi-otn-12qinv-otg-12qinv.html"
+            ),
+        }
+    )
+
+    result = BraveSearchProvider(_brave_definition(), client=client).discover_product(
+        product=product,
+        sources=[source],
+    )
+
+    assert [request["query"] for request in client.requests] == [raw_query]
+    assert result.status == "found_candidates"
+    assert result.searched_queries == [raw_query]
+    assert result.executed_query_count == 1
+
+
+def test_brave_search_tries_expanded_query_after_raw_query_has_no_candidates(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
+    source = load_source_registry().get("bestprice")
+    product = _product(
+        mpn="OTN/OTG-12QINV",
+        manufacturer="Toyotomi",
+        category="Κλιματιστικά",
+    )
+    raw_query = 'site:bestprice.gr Toyotomi "OTN/OTG-12QINV"'
+    expanded_query = 'site:bestprice.gr Toyotomi "OTN-12QINV/OTG-12QINV"'
+    client = _QueryBraveClient(
+        {
+            raw_query: {"web": {"results": []}},
+            expanded_query: _brave_bestprice_response(
+                "toyotomi-otn-12qinv-otg-12qinv.html"
+            ),
+        }
+    )
+
+    result = BraveSearchProvider(_brave_definition(), client=client).discover_product(
+        product=product,
+        sources=[source],
+    )
+
+    assert [request["query"] for request in client.requests] == [
+        raw_query,
+        expanded_query,
+    ]
+    assert [candidate.candidate_url for candidate in result.candidates] == [
+        "https://www.bestprice.gr/item/2159810360/toyotomi-otn-12qinv-otg-12qinv.html"
+    ]
+    assert result.searched_queries == [raw_query, expanded_query]
+    assert result.executed_query_count == 2
+    assert result.matched_identifier_variant == "OTN-12QINV/OTG-12QINV"
+
+
+def test_brave_search_all_sources_runs_expanded_query_for_sources_still_missing(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
+    sources = [
+        load_source_registry().get("skroutz"),
+        load_source_registry().get("bestprice"),
+    ]
+    product = _product(
+        mpn="OTN/OTG-12QINV",
+        manufacturer="Toyotomi",
+        category="Κλιματιστικά",
+    )
+    raw_query = "OTN/OTG-12QINV Toyotomi"
+    expanded_query = "OTN-12QINV/OTG-12QINV Toyotomi"
+    client = _QueryBraveClient(
+        {
+            raw_query: {
+                "web": {
+                    "results": [
+                        {
+                            "url": "https://www.skroutz.gr/s/1/toyotomi-otnotg-12qinv.html",
+                            "title": "Toyotomi OTN/OTG-12QINV | Skroutz",
+                        }
+                    ]
+                }
+            },
+            expanded_query: _brave_bestprice_response(
+                "toyotomi-otn-12qinv-otg-12qinv.html"
+            ),
+        }
+    )
+
+    result = BraveSearchProvider(_brave_definition(), client=client).discover_product(
+        product=product,
+        sources=sources,
+    )
+
+    assert [request["query"] for request in client.requests] == [
+        raw_query,
+        expanded_query,
+    ]
+    assert [candidate.provenance.source_name for candidate in result.candidates] == [
+        "skroutz",
+        "bestprice",
+    ]
+
+
 def test_brave_search_http_error_statuses(monkeypatch) -> None:
     monkeypatch.setenv(BRAVE_SEARCH_API_KEY_ENV_VAR, "fake-token")
     product = _product(mpn="UTG-12CH", manufacturer="Toyotomi")
@@ -961,6 +1150,20 @@ def _brave_response() -> dict:
     }
 
 
+def _brave_bestprice_response(slug: str) -> dict:
+    return {
+        "web": {
+            "results": [
+                {
+                    "url": f"https://www.bestprice.gr/item/2159810360/{slug}",
+                    "title": "Toyotomi OTN-12QINV/OTG-12QINV | BestPrice",
+                    "description": "BestPrice product page",
+                }
+            ]
+        }
+    }
+
+
 class _FakeBraveResponse:
     def __init__(self, payload: dict, status_code: int = 200) -> None:
         self.payload = payload
@@ -986,6 +1189,23 @@ class _FakeBraveClient:
             }
         )
         return _FakeBraveResponse(self.payload, self.status_code)
+
+
+class _QueryBraveClient:
+    def __init__(self, payload_by_query: dict[str, dict]) -> None:
+        self.payload_by_query = payload_by_query
+        self.requests: list[dict] = []
+
+    def search(self, *, definition: SearchProviderDefinition, query: str, api_key: str):
+        self.requests.append(
+            {
+                "endpoint_url": definition.endpoint_url,
+                "definition": definition,
+                "query": query,
+                "api_key": api_key,
+            }
+        )
+        return _FakeBraveResponse(self.payload_by_query[query])
 
 
 class _TimeoutBraveClient:

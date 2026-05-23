@@ -38,6 +38,9 @@ RESULT_COLUMNS = [
     "evidence_price",
     "competing_candidates_count",
     "searched_queries",
+    "searched_identifier_variants_json",
+    "executed_query_count",
+    "matched_identifier_variant",
     "notes",
     "checked_at",
 ]
@@ -297,10 +300,20 @@ def _searched_queries_payload(
                 "catalog_product_id": candidate.product.catalog_product_id,
                 "source_name": candidate.source_name,
                 "searched_queries": candidate.searched_queries,
+                "searched_identifier_variants": _searched_identifier_variants(
+                    candidate
+                ),
+                "executed_query_count": _executed_query_count(candidate),
+                "matched_identifier_variant": _matched_identifier_variant(candidate),
                 "provider_provenance": [],
             },
         )
         item["searched_queries"] = candidate.searched_queries
+        item["searched_identifier_variants"] = _searched_identifier_variants(candidate)
+        item["executed_query_count"] = _executed_query_count(candidate)
+        matched_variant = _matched_identifier_variant(candidate)
+        if matched_variant:
+            item["matched_identifier_variant"] = matched_variant
         provenance = candidate.evidence_json.get("provider_provenance")
         if (
             isinstance(provenance, dict)
@@ -309,6 +322,37 @@ def _searched_queries_payload(
         ):
             item["provider_provenance"].append(provenance)
     return {"items": list(items.values())}
+
+
+def _searched_identifier_variants(candidate: SourceUrlAgentCandidate) -> list[str]:
+    provider_summary = candidate.evidence_json.get("provider_summary")
+    if not isinstance(provider_summary, dict):
+        return []
+    variants = provider_summary.get("searched_identifier_variants")
+    if not isinstance(variants, list):
+        return []
+    return [str(item) for item in variants if str(item or "").strip()]
+
+
+def _executed_query_count(candidate: SourceUrlAgentCandidate) -> int:
+    provider_summary = candidate.evidence_json.get("provider_summary")
+    if isinstance(provider_summary, dict):
+        value = provider_summary.get("executed_query_count")
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+    return len(candidate.searched_queries)
+
+
+def _matched_identifier_variant(candidate: SourceUrlAgentCandidate) -> str:
+    value = str(candidate.evidence_json.get("matched_identifier_variant") or "").strip()
+    if value:
+        return value
+    mpn = candidate.evidence_json.get("mpn")
+    if isinstance(mpn, dict):
+        return str(mpn.get("matched_identifier_variant") or "").strip()
+    return ""
 
 
 def _counts_by_source(

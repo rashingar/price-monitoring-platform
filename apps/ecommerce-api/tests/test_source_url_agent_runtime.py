@@ -396,7 +396,28 @@ def test_artifact_writing_includes_provider_provenance_in_searched_queries(
     }
     candidate = replace(
         candidate,
-        evidence_json={**candidate.evidence_json, "provider_provenance": provenance},
+        evidence_json={
+            **candidate.evidence_json,
+            "provider_provenance": provenance,
+            "provider_summary": {
+                "provider_name": "brave_search",
+                "searched_queries": [
+                    'site:bestprice.gr Toyotomi "OTN/OTG-12QINV"',
+                    'site:bestprice.gr Toyotomi "OTN-12QINV/OTG-12QINV"',
+                ],
+                "searched_identifier_variants": [
+                    "OTN/OTG-12QINV",
+                    "OTN-12QINV/OTG-12QINV",
+                ],
+                "executed_query_count": 2,
+                "matched_identifier_variant": "OTN-12QINV/OTG-12QINV",
+            },
+            "matched_identifier_variant": "OTN-12QINV/OTG-12QINV",
+        },
+        searched_queries=[
+            'site:bestprice.gr Toyotomi "OTN/OTG-12QINV"',
+            'site:bestprice.gr Toyotomi "OTN-12QINV/OTG-12QINV"',
+        ],
     )
 
     paths = write_run_artifacts(
@@ -409,6 +430,27 @@ def test_artifact_writing_includes_provider_provenance_in_searched_queries(
     payload = json.loads(paths.searched_queries.read_text(encoding="utf-8"))
 
     assert payload["items"][0]["provider_provenance"] == [provenance]
+    assert payload["items"][0]["searched_queries"] == [
+        'site:bestprice.gr Toyotomi "OTN/OTG-12QINV"',
+        'site:bestprice.gr Toyotomi "OTN-12QINV/OTG-12QINV"',
+    ]
+    assert payload["items"][0]["executed_query_count"] == 2
+    assert payload["items"][0]["searched_identifier_variants"] == [
+        "OTN/OTG-12QINV",
+        "OTN-12QINV/OTG-12QINV",
+    ]
+    assert (
+        payload["items"][0]["matched_identifier_variant"]
+        == "OTN-12QINV/OTG-12QINV"
+    )
+
+    with paths.source_url_results.open("r", encoding="utf-8", newline="") as handle:
+        row = next(csv.DictReader(handle))
+    assert row["executed_query_count"] == "2"
+    assert row["searched_identifier_variants_json"] == (
+        '["OTN/OTG-12QINV", "OTN-12QINV/OTG-12QINV"]'
+    )
+    assert row["matched_identifier_variant"] == "OTN-12QINV/OTG-12QINV"
 
 
 def test_source_url_agent_progress_definitions_are_stable() -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -91,6 +92,13 @@ class SourceUrlAgentCandidate:
             "evidence_price": _price_evidence_text(evidence.get("price")),
             "competing_candidates_count": self.competing_candidates_count,
             "searched_queries": " | ".join(self.searched_queries),
+            "searched_identifier_variants_json": _json_list_text(
+                _searched_identifier_variants(evidence)
+            ),
+            "executed_query_count": _executed_query_count(
+                evidence, self.searched_queries
+            ),
+            "matched_identifier_variant": _matched_identifier_variant(evidence),
             "notes": self.notes,
             "checked_at": self.checked_at.isoformat(),
         }
@@ -164,12 +172,15 @@ def candidate_from_evidence(
     competing_candidates_count: int,
     searched_queries: list[str],
     status: str = "pending",
+    provider_summary: dict[str, Any] | None = None,
 ) -> SourceUrlAgentCandidate:
     evidence_json = evidence.to_json()
     evidence_json["mpn"]["expected"] = product.mpn
     evidence_json["model"]["expected"] = product.model
     evidence_json["brand"]["expected"] = product.manufacturer
     evidence_json["category"]["expected"] = product.category
+    if provider_summary:
+        evidence_json["provider_summary"] = provider_summary
     if score.composite is not None:
         evidence_json["composite"] = score.composite.to_json()
     notes = score.notes
@@ -262,3 +273,42 @@ def _price_evidence_text(value: object) -> str:
     if compatible is False:
         return "different"
     return "unknown"
+
+
+def _searched_identifier_variants(evidence: dict[str, Any]) -> list[str]:
+    provider_summary = evidence.get("provider_summary")
+    if not isinstance(provider_summary, dict):
+        return []
+    variants = provider_summary.get("searched_identifier_variants")
+    if not isinstance(variants, list):
+        return []
+    return [str(item) for item in variants if str(item or "").strip()]
+
+
+def _executed_query_count(
+    evidence: dict[str, Any], searched_queries: list[str]
+) -> int:
+    provider_summary = evidence.get("provider_summary")
+    if isinstance(provider_summary, dict):
+        value = provider_summary.get("executed_query_count")
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+    return len(searched_queries)
+
+
+def _matched_identifier_variant(evidence: dict[str, Any]) -> str:
+    value = str(evidence.get("matched_identifier_variant") or "").strip()
+    if value:
+        return value
+    mpn = evidence.get("mpn")
+    if isinstance(mpn, dict):
+        return str(mpn.get("matched_identifier_variant") or "").strip()
+    return ""
+
+
+def _json_list_text(values: list[str]) -> str:
+    if not values:
+        return ""
+    return json.dumps(values, ensure_ascii=False)
