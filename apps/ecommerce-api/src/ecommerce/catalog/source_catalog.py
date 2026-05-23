@@ -75,6 +75,10 @@ def is_atomic_model(model: str) -> bool:
     return value.isdigit() and len(value) == 6
 
 
+def is_source_automation_ready(*, model: str, mpn: str) -> bool:
+    return is_atomic_model(model) and bool(_text(mpn))
+
+
 def resolve_source_catalog_path(path: Path | None = None) -> Path:
     if path is not None:
         return path
@@ -135,9 +139,7 @@ def _row_to_product(row: dict[str, str], header_map: dict[str, str]) -> CatalogP
     if not mpn:
         warnings.append("missing_mpn")
 
-    automation_eligible = (
-        atomic and status == 1 and price is not None and price > 0 and bool(mpn)
-    )
+    automation_eligible = is_source_automation_ready(model=model, mpn=mpn)
 
     return CatalogProduct(
         catalog_product_id=None,

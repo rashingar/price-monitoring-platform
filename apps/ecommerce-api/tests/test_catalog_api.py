@@ -308,7 +308,7 @@ def test_catalog_products_search_mpn_atomic_and_automation_filters(
     assert {item["model"] for item in searched["items"]} == {"005606", "123456"}
     assert [item["model"] for item in has_mpn["items"]] == ["233374-233203"]
     assert {item["model"] for item in atomic["items"]} == {"005606", "123456"}
-    assert [item["model"] for item in eligible["items"]] == ["005606"]
+    assert {item["model"] for item in eligible["items"]} == {"005606", "123456"}
 
 
 def test_catalog_products_has_quantity_filter_requires_active_positive_quantity(

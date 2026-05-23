@@ -8,6 +8,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ecommerce.catalog.source_catalog import (  # noqa: E402
     MissingCatalogColumnsError,
+    is_source_automation_ready,
     is_atomic_model,
     load_source_catalog,
 )
@@ -88,7 +89,30 @@ def test_model_whitespace_is_stripped_before_validation_and_output(
 
     assert products[1].model == "123456"
     assert products[1].is_atomic_model
-    assert not products[1].automation_eligible
+    assert products[1].automation_eligible
+
+
+@pytest.mark.parametrize(
+    ("price", "quantity", "status"),
+    [
+        ("123.45", "3", "0"),
+        ("0", "3", "1"),
+        ("0", "3", "0"),
+    ],
+)
+def test_source_automation_eligibility_ignores_status_and_price(
+    tmp_path: Path, price: str, quantity: str, status: str
+) -> None:
+    catalog_path = tmp_path / "sourceCata.csv"
+    catalog_path.write_text(
+        "model,mpn,name,category,manufacturer,price,quantity,status,bestprice_status,skroutz_status\n"
+        f"123456,MPN-1,Product,Cat A,Bosch,{price},{quantity},{status},1,0\n",
+        encoding="utf-8-sig",
+    )
+
+    product = load_source_catalog(catalog_path)[0]
+
+    assert product.automation_eligible
 
 
 def test_atomic_model_detection_examples() -> None:
@@ -100,6 +124,12 @@ def test_atomic_model_detection_examples() -> None:
     assert not is_atomic_model("ABC123")
     assert not is_atomic_model("12345")
     assert not is_atomic_model("1234567")
+
+
+def test_source_automation_ready_requires_atomic_model_and_mpn() -> None:
+    assert is_source_automation_ready(model="123456", mpn="MPN-1")
+    assert not is_source_automation_ready(model="123456", mpn="")
+    assert not is_source_automation_ready(model="233374-233203", mpn="MPN-1")
 
 
 def test_composite_model_and_missing_mpn_warnings(tmp_path: Path) -> None:

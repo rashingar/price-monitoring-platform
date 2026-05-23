@@ -6,11 +6,13 @@ import {
 } from "../../api/priceMonitoringUtils";
 import {
   catalogDbImportRequiredFixtureRoutes,
+  catalogProducts,
   catalogProductDetail,
   catalogProductsEmptyImportWarning,
   commerceDbRequiredFixtureRoutes,
   commerceFixtureRoutes,
   dbStatusUnavailable,
+  priceMonitoringSelectionResult,
   priceMonitoringMissingSourceUrlError,
   priceMonitoringMissingSourceUrlSelectionResult,
   sourceUrlAgentReadinessBlocked,
@@ -447,7 +449,8 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/catalog");
 
     await expect(screen.findByRole("heading", { name: "Commerce catalog" })).resolves.toBeInTheDocument();
-    expect(screen.getByText("Composite/invalid").closest("div")).toHaveTextContent("1");
+    const compositeSummary = await screen.findByText("Composite/invalid");
+    expect(compositeSummary.closest("div")).toHaveTextContent("1");
     await expect(screen.findByText("005606")).resolves.toBeInTheDocument();
     await expect(screen.findByText("Midea Αφυγραντήρας 20L")).resolves.toBeInTheDocument();
     expect(screen.queryByText("Αφυγραντήρες")).not.toBeInTheDocument();
@@ -488,6 +491,87 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getByRole("link", { name: "Details for 005606" })).toHaveAttribute(
       "href",
       "/catalog/products/1",
+    );
+  });
+
+  it("shows specific Catalog automation blockers and non-blocking disabled or zero price warnings", async () => {
+    const warningProduct = {
+      ...catalogProducts.items[0],
+      catalog_product_id: 10,
+      model: "001111",
+      mpn: "READY-1",
+      name: "Disabled zero price automation-ready product",
+      price: 0,
+      quantity: 1,
+      status: 0,
+      automation_eligible: true,
+    };
+    const missingMpnProduct = {
+      ...catalogProducts.items[0],
+      catalog_product_id: 11,
+      model: "002222",
+      mpn: "",
+      name: "Missing MPN product",
+      automation_eligible: false,
+    };
+    const compositeProduct = {
+      ...catalogProducts.items[0],
+      catalog_product_id: 12,
+      model: "AB-123",
+      mpn: "COMBO-1",
+      name: "Composite product",
+      is_atomic_model: false,
+      automation_eligible: false,
+    };
+    const mockFetch = installMockFetch([
+      {
+        method: "GET",
+        path: "/commerce-api/catalog/products",
+        response: {
+          ...catalogProducts,
+          items: [warningProduct, missingMpnProduct, compositeProduct],
+          total: 3,
+          filtered_total: 3,
+        },
+      },
+      {
+        method: "POST",
+        path: "/commerce-api/price-monitoring/runs",
+        response: priceMonitoringSelectionResult,
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/catalog");
+
+    const warningCheckbox = await screen.findByLabelText("Select 001111");
+    const missingMpnRow = screen.getByLabelText("Select 002222").closest("tr") as HTMLElement;
+    const compositeRow = screen.getByLabelText("Select AB-123").closest("tr") as HTMLElement;
+    expect(warningCheckbox).toBeEnabled();
+    expect(screen.getByText("Disabled")).toHaveClass("status-badge", "warning");
+    expect(screen.getByText("Zero price")).toHaveClass("status-badge", "warning");
+    expect(within(missingMpnRow).getByText("Missing MPN")).toHaveClass("status-badge", "danger");
+    expect(within(compositeRow).getByText("Composite")).toHaveClass("status-badge", "danger");
+    expect(screen.queryByText("Not eligible")).not.toBeInTheDocument();
+    expect(within(missingMpnRow).getByLabelText("Select 002222")).toBeDisabled();
+    expect(within(compositeRow).getByLabelText("Select AB-123")).toBeDisabled();
+
+    fireEvent.click(warningCheckbox);
+    await waitFor(() => expect(warningCheckbox).toBeChecked());
+    const createRunButton = screen.getByRole("button", { name: "Create run" });
+    expect(createRunButton).toBeEnabled();
+    fireEvent.click(createRunButton);
+
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.some(
+          (request) =>
+            request.method === "POST" &&
+            request.pathname === "/commerce-api/price-monitoring/runs" &&
+            Array.isArray((request.body as { selected_models?: unknown }).selected_models) &&
+            (request.body as { selected_models: string[] }).selected_models.includes("001111"),
+        ),
+      ).toBe(true),
     );
   });
 

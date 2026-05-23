@@ -14,6 +14,11 @@ export interface SourceUrlEligibility {
   blocker: string | null;
 }
 
+export interface CatalogEligibilityBadge {
+  label: string;
+  className: string;
+}
+
 export interface CatalogSelectionFilters {
   q: string;
   family: string;
@@ -56,13 +61,37 @@ export function getSourceUrlEligibility(product: CatalogProduct): SourceUrlEligi
   return { label: "Missing", className: "danger", blocker: "Missing source URL" };
 }
 
-export function getSelectionBlocker(product: CatalogProduct): string | null {
-  if (product.is_atomic_model === false) {
-    return "Composite model";
+export function getAutomationBlockerBadges(product: CatalogProduct): CatalogEligibilityBadge[] {
+  const badges: CatalogEligibilityBadge[] = [];
+  if (product.automation_eligible !== false) {
+    return badges;
   }
+  if (product.is_atomic_model === false) {
+    badges.push({ label: "Composite", className: "danger" });
+  }
+  if (String(product.mpn ?? "").trim().length === 0) {
+    badges.push({ label: "Missing MPN", className: "danger" });
+  }
+  if (badges.length === 0) {
+    badges.push({ label: "Automation blocked", className: "danger" });
+  }
+  return badges;
+}
 
+export function getCatalogWarningBadges(product: CatalogProduct): CatalogEligibilityBadge[] {
+  const badges: CatalogEligibilityBadge[] = [];
+  if (product.status !== undefined && product.status !== null && Number(product.status) !== 1) {
+    badges.push({ label: "Disabled", className: "warning" });
+  }
+  if (typeof product.price !== "number" || !Number.isFinite(product.price) || product.price <= 0) {
+    badges.push({ label: "Zero price", className: "warning" });
+  }
+  return badges;
+}
+
+export function getSelectionBlocker(product: CatalogProduct): string | null {
   if (product.automation_eligible === false) {
-    return "Not eligible";
+    return getAutomationBlockerBadges(product)[0]?.label ?? "Automation blocked";
   }
 
   if (product.ignored === true) {

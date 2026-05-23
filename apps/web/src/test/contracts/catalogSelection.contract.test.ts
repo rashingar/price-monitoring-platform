@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { CatalogProduct, PriceMonitoringSelectionResult } from "../../api/commerceTypes";
 import {
+  getAutomationBlockerBadges,
+  getCatalogWarningBadges,
   getSelectionBlocker,
   getSkippedMissingSourceUrlModels,
   getSourceUrlEligibility,
@@ -28,10 +30,48 @@ describe("catalog selection helpers", () => {
   });
 
   it("blocks composite, ignored, and missing source URL products in the same order as Catalog", () => {
-    expect(getSelectionBlocker({ model: "1", is_atomic_model: false })).toBe("Composite model");
-    expect(getSelectionBlocker({ model: "2", automation_eligible: false })).toBe("Not eligible");
+    expect(getSelectionBlocker({ model: "1", is_atomic_model: false, automation_eligible: false })).toBe("Composite");
+    expect(getSelectionBlocker({ model: "2", automation_eligible: false })).toBe("Missing MPN");
     expect(getSelectionBlocker({ model: "3", ignored: true })).toBe("Ignored");
     expect(getSelectionBlocker({ model: "4" })).toBe("Missing source URL");
+  });
+
+  it("derives automation blocker and non-blocking catalog warning badges", () => {
+    expect(
+      getAutomationBlockerBadges({
+        model: "AB-123",
+        mpn: "",
+        is_atomic_model: false,
+        automation_eligible: false,
+      }),
+    ).toEqual([
+      { label: "Composite", className: "danger" },
+      { label: "Missing MPN", className: "danger" },
+    ]);
+    expect(
+      getCatalogWarningBadges({
+        model: "001234",
+        mpn: "MPN-1",
+        is_atomic_model: true,
+        automation_eligible: true,
+        status: 0,
+        price: 0,
+      }),
+    ).toEqual([
+      { label: "Disabled", className: "warning" },
+      { label: "Zero price", className: "warning" },
+    ]);
+    expect(
+      getSelectionBlocker({
+        model: "001234",
+        mpn: "MPN-1",
+        is_atomic_model: true,
+        automation_eligible: true,
+        status: 0,
+        price: 0,
+        source_url_coverage: { has_active_source_url: true },
+      }),
+    ).toBeNull();
   });
 
   it("builds the Price Monitoring selection body from selected models and current filters", () => {

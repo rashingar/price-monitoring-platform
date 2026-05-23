@@ -6,6 +6,8 @@ import {
   getMarketplaceStatus,
 } from "./catalogFormatters";
 import {
+  getAutomationBlockerBadges,
+  getCatalogWarningBadges,
   getSelectionBlocker,
   getSourceUrlEligibility,
   normalizeModel,
@@ -75,6 +77,8 @@ export function CatalogProductsTable({
             const model = normalizeModel(product.model);
             const selectionBlocker = getSelectionBlocker(product);
             const sourceUrlEligibility = getSourceUrlEligibility(product);
+            const automationBlockers = getAutomationBlockerBadges(product);
+            const catalogWarnings = getCatalogWarningBadges(product);
             const isSelected = selectedModels.has(model);
             const warnings = Array.isArray(product.warnings) ? product.warnings : [];
             const rawCategory = product.raw_category ?? product.category ?? "";
@@ -157,8 +161,20 @@ export function CatalogProductsTable({
                       <span className={`status-badge ${sourceUrlEligibility.className}`}>
                         {sourceUrlEligibility.label}
                       </span>
-                      {selectionBlocker && selectionBlocker !== sourceUrlEligibility.blocker ? (
-                        <span className="status-badge queued">{selectionBlocker}</span>
+                      {automationBlockers.map((badge) => (
+                        <span className={`status-badge ${badge.className}`} key={badge.label}>
+                          {badge.label}
+                        </span>
+                      ))}
+                      {catalogWarnings.map((badge) => (
+                        <span className={`status-badge ${badge.className}`} key={badge.label}>
+                          {badge.label}
+                        </span>
+                      ))}
+                      {selectionBlocker &&
+                      selectionBlocker !== sourceUrlEligibility.blocker &&
+                      !automationBlockers.some((badge) => badge.label === selectionBlocker) ? (
+                        <span className="status-badge danger">{selectionBlocker}</span>
                       ) : null}
                       {warnings.length > 0 ? (
                         <span className="muted">{warnings.join(", ")}</span>
