@@ -118,6 +118,7 @@ def test_accept_candidate_promotes_candidate_url(tmp_path: Path, monkeypatch) ->
     with session_scope(database_url) as session:
         stored = session.query(SourceUrl).one()
         assert stored.url == "https://www.bestprice.gr/item/1/lg-remote.html"
+        assert stored.provenance == "discovery"
 
 
 def test_accept_candidate_with_reviewed_url_promotes_reviewed_url(

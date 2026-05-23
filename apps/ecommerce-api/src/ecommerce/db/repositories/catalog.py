@@ -14,6 +14,9 @@ from ecommerce.catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.models.catalog import CatalogProductRow
 from ecommerce.db.models.products import Product, ProductSource, SourceCaptureSnapshot
 from ecommerce.db.models.source_urls import SourceUrl
+from ecommerce.db.repositories.source_urls import (
+    get_latest_source_url_discovery_statuses_for_catalog_products,
+)
 from ecommerce.db.repositories.common import json_safe_value
 from ecommerce.source_capture.canonicalize_url import (
     canonical_url_hash,
@@ -38,6 +41,7 @@ class CatalogProductListFilters:
     manufacturer: str | None = None
     marketplace: MarketplaceFilter | None = None
     source_name: str | None = None
+    source_url_discovery_source: str | None = None
     has_mpn: bool | None = None
     has_source_url: bool | None = None
     has_quantity: bool | None = None
@@ -100,12 +104,21 @@ def list_catalog_products_page(
     status_counts = _source_url_status_counts(
         session, [row.id for row in rows], source_filter
     )
+    discovery_source_filter = _source_filter(
+        filters.source_url_discovery_source
+    ) or source_filter
+    latest_discovery_jobs = get_latest_source_url_discovery_statuses_for_catalog_products(
+        session,
+        [int(row.id) for row in rows],
+        source_name=discovery_source_filter,
+    )
     items = [
         _catalog_product_payload(
             row,
             is_ignored=row.model in ignored_models,
             status_counts=status_counts.get(int(row.id)),
             source_filter=source_filter,
+            latest_discovery_job=latest_discovery_jobs.get(int(row.id)),
         )
         for row in rows
     ]
@@ -536,11 +549,12 @@ def _catalog_product_payload(
     is_ignored: bool,
     status_counts: dict[str, int] | None,
     source_filter: str | None,
+    latest_discovery_job: Any | None = None,
 ) -> dict[str, Any]:
     source_counts = status_counts or _empty_status_counts()
     active_count = int(source_counts.get("active") or 0)
     automation_eligible = bool(row.automation_eligible) and not is_ignored
-    return {
+    payload = {
         "catalog_product_id": row.id,
         "model": row.model or "",
         "mpn": row.mpn or "",
@@ -575,6 +589,18 @@ def _catalog_product_payload(
             "status_counts": dict(source_counts),
         },
     }
+    if latest_discovery_job is not None:
+        payload.update(
+            {
+                "latest_source_url_job_id": latest_discovery_job.run_id,
+                "latest_source_url_job_status": latest_discovery_job.status,
+                "latest_source_url_job_updated_at": _json_safe_value(
+                    latest_discovery_job.updated_at
+                ),
+                "source_url_discovery_running": latest_discovery_job.running,
+            }
+        )
+    return payload
 
 
 def _product_sources_for_catalog_product(
@@ -673,6 +699,7 @@ def _source_url_lifecycle_payload(
         "url_normalized": row.url_normalized,
         "status": row.status,
         "url_type": row.url_type,
+        "provenance": row.provenance or "unknown",
         "trust_level": row.trust_level,
         "added_by": row.added_by,
         "notes": row.notes,

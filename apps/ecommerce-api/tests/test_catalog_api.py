@@ -21,6 +21,7 @@ from ecommerce.db.models.products import (
 from ecommerce.db.models.source_urls import (
     SourceUrlCandidate,
     SourceUrlDiscoveryRun,
+    SourceUrlDiscoveryTask,
 )  # noqa: E402
 from ecommerce.db.repositories.catalog import (  # noqa: E402
     get_catalog_brands,
@@ -149,6 +150,90 @@ def test_catalog_products_pagination(tmp_path: Path, monkeypatch) -> None:
     assert [item["model"] for item in payload["items"]] == ["233374-233203", "ABC123"]
     assert "ignored" in payload["items"][0]
     assert isinstance(payload["items"][0]["catalog_product_id"], int)
+
+
+def test_catalog_products_include_source_url_discovery_running_state(
+    tmp_path: Path, monkeypatch
+) -> None:
+    client = _client_with_catalog(tmp_path, monkeypatch)
+    products = client.get("/api/catalog/products").json()["items"]
+    product_id = products[0]["catalog_product_id"]
+    completed_product_id = products[1]["catalog_product_id"]
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'ecommerce.db'}"
+    with session_scope(database_url) as session:
+        session.add(
+            SourceUrlDiscoveryRun(
+                run_id="source-run-active",
+                source_name="bestprice",
+                mode="catalog",
+                status="running",
+                selected_count=1,
+                candidate_count=0,
+                matched_count=0,
+                needs_review_count=0,
+                not_found_count=0,
+                error_count=0,
+                created_at=NOW,
+                updated_at=NOW,
+            )
+        )
+        session.add(
+            SourceUrlDiscoveryTask(
+                run_id="source-run-active",
+                catalog_product_id=product_id,
+                model="005606",
+                source_name="bestprice",
+                status="running",
+                candidate_count=0,
+                created_at=NOW,
+                updated_at=NOW,
+            )
+        )
+        session.add(
+            SourceUrlDiscoveryRun(
+                run_id="source-run-done",
+                source_name="bestprice",
+                mode="catalog",
+                status="completed",
+                selected_count=1,
+                candidate_count=0,
+                matched_count=0,
+                needs_review_count=0,
+                not_found_count=0,
+                error_count=0,
+                created_at=NOW,
+                updated_at=NOW,
+                completed_at=NOW,
+            )
+        )
+        session.add(
+            SourceUrlDiscoveryTask(
+                run_id="source-run-done",
+                catalog_product_id=completed_product_id,
+                model="123456",
+                source_name="bestprice",
+                status="completed",
+                candidate_count=0,
+                created_at=NOW,
+                updated_at=NOW,
+                completed_at=NOW,
+            )
+        )
+
+    response = client.get(
+        "/api/catalog/products",
+        params={"source_url_discovery_source": "bestprice"},
+    )
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["latest_source_url_job_id"] == "source-run-active"
+    assert item["latest_source_url_job_status"] == "running"
+    assert item["source_url_discovery_running"] is True
+    completed_item = response.json()["items"][1]
+    assert completed_item["latest_source_url_job_id"] == "source-run-done"
+    assert completed_item["latest_source_url_job_status"] == "completed"
+    assert completed_item["source_url_discovery_running"] is False
 
 
 def test_catalog_products_category_filter(tmp_path: Path, monkeypatch) -> None:

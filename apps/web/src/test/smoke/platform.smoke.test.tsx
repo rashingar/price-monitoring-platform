@@ -929,6 +929,38 @@ describe("platform mocked page smoke tests", () => {
     expect(within(drawer).getByText("Find URL disabled: Composite.")).toBeInTheDocument();
   });
 
+  it("shows Catalog row discovery running indicators only for non-terminal jobs", async () => {
+    installMockFetch([
+      {
+        method: "GET",
+        path: "/commerce-api/catalog/products",
+        response: {
+          ...catalogProducts,
+          items: [
+            {
+              ...catalogProducts.items[0],
+              source_url_discovery_running: true,
+              latest_source_url_job_id: "source-run-active",
+              latest_source_url_job_status: "running",
+            },
+            {
+              ...catalogProducts.items[1],
+              source_url_discovery_running: false,
+              latest_source_url_job_id: "source-run-done",
+              latest_source_url_job_status: "completed",
+            },
+          ],
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/catalog");
+
+    await expect(screen.findByText("Finding URL")).resolves.toBeInTheDocument();
+    expect(screen.getAllByText("Finding URL")).toHaveLength(1);
+  });
+
   it("opens and closes the Catalog source URL drawer with product context", async () => {
     installMockFetch(allRoutes);
 
@@ -956,6 +988,8 @@ describe("platform mocked page smoke tests", () => {
     expect(within(drawer).getByText("source-run-002")).toBeInTheDocument();
     expect(within(drawer).getAllByText("Manual").length).toBeGreaterThan(0);
     expect(within(drawer).getByText("Discovery")).toBeInTheDocument();
+    expect(within(drawer).getByText("Import")).toBeInTheDocument();
+    expect(within(drawer).getByText("Unknown")).toBeInTheDocument();
 
     fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Source URLs" })).not.toBeInTheDocument());
@@ -1113,6 +1147,7 @@ describe("platform mocked page smoke tests", () => {
               url_normalized: "https://www.bestprice.gr/item/702/midea-md-20l.html",
               status: "active",
               url_type: "discovered",
+              provenance: "discovery",
               trust_level: "manual",
               added_by: "source-url-agent",
               failure_count: 0,

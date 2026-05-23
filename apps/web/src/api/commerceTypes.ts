@@ -133,12 +133,17 @@ export interface CatalogProduct {
   ignored?: boolean | null;
   warnings?: string[] | null;
   source_url_coverage?: PriceMonitoringSourceUrlCoverage | null;
+  latest_source_url_job_id?: string | number | null;
+  latest_source_url_job_status?: string | null;
+  latest_source_url_job_updated_at?: string | null;
+  source_url_discovery_running?: boolean | null;
   [key: string]: unknown;
 }
 
 export type SourceUrlStatus = "active" | "disabled" | "broken" | "redirected" | "needs_review";
 
 export type SourceUrlType = "manual" | "imported" | "discovered";
+export type SourceUrlProvenance = "manual" | "discovery" | "import" | "unknown";
 
 export interface SourceUrl {
   id?: number | string | null;
@@ -155,6 +160,7 @@ export interface SourceUrl {
   url_normalized?: string | null;
   status: SourceUrlStatus | string;
   url_type: SourceUrlType | string;
+  provenance?: SourceUrlProvenance | string | null;
   trust_level?: string | null;
   added_by?: string | null;
   notes?: string | null;
@@ -184,6 +190,7 @@ export interface SourceUrlCreateBody {
   url: string;
   source_name?: SourceName | null;
   url_type?: SourceUrlType | string | null;
+  provenance?: SourceUrlProvenance | string | null;
   trust_level?: string | null;
   added_by?: string | null;
   notes?: string | null;
@@ -781,6 +788,7 @@ export interface CatalogProductsParams {
   manufacturer?: string | null;
   marketplace?: MarketplaceFilter | null;
   source_name?: PriceMonitoringSource | string | null;
+  source_url_discovery_source?: PriceMonitoringSource | string | null;
   page?: number;
   page_size?: number;
   atomic_only?: boolean;

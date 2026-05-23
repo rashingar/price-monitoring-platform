@@ -27,139 +27,22 @@ import {
   isActiveSourceUrlAgentRun,
 } from "../features/catalog/sourceUrlDiscovery";
 import { submitSourceUrlCandidateReview } from "../features/source-url-candidates/sourceUrlCandidateReviewActions";
+import { SourceUrlCandidateReview } from "./catalog-source-urls/SourceUrlCandidateReview";
+import { SourceUrlDiscoveryStatus } from "./catalog-source-urls/SourceUrlDiscoveryStatus";
+import { SourceUrlDrawerActions } from "./catalog-source-urls/SourceUrlDrawerActions";
+import { SourceUrlManualForm } from "./catalog-source-urls/SourceUrlManualForm";
+import { SourceUrlTable } from "./catalog-source-urls/SourceUrlTable";
+import {
+  candidateKey,
+  discoverySourceForDrawer,
+  formatValue,
+  isSuccessfulDiscoveryRun,
+  isTerminalDiscoveryRun,
+  reviewableCandidates,
+  sourceUrlId,
+  sourceUrlStatusClass,
+} from "./catalog-source-urls/sourceUrlDrawerUtils";
 import { ErrorState, LoadingState } from "./layout/StateBlocks";
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined || value === "") {
-    return "-";
-  }
-
-  return String(value);
-}
-
-function formatDate(value: unknown): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    return "-";
-  }
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-}
-
-function sourceUrlId(sourceUrl: SourceUrl): string | number | null {
-  return sourceUrl.id ?? sourceUrl.source_url_id ?? null;
-}
-
-function sourceUrlStatusClass(status: string | null | undefined): string {
-  switch (status) {
-    case "active":
-    case "success":
-    case "succeeded":
-      return "success";
-    case "needs_review":
-    case "warning":
-      return "warning";
-    case "broken":
-    case "failed":
-    case "error":
-      return "danger";
-    case "disabled":
-      return "neutral";
-    case "redirected":
-      return "queued";
-    default:
-      return "neutral";
-  }
-}
-
-function discoverySourceForDrawer(
-  marketplace: MarketplaceFilter,
-  source: PriceMonitoringSource,
-): string {
-  if (marketplace === "bestprice" || marketplace === "skroutz") {
-    return marketplace;
-  }
-  return source || "bestprice";
-}
-
-function sourceUrlOriginLabel(sourceUrl: SourceUrl): string {
-  const urlType = String(sourceUrl.url_type ?? "").toLowerCase();
-  const addedBy = String(sourceUrl.added_by ?? "").toLowerCase();
-  if (urlType === "manual") {
-    return "Manual";
-  }
-  if (urlType === "discovered" || addedBy.includes("source-url-agent")) {
-    return "Discovery";
-  }
-  if (urlType === "imported") {
-    return "Imported";
-  }
-  return "Unknown";
-}
-
-function isTerminalDiscoveryRun(run: SourceUrlAgentRun | null): boolean {
-  return !isActiveSourceUrlAgentRun(run);
-}
-
-function isSuccessfulDiscoveryRun(run: SourceUrlAgentRun | null): boolean {
-  const status = typeof run?.status === "string" ? run.status.toLowerCase() : "";
-  return status === "succeeded" || status === "success" || status === "completed";
-}
-
-function runMessage(run: SourceUrlAgentRun | null): string | null {
-  const taskError = run?.tasks?.find((task) => String(task.error_message ?? "").trim().length > 0)?.error_message;
-  if (taskError) {
-    return String(taskError);
-  }
-  const warnings = Array.isArray(run?.warnings) ? run?.warnings : [];
-  return warnings.length > 0 ? String(warnings[0]) : null;
-}
-
-function reviewableCandidates(history: ProductSourceUrlCandidateHistoryResponse | null): SourceUrlCandidate[] {
-  const latest = history?.items?.[0];
-  if (!latest) {
-    return [];
-  }
-  return latest.candidates.filter((candidate) => {
-    const status = String(candidate.status ?? "").toLowerCase();
-    return Boolean(candidate.candidate_url) && (status === "needs_review" || status === "pending");
-  });
-}
-
-function candidateKey(candidate: SourceUrlCandidate): string {
-  return String(candidate.id);
-}
-
-function hasCaptureMetadata(sourceUrl: SourceUrl): boolean {
-  return Boolean(
-    sourceUrl.product_source_id ??
-      sourceUrl.capture_status ??
-      sourceUrl.last_capture_status ??
-      sourceUrl.last_fetch_status ??
-      sourceUrl.last_capture_strategy ??
-      sourceUrl.last_capture_snapshot_id ??
-      sourceUrl.source_capture_snapshot_id ??
-      sourceUrl.snapshot_ref ??
-      sourceUrl.full_snapshot_ref,
-  );
-}
-
-function formatArtifactReference(value: unknown): string {
-  if (typeof value === "string" && value.trim().length > 0) {
-    return value;
-  }
-
-  if (typeof value === "object" && value !== null && "path" in value) {
-    const path = (value as { path?: unknown }).path;
-    return typeof path === "string" && path.trim().length > 0 ? path : "-";
-  }
-
-  return "-";
-}
-
-function normalizeActionLabel(status: string): string {
-  return status.replace(/_/g, " ");
-}
 
 function readinessMessage(error: unknown): string {
   const block = getCatalogReadinessBlock(error);
@@ -590,146 +473,13 @@ export function SourceUrlImportPanel({
   );
 }
 
-function LatestDiscoveryJobBlock({
-  run,
-  isLoading,
-}: {
-  run: SourceUrlAgentRun | null;
-  isLoading: boolean;
-}) {
-  if (!run && !isLoading) {
-    return null;
-  }
-
-  const message = runMessage(run);
-  return (
-    <section className="source-url-discovery-block" aria-label="Latest discovery job">
-      <div className="source-url-discovery-block-header">
-        <strong>Latest discovery job</strong>
-        {isLoading ? <span className="muted">Refreshing...</span> : null}
-      </div>
-      {run ? (
-        <dl className="source-url-discovery-meta">
-          <div>
-            <dt>Run id</dt>
-            <dd>{formatValue(getSourceUrlAgentRunId(run))}</dd>
-          </div>
-          <div>
-            <dt>Status</dt>
-            <dd>
-              <span className={`status-badge ${sourceUrlStatusClass(run.status)}`}>
-                {formatValue(run.status)}
-              </span>
-            </dd>
-          </div>
-          <div>
-            <dt>Source</dt>
-            <dd>{formatValue(run.source ?? run.source_name)}</dd>
-          </div>
-          <div>
-            <dt>Created</dt>
-            <dd>{formatDate(run.created_at)}</dd>
-          </div>
-          <div>
-            <dt>Completed</dt>
-            <dd>{formatDate(run.completed_at)}</dd>
-          </div>
-        </dl>
-      ) : (
-        <p className="muted">No discovery job yet.</p>
-      )}
-      {message ? <p className="form-warning">{message}</p> : null}
-    </section>
-  );
-}
-
-function CandidateSummary({ candidate }: { candidate: SourceUrlCandidate }) {
-  return (
-    <div className="source-url-drawer-candidate">
-      <div>
-        <strong>{formatValue(candidate.candidate_title ?? candidate.product_name)}</strong>
-        <p className="muted">
-          {formatValue(candidate.source_name)} / {formatValue(candidate.source_domain)}
-          {" · "}
-          confidence {formatValue(candidate.confidence_score)}
-        </p>
-      </div>
-      {candidate.candidate_url ? (
-        <a href={candidate.candidate_url} target="_blank" rel="noreferrer noopener">
-          {candidate.candidate_url}
-        </a>
-      ) : null}
-    </div>
-  );
-}
-
-function DrawerCandidateReviewBlock({
-  candidates,
-  expanded,
-  pendingCandidateId,
-  onToggleExpanded,
-  onReview,
-}: {
-  candidates: SourceUrlCandidate[];
-  expanded: boolean;
-  pendingCandidateId: string | null;
-  onToggleExpanded: () => void;
-  onReview: (candidate: SourceUrlCandidate, decision: SourceUrlCandidateReviewDecision) => void;
-}) {
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  const visibleCandidates = expanded ? candidates : candidates.slice(0, 1);
-  return (
-    <section className="source-url-discovery-block" aria-label="Discovery candidate review">
-      <div className="source-url-discovery-block-header">
-        <strong>Candidate review</strong>
-        {candidates.length > 1 ? (
-          <button className="button secondary compact-button" type="button" onClick={onToggleExpanded}>
-            {expanded ? "Show top only" : `Show ${candidates.length - 1} more`}
-          </button>
-        ) : null}
-      </div>
-      <div className="source-url-drawer-candidates">
-        {visibleCandidates.map((candidate) => {
-          const id = candidateKey(candidate);
-          const isPending = pendingCandidateId === id;
-          return (
-            <article key={id} className="source-url-drawer-candidate-card">
-              <CandidateSummary candidate={candidate} />
-              <div className="button-row">
-                <button
-                  className="button primary compact-button"
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => onReview(candidate, "accept")}
-                >
-                  {isPending ? "Submitting..." : "Accept"}
-                </button>
-                <button
-                  className="button danger compact-button"
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => onReview(candidate, "reject")}
-                >
-                  {isPending ? "Submitting..." : "Reject"}
-                </button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 export function CatalogSourceUrlManager({
   product,
   disabled,
   refreshToken,
   marketplace,
   source,
+  onDiscoveryStatusChange,
   onClose,
 }: {
   product: CatalogProduct | null;
@@ -737,6 +487,7 @@ export function CatalogSourceUrlManager({
   refreshToken: number;
   marketplace: MarketplaceFilter;
   source: PriceMonitoringSource;
+  onDiscoveryStatusChange?: () => void;
   onClose: () => void;
 }) {
   const catalogProductId = product?.catalog_product_id;
@@ -844,12 +595,13 @@ export function CatalogSourceUrlManager({
             void loadCandidateHistory().catch(() => null);
             if (isTerminalDiscoveryRun(nextRun)) {
               stopDiscoveryPolling();
+              onDiscoveryStatusChange?.();
               void refreshDiscoveryOutputs();
               if (isSuccessfulDiscoveryRun(nextRun) && !extraRefreshScheduled) {
                 extraRefreshScheduled = true;
-                discoveryExtraRefreshTimeoutRef.current = window.setTimeout(() => {
-                  discoveryExtraRefreshTimeoutRef.current = null;
+                window.setTimeout(() => {
                   void refreshDiscoveryOutputs();
+                  onDiscoveryStatusChange?.();
                 }, 1_500);
               }
             }
@@ -871,6 +623,7 @@ export function CatalogSourceUrlManager({
       discoveryPollIntervalRef,
       loadCandidateHistory,
       refreshDiscoveryOutputs,
+      onDiscoveryStatusChange,
       stopDiscoveryPolling,
     ],
   );
@@ -884,7 +637,11 @@ export function CatalogSourceUrlManager({
 
       setIsDiscoveryStatusLoading(true);
       try {
-        const response = await commerceClient.getLatestSourceUrlAgentRunForCatalogProduct(catalogProductId, signal);
+        const response = await commerceClient.getLatestSourceUrlAgentRunForCatalogProduct(
+          catalogProductId,
+          discoverySource,
+          signal,
+        );
         if (signal?.aborted) {
           return null;
         }
@@ -906,7 +663,7 @@ export function CatalogSourceUrlManager({
         }
       }
     },
-    [canLoad, catalogProductId, pollDiscoveryRun],
+    [canLoad, catalogProductId, discoverySource, pollDiscoveryRun],
   );
 
   useEffect(() => {
@@ -1010,6 +767,7 @@ export function CatalogSourceUrlManager({
       setLatestDiscoveryRun(createdRun);
       const runId = getSourceUrlAgentRunId(createdRun);
       setDiscoveryMessage(runId ? `Find URL run started: ${runId}` : "Find URL run started.");
+      onDiscoveryStatusChange?.();
       await loadCandidateHistory().catch(() => null);
       if (runId && isActiveSourceUrlAgentRun(createdRun)) {
         pollDiscoveryRun(runId);
@@ -1169,7 +927,6 @@ export function CatalogSourceUrlManager({
     return null;
   }
 
-  const showCaptureColumns = items.some(hasCaptureMetadata);
   const pendingCandidates = reviewableCandidates(candidateHistory);
   const findUrlDisabledReason =
     !canLoad
@@ -1221,28 +978,16 @@ export function CatalogSourceUrlManager({
             </div>
           </dl>
 
-          <div className="toolbar source-url-drawer-toolbar">
-            <p className="muted">Manage monitored source URLs attached to this catalog product.</p>
-            <div className="button-row">
-              <button
-                className="button secondary"
-                type="button"
-                onClick={() => void loadItems()}
-                disabled={!canLoad || isLoading}
-              >
-                Refresh URLs
-              </button>
-              <button
-                className="button primary"
-                type="button"
-                onClick={() => void startDiscovery()}
-                disabled={!canFindUrl || isDiscoveryStarting}
-                title={findUrlDisabledReason ?? `Search ${discoverySource}`}
-              >
-                {isDiscoveryStarting ? "Starting..." : "Find URL"}
-              </button>
-            </div>
-          </div>
+          <SourceUrlDrawerActions
+            canLoad={canLoad}
+            isLoading={isLoading}
+            canFindUrl={canFindUrl}
+            isDiscoveryStarting={isDiscoveryStarting}
+            findUrlDisabledReason={findUrlDisabledReason}
+            discoverySource={discoverySource}
+            onRefresh={() => void loadItems()}
+            onFindUrl={() => void startDiscovery()}
+          />
 
       {disabled ? (
         <p className="muted">Source URL manager is locked until Catalog database/import readiness is restored.</p>
@@ -1259,8 +1004,8 @@ export function CatalogSourceUrlManager({
       {discoveryMessage ? <p className="muted">{discoveryMessage}</p> : null}
       {discoveryError ? <ErrorState message={discoveryError} /> : null}
 
-      <LatestDiscoveryJobBlock run={latestDiscoveryRun} isLoading={isDiscoveryStatusLoading} />
-      <DrawerCandidateReviewBlock
+      <SourceUrlDiscoveryStatus run={latestDiscoveryRun} isLoading={isDiscoveryStatusLoading} />
+      <SourceUrlCandidateReview
         candidates={pendingCandidates}
         expanded={isCandidateReviewExpanded}
         pendingCandidateId={pendingCandidateId}
@@ -1268,234 +1013,29 @@ export function CatalogSourceUrlManager({
         onReview={(candidate, decision) => void reviewCandidate(candidate, decision)}
       />
 
-      <form className="source-url-add-form" onSubmit={(event) => void addUrl(event)}>
-        <label className="inline-field wide">
-          Manual URL
-          <input
-            type="url"
-            value={newUrl}
-            onChange={(event) => setNewUrl(event.target.value)}
-            placeholder="https://example.com/product"
-            disabled={!canLoad || isCreating}
-          />
-        </label>
-        <label className="inline-field" title="Source name identifies the vendor or registry source used for source URL capture.">
-          Source name
-          <input
-            type="text"
-            value={newSourceName}
-            onChange={(event) => setNewSourceName(event.target.value)}
-            placeholder="electronet, public, plaisio, kotsovolos"
-            disabled={!canLoad || isCreating}
-          />
-        </label>
-        <button className="button primary" type="submit" disabled={!canLoad || isCreating || newUrl.trim().length === 0}>
-          {isCreating ? "Adding..." : "Add URL"}
-        </button>
-      </form>
+      <SourceUrlManualForm
+        canLoad={canLoad}
+        isCreating={isCreating}
+        newUrl={newUrl}
+        newSourceName={newSourceName}
+        onNewUrlChange={setNewUrl}
+        onNewSourceNameChange={setNewSourceName}
+        onSubmit={(event) => void addUrl(event)}
+      />
 
-      <div className="table-wrap source-url-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Source name</th>
-              <th>Domain</th>
-              <th>URL</th>
-              <th>Status</th>
-              <th>Origin</th>
-              <th>Type</th>
-              <th>Trust</th>
-              <th>Failures</th>
-              <th>Last success</th>
-              <th>Last failed</th>
-              <th>Last error</th>
-              {showCaptureColumns ? <th>Product source</th> : null}
-              {showCaptureColumns ? <th>Capture</th> : null}
-              {showCaptureColumns ? <th>Snapshot</th> : null}
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length > 0 ? (
-              items.map((sourceUrl, index) => {
-                const id = sourceUrlId(sourceUrl);
-                const isPending = pendingActionId !== null && pendingActionId === id;
-                const isEditing = editingId !== null && editingId === id;
-                return (
-                  <tr key={`${id ?? sourceUrl.url}-${index}`}>
-                    <td>
-                      {isEditing ? (
-                        <input
-                          className="table-input"
-                          type="text"
-                          value={editDraft.source_name}
-                          onChange={(event) =>
-                            setEditDraft((current) => ({ ...current, source_name: event.target.value }))
-                          }
-                          disabled={isPending}
-                          aria-label={`Edit source name for ${sourceUrl.url}`}
-                        />
-                      ) : (
-                        formatValue(sourceUrl.source_name)
-                      )}
-                    </td>
-                    <td>{formatValue(sourceUrl.source_domain)}</td>
-                    <td className="source-url-cell">
-                      {isEditing ? (
-                        <div className="source-url-edit-form">
-                          <label>
-                            URL
-                            <textarea
-                              value={editDraft.url}
-                              onChange={(event) =>
-                                setEditDraft((current) => ({ ...current, url: event.target.value }))
-                              }
-                              disabled={isPending}
-                              aria-label={`Edit URL for ${sourceUrl.url}`}
-                            />
-                          </label>
-                          <label>
-                            Notes
-                            <textarea
-                              value={editDraft.notes}
-                              onChange={(event) =>
-                                setEditDraft((current) => ({ ...current, notes: event.target.value }))
-                              }
-                              disabled={isPending}
-                              aria-label={`Edit notes for ${sourceUrl.url}`}
-                            />
-                          </label>
-                        </div>
-                      ) : (
-                        <>
-                          <a href={sourceUrl.url} target="_blank" rel="noreferrer">
-                            {sourceUrl.url}
-                          </a>
-                          {sourceUrl.url_normalized && sourceUrl.url_normalized !== sourceUrl.url ? (
-                            <span className="artifact-path">Normalized: {sourceUrl.url_normalized}</span>
-                          ) : null}
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${sourceUrlStatusClass(sourceUrl.status)}`}>
-                        {normalizeActionLabel(sourceUrl.status)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="status-badge neutral">{sourceUrlOriginLabel(sourceUrl)}</span>
-                    </td>
-                    <td>{formatValue(sourceUrl.url_type)}</td>
-                    <td>{formatValue(sourceUrl.trust_level)}</td>
-                    <td>{formatValue(sourceUrl.failure_count)}</td>
-                    <td>{formatDate(sourceUrl.last_success_at)}</td>
-                    <td>{formatDate(sourceUrl.last_failed_at)}</td>
-                    <td>{formatValue(sourceUrl.last_error)}</td>
-                    {showCaptureColumns ? <td>{formatValue(sourceUrl.product_source_id)}</td> : null}
-                    {showCaptureColumns ? (
-                      <td>
-                        <span className={`status-badge ${sourceUrlStatusClass(sourceUrl.capture_status ?? sourceUrl.last_capture_status ?? sourceUrl.last_fetch_status ?? null)}`}>
-                          {normalizeActionLabel(
-                            sourceUrl.capture_status ?? sourceUrl.last_capture_status ?? sourceUrl.last_fetch_status ?? "-",
-                          )}
-                        </span>
-                        <small className="artifact-path">
-                          {formatValue(sourceUrl.last_capture_strategy)} /{" "}
-                          {formatDate(sourceUrl.last_capture_at ?? sourceUrl.last_fetched_at ?? sourceUrl.last_success_at)}
-                        </small>
-                      </td>
-                    ) : null}
-                    {showCaptureColumns ? (
-                      <td>
-                        {formatValue(sourceUrl.source_capture_snapshot_id ?? sourceUrl.last_capture_snapshot_id)}
-                        <small className="artifact-path">
-                          {formatArtifactReference(sourceUrl.full_snapshot_ref ?? sourceUrl.snapshot_ref)}
-                        </small>
-                      </td>
-                    ) : null}
-                    <td>
-                      <div className="button-row source-url-actions">
-                        {isEditing ? (
-                          <>
-                            <button
-                              className="button primary compact-button"
-                              type="button"
-                              onClick={() => void saveEdit(sourceUrl)}
-                              disabled={disabled || isPending || id === null || editDraft.url.trim().length === 0}
-                            >
-                              Save
-                            </button>
-                            <button
-                              className="button secondary compact-button"
-                              type="button"
-                              onClick={cancelEdit}
-                              disabled={isPending}
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              className="button secondary compact-button"
-                              type="button"
-                              onClick={() => startEdit(sourceUrl)}
-                              disabled={disabled || isPending || id === null}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="button secondary compact-button"
-                              type="button"
-                              onClick={() => void validateUrl(sourceUrl)}
-                              disabled={disabled || isPending || id === null}
-                            >
-                              Validate
-                            </button>
-                            {sourceUrl.status === "active" ? (
-                              <button
-                                className="button secondary compact-button"
-                                type="button"
-                                onClick={() => void updateStatus(sourceUrl, "disabled")}
-                                disabled={disabled || isPending || id === null}
-                              >
-                                Disable
-                              </button>
-                            ) : (
-                              <button
-                                className="button secondary compact-button"
-                                type="button"
-                                onClick={() => void updateStatus(sourceUrl, "active")}
-                                disabled={disabled || isPending || id === null}
-                              >
-                                {sourceUrl.status === "needs_review" ? "Promote to active" : "Reactivate"}
-                              </button>
-                            )}
-                            {sourceUrl.status !== "needs_review" ? (
-                              <button
-                                className="button secondary compact-button"
-                                type="button"
-                                onClick={() => void updateStatus(sourceUrl, "needs_review")}
-                                disabled={disabled || isPending || id === null}
-                              >
-                                Mark needs_review
-                              </button>
-                            ) : null}
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={showCaptureColumns ? 15 : 12}>No source URLs for this product yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <SourceUrlTable
+        items={items}
+        disabled={disabled}
+        pendingActionId={pendingActionId}
+        editingId={editingId}
+        editDraft={editDraft}
+        onEditDraftChange={setEditDraft}
+        onStartEdit={startEdit}
+        onCancelEdit={cancelEdit}
+        onSaveEdit={(sourceUrl) => void saveEdit(sourceUrl)}
+        onValidate={(sourceUrl) => void validateUrl(sourceUrl)}
+        onUpdateStatus={(sourceUrl, status) => void updateStatus(sourceUrl, status)}
+      />
         </div>
       </section>
     </div>

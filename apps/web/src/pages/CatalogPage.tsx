@@ -224,6 +224,7 @@ export function CatalogPage() {
         refreshToken={sourceUrlRefreshToken}
         marketplace={catalogState.marketplace}
         source={catalogState.source}
+        onDiscoveryStatusChange={() => void catalogData.loadProducts()}
         onClose={() => setSourceUrlProduct(null)}
       />
     </div>

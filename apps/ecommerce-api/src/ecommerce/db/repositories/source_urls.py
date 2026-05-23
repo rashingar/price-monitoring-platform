@@ -30,6 +30,8 @@ from ecommerce.source_capture.canonicalize_url import canonicalize_url
 
 SOURCE_URL_STATUSES = {"active", "disabled", "broken", "redirected", "needs_review"}
 SOURCE_URL_TYPES = {"manual", "imported", "discovered"}
+SOURCE_URL_PROVENANCES = {"manual", "discovery", "import", "unknown"}
+SOURCE_URL_DISCOVERY_RUNNING_STATUSES = {"queued", "running"}
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,15 @@ class SourceUrlDiscoveryRunPage:
     total: int
     limit: int
     offset: int
+
+
+@dataclass(frozen=True)
+class SourceUrlDiscoveryLatestStatus:
+    run_id: str
+    status: str
+    source_name: str
+    updated_at: datetime | None
+    running: bool
 
 
 def get_active_catalog_product(
@@ -145,25 +156,76 @@ def get_source_url_discovery_run(
 
 
 def get_latest_source_url_discovery_run_for_catalog_product(
-    session: Session, catalog_product_id: int
+    session: Session, catalog_product_id: int, *, source_name: str | None = None
 ) -> SourceUrlDiscoveryRun | None:
-    return (
-        session.execute(
-            select(SourceUrlDiscoveryRun)
-            .join(
-                SourceUrlDiscoveryTask,
-                SourceUrlDiscoveryTask.run_id == SourceUrlDiscoveryRun.run_id,
-            )
-            .where(SourceUrlDiscoveryTask.catalog_product_id == catalog_product_id)
-            .order_by(
-                SourceUrlDiscoveryRun.created_at.desc(),
-                SourceUrlDiscoveryRun.id.desc(),
-            )
-            .limit(1)
+    statement = (
+        select(SourceUrlDiscoveryRun)
+        .join(
+            SourceUrlDiscoveryTask,
+            SourceUrlDiscoveryTask.run_id == SourceUrlDiscoveryRun.run_id,
         )
-        .scalars()
-        .first()
+        .where(SourceUrlDiscoveryTask.catalog_product_id == catalog_product_id)
+        .order_by(
+            SourceUrlDiscoveryRun.created_at.desc(),
+            SourceUrlDiscoveryRun.id.desc(),
+        )
+        .limit(1)
     )
+    if source_name:
+        statement = statement.where(
+            func.lower(SourceUrlDiscoveryTask.source_name) == source_name.casefold()
+        )
+    return session.execute(statement).scalars().first()
+
+
+def get_latest_source_url_discovery_statuses_for_catalog_products(
+    session: Session,
+    catalog_product_ids: list[int],
+    *,
+    source_name: str | None = None,
+) -> dict[int, SourceUrlDiscoveryLatestStatus]:
+    product_ids = sorted(
+        {
+            int(product_id)
+            for product_id in catalog_product_ids
+            if product_id is not None
+        }
+    )
+    if not product_ids:
+        return {}
+    statement = (
+        select(SourceUrlDiscoveryTask, SourceUrlDiscoveryRun)
+        .join(
+            SourceUrlDiscoveryRun,
+            SourceUrlDiscoveryTask.run_id == SourceUrlDiscoveryRun.run_id,
+        )
+        .where(SourceUrlDiscoveryTask.catalog_product_id.in_(product_ids))
+        .order_by(
+            SourceUrlDiscoveryTask.catalog_product_id.asc(),
+            SourceUrlDiscoveryRun.created_at.desc(),
+            SourceUrlDiscoveryRun.id.desc(),
+            SourceUrlDiscoveryTask.id.desc(),
+        )
+    )
+    if source_name:
+        statement = statement.where(
+            func.lower(SourceUrlDiscoveryTask.source_name) == source_name.casefold()
+        )
+
+    latest: dict[int, SourceUrlDiscoveryLatestStatus] = {}
+    for task, run in session.execute(statement).all():
+        product_id = task.catalog_product_id
+        if product_id is None or int(product_id) in latest:
+            continue
+        status = str(task.status or run.status or "")
+        latest[int(product_id)] = SourceUrlDiscoveryLatestStatus(
+            run_id=run.run_id,
+            status=status,
+            source_name=task.source_name or run.source_name,
+            updated_at=task.updated_at or run.updated_at,
+            running=_is_source_url_discovery_running(task.status, run.status),
+        )
+    return latest
 
 
 def source_url_discovery_task_counts(session: Session, run_id: str) -> dict[str, int]:
@@ -270,6 +332,9 @@ def create_or_update_manual_source_url(
     supplied_source_name = _optional_text(payload.get("source_name"))
     source_name = supplied_source_name or infer_source_name(domain)
     url_type = _validated_url_type(_optional_text(payload.get("url_type")) or "manual")
+    provenance = _validated_provenance(
+        _optional_text(payload.get("provenance")) or "manual"
+    )
     trust_level = _optional_text(payload.get("trust_level")) or "manual"
     timestamp = _now()
 
@@ -281,6 +346,7 @@ def create_or_update_manual_source_url(
         existing.source_domain = domain
         existing.url = url.strip()
         existing.url_type = url_type
+        existing.provenance = provenance
         existing.trust_level = trust_level
         if "added_by" in payload:
             existing.added_by = _optional_text(payload.get("added_by"))
@@ -304,6 +370,7 @@ def create_or_update_manual_source_url(
         url_normalized=normalized_url,
         status="active",
         url_type=url_type,
+        provenance=provenance,
         trust_level=trust_level,
         added_by=_optional_text(payload.get("added_by")),
         notes=_optional_text(payload.get("notes")),
@@ -331,6 +398,7 @@ def create_or_update_imported_source_url(
     last_error: str | None = None,
     notes: str | None = None,
     apply: bool = True,
+    provenance: str | None = None,
 ) -> ImportedSourceUrlUpsertResult:
     product = get_active_catalog_product(session, catalog_product_id)
     if product is None:
@@ -341,6 +409,7 @@ def create_or_update_imported_source_url(
     domain = extract_source_domain(normalized_url)
     resolved_source_name = _optional_text(source_name) or infer_source_name(domain)
     resolved_url_type = _validated_url_type(url_type)
+    resolved_provenance = _validated_provenance(provenance or "import")
     resolved_trust_level = _optional_text(trust_level) or "imported"
     resolved_status = _validated_status(status)
     timestamp = _now()
@@ -365,6 +434,7 @@ def create_or_update_imported_source_url(
             url_normalized=normalized_url,
             status=resolved_status,
             url_type=resolved_url_type,
+            provenance=resolved_provenance,
             trust_level=resolved_trust_level,
             notes=_optional_text(notes),
             last_seen_at=_timestamp_or_none(last_seen_at),
@@ -388,6 +458,7 @@ def create_or_update_imported_source_url(
         source_domain=domain,
         url=clean_url.strip(),
         url_type=resolved_url_type,
+        provenance=resolved_provenance,
         trust_level=resolved_trust_level,
         status=resolved_status,
         last_seen_at=_timestamp_or_none(last_seen_at),
@@ -528,6 +599,7 @@ def source_url_to_dict(row: SourceUrl) -> dict[str, Any]:
         "url_normalized": row.url_normalized,
         "status": row.status,
         "url_type": row.url_type,
+        "provenance": row.provenance or "unknown",
         "trust_level": row.trust_level,
         "added_by": row.added_by,
         "notes": row.notes,
@@ -609,6 +681,7 @@ def _imported_source_url_updates(
     source_domain: str,
     url: str,
     url_type: str,
+    provenance: str,
     trust_level: str,
     status: str,
     last_seen_at: datetime | None,
@@ -627,6 +700,7 @@ def _imported_source_url_updates(
 
     if row.url_type != "manual":
         _set_if_changed(updates, row, "url_type", url_type)
+        _set_if_changed(updates, row, "provenance", provenance)
         _set_if_changed(updates, row, "trust_level", trust_level)
 
     if row.status != "disabled":
@@ -695,6 +769,24 @@ def _validated_url_type(value: str) -> str:
     if text not in SOURCE_URL_TYPES:
         raise ValueError("url_type must be one of: manual, imported, discovered")
     return text
+
+
+def _validated_provenance(value: str) -> str:
+    text = value.strip()
+    if text not in SOURCE_URL_PROVENANCES:
+        raise ValueError(
+            "provenance must be one of: manual, discovery, import, unknown"
+        )
+    return text
+
+
+def _is_source_url_discovery_running(
+    task_status: str | None, run_status: str | None
+) -> bool:
+    return (
+        str(task_status or "").casefold() in SOURCE_URL_DISCOVERY_RUNNING_STATUSES
+        or str(run_status or "").casefold() in SOURCE_URL_DISCOVERY_RUNNING_STATUSES
+    )
 
 
 def _required_text(value: object, field_name: str) -> str:

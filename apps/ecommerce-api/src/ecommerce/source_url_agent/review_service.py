@@ -151,6 +151,7 @@ def promote_candidate_url(
         url=reviewed_url,
         source_name=candidate.source_name,
         url_type="discovered",
+        provenance="discovery",
         trust_level="manual",
         status="active",
         last_seen_at=reviewed_at,

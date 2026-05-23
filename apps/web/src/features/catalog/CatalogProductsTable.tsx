@@ -171,6 +171,14 @@ export function CatalogProductsTable({
                           {badge.label}
                         </span>
                       ))}
+                      {product.source_url_discovery_running ? (
+                        <span
+                          className="status-badge queued"
+                          title={String(product.latest_source_url_job_id ?? "")}
+                        >
+                          Finding URL
+                        </span>
+                      ) : null}
                       {selectionBlocker &&
                       selectionBlocker !== sourceUrlEligibility.blocker &&
                       !automationBlockers.some((badge) => badge.label === selectionBlocker) ? (

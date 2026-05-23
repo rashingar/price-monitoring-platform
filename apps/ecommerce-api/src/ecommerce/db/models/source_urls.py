@@ -37,6 +37,10 @@ class SourceUrl(Base):
             "url_type IN ('manual', 'imported', 'discovered')",
             name="ck_source_urls_url_type",
         ),
+        CheckConstraint(
+            "provenance IS NULL OR provenance IN ('manual', 'discovery', 'import', 'unknown')",
+            name="ck_source_urls_provenance",
+        ),
         UniqueConstraint(
             "catalog_product_id",
             "url_normalized",
@@ -78,6 +82,7 @@ class SourceUrl(Base):
     url_type: Mapped[str] = mapped_column(
         String, nullable=False, default="manual", server_default="manual"
     )
+    provenance: Mapped[str | None] = mapped_column(String, nullable=True)
     trust_level: Mapped[str] = mapped_column(
         String, nullable=False, default="manual", server_default="manual"
     )

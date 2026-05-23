@@ -22,6 +22,13 @@ import {
 import { DEFAULT_PAGE_SIZE } from "./catalogConstants";
 import type { CatalogFilterState } from "./catalogTypes";
 
+function sourceUrlDiscoverySource(filters: CatalogFilterState): string {
+  if (filters.marketplace === "bestprice" || filters.marketplace === "skroutz") {
+    return filters.marketplace;
+  }
+  return filters.source || "bestprice";
+}
+
 function getCategoryHierarchyErrorMessage(error: unknown): string {
   return error instanceof CommerceApiError && error.status === 404
     ? CATEGORY_HIERARCHY_UNAVAILABLE_MESSAGE
@@ -147,6 +154,7 @@ export function useCatalogData(filters: CatalogFilterState & { page: number; pag
         atomic_only: !filters.showComposite,
         ignored: filters.includeIgnored ? "include" : "exclude",
         source_name: filters.source,
+        source_url_discovery_source: sourceUrlDiscoverySource(filters),
       };
 
       if (filters.sourceUrlsOnly) {

@@ -2286,6 +2286,17 @@
             ],
             "title": "Notes"
           },
+          "provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
           "source_name": {
             "anyOf": [
               {
@@ -3558,6 +3569,22 @@
                 }
               ],
               "title": "Source Name"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_url_discovery_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Url Discovery Source"
             }
           },
           {
@@ -7777,6 +7804,22 @@
               "minimum": 1,
               "title": "Catalog Product Id",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Name"
             }
           }
         ],

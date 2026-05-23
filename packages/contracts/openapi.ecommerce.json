@@ -2286,6 +2286,17 @@
             ],
             "title": "Notes"
           },
+          "provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provenance"
+          },
           "source_name": {
             "anyOf": [
               {
@@ -3558,6 +3569,22 @@
                 }
               ],
               "title": "Source Name"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_url_discovery_source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Url Discovery Source"
             }
           },
           {
@@ -7760,6 +7787,74 @@
           }
         },
         "summary": "Enqueue Source Url Agent Run",
+        "tags": [
+          "source-url-agent"
+        ]
+      }
+    },
+    "/api/source-url-agent/runs/latest": {
+      "get": {
+        "operationId": "get_latest_source_url_agent_run_for_catalog_product_api_source_url_agent_runs_latest_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "catalog_product_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Catalog Product Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Latest Source Url Agent Run For Catalog Product Api Source Url Agent Runs Latest Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Latest Source Url Agent Run For Catalog Product",
         "tags": [
           "source-url-agent"
         ]

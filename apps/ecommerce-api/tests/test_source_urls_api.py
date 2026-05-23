@@ -83,6 +83,7 @@ def test_post_manual_url_creates_active_url_and_infers_known_source(
     assert item["catalog_product_id"] == product_id
     assert item["status"] == "active"
     assert item["url_type"] == "manual"
+    assert item["provenance"] == "manual"
     assert item["trust_level"] == "manual"
     assert item["source_domain"] == "www.skroutz.gr"
     assert item["source_name"] == "skroutz"
@@ -149,6 +150,24 @@ def test_get_lists_source_urls_for_catalog_product(tmp_path: Path, monkeypatch) 
 
     assert response.status_code == 200
     assert [item["id"] for item in response.json()["items"]] == [created["id"]]
+    assert response.json()["items"][0]["provenance"] == "manual"
+
+
+def test_source_url_without_provenance_reads_as_unknown(
+    tmp_path: Path, monkeypatch
+) -> None:
+    client, database_url = _client_with_catalog(tmp_path, monkeypatch)
+    product_id = _catalog_product_ids(client)[0]
+    created = _post_source_url(client, product_id, "https://www.public.gr/product/1")
+    with session_scope(database_url) as session:
+        row = session.get(SourceUrl, created["id"])
+        assert row is not None
+        row.provenance = None
+
+    response = client.get(f"/api/catalog/products/{product_id}/source-urls")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["provenance"] == "unknown"
 
 
 def test_patch_can_disable_and_reactivate_url(tmp_path: Path, monkeypatch) -> None:

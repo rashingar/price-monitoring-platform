@@ -225,12 +225,13 @@ def list_source_url_agent_runs(
 @router.get("/runs/latest")
 def get_latest_source_url_agent_run_for_catalog_product(
     catalog_product_id: int = Query(..., ge=1),
+    source_name: str | None = None,
 ) -> dict[str, Any] | None:
     require_source_url_agent_run_database_ready()
     try:
         with session_scope() as session:
             row = get_latest_source_url_discovery_run_for_catalog_product(
-                session, catalog_product_id
+                session, catalog_product_id, source_name=source_name
             )
             if row is None:
                 return None

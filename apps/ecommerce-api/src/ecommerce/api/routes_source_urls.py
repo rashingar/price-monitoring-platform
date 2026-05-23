@@ -29,6 +29,7 @@ class SourceUrlCreateRequest(BaseModel):
     url: str = Field(...)
     source_name: str | None = None
     url_type: str | None = "manual"
+    provenance: str | None = None
     trust_level: str | None = None
     added_by: str | None = None
     notes: str | None = None

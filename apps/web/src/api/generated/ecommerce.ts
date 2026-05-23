@@ -356,6 +356,10 @@ export interface paths {
     /** Get Source Url Agent Run Artifacts */
     get: operations["get_source_url_agent_run_artifacts_api_source_url_agent_runs__run_id__artifacts_get"];
   };
+  "/api/source-url-agent/runs/latest": {
+    /** Get Latest Source Url Agent Run For Catalog Product */
+    get: operations["get_latest_source_url_agent_run_for_catalog_product_api_source_url_agent_runs_latest_get"];
+  };
   "/api/source-url-agent/runs/sync": {
     /** Launch Source Url Agent Run */
     post: operations["launch_source_url_agent_run_api_source_url_agent_runs_sync_post"];
@@ -1232,6 +1236,8 @@ export interface components {
       added_by?: string | null;
       /** Notes */
       notes?: string | null;
+      /** Provenance */
+      provenance?: string | null;
       /** Source Name */
       source_name?: string | null;
       /** Trust Level */
@@ -1722,6 +1728,7 @@ export interface operations {
         manufacturer?: string | null;
         marketplace?: ("bestprice" | "skroutz" | "both" | "none") | null;
         source_name?: string | null;
+        source_url_discovery_source?: string | null;
         has_mpn?: boolean | null;
         has_source_url?: boolean | null;
         has_quantity?: boolean | null;
@@ -3649,6 +3656,31 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /** Get Latest Source Url Agent Run For Catalog Product */
+  get_latest_source_url_agent_run_for_catalog_product_api_source_url_agent_runs_latest_get: {
+    parameters: {
+      query: {
+        catalog_product_id: number;
+        source_name?: string | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          } | null;
         };
       };
       /** @description Validation Error */

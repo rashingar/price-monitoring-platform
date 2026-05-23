@@ -327,6 +327,10 @@ function normalizeProduct(value: unknown): CatalogProduct | null {
   return {
     ...value,
     source_url_coverage: normalizeSourceUrlCoverage(value.source_url_coverage),
+    latest_source_url_job_id: normalizeNullableId(value.latest_source_url_job_id),
+    latest_source_url_job_status: normalizeNullableString(value.latest_source_url_job_status),
+    latest_source_url_job_updated_at: normalizeNullableString(value.latest_source_url_job_updated_at),
+    source_url_discovery_running: Boolean(value.source_url_discovery_running),
   } as CatalogProduct;
 }
 
@@ -406,6 +410,7 @@ function normalizeSourceUrl(value: unknown): SourceUrl | null {
     url_normalized: normalizeNullableString(value.url_normalized),
     status: normalizeNullableString(value.status) ?? "active",
     url_type: normalizeNullableString(value.url_type) ?? "manual",
+    provenance: normalizeNullableString(value.provenance) ?? "unknown",
     trust_level: normalizeNullableString(value.trust_level),
     added_by: normalizeNullableString(value.added_by),
     notes: normalizeNullableString(value.notes),
@@ -2846,11 +2851,15 @@ export const commerceClient = {
 
   async getLatestSourceUrlAgentRunForCatalogProduct(
     catalogProductId: string | number,
+    sourceName?: string | null,
     signal?: AbortSignal,
   ): Promise<ProductSourceUrlDiscoveryLatestResponse> {
     return normalizeProductSourceUrlDiscoveryLatest(
       await request<unknown>(
-        appendQuery("/source-url-agent/runs/latest", { catalog_product_id: catalogProductId }),
+        appendQuery("/source-url-agent/runs/latest", {
+          catalog_product_id: catalogProductId,
+          source_name: sourceName,
+        }),
         { signal },
       ),
     );
