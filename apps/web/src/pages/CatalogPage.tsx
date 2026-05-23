@@ -222,6 +222,8 @@ export function CatalogPage() {
         product={sourceUrlProduct}
         disabled={catalogData.isCatalogLocked}
         refreshToken={sourceUrlRefreshToken}
+        marketplace={catalogState.marketplace}
+        source={catalogState.source}
         onClose={() => setSourceUrlProduct(null)}
       />
     </div>

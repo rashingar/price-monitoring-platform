@@ -56,6 +56,7 @@ import type {
   ProductFactoryBatchSelectSourceRequest,
   ProductFactoryBatchUploadResponse,
   ProductFactoryHandoffImportRequest,
+  ProductSourceUrlDiscoveryLatestResponse,
   ProductSourceUrlCandidateHistoryResponse,
   ProductSourceUrlCandidateRunGroup,
   PriceHistoryResponse,
@@ -1015,6 +1016,17 @@ function normalizeProductSourceUrlCandidateHistory(
       0,
     ),
     warnings: normalizeStringArray(source.warnings),
+  };
+}
+
+function normalizeProductSourceUrlDiscoveryLatest(
+  payload: unknown,
+): ProductSourceUrlDiscoveryLatestResponse {
+  const source = isRecord(payload) ? payload : {};
+  const run = normalizeSourceUrlAgentRun(source.run ?? source.item ?? source.data ?? payload);
+  return {
+    ...source,
+    run,
   };
 }
 
@@ -2827,6 +2839,18 @@ export const commerceClient = {
     return normalizeProductSourceUrlCandidateHistory(
       await request<unknown>(
         `/catalog/products/${encodeURIComponent(String(catalogProductId))}/source-url-candidates`,
+        { signal },
+      ),
+    );
+  },
+
+  async getLatestSourceUrlAgentRunForCatalogProduct(
+    catalogProductId: string | number,
+    signal?: AbortSignal,
+  ): Promise<ProductSourceUrlDiscoveryLatestResponse> {
+    return normalizeProductSourceUrlDiscoveryLatest(
+      await request<unknown>(
+        appendQuery("/source-url-agent/runs/latest", { catalog_product_id: catalogProductId }),
         { signal },
       ),
     );

@@ -171,10 +171,11 @@ def _discovery_task(
     model: str,
     status: str,
     match_status: str | None = None,
+    catalog_product_id: int | None = None,
 ) -> SourceUrlDiscoveryTask:
     row = SourceUrlDiscoveryTask(
         run_id=run_id,
-        catalog_product_id=None,
+        catalog_product_id=catalog_product_id,
         model=model,
         source_name="bestprice",
         status=status,
@@ -376,6 +377,75 @@ def test_source_url_agent_run_detail_preserves_tasks_and_artifacts_shape(
     assert payload["artifacts"] == []
     assert missing.status_code == 404
     assert missing.json()["detail"] == "Source URL Agent run not found."
+
+
+def test_source_url_agent_latest_run_filters_by_catalog_product(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "ecommerce.api.source_url_agent.runs.require_source_url_agent_run_database_ready",
+        lambda: None,
+    )
+    client, database_url = _client(tmp_path, monkeypatch)
+    with session_scope(database_url) as session:
+        product = _catalog_product(session)
+        other_product = _catalog_product(session, model="005607", mpn="MR25GA")
+        _discovery_run(
+            session,
+            run_id="older-product-run",
+            created_at=datetime(2026, 5, 1, 10, tzinfo=timezone.utc),
+        )
+        _discovery_task(
+            session,
+            run_id="older-product-run",
+            model=product.model,
+            status="completed",
+            catalog_product_id=product.id,
+        )
+        latest = _discovery_run(
+            session,
+            run_id="latest-product-run",
+            status="running",
+            created_at=datetime(2026, 5, 2, 10, tzinfo=timezone.utc),
+        )
+        _discovery_task(
+            session,
+            run_id="latest-product-run",
+            model=product.model,
+            status="running",
+            catalog_product_id=product.id,
+        )
+        _discovery_run(
+            session,
+            run_id="other-product-run",
+            created_at=datetime(2026, 5, 3, 10, tzinfo=timezone.utc),
+        )
+        _discovery_task(
+            session,
+            run_id="other-product-run",
+            model=other_product.model,
+            status="completed",
+            catalog_product_id=other_product.id,
+        )
+
+    response = client.get(
+        "/api/source-url-agent/runs/latest",
+        params={"catalog_product_id": product.id},
+    )
+    missing = client.get(
+        "/api/source-url-agent/runs/latest",
+        params={"catalog_product_id": 999999},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == latest.id
+    assert payload["run_id"] == "latest-product-run"
+    assert payload["status"] == "running"
+    assert payload["tasks"][0]["catalog_product_id"] == product.id
+    assert missing.status_code == 200
+    assert missing.json() is None
 
 
 def test_source_url_agent_readiness_blocks_when_brave_api_key_is_missing(

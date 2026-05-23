@@ -507,6 +507,11 @@ export interface ProductSourceUrlCandidateRunGroup {
   [key: string]: unknown;
 }
 
+export interface ProductSourceUrlDiscoveryLatestResponse {
+  run: SourceUrlAgentRun | null;
+  [key: string]: unknown;
+}
+
 export interface ProductSourceUrlCandidateHistoryResponse {
   catalog_product_id: string | number | null;
   items: ProductSourceUrlCandidateRunGroup[];

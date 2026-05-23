@@ -2176,6 +2176,30 @@ function createSourceUrlAgentRunResponse(request: MockRequest) {
   };
 }
 
+function latestSourceUrlAgentRunForProductResponse(request: MockRequest) {
+  const catalogProductId = request.searchParams.get("catalog_product_id");
+  if (catalogProductId === "1") {
+    return {
+      ...productSourceUrlCandidateHistory.items[0].run,
+      tasks: [
+        {
+          id: 2001,
+          run_id: "source-run-002",
+          catalog_product_id: 1,
+          model: "005606",
+          source_name: "bestprice",
+          status: "completed",
+          match_status: "needs_review",
+          candidate_count: 2,
+          created_at: "2026-05-03T09:55:00Z",
+          updated_at: "2026-05-03T10:08:00Z",
+        },
+      ],
+    };
+  }
+  return null;
+}
+
 function sourceUrlCandidatesResponse(request: MockRequest) {
   const status = request.searchParams.get("status");
   const sourceName = request.searchParams.get("source_name");
@@ -2417,6 +2441,11 @@ export const commerceFixtureRoutes: MockRoute[] = [
   { method: "GET", path: "/commerce-api/source-url-agent/runs", response: sourceUrlAgentRuns },
   {
     method: "GET",
+    path: "/commerce-api/source-url-agent/runs/latest",
+    response: latestSourceUrlAgentRunForProductResponse,
+  },
+  {
+    method: "GET",
     path: "/commerce-api/source-url-agent/runs/source-run-001",
     response: sourceUrlAgentRunDetail,
   },
@@ -2497,6 +2526,11 @@ export const commerceFixtureRoutes: MockRoute[] = [
     response: createSourceUrlAgentRunResponse,
   },
   { method: "GET", path: "/commerce-api/source-url-agent/runs", response: sourceUrlAgentRuns },
+  {
+    method: "GET",
+    path: "/commerce-api/source-url-agent/runs/latest",
+    response: latestSourceUrlAgentRunForProductResponse,
+  },
   {
     method: "GET",
     path: "/commerce-api/source-url-agent/runs/source-run-001",

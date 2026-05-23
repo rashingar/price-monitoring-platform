@@ -7,6 +7,7 @@ import type {
   SourceUrlCandidate,
   SourceUrlCandidateReviewDecision,
 } from "../../api/commerceTypes";
+import { submitSourceUrlCandidateReview } from "./sourceUrlCandidateReviewActions";
 import { normalizeLabel } from "./sourceUrlCandidateFormatters";
 import { candidateId } from "./sourceUrlCandidateHelpers";
 
@@ -70,11 +71,11 @@ export function useSourceUrlCandidateReview({
     setPendingCandidateId(id);
     setNotice(null);
     try {
-      const updated = await commerceClient.reviewSourceUrlCandidate(candidate.id, {
+      const updated = await submitSourceUrlCandidateReview({
+        candidateId: candidate.id,
         decision,
-        reviewed_url: decision === "replace_url" ? reviewedUrl.trim() : null,
-        review_notes: reviewNotes.trim() || null,
-        reviewed_by: "operator",
+        reviewedUrl,
+        reviewNotes,
       });
       updateCandidateInState(updated);
       updateSelectedCandidate(updated);

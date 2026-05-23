@@ -1685,6 +1685,71 @@ textarea {
   min-height: auto;
 }
 
+.source-url-discovery-block {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-subtle);
+}
+
+.source-url-discovery-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.source-url-discovery-meta {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.source-url-discovery-meta div {
+  min-width: 0;
+}
+
+.source-url-discovery-meta dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.source-url-discovery-meta dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.source-url-drawer-candidates {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.source-url-drawer-candidate-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.source-url-drawer-candidate {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.source-url-drawer-candidate a {
+  overflow-wrap: anywhere;
+}
+
 @keyframes source-url-drawer-in {
   from {
     transform: translateX(24px);
@@ -3431,6 +3496,7 @@ code {
   .vendor-source-coverage-grid,
   .vendor-source-count-grid,
   .source-url-product-summary,
+  .source-url-discovery-meta,
   .catalog-product-detail-grid,
   .catalog-product-source-summary,
   .source-url-candidate-filters,

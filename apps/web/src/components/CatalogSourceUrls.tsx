@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   commerceClient,
@@ -8,12 +8,25 @@ import { getCatalogReadinessBlock } from "../api/catalogReadinessGate";
 import type { CatalogReadinessBlock } from "../api/catalogReadinessGate";
 import type {
   CatalogProduct,
+  MarketplaceFilter,
+  PriceMonitoringSource,
+  ProductSourceUrlCandidateHistoryResponse,
+  SourceUrlAgentRun,
+  SourceUrlAgentRunRequest,
+  SourceUrlCandidate,
+  SourceUrlCandidateReviewDecision,
   SourceUrl,
   SourceUrlImportRequest,
   SourceUrlImportResponse,
   SourceUrlStatus,
   SourceUrlSummaryResponse,
 } from "../api/commerceTypes";
+import { getAutomationBlockerBadges } from "../features/catalog/catalogSelection";
+import {
+  getSourceUrlAgentRunId,
+  isActiveSourceUrlAgentRun,
+} from "../features/catalog/sourceUrlDiscovery";
+import { submitSourceUrlCandidateReview } from "../features/source-url-candidates/sourceUrlCandidateReviewActions";
 import { ErrorState, LoadingState } from "./layout/StateBlocks";
 
 function formatValue(value: unknown): string {
@@ -57,6 +70,64 @@ function sourceUrlStatusClass(status: string | null | undefined): string {
     default:
       return "neutral";
   }
+}
+
+function discoverySourceForDrawer(
+  marketplace: MarketplaceFilter,
+  source: PriceMonitoringSource,
+): string {
+  if (marketplace === "bestprice" || marketplace === "skroutz") {
+    return marketplace;
+  }
+  return source || "bestprice";
+}
+
+function sourceUrlOriginLabel(sourceUrl: SourceUrl): string {
+  const urlType = String(sourceUrl.url_type ?? "").toLowerCase();
+  const addedBy = String(sourceUrl.added_by ?? "").toLowerCase();
+  if (urlType === "manual") {
+    return "Manual";
+  }
+  if (urlType === "discovered" || addedBy.includes("source-url-agent")) {
+    return "Discovery";
+  }
+  if (urlType === "imported") {
+    return "Imported";
+  }
+  return "Unknown";
+}
+
+function isTerminalDiscoveryRun(run: SourceUrlAgentRun | null): boolean {
+  return !isActiveSourceUrlAgentRun(run);
+}
+
+function isSuccessfulDiscoveryRun(run: SourceUrlAgentRun | null): boolean {
+  const status = typeof run?.status === "string" ? run.status.toLowerCase() : "";
+  return status === "succeeded" || status === "success" || status === "completed";
+}
+
+function runMessage(run: SourceUrlAgentRun | null): string | null {
+  const taskError = run?.tasks?.find((task) => String(task.error_message ?? "").trim().length > 0)?.error_message;
+  if (taskError) {
+    return String(taskError);
+  }
+  const warnings = Array.isArray(run?.warnings) ? run?.warnings : [];
+  return warnings.length > 0 ? String(warnings[0]) : null;
+}
+
+function reviewableCandidates(history: ProductSourceUrlCandidateHistoryResponse | null): SourceUrlCandidate[] {
+  const latest = history?.items?.[0];
+  if (!latest) {
+    return [];
+  }
+  return latest.candidates.filter((candidate) => {
+    const status = String(candidate.status ?? "").toLowerCase();
+    return Boolean(candidate.candidate_url) && (status === "needs_review" || status === "pending");
+  });
+}
+
+function candidateKey(candidate: SourceUrlCandidate): string {
+  return String(candidate.id);
 }
 
 function hasCaptureMetadata(sourceUrl: SourceUrl): boolean {
@@ -519,18 +590,158 @@ export function SourceUrlImportPanel({
   );
 }
 
+function LatestDiscoveryJobBlock({
+  run,
+  isLoading,
+}: {
+  run: SourceUrlAgentRun | null;
+  isLoading: boolean;
+}) {
+  if (!run && !isLoading) {
+    return null;
+  }
+
+  const message = runMessage(run);
+  return (
+    <section className="source-url-discovery-block" aria-label="Latest discovery job">
+      <div className="source-url-discovery-block-header">
+        <strong>Latest discovery job</strong>
+        {isLoading ? <span className="muted">Refreshing...</span> : null}
+      </div>
+      {run ? (
+        <dl className="source-url-discovery-meta">
+          <div>
+            <dt>Run id</dt>
+            <dd>{formatValue(getSourceUrlAgentRunId(run))}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>
+              <span className={`status-badge ${sourceUrlStatusClass(run.status)}`}>
+                {formatValue(run.status)}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt>Source</dt>
+            <dd>{formatValue(run.source ?? run.source_name)}</dd>
+          </div>
+          <div>
+            <dt>Created</dt>
+            <dd>{formatDate(run.created_at)}</dd>
+          </div>
+          <div>
+            <dt>Completed</dt>
+            <dd>{formatDate(run.completed_at)}</dd>
+          </div>
+        </dl>
+      ) : (
+        <p className="muted">No discovery job yet.</p>
+      )}
+      {message ? <p className="form-warning">{message}</p> : null}
+    </section>
+  );
+}
+
+function CandidateSummary({ candidate }: { candidate: SourceUrlCandidate }) {
+  return (
+    <div className="source-url-drawer-candidate">
+      <div>
+        <strong>{formatValue(candidate.candidate_title ?? candidate.product_name)}</strong>
+        <p className="muted">
+          {formatValue(candidate.source_name)} / {formatValue(candidate.source_domain)}
+          {" · "}
+          confidence {formatValue(candidate.confidence_score)}
+        </p>
+      </div>
+      {candidate.candidate_url ? (
+        <a href={candidate.candidate_url} target="_blank" rel="noreferrer noopener">
+          {candidate.candidate_url}
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function DrawerCandidateReviewBlock({
+  candidates,
+  expanded,
+  pendingCandidateId,
+  onToggleExpanded,
+  onReview,
+}: {
+  candidates: SourceUrlCandidate[];
+  expanded: boolean;
+  pendingCandidateId: string | null;
+  onToggleExpanded: () => void;
+  onReview: (candidate: SourceUrlCandidate, decision: SourceUrlCandidateReviewDecision) => void;
+}) {
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const visibleCandidates = expanded ? candidates : candidates.slice(0, 1);
+  return (
+    <section className="source-url-discovery-block" aria-label="Discovery candidate review">
+      <div className="source-url-discovery-block-header">
+        <strong>Candidate review</strong>
+        {candidates.length > 1 ? (
+          <button className="button secondary compact-button" type="button" onClick={onToggleExpanded}>
+            {expanded ? "Show top only" : `Show ${candidates.length - 1} more`}
+          </button>
+        ) : null}
+      </div>
+      <div className="source-url-drawer-candidates">
+        {visibleCandidates.map((candidate) => {
+          const id = candidateKey(candidate);
+          const isPending = pendingCandidateId === id;
+          return (
+            <article key={id} className="source-url-drawer-candidate-card">
+              <CandidateSummary candidate={candidate} />
+              <div className="button-row">
+                <button
+                  className="button primary compact-button"
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => onReview(candidate, "accept")}
+                >
+                  {isPending ? "Submitting..." : "Accept"}
+                </button>
+                <button
+                  className="button danger compact-button"
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => onReview(candidate, "reject")}
+                >
+                  {isPending ? "Submitting..." : "Reject"}
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function CatalogSourceUrlManager({
   product,
   disabled,
   refreshToken,
+  marketplace,
+  source,
   onClose,
 }: {
   product: CatalogProduct | null;
   disabled: boolean;
   refreshToken: number;
+  marketplace: MarketplaceFilter;
+  source: PriceMonitoringSource;
   onClose: () => void;
 }) {
   const catalogProductId = product?.catalog_product_id;
+  const discoveryPollIntervalRef = useRef<number | null>(null);
+  const discoveryExtraRefreshTimeoutRef = useRef<number | null>(null);
   const [items, setItems] = useState<SourceUrl[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [readinessBlock, setReadinessBlock] = useState<CatalogReadinessBlock | null>(null);
@@ -543,8 +754,19 @@ export function CatalogSourceUrlManager({
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editDraft, setEditDraft] = useState({ url: "", source_name: "", notes: "" });
   const [editError, setEditError] = useState<string | null>(null);
+  const [latestDiscoveryRun, setLatestDiscoveryRun] = useState<SourceUrlAgentRun | null>(null);
+  const [candidateHistory, setCandidateHistory] = useState<ProductSourceUrlCandidateHistoryResponse | null>(null);
+  const [isDiscoveryStarting, setIsDiscoveryStarting] = useState(false);
+  const [isDiscoveryStatusLoading, setIsDiscoveryStatusLoading] = useState(false);
+  const [discoveryMessage, setDiscoveryMessage] = useState<string | null>(null);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+  const [isCandidateReviewExpanded, setIsCandidateReviewExpanded] = useState(false);
+  const [pendingCandidateId, setPendingCandidateId] = useState<string | null>(null);
 
   const canLoad = !disabled && catalogProductId !== null && catalogProductId !== undefined && catalogProductId !== "";
+  const discoverySource = discoverySourceForDrawer(marketplace, source);
+  const automationBlocker = product ? getAutomationBlockerBadges(product)[0]?.label ?? null : null;
+  const canFindUrl = canLoad && product?.automation_eligible === true;
 
   const loadItems = useCallback(
     async (signal?: AbortSignal) => {
@@ -577,6 +799,116 @@ export function CatalogSourceUrlManager({
     [canLoad, catalogProductId],
   );
 
+  const loadCandidateHistory = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!canLoad) {
+        setCandidateHistory(null);
+        return null;
+      }
+
+      const response = await commerceClient.getCatalogProductSourceUrlCandidateHistory(catalogProductId, signal);
+      if (!signal?.aborted) {
+        setCandidateHistory(response);
+      }
+      return response;
+    },
+    [canLoad, catalogProductId],
+  );
+
+  const stopDiscoveryPolling = useCallback(() => {
+    if (discoveryPollIntervalRef.current !== null) {
+      window.clearInterval(discoveryPollIntervalRef.current);
+      discoveryPollIntervalRef.current = null;
+    }
+    if (discoveryExtraRefreshTimeoutRef.current !== null) {
+      window.clearTimeout(discoveryExtraRefreshTimeoutRef.current);
+      discoveryExtraRefreshTimeoutRef.current = null;
+    }
+  }, [discoveryExtraRefreshTimeoutRef, discoveryPollIntervalRef]);
+
+  const refreshDiscoveryOutputs = useCallback(async () => {
+    await Promise.all([loadItems(), loadCandidateHistory().catch(() => null)]);
+  }, [loadCandidateHistory, loadItems]);
+
+  const pollDiscoveryRun = useCallback(
+    (runId: string) => {
+      stopDiscoveryPolling();
+      let extraRefreshScheduled = false;
+      const refresh = () => {
+        setIsDiscoveryStatusLoading(true);
+        commerceClient
+          .getSourceUrlAgentRun(runId)
+          .then((nextRun) => {
+            setLatestDiscoveryRun(nextRun);
+            setDiscoveryError(null);
+            void loadCandidateHistory().catch(() => null);
+            if (isTerminalDiscoveryRun(nextRun)) {
+              stopDiscoveryPolling();
+              void refreshDiscoveryOutputs();
+              if (isSuccessfulDiscoveryRun(nextRun) && !extraRefreshScheduled) {
+                extraRefreshScheduled = true;
+                discoveryExtraRefreshTimeoutRef.current = window.setTimeout(() => {
+                  discoveryExtraRefreshTimeoutRef.current = null;
+                  void refreshDiscoveryOutputs();
+                }, 1_500);
+              }
+            }
+          })
+          .catch((pollError) => {
+            setDiscoveryError(getCommerceApiErrorMessage(pollError));
+            stopDiscoveryPolling();
+          })
+          .finally(() => {
+            setIsDiscoveryStatusLoading(false);
+          });
+      };
+
+      refresh();
+      discoveryPollIntervalRef.current = window.setInterval(refresh, 4_000);
+    },
+    [
+      discoveryExtraRefreshTimeoutRef,
+      discoveryPollIntervalRef,
+      loadCandidateHistory,
+      refreshDiscoveryOutputs,
+      stopDiscoveryPolling,
+    ],
+  );
+
+  const loadLatestDiscoveryRun = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!canLoad) {
+        setLatestDiscoveryRun(null);
+        return null;
+      }
+
+      setIsDiscoveryStatusLoading(true);
+      try {
+        const response = await commerceClient.getLatestSourceUrlAgentRunForCatalogProduct(catalogProductId, signal);
+        if (signal?.aborted) {
+          return null;
+        }
+        setLatestDiscoveryRun(response.run);
+        setDiscoveryError(null);
+        const runId = getSourceUrlAgentRunId(response.run);
+        if (runId && isActiveSourceUrlAgentRun(response.run)) {
+          pollDiscoveryRun(runId);
+        }
+        return response.run;
+      } catch (loadError) {
+        if (!signal?.aborted) {
+          setDiscoveryError(getCommerceApiErrorMessage(loadError));
+        }
+        return null;
+      } finally {
+        if (!signal?.aborted) {
+          setIsDiscoveryStatusLoading(false);
+        }
+      }
+    },
+    [canLoad, catalogProductId, pollDiscoveryRun],
+  );
+
   useEffect(() => {
     const controller = new AbortController();
     void loadItems(controller.signal);
@@ -584,9 +916,30 @@ export function CatalogSourceUrlManager({
   }, [loadItems, refreshToken]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    stopDiscoveryPolling();
+    void loadLatestDiscoveryRun(controller.signal);
+    void loadCandidateHistory(controller.signal).catch((loadError) => {
+      if (!controller.signal.aborted) {
+        setDiscoveryError(getCommerceApiErrorMessage(loadError));
+      }
+    });
+    return () => {
+      controller.abort();
+      stopDiscoveryPolling();
+    };
+  }, [loadCandidateHistory, loadLatestDiscoveryRun, stopDiscoveryPolling]);
+
+  useEffect(() => {
     setEditingId(null);
     setEditError(null);
     setValidationMessage(null);
+    setDiscoveryMessage(null);
+    setDiscoveryError(null);
+    setCandidateHistory(null);
+    setLatestDiscoveryRun(null);
+    setIsCandidateReviewExpanded(false);
+    setPendingCandidateId(null);
   }, [catalogProductId]);
 
   useEffect(() => {
@@ -627,6 +980,104 @@ export function CatalogSourceUrlManager({
       setError(readinessMessage(createError));
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const startDiscovery = async () => {
+    if (!canFindUrl || !product || isDiscoveryStarting) {
+      return;
+    }
+
+    setIsDiscoveryStarting(true);
+    setDiscoveryError(null);
+    setDiscoveryMessage(null);
+    stopDiscoveryPolling();
+    try {
+      const request: SourceUrlAgentRunRequest = {
+        mode: "catalog",
+        source: discoverySource,
+        catalog_product_id: Number(catalogProductId),
+        selected_models: [String(product.model ?? "").trim()].filter(Boolean),
+        missing_only: false,
+        active_only: true,
+        dry_run: true,
+        apply_high_confidence: false,
+        limit: 1,
+        max_products_per_batch: 1,
+        rate_limit_seconds: 2,
+      };
+      const createdRun = await commerceClient.createSourceUrlAgentRun(request);
+      setLatestDiscoveryRun(createdRun);
+      const runId = getSourceUrlAgentRunId(createdRun);
+      setDiscoveryMessage(runId ? `Find URL run started: ${runId}` : "Find URL run started.");
+      await loadCandidateHistory().catch(() => null);
+      if (runId && isActiveSourceUrlAgentRun(createdRun)) {
+        pollDiscoveryRun(runId);
+      } else {
+        await refreshDiscoveryOutputs();
+      }
+    } catch (startError) {
+      setDiscoveryError(getCommerceApiErrorMessage(startError));
+    } finally {
+      setIsDiscoveryStarting(false);
+    }
+  };
+
+  const reviewCandidate = async (
+    candidate: SourceUrlCandidate,
+    decision: SourceUrlCandidateReviewDecision,
+  ) => {
+    const id = candidateKey(candidate);
+    setPendingCandidateId(id);
+    setDiscoveryError(null);
+    setDiscoveryMessage(null);
+    if (decision === "reject") {
+      setCandidateHistory((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((item) => ({
+                ...item,
+                candidates: item.candidates.filter((row) => candidateKey(row) !== id),
+              })),
+            }
+          : current,
+      );
+    }
+    try {
+      const updated = await submitSourceUrlCandidateReview({
+        candidateId: candidate.id,
+        decision,
+        reviewNotes: candidate.notes ?? null,
+      });
+      setDiscoveryMessage(`Candidate ${id} ${decision === "accept" ? "accepted" : "rejected"}.`);
+      setCandidateHistory((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((item) => ({
+                ...item,
+                candidates: item.candidates
+                  .map((row) => (candidateKey(row) === id ? { ...row, ...updated } : row))
+                  .filter((row) => {
+                    const status = String(row.status ?? "").toLowerCase();
+                    return status !== "rejected" && status !== "accepted";
+                  }),
+              })),
+            }
+          : current,
+      );
+      setIsCandidateReviewExpanded(false);
+      await Promise.all([
+        loadCandidateHistory().catch(() => null),
+        loadLatestDiscoveryRun().catch(() => null),
+        loadItems(),
+      ]);
+    } catch (reviewError) {
+      setDiscoveryError(getCommerceApiErrorMessage(reviewError));
+      await loadCandidateHistory().catch(() => null);
+    } finally {
+      setPendingCandidateId(null);
     }
   };
 
@@ -719,6 +1170,13 @@ export function CatalogSourceUrlManager({
   }
 
   const showCaptureColumns = items.some(hasCaptureMetadata);
+  const pendingCandidates = reviewableCandidates(candidateHistory);
+  const findUrlDisabledReason =
+    !canLoad
+      ? "Catalog product id missing"
+      : canFindUrl
+        ? null
+        : automationBlocker ?? "Automation blocked";
 
   return (
     <div className="source-url-drawer-backdrop" onMouseDown={onClose}>
@@ -765,14 +1223,25 @@ export function CatalogSourceUrlManager({
 
           <div className="toolbar source-url-drawer-toolbar">
             <p className="muted">Manage monitored source URLs attached to this catalog product.</p>
-            <button
-              className="button secondary"
-              type="button"
-              onClick={() => void loadItems()}
-              disabled={!canLoad || isLoading}
-            >
-              Refresh URLs
-            </button>
+            <div className="button-row">
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => void loadItems()}
+                disabled={!canLoad || isLoading}
+              >
+                Refresh URLs
+              </button>
+              <button
+                className="button primary"
+                type="button"
+                onClick={() => void startDiscovery()}
+                disabled={!canFindUrl || isDiscoveryStarting}
+                title={findUrlDisabledReason ?? `Search ${discoverySource}`}
+              >
+                {isDiscoveryStarting ? "Starting..." : "Find URL"}
+              </button>
+            </div>
           </div>
 
       {disabled ? (
@@ -786,6 +1255,18 @@ export function CatalogSourceUrlManager({
       {error ? <ErrorState message={error} onRetry={() => void loadItems()} /> : null}
       {editError ? <ErrorState message={editError} /> : null}
       {validationMessage ? <p className="muted">{validationMessage}</p> : null}
+      {findUrlDisabledReason && canLoad ? <p className="muted">Find URL disabled: {findUrlDisabledReason}.</p> : null}
+      {discoveryMessage ? <p className="muted">{discoveryMessage}</p> : null}
+      {discoveryError ? <ErrorState message={discoveryError} /> : null}
+
+      <LatestDiscoveryJobBlock run={latestDiscoveryRun} isLoading={isDiscoveryStatusLoading} />
+      <DrawerCandidateReviewBlock
+        candidates={pendingCandidates}
+        expanded={isCandidateReviewExpanded}
+        pendingCandidateId={pendingCandidateId}
+        onToggleExpanded={() => setIsCandidateReviewExpanded((current) => !current)}
+        onReview={(candidate, decision) => void reviewCandidate(candidate, decision)}
+      />
 
       <form className="source-url-add-form" onSubmit={(event) => void addUrl(event)}>
         <label className="inline-field wide">
@@ -821,6 +1302,7 @@ export function CatalogSourceUrlManager({
               <th>Domain</th>
               <th>URL</th>
               <th>Status</th>
+              <th>Origin</th>
               <th>Type</th>
               <th>Trust</th>
               <th>Failures</th>
@@ -899,6 +1381,9 @@ export function CatalogSourceUrlManager({
                       <span className={`status-badge ${sourceUrlStatusClass(sourceUrl.status)}`}>
                         {normalizeActionLabel(sourceUrl.status)}
                       </span>
+                    </td>
+                    <td>
+                      <span className="status-badge neutral">{sourceUrlOriginLabel(sourceUrl)}</span>
                     </td>
                     <td>{formatValue(sourceUrl.url_type)}</td>
                     <td>{formatValue(sourceUrl.trust_level)}</td>
@@ -1005,7 +1490,7 @@ export function CatalogSourceUrlManager({
               })
             ) : (
               <tr>
-                <td colSpan={showCaptureColumns ? 14 : 11}>No source URLs for this product yet.</td>
+                <td colSpan={showCaptureColumns ? 15 : 12}>No source URLs for this product yet.</td>
               </tr>
             )}
           </tbody>

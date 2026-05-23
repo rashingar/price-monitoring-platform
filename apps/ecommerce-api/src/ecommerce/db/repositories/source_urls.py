@@ -144,6 +144,28 @@ def get_source_url_discovery_run(
     ).scalar_one_or_none()
 
 
+def get_latest_source_url_discovery_run_for_catalog_product(
+    session: Session, catalog_product_id: int
+) -> SourceUrlDiscoveryRun | None:
+    return (
+        session.execute(
+            select(SourceUrlDiscoveryRun)
+            .join(
+                SourceUrlDiscoveryTask,
+                SourceUrlDiscoveryTask.run_id == SourceUrlDiscoveryRun.run_id,
+            )
+            .where(SourceUrlDiscoveryTask.catalog_product_id == catalog_product_id)
+            .order_by(
+                SourceUrlDiscoveryRun.created_at.desc(),
+                SourceUrlDiscoveryRun.id.desc(),
+            )
+            .limit(1)
+        )
+        .scalars()
+        .first()
+    )
+
+
 def source_url_discovery_task_counts(session: Session, run_id: str) -> dict[str, int]:
     rows = session.execute(
         select(SourceUrlDiscoveryTask.status, func.count(SourceUrlDiscoveryTask.id))

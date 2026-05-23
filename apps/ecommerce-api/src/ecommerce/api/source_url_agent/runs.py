@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ecommerce.catalog.source_catalog import DEFAULT_CATALOG_SOURCE
 from ecommerce.db.repositories.source_urls import (
+    get_latest_source_url_discovery_run_for_catalog_product,
     get_source_url_discovery_run,
     list_source_url_discovery_run_page,
 )
@@ -219,6 +220,28 @@ def list_source_url_agent_runs(
         "limit": page.limit,
         "offset": page.offset,
     }
+
+
+@router.get("/runs/latest")
+def get_latest_source_url_agent_run_for_catalog_product(
+    catalog_product_id: int = Query(..., ge=1),
+) -> dict[str, Any] | None:
+    require_source_url_agent_run_database_ready()
+    try:
+        with session_scope() as session:
+            row = get_latest_source_url_discovery_run_for_catalog_product(
+                session, catalog_product_id
+            )
+            if row is None:
+                return None
+            payload = discovery_run_to_dict(row, session=session, include_tasks=True)
+            payload["artifacts"] = source_url_agent_artifact_items(row.run_id)
+            return payload
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source URL Agent latest run query failed: {safe_db_error(exc)}",
+        ) from exc
 
 
 @router.get("/runs/{run_id}")

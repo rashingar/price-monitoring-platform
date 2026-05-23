@@ -849,6 +849,86 @@ describe("platform mocked page smoke tests", () => {
     expect(screen.getAllByText("Imported").length).toBeGreaterThan(0);
   });
 
+  it("enables drawer Find URL only for automation eligible products", async () => {
+    const warningProduct = {
+      ...catalogProducts.items[0],
+      catalog_product_id: 10,
+      model: "001111",
+      mpn: "READY-1",
+      name: "Disabled zero price automation-ready product",
+      price: 0,
+      status: 0,
+      automation_eligible: true,
+    };
+    const missingMpnProduct = {
+      ...catalogProducts.items[0],
+      catalog_product_id: 11,
+      model: "002222",
+      mpn: "",
+      name: "Missing MPN product",
+      automation_eligible: false,
+      is_atomic_model: true,
+    };
+    const compositeProduct = {
+      ...catalogProducts.items[0],
+      catalog_product_id: 12,
+      model: "003333",
+      mpn: "COMBO-1",
+      name: "Composite product",
+      automation_eligible: false,
+      is_atomic_model: false,
+    };
+    installMockFetch([
+      {
+        method: "GET",
+        path: "/commerce-api/catalog/products",
+        response: {
+          ...catalogProducts,
+          items: [warningProduct, missingMpnProduct, compositeProduct],
+          total: 3,
+          filtered_total: 3,
+        },
+      },
+      {
+        method: "GET",
+        path: (request) => /^\/commerce-api\/catalog\/products\/(10|11|12)\/source-urls$/.test(request.pathname),
+        response: { items: [] },
+      },
+      {
+        method: "GET",
+        path: (request) => /^\/commerce-api\/catalog\/products\/(10|11|12)\/source-url-candidates$/.test(request.pathname),
+        response: { items: [], total_candidates: 0, warnings: [] },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/runs/latest",
+        response: null,
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/catalog");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Source URLs for 001111" }));
+    let drawer = await screen.findByRole("dialog", { name: "Source URLs" });
+    expect(within(drawer).getByRole("button", { name: "Find URL" })).toBeEnabled();
+    expect(within(drawer).queryByText(/Find URL disabled/)).not.toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Source URLs" })).not.toBeInTheDocument());
+
+    fireEvent.click(await screen.findByRole("button", { name: "Source URLs for 002222" }));
+    drawer = await screen.findByRole("dialog", { name: "Source URLs" });
+    expect(within(drawer).getByRole("button", { name: "Find URL" })).toBeDisabled();
+    expect(within(drawer).getByText("Find URL disabled: Missing MPN.")).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Source URLs" })).not.toBeInTheDocument());
+
+    fireEvent.click(await screen.findByRole("button", { name: "Source URLs for 003333" }));
+    drawer = await screen.findByRole("dialog", { name: "Source URLs" });
+    expect(within(drawer).getByRole("button", { name: "Find URL" })).toBeDisabled();
+    expect(within(drawer).getByText("Find URL disabled: Composite.")).toBeInTheDocument();
+  });
+
   it("opens and closes the Catalog source URL drawer with product context", async () => {
     installMockFetch(allRoutes);
 
@@ -871,9 +951,276 @@ describe("platform mocked page smoke tests", () => {
     expect(within(drawer).getByText("public")).toBeInTheDocument();
     expect(within(drawer).getByText("plaisio")).toBeInTheDocument();
     expect(within(drawer).getByText("kotsovolos")).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "Find URL" })).toBeEnabled();
+    expect(within(drawer).getByText("Latest discovery job")).toBeInTheDocument();
+    expect(within(drawer).getByText("source-run-002")).toBeInTheDocument();
+    expect(within(drawer).getAllByText("Manual").length).toBeGreaterThan(0);
+    expect(within(drawer).getByText("Discovery")).toBeInTheDocument();
 
     fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Source URLs" })).not.toBeInTheDocument());
+  });
+
+  it("starts one-product drawer Find URL discovery with the selected marketplace source", async () => {
+    const mockFetch = installMockFetch([
+      {
+        method: "POST",
+        path: "/commerce-api/source-url-agent/runs",
+        response: async (request) => {
+          await delay(40);
+          const body =
+            typeof request.body === "object" && request.body !== null && !Array.isArray(request.body)
+              ? (request.body as Record<string, unknown>)
+              : {};
+          return {
+            run_id: "source-run-drawer",
+            source: body.source,
+            mode: "catalog",
+            status: "queued",
+            selected_count: 1,
+            candidate_count: 0,
+            needs_review_count: 0,
+            task_total_count: 1,
+            task_finished_count: 0,
+            created_at: "2026-05-04T10:00:00Z",
+          };
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/runs/source-run-drawer",
+        response: {
+          run_id: "source-run-drawer",
+          source: "skroutz",
+          mode: "catalog",
+          status: "succeeded",
+          selected_count: 1,
+          candidate_count: 1,
+          needs_review_count: 1,
+          task_total_count: 1,
+          task_finished_count: 1,
+          created_at: "2026-05-04T10:00:00Z",
+          completed_at: "2026-05-04T10:01:00Z",
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/catalog");
+
+    await screen.findByRole("heading", { name: "Commerce catalog" });
+    fireEvent.change(screen.getByLabelText("Marketplace"), { target: { value: "skroutz" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Source URLs for 005606" }));
+    const drawer = await screen.findByRole("dialog", { name: "Source URLs" });
+    const findButton = within(drawer).getByRole("button", { name: "Find URL" });
+
+    fireEvent.click(findButton);
+    fireEvent.click(findButton);
+
+    expect(within(drawer).getByLabelText("Manual URL")).toBeEnabled();
+    await expect(within(drawer).findByText("source-run-drawer")).resolves.toBeInTheDocument();
+    await expect(within(drawer).findByText("Find URL run started: source-run-drawer")).resolves.toBeInTheDocument();
+    expect(within(drawer).queryByRole("link", { name: "Review candidates" })).not.toBeInTheDocument();
+    expect(
+      mockFetch.requests.filter(
+        (request) => request.method === "POST" && request.pathname === "/commerce-api/source-url-agent/runs",
+      ),
+    ).toHaveLength(1);
+    expect(
+      mockFetch.requests.some(
+        (request) =>
+          request.method === "POST" &&
+          request.pathname === "/commerce-api/source-url-agent/runs" &&
+          typeof request.body === "object" &&
+          request.body !== null &&
+          !Array.isArray(request.body) &&
+          request.body.source === "skroutz" &&
+          request.body.catalog_product_id === 1 &&
+          Array.isArray(request.body.selected_models) &&
+          request.body.selected_models.includes("005606") &&
+          request.body.missing_only === false &&
+          request.body.limit === 1,
+      ),
+    ).toBe(true);
+    await waitFor(() =>
+      expect(
+        mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    const afterTerminalRefresh =
+      mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length;
+    await delay(1_700);
+    const afterExtraRefresh =
+      mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length;
+    expect(afterExtraRefresh).toBeGreaterThan(afterTerminalRefresh);
+    await delay(4_200);
+    expect(
+      mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length,
+    ).toBe(afterExtraRefresh);
+  });
+
+  it("reviews drawer discovery candidates inline and refreshes Source URLs", async () => {
+    let accepted = false;
+    let candidates = [
+      {
+        id: 701,
+        run_id: "source-run-review",
+        catalog_product_id: 1,
+        model: "005606",
+        mpn: "MD-20L",
+        manufacturer: "Midea",
+        product_name: "Midea candidate product",
+        source_name: "bestprice",
+        source_domain: "bestprice.gr",
+        candidate_url: "https://www.bestprice.gr/item/701/midea-md-20l.html",
+        candidate_title: "First drawer candidate",
+        confidence_score: 0.98,
+        status: "needs_review",
+        notes: "Top candidate.",
+        created_at: "2026-05-04T10:01:00Z",
+      },
+      {
+        id: 702,
+        run_id: "source-run-review",
+        catalog_product_id: 1,
+        model: "005606",
+        mpn: "MD-20L",
+        manufacturer: "Midea",
+        product_name: "Midea candidate product",
+        source_name: "bestprice",
+        source_domain: "bestprice.gr",
+        candidate_url: "https://www.bestprice.gr/item/702/midea-md-20l.html",
+        candidate_title: "Second drawer candidate",
+        confidence_score: 0.93,
+        status: "needs_review",
+        notes: "Second candidate.",
+        created_at: "2026-05-04T10:02:00Z",
+      },
+    ];
+    const sourceUrlsResponse = () => ({
+      items: accepted
+        ? [
+            {
+              id: 777,
+              catalog_product_id: 1,
+              catalog_source: "sourceCata",
+              model: "005606",
+              mpn: "MD-20L",
+              manufacturer: "Midea",
+              source_name: "bestprice",
+              source_domain: "bestprice.gr",
+              url: "https://www.bestprice.gr/item/702/midea-md-20l.html",
+              url_normalized: "https://www.bestprice.gr/item/702/midea-md-20l.html",
+              status: "active",
+              url_type: "discovered",
+              trust_level: "manual",
+              added_by: "source-url-agent",
+              failure_count: 0,
+            },
+          ]
+        : [],
+    });
+    const mockFetch = installMockFetch([
+      { method: "GET", path: "/commerce-api/catalog/products/1/source-urls", response: sourceUrlsResponse },
+      {
+        method: "GET",
+        path: "/commerce-api/source-url-agent/runs/latest",
+        response: {
+          run_id: "source-run-review",
+          source: "bestprice",
+          mode: "catalog",
+          status: "succeeded",
+          created_at: "2026-05-04T10:00:00Z",
+          completed_at: "2026-05-04T10:03:00Z",
+        },
+      },
+      {
+        method: "GET",
+        path: "/commerce-api/catalog/products/1/source-url-candidates",
+        response: () => ({
+          catalog_product_id: 1,
+          total_candidates: candidates.length,
+          warnings: [],
+          items: [
+            {
+              run_id: "source-run-review",
+              run: {
+                run_id: "source-run-review",
+                source: "bestprice",
+                mode: "catalog",
+                status: "succeeded",
+              },
+              counts: { needs_review: candidates.length, accepted: 0, rejected: 0, pending: 0, not_found: 0, error: 0 },
+              candidates,
+            },
+          ],
+        }),
+      },
+      {
+        method: "PATCH",
+        path: "/commerce-api/source-url-agent/candidates/701/review",
+        response: (request) => {
+          candidates = candidates.filter((candidate) => candidate.id !== 701);
+          return { ...candidates[0], id: 701, status: "rejected", reviewed_by: "operator", reviewed_at: "2026-05-04T10:04:00Z" };
+        },
+      },
+      {
+        method: "PATCH",
+        path: "/commerce-api/source-url-agent/candidates/702/review",
+        response: () => {
+          accepted = true;
+          candidates = [];
+          return { id: 702, status: "accepted", reviewed_by: "operator", reviewed_at: "2026-05-04T10:05:00Z" };
+        },
+      },
+      ...allRoutes,
+    ]);
+
+    renderWithRouter("/catalog");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Source URLs for 005606" }));
+    const drawer = await screen.findByRole("dialog", { name: "Source URLs" });
+    await expect(within(drawer).findByText("First drawer candidate")).resolves.toBeInTheDocument();
+    expect(within(drawer).queryByText("Second drawer candidate")).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("link", { name: "Review candidates" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Show 1 more" }));
+    expect(within(drawer).getByText("Second drawer candidate")).toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getAllByRole("button", { name: "Reject" })[0]);
+    await waitFor(() => expect(within(drawer).queryByText("First drawer candidate")).not.toBeInTheDocument());
+    await expect(within(drawer).findByText("Second drawer candidate")).resolves.toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Accept" }));
+    await waitFor(() => expect(within(drawer).queryByText("Second drawer candidate")).not.toBeInTheDocument());
+    await expect(within(drawer).findByText("https://www.bestprice.gr/item/702/midea-md-20l.html")).resolves.toBeInTheDocument();
+    expect(within(drawer).getByText("Discovery")).toBeInTheDocument();
+    expect(within(drawer).getByLabelText("Manual URL")).toBeEnabled();
+    expect(
+      mockFetch.requests.some(
+        (request) =>
+          request.method === "PATCH" &&
+          request.pathname === "/commerce-api/source-url-agent/candidates/701/review" &&
+          typeof request.body === "object" &&
+          request.body !== null &&
+          !Array.isArray(request.body) &&
+          request.body.decision === "reject",
+      ),
+    ).toBe(true);
+    expect(
+      mockFetch.requests.some(
+        (request) =>
+          request.method === "PATCH" &&
+          request.pathname === "/commerce-api/source-url-agent/candidates/702/review" &&
+          typeof request.body === "object" &&
+          request.body !== null &&
+          !Array.isArray(request.body) &&
+          request.body.decision === "accept",
+      ),
+    ).toBe(true);
+    expect(
+      mockFetch.requests.filter((request) => request.pathname === "/commerce-api/catalog/products/1/source-urls").length,
+    ).toBeGreaterThan(1);
   });
 
   it("renders Find Source table", async () => {
