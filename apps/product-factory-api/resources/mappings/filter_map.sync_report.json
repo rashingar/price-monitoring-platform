@@ -16,16 +16,17 @@
   "manual_override_values": 18,
   "existing_map_fallback_rows": [],
   "first_deepest_fallback_rows": [],
+  "omitted_groups": [
+    {
+      "category_id": "cat_0eb2b340ab02",
+      "group_id": "fg_a6db7963afb3"
+    }
+  ],
   "overridden_groups": [
     {
       "category_id": "cat_20f12195304a",
       "group_id": "fg_49e215b144da",
       "field": "required"
-    },
-    {
-      "category_id": "cat_0eb2b340ab02",
-      "group_id": "fg_a6db7963afb3",
-      "field": "status"
     },
     {
       "category_id": "cat_0eb2b340ab02",

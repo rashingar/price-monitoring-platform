@@ -369,19 +369,6 @@
               "status": "active"
             }
           ]
-        },
-        {
-          "group_id": "fg_a6db7963afb3",
-          "name": "Ενεργειακή Κλάση Ψύξης",
-          "required": true,
-          "status": "inactive",
-          "values": [
-            {
-              "value_id": "fv_2c5b8cace1d5",
-              "value": "A+",
-              "status": "active"
-            }
-          ]
         }
       ]
     },
@@ -13231,19 +13218,6 @@
               "status": "active"
             }
           ]
-        },
-        {
-          "group_id": "fg_a6db7963afb3",
-          "name": "Ενεργειακή Κλάση Ψύξης",
-          "required": true,
-          "status": "inactive",
-          "values": [
-            {
-              "value_id": "fv_2c5b8cace1d5",
-              "value": "A+",
-              "status": "active"
-            }
-          ]
         }
       ]
     },
@@ -24608,19 +24582,6 @@
             {
               "value_id": "fv_d7ca7e043e9d",
               "value": "59,20 cm",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "group_id": "fg_a6db7963afb3",
-          "name": "Ενεργειακή Κλάση Ψύξης",
-          "required": true,
-          "status": "inactive",
-          "values": [
-            {
-              "value_id": "fv_2c5b8cace1d5",
-              "value": "A+",
               "status": "active"
             }
           ]
@@ -37470,19 +37431,6 @@
             {
               "value_id": "fv_d7ca7e043e9d",
               "value": "59,20 cm",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "group_id": "fg_a6db7963afb3",
-          "name": "Ενεργειακή Κλάση Ψύξης",
-          "required": true,
-          "status": "inactive",
-          "values": [
-            {
-              "value_id": "fv_2c5b8cace1d5",
-              "value": "A+",
               "status": "active"
             }
           ]

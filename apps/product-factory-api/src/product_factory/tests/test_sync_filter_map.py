@@ -302,6 +302,51 @@ def test_manual_overrides_win_conflicts(tmp_path: Path) -> None:
     assert final_group["values"][0]["status"] == "deprecated"
 
 
+def test_manual_overrides_can_omit_base_group(tmp_path: Path) -> None:
+    paths = _make_paths(tmp_path)
+    _write_csv(paths["csv_path"], _sample_rows())
+    run_bootstrap(**paths, write=True)
+    base = json.loads(paths["base_path"].read_text(encoding="utf-8"))
+    category = _only_category(base)
+    group = category["filter_groups"][0]
+    manual = default_manual_overrides()
+    manual["categories"] = {
+        category["category_id"]: {
+            "category_id": category["category_id"],
+            "path": category["path"],
+            "groups": {
+                group["group_id"]: {
+                    "group_id": group["group_id"],
+                    "name": group["name"],
+                    "omit": True,
+                    "values": {},
+                }
+            },
+        }
+    }
+    paths["manual_path"].write_text(
+        json.dumps(manual, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+    run_apply_overrides(
+        base_path=paths["base_path"],
+        manual_path=paths["manual_path"],
+        filter_map_path=paths["filter_map_path"],
+        report_path=paths["report_path"],
+        write=True,
+    )
+    final = json.loads(paths["filter_map_path"].read_text(encoding="utf-8"))
+    final_group_ids = {
+        item["group_id"] for item in _only_category(final)["filter_groups"]
+    }
+    report = json.loads(paths["report_path"].read_text(encoding="utf-8"))
+
+    assert group["group_id"] not in final_group_ids
+    assert report["omitted_groups"] == [
+        {"category_id": category["category_id"], "group_id": group["group_id"]}
+    ]
+
+
 def test_manual_override_file_supports_active_inactive_deprecated_statuses(
     tmp_path: Path,
 ) -> None:

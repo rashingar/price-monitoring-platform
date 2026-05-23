@@ -415,6 +415,19 @@ def apply_manual_overrides(
         )
         for group_id, group_override in category_override.get("groups", {}).items():
             report["manual_override_groups"] += 1
+            if group_override.get("omit") is True:
+                if group_id in groups_by_id:
+                    category["filter_groups"] = [
+                        group
+                        for group in category.get("filter_groups", [])
+                        if group.get("group_id") != group_id
+                    ]
+                    groups_by_id.pop(group_id, None)
+                    report["omitted_groups"].append(
+                        {"category_id": category_id, "group_id": group_id}
+                    )
+                continue
+
             _validate_status(group_override, "group", group_id, report)
             group = groups_by_id.get(group_id)
             if group is None:
@@ -631,6 +644,7 @@ def new_report(mode: str, *, csv_path: Path | None = None) -> dict[str, Any]:
         "manual_override_values": 0,
         "existing_map_fallback_rows": [],
         "first_deepest_fallback_rows": [],
+        "omitted_groups": [],
         "overridden_groups": [],
         "overridden_values": [],
         "warnings": [],

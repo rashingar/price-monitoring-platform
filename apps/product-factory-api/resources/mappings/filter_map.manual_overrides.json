@@ -37,7 +37,7 @@
         "fg_a6db7963afb3": {
           "group_id": "fg_a6db7963afb3",
           "name": "Ενεργειακή Κλάση Ψύξης",
-          "status": "inactive",
+          "omit": true,
           "values": {}
         },
         "fg_07e775fadc08": {
