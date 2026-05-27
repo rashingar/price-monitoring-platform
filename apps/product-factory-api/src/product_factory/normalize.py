@@ -103,7 +103,8 @@ def parse_euro_price(text: str | None) -> float | None:
         return None
     cleaned_text = strip_nbsp(text)
     candidates = re.findall(
-        r"(?:\d{1,3}(?:[.\s]\d{3})*|\d+)(?:,\d{1,2})?\s*(?:€|β‚¬)?", cleaned_text
+        r"(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[,.]\d{1,2})?\s*(?:€|β‚¬)?",
+        cleaned_text,
     )
     if not candidates:
         return None

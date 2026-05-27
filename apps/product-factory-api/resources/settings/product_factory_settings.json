@@ -3,7 +3,7 @@
   "authoring": {
     "intro_text": {
       "default": {
-        "min_words": 70,
+        "min_words": 60,
         "max_words": 180,
         "max_attempts": 3,
         "max_emphasized_words_percent": 45

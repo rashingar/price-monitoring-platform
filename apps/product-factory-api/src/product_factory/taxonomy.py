@@ -23,6 +23,9 @@ ALIASES = {
     normalize_for_match("Σκούπα Stick"): "Σκούπες Stick",
     normalize_for_match("Γυναικεία Φροντίδα"): "Προσωπική Φροντίδα",
     normalize_for_match("Βούρτσες - Ψαλίδια"): "Βούρτσες-Ψαλίδια-ισιωτικά",
+    normalize_for_match("Air Condition"): "Κλιματιστικά",
+    normalize_for_match("Κλιματιστικά Inverter"): "Τοίχου",
+    normalize_for_match("Οικιακά Κλιματιστικά (Split)"): "Τοίχου",
 }
 TV_LEAF = normalize_for_match("Τηλεοράσεις")
 TV_CATEGORY_CTA_URL = "https://www.etranoulis.gr/eikona-hxos/thleoraseis"

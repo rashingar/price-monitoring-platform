@@ -4,6 +4,7 @@ import re
 from urllib.parse import urlparse
 
 ELECTRONET_DOMAINS = {"electronet.gr", "www.electronet.gr"}
+DREAMELECTRIC_DOMAINS = {"dreamelectric.gr", "www.dreamelectric.gr"}
 SKROUTZ_DOMAINS = {"skroutz.gr", "www.skroutz.gr", "skroutz.cy", "www.skroutz.cy"}
 BESTPRICE_DOMAINS = {"bestprice.gr", "www.bestprice.gr"}
 KOTSOVOLOS_DOMAINS = {"kotsovolos.gr", "www.kotsovolos.gr"}
@@ -20,6 +21,8 @@ def detect_source(url: str) -> str:
     host = normalize_host(url)
     if host in ELECTRONET_DOMAINS:
         return "electronet"
+    if host in DREAMELECTRIC_DOMAINS:
+        return "dreamelectric"
     if host in SKROUTZ_DOMAINS:
         return "skroutz"
     if host in BESTPRICE_DOMAINS:
@@ -27,7 +30,7 @@ def detect_source(url: str) -> str:
     if host in KOTSOVOLOS_DOMAINS:
         return "kotsovolos"
     raise ValueError(
-        "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
+        "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, or Kotsovolos product URL"
     )
 
 
@@ -58,6 +61,8 @@ def validate_url_scope(url: str) -> tuple[str, bool, str]:
     source = detect_source(url)
     if source == "electronet":
         return source, True, "electronet_domain"
+    if source == "dreamelectric":
+        return source, True, "dreamelectric_domain"
     if is_skroutz_product_url(url):
         return source, True, "skroutz_product_path"
     if source == "skroutz":

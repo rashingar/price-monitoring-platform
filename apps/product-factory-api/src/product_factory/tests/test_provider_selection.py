@@ -26,6 +26,7 @@ from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmen
 from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import execute_source_acquisition_stage
 from product_factory.parser_product_bestprice import BestPriceProductParser
+from product_factory.parser_product_dreamelectric import DreamelectricProductParser
 from product_factory.parser_product_kotsovolos import KotsovolosProductParser
 from product_factory.providers import (
     BestPriceProvider,
@@ -245,9 +246,16 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         manufacturer_parser=object(),
     )
 
-    assert registry.ids() == ("bestprice", "electronet", "kotsovolos", "skroutz")
+    assert registry.ids() == (
+        "bestprice",
+        "dreamelectric",
+        "electronet",
+        "kotsovolos",
+        "skroutz",
+    )
     assert [definition.provider_id for definition in registry.definitions()] == [
         "bestprice",
+        "dreamelectric",
         "electronet",
         "kotsovolos",
         "skroutz",
@@ -256,12 +264,76 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
 
 def test_source_to_provider_id_maps_supported_sources() -> None:
     assert source_to_provider_id("bestprice") == "bestprice"
+    assert source_to_provider_id("dreamelectric") == "dreamelectric"
     assert source_to_provider_id("electronet") == "electronet"
     assert source_to_provider_id("kotsovolos") == "kotsovolos"
     assert source_to_provider_id("skroutz") == "skroutz"
     assert source_to_provider_id("manufacturer_tefal") is None
     assert source_to_provider_id("manufacturer_bosch") is None
     assert source_to_provider_id("unsupported_source") is None
+
+
+def test_dreamelectric_parser_normalizes_specs_and_gallery() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.dreamelectric.gr/p,23766,example.html">
+        <meta name="description" content="Pitsos Ioli Premium PSI12AW32 / PSO12AW32 κλιματιστικό 12000 BTU.">
+      </head>
+      <body>
+        <nav class="breadcrumb">
+          <a>Αρχική</a>
+          <a>ΚΛΙΜΑΤΙΣΜΟΣ & ΘΕΡΜΑΝΣΗ</a>
+          <a>Κλιματιστικά</a>
+          <a>Οικιακά Κλιματιστικά (Split)</a>
+        </nav>
+        <div id="product-product">
+          <div class="product-info">
+            <div class="product-left">
+              <div class="main-image">
+                <img data-largeimg="/image/cache/catalog/PSI12AW32%201-1000x1000w.jpg" alt="Pitsos PSI12AW32">
+              </div>
+              <div class="additional-images">
+                <img data-largeimg="/image/cache/catalog/PSI12AW32%202-1000x1000w.jpg" alt="Pitsos PSI12AW32">
+                <img data-largeimg="/image/cache/catalog/PSI12AW32%203-1000x1000w.jpg" alt="Pitsos PSI12AW32">
+                <img data-largeimg="/image/cache/catalog/PSI12AW32%204-1000x1000h.jpg" alt="Pitsos PSI12AW32">
+              </div>
+            </div>
+            <div class="product-right">
+              <h1>Pitsos Ioli Premium PSI12AW32 / PSO12AW32 Οικιακό Κλιματιστικό Split 12000 BTU</h1>
+              <div class="product-price">390.00€</div>
+              <span>Κωδικός: 624941</span>
+              <a href="/brand/pitsos">Pitsos</a>
+            </div>
+          </div>
+          <div class="block-attributes">
+            <table>
+              <tr><td>Τεχνικά Χαρακτηριστικά</td></tr>
+              <tr><td>SCOP / Βαθμός Απόδοσης Θέρμανσης</td><td>5.1</td></tr>
+              <tr><td>SEER / Βαθμός Απόδοσης Ψύξης</td><td>6.1</td></tr>
+              <tr><td>Εγκατεστημένο Wi-Fi</td><td>√</td></tr>
+              <tr><td>Ονομαστική Απόδοση (Btu/h)</td><td>12000</td></tr>
+              <tr><td>Ψύξης Ενεργειακή Κλάση</td><td>A2</td></tr>
+            </table>
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+
+    parsed = DreamelectricProductParser().parse(
+        html, "https://www.dreamelectric.gr/p,23766,example.html"
+    )
+
+    assert parsed.critical_missing == []
+    assert parsed.source.product_code == "624941"
+    assert parsed.source.brand == "Pitsos"
+    assert parsed.source.mpn == "PSI12AW32"
+    assert parsed.source.price_value == 390.0
+    assert len(parsed.source.gallery_images) == 4
+    labels = [item.label for item in parsed.source.spec_sections[0].items]
+    assert "Ψύξης Ενεργειακή Κλάση" in labels
+    assert "Ενεργειακή Κλάση Ψύξης" in labels
 
 
 def test_bestprice_parser_normalizes_jsonld_product() -> None:

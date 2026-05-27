@@ -1,5 +1,6 @@
 from .base import ProductProvider, ProviderError
 from .bestprice_provider import BestPriceProvider
+from .dreamelectric_provider import DreamelectricProvider
 from .electronet_provider import ElectronetProvider
 from .kotsovolos_provider import KotsovolosProvider
 from .manufacturer_tefal_provider import (
@@ -27,6 +28,7 @@ from .registry import (
 
 __all__ = [
     "ElectronetProvider",
+    "DreamelectricProvider",
     "BestPriceProvider",
     "KotsovolosProvider",
     "ProductProvider",

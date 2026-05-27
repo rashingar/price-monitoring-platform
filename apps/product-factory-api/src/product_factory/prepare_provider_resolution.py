@@ -6,6 +6,7 @@ from typing import Callable
 from .fetcher import ElectronetFetcher
 from .models import CLIInput, FetchResult, ParsedProduct
 from .parser_product_bestprice import BestPriceProductParser
+from .parser_product_dreamelectric import DreamelectricProductParser
 from .parser_product_electronet import ElectronetProductParser
 from .parser_product_kotsovolos import KotsovolosProductParser
 from .parser_product_manufacturer import ManufacturerProductParser
@@ -155,6 +156,9 @@ def resolve_prepare_provider_resolution(
     bestprice_parser_factory: Callable[
         [], BestPriceProductParser
     ] = BestPriceProductParser,
+    dreamelectric_parser_factory: Callable[
+        [], DreamelectricProductParser
+    ] = DreamelectricProductParser,
     kotsovolos_parser_factory: Callable[
         [], KotsovolosProductParser
     ] = KotsovolosProductParser,
@@ -174,6 +178,7 @@ def resolve_prepare_provider_resolution(
     source = detect_source_fn(cli.url)
     schema_matcher = schema_matcher_factory(str(SCHEMA_LIBRARY_PATH))
     bestprice_parser = bestprice_parser_factory()
+    dreamelectric_parser = dreamelectric_parser_factory()
     kotsovolos_parser = kotsovolos_parser_factory()
     electronet_parser = electronet_parser_factory(
         known_section_titles=schema_matcher.known_section_titles
@@ -184,6 +189,7 @@ def resolve_prepare_provider_resolution(
     registry = bootstrap_provider_registry_fn(
         fetcher=fetcher,
         bestprice_parser=bestprice_parser,
+        dreamelectric_parser=dreamelectric_parser,
         kotsovolos_parser=kotsovolos_parser,
         electronet_parser=electronet_parser,
         skroutz_parser=skroutz_parser,
