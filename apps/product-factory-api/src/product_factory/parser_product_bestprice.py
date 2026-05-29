@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from html import escape, unescape
 from typing import Any
 
 from bs4 import BeautifulSoup
@@ -41,7 +42,10 @@ class BestPriceProductParser:
         title, title_source = self._extract_title(soup, product_json)
         brand = self._extract_brand(product_json, title)
         product_code = self._extract_product_code(product_json, canonical_url)
-        hero_summary = self._extract_summary(soup)
+        presentation_html, presentation_text = self._extract_presentation_source(
+            soup, canonical_url
+        )
+        hero_summary = self._extract_summary(soup, presentation_text)
         price_text, price_value = self._extract_price(product_json)
         category_text, category_href, source_breadcrumbs = self._extract_category(
             breadcrumb_json, canonical_url
@@ -104,7 +108,8 @@ class BestPriceProductParser:
             gallery_images=gallery_images,
             key_specs=key_specs,
             spec_sections=spec_sections,
-            presentation_source_text=hero_summary,
+            presentation_source_html=presentation_html,
+            presentation_source_text=presentation_text or hero_summary,
             scraped_at=utcnow_iso(),
             fallback_used=fallback_used,
         )
@@ -119,13 +124,18 @@ class BestPriceProductParser:
                 else "jsonld.breadcrumb"
             ),
             "gallery_images": (
-                "jsonld.image/meta.og:image" if gallery_images else "missing"
+                "dom:#item-image-gallery/jsonld.image/meta.og:image"
+                if gallery_images
+                else "missing"
             ),
             "spec_sections": (
                 "jsonld.additionalProperty" if spec_sections else "missing"
             ),
-            "hero_summary": (
-                "meta.description/.item-description" if hero_summary else "missing"
+            "hero_summary": self._summary_source(soup, presentation_text, hero_summary),
+            "presentation_blocks": (
+                "dom:#item-content .content-block"
+                if presentation_html
+                else "missing"
             ),
         }
         diagnostics = {
@@ -137,6 +147,11 @@ class BestPriceProductParser:
                 ("gallery_images", "gallery_images", provenance["gallery_images"]),
                 ("spec_sections", "spec_sections", provenance["spec_sections"]),
                 ("hero_summary", "hero_summary", provenance["hero_summary"]),
+                (
+                    "presentation_blocks",
+                    "presentation_source_html",
+                    provenance["presentation_blocks"],
+                ),
             ]
         }
         warnings = (
@@ -234,14 +249,42 @@ class BestPriceProductParser:
         match = BESTPRICE_ITEM_ID_RE.search(url)
         return match.group(1) if match else ""
 
-    def _extract_summary(self, soup: BeautifulSoup) -> str:
+    def _extract_summary(self, soup: BeautifulSoup, presentation_text: str = "") -> str:
         node = soup.select_one(".item-description")
         if node is not None:
             summary = safe_text(node)
             if summary:
                 return summary
+        insight = soup.select_one(".item-insights__summary p")
+        if insight is not None:
+            summary = safe_text(insight)
+            if summary:
+                return summary
+        if presentation_text:
+            first_line = normalize_whitespace(presentation_text.splitlines()[-1])
+            if first_line:
+                return first_line
+        meta = soup.select_one("meta[itemprop='description']")
+        summary = normalize_whitespace(meta.get("content", "") if meta else "")
+        if summary:
+            return summary
         meta = soup.select_one("meta[name='description']")
         return normalize_whitespace(meta.get("content", "") if meta else "")
+
+    def _summary_source(
+        self, soup: BeautifulSoup, presentation_text: str, hero_summary: str
+    ) -> str:
+        if not hero_summary:
+            return "missing"
+        if soup.select_one(".item-description") is not None:
+            return "dom:.item-description"
+        if soup.select_one(".item-insights__summary p") is not None:
+            return "dom:.item-insights__summary"
+        if presentation_text:
+            return "dom:#item-content .content-block"
+        if soup.select_one("meta[itemprop='description']") is not None:
+            return "meta.itemprop.description"
+        return "meta.description"
 
     def _extract_price(self, product_json: dict[str, Any]) -> tuple[str, float | None]:
         offers = product_json.get("offers")
@@ -327,6 +370,67 @@ class BestPriceProductParser:
                 items.append(SpecItem(label=label, value=value))
         return items
 
+    def _extract_presentation_source(
+        self, soup: BeautifulSoup, base_url: str
+    ) -> tuple[str, str]:
+        blocks: list[dict[str, str]] = []
+        for block in soup.select("#item-content .content-block"):
+            title_node = block.select_one(".content-block__header, h2, h3, h4")
+            body_node = block.select_one(".content-block__body")
+            image_node = block.select_one("img")
+            title = safe_text(title_node) if title_node is not None else ""
+            paragraph = (
+                normalize_whitespace(body_node.get_text(" ", strip=True))
+                if body_node is not None
+                else ""
+            )
+            if not paragraph:
+                paragraph = " ".join(
+                    normalize_whitespace(node.get_text(" ", strip=True))
+                    for node in block.select("p")
+                    if normalize_whitespace(node.get_text(" ", strip=True))
+                )
+            image_url = ""
+            if image_node is not None:
+                image_url = normalize_whitespace(
+                    str(
+                        image_node.get("src")
+                        or image_node.get("data-src")
+                        or image_node.get("data-original")
+                        or ""
+                    )
+                )
+            if title and paragraph:
+                blocks.append(
+                    {
+                        "title": title,
+                        "paragraph": normalize_whitespace(paragraph),
+                        "image_url": (
+                            make_absolute_url(image_url, base_url) if image_url else ""
+                        ),
+                    }
+                )
+
+        html_parts: list[str] = []
+        text_parts: list[str] = []
+        for block in blocks:
+            title = normalize_whitespace(block["title"])
+            paragraph = normalize_whitespace(block["paragraph"])
+            if not title or not paragraph:
+                continue
+            html_parts.append('<section class="ck-text inline">')
+            image_url = normalize_whitespace(block.get("image_url", ""))
+            if image_url:
+                html_parts.append(
+                    f'<img src="{escape(image_url, quote=True)}" '
+                    f'alt="{escape(title, quote=True)}">'
+                )
+            html_parts.append(f"<h3>{escape(title)}</h3>")
+            html_parts.append(f"<p>{escape(paragraph)}</p>")
+            html_parts.append("</section>")
+            text_parts.append(f"{title}\n{paragraph}")
+        return "".join(html_parts), "\n\n".join(text_parts)
+
     def _extract_gallery_images(
         self,
         soup: BeautifulSoup,
@@ -334,15 +438,16 @@ class BestPriceProductParser:
         base_url: str,
         title: str,
     ) -> list[GalleryImage]:
-        urls: list[str] = []
+        urls: list[str] = self._extract_gallery_dom_urls(soup, base_url)
         raw_images = product_json.get("image")
-        if isinstance(raw_images, str):
-            urls.append(raw_images)
-        elif isinstance(raw_images, list):
-            urls.extend(str(item) for item in raw_images if item)
-        meta = soup.select_one("meta[property='og:image']")
-        if meta is not None:
-            urls.append(str(meta.get("content") or ""))
+        if not urls:
+            if isinstance(raw_images, str):
+                urls.append(raw_images)
+            elif isinstance(raw_images, list):
+                urls.extend(str(item) for item in raw_images if item)
+            meta = soup.select_one("meta[property='og:image']")
+            if meta is not None:
+                urls.append(str(meta.get("content") or ""))
         image_urls = dedupe_urls_preserve_order(
             [make_absolute_url(url, base_url) for url in urls]
         )
@@ -350,6 +455,61 @@ class BestPriceProductParser:
             GalleryImage(url=image_url, alt=title, position=index)
             for index, image_url in enumerate(image_urls, start=1)
         ]
+
+    def _extract_gallery_dom_urls(self, soup: BeautifulSoup, base_url: str) -> list[str]:
+        urls: list[str] = []
+        for link in soup.select("#item-image-gallery a[href]"):
+            href = normalize_whitespace(str(link.get("href") or ""))
+            if href:
+                urls.append(make_absolute_url(href, base_url))
+
+        if urls:
+            return dedupe_urls_preserve_order(urls)
+
+        data_node = soup.select_one(
+            "#item-image-gallery[data-items], .item-image__dots[data-items]"
+        )
+        raw_items = (
+            str(data_node.get("data-items") or "") if data_node is not None else ""
+        )
+        if raw_items:
+            page = self._extract_bp_page_data(soup)
+            slug = normalize_whitespace(str(page.get("slug") or ""))
+            try:
+                items = json.loads(unescape(raw_items))
+            except json.JSONDecodeError:
+                items = []
+            if isinstance(items, list):
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    path = normalize_whitespace(
+                        str(item.get("path") or item.get("p") or "")
+                    )
+                    if not path or not slug:
+                        continue
+                    urls.append(
+                        make_absolute_url(
+                            f"https://bbpcdn.pstatic.gr/{path.strip('/')}/{slug}.webp",
+                            base_url,
+                        )
+                    )
+
+        return dedupe_urls_preserve_order(urls)
+
+    def _extract_bp_page_data(self, soup: BeautifulSoup) -> dict[str, Any]:
+        node = soup.select_one("script#bp-data[type='application/json']")
+        raw = ""
+        if node is not None:
+            raw = node.string or node.get_text()
+        if not normalize_whitespace(raw):
+            return {}
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        page = payload.get("PAGE") if isinstance(payload, dict) else None
+        return page if isinstance(page, dict) else {}
 
     def _collect_missing_fields(self, source: SourceProductData) -> list[str]:
         missing: list[str] = []

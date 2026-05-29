@@ -15,6 +15,7 @@ from product_factory.models import (
     SpecSection,
     TaxonomyResolution,
 )
+from product_factory.html_builders import extract_presentation_blocks
 from product_factory.prepare_provider_resolution import PrepareProviderResolutionResult
 from product_factory.prepare_result_assembly import PrepareResultAssemblyResult
 from product_factory.prepare_scrape_persistence import (
@@ -397,6 +398,126 @@ def test_bestprice_parser_normalizes_jsonld_product() -> None:
         "Wifi Ready"
     ] == "Ναι"
     assert parsed.critical_missing == []
+
+
+def test_bestprice_parser_extracts_content_sections_and_visible_specs() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html">
+        <script type="application/ld+json">
+          {"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[
+            {"@type":"ListItem","position":1,"item":{"@id":"/cat/3048/thleoraseis.html","name":"Τηλεοράσεις"}}
+          ]}
+        </script>
+        <script type="application/ld+json">
+          {"@context":"https://schema.org","@type":"Product",
+           "name":"TCL 65C8L Smart Τηλεόραση 65\\\" 4K UHD",
+           "image":["https://cdn.example/product.jpg"],
+           "brand":{"@type":"Brand","name":"TCL"},
+           "additionalProperty":[{"@type":"PropertyValue","name":"Panel","value":"Mini LED"}]}
+        </script>
+      </head>
+      <body>
+        <div class="item-insights__summary">
+          <p>Η TCL 65C8L συνδυάζει Mini LED εικόνα και Wi-Fi λειτουργίες.</p>
+        </div>
+        <section id="item-content">
+          <div class="content-block">
+            <div class="content-block__image">
+              <img src="/P/bpimg/content1.webp" alt="Mini LED">
+            </div>
+            <div class="content-block__content">
+              <h3 class="content-block__header">Mini LED εικόνα</h3>
+              <div class="content-block__body">
+                <p>Η τεχνολογία Mini LED προσφέρει υψηλή φωτεινότητα και καθαρή αντίθεση.</p>
+              </div>
+            </div>
+          </div>
+          <div class="content-block">
+            <div class="content-block__content">
+              <h3 class="content-block__header">Έξυπνες λειτουργίες</h3>
+              <div class="content-block__body">
+                <p>Η τηλεόραση υποστηρίζει Wi-Fi και εφαρμογές streaming.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="item-specs">
+          <dl><dt>Wifi</dt><dd>Ναι</dd></dl>
+          <dl><dt>HDR</dt><dd>Dolby Vision</dd></dl>
+        </section>
+      </body>
+    </html>
+    """
+
+    parsed = BestPriceProductParser().parse(html, BESTPRICE_URL)
+
+    blocks = extract_presentation_blocks(
+        parsed.source.presentation_source_html,
+        parsed.source.presentation_source_text,
+        base_url=parsed.source.canonical_url,
+    )
+    spec_values = {
+        item.label: item.value
+        for section in parsed.source.spec_sections
+        for item in section.items
+    }
+
+    assert parsed.source.hero_summary.startswith("Η TCL 65C8L")
+    assert [block["title"] for block in blocks] == [
+        "Mini LED εικόνα",
+        "Έξυπνες λειτουργίες",
+    ]
+    assert blocks[0]["image_url"] == "https://www.bestprice.gr/P/bpimg/content1.webp"
+    assert "Wi-Fi και εφαρμογές streaming" in parsed.source.presentation_source_text
+    assert spec_values["Wifi"] == "Ναι"
+    assert spec_values["HDR"] == "Dolby Vision"
+
+
+def test_bestprice_parser_reads_real_gallery_links_before_jsonld_image() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html">
+        <script type="application/ld+json">
+          {"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[
+            {"@type":"ListItem","position":1,"item":{"@id":"/cat/3048/thleoraseis.html","name":"Τηλεοράσεις"}}
+          ]}
+        </script>
+        <script type="application/ld+json">
+          {"@context":"https://schema.org","@type":"Product",
+           "name":"TCL 65C8L Smart Τηλεόραση 65\\\" 4K UHD",
+           "image":["https://cdn.example/product.jpg"],
+           "brand":{"@type":"Brand","name":"TCL"},
+           "additionalProperty":[{"@type":"PropertyValue","name":"Panel","value":"Mini LED"}]}
+        </script>
+      </head>
+      <body><div class="item-description">Περιγραφή</div></body>
+    </html>
+    """
+
+    html = html.replace(
+        "</body>",
+        """
+        <div id="item-image-gallery">
+          <ol>
+            <li><a href="https://bbpcdn.pstatic.gr/bpimg37/aGsjb/1WmIpD/tcl-65c8l.webp"></a></li>
+            <li><a href="https://bbpcdn.pstatic.gr/P/bp_img_sets/7phDOo/tcl-65c8l.webp"></a></li>
+            <li><a href="https://bbpcdn.pstatic.gr/P/bp_img_sets/7phDOp/tcl-65c8l.webp"></a></li>
+          </ol>
+        </div>
+        </body>
+        """,
+    )
+    parsed = BestPriceProductParser().parse(html, BESTPRICE_URL)
+
+    assert [image.position for image in parsed.source.gallery_images] == [1, 2, 3]
+    assert [image.url for image in parsed.source.gallery_images] == [
+        "https://bbpcdn.pstatic.gr/bpimg37/aGsjb/1WmIpD/tcl-65c8l.webp",
+        "https://bbpcdn.pstatic.gr/P/bp_img_sets/7phDOo/tcl-65c8l.webp",
+        "https://bbpcdn.pstatic.gr/P/bp_img_sets/7phDOp/tcl-65c8l.webp",
+    ]
 
 
 def test_bestprice_provider_normalize_returns_provider_result(tmp_path: Path) -> None:
