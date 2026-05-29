@@ -110,6 +110,13 @@ def test_common_skroutz_description_aliases_map_to_alias_families() -> None:
     assert label_alias_family_id("Χρώμα") == "color"
 
 
+def test_fan_blade_count_alias_family_covers_skroutz_wording() -> None:
+    assert label_alias_family_id("Αριθμός Πτερυγίων") == "fan_blade_count"
+    assert label_alias_family_id("Αριθμός Φτερωτών") == "fan_blade_count"
+    assert labels_equivalent("Αριθμός Πτερυγίων", "Αριθμός Φτερωτών")
+    assert "alias:fan_blade_count" in candidate_label_keys("Αριθμός Φτερωτών")
+
+
 def test_unknown_labels_do_not_map_to_alias_family() -> None:
     assert label_alias_family_id("Διακόπτες") == ""
     assert label_alias_family_id("Υλικό Κατασκευής") == ""

@@ -63,6 +63,15 @@
       "mojibake_examples": []
     },
     {
+      "family_id": "fan_blade_count",
+      "canonical_label": "Αριθμός Πτερυγίων",
+      "aliases": [
+        "Αριθμός Πτερυγίων",
+        "Αριθμός Φτερωτών"
+      ],
+      "mojibake_examples": []
+    },
+    {
       "family_id": "color",
       "canonical_label": "Χρώμα",
       "aliases": [
