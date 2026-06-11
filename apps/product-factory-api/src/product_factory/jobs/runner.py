@@ -299,6 +299,14 @@ def run_full_pipeline_job(
     if render_result.status == JobStatus.FAILED:
         return _full_pipeline_failed_result("render", render_result, artifacts)
 
+    if bool(record.payload.get("skip_publish", False)):
+        log("Full pipeline skip_publish active; stopping after render.")
+        return JobRunResult(
+            status=JobStatus.SUCCEEDED,
+            message="Full pipeline job succeeded without publish.",
+            artifacts=artifacts,
+        )
+
     publish_payload = {"model": model}
     if render_result.artifacts.get("published_csv_path"):
         publish_payload["current_job_product_file"] = render_result.artifacts[
@@ -413,7 +421,7 @@ def _full_pipeline_prepare_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "bestprice_status": int(bool(payload.get("bestprice_enabled", False))),
         "skroutz_status": int(bool(payload.get("skroutz_enabled", False))),
         "boxnow": int(bool(payload.get("boxnow_enabled", False))),
-        "price": 0,
+        "price": payload.get("price", 0),
         "gallery_mode": payload.get("gallery_mode") or "all",
     }
 

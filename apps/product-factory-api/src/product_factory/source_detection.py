@@ -8,9 +8,14 @@ DREAMELECTRIC_DOMAINS = {"dreamelectric.gr", "www.dreamelectric.gr"}
 SKROUTZ_DOMAINS = {"skroutz.gr", "www.skroutz.gr", "skroutz.cy", "www.skroutz.cy"}
 BESTPRICE_DOMAINS = {"bestprice.gr", "www.bestprice.gr"}
 KOTSOVOLOS_DOMAINS = {"kotsovolos.gr", "www.kotsovolos.gr"}
+ESTIA_DOMAINS = {"estiahomeart.com", "www.estiahomeart.com"}
+APOTHEMA_DOMAINS = {"apothema.gr", "www.apothema.gr"}
+MARKETQUEST_DOMAINS = {"marketquest.gr", "www.marketquest.gr"}
 SKROUTZ_PRODUCT_PATH_PREFIX = "/s/"
 BESTPRICE_PRODUCT_PATH_PREFIX = "/item/"
 KOTSOVOLOS_PRODUCT_PATH_RE = re.compile(r"/\d{5,}-", re.IGNORECASE)
+ESTIA_PRODUCT_PATH_RE = re.compile(r"^/[A-Za-z0-9][A-Za-z0-9_-]*(?:/[A-Za-z0-9_-]+)?/?$")
+MARKETQUEST_PRODUCT_PATH_RE = re.compile(r"^/product/\d+/.+\.html$", re.IGNORECASE)
 
 
 def normalize_host(url: str) -> str:
@@ -29,8 +34,14 @@ def detect_source(url: str) -> str:
         return "bestprice"
     if host in KOTSOVOLOS_DOMAINS:
         return "kotsovolos"
+    if host in ESTIA_DOMAINS:
+        return "estia"
+    if host in APOTHEMA_DOMAINS:
+        return "apothema"
+    if host in MARKETQUEST_DOMAINS:
+        return "marketquest"
     raise ValueError(
-        "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, or Kotsovolos product URL"
+        "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
     )
 
 
@@ -57,6 +68,24 @@ def is_kotsovolos_product_url(url: str) -> bool:
     )
 
 
+def is_estia_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    path = parsed.path.strip()
+    return (
+        parsed.netloc.strip().lower() in ESTIA_DOMAINS
+        and bool(ESTIA_PRODUCT_PATH_RE.match(path))
+        and path.strip("/") not in {"", "el", "en", "cart", "login", "register"}
+    )
+
+
+def is_marketquest_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return (
+        parsed.netloc.strip().lower() in MARKETQUEST_DOMAINS
+        and bool(MARKETQUEST_PRODUCT_PATH_RE.match(parsed.path.strip()))
+    )
+
+
 def validate_url_scope(url: str) -> tuple[str, bool, str]:
     source = detect_source(url)
     if source == "electronet":
@@ -75,4 +104,17 @@ def validate_url_scope(url: str) -> tuple[str, bool, str]:
         return source, True, "kotsovolos_product_path"
     if source == "kotsovolos":
         return source, False, "kotsovolos_non_product_path"
+    if is_estia_product_url(url):
+        return source, True, "estia_product_path"
+    if source == "estia":
+        return source, False, "estia_non_product_path"
+    if source == "apothema":
+        parsed = urlparse(url)
+        if re.search(r"-\d+p/?$", parsed.path, re.IGNORECASE):
+            return source, True, "apothema_product_path"
+        return source, False, "apothema_non_product_path"
+    if is_marketquest_product_url(url):
+        return source, True, "marketquest_product_path"
+    if source == "marketquest":
+        return source, False, "marketquest_non_product_path"
     return source, False, "unsupported_source"

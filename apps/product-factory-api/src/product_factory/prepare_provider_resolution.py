@@ -6,9 +6,12 @@ from typing import Callable
 from .fetcher import ElectronetFetcher
 from .models import CLIInput, FetchResult, ParsedProduct
 from .parser_product_bestprice import BestPriceProductParser
+from .parser_product_apothema import ApothemaProductParser
 from .parser_product_dreamelectric import DreamelectricProductParser
 from .parser_product_electronet import ElectronetProductParser
+from .parser_product_estia import EstiaProductParser
 from .parser_product_kotsovolos import KotsovolosProductParser
+from .parser_product_marketquest import MarketQuestProductParser
 from .parser_product_manufacturer import ManufacturerProductParser
 from .parser_product_skroutz import SkroutzProductParser
 from .providers.base import ProviderError
@@ -156,12 +159,19 @@ def resolve_prepare_provider_resolution(
     bestprice_parser_factory: Callable[
         [], BestPriceProductParser
     ] = BestPriceProductParser,
+    apothema_parser_factory: Callable[
+        [], ApothemaProductParser
+    ] = ApothemaProductParser,
     dreamelectric_parser_factory: Callable[
         [], DreamelectricProductParser
     ] = DreamelectricProductParser,
+    estia_parser_factory: Callable[[], EstiaProductParser] = EstiaProductParser,
     kotsovolos_parser_factory: Callable[
         [], KotsovolosProductParser
     ] = KotsovolosProductParser,
+    marketquest_parser_factory: Callable[
+        [], MarketQuestProductParser
+    ] = MarketQuestProductParser,
     electronet_parser_factory: Callable[
         ..., ElectronetProductParser
     ] = ElectronetProductParser,
@@ -178,8 +188,11 @@ def resolve_prepare_provider_resolution(
     source = detect_source_fn(cli.url)
     schema_matcher = schema_matcher_factory(str(SCHEMA_LIBRARY_PATH))
     bestprice_parser = bestprice_parser_factory()
+    apothema_parser = apothema_parser_factory()
     dreamelectric_parser = dreamelectric_parser_factory()
+    estia_parser = estia_parser_factory()
     kotsovolos_parser = kotsovolos_parser_factory()
+    marketquest_parser = marketquest_parser_factory()
     electronet_parser = electronet_parser_factory(
         known_section_titles=schema_matcher.known_section_titles
     )
@@ -188,9 +201,12 @@ def resolve_prepare_provider_resolution(
     fetcher = fetcher_factory()
     registry = bootstrap_provider_registry_fn(
         fetcher=fetcher,
+        apothema_parser=apothema_parser,
         bestprice_parser=bestprice_parser,
         dreamelectric_parser=dreamelectric_parser,
+        estia_parser=estia_parser,
         kotsovolos_parser=kotsovolos_parser,
+        marketquest_parser=marketquest_parser,
         electronet_parser=electronet_parser,
         skroutz_parser=skroutz_parser,
         manufacturer_parser=manufacturer_parser,

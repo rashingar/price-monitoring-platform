@@ -95,9 +95,11 @@ class FullPipelineJobRequest(BaseModel):
     bestprice_enabled: bool = False
     skroutz_enabled: bool = False
     boxnow_enabled: bool = False
+    price: str | float | int = 0
     photos: int = Field(default=DEFAULT_FULL_PIPELINE_PHOTOS, ge=1)
     sections: int = Field(default=DEFAULT_FULL_PIPELINE_SECTIONS, ge=0)
     gallery_mode: Literal["all"] = DEFAULT_FULL_PIPELINE_GALLERY_MODE
+    skip_publish: bool = False
     trigger_source: str | None = None
     telegram_chat_id: str | None = None
     source_resolution: dict[str, Any] | None = None

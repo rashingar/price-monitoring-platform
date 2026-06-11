@@ -282,6 +282,23 @@ def build_deterministic_product_fields(
 
     raw_title = normalize_whitespace(source.name)
     brand = normalize_whitespace(source.brand)
+    if normalize_for_match(source.source_name) == "estia":
+        mpn = normalize_whitespace(source.mpn) or resolve_deterministic_mpn(
+            source, raw_title, brand, model, taxonomy
+        )
+        category_phrase = taxonomy.sub_category or taxonomy.leaf_category
+        name = raw_title
+        meta_title = f"{name} | eTranoulis" if name else ""
+        return _skroutz_result(
+            brand,
+            mpn,
+            category_phrase,
+            [],
+            name,
+            meta_title,
+            seo_keyword_builder(name, model),
+            taxonomy,
+        )
     mpn = resolve_deterministic_mpn(source, raw_title, brand, model, taxonomy)
     tv_fields = build_tv_deterministic_fields(
         source=source,

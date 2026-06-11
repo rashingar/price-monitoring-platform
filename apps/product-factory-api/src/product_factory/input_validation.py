@@ -8,7 +8,7 @@ from .source_detection import validate_url_scope
 
 FAIL_MESSAGE = "Generation failed, provide 6-digit model"
 SUPPORTED_URL_MESSAGE = (
-    "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
+    "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
 )
 
 

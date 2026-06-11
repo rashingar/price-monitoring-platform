@@ -581,7 +581,7 @@ def _template_requests_raw_spec_sections(template: dict[str, Any]) -> bool:
 
 def _should_render_raw_source_characteristics(source: SourceProductData) -> bool:
     source_name = normalize_for_match(source.source_name)
-    if source_name == "electronet":
+    if source_name in {"electronet", "estia"}:
         return True
     host = urlparse(source.canonical_url or source.url).netloc.strip().lower()
     return host in {"electronet.gr", "www.electronet.gr"}

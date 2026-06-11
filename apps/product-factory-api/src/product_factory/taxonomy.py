@@ -33,6 +33,14 @@ MICROWAVE_LEAF = normalize_for_match("Φούρνοι Μικροκυμάτων")
 MICROWAVE_CATEGORY_CTA_URL = (
     "https://www.etranoulis.gr/oikiakes-syskeues/fournoi-mikrokymatwn"
 )
+FAN_CATEGORY_URL_TOKENS = {"anemisthres", "anemistires", "anemistiras", "fan"}
+FAN_SUBCATEGORY_URL_TOKENS = {
+    "orthostatis": {"orthostatis", "dapedou", "stand", "pedestal"},
+    "epitrapezioi": {"epitrapezioi", "epitrapezios", "table", "desk"},
+    "orofhs": {"orofhs", "orofis", "ceiling"},
+    "an": {"toixou", "wall"},
+    "ydronefosis": {"ydronefosis", "mist", "misting"},
+}
 TV_SIZE_BUCKETS = {
     "Έως 32''": (0, 32),
     "33''-50''": (33, 50),
@@ -117,12 +125,35 @@ class TaxonomyResolver:
         url_path_norm = normalize_for_match(urlparse(url).path)
         url_tokens = set(url_path_norm.split())
         name_tokens = set(normalize_for_match(name).split())
+        source_evidence_tokens = set(url_tokens | name_tokens)
         spec_labels = {
             normalize_for_match(item.label)
             for section in spec_sections
             for item in section.items
             if item.label
         }
+        for item in key_specs:
+            if isinstance(item, dict):
+                source_evidence_tokens.update(
+                    normalize_for_match(item.get("label", "")).split()
+                )
+                source_evidence_tokens.update(
+                    normalize_for_match(item.get("value", "")).split()
+                )
+            else:
+                source_evidence_tokens.update(
+                    normalize_for_match(getattr(item, "label", "")).split()
+                )
+                source_evidence_tokens.update(
+                    normalize_for_match(getattr(item, "value", "")).split()
+                )
+        for section in spec_sections:
+            source_evidence_tokens.update(normalize_for_match(section.section).split())
+            for item in section.items:
+                source_evidence_tokens.update(normalize_for_match(item.label).split())
+                source_evidence_tokens.update(
+                    normalize_for_match(item.value or "").split()
+                )
         tv_size_bucket = self._resolve_tv_size_bucket(
             name=name, key_specs=key_specs, spec_sections=spec_sections
         )
@@ -206,6 +237,13 @@ class TaxonomyResolver:
                 score += 4.0
                 reasons.append("electronet_tigania_wok_url")
 
+            if (
+                "thgania" in candidate_url_tokens
+                and ({"tigani", "tigania", "thgani", "thgania"} & url_tokens)
+            ):
+                score += 3.5
+                reasons.append("cookware_pan_url")
+
             if leaf_norm == MICROWAVE_LEAF:
                 without_grill_url = any(
                     token in url_path_norm
@@ -221,6 +259,21 @@ class TaxonomyResolver:
                 elif with_grill_url and sub_norm == normalize_for_match("Με Grill"):
                     score += 4.0
                     reasons.append("electronet_microwave_with_grill_url")
+
+            if (
+                candidate_url_tokens & FAN_CATEGORY_URL_TOKENS
+                and source_evidence_tokens & FAN_CATEGORY_URL_TOKENS
+            ):
+                for subtype_url_token, subtype_evidence_tokens in (
+                    FAN_SUBCATEGORY_URL_TOKENS.items()
+                ):
+                    if (
+                        subtype_url_token in candidate_url_tokens
+                        and source_evidence_tokens & subtype_evidence_tokens
+                    ):
+                        score += 3.0
+                        reasons.append("fan_subcategory_url")
+                        break
 
             filter_row = self.filter_by_path.get(candidate_path_norm)
             if filter_row:
@@ -278,6 +331,15 @@ class TaxonomyResolver:
             best["confidence"] >= 4.5
             and delta >= 2.0
             and "leaf_breadcrumb" in best["reasons"]
+        ):
+            resolved = True
+        elif (
+            best["confidence"] >= 3.5
+            and delta >= 2.0
+            and any(
+                reason in best["reasons"]
+                for reason in ["fan_subcategory_url", "cookware_pan_url"]
+            )
         ):
             resolved = True
 
