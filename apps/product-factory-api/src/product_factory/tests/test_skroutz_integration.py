@@ -85,6 +85,22 @@ def test_validate_input_accepts_bestprice_product_url() -> None:
     assert cli.url == args.url
 
 
+def test_validate_input_accepts_apothema_product_url() -> None:
+    args = argparse.Namespace(
+        model="345145",
+        url="https://www.apothema.gr/hisense-hbd5a-dianemhths-mpyras-5lt-304513p?source=bestprice",
+        photos=10,
+        sections=0,
+        skroutz_status=0,
+        boxnow=0,
+        price="0",
+        out="out",
+    )
+    cli = validate_input(args)
+    assert cli.model == "345145"
+    assert cli.url == args.url
+
+
 def test_validate_input_accepts_kotsovolos_product_url() -> None:
     args = argparse.Namespace(
         model="412917",
@@ -98,6 +114,38 @@ def test_validate_input_accepts_kotsovolos_product_url() -> None:
     )
     cli = validate_input(args)
     assert cli.model == "412917"
+    assert cli.url == args.url
+
+
+def test_validate_input_accepts_estia_product_url() -> None:
+    args = argparse.Namespace(
+        model="343089",
+        url="https://estiahomeart.com/01-32098",
+        photos=1,
+        sections=0,
+        skroutz_status=0,
+        boxnow=1,
+        price="16.60",
+        out="out",
+    )
+    cli = validate_input(args)
+    assert cli.model == "343089"
+    assert cli.url == args.url
+
+
+def test_validate_input_accepts_marketquest_product_url() -> None:
+    args = argparse.Namespace(
+        model="344876",
+        url="https://www.marketquest.gr/product/1336/bra-tigani-grill-signature-me-rabdwseis-apo-anoxeidwto.html",
+        photos=1,
+        sections=0,
+        skroutz_status=0,
+        boxnow=1,
+        price="45",
+        out="out",
+    )
+    cli = validate_input(args)
+    assert cli.model == "344876"
     assert cli.url == args.url
 
 
@@ -117,7 +165,7 @@ def test_validate_input_rejects_tefal_manufacturer_product_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
+            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
         )
     else:
         raise AssertionError("Expected ValueError")
@@ -139,7 +187,7 @@ def test_validate_input_rejects_non_product_skroutz_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
+            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
         )
     else:
         raise AssertionError("Expected ValueError")
@@ -161,7 +209,7 @@ def test_validate_input_rejects_non_product_tefal_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Skroutz, BestPrice, or Kotsovolos product URL"
+            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
         )
     else:
         raise AssertionError("Expected ValueError")

@@ -2,24 +2,33 @@ from __future__ import annotations
 
 from ..fetcher import ElectronetFetcher
 from ..parser_product_bestprice import BestPriceProductParser
+from ..parser_product_apothema import ApothemaProductParser
 from ..parser_product_dreamelectric import DreamelectricProductParser
 from ..parser_product_electronet import ElectronetProductParser
+from ..parser_product_estia import EstiaProductParser
 from ..parser_product_kotsovolos import KotsovolosProductParser
+from ..parser_product_marketquest import MarketQuestProductParser
 from ..parser_product_manufacturer import ManufacturerProductParser
 from ..parser_product_skroutz import SkroutzProductParser
 from .base import ProductProvider, ProviderError
+from .apothema_provider import ApothemaProvider
 from .bestprice_provider import BestPriceProvider
 from .dreamelectric_provider import DreamelectricProvider
 from .electronet_provider import ElectronetProvider
+from .estia_provider import EstiaProvider
 from .kotsovolos_provider import KotsovolosProvider
+from .marketquest_provider import MarketQuestProvider
 from .models import ProviderDefinition, ProviderErrorCode, ProviderKind, ProviderStage
 from .skroutz_provider import SkroutzProvider
 
 RUNTIME_SOURCE_PROVIDER_IDS = {
+    "apothema": "apothema",
     "bestprice": "bestprice",
     "dreamelectric": "dreamelectric",
     "electronet": "electronet",
+    "estia": "estia",
     "kotsovolos": "kotsovolos",
+    "marketquest": "marketquest",
     "skroutz": "skroutz",
 }
 
@@ -84,11 +93,19 @@ def bootstrap_runtime_provider_registry(
     electronet_parser: ElectronetProductParser,
     skroutz_parser: SkroutzProductParser,
     manufacturer_parser: ManufacturerProductParser,
+    apothema_parser: ApothemaProductParser | None = None,
     bestprice_parser: BestPriceProductParser | None = None,
     dreamelectric_parser: DreamelectricProductParser | None = None,
+    estia_parser: EstiaProductParser | None = None,
     kotsovolos_parser: KotsovolosProductParser | None = None,
+    marketquest_parser: MarketQuestProductParser | None = None,
 ) -> ProviderRegistry:
     registry = ProviderRegistry()
+    registry.register(
+        ApothemaProvider(
+            fetcher=fetcher, parser=apothema_parser or ApothemaProductParser()
+        )
+    )
     registry.register(
         BestPriceProvider(
             fetcher=fetcher, parser=bestprice_parser or BestPriceProductParser()
@@ -102,8 +119,17 @@ def bootstrap_runtime_provider_registry(
     )
     registry.register(ElectronetProvider(fetcher=fetcher, parser=electronet_parser))
     registry.register(
+        EstiaProvider(fetcher=fetcher, parser=estia_parser or EstiaProductParser())
+    )
+    registry.register(
         KotsovolosProvider(
             fetcher=fetcher, parser=kotsovolos_parser or KotsovolosProductParser()
+        )
+    )
+    registry.register(
+        MarketQuestProvider(
+            fetcher=fetcher,
+            parser=marketquest_parser or MarketQuestProductParser(),
         )
     )
     registry.register(SkroutzProvider(parser=skroutz_parser))

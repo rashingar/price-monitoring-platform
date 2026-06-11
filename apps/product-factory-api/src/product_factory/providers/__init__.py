@@ -1,8 +1,11 @@
 from .base import ProductProvider, ProviderError
+from .apothema_provider import ApothemaProvider
 from .bestprice_provider import BestPriceProvider
 from .dreamelectric_provider import DreamelectricProvider
 from .electronet_provider import ElectronetProvider
+from .estia_provider import EstiaProvider
 from .kotsovolos_provider import KotsovolosProvider
+from .marketquest_provider import MarketQuestProvider
 from .manufacturer_tefal_provider import (
     ManufacturerBoschProvider,
     ManufacturerTefalProvider,
@@ -28,9 +31,12 @@ from .registry import (
 
 __all__ = [
     "ElectronetProvider",
+    "EstiaProvider",
     "DreamelectricProvider",
+    "ApothemaProvider",
     "BestPriceProvider",
     "KotsovolosProvider",
+    "MarketQuestProvider",
     "ProductProvider",
     "ManufacturerTefalProvider",
     "ManufacturerBoschProvider",

@@ -29,6 +29,7 @@ from product_factory.source_acquisition_stage import execute_source_acquisition_
 from product_factory.parser_product_bestprice import BestPriceProductParser
 from product_factory.parser_product_dreamelectric import DreamelectricProductParser
 from product_factory.parser_product_kotsovolos import KotsovolosProductParser
+from product_factory.parser_product_marketquest import MarketQuestProductParser
 from product_factory.providers import (
     BestPriceProvider,
     KotsovolosProvider,
@@ -248,26 +249,35 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
     )
 
     assert registry.ids() == (
+        "apothema",
         "bestprice",
         "dreamelectric",
         "electronet",
+        "estia",
         "kotsovolos",
+        "marketquest",
         "skroutz",
     )
     assert [definition.provider_id for definition in registry.definitions()] == [
+        "apothema",
         "bestprice",
         "dreamelectric",
         "electronet",
+        "estia",
         "kotsovolos",
+        "marketquest",
         "skroutz",
     ]
 
 
 def test_source_to_provider_id_maps_supported_sources() -> None:
+    assert source_to_provider_id("apothema") == "apothema"
     assert source_to_provider_id("bestprice") == "bestprice"
     assert source_to_provider_id("dreamelectric") == "dreamelectric"
     assert source_to_provider_id("electronet") == "electronet"
+    assert source_to_provider_id("estia") == "estia"
     assert source_to_provider_id("kotsovolos") == "kotsovolos"
+    assert source_to_provider_id("marketquest") == "marketquest"
     assert source_to_provider_id("skroutz") == "skroutz"
     assert source_to_provider_id("manufacturer_tefal") is None
     assert source_to_provider_id("manufacturer_bosch") is None
@@ -555,6 +565,68 @@ def test_bestprice_provider_normalize_returns_provider_result(tmp_path: Path) ->
     assert result.product.source_name == "bestprice"
     assert result.product.page_type == "product"
     assert result.metadata["fetch_method"] == "fixture"
+
+
+def test_marketquest_parser_extracts_info_tab_specs_and_gallery() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.marketquest.gr/product/1336/bra-tigani-grill-signature-me-rabdwseis-apo-anoxeidwto.html">
+        <title>Bra Τηγάνι Grill Signature με ραβδώσεις από ανοξείδωτο ατσάλι χωρίς αντικολλητική επίστρωση 28cm | Τηγάνια | Market Quest</title>
+      </head>
+      <body>
+        <nav class="breadcrumb">
+          <a href="/main.php">Αρχική</a>
+          <a href="/category/1/oikiakes-syskeyes.html">Οικιακές συσκευές</a>
+          <a href="/category/1_123/oikiakes-syskeyes-skeyi-kai-ergaleia-mageirikis.html">Σκεύη και Εργαλεία Μαγειρικής</a>
+          <a href="/category/1_123_147/skeyi-kai-ergaleia-mageirikis-tigania.html">Τηγάνια</a>
+        </nav>
+        <div class="product-slick product_images">
+          <a class="lightbox mainimg" href="images/products/2026/04/GRILL.png">
+            <img src="images/products/2026/04/GRILL.png" alt="Bra Τηγάνι Grill Signature">
+          </a>
+        </div>
+        <div class="product-right">
+          <h2>Bra Τηγάνι Grill Signature με ραβδώσεις από ανοξείδωτο ατσάλι χωρίς αντικολλητική επίστρωση 28cm</h2>
+          <h5>BRA</h5>
+          <h5>Κωδικός marketquest: <span id="products_model" itemprop="model">6730101778</span><br>
+          MPN: <span id="products_mpn" itemprop="mpn">A771301 SIGNATURE RIBBED GRILL 28cm</span></h5>
+        </div>
+        <div id="products_description">Το τηγάνι Signature Grill της Bra είναι κατασκευασμένο από ανοξείδωτο ατσάλι 18/10.</div>
+        <div id="products_perigrafi-tabcontent">
+          <ul>
+            <li>Κατασκευή από ανοξείδωτο ατσάλι 18/10</li>
+            <li>Ραβδωτή επιφάνεια ψησίματος χωρίς αντικολλητική επίστρωση</li>
+            <li>Βάση Full Induction μεγάλης διαμέτρου</li>
+            <li>Κατάλληλο για όλους τους τύπους εστιών, συμπεριλαμβανομένων των επαγωγικών</li>
+            <li>Κατάλληλο για χρήση στον φούρνο έως 220°C</li>
+            <li>Κατάλληλο για πλύσιμο στο πλυντήριο πιάτων</li>
+          </ul>
+        </div>
+      </body>
+    </html>
+    """
+
+    parsed = MarketQuestProductParser().parse(
+        html,
+        "https://www.marketquest.gr/product/1336/bra-tigani-grill-signature-me-rabdwseis-apo-anoxeidwto.html",
+    )
+    specs = {item.label: item.value for item in parsed.source.spec_sections[0].items}
+
+    assert parsed.source.source_name == "marketquest"
+    assert parsed.source.product_code == "6730101778"
+    assert parsed.source.brand == "BRA"
+    assert parsed.source.mpn == "A771301"
+    assert parsed.source.breadcrumbs[-1] == "Τηγάνια"
+    assert parsed.source.gallery_images[0].url == (
+        "https://www.marketquest.gr/images/products/2026/04/GRILL.png"
+    )
+    assert specs["Διάμετρος Σκεύους σε Εκατοστά."] == "28cm"
+    assert specs["Τύπος Σκεύους"] == "Τηγάνι Grill"
+    assert specs["Υλικό Σκεύους"] == "Ανοξείδωτο Ατσάλι"
+    assert specs["Εσωτερική Επίστρωση"] == "Χωρίς Αντικολλητική Επίστρωση"
+    assert specs["Κατάλληλο για Φούρνο"] == "Έως 220°C"
+    assert parsed.critical_missing == []
 
 
 def test_kotsovolos_parser_normalizes_visible_product_characteristics() -> None:
