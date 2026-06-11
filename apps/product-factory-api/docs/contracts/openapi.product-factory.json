@@ -1172,6 +1172,21 @@
             "title": "Photos",
             "type": "integer"
           },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "default": 0,
+            "title": "Price"
+          },
           "product_name": {
             "anyOf": [
               {
@@ -1188,6 +1203,11 @@
             "minimum": 0.0,
             "title": "Sections",
             "type": "integer"
+          },
+          "skip_publish": {
+            "default": false,
+            "title": "Skip Publish",
+            "type": "boolean"
           },
           "skroutz_enabled": {
             "default": false,

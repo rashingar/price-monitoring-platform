@@ -115,6 +115,30 @@ The final machine-readable validation report for a product run is `work/{model}/
 
 Prefer fixing pipeline behavior over hand-editing generated files.
 
+## Estia XLSX Batch Import
+
+Estia Home Art XLSX workbooks can be queued through the existing file-backed
+Product Factory job system. The importer reads the first non-empty worksheet
+(`Φύλλο1` when present), requires `model`, `name`, `mpn`, and `brand`, preserves
+optional `price` and `Boxnow`, and builds each source URL as
+`https://estiahomeart.com/{mpn}`.
+
+From the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m product_factory.estia_batch_import "C:\path\to\thermos-estia.xlsx"
+```
+
+To queue and execute the generated jobs locally in review mode:
+
+```powershell
+.\.venv\Scripts\python.exe -m product_factory.estia_batch_import "C:\path\to\thermos-estia.xlsx" --run --skip-publish
+```
+
+`--skip-publish` is the default for this batch command, so Estia review runs stop
+after render and do not import products into OpenCart. Use `--publish` only after
+the normal review/approval step.
+
 ## Full-Pipeline Extraction Defaults
 
 Full-pipeline jobs from the API and Telegram default to `sections: 20` as a
