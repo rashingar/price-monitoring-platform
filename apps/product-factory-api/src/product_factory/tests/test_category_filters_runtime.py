@@ -551,6 +551,45 @@ def test_watt_filter_group_resolves_power_aliases_through_shared_registry(
     assert power.outside_allowed is False
 
 
+def test_fan_filters_resolve_bestprice_diameter_and_consumption_labels() -> None:
+    category = {
+        "category_id": "cat_fan_stand",
+        "path": "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Ανεμιστήρες > Ορθοστάτης",
+        "filter_groups": [
+            {
+                "group_id": "fg_diameter",
+                "name": "Διάμετρος σε Εκατοστά",
+                "required": True,
+                "status": "active",
+                "values": [{"value_id": "fv_40", "value": "40*", "status": "active"}],
+            },
+            {
+                "group_id": "fg_power",
+                "name": "Ισχύς (Watt)",
+                "required": True,
+                "status": "active",
+                "values": [{"value_id": "fv_40", "value": "40", "status": "active"}],
+            },
+        ],
+    }
+    taxonomy = TaxonomyResolution(
+        category_id="cat_fan_stand",
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Ανεμιστήρες",
+        sub_category="Ορθοστάτης",
+        taxonomy_path="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ > Ανεμιστήρες > Ορθοστάτης",
+    )
+
+    result = resolve_category_filter_values(
+        _source(("Διάμετρος", "40cm"), ("Κατανάλωση", "40W")), taxonomy, category
+    )
+
+    by_group = {group.group_name: group for group in result.groups}
+    assert by_group["Διάμετρος σε Εκατοστά"].resolved_value == "40*"
+    assert by_group["Ισχύς (Watt)"].resolved_value == "40"
+    assert not result.missing_required_groups
+
+
 def test_watt_filter_group_does_not_resolve_unrelated_dimension_or_weight_labels() -> (
     None
 ):

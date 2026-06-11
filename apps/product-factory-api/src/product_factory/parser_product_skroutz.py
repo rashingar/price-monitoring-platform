@@ -382,6 +382,15 @@ SKROUTZ_FAMILIES: dict[str, dict[str, Any]] = {
         "spec_mode": "raw",
         "taxonomy_mode": "family",
     },
+    "tower_fan": {
+        "category_labels": set(),
+        "category_href_tokens": {"pyrgos", "tower fan"},
+        "title_tokens": {"πύργος", "πυργος", "pyrgos", "tower fan"},
+        "breadcrumbs": ["Αρχική", "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ", "Ανεμιστήρες"],
+        "sections": [],
+        "spec_mode": "raw",
+        "taxonomy_mode": "family",
+    },
     "ceiling_fan": {
         "category_labels": set(),
         "category_href_tokens": {"orofis", "orofhs", "ceiling fan"},

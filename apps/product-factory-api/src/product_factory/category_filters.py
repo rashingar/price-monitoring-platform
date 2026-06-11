@@ -574,6 +574,13 @@ def _candidate_source_labels(group_name: str, *, taxonomy_path: str = "") -> lis
         aliases.extend(["Εστίες", "Εστία"])
     if group_name == "Σύστημα Ήχου" or "Σύστημα" in group_name and "Ήχου" in group_name:
         aliases.extend(["Κανάλια", "Ηχεία"])
+    if normalized_group == normalize_label_key("Ισχύς (Watt)"):
+        aliases.extend(["Κατανάλωση", "Κατανάλωση Ισχύος"])
+    if (
+        "διαμετρος" in normalized_group
+        and ("εκατοστα" in normalized_group or "cm" in normalized_group)
+    ):
+        aliases.extend(["Διάμετρος", "Διάμετρος σε cm", "Διάμετρος (cm)"])
     for alias in aliases:
         if alias not in candidates:
             candidates.append(alias)

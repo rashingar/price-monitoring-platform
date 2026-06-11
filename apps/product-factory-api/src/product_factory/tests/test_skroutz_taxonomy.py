@@ -316,6 +316,34 @@ def test_ice_cream_maker_category_resolves_to_small_appliance_taxonomy() -> None
     assert taxonomy.sub_category == "Παγωτομηχανές"
 
 
+def test_tower_fan_category_resolves_to_supported_fan_taxonomy() -> None:
+    parser = SkroutzProductParser()
+    resolver = TaxonomyResolver()
+    row = {
+        "name": "Rohnson R-8112 Ανεμιστήρας Πύργος 60W με Τηλεχειριστήριο Λευκός",
+        "category_tag_text": "Ανεμιστήρες",
+        "category_tag_href": "https://www.skroutz.gr/c/453/anemistires.html",
+        "manufacturer": "Rohnson",
+        "skroutz_product_url": "https://www.skroutz.gr/s/66937454/rohnson-r-8112-anemistiras-pyrgos-60w-me-tilecheiristirio-leykos.html",
+        "model": "R-8112",
+    }
+
+    parsed = parser.parse(build_minimal_taxonomy_html(row), row["skroutz_product_url"])
+    taxonomy, _ = resolver.resolve(
+        parsed.source.breadcrumbs,
+        parsed.source.canonical_url,
+        parsed.source.name,
+        parsed.source.key_specs,
+        parsed.source.spec_sections,
+    )
+
+    assert parsed.source.page_type == "product"
+    assert parsed.source.skroutz_family == "tower_fan"
+    assert taxonomy.parent_category == "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ"
+    assert taxonomy.leaf_category == "Ανεμιστήρες"
+    assert taxonomy.sub_category is None
+
+
 def test_microwave_category_resolves_to_microwave_leaf_taxonomy() -> None:
     parser = SkroutzProductParser()
     resolver = TaxonomyResolver()

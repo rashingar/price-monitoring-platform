@@ -162,6 +162,52 @@ def test_taxonomy_resolution_prefers_television_size_bucket_for_50_inches() -> N
     )
 
 
+def test_taxonomy_resolution_accepts_bestprice_stand_fan_url_evidence() -> None:
+    resolver = TaxonomyResolver()
+    resolution, candidates = resolver.resolve(
+        breadcrumbs=["Ξ‘ΟΟ‡ΞΉΞΊΞ®"],
+        url="https://www.bestprice.gr/item/2156488534/taurus-greco-16cr-anemistiras-dapedou-orthostatis-40cm-40w.html",
+        name="Taurus Greco 16cr anemistiras dapedou orthostatis 40cm 40W",
+        key_specs=[
+            {"label": "manufacturer", "value": "Taurus"},
+            {"label": "diameter", "value": "40cm"},
+            {"label": "power", "value": "40W"},
+        ],
+        spec_sections=[],
+    )
+
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/klimatismos-thermansi/anemisthres/orthostatis"
+    )
+    assert resolution.taxonomy_path
+    assert "fan_subcategory_url" in resolution.reason
+    assert candidates[0]["cta_url"].endswith("/orthostatis")
+
+
+def test_taxonomy_resolution_accepts_bestprice_pan_url_evidence() -> None:
+    resolver = TaxonomyResolver()
+    resolution, candidates = resolver.resolve(
+        breadcrumbs=["home"],
+        url="https://www.bestprice.gr/item/2164069513/bra-tigani-anoxeidoto-antikollitiko-24cm-a771202.html",
+        name="BRA tigani anoxeidoto antikollitiko 24cm A771202",
+        key_specs=[
+            {"label": "manufacturer", "value": "BRA"},
+            {"label": "size", "value": "24cm"},
+            {"label": "type", "value": "tigani"},
+        ],
+        spec_sections=[],
+    )
+
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/oikiakos-eksoplismos/skeuh-mageirikhs/thgania"
+    )
+    assert resolution.taxonomy_path
+    assert "cookware_pan_url" in resolution.reason
+    assert candidates[0]["cta_url"].endswith("/thgania")
+
+
 def test_taxonomy_resolution_prefers_microwave_without_grill_url_and_base_cta() -> None:
     resolver = TaxonomyResolver()
     resolution, candidates = resolver.resolve(
