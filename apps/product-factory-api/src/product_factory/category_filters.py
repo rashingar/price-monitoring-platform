@@ -570,6 +570,11 @@ def _candidate_source_labels(group_name: str, *, taxonomy_path: str = "") -> lis
         aliases.extend(["Grill", "Λειτουργία Grill"])
     if "τεχνολογια εστιων" in normalized_group:
         aliases.extend(["Τύπος", "Τύπος Εστίας", "Τεχνολογία Πλατώ Εστιών"])
+    if (
+        normalized_group == normalize_label_key("Υλικό πλάκας")
+        and "κουζινες" in normalized_taxonomy
+    ):
+        aliases.extend(["Τύπος Εστιών", "Τύπος Εστίας"])
     if "Αριθμός" in group_name and "εστιών" in group_name:
         aliases.extend(["Εστίες", "Εστία"])
     if group_name == "Σύστημα Ήχου" or "Σύστημα" in group_name and "Ήχου" in group_name:

@@ -30,6 +30,7 @@ from .skroutz_taxonomy import (
     normalize_category_href_slug,
     serialize_source_category,
 )
+from .source_detection import is_skroutz_product_url
 from .utils import utcnow_iso
 
 INTERSTITIAL_MARKERS = {"just a moment", "enable javascript and cookies", "περιμένετε"}
@@ -166,6 +167,33 @@ SKROUTZ_FAMILIES: dict[str, dict[str, Any]] = {
             ("Διαστάσεις", ["Πλάτος", "Βάθος"]),
         ],
         "spec_mode": "custom",
+        "taxonomy_mode": "family",
+    },
+    "electric_grill": {
+        "category_labels": {
+            "Ηλεκτρικές Ψηστιέρες",
+            "Ψηστιέρες",
+            "Ψηστιέρες - Γκριλιέρες",
+        },
+        "category_href_tokens": {
+            "electric barbeque",
+            "ilektrikes psistieres",
+            "psistieres gkrilieres",
+        },
+        "title_tokens": {
+            "ilektriki psistaria",
+            "ilektrikes psistieres",
+            "psistaria scharas",
+            "grill",
+        },
+        "breadcrumbs": [
+            "Αρχική",
+            "ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
+            "Μικροί Μάγειρες",
+            "Ψηστιέρες - Γκριλιέρες",
+        ],
+        "sections": [],
+        "spec_mode": "raw",
         "taxonomy_mode": "family",
     },
     "ice_cream_maker": {
@@ -582,12 +610,20 @@ class SkroutzProductParser:
                 f"skroutz_taxonomy_helper_used:{taxonomy_hint.matched_rule_id}"
             )
 
+        generic_product_candidate = bool(
+            not family
+            and not taxonomy_hint
+            and is_skroutz_product_url(canonical_url)
+            and title
+            and product_code
+            and (mpn or raw_sections or raw_pairs or summary_pairs)
+        )
         breadcrumbs = clean_breadcrumbs(
             SKROUTZ_FAMILIES.get(family, {}).get("breadcrumbs", [])
             or (
                 taxonomy_hint.breadcrumbs
                 if taxonomy_hint and not taxonomy_hint.ambiguous
-                else []
+                else ([category_tag_text] if generic_product_candidate else [])
             )
         )
         provenance["breadcrumbs"] = category_source if breadcrumbs else "missing"
@@ -664,6 +700,7 @@ class SkroutzProductParser:
 
         supported_page = bool(
             (family and family_config.get("taxonomy_mode") != "helper")
+            or generic_product_candidate
             or (
                 taxonomy_hint
                 and not taxonomy_hint.ambiguous
@@ -671,6 +708,8 @@ class SkroutzProductParser:
                 and taxonomy_hint.leaf_category
             )
         )
+        if generic_product_candidate:
+            warnings.append("skroutz_generic_product_taxonomy_fallback")
         if not supported_page:
             warnings.append("unsupported_skroutz_category")
 

@@ -840,11 +840,31 @@ _AIR_CONDITIONER_YES_NO_FIELD_KEYS = {
     normalize_for_match("Ιονιστής"),
 }
 
+_GENERIC_TEMPLATE_FIELD_ALIAS_MAP = {
+    normalize_for_match("Τύπος Συσκευής"): ("Είδος",),
+    normalize_for_match("Τύπος Εστίας"): ("Τύπος Εστιών",),
+    normalize_for_match("Χωρητικότητα Φούρνου σε Λίτρα"): (
+        "Χωρητικότητα Φούρνου",
+    ),
+    normalize_for_match("Αριθμός Λειτουργιών Ψησίματος"): ("Τρόποι Ψησίματος",),
+    normalize_for_match("Τρόποι Λειτουργίας Ψησίματος"): ("Τύποι Ψησίματος",),
+    normalize_for_match("Οθόνη Ψηφιακών Ενδείξεων"): ("Ψηφιακή Οθόνη",),
+    normalize_for_match("Χειρισμός"): ("Διακόπτες",),
+    normalize_for_match("Καθαρισμός Φούρνου"): ("Σύστημα Καθαρισμού",),
+    normalize_for_match("Εξοπλισμός"): ("Αξεσουάρ",),
+    normalize_for_match("Κλείδωμα Ασφαλείας για Παιδιά"): ("Κλείδωμα",),
+    normalize_for_match("Πλάτος Συσκευής σε Εκατοστά"): ("Πλάτος",),
+}
 
-def _aliases_for_template_field(field: dict[str, Any]) -> list[str]:
+
+def _aliases_for_template_field(
+    field: dict[str, Any], taxonomy_leaf: str = ""
+) -> list[str]:
     aliases = list(field.get("aliases", [])) or [str(field.get("label", "")).strip()]
     section_key = normalize_for_match(str(field.get("section_title", "")))
     label_key = normalize_for_match(str(field.get("label", "")))
+    if normalize_for_match(taxonomy_leaf) == normalize_for_match("Κουζίνες"):
+        aliases.extend(_GENERIC_TEMPLATE_FIELD_ALIAS_MAP.get(label_key, ()))
     if section_key in _AIR_CONDITIONER_SECTION_KEYS:
         aliases.extend(_AIR_CONDITIONER_FIELD_ALIAS_MAP.get(label_key, ()))
     return dedupe_strings(alias for alias in aliases if alias)
@@ -932,7 +952,7 @@ def _resolve_template_field(
     resolver_name = str(field.get("resolver", "")).strip()
     resolver = _RESOLVERS.get(resolver_name)
     if resolver is None:
-        aliases = _aliases_for_template_field(field)
+        aliases = _aliases_for_template_field(field, context.taxonomy.leaf_category)
         value, source = _first_value_from_aliases(
             context,
             aliases,
