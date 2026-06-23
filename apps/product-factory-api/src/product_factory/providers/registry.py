@@ -5,19 +5,23 @@ from ..parser_product_bestprice import BestPriceProductParser
 from ..parser_product_apothema import ApothemaProductParser
 from ..parser_product_dreamelectric import DreamelectricProductParser
 from ..parser_product_electronet import ElectronetProductParser
+from ..parser_product_euragora import EuragoraProductParser
 from ..parser_product_estia import EstiaProductParser
 from ..parser_product_kotsovolos import KotsovolosProductParser
 from ..parser_product_marketquest import MarketQuestProductParser
 from ..parser_product_manufacturer import ManufacturerProductParser
+from ..parser_product_pampoukidis import PampoukidisProductParser
 from ..parser_product_skroutz import SkroutzProductParser
 from .base import ProductProvider, ProviderError
 from .apothema_provider import ApothemaProvider
 from .bestprice_provider import BestPriceProvider
 from .dreamelectric_provider import DreamelectricProvider
 from .electronet_provider import ElectronetProvider
+from .euragora_provider import EuragoraProvider
 from .estia_provider import EstiaProvider
 from .kotsovolos_provider import KotsovolosProvider
 from .marketquest_provider import MarketQuestProvider
+from .pampoukidis_provider import PampoukidisProvider
 from .models import ProviderDefinition, ProviderErrorCode, ProviderKind, ProviderStage
 from .skroutz_provider import SkroutzProvider
 
@@ -27,8 +31,10 @@ RUNTIME_SOURCE_PROVIDER_IDS = {
     "dreamelectric": "dreamelectric",
     "electronet": "electronet",
     "estia": "estia",
+    "euragora": "euragora",
     "kotsovolos": "kotsovolos",
     "marketquest": "marketquest",
+    "pampoukidis": "pampoukidis",
     "skroutz": "skroutz",
 }
 
@@ -97,8 +103,10 @@ def bootstrap_runtime_provider_registry(
     bestprice_parser: BestPriceProductParser | None = None,
     dreamelectric_parser: DreamelectricProductParser | None = None,
     estia_parser: EstiaProductParser | None = None,
+    euragora_parser: EuragoraProductParser | None = None,
     kotsovolos_parser: KotsovolosProductParser | None = None,
     marketquest_parser: MarketQuestProductParser | None = None,
+    pampoukidis_parser: PampoukidisProductParser | None = None,
 ) -> ProviderRegistry:
     registry = ProviderRegistry()
     registry.register(
@@ -122,6 +130,11 @@ def bootstrap_runtime_provider_registry(
         EstiaProvider(fetcher=fetcher, parser=estia_parser or EstiaProductParser())
     )
     registry.register(
+        EuragoraProvider(
+            fetcher=fetcher, parser=euragora_parser or EuragoraProductParser()
+        )
+    )
+    registry.register(
         KotsovolosProvider(
             fetcher=fetcher, parser=kotsovolos_parser or KotsovolosProductParser()
         )
@@ -130,6 +143,12 @@ def bootstrap_runtime_provider_registry(
         MarketQuestProvider(
             fetcher=fetcher,
             parser=marketquest_parser or MarketQuestProductParser(),
+        )
+    )
+    registry.register(
+        PampoukidisProvider(
+            fetcher=fetcher,
+            parser=pampoukidis_parser or PampoukidisProductParser(),
         )
     )
     registry.register(SkroutzProvider(parser=skroutz_parser))

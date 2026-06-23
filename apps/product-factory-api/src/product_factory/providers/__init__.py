@@ -3,9 +3,11 @@ from .apothema_provider import ApothemaProvider
 from .bestprice_provider import BestPriceProvider
 from .dreamelectric_provider import DreamelectricProvider
 from .electronet_provider import ElectronetProvider
+from .euragora_provider import EuragoraProvider
 from .estia_provider import EstiaProvider
 from .kotsovolos_provider import KotsovolosProvider
 from .marketquest_provider import MarketQuestProvider
+from .pampoukidis_provider import PampoukidisProvider
 from .manufacturer_tefal_provider import (
     ManufacturerBoschProvider,
     ManufacturerTefalProvider,
@@ -37,6 +39,8 @@ __all__ = [
     "BestPriceProvider",
     "KotsovolosProvider",
     "MarketQuestProvider",
+    "EuragoraProvider",
+    "PampoukidisProvider",
     "ProductProvider",
     "ManufacturerTefalProvider",
     "ManufacturerBoschProvider",

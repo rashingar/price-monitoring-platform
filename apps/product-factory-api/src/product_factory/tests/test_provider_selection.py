@@ -28,8 +28,10 @@ from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import execute_source_acquisition_stage
 from product_factory.parser_product_bestprice import BestPriceProductParser
 from product_factory.parser_product_dreamelectric import DreamelectricProductParser
+from product_factory.parser_product_euragora import EuragoraProductParser
 from product_factory.parser_product_kotsovolos import KotsovolosProductParser
 from product_factory.parser_product_marketquest import MarketQuestProductParser
+from product_factory.parser_product_pampoukidis import PampoukidisProductParser
 from product_factory.providers import (
     BestPriceProvider,
     KotsovolosProvider,
@@ -61,6 +63,8 @@ BESTPRICE_MODEL = "143667"
 BESTPRICE_URL = "https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l-smart-tileorasi-65-4k-uhd-mini-led-hdr.html"
 KOTSOVOLOS_MODEL = "412917"
 KOTSOVOLOS_URL = "https://www.kotsovolos.gr/air-condition-heaters/air-condition/7000-to-15000-btu/245318-a-c-in18btu-inventor-ar5vi-18wfi-aria"
+EURAGORA_URL = "https://euragora.gr/product/inventor-intellia-invbi-24wfi-invbo-24-klimatistiko-inverter-24000-btu-a-a/"
+PAMPOUKIDIS_URL = "https://www.pampoukidis.gr/ac-invbi-24wfiinvbo-24-intellia-esot-exot-inventor"
 MANUFACTURER_MODEL = "344709"
 MANUFACTURER_URL = "https://shop.tefal.gr/products/dolci-%CF%80%CE%B1%CE%B3%CF%89%CF%84%CE%BF%CE%BC%CE%B7%CF%87%CE%B1%CE%BD%CE%AE-ig602a"
 
@@ -121,6 +125,88 @@ class DummyFetcher:
 
     def download_besco_images(self, **_kwargs):
         return [], [], []
+
+
+def test_euragora_parser_extracts_woocommerce_product_data() -> None:
+    html = """
+    <html><head>
+      <link rel="canonical" href="https://euragora.gr/product/sample/" />
+      <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"Product",
+       "name":"Inventor Intellia INVBI-24WFI/INVBO-24 Κλιματιστικό Inverter 24.000 BTU A+++/A+++",
+       "description":"Inventor Intellia Κλιματιστικό Inverter 24.000 BTU A+++/A+++",
+       "sku":"INVBI-24WFI/INVBO-24",
+       "brand":{"@type":"Brand","name":"Inventor"},
+       "category":"Κλιματισμός Θέρμανση & Καθαρισμός Αέρα",
+       "image":[{"url":"https://euragora.gr/wp-content/uploads/2026/06/INTELLIA.jpg"},
+                {"url":"https://euragora.gr/wp-content/uploads/2026/06/Label-2678045.jpg"}],
+       "offers":{"@type":"Offer","price":"1269.00","priceCurrency":"EUR"},
+       "additionalProperty":[
+         {"@type":"PropertyValue","name":"pa_energiaki-klasi-thermansis","value":"A+++"},
+         {"@type":"PropertyValue","name":"pa_isxis-psiksis","value":"24000 btu"},
+         {"@type":"PropertyValue","name":"pa_seer","value":"8,5 W/W"}]}
+      </script>
+    </head><body>
+      <nav class="woocommerce-breadcrumb">
+        <a>Αρχική σελίδα</a><a>Κλιματισμός Θέρμανση</a><a>Κλιματιστικά</a>
+      </nav>
+      <h1 class="product_title">Inventor Intellia INVBI-24WFI/INVBO-24 Κλιματιστικό Inverter 24.000 BTU A+++/A+++</h1>
+    </body></html>
+    """
+
+    parsed = EuragoraProductParser().parse(html, EURAGORA_URL)
+
+    assert parsed.source.source_name == "euragora"
+    assert parsed.source.brand == "Inventor"
+    assert parsed.source.mpn == "INVBI-24WFI/INVBO-24"
+    assert len(parsed.source.gallery_images) == 2
+    assert parsed.source.category_tag_text == "Τοίχου"
+    assert parsed.source.breadcrumbs[-1] == "Τοίχου"
+    assert parsed.source.taxonomy_source_category.endswith("Κλιματιστικά///Τοίχου")
+    values = {item.label: item.value for item in parsed.source.spec_sections[0].items}
+    assert values["Ενεργειακή Κλάση Θέρμανσης"] == "A+++"
+    assert values["Ονομαστική Απόδοση"] == "24000 btu"
+
+
+def test_pampoukidis_parser_uses_prodiagrafes_tab_specs() -> None:
+    html = """
+    <html><head>
+      <link rel="canonical" href="https://www.pampoukidis.gr/ac-invbi-24wfiinvbo-24-intellia-esot-exot-inventor" />
+      <meta name="description" content="Κλιματιστικό Intellia με τεχνολογία AI." />
+      <meta property="og:title" content="A/C INVBI-24WFI/INVBO-24 INTELLIA (ΕΣΩΤ- ΕΞΩΤ) INVENTOR | Pampoukidis" />
+      <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Αρχική"},
+        {"@type":"ListItem","position":2,"name":"Κλιματισμός Εποχιακά"},
+        {"@type":"ListItem","position":3,"name":"A/C INVBI-24WFI/INVBO-24 INTELLIA (ΕΣΩΤ- ΕΞΩΤ) INVENTOR"}]}
+      </script>
+    </head><body>
+      <h1>A/C INVBI-24WFI/INVBO-24 INTELLIA (ΕΣΩΤ- ΕΞΩΤ) INVENTOR</h1>
+      <img src="https://cdn.pampoukidis.gr/images/styles/large/9-1078.jpg" alt="A/C" />
+      <div id="specs-tab">
+        <div class="grid grid-cols-2"><div>Ενεργειακή Κλάση Ψύξης</div><div>A+++</div></div>
+        <div class="grid grid-cols-2"><div>Ονομαστική Απόδοση (Btu/h)</div><div>24000</div></div>
+        <div class="grid grid-cols-2"><div>Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER</div><div>8, 5</div></div>
+      </div>
+    </body></html>
+    """
+
+    parsed = PampoukidisProductParser().parse(html, PAMPOUKIDIS_URL)
+
+    assert parsed.source.source_name == "pampoukidis"
+    assert parsed.source.brand == "Inventor"
+    assert parsed.source.mpn == "INVBI-24WFI/INVBO-24"
+    assert parsed.source.spec_sections[0].section == "Προδιαγραφές"
+    assert parsed.source.category_tag_text == "Τοίχου"
+    values = {item.label: item.value for item in parsed.source.spec_sections[0].items}
+    assert values["Ενεργειακή Κλάση Ψύξης"] == "A+++"
+    assert values["Ονομαστική Απόδοση (Btu/h)"] == "24000"
+    assert values["Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"] == "8,5"
+
+
+def test_new_runtime_sources_map_to_providers() -> None:
+    assert source_to_provider_id("euragora") == "euragora"
+    assert source_to_provider_id("pampoukidis") == "pampoukidis"
 
 
 def build_provider(skroutz_fixtures_root: Path) -> SkroutzProvider:

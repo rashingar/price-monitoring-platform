@@ -11,11 +11,14 @@ KOTSOVOLOS_DOMAINS = {"kotsovolos.gr", "www.kotsovolos.gr"}
 ESTIA_DOMAINS = {"estiahomeart.com", "www.estiahomeart.com"}
 APOTHEMA_DOMAINS = {"apothema.gr", "www.apothema.gr"}
 MARKETQUEST_DOMAINS = {"marketquest.gr", "www.marketquest.gr"}
+EURAGORA_DOMAINS = {"euragora.gr", "www.euragora.gr"}
+PAMPOUKIDIS_DOMAINS = {"pampoukidis.gr", "www.pampoukidis.gr"}
 SKROUTZ_PRODUCT_PATH_PREFIX = "/s/"
 BESTPRICE_PRODUCT_PATH_PREFIX = "/item/"
 KOTSOVOLOS_PRODUCT_PATH_RE = re.compile(r"/\d{5,}-", re.IGNORECASE)
 ESTIA_PRODUCT_PATH_RE = re.compile(r"^/[A-Za-z0-9][A-Za-z0-9_-]*(?:/[A-Za-z0-9_-]+)?/?$")
 MARKETQUEST_PRODUCT_PATH_RE = re.compile(r"^/product/\d+/.+\.html$", re.IGNORECASE)
+EURAGORA_PRODUCT_PATH_PREFIX = "/product/"
 
 
 def normalize_host(url: str) -> str:
@@ -40,8 +43,12 @@ def detect_source(url: str) -> str:
         return "apothema"
     if host in MARKETQUEST_DOMAINS:
         return "marketquest"
+    if host in EURAGORA_DOMAINS:
+        return "euragora"
+    if host in PAMPOUKIDIS_DOMAINS:
+        return "pampoukidis"
     raise ValueError(
-        "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
+        "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, MarketQuest, Euragora, or Pampoukidis product URL"
     )
 
 
@@ -86,6 +93,20 @@ def is_marketquest_product_url(url: str) -> bool:
     )
 
 
+def is_euragora_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return (
+        parsed.netloc.strip().lower() in EURAGORA_DOMAINS
+        and parsed.path.startswith(EURAGORA_PRODUCT_PATH_PREFIX)
+    )
+
+
+def is_pampoukidis_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    path = parsed.path.strip("/")
+    return parsed.netloc.strip().lower() in PAMPOUKIDIS_DOMAINS and bool(path)
+
+
 def validate_url_scope(url: str) -> tuple[str, bool, str]:
     source = detect_source(url)
     if source == "electronet":
@@ -117,4 +138,12 @@ def validate_url_scope(url: str) -> tuple[str, bool, str]:
         return source, True, "marketquest_product_path"
     if source == "marketquest":
         return source, False, "marketquest_non_product_path"
+    if is_euragora_product_url(url):
+        return source, True, "euragora_product_path"
+    if source == "euragora":
+        return source, False, "euragora_non_product_path"
+    if is_pampoukidis_product_url(url):
+        return source, True, "pampoukidis_product_path"
+    if source == "pampoukidis":
+        return source, False, "pampoukidis_non_product_path"
     return source, False, "unsupported_source"

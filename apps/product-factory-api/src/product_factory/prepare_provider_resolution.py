@@ -9,10 +9,12 @@ from .parser_product_bestprice import BestPriceProductParser
 from .parser_product_apothema import ApothemaProductParser
 from .parser_product_dreamelectric import DreamelectricProductParser
 from .parser_product_electronet import ElectronetProductParser
+from .parser_product_euragora import EuragoraProductParser
 from .parser_product_estia import EstiaProductParser
 from .parser_product_kotsovolos import KotsovolosProductParser
 from .parser_product_marketquest import MarketQuestProductParser
 from .parser_product_manufacturer import ManufacturerProductParser
+from .parser_product_pampoukidis import PampoukidisProductParser
 from .parser_product_skroutz import SkroutzProductParser
 from .providers.base import ProviderError
 from .providers.models import ProviderInputIdentity, ProviderResult
@@ -166,6 +168,7 @@ def resolve_prepare_provider_resolution(
         [], DreamelectricProductParser
     ] = DreamelectricProductParser,
     estia_parser_factory: Callable[[], EstiaProductParser] = EstiaProductParser,
+    euragora_parser_factory: Callable[[], EuragoraProductParser] = EuragoraProductParser,
     kotsovolos_parser_factory: Callable[
         [], KotsovolosProductParser
     ] = KotsovolosProductParser,
@@ -179,6 +182,9 @@ def resolve_prepare_provider_resolution(
     manufacturer_parser_factory: Callable[
         [], ManufacturerProductParser
     ] = ManufacturerProductParser,
+    pampoukidis_parser_factory: Callable[
+        [], PampoukidisProductParser
+    ] = PampoukidisProductParser,
     fetcher_factory: Callable[[], ElectronetFetcher] = ElectronetFetcher,
     bootstrap_provider_registry_fn: Callable[
         ..., ProviderRegistry
@@ -191,8 +197,10 @@ def resolve_prepare_provider_resolution(
     apothema_parser = apothema_parser_factory()
     dreamelectric_parser = dreamelectric_parser_factory()
     estia_parser = estia_parser_factory()
+    euragora_parser = euragora_parser_factory()
     kotsovolos_parser = kotsovolos_parser_factory()
     marketquest_parser = marketquest_parser_factory()
+    pampoukidis_parser = pampoukidis_parser_factory()
     electronet_parser = electronet_parser_factory(
         known_section_titles=schema_matcher.known_section_titles
     )
@@ -205,8 +213,10 @@ def resolve_prepare_provider_resolution(
         bestprice_parser=bestprice_parser,
         dreamelectric_parser=dreamelectric_parser,
         estia_parser=estia_parser,
+        euragora_parser=euragora_parser,
         kotsovolos_parser=kotsovolos_parser,
         marketquest_parser=marketquest_parser,
+        pampoukidis_parser=pampoukidis_parser,
         electronet_parser=electronet_parser,
         skroutz_parser=skroutz_parser,
         manufacturer_parser=manufacturer_parser,

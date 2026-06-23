@@ -482,6 +482,14 @@ def _resolve_group_value(
         value = review_normalized.get(normalized_key)
         if value:
             return value, "approved_review"
+    derived_value, derived_from = _resolve_stable_id_group_value(
+        group_id=group_id,
+        exact_source=exact_source,
+        exact_manufacturer=exact_manufacturer,
+        normalized_lookup=normalized_lookup,
+    )
+    if derived_value:
+        return derived_value, derived_from
     derived_value, derived_from = _resolve_hob_zone_group_value(
         group_name=group_name,
         exact_source=exact_source,
@@ -523,6 +531,176 @@ def _resolve_group_value(
             if normalized:
                 return normalized
     return "", ""
+
+
+def _resolve_stable_id_group_value(
+    *,
+    group_id: str,
+    exact_source: dict[str, str],
+    exact_manufacturer: dict[str, str],
+    normalized_lookup: dict[str, tuple[str, str]],
+) -> tuple[str, str]:
+    if group_id == "fg_fc9322252117":
+        return _resolve_air_condition_energy_class(
+            exact_source=exact_source,
+            exact_manufacturer=exact_manufacturer,
+            normalized_lookup=normalized_lookup,
+        )
+    if group_id == "fg_7d0f9663ebc1":
+        return _resolve_wifi_support(
+            exact_source=exact_source,
+            exact_manufacturer=exact_manufacturer,
+            normalized_lookup=normalized_lookup,
+        )
+    return "", ""
+
+
+def _resolve_air_condition_energy_class(
+    *,
+    exact_source: dict[str, str],
+    exact_manufacturer: dict[str, str],
+    normalized_lookup: dict[str, tuple[str, str]],
+) -> tuple[str, str]:
+    lookups = (("source", exact_source), ("manufacturer", exact_manufacturer))
+    for source_name, lookup in lookups:
+        cooling = _first_energy_value_for_tokens(lookup, ("cool", "cooling", "seer"))
+        heating = _first_energy_value_for_tokens(lookup, ("heat", "heating", "scop"))
+        if cooling == "A" and heating == "A+++":
+            return f"({cooling} / {heating})", f"{source_name}_cooling_heating_energy"
+        if cooling:
+            return cooling, f"{source_name}_cooling_energy"
+    for source_name, lookup in lookups:
+        value = _first_energy_value_for_tokens(lookup, ("cool", "cooling", "seer"))
+        if value:
+            return value, f"{source_name}_cooling_energy"
+    for source_name, lookup in lookups:
+        value = _first_energy_value_for_tokens(lookup, ("energy",))
+        if value:
+            return value, f"{source_name}_energy"
+    for source_name, lookup in lookups:
+        value = _first_energy_value(lookup)
+        if value:
+            return value, f"{source_name}_energy_value"
+    for normalized_key, (value, source_name) in normalized_lookup.items():
+        if "energy" not in normalized_key:
+            continue
+        energy = _latin_energy_class(value)
+        if energy:
+            return energy, source_name
+    return "", ""
+
+
+def _first_energy_value_for_tokens(
+    lookup: dict[str, str], tokens: tuple[str, ...]
+) -> str:
+    for label, value in lookup.items():
+        label_key = _ascii_label_key(label)
+        if not all(_ascii_key_has_token(label_key, token) for token in tokens):
+            continue
+        energy = _latin_energy_class(value)
+        if energy:
+            return energy
+    return ""
+
+
+def _ascii_key_has_token(label_key: str, token: str) -> bool:
+    aliases = {
+        "cool": ("cool", "cooling", "psyx", "psix"),
+        "cooling": ("cool", "cooling", "psyx", "psix"),
+        "heat": ("heat", "heating", "therm"),
+        "heating": ("heat", "heating", "therm"),
+        "energy": ("energy", "energei"),
+    }.get(token, (token,))
+    return any(alias in label_key for alias in aliases)
+
+
+def _first_energy_value(lookup: dict[str, str]) -> str:
+    for value in lookup.values():
+        energy = _latin_energy_class(value)
+        if energy:
+            return energy
+    return ""
+
+
+def _resolve_wifi_support(
+    *,
+    exact_source: dict[str, str],
+    exact_manufacturer: dict[str, str],
+    normalized_lookup: dict[str, tuple[str, str]],
+) -> tuple[str, str]:
+    for source_name, lookup in (
+        ("source", exact_source),
+        ("manufacturer", exact_manufacturer),
+    ):
+        for label, value in lookup.items():
+            label_key = _ascii_label_key(label)
+            value_key = _ascii_label_key(value)
+            if (
+                "wifi" not in label_key
+                and "wi fi" not in label_key
+                and "wifi" not in value_key
+                and "wi fi" not in value_key
+            ):
+                continue
+            if _is_negative_wifi_value(value_key):
+                continue
+            return "Υποστηρίζεται", f"{source_name}_wifi"
+    for normalized_key, (value, source_name) in normalized_lookup.items():
+        if "wifi" not in normalized_key and "wi fi" not in normalized_key:
+            continue
+        if _is_negative_wifi_value(_ascii_label_key(value)):
+            continue
+        return "Υποστηρίζεται", source_name
+    return "", ""
+
+
+def _is_negative_wifi_value(value_key: str) -> bool:
+    return bool(
+        re.search(r"\b(no|not|without|none|false|0)\b", value_key)
+        or "οχι" in value_key
+        or "χωρις" in value_key
+    )
+
+
+def _ascii_label_key(value: str) -> str:
+    repaired = repair_mojibake_text(value)
+    normalized = unicodedata.normalize("NFD", repaired)
+    normalized = "".join(
+        char for char in normalized if unicodedata.category(char) != "Mn"
+    )
+    normalized = unicodedata.normalize("NFC", normalized).casefold()
+    replacements = str.maketrans(
+        {
+            "α": "a",
+            "β": "b",
+            "γ": "g",
+            "δ": "d",
+            "ε": "e",
+            "ζ": "z",
+            "η": "i",
+            "θ": "th",
+            "ι": "i",
+            "κ": "k",
+            "λ": "l",
+            "μ": "m",
+            "ν": "n",
+            "ξ": "x",
+            "ο": "o",
+            "π": "p",
+            "ρ": "r",
+            "σ": "s",
+            "ς": "s",
+            "τ": "t",
+            "υ": "y",
+            "φ": "f",
+            "χ": "ch",
+            "ψ": "ps",
+            "ω": "o",
+        }
+    )
+    normalized = normalized.translate(replacements)
+    normalized = re.sub(r"[_\W]+", " ", normalized, flags=re.ASCII)
+    return re.sub(r"\s+", " ", normalized).strip()
 
 
 def _candidate_source_labels(group_name: str, *, taxonomy_path: str = "") -> list[str]:
@@ -751,6 +929,31 @@ def _latin_energy_class(value: str) -> str:
     )
     normalized = unicodedata.normalize("NFC", normalized)
     normalized = re.sub(r"\s+", "", normalized.strip().strip("()[]{}"))
+    normalized = "".join(
+        {
+            "Α": "A",
+            "Β": "B",
+            "Γ": "C",
+            "Δ": "D",
+            "Ε": "E",
+            "Ζ": "F",
+            "Η": "G",
+            "α": "A",
+            "β": "B",
+            "γ": "C",
+            "δ": "D",
+            "ε": "E",
+            "ζ": "F",
+            "η": "G",
+        }.get(char, char)
+        for char in normalized
+    )
+    latin_match = re.fullmatch(
+        r"([A-Ga-g])(\+{0,3})(?:/[A-Ga-g]\+{0,3})?",
+        normalized,
+    )
+    if latin_match:
+        return f"{latin_match.group(1).upper()}{latin_match.group(2)}"
     greek_to_latin = {
         "Α": "A",
         "Β": "B",

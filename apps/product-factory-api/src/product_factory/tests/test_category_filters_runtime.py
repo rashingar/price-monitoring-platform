@@ -142,6 +142,75 @@ def _source(
     )
 
 
+def test_air_conditioner_stable_filter_ids_resolve_energy_and_wifi() -> None:
+    category = {
+        "category_id": "cat_b2b8afb35bbf",
+        "path": "Air Conditioners > Wall",
+        "filter_groups": [
+            {
+                "group_id": "fg_fc9322252117",
+                "name": "Energy Class",
+                "required": True,
+                "status": "active",
+                "values": [
+                    {"value_id": "fv_a3", "value": "A+++", "status": "active"},
+                    {"value_id": "fv_a2", "value": "A++", "status": "active"},
+                    {
+                        "value_id": "fv_a_a3",
+                        "value": "(A / A+++)",
+                        "status": "active",
+                    },
+                ],
+            },
+            {
+                "group_id": "fg_7d0f9663ebc1",
+                "name": "Wifi",
+                "required": True,
+                "status": "active",
+                "values": [
+                    {
+                        "value_id": "fv_wifi",
+                        "value": "\u03a5\u03c0\u03bf\u03c3\u03c4\u03b7\u03c1\u03af\u03b6\u03b5\u03c4\u03b1\u03b9",
+                        "status": "active",
+                    }
+                ],
+            },
+        ],
+    }
+    source = SourceProductData(
+        name="Inventor Intellia INVI-09WFI/INVO-09 9000BTU",
+        spec_sections=[
+            SpecSection(
+                section="Seasonal Performance",
+                items=[
+                    SpecItem("Cooling Energy Class SEER", "A"),
+                    SpecItem("Heating Energy Class SCOP", "A+++"),
+                ],
+            ),
+            SpecSection(
+                section="Features",
+                items=[SpecItem("Connectivity (WiFi)", "Yes")],
+            ),
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        category_id="cat_b2b8afb35bbf",
+        parent_category="Air Conditioners",
+        leaf_category="Wall",
+        sub_category="",
+        taxonomy_path="Air Conditioners > Wall",
+    )
+
+    result = resolve_category_filter_values(source, taxonomy, category)
+
+    values = {group.group_id: group.resolved_value for group in result.groups}
+    assert values["fg_fc9322252117"] == "(A / A+++)"
+    assert (
+        values["fg_7d0f9663ebc1"]
+        == "\u03a5\u03c0\u03bf\u03c3\u03c4\u03b7\u03c1\u03af\u03b6\u03b5\u03c4\u03b1\u03b9"
+    )
+
+
 def _template(path: Path, headers: list[str] | None = None) -> Path:
     headers = headers or ["model", "name", "meta_description"]
     with path.open("w", encoding="utf-8", newline="") as handle:

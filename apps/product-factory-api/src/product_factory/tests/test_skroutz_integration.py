@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 
 from product_factory.input_validation import validate_input
 from product_factory.mapping import build_row
@@ -165,7 +165,7 @@ def test_validate_input_rejects_tefal_manufacturer_product_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
+            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, MarketQuest, Euragora, or Pampoukidis product URL"
         )
     else:
         raise AssertionError("Expected ValueError")
@@ -187,7 +187,7 @@ def test_validate_input_rejects_non_product_skroutz_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
+            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, MarketQuest, Euragora, or Pampoukidis product URL"
         )
     else:
         raise AssertionError("Expected ValueError")
@@ -209,7 +209,7 @@ def test_validate_input_rejects_non_product_tefal_url() -> None:
     except ValueError as exc:
         assert (
             str(exc)
-            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, or MarketQuest product URL"
+            == "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, MarketQuest, Euragora, or Pampoukidis product URL"
         )
     else:
         raise AssertionError("Expected ValueError")
@@ -227,9 +227,9 @@ def test_build_row_keeps_prompt_price_contract() -> None:
         )
     )
     taxonomy = TaxonomyResolution(
-        parent_category="ΟΙΚΙΑΚΟΣ ΕΞΟΠΛΙΣΜΟΣ",
-        leaf_category="Συσκευές Κουζίνας",
-        sub_category="Βραστήρες",
+        parent_category="ΞΞ™ΞΞ™Ξ‘ΞΞΞ£ Ξ•ΞΞΞ Ξ›Ξ™Ξ£ΞΞΞ£",
+        leaf_category="Ξ£Ο…ΟƒΞΊΞµΟ…Ξ­Ο‚ ΞΞΏΟ…Ξ¶Ξ―Ξ½Ξ±Ο‚",
+        sub_category="Ξ’ΟΞ±ΟƒΟ„Ξ®ΟΞµΟ‚",
         cta_url="https://example.com",
     )
     row, _, _ = build_row(
