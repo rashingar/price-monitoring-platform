@@ -4,13 +4,13 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
 
-from product_factory.jobs.models import JobRecord, JobType, is_terminal_job_status
+from product_factory.jobs.models import JobType, is_terminal_job_status
 from product_factory.jobs.retry import (
     build_retry_from_artifacts_payload,
     build_start_from_scratch_payload,
 )
 from product_factory.jobs.runner import SequentialJobRunner
-from product_factory.jobs.store import JobStore
+from product_factory.jobs.store import ActiveFullPipelineJobConflict, JobStore
 
 from .artifact_resolver import resolve_job_artifacts
 from .schemas import (
@@ -55,48 +55,19 @@ def _job_runner(api_request: Request) -> SequentialJobRunner:
 def _enqueue_job(
     api_request: Request, job_type: JobType, payload: dict[str, Any]
 ) -> JobResponse:
+    store = _job_store(api_request)
     if job_type == JobType.FULL_PIPELINE:
-        _ensure_no_active_full_pipeline_for_model(_job_store(api_request), payload)
-    record = _job_store(api_request).enqueue(job_type, payload)
+        try:
+            record = store.enqueue_full_pipeline_unless_active(payload)
+        except ActiveFullPipelineJobConflict as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
+    else:
+        record = store.enqueue(job_type, payload)
     _job_runner(api_request).enqueue(record.job_id)
     return JobResponse.from_record(record)
-
-
-def _ensure_no_active_full_pipeline_for_model(
-    store: JobStore, payload: dict[str, Any]
-) -> None:
-    model = _normalized_model(str(payload.get("model", "")))
-    if not model:
-        return
-    active = next(
-        (
-            record
-            for record in store.list_jobs_for_model(model)
-            if _is_active_full_pipeline_for_model(record, model)
-        ),
-        None,
-    )
-    if active is None:
-        return
-    raise HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail=(
-            f"Full Product Factory workflow for model {active.model} is already "
-            f"{active.status.value} as job {active.job_id}."
-        ),
-    )
-
-
-def _is_active_full_pipeline_for_model(record: JobRecord, model: str) -> bool:
-    return (
-        record.job_type == JobType.FULL_PIPELINE
-        and _normalized_model(record.model) == model
-        and not is_terminal_job_status(record.status)
-    )
-
-
-def _normalized_model(model: str) -> str:
-    return str(model or "").strip().casefold()
 
 
 def _get_job_response(api_request: Request, job_id: str) -> JobResponse:

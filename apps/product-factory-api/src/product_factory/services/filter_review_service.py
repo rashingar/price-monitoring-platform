@@ -62,10 +62,39 @@ class _ManualUpdateResult:
     changed: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class FilterReviewRenderGate:
+    may_render: bool
+    blocking_reasons: list[str]
+    missing_required_labels: list[str]
+    review_artifact_path: str | None = None
+
+
 def get_filter_review_state(model: str) -> FilterReviewResponse:
     context = _load_prepared_review_context(model)
     review_payload = load_category_filter_review_payload(context.model_root)
     return _build_state(context, review_payload=review_payload)
+
+
+def evaluate_filter_review_render_gate(
+    review: FilterReviewResponse,
+) -> FilterReviewRenderGate:
+    blocking_reasons = _filter_review_blocking_reasons(review)
+    missing_required_labels = _filter_review_missing_required_labels(review)
+    may_render = not (
+        bool(getattr(review, "render_blocked", False))
+        or missing_required_labels
+        or (getattr(review, "approved", False) is not True and blocking_reasons)
+    )
+    review_artifact_path = getattr(review, "review_artifact_path", None)
+    return FilterReviewRenderGate(
+        may_render=may_render,
+        blocking_reasons=blocking_reasons,
+        missing_required_labels=missing_required_labels,
+        review_artifact_path=(
+            str(review_artifact_path) if review_artifact_path else None
+        ),
+    )
 
 
 def save_filter_review(
@@ -287,6 +316,53 @@ def _build_state(
         warnings=list(dict.fromkeys(merged_warnings)),
         review_artifact_path=str(context.review_path),
     )
+
+
+def _filter_review_blocking_reasons(review: FilterReviewResponse) -> list[str]:
+    values = [
+        *list(getattr(review, "warnings", []) or []),
+        *list(getattr(review, "render_block_reasons", []) or []),
+    ]
+    for group in list(getattr(review, "groups", []) or []):
+        group_name = str(getattr(group, "group_name", "") or "").strip()
+        for label, attr in (
+            ("Missing required", "missing_required"),
+            ("Outside allowed", "outside_allowed"),
+            ("Deprecated", "deprecated_value"),
+            ("Inactive group", "inactive_group"),
+            ("Not emitted", "emitted_if_rendered"),
+        ):
+            if attr == "emitted_if_rendered":
+                active = getattr(group, attr, None) is False
+            else:
+                active = bool(getattr(group, attr, False))
+            if active:
+                values.append(f"{group_name}: {label}" if group_name else label)
+    return [
+        item
+        for item in dict.fromkeys(str(value).strip() for value in values)
+        if item and item != "category_filter_review_not_approved"
+    ]
+
+
+def _filter_review_missing_required_labels(
+    review: FilterReviewResponse,
+) -> list[str]:
+    if bool(getattr(review, "approved", False)) and not bool(
+        getattr(review, "render_blocked", False)
+    ):
+        return []
+    labels: list[str] = []
+    for group in list(getattr(review, "missing_required_groups", []) or []):
+        label = str(
+            getattr(group, "group_name", None)
+            or getattr(group, "group_id", None)
+            or group
+            or ""
+        ).strip()
+        if label:
+            labels.append(label)
+    return list(dict.fromkeys(labels))
 
 
 def _build_group_response(

@@ -46,6 +46,20 @@ class JobStore:
             self.log_path(job_id).touch(exist_ok=True)
         return record
 
+    def enqueue_full_pipeline_unless_active(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        job_id: str | None = None,
+    ) -> JobRecord:
+        normalized = _normalized_model(str(payload.get("model", "")))
+        with self._lock:
+            if normalized:
+                active = self._active_full_pipeline_for_model_locked(normalized)
+                if active is not None:
+                    raise ActiveFullPipelineJobConflict(active)
+            return self.enqueue(JobType.FULL_PIPELINE, payload, job_id=job_id)
+
     def list_jobs(self) -> list[JobRecord]:
         with self._lock:
             if not self.jobs_dir.exists():
@@ -63,6 +77,18 @@ class JobStore:
             record
             for record in self.list_jobs()
             if _normalized_model(record.model) == normalized
+        ]
+
+    def list_non_terminal_jobs(self) -> list[JobRecord]:
+        return [
+            record
+            for record in self.list_jobs()
+            if record.status not in {
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+                JobStatus.KILLED,
+            }
         ]
 
     def get_job(self, job_id: str) -> JobRecord | None:
@@ -326,6 +352,23 @@ class JobStore:
         )
         tmp_path.replace(path)
 
+    def _active_full_pipeline_for_model_locked(
+        self, normalized_model: str
+    ) -> JobRecord | None:
+        if not self.jobs_dir.exists():
+            return None
+        records = [
+            self._read_record_path(path) for path in self.jobs_dir.glob("*.json")
+        ]
+        for record in sorted(records, key=lambda item: (item.created_at, item.job_id)):
+            if (
+                record.job_type == JobType.FULL_PIPELINE
+                and record.status in {JobStatus.QUEUED, JobStatus.RUNNING}
+                and _normalized_model(record.model) == normalized_model
+            ):
+                return record
+        return None
+
     @staticmethod
     def _validate_job_id(job_id: str) -> None:
         if not job_id or not _JOB_ID_RE.fullmatch(job_id):
@@ -346,3 +389,12 @@ def _job_id_part(value: str) -> str:
 
 def _normalized_model(model: str) -> str:
     return str(model or "").strip().casefold()
+
+
+class ActiveFullPipelineJobConflict(RuntimeError):
+    def __init__(self, active_job: JobRecord) -> None:
+        self.active_job = active_job
+        super().__init__(
+            f"Full Product Factory workflow for model {active_job.model} is already "
+            f"{active_job.status.value} as job {active_job.job_id}."
+        )

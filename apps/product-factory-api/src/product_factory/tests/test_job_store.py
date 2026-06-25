@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from product_factory.jobs.models import JobStatus, JobType
-from product_factory.jobs.store import JobStore
+from product_factory.jobs.store import ActiveFullPipelineJobConflict, JobStore
 
 
 def test_enqueue_persists_job_metadata_and_log_file(tmp_path: Path) -> None:
@@ -67,6 +67,29 @@ def test_store_lists_jobs_for_model_case_insensitively(tmp_path: Path) -> None:
     jobs = store.list_jobs_for_model(" abc ")
 
     assert [job.job_id for job in jobs] == [first.job_id, second.job_id]
+
+
+def test_store_atomically_rejects_active_full_pipeline_duplicate(
+    tmp_path: Path,
+) -> None:
+    store = JobStore(tmp_path / "jobs")
+    first = store.enqueue_full_pipeline_unless_active(
+        {"model": " ABC123 ", "source_url": "https://www.electronet.gr/example"},
+        job_id="job-1",
+    )
+
+    try:
+        store.enqueue_full_pipeline_unless_active(
+            {"model": "abc123", "source_url": "https://www.electronet.gr/example"},
+            job_id="job-2",
+        )
+    except ActiveFullPipelineJobConflict as exc:
+        conflict = exc
+    else:
+        raise AssertionError("Expected active full-pipeline conflict")
+
+    assert conflict.active_job == first
+    assert store.get_job("job-2") is None
 
 
 def test_store_updates_statuses_and_reads_logs(tmp_path: Path) -> None:

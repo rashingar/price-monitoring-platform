@@ -11,7 +11,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .. import repo_paths
 from ..services import (
@@ -31,7 +31,7 @@ from ..services.authoring_service import (
     run_seo_meta_authoring,
 )
 from ..services.execution_models import PreparedProductContext
-from ..services.filter_review_service import get_filter_review_state
+from ..services import filter_review_service
 from ..services.models import RunStatus
 from ..status_fields import (
     DEFAULT_BESTPRICE_STATUS,
@@ -42,6 +42,9 @@ from ..status_fields import (
 from .models import JobRecord, JobStatus, JobType, is_terminal_job_status, utc_now_iso
 from .retry import is_full_pipeline_retry_from_artifacts
 from .store import JobStore
+
+if TYPE_CHECKING:
+    from ..api.schemas import FilterReviewResponse
 
 SCRAPER_ROOT = Path(__file__).resolve().parents[2]
 MAX_WORKERS_ENV = "PRODUCT_FACTORY_MAX_JOB_WORKERS"
@@ -205,11 +208,13 @@ def run_full_pipeline_job(
     prepare_product_fn: Callable[[PrepareRequest], ServiceResult] | None = None,
     run_intro_text_authoring_fn: Callable[..., AuthoringStatus] | None = None,
     run_seo_meta_authoring_fn: Callable[..., AuthoringStatus] | None = None,
-    get_filter_review_state_fn: Callable[[str], Any] | None = None,
+    get_filter_review_state_fn: Callable[[str], FilterReviewResponse] | None = None,
     render_product_fn: Callable[[RenderRequest], ServiceResult] | None = None,
     publish_product_fn: Callable[[PublishRequest], ServiceResult] | None = None,
 ) -> JobRunResult:
-    get_filter_review_state_fn = get_filter_review_state_fn or get_filter_review_state
+    get_filter_review_state_fn = (
+        get_filter_review_state_fn or filter_review_service.get_filter_review_state
+    )
     model = str(record.payload["model"])
     source_url = str(record.payload["source_url"])
     retry_from_artifacts = is_full_pipeline_retry_from_artifacts(record.payload)
@@ -492,31 +497,29 @@ def _run_full_pipeline_filter_review(
     model: str,
     log: LogCallback,
     *,
-    get_filter_review_state_fn: Callable[[str], Any],
+    get_filter_review_state_fn: Callable[[str], FilterReviewResponse],
 ) -> JobRunResult:
     review = get_filter_review_state_fn(model)
     artifacts: dict[str, str] = {}
-    review_artifact_path = getattr(review, "review_artifact_path", None)
-    if review_artifact_path:
-        artifacts["category_filter_review_path"] = str(review_artifact_path)
+    gate = filter_review_service.evaluate_filter_review_render_gate(review)
+    if gate.review_artifact_path:
+        artifacts["category_filter_review_path"] = gate.review_artifact_path
 
-    warnings = _filter_review_warnings(review)
-    missing_required = _filter_review_missing_required_labels(review)
-    for warning in warnings:
-        log(f"Filter Review warning: {warning}")
-    for group in missing_required:
+    for reason in gate.blocking_reasons:
+        log(f"Filter Review warning: {reason}")
+    for group in gate.missing_required_labels:
         log(f"Filter Review missing required group: {group}")
 
-    if _filter_review_requires_manual_review(review):
-        if missing_required:
+    if not gate.may_render:
+        if gate.missing_required_labels:
             detail = (
                 "Filter Review requires manual review before render: "
-                f"missing required filters: {', '.join(missing_required)}."
+                f"missing required filters: {', '.join(gate.missing_required_labels)}."
             )
-        elif warnings:
+        elif gate.blocking_reasons:
             detail = (
                 "Filter Review requires manual review before render: "
-                f"{'; '.join(warnings)}."
+                f"{'; '.join(gate.blocking_reasons)}."
             )
         else:
             detail = "Filter Review requires manual review before render."
@@ -534,60 +537,6 @@ def _run_full_pipeline_filter_review(
         message="Filter Review passed.",
         artifacts=artifacts,
     )
-
-
-def _filter_review_requires_manual_review(review: Any) -> bool:
-    if bool(getattr(review, "render_blocked", False)):
-        return True
-    if _filter_review_missing_required_labels(review):
-        return True
-    warnings = _filter_review_warnings(review)
-    return bool(getattr(review, "approved", False) is not True and warnings)
-
-
-def _filter_review_warnings(review: Any) -> list[str]:
-    values = [
-        *list(getattr(review, "warnings", []) or []),
-        *list(getattr(review, "render_block_reasons", []) or []),
-    ]
-    for group in list(getattr(review, "groups", []) or []):
-        group_name = str(getattr(group, "group_name", "") or "").strip()
-        for label, attr in (
-            ("Missing required", "missing_required"),
-            ("Outside allowed", "outside_allowed"),
-            ("Deprecated", "deprecated_value"),
-            ("Inactive group", "inactive_group"),
-            ("Not emitted", "emitted_if_rendered"),
-        ):
-            if attr == "emitted_if_rendered":
-                active = getattr(group, attr, None) is False
-            else:
-                active = bool(getattr(group, attr, False))
-            if active:
-                values.append(f"{group_name}: {label}" if group_name else label)
-    return [
-        item
-        for item in dict.fromkeys(str(value).strip() for value in values)
-        if item and item != "category_filter_review_not_approved"
-    ]
-
-
-def _filter_review_missing_required_labels(review: Any) -> list[str]:
-    if bool(getattr(review, "approved", False)) and not bool(
-        getattr(review, "render_blocked", False)
-    ):
-        return []
-    labels: list[str] = []
-    for group in list(getattr(review, "missing_required_groups", []) or []):
-        label = str(
-            getattr(group, "group_name", None)
-            or getattr(group, "group_id", None)
-            or group
-            or ""
-        ).strip()
-        if label:
-            labels.append(label)
-    return list(dict.fromkeys(labels))
 
 
 def _missing_prepared_artifacts(model: str) -> dict[str, Path]:
@@ -979,9 +928,18 @@ class SequentialJobRunner:
         with self._condition:
             if self._stopping:
                 raise RuntimeError("Job runner is stopping.")
+            if job_id in self._queue or job_id in self._active_job_ids:
+                return
             self._ensure_workers_started_locked()
             self._queue.append(job_id)
             self._condition.notify_all()
+
+    def owns_running_job(self, job_id: str) -> bool:
+        with self._condition:
+            if job_id not in self._active_job_ids:
+                return False
+            process = self._processes.get(job_id)
+            return process is None or process.poll() is None
 
     def stop_job(self, job_id: str, *, reason: str | None = None) -> JobRecord:
         record = self._store.get_job(job_id)

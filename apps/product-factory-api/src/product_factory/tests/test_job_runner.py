@@ -764,6 +764,59 @@ def test_full_pipeline_filter_review_block_stops_before_render_and_retry_skips_p
     assert "Full pipeline stage render starting." not in logs
 
 
+def test_full_pipeline_filter_review_uses_canonical_service_gate(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    model = "233541"
+    _write_required_prepared_artifacts(tmp_path, model)
+    monkeypatch.setattr(job_runner.repo_paths, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        job_runner.filter_review_service,
+        "evaluate_filter_review_render_gate",
+        lambda review: job_runner.filter_review_service.FilterReviewRenderGate(
+            may_render=False,
+            blocking_reasons=["canonical gate blocked render"],
+            missing_required_labels=[],
+            review_artifact_path=f"work/{model}/review/category_filters.override.json",
+        ),
+    )
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatus.RUNNING,
+        model=model,
+        payload={
+            "model": model,
+            "source_url": "https://www.electronet.gr/example",
+            "skip_prepare": True,
+            "retry_mode": "from_prepared_artifacts",
+        },
+    )
+    calls: list[str] = []
+
+    result = run_full_pipeline_job(
+        record,
+        lambda line: None,
+        prepare_product_fn=lambda request: calls.append("prepare")
+        or _service_result(request.model, RunType.PREPARE),
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append("intro")
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append("seo")
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        get_filter_review_state_fn=lambda model: _passing_filter_review(model),
+        render_product_fn=lambda request: calls.append("render")
+        or _service_result(request.model, RunType.RENDER),
+        publish_product_fn=lambda request: calls.append("publish")
+        or _service_result(request.model, RunType.PUBLISH),
+    )
+
+    assert result.status == JobStatus.FAILED
+    assert result.error_code == "category_filter_review_required"
+    assert "canonical gate blocked render" in (result.error or "")
+    assert calls == ["intro", "seo"]
+
+
 def test_full_pipeline_retry_from_artifacts_fails_when_prepared_artifacts_are_missing(
     tmp_path: Path,
     monkeypatch,

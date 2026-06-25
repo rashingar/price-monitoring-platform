@@ -67,11 +67,13 @@ Job metadata is file-backed under `work/api/jobs/`:
 - `work/api/jobs/{job_id}.log` stores job lifecycle logs.
 - `work/api/jobs/{job_id}.stdout.log` and `work/api/jobs/{job_id}.stderr.log` store captured child-process streams.
 
-Jobs are queued and run in queue order. The default worker count is one active job at a time. If worker count is raised, jobs for the same trimmed/lowercase model are not allowed to run concurrently.
+Jobs are queued and run in queue order. The default worker count is one active job at a time. If worker count is raised, jobs for the same trimmed/lowercase model are not allowed to run concurrently. The API does not expose a numeric queue position.
+
+On API startup, queued job records under `work/api/jobs/` are restored into the in-memory runner in original submission order. Running records left behind by an earlier API process are marked failed with `job_interrupted_by_restart`; they are not automatically rerun because they may have produced partial artifacts or external effects. Use the explicit retry/start endpoints when rerun is appropriate.
 
 New job IDs are model-first (`{model}-{stage}-{suffix}`), so workflow screens can group prepare, render, and publish attempts by model. Use `GET /api/jobs/by-model/{model}` to open a model workflow history with the newest attempt first.
 
-For terminal `full_pipeline` jobs, `POST /api/jobs/{job_id}/retry` retries without scraping by reusing prepared artifacts and rerunning authoring, render, and publish. Use `POST /api/jobs/{job_id}/start` to start from scratch; it enqueues the original full-pipeline payload and scrapes the source URL again.
+For terminal `full_pipeline` jobs, `POST /api/jobs/{job_id}/retry` retries without scraping by reusing prepared artifacts and rerunning authoring, render, and publish. Use `POST /api/jobs/{job_id}/start` to start from scratch; it enqueues the original full-pipeline payload and scrapes the source URL again. Full-pipeline enqueue, retry, and start operations enforce the duplicate active-model guard atomically: at most one queued or running full-pipeline job can exist for the same normalized model.
 
 Runtime knobs:
 

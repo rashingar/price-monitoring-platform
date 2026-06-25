@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -329,6 +330,89 @@ def test_full_pipeline_route_maps_prepare_form_fields_and_rejects_duplicate_acti
     first_record = store.get_job(first.json()["job_id"])
     for key, value in payload.items():
         assert first_record.payload[key] == value
+
+
+def test_full_pipeline_route_rejects_concurrent_duplicate_active_model_atomically(
+    tmp_path: Path,
+) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    release = threading.Event()
+    barrier = threading.Barrier(4)
+
+    def callback(record: JobRecord, log: LogCallback) -> None:
+        log(f"queued {record.job_type.value}")
+        release.wait(timeout=2.0)
+
+    runner = SequentialJobRunner(store, callback)
+    app = create_app(job_store=store, job_runner=runner)
+    payload = {
+        "model": "000001",
+        "source_url": "https://www.electronet.gr/example",
+    }
+
+    def submit() -> int:
+        barrier.wait(timeout=2.0)
+        return client.post("/api/jobs/full-pipeline", json=payload).status_code
+
+    with fastapi_testclient.TestClient(app) as client:
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            statuses = list(executor.map(lambda _: submit(), range(4)))
+        active = [
+            record
+            for record in store.list_jobs()
+            if record.job_type == JobType.FULL_PIPELINE
+            and record.status in {JobStatus.QUEUED, JobStatus.RUNNING}
+        ]
+        release.set()
+        assert runner.wait_until_idle(timeout=2.0)
+
+    assert statuses.count(202) == 1
+    assert statuses.count(409) == 3
+    assert len(active) == 1
+
+
+def test_full_pipeline_route_accepts_concurrent_different_models(
+    tmp_path: Path,
+) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    release = threading.Event()
+    barrier = threading.Barrier(2)
+
+    def callback(record: JobRecord, log: LogCallback) -> None:
+        log(f"queued {record.model}")
+        release.wait(timeout=2.0)
+
+    runner = SequentialJobRunner(store, callback)
+    app = create_app(job_store=store, job_runner=runner)
+
+    def submit(model: str) -> int:
+        barrier.wait(timeout=2.0)
+        return client.post(
+            "/api/jobs/full-pipeline",
+            json={
+                "model": model,
+                "source_url": f"https://www.electronet.gr/example-{model}",
+            },
+        ).status_code
+
+    with fastapi_testclient.TestClient(app) as client:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            statuses = list(executor.map(submit, ["000001", "000002"]))
+        release.set()
+        assert runner.wait_until_idle(timeout=2.0)
+
+    assert sorted(statuses) == [202, 202]
+    assert sorted(
+        record.model
+        for record in store.list_jobs()
+        if record.job_type == JobType.FULL_PIPELINE
+    ) == ["000001", "000002"]
 
 
 def test_full_pipeline_route_preserves_explicit_disabled_bestprice_status(
