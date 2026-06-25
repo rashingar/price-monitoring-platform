@@ -9,6 +9,7 @@ from .parser_product_bestprice import BestPriceProductParser
 from .parser_product_apothema import ApothemaProductParser
 from .parser_product_dreamelectric import DreamelectricProductParser
 from .parser_product_electronet import ElectronetProductParser
+from .parser_product_ecomarkt import EcomarktProductParser
 from .parser_product_euragora import EuragoraProductParser
 from .parser_product_estia import EstiaProductParser
 from .parser_product_guaranty import GuarantyProductParser
@@ -169,6 +170,7 @@ def resolve_prepare_provider_resolution(
     dreamelectric_parser_factory: Callable[
         [], DreamelectricProductParser
     ] = DreamelectricProductParser,
+    ecomarkt_parser_factory: Callable[[], EcomarktProductParser] = EcomarktProductParser,
     estia_parser_factory: Callable[[], EstiaProductParser] = EstiaProductParser,
     euragora_parser_factory: Callable[
         [], EuragoraProductParser
@@ -206,6 +208,7 @@ def resolve_prepare_provider_resolution(
     bestprice_parser = bestprice_parser_factory()
     apothema_parser = apothema_parser_factory()
     dreamelectric_parser = dreamelectric_parser_factory()
+    ecomarkt_parser = ecomarkt_parser_factory()
     estia_parser = estia_parser_factory()
     euragora_parser = euragora_parser_factory()
     guaranty_parser = guaranty_parser_factory()
@@ -224,6 +227,7 @@ def resolve_prepare_provider_resolution(
         apothema_parser=apothema_parser,
         bestprice_parser=bestprice_parser,
         dreamelectric_parser=dreamelectric_parser,
+        ecomarkt_parser=ecomarkt_parser,
         estia_parser=estia_parser,
         euragora_parser=euragora_parser,
         guaranty_parser=guaranty_parser,

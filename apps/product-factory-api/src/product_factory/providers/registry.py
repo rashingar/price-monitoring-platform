@@ -5,6 +5,7 @@ from ..parser_product_bestprice import BestPriceProductParser
 from ..parser_product_apothema import ApothemaProductParser
 from ..parser_product_dreamelectric import DreamelectricProductParser
 from ..parser_product_electronet import ElectronetProductParser
+from ..parser_product_ecomarkt import EcomarktProductParser
 from ..parser_product_euragora import EuragoraProductParser
 from ..parser_product_estia import EstiaProductParser
 from ..parser_product_guaranty import GuarantyProductParser
@@ -18,6 +19,7 @@ from .base import ProductProvider, ProviderError
 from .apothema_provider import ApothemaProvider
 from .bestprice_provider import BestPriceProvider
 from .dreamelectric_provider import DreamelectricProvider
+from .ecomarkt_provider import EcomarktProvider
 from .electronet_provider import ElectronetProvider
 from .euragora_provider import EuragoraProvider
 from .estia_provider import EstiaProvider
@@ -33,6 +35,7 @@ RUNTIME_SOURCE_PROVIDER_IDS = {
     "apothema": "apothema",
     "bestprice": "bestprice",
     "dreamelectric": "dreamelectric",
+    "ecomarkt": "ecomarkt",
     "electronet": "electronet",
     "estia": "estia",
     "euragora": "euragora",
@@ -108,6 +111,7 @@ def bootstrap_runtime_provider_registry(
     apothema_parser: ApothemaProductParser | None = None,
     bestprice_parser: BestPriceProductParser | None = None,
     dreamelectric_parser: DreamelectricProductParser | None = None,
+    ecomarkt_parser: EcomarktProductParser | None = None,
     estia_parser: EstiaProductParser | None = None,
     euragora_parser: EuragoraProductParser | None = None,
     guaranty_parser: GuarantyProductParser | None = None,
@@ -131,6 +135,12 @@ def bootstrap_runtime_provider_registry(
         DreamelectricProvider(
             fetcher=fetcher,
             parser=dreamelectric_parser or DreamelectricProductParser(),
+        )
+    )
+    registry.register(
+        EcomarktProvider(
+            fetcher=fetcher,
+            parser=ecomarkt_parser or EcomarktProductParser(),
         )
     )
     registry.register(ElectronetProvider(fetcher=fetcher, parser=electronet_parser))
