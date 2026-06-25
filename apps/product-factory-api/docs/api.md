@@ -149,6 +149,7 @@ Settings:
   "url": "https://www.example.com/product",
   "photos": 5,
   "sections": 0,
+  "bestprice_status": 1,
   "skroutz_status": 1,
   "boxnow": 0,
   "price": "798"
@@ -174,16 +175,16 @@ Settings:
 
 `POST /api/jobs/full-pipeline` enqueues the complete Product Factory pipeline for one model: prepare, intro text authoring, SEO meta authoring, render, and publish. The job stops at the first failed stage and records the failing stage in logs and terminal job metadata.
 
-`source_url` is always the scraping source URL. `bestprice_enabled`, `skroutz_enabled`, and `boxnow_enabled` are product listing/configuration flags and do not choose or rewrite the scraping source.
+`source_url` is always the scraping source URL. `bestprice_status`, `skroutz_status`, and `boxnow` are product listing/configuration fields and do not choose or rewrite the scraping source. BestPrice defaults to enabled (`1`) when omitted, and legacy payloads/jobs that do not store the field are treated as enabled during prepare, render, and publish.
 
 ```json
 {
   "model": "234385",
   "product_name": "Example product",
   "source_url": "https://www.electronet.gr/example-product",
-  "bestprice_enabled": false,
-  "skroutz_enabled": true,
-  "boxnow_enabled": false,
+  "bestprice_status": 0,
+  "skroutz_status": 1,
+  "boxnow": 0,
   "photos": 100,
   "sections": 20,
   "gallery_mode": "all",

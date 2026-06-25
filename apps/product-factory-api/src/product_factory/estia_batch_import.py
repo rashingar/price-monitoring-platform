@@ -13,6 +13,7 @@ from .jobs.models import JobStatus, JobType
 from .jobs.run_product_factory_job import main as run_job_worker_main
 from .jobs.store import DEFAULT_JOBS_DIR, JobStore
 from .normalize import normalize_for_match, normalize_whitespace
+from .status_fields import DEFAULT_BESTPRICE_STATUS, DEFAULT_SKR_OUTZ_STATUS
 
 ESTIA_BASE_URL = "https://estiahomeart.com"
 DEFAULT_PHOTOS = 100
@@ -215,9 +216,9 @@ def build_full_pipeline_payload(
         "model": row.model,
         "product_name": row.name,
         "source_url": row.source_url,
-        "bestprice_enabled": False,
-        "skroutz_enabled": False,
-        "boxnow_enabled": bool(row.boxnow),
+        "bestprice_status": DEFAULT_BESTPRICE_STATUS,
+        "skroutz_status": DEFAULT_SKR_OUTZ_STATUS,
+        "boxnow": row.boxnow,
         "price": row.price,
         "photos": max(int(photos), 1),
         "sections": max(int(sections), 0),

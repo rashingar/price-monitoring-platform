@@ -6,6 +6,12 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from product_factory.jobs.models import JobRecord, JobStatus, JobType
+from product_factory.status_fields import (
+    DEFAULT_BESTPRICE_STATUS,
+    DEFAULT_BOXNOW_STATUS,
+    DEFAULT_SKR_OUTZ_STATUS,
+    status_or_default,
+)
 
 from ..source_detection import validate_url_scope
 from .artifact_resolver import ResolvedArtifact
@@ -24,13 +30,25 @@ class PrepareJobRequest(BaseModel):
     url: str
     photos: int = 1
     sections: int = 0
-    skroutz_status: int = 0
-    boxnow: int = 0
+    bestprice_status: int = DEFAULT_BESTPRICE_STATUS
+    skroutz_status: int = DEFAULT_SKR_OUTZ_STATUS
+    boxnow: int = DEFAULT_BOXNOW_STATUS
     price: str | float | int = 0
     gallery_url: str | None = None
     characteristics_url: str | None = None
     second_opencart_image_index: int | None = Field(default=None, ge=1)
     gallery_mode: Literal["all"] | None = None
+
+    @field_validator("bestprice_status", "skroutz_status", "boxnow", mode="before")
+    @classmethod
+    def _normalize_status_fields(cls, value: object, info: object) -> object:
+        field_name = getattr(info, "field_name", "status")
+        default = {
+            "bestprice_status": DEFAULT_BESTPRICE_STATUS,
+            "skroutz_status": DEFAULT_SKR_OUTZ_STATUS,
+            "boxnow": DEFAULT_BOXNOW_STATUS,
+        }[field_name]
+        return status_or_default(value, default=default, field_name=field_name)
 
     @field_validator("gallery_url", "characteristics_url", mode="before")
     @classmethod
@@ -92,9 +110,9 @@ class FullPipelineJobRequest(BaseModel):
     model: str
     product_name: str | None = None
     source_url: str
-    bestprice_enabled: bool = False
-    skroutz_enabled: bool = False
-    boxnow_enabled: bool = False
+    bestprice_status: int = DEFAULT_BESTPRICE_STATUS
+    skroutz_status: int = DEFAULT_SKR_OUTZ_STATUS
+    boxnow: int = DEFAULT_BOXNOW_STATUS
     price: str | float | int = 0
     photos: int = Field(default=DEFAULT_FULL_PIPELINE_PHOTOS, ge=1)
     sections: int = Field(default=DEFAULT_FULL_PIPELINE_SECTIONS, ge=0)
@@ -148,6 +166,19 @@ class FullPipelineJobRequest(BaseModel):
                 "source_url must be a supported Product Factory source URL"
             )
         return value
+
+    @field_validator("bestprice_status", "skroutz_status", "boxnow", mode="before")
+    @classmethod
+    def _normalize_full_pipeline_status_fields(
+        cls, value: object, info: object
+    ) -> object:
+        field_name = getattr(info, "field_name", "status")
+        default = {
+            "bestprice_status": DEFAULT_BESTPRICE_STATUS,
+            "skroutz_status": DEFAULT_SKR_OUTZ_STATUS,
+            "boxnow": DEFAULT_BOXNOW_STATUS,
+        }[field_name]
+        return status_or_default(value, default=default, field_name=field_name)
 
 
 class StopJobRequest(BaseModel):

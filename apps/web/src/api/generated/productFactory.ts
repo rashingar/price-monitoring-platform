@@ -227,6 +227,14 @@ export interface components {
       emphasized_word_ratio?: number | null;
       /** Errors */
       errors?: string[];
+      /** Lint Trace Path */
+      lint_trace_path?: string | null;
+      /** Lint Warning Codes */
+      lint_warning_codes?: string[];
+      /** Lint Warnings */
+      lint_warnings?: {
+          [key: string]: string;
+        }[];
       /** Max Attempts */
       max_attempts?: number | null;
       /** Max Words */
@@ -591,15 +599,15 @@ export interface components {
     /** FullPipelineJobRequest */
     FullPipelineJobRequest: {
       /**
-       * Bestprice Enabled
-       * @default false
+       * Bestprice Status
+       * @default 1
        */
-      bestprice_enabled?: boolean;
+      bestprice_status?: number;
       /**
-       * Boxnow Enabled
-       * @default false
+       * Boxnow
+       * @default 0
        */
-      boxnow_enabled?: boolean;
+      boxnow?: number;
       /**
        * Gallery Mode
        * @default all
@@ -613,6 +621,11 @@ export interface components {
        * @default 100
        */
       photos?: number;
+      /**
+       * Price
+       * @default 0
+       */
+      price?: string | number;
       /** Product Name */
       product_name?: string | null;
       /**
@@ -621,10 +634,15 @@ export interface components {
        */
       sections?: number;
       /**
-       * Skroutz Enabled
+       * Skip Publish
        * @default false
        */
-      skroutz_enabled?: boolean;
+      skip_publish?: boolean;
+      /**
+       * Skroutz Status
+       * @default 0
+       */
+      skroutz_status?: number;
       /** Source Resolution */
       source_resolution?: {
         [key: string]: unknown;
@@ -716,6 +734,11 @@ export interface components {
     JobType: "prepare" | "authoring_intro" | "authoring_seo" | "render" | "publish" | "full_pipeline";
     /** PrepareJobRequest */
     PrepareJobRequest: {
+      /**
+       * Bestprice Status
+       * @default 1
+       */
+      bestprice_status?: number;
       /**
        * Boxnow
        * @default 0

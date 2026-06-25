@@ -229,7 +229,9 @@ def test_estia_xlsx_import_enqueues_full_pipeline_jobs(tmp_path: Path) -> None:
         "ΘΕΡΜΟΣ STRAW TUMBLER XL StA 900ml NOIR ECHO ESTIA"
     )
     assert jobs[0].payload["price"] == "16.60"
-    assert jobs[0].payload["boxnow_enabled"] is True
+    assert jobs[0].payload["bestprice_status"] == 1
+    assert jobs[0].payload["skroutz_status"] == 0
+    assert jobs[0].payload["boxnow"] == 1
     assert jobs[0].payload["sections"] == 0
     assert jobs[0].payload["skip_publish"] is True
     assert jobs[0].payload["source_resolution"]["mpn"] == "01-32098"
@@ -249,9 +251,9 @@ def test_full_pipeline_skip_publish_preserves_price_and_stops_after_render(
         payload={
             "model": model,
             "source_url": "https://estiahomeart.com/01-32098",
-            "bestprice_enabled": False,
-            "skroutz_enabled": False,
-            "boxnow_enabled": True,
+            "bestprice_status": 1,
+            "skroutz_status": 0,
+            "boxnow": 1,
             "price": "16.60",
             "gallery_mode": "all",
             "skip_publish": True,

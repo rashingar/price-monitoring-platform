@@ -108,9 +108,9 @@ def build_full_pipeline_payload(
         "photos": 100,
         "sections": 20,
         "gallery_mode": "all",
-        "bestprice_enabled": False,
-        "skroutz_enabled": False,
-        "boxnow_enabled": False,
+        "bestprice_status": 1,
+        "skroutz_status": 0,
+        "boxnow": 0,
         "trigger_source": "csv_batch",
         "source_resolution": {
             "method": "batch_intake",

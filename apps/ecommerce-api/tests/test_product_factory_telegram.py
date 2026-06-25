@@ -43,16 +43,16 @@ from ecommerce.product_factory_telegram.warehouse import (
 from ecommerce.source_url_agent.brave_search import BraveSearchResultItem
 
 ACCEPTED_COMMANDS = [
-    ("012345", False, False, False, None),
+    ("012345", True, False, False, None),
     ("012345 B", True, False, False, None),
-    ("012345 S", False, True, False, None),
+    ("012345 S", True, True, False, None),
     ("012345 B S", True, True, False, None),
     ("012345 B B", True, False, True, None),
-    ("012345 S B", False, True, True, None),
+    ("012345 S B", True, True, True, None),
     ("012345 B S B", True, True, True, None),
     (
         "012345 https://example.com/product",
-        False,
+        True,
         False,
         False,
         "https://example.com/product",
@@ -66,7 +66,7 @@ ACCEPTED_COMMANDS = [
     ),
     (
         "012345 S https://example.com/product",
-        False,
+        True,
         True,
         False,
         "https://example.com/product",
@@ -87,7 +87,7 @@ ACCEPTED_COMMANDS = [
     ),
     (
         "012345 S B https://example.com/product",
-        False,
+        True,
         True,
         True,
         "https://example.com/product",
@@ -115,9 +115,9 @@ def test_parser_accepts_compact_product_factory_commands(
     command = parse_product_factory_command(text)
 
     assert command.model == "012345"
-    assert command.bestprice_enabled is bestprice
-    assert command.skroutz_enabled is skroutz
-    assert command.boxnow_enabled is boxnow
+    assert command.bestprice_status == int(bestprice)
+    assert command.skroutz_status == int(skroutz)
+    assert command.boxnow == int(boxnow)
     assert command.manual_url == url
 
 
@@ -215,7 +215,7 @@ def test_audit_logger_writes_jsonl_with_expected_fields(tmp_path: Path) -> None:
         user_id="42",
         model="012345",
         product_name="Warehouse Product",
-        bestprice_enabled=True,
+        bestprice_status=1,
         status="received",
     )
 
@@ -226,7 +226,7 @@ def test_audit_logger_writes_jsonl_with_expected_fields(tmp_path: Path) -> None:
     assert rows[0]["created_at"].endswith("+00:00")
     assert rows[0]["chat_id"] == "-100"
     assert rows[0]["model"] == "012345"
-    assert rows[0]["bestprice_enabled"] is True
+    assert rows[0]["bestprice_status"] == 1
 
 
 def test_audit_logger_creates_parent_directory(tmp_path: Path) -> None:
@@ -341,9 +341,9 @@ def test_webhook_with_manual_url_calls_product_factory_with_correct_flags(
     assert payload["model"] == "012345"
     assert payload["product_name"] == "Warehouse Product"
     assert payload["source_url"] == "https://example.com/product"
-    assert payload["bestprice_enabled"] is True
-    assert payload["skroutz_enabled"] is True
-    assert payload["boxnow_enabled"] is True
+    assert payload["bestprice_status"] == 1
+    assert payload["skroutz_status"] == 1
+    assert payload["boxnow"] == 1
     assert payload["photos"] == 20
     assert payload["sections"] == 20
     assert payload["trigger_source"] == "telegram"
@@ -687,7 +687,7 @@ def test_selecting_pending_suggestion_enqueues_with_selected_candidate(
         fake_product_factory.payloads[0]["source_url"]
         == "https://www.electronet.gr/a/b/c/brand-mpn-1"
     )
-    assert fake_product_factory.payloads[0]["skroutz_enabled"] is True
+    assert fake_product_factory.payloads[0]["skroutz_status"] == 1
     assert (
         fake_product_factory.payloads[0]["source_resolution"]["selected_title"]
         == "Brand MPN-1 Alpha Mixer"
@@ -827,8 +827,8 @@ def test_listing_flags_do_not_affect_selected_scraping_source(
     )
 
     payload = fake_product_factory.payloads[0]
-    assert payload["bestprice_enabled"] is True
-    assert payload["skroutz_enabled"] is True
+    assert payload["bestprice_status"] == 1
+    assert payload["skroutz_status"] == 1
     assert payload["source_resolution"]["selected_source"] == "electronet"
 
 

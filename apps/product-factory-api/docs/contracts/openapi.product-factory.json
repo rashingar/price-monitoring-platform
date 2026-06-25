@@ -1146,15 +1146,15 @@
       },
       "FullPipelineJobRequest": {
         "properties": {
-          "bestprice_enabled": {
-            "default": false,
-            "title": "Bestprice Enabled",
-            "type": "boolean"
+          "bestprice_status": {
+            "default": 1,
+            "title": "Bestprice Status",
+            "type": "integer"
           },
-          "boxnow_enabled": {
-            "default": false,
-            "title": "Boxnow Enabled",
-            "type": "boolean"
+          "boxnow": {
+            "default": 0,
+            "title": "Boxnow",
+            "type": "integer"
           },
           "gallery_mode": {
             "const": "all",
@@ -1209,10 +1209,10 @@
             "title": "Skip Publish",
             "type": "boolean"
           },
-          "skroutz_enabled": {
-            "default": false,
-            "title": "Skroutz Enabled",
-            "type": "boolean"
+          "skroutz_status": {
+            "default": 0,
+            "title": "Skroutz Status",
+            "type": "integer"
           },
           "source_resolution": {
             "anyOf": [
@@ -1517,6 +1517,11 @@
       },
       "PrepareJobRequest": {
         "properties": {
+          "bestprice_status": {
+            "default": 1,
+            "title": "Bestprice Status",
+            "type": "integer"
+          },
           "boxnow": {
             "default": 0,
             "title": "Boxnow",

@@ -66,6 +66,7 @@ def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(
         assert response.status_code == 202
         job_id = response.json()["job_id"]
         queued_payload = store.get_job(job_id).payload
+        assert queued_payload["bestprice_status"] == 1
         assert queued_payload["gallery_url"] == "https://www.electronet.gr/gallery"
         assert (
             queued_payload["characteristics_url"] == "https://www.electronet.gr/specs"
@@ -136,6 +137,9 @@ def test_prepare_route_accepts_legacy_payload_and_rejects_invalid_second_image_i
     assert (
         store.get_job(legacy_response.json()["job_id"]).payload.get("gallery_url")
         is None
+    )
+    assert (
+        store.get_job(legacy_response.json()["job_id"]).payload["bestprice_status"] == 1
     )
     assert (
         store.get_job(legacy_response.json()["job_id"]).payload.get(
@@ -244,9 +248,8 @@ def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(
                 "model": "000001",
                 "product_name": "Example product",
                 "source_url": source_url,
-                "bestprice_enabled": True,
-                "skroutz_enabled": True,
-                "boxnow_enabled": False,
+                "skroutz_status": 1,
+                "boxnow": 0,
                 "trigger_source": "telegram",
                 "telegram_chat_id": "12345",
                 "source_resolution": {"candidate_id": "abc"},
@@ -261,13 +264,78 @@ def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(
     record = store.get_job(body["job_id"])
     assert body["job_type"] == JobType.FULL_PIPELINE.value
     assert record.payload["source_url"] == source_url
-    assert record.payload["bestprice_enabled"] is True
-    assert record.payload["skroutz_enabled"] is True
-    assert record.payload["boxnow_enabled"] is False
+    assert record.payload["bestprice_status"] == 1
+    assert record.payload["skroutz_status"] == 1
+    assert record.payload["boxnow"] == 0
     assert record.payload["photos"] == 100
     assert record.payload["sections"] == 20
     assert record.payload["gallery_mode"] == "all"
     assert record.payload["source_resolution"] == {"candidate_id": "abc"}
+
+
+def test_full_pipeline_route_preserves_explicit_disabled_bestprice_status(
+    tmp_path: Path,
+) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: None)
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
+
+    try:
+        response = client.post(
+            "/api/jobs/full-pipeline",
+            json={
+                "model": "000001",
+                "source_url": "https://www.electronet.gr/example",
+                "bestprice_status": 0,
+            },
+        )
+    finally:
+        runner.stop()
+
+    assert response.status_code == 202
+    record = store.get_job(response.json()["job_id"])
+    assert record.payload["bestprice_status"] == 0
+
+
+def test_prepare_and_full_pipeline_routes_reject_invalid_status_values(
+    tmp_path: Path,
+) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    runner = SequentialJobRunner(store, lambda record, log: None)
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
+
+    try:
+        prepare_response = client.post(
+            "/api/jobs/prepare",
+            json={
+                "model": "999001",
+                "url": "https://www.electronet.gr/example",
+                "bestprice_status": "maybe",
+            },
+        )
+        full_pipeline_response = client.post(
+            "/api/jobs/full-pipeline",
+            json={
+                "model": "000001",
+                "source_url": "https://www.electronet.gr/example",
+                "bestprice_status": 2,
+            },
+        )
+    finally:
+        runner.stop()
+
+    assert prepare_response.status_code == 422
+    assert full_pipeline_response.status_code == 422
 
 
 def test_retry_requeues_failed_full_pipeline_from_prepared_artifacts(
@@ -283,9 +351,9 @@ def test_retry_requeues_failed_full_pipeline_from_prepared_artifacts(
     payload = {
         "model": "233541",
         "source_url": "https://www.electronet.gr/example",
-        "bestprice_enabled": False,
-        "skroutz_enabled": True,
-        "boxnow_enabled": True,
+        "bestprice_status": 0,
+        "skroutz_status": 1,
+        "boxnow": 1,
         "photos": 100,
         "sections": 20,
         "gallery_mode": "all",
@@ -328,9 +396,9 @@ def test_start_requeues_terminal_full_pipeline_from_scratch_without_retry_metada
     payload = {
         "model": "233541",
         "source_url": "https://www.electronet.gr/example",
-        "bestprice_enabled": False,
-        "skroutz_enabled": True,
-        "boxnow_enabled": True,
+        "bestprice_status": 0,
+        "skroutz_status": 1,
+        "boxnow": 1,
         "photos": 100,
         "sections": 20,
         "gallery_mode": "all",
@@ -358,9 +426,9 @@ def test_start_requeues_terminal_full_pipeline_from_scratch_without_retry_metada
     assert started.payload == {
         "model": "233541",
         "source_url": "https://www.electronet.gr/example",
-        "bestprice_enabled": False,
-        "skroutz_enabled": True,
-        "boxnow_enabled": True,
+        "bestprice_status": 0,
+        "skroutz_status": 1,
+        "boxnow": 1,
         "photos": 100,
         "sections": 20,
         "gallery_mode": "all",

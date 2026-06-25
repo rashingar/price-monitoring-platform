@@ -12,6 +12,12 @@ from ..models import (
     SourceProductData,
     TaxonomyResolution,
 )
+from ..status_fields import (
+    DEFAULT_BESTPRICE_STATUS,
+    DEFAULT_BOXNOW_STATUS,
+    DEFAULT_SKR_OUTZ_STATUS,
+    status_from_payload,
+)
 from .models import RunStatus
 
 _T = TypeVar("_T")
@@ -224,9 +230,21 @@ class PreparedProductContext:
             url=str(input_data.get("url", "")),
             photos=int(input_data.get("photos", 1)),
             sections=int(input_data.get("sections", 0)),
-            bestprice_status=int(input_data.get("bestprice_status", 1)),
-            skroutz_status=int(input_data.get("skroutz_status", 0)),
-            boxnow=int(input_data.get("boxnow", 0)),
+            bestprice_status=status_from_payload(
+                input_data,
+                key="bestprice_status",
+                default=DEFAULT_BESTPRICE_STATUS,
+            ),
+            skroutz_status=status_from_payload(
+                input_data,
+                key="skroutz_status",
+                default=DEFAULT_SKR_OUTZ_STATUS,
+            ),
+            boxnow=status_from_payload(
+                input_data,
+                key="boxnow",
+                default=DEFAULT_BOXNOW_STATUS,
+            ),
             price=input_data.get("price", 0),
             gallery_url=str(input_data.get("gallery_url") or "") or None,
             characteristics_url=str(input_data.get("characteristics_url") or "")

@@ -421,9 +421,9 @@ def test_enqueue_selected_enqueues_eligible_rows_and_forces_low_confidence_revie
     assert first_payload["photos"] == 100
     assert first_payload["sections"] == 20
     assert first_payload["gallery_mode"] == "all"
-    assert first_payload["bestprice_enabled"] is False
-    assert first_payload["skroutz_enabled"] is False
-    assert first_payload["boxnow_enabled"] is False
+    assert first_payload["bestprice_status"] == 1
+    assert first_payload["skroutz_status"] == 0
+    assert first_payload["boxnow"] == 0
     assert first_payload["trigger_source"] == "csv_batch"
     assert first_payload["source_resolution"]["batch_id"] == batch_id
     assert first_payload["source_resolution"]["selected_source"] == "skroutz"

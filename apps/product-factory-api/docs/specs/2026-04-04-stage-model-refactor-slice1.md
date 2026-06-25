@@ -67,7 +67,7 @@ It intentionally carries only acquisition-owned outputs:
 
 It intentionally does not embed `CLIInput`.
 
-Request-owned state such as `model`, `url`, `photos`, `sections`, `skroutz_status`, `boxnow`, and `price` stays outside the acquisition result and is passed explicitly by `prepare`.
+Request-owned state such as `model`, `url`, `photos`, `sections`, `bestprice_status`, `skroutz_status`, `boxnow`, and `price` stays outside the acquisition result and is passed explicitly by `prepare`.
 
 ## Implementation Notes
 

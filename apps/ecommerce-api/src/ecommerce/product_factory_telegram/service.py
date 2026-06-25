@@ -351,9 +351,9 @@ def process_telegram_product_factory_update(
                 command_model=command.model,
                 product=product,
                 source_url=selected.url,
-                bestprice_enabled=command.bestprice_enabled,
-                skroutz_enabled=command.skroutz_enabled,
-                boxnow_enabled=command.boxnow_enabled,
+                bestprice_status=command.bestprice_status,
+                skroutz_status=command.skroutz_status,
+                boxnow=command.boxnow,
                 telegram_chat_id=chat_id,
                 source_resolution=resolution.metadata_for(selected),
             )
@@ -454,9 +454,9 @@ def process_telegram_product_factory_update(
         command_model=command.model,
         product=product,
         source_url=command.manual_url,
-        bestprice_enabled=command.bestprice_enabled,
-        skroutz_enabled=command.skroutz_enabled,
-        boxnow_enabled=command.boxnow_enabled,
+        bestprice_status=command.bestprice_status,
+        skroutz_status=command.skroutz_status,
+        boxnow=command.boxnow,
         telegram_chat_id=chat_id,
         source_resolution=_manual_source_resolution(
             product=product, url=command.manual_url
@@ -593,9 +593,9 @@ def _process_source_choice_callback(
         command_model=choice.command.model,
         product=choice.product,
         source_url=selected.url,
-        bestprice_enabled=choice.command.bestprice_enabled,
-        skroutz_enabled=choice.command.skroutz_enabled,
-        boxnow_enabled=choice.command.boxnow_enabled,
+        bestprice_status=choice.command.bestprice_status,
+        skroutz_status=choice.command.skroutz_status,
+        boxnow=choice.command.boxnow,
         telegram_chat_id=chat_id,
         source_resolution=_candidate_source_resolution(
             candidate=selected,
@@ -889,9 +889,9 @@ def _audit_product_event(
         user_id=user_id,
         model=command.model,
         product_name=product.name if product else None,
-        bestprice_enabled=command.bestprice_enabled,
-        skroutz_enabled=command.skroutz_enabled,
-        boxnow_enabled=command.boxnow_enabled,
+        bestprice_status=command.bestprice_status,
+        skroutz_status=command.skroutz_status,
+        boxnow=command.boxnow,
         selected_source=selected_source,
         selected_url=selected_url,
         selected_title=selected_title,
@@ -952,9 +952,9 @@ def _product_factory_payload(
     command_model: str,
     product: WarehouseProduct,
     source_url: str,
-    bestprice_enabled: bool,
-    skroutz_enabled: bool,
-    boxnow_enabled: bool,
+    bestprice_status: int,
+    skroutz_status: int,
+    boxnow: int,
     telegram_chat_id: str,
     source_resolution: dict[str, Any],
 ) -> dict[str, Any]:
@@ -965,9 +965,9 @@ def _product_factory_payload(
         "model": command_model,
         "product_name": product.name,
         "source_url": source_url,
-        "bestprice_enabled": bestprice_enabled,
-        "skroutz_enabled": skroutz_enabled,
-        "boxnow_enabled": boxnow_enabled,
+        "bestprice_status": bestprice_status,
+        "skroutz_status": skroutz_status,
+        "boxnow": boxnow,
         "photos": FULL_GALLERY_PHOTOS,
         "sections": DEFAULT_SECTIONS,
         "trigger_source": "telegram",
@@ -1093,9 +1093,9 @@ def _job_started_message(
         f"model: {command.model}\n"
         f"product name: {product.name}\n"
         f"job_id: {job.job_id}\n"
-        f"BestPrice: {_yes_no(command.bestprice_enabled)}\n"
-        f"Skroutz: {_yes_no(command.skroutz_enabled)}\n"
-        f"BoxNow: {_yes_no(command.boxnow_enabled)}"
+        f"BestPrice: {_yes_no(command.bestprice_status == 1)}\n"
+        f"Skroutz: {_yes_no(command.skroutz_status == 1)}\n"
+        f"BoxNow: {_yes_no(command.boxnow == 1)}"
     )
 
 

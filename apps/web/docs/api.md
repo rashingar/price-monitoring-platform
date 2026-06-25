@@ -93,6 +93,7 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 
 ```ts
 {
+  bestprice_status?: number; // default: 1
   boxnow?: number; // default: 0
   characteristics_url?: string | null;
   gallery_mode?: string | null;
@@ -161,14 +162,16 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 
 ```ts
 {
-  bestprice_enabled?: boolean; // default: false
-  boxnow_enabled?: boolean; // default: false
+  bestprice_status?: number; // default: 1
+  boxnow?: number; // default: 0
   gallery_mode?: string; // default: "all"
   model: string;
   photos?: number; // default: 100
+  price?: string | number; // default: 0
   product_name?: string | null;
   sections?: number; // default: 20
-  skroutz_enabled?: boolean; // default: false
+  skip_publish?: boolean; // default: false
+  skroutz_status?: number; // default: 0
   source_resolution?: object | null;
   source_url: string;
   telegram_chat_id?: string | null;

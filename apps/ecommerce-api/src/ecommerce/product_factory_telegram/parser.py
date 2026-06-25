@@ -8,22 +8,22 @@ from urllib.parse import urlsplit
 
 _MODEL_RE = re.compile(r"^\d{6}$")
 _ACCEPTED_FLAG_SEQUENCES = {
-    (): (False, False, False),
-    ("B",): (True, False, False),
-    ("S",): (False, True, False),
-    ("B", "S"): (True, True, False),
-    ("B", "B"): (True, False, True),
-    ("S", "B"): (False, True, True),
-    ("B", "S", "B"): (True, True, True),
+    (): (1, 0, 0),
+    ("B",): (1, 0, 0),
+    ("S",): (1, 1, 0),
+    ("B", "S"): (1, 1, 0),
+    ("B", "B"): (1, 0, 1),
+    ("S", "B"): (1, 1, 1),
+    ("B", "S", "B"): (1, 1, 1),
 }
 
 
 @dataclass(frozen=True)
 class ProductFactoryCommand:
     model: str
-    bestprice_enabled: bool
-    skroutz_enabled: bool
-    boxnow_enabled: bool
+    bestprice_status: int
+    skroutz_status: int
+    boxnow: int
     manual_url: str | None = None
 
 
@@ -58,14 +58,12 @@ def parse_product_factory_command(text: str) -> ProductFactoryCommand:
     if flag_sequence not in _ACCEPTED_FLAG_SEQUENCES:
         raise ProductFactoryCommandParseError("Invalid or duplicate flag sequence.")
 
-    bestprice_enabled, skroutz_enabled, boxnow_enabled = _ACCEPTED_FLAG_SEQUENCES[
-        flag_sequence
-    ]
+    bestprice_status, skroutz_status, boxnow = _ACCEPTED_FLAG_SEQUENCES[flag_sequence]
     return ProductFactoryCommand(
         model=model,
-        bestprice_enabled=bestprice_enabled,
-        skroutz_enabled=skroutz_enabled,
-        boxnow_enabled=boxnow_enabled,
+        bestprice_status=bestprice_status,
+        skroutz_status=skroutz_status,
+        boxnow=boxnow,
         manual_url=manual_url,
     )
 

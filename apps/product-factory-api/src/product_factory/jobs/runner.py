@@ -32,6 +32,12 @@ from ..services.authoring_service import (
 )
 from ..services.execution_models import PreparedProductContext
 from ..services.models import RunStatus
+from ..status_fields import (
+    DEFAULT_BESTPRICE_STATUS,
+    DEFAULT_BOXNOW_STATUS,
+    DEFAULT_SKR_OUTZ_STATUS,
+    status_from_payload,
+)
 from .models import JobRecord, JobStatus, JobType, is_terminal_job_status, utc_now_iso
 from .retry import is_full_pipeline_retry_from_artifacts
 from .store import JobStore
@@ -89,9 +95,21 @@ def run_prepare_job(
         url=str(record.payload["url"]),
         photos=record.payload.get("photos", 1),
         sections=record.payload.get("sections", 0),
-        bestprice_status=record.payload.get("bestprice_status", 1),
-        skroutz_status=record.payload.get("skroutz_status", 0),
-        boxnow=record.payload.get("boxnow", 0),
+        bestprice_status=status_from_payload(
+            record.payload,
+            key="bestprice_status",
+            default=DEFAULT_BESTPRICE_STATUS,
+        ),
+        skroutz_status=status_from_payload(
+            record.payload,
+            key="skroutz_status",
+            default=DEFAULT_SKR_OUTZ_STATUS,
+        ),
+        boxnow=status_from_payload(
+            record.payload,
+            key="boxnow",
+            default=DEFAULT_BOXNOW_STATUS,
+        ),
         price=record.payload.get("price", 0),
         gallery_url=record.payload.get("gallery_url") or None,
         characteristics_url=record.payload.get("characteristics_url") or None,
@@ -197,9 +215,9 @@ def run_full_pipeline_job(
     log(f"Full pipeline source URL: {source_url}")
     log(
         "Full pipeline listing flags: "
-        f"bestprice_enabled={bool(record.payload.get('bestprice_enabled', False))}, "
-        f"skroutz_enabled={bool(record.payload.get('skroutz_enabled', False))}, "
-        f"boxnow_enabled={bool(record.payload.get('boxnow_enabled', False))}"
+        f"bestprice_status={status_from_payload(record.payload, key='bestprice_status', legacy_key='bestprice_enabled', default=DEFAULT_BESTPRICE_STATUS)}, "
+        f"skroutz_status={status_from_payload(record.payload, key='skroutz_status', legacy_key='skroutz_enabled', default=DEFAULT_SKR_OUTZ_STATUS)}, "
+        f"boxnow={status_from_payload(record.payload, key='boxnow', legacy_key='boxnow_enabled', default=DEFAULT_BOXNOW_STATUS)}"
     )
 
     if retry_from_artifacts:
@@ -418,9 +436,24 @@ def _full_pipeline_prepare_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "url": payload["source_url"],
         "photos": payload.get("photos", 100),
         "sections": payload.get("sections", 20),
-        "bestprice_status": int(bool(payload.get("bestprice_enabled", False))),
-        "skroutz_status": int(bool(payload.get("skroutz_enabled", False))),
-        "boxnow": int(bool(payload.get("boxnow_enabled", False))),
+        "bestprice_status": status_from_payload(
+            payload,
+            key="bestprice_status",
+            legacy_key="bestprice_enabled",
+            default=DEFAULT_BESTPRICE_STATUS,
+        ),
+        "skroutz_status": status_from_payload(
+            payload,
+            key="skroutz_status",
+            legacy_key="skroutz_enabled",
+            default=DEFAULT_SKR_OUTZ_STATUS,
+        ),
+        "boxnow": status_from_payload(
+            payload,
+            key="boxnow",
+            legacy_key="boxnow_enabled",
+            default=DEFAULT_BOXNOW_STATUS,
+        ),
         "price": payload.get("price", 0),
         "gallery_mode": payload.get("gallery_mode") or "all",
     }

@@ -22,6 +22,11 @@ from .services.prepare_service import prepare_product
 from .services.publish_service import build_publish_phase_details, publish_product
 from .services.render_execution import execute_render_workflow
 from .services.render_service import render_product
+from .status_fields import (
+    DEFAULT_BESTPRICE_STATUS,
+    DEFAULT_BOXNOW_STATUS,
+    DEFAULT_SKR_OUTZ_STATUS,
+)
 
 WORK_ROOT = REPO_ROOT / "work"
 PRODUCTS_ROOT = REPO_ROOT / "products"
@@ -157,10 +162,12 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "photos": template_values.get("photos", "1"),
         "sections": template_values.get("sections", "0"),
         "bestprice_status": template_values.get(
-            "bestprice_status", template_values.get("bestprice", "1")
+            "bestprice_status", str(DEFAULT_BESTPRICE_STATUS)
         ),
-        "skroutz_status": template_values.get("skroutz_status", "0"),
-        "boxnow": template_values.get("boxnow", "0"),
+        "skroutz_status": template_values.get(
+            "skroutz_status", str(DEFAULT_SKR_OUTZ_STATUS)
+        ),
+        "boxnow": template_values.get("boxnow", str(DEFAULT_BOXNOW_STATUS)),
         "price": template_values.get("price", "0"),
         "gallery_url": template_values.get("gallery_url", ""),
         "characteristics_url": template_values.get("characteristics_url", ""),
@@ -242,7 +249,6 @@ def parse_template_text(text: str) -> dict[str, str]:
             "url",
             "photos",
             "sections",
-            "bestprice",
             "bestprice_status",
             "skroutz_status",
             "boxnow",

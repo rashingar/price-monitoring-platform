@@ -122,8 +122,12 @@ trailing `B` after marketplace flags enables BoxNow. URLs are manual scrape
 overrides and must be absolute `http` or `https`.
 
 Marketplace/listing flags are independent from scrape-source selection.
-`bestprice_enabled` and `skroutz_enabled` only affect Product Factory product
-configuration.
+Product Factory receives canonical product-status fields:
+`bestprice_status`, `skroutz_status`, and `boxnow`. BestPrice defaults to
+enabled (`1`) when the Telegram/API payload omits it, and the compact Telegram
+command parser treats missing BestPrice input as enabled for consistency with
+the UI and other batch/automation entry points. The legacy leading `B` token
+remains accepted for backward compatibility.
 
 With a manual URL, Ecommerce API looks up the product name from the CSV file at
 `PRODUCT_FACTORY_WAREHOUSE_CATALOG_PATH` using

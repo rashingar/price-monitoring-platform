@@ -25,6 +25,7 @@ describe("PrepareJobForm contract", () => {
     expect(screen.getByLabelText("Photos")).toHaveValue(1);
     expect(screen.getByLabelText("Sections")).toHaveValue(0);
     expect(screen.getByLabelText("Price")).toHaveValue("0");
+    expect(screen.getByLabelText("BestPrice status")).toBeChecked();
     expect(screen.queryByLabelText("Gallery URL")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Characteristics URL")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Second OpenCart image index")).not.toBeInTheDocument();
@@ -71,10 +72,24 @@ describe("PrepareJobForm contract", () => {
       url: "https://example.invalid/product",
       photos: 1,
       sections: 0,
+      bestprice_status: 1,
       skroutz_status: 0,
       boxnow: 0,
       price: 0,
     });
+  });
+
+  it("renders BestPrice status immediately below BoxNow", () => {
+    renderPrepareForm();
+
+    const boxNowRow = screen.getByLabelText("BoxNow").closest("label");
+    const bestPriceRow = screen.getByLabelText("BestPrice status").closest("label");
+
+    expect(boxNowRow).not.toBeNull();
+    expect(bestPriceRow).not.toBeNull();
+    expect(
+      boxNowRow?.compareDocumentPosition(bestPriceRow as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("keeps controlled input edits visible across parent rerenders", () => {
@@ -113,6 +128,70 @@ describe("PrepareJobForm contract", () => {
 
     expect(screen.getByLabelText("Model")).toHaveValue("123456");
     expect(screen.getByLabelText("URL")).toHaveValue("https://example.invalid/new-product");
+  });
+
+  it("preserves explicit hydrated BestPrice values and defaults legacy state to checked", () => {
+    const onSubmit = vi.fn();
+    const { rerender } = render(
+      <PrepareJobForm
+        error={null}
+        initialForm={{
+          ...initialPrepareFormState,
+          model: "005606",
+          url: "https://example.invalid/product",
+          bestprice_status: false,
+        }}
+        isSubmitting={false}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    expect(screen.getByLabelText("BestPrice status")).not.toBeChecked();
+
+    rerender(
+      <PrepareJobForm
+        error={null}
+        initialForm={{
+          model: "005606",
+          url: "https://example.invalid/product",
+          photos: "1",
+          sections: "0",
+          skroutz_status: false,
+          boxnow: false,
+          price: "0",
+          gallery_url: "",
+          characteristics_url: "",
+          second_opencart_image_index: "",
+        }}
+        isSubmitting={false}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    expect(screen.getByLabelText("BestPrice status")).toBeChecked();
+  });
+
+  it("submits explicit BestPrice enabled and disabled values", () => {
+    const onSubmit = renderPrepareForm();
+
+    fireEvent.change(screen.getByLabelText("Model"), { target: { value: "005606" } });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
+    fireEvent.submit(screen.getByRole("button", { name: "Start prepare job" }).closest("form")!);
+
+    expect(onSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        bestprice_status: 1,
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText("BestPrice status"));
+    fireEvent.submit(screen.getByRole("button", { name: "Start prepare job" }).closest("form")!);
+
+    expect(onSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        bestprice_status: 0,
+      }),
+    );
   });
 
   it("shows and submits optional extra settings only when expanded", () => {

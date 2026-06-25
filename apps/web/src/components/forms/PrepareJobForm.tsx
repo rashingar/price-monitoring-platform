@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import type { PrepareJobRequest } from "../../api/types";
 
 interface PrepareJobFormProps {
@@ -18,6 +18,7 @@ export interface PrepareFormState {
   sections: string;
   skroutz_status: boolean;
   boxnow: boolean;
+  bestprice_status: boolean;
   price: string;
   gallery_url: string;
   characteristics_url: string;
@@ -31,6 +32,7 @@ export const initialPrepareFormState: PrepareFormState = {
   sections: "0",
   skroutz_status: false,
   boxnow: false,
+  bestprice_status: true,
   price: "0",
   gallery_url: "",
   characteristics_url: "",
@@ -67,6 +69,12 @@ export function PrepareJobForm({
   const form = isControlled ? normalizePrepareFormState(initialForm) : localForm;
   const [localError, setLocalError] = useState<string | null>(null);
   const [extraSettingsOpen, setExtraSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isControlled) {
+      setLocalForm(normalizePrepareFormState(initialForm));
+    }
+  }, [initialForm, isControlled]);
 
   function updateField<Key extends keyof PrepareFormState>(
     key: Key,
@@ -134,6 +142,7 @@ export function PrepareJobForm({
       sections,
       skroutz_status: form.skroutz_status ? 1 : 0,
       boxnow: form.boxnow ? 1 : 0,
+      bestprice_status: form.bestprice_status ? 1 : 0,
       price,
     };
     if (galleryUrl.length > 0) {
@@ -219,6 +228,17 @@ export function PrepareJobForm({
           onChange={(event) => updateField("boxnow", event.target.checked)}
         />
         <span>BoxNow</span>
+      </label>
+
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={form.bestprice_status}
+          onChange={(event) =>
+            updateField("bestprice_status", event.target.checked)
+          }
+        />
+        <span>BestPrice status</span>
       </label>
 
       <label>

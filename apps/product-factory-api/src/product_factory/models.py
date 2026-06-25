@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
+from .status_fields import (
+    DEFAULT_BESTPRICE_STATUS,
+    DEFAULT_BOXNOW_STATUS,
+    DEFAULT_SKR_OUTZ_STATUS,
+)
+
 
 @dataclass(slots=True)
 class CLIInput:
@@ -10,9 +16,9 @@ class CLIInput:
     url: str
     photos: int = 1
     sections: int = 0
-    bestprice_status: int = 1
-    skroutz_status: int = 0
-    boxnow: int = 0
+    bestprice_status: int = DEFAULT_BESTPRICE_STATUS
+    skroutz_status: int = DEFAULT_SKR_OUTZ_STATUS
+    boxnow: int = DEFAULT_BOXNOW_STATUS
     price: str | float | int = 0
     gallery_url: str | None = None
     characteristics_url: str | None = None

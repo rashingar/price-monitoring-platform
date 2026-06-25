@@ -51,9 +51,9 @@ export const productFactoryJobs = [
     payload: {
       model: "233541",
       source_url: "https://www.electronet.gr/example",
-      bestprice_enabled: false,
-      skroutz_enabled: true,
-      boxnow_enabled: true,
+      bestprice_status: 0,
+      skroutz_status: 1,
+      boxnow: 1,
       photos: 100,
       sections: 20,
       gallery_mode: "all",

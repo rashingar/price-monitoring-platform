@@ -5,6 +5,12 @@ from urllib.parse import urlparse
 
 from .models import CLIInput
 from .source_detection import SUPPORTED_URL_MESSAGE, validate_url_scope
+from .status_fields import (
+    DEFAULT_BESTPRICE_STATUS,
+    DEFAULT_BOXNOW_STATUS,
+    DEFAULT_SKR_OUTZ_STATUS,
+    status_or_default,
+)
 
 FAIL_MESSAGE = "Generation failed, provide 6-digit model"
 
@@ -58,9 +64,21 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
         url=args.url.strip(),
         photos=max(int(args.photos), 1),
         sections=max(int(args.sections), 0),
-        bestprice_status=int(getattr(args, "bestprice_status", 1)),
-        skroutz_status=int(args.skroutz_status),
-        boxnow=int(args.boxnow),
+        bestprice_status=status_or_default(
+            getattr(args, "bestprice_status", None),
+            default=DEFAULT_BESTPRICE_STATUS,
+            field_name="bestprice_status",
+        ),
+        skroutz_status=status_or_default(
+            getattr(args, "skroutz_status", None),
+            default=DEFAULT_SKR_OUTZ_STATUS,
+            field_name="skroutz_status",
+        ),
+        boxnow=status_or_default(
+            getattr(args, "boxnow", None),
+            default=DEFAULT_BOXNOW_STATUS,
+            field_name="boxnow",
+        ),
         price=args.price,
         gallery_url=gallery_url,
         characteristics_url=characteristics_url,
