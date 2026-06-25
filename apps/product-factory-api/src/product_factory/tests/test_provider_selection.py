@@ -29,6 +29,8 @@ from product_factory.source_acquisition_stage import execute_source_acquisition_
 from product_factory.parser_product_bestprice import BestPriceProductParser
 from product_factory.parser_product_dreamelectric import DreamelectricProductParser
 from product_factory.parser_product_euragora import EuragoraProductParser
+from product_factory.parser_product_fgeurope import FGEuropeProductParser
+from product_factory.parser_product_guaranty import GuarantyProductParser
 from product_factory.parser_product_kotsovolos import KotsovolosProductParser
 from product_factory.parser_product_marketquest import MarketQuestProductParser
 from product_factory.parser_product_pampoukidis import PampoukidisProductParser
@@ -64,7 +66,13 @@ BESTPRICE_URL = "https://www.bestprice.gr/item/2163977668/tcl-sqd-mini-led-65c8l
 KOTSOVOLOS_MODEL = "412917"
 KOTSOVOLOS_URL = "https://www.kotsovolos.gr/air-condition-heaters/air-condition/7000-to-15000-btu/245318-a-c-in18btu-inventor-ar5vi-18wfi-aria"
 EURAGORA_URL = "https://euragora.gr/product/inventor-intellia-invbi-24wfi-invbo-24-klimatistiko-inverter-24000-btu-a-a/"
-PAMPOUKIDIS_URL = "https://www.pampoukidis.gr/ac-invbi-24wfiinvbo-24-intellia-esot-exot-inventor"
+PAMPOUKIDIS_URL = (
+    "https://www.pampoukidis.gr/ac-invbi-24wfiinvbo-24-intellia-esot-exot-inventor"
+)
+GUARANTY_URL = "https://www.guaranty.gr/product/1123984/brandt-bt37038q-plyntirio-royxwn-anw-fortwsis.html"
+FGEUROPE_URL = (
+    "https://www.fgeurope.gr/product/midea-klimatistiko-toichou-solunar-24kbtu/"
+)
 MANUFACTURER_MODEL = "344709"
 MANUFACTURER_URL = "https://shop.tefal.gr/products/dolci-%CF%80%CE%B1%CE%B3%CF%89%CF%84%CE%BF%CE%BC%CE%B7%CF%87%CE%B1%CE%BD%CE%AE-ig602a"
 
@@ -204,9 +212,168 @@ def test_pampoukidis_parser_uses_prodiagrafes_tab_specs() -> None:
     assert values["Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"] == "8,5"
 
 
+def test_guaranty_parser_normalizes_washer_specs_and_aliases() -> None:
+    html = """
+    <html><head>
+      <link rel="canonical" href="https://www.guaranty.gr/product/1123984/brandt-bt37038q-plyntirio-royxwn-anw-fortwsis.html" />
+      <meta name="description" content="Πλυντήριο ρούχων άνω φόρτωσης Brandt BT37038Q με χωρητικότητα 7kg και 1300 στροφές." />
+      <meta property="og:image" content="/images/products/brandt-bt37038q.jpg" />
+      <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"Product",
+       "name":"BRANDT BT37038Q Πλυντήριο ρούχων άνω φόρτωσης",
+       "sku":"BT37038Q",
+       "brand":{"@type":"Brand","name":"Brandt"},
+       "offers":{"@type":"Offer","price":"429.00","priceCurrency":"EUR"}}
+      </script>
+      <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[
+       {"@type":"ListItem","position":1,"name":"Αρχική"},
+       {"@type":"ListItem","position":2,"name":"Οικιακές Συσκευές"},
+       {"@type":"ListItem","position":3,"name":"Πλυντήρια Ρούχων"}]}
+      </script>
+    </head><body>
+      <h1>BRANDT BT37038Q Πλυντήριο ρούχων άνω φόρτωσης</h1>
+      <div class="product-code">Κωδικός προϊόντος: 1001123984</div>
+      <table class="specifications">
+        <tr><td>Τύπος Συσκευής</td><td>Πλυντήριο Ρούχων Άνω Φόρτωσης (Top Loader)</td></tr>
+        <tr><td>Μοντέλο</td><td>BT37038Q</td></tr>
+        <tr><td>Χωρητικότητα Κάδου</td><td>7.0 kg</td></tr>
+        <tr><td>Μέγιστη Ταχύτητα Στιψίματος</td><td>1300 rpm</td></tr>
+        <tr><td>Ενεργειακή Κλάση</td><td>C</td></tr>
+      </table>
+      <img src="/images/products/brandt-bt37038q-gallery.jpg" alt="BRANDT BT37038Q" />
+    </body></html>
+    """
+
+    parsed = GuarantyProductParser().parse(html, GUARANTY_URL)
+    specs = {item.label: item.value for item in parsed.source.spec_sections[0].items}
+
+    assert parsed.source.source_name == "guaranty"
+    assert parsed.source.product_code == "1001123984"
+    assert parsed.source.brand == "Brandt"
+    assert parsed.source.mpn == "BT37038Q"
+    assert parsed.source.category_tag_text == "Πλυντήρια Ρούχων"
+    assert parsed.source.taxonomy_source_category.endswith("Πλυντήρια Ρούχων")
+    assert specs["Χωρητικότητα Πλύσης"] == "7 kg"
+    assert specs["Μέγιστες Στροφές Στυψίματος"] == "1300 rpm"
+    assert specs["Τύπος Φόρτωσης"] == "Άνω"
+    assert parsed.source.gallery_images[0].url == (
+        "https://www.guaranty.gr/images/products/brandt-bt37038q.jpg"
+    )
+    assert parsed.critical_missing == []
+
+
 def test_new_runtime_sources_map_to_providers() -> None:
     assert source_to_provider_id("euragora") == "euragora"
+    assert source_to_provider_id("fgeurope") == "fgeurope"
+    assert source_to_provider_id("guaranty") == "guaranty"
     assert source_to_provider_id("pampoukidis") == "pampoukidis"
+
+
+def test_fgeurope_parser_extracts_gallery_specs_and_energy_label() -> None:
+    html = """
+    <html><head>
+      <link rel="canonical" href="https://www.fgeurope.gr/product/midea-klimatistiko-toichou-solunar-24kbtu/" />
+      <meta name="description" content="Το κλιματιστικό Solunar είναι εξοπλισμένο με το AI EcoMaster της Midea." />
+      <meta property="og:title" content="Midea Κλιματιστικό Τοίχου SOLUNAR 24kBTU | FG Europe" />
+      <meta property="og:image" content="https://www.fgeurope.gr/wp-content/uploads/2026/01/FrontRight-scaled.png" />
+    </head><body>
+      <a class="subsite-logo" title="Midea"><img alt="Midea" src="/midea.png" /></a>
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a>Home</a></li>
+        <li class="breadcrumb-item"><a>Midea</a></li>
+        <li class="breadcrumb-item"><a>Κλιματιστικά Midea</a></li>
+        <li class="breadcrumb-item"><a>Οικιακός Κλιματισμός Midea</a></li>
+        <li class="breadcrumb-item"><span>Midea Κλιματιστικό Τοίχου SOLUNAR 24kBTU</span></li>
+      </ol>
+      <div class="single-product-link"><h3>Midea Κλιματιστικό Τοίχου SOLUNAR 24kBTU</h3></div>
+      <div class="line-height-2"><strong>Κωδικός Εσωτερικής Μονάδας:</strong><span>EF-24RD1</span></div>
+      <div class="line-height-2"><strong>Κωδικός Εξωτερικής Μονάδας:</strong><span>MX4-24RD1-EF</span></div>
+      <div class="product-gallery">
+        <a href="https://www.fgeurope.gr/wp-content/uploads/2026/01/FrontRight-scaled.png" data-fancybox="images"><img alt="1" /></a>
+        <a href="https://www.fgeurope.gr/wp-content/uploads/2026/01/FrontLeft-scaled.png" data-fancybox="images"><img alt="2" /></a>
+        <a href="https://www.fgeurope.gr/wp-content/uploads/2026/01/Top-scaled.png" data-fancybox="images"><img alt="3" /></a>
+      </div>
+      <div class="product-attributes product-attributes-grid">
+        <table>
+          <tr><th>Ονομαστική Απόδοση Btu/h</th><td>23385</td></tr>
+          <tr><th>Ενεργειακή Κλάση Ψύξης</th><td>A++</td></tr>
+          <tr><th>Εποχιακός Βαθμός Ενεργειακής Απόδοσης (SEER) Ψύξη</th><td>7.1</td></tr>
+          <tr><th>Ενεργειακή Κλάση Θέρμανσης (Θερμή Ζώνη)</th><td>A+++</td></tr>
+          <tr><th>Ενεργειακή Κλάση Θέρμανσης (Μέσης Ζώνης)</th><td>A+</td></tr>
+          <tr><th>Εποχιακός Συντελεστής Απόδοσης (SCOP) Θέρμανση (Μέση)</th><td>4.2</td></tr>
+          <tr><th>Εποχιακός Συντελεστής Απόδοσης (SCOP) Θέρμανση (Θερμή)</th><td>5.1</td></tr>
+          <tr><th>Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A)</th><td>62</td></tr>
+          <tr><th>Διαστάσεις Εσωτερικής Μονάδας (Π x Β x Υ) mm</th><td>1055×231×330</td></tr>
+          <tr><th>Καθαρό/Μικτό Βάρος Εσωτερικής Μονάδας kg</th><td>12.4/15.9</td></tr>
+          <tr><th>Διαστάσεις Εξωτερικής Μονάδας (Π x Β x Υ) mm</th><td>890×342×673</td></tr>
+          <tr><th>Καθαρό/Μικτό Βάρος Εξωτερικής Μονάδας kg</th><td>38.3/41.5</td></tr>
+          <tr><th>Κωδικός Εξωτερικής Μονάδας</th><td>MX4-24RD1-EF</td></tr>
+        </table>
+      </div>
+      <div class="row">
+        <div><h4>AI Ecomaster</h4><p>Το κλιματιστικό Solunar είναι εξοπλισμένο με AI EcoMaster για αποδοτική λειτουργία.</p></div>
+        <img src="https://www.fgeurope.gr/wp-content/uploads/2026/01/ecomaster.png" />
+      </div>
+      <div class="row">
+        <div><h4>Πλήρης έλεγχος με ένα κλικ</h4><p>Με την εφαρμογή SmartHome App και Wi-Fi ελέγχετε το κλιματιστικό από απόσταση.</p></div>
+        <img src="https://www.fgeurope.gr/wp-content/uploads/2026/01/app.png" />
+      </div>
+      <div id="ΣυνοδευτικάΑρχεία"></div>
+      <div class="file-slider">
+        <div class="files-wrapper">
+          <a href="https://www.fgeurope.gr/wp-content/uploads/2026/01/User-manual-Solunar_.pdf"><h6>Εγχειρίδιο Χρήστη</h6></a>
+          <a href="https://www.fgeurope.gr/wp-content/uploads/2026/01/Product-fiche-Solunar.jpg"><h6>Product Fiche</h6></a>
+          <a href="https://www.fgeurope.gr/wp-content/uploads/2026/01/Energy-label-Solunar-24000btu-EF-24RD1H.jpg"><h6>Ενεργειακή Ετικέτα</h6></a>
+        </div>
+      </div>
+    </body></html>
+    """
+
+    parsed = FGEuropeProductParser().parse(html, FGEUROPE_URL)
+    specs = {item.label: item.value for item in parsed.source.spec_sections[0].items}
+
+    assert parsed.source.source_name == "fgeurope"
+    assert parsed.source.brand == "Midea"
+    assert parsed.source.mpn == "EF-24RD1/MX4-24RD1-EF"
+    assert parsed.source.product_code == "EF-24RD1"
+    assert parsed.source.category_tag_text == "Τοίχου"
+    assert parsed.source.taxonomy_rule_id == "fgeurope:wall_ac"
+    assert parsed.source.gallery_images[1].url.endswith("FrontLeft-scaled.png")
+    assert parsed.source.energy_label_asset_url.endswith(
+        "Energy-label-Solunar-24000btu-EF-24RD1H.jpg"
+    )
+    assert parsed.source.product_sheet_asset_url.endswith("Product-fiche-Solunar.jpg")
+    assert specs["Ονομαστική Απόδοση (Btu/h)"] == "24000 BTU"
+    assert specs["Βαθμός Εποχιακής Απόδοσης Ψύξης - SEER"] == "7.1"
+    assert specs["Βαθμός Εποχιακής Απόδοσης Θέρμανσης Μέσης Εποχής - SCOP"] == "4.2"
+    assert (
+        specs["Βαθμός Εποχιακής Απόδοσης Θέρμανσης Θερμότερης Εποχής - SCOP"] == "5.1"
+    )
+    assert specs["Ενεργειακή Κλάση Θέρμανσης Θερμότερης Εποχής"] == "A+++"
+    assert specs["Ενεργειακή Κλάση Θέρμανσης Μέσης Εποχής"] == "A+"
+    assert specs["Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A) - Hi"] == "62"
+    assert specs["Πλάτος Εσωτερικής Μονάδας ( mm )"] == "1055"
+    assert specs["Βάθος Εσωτερικής Μονάδας ( mm )"] == "231"
+    assert specs["Ύψος Εσωτερικής Μονάδας ( mm )"] == "330"
+    assert specs["Πλάτος Εξωτερικής Μονάδας ( mm )"] == "890"
+    assert specs["Βάθος Εξωτερικής Μονάδας ( mm )"] == "342"
+    assert specs["Ύψος Εξωτερικής Μονάδας ( mm )"] == "673"
+    assert specs["Βάρος Εσωτερικής Μονάδας ( Kg )"] == "12.4"
+    assert specs["Βάρος Εξωτερικής Μονάδας ( Kg )"] == "38.3"
+    assert specs["Wifi"] == "Υποστηρίζεται"
+    assert "AI Ecomaster" in parsed.source.presentation_source_html
+    assert "SmartHome App" in parsed.source.presentation_source_text
+    assert (
+        len(
+            extract_presentation_blocks(
+                parsed.source.presentation_source_html,
+                parsed.source.presentation_source_text,
+            )
+        )
+        == 2
+    )
+    assert parsed.critical_missing == []
 
 
 def build_provider(skroutz_fixtures_root: Path) -> SkroutzProvider:
@@ -340,8 +507,12 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         "dreamelectric",
         "electronet",
         "estia",
+        "euragora",
+        "fgeurope",
+        "guaranty",
         "kotsovolos",
         "marketquest",
+        "pampoukidis",
         "skroutz",
     )
     assert [definition.provider_id for definition in registry.definitions()] == [
@@ -350,8 +521,12 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         "dreamelectric",
         "electronet",
         "estia",
+        "euragora",
+        "fgeurope",
+        "guaranty",
         "kotsovolos",
         "marketquest",
+        "pampoukidis",
         "skroutz",
     ]
 
@@ -362,8 +537,12 @@ def test_source_to_provider_id_maps_supported_sources() -> None:
     assert source_to_provider_id("dreamelectric") == "dreamelectric"
     assert source_to_provider_id("electronet") == "electronet"
     assert source_to_provider_id("estia") == "estia"
+    assert source_to_provider_id("euragora") == "euragora"
+    assert source_to_provider_id("fgeurope") == "fgeurope"
+    assert source_to_provider_id("guaranty") == "guaranty"
     assert source_to_provider_id("kotsovolos") == "kotsovolos"
     assert source_to_provider_id("marketquest") == "marketquest"
+    assert source_to_provider_id("pampoukidis") == "pampoukidis"
     assert source_to_provider_id("skroutz") == "skroutz"
     assert source_to_provider_id("manufacturer_tefal") is None
     assert source_to_provider_id("manufacturer_bosch") is None

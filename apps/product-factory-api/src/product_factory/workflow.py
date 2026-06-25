@@ -70,6 +70,9 @@ def add_input_fields(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--skroutz-status", type=int, default=None, dest="skroutz_status"
     )
+    parser.add_argument(
+        "--bestprice-status", type=int, default=None, dest="bestprice_status"
+    )
     parser.add_argument("--boxnow", type=int, default=None)
     parser.add_argument("--price", default=None)
     parser.add_argument("--gallery-url", default=None, dest="gallery_url")
@@ -98,6 +101,7 @@ def main(argv: list[str] | None = None) -> int:
                     url=cli.url,
                     photos=cli.photos,
                     sections=cli.sections,
+                    bestprice_status=cli.bestprice_status,
                     skroutz_status=cli.skroutz_status,
                     boxnow=cli.boxnow,
                     price=cli.price,
@@ -152,6 +156,9 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "url": template_values.get("url", ""),
         "photos": template_values.get("photos", "1"),
         "sections": template_values.get("sections", "0"),
+        "bestprice_status": template_values.get(
+            "bestprice_status", template_values.get("bestprice", "1")
+        ),
         "skroutz_status": template_values.get("skroutz_status", "0"),
         "boxnow": template_values.get("boxnow", "0"),
         "price": template_values.get("price", "0"),
@@ -167,6 +174,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "url",
         "photos",
         "sections",
+        "bestprice_status",
         "skroutz_status",
         "boxnow",
         "price",
@@ -183,6 +191,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         url=merged["url"],
         photos=merged["photos"],
         sections=merged["sections"],
+        bestprice_status=merged["bestprice_status"],
         skroutz_status=merged["skroutz_status"],
         boxnow=merged["boxnow"],
         price=merged["price"],
@@ -198,12 +207,14 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         url=cli.url,
         photos=cli.photos,
         sections=cli.sections,
+        bestprice_status=cli.bestprice_status,
         skroutz_status=cli.skroutz_status,
         boxnow=cli.boxnow,
         price=cli.price,
         gallery_url=cli.gallery_url,
         characteristics_url=cli.characteristics_url,
         second_opencart_image_index=cli.second_opencart_image_index,
+        gallery_mode=cli.gallery_mode,
         out=str(WORK_ROOT / cli.model / "scrape"),
     )
 
@@ -231,6 +242,8 @@ def parse_template_text(text: str) -> dict[str, str]:
             "url",
             "photos",
             "sections",
+            "bestprice",
+            "bestprice_status",
             "skroutz_status",
             "boxnow",
             "price",

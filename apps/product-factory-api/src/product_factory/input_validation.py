@@ -4,12 +4,9 @@ import argparse
 from urllib.parse import urlparse
 
 from .models import CLIInput
-from .source_detection import validate_url_scope
+from .source_detection import SUPPORTED_URL_MESSAGE, validate_url_scope
 
 FAIL_MESSAGE = "Generation failed, provide 6-digit model"
-SUPPORTED_URL_MESSAGE = (
-    "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, MarketQuest, Euragora, or Pampoukidis product URL"
-)
 
 
 def validate_input(args: argparse.Namespace) -> CLIInput:
@@ -61,6 +58,7 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
         url=args.url.strip(),
         photos=max(int(args.photos), 1),
         sections=max(int(args.sections), 0),
+        bestprice_status=int(getattr(args, "bestprice_status", 1)),
         skroutz_status=int(args.skroutz_status),
         boxnow=int(args.boxnow),
         price=args.price,

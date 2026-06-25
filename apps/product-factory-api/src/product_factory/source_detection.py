@@ -13,12 +13,23 @@ APOTHEMA_DOMAINS = {"apothema.gr", "www.apothema.gr"}
 MARKETQUEST_DOMAINS = {"marketquest.gr", "www.marketquest.gr"}
 EURAGORA_DOMAINS = {"euragora.gr", "www.euragora.gr"}
 PAMPOUKIDIS_DOMAINS = {"pampoukidis.gr", "www.pampoukidis.gr"}
+GUARANTY_DOMAINS = {"guaranty.gr", "www.guaranty.gr"}
+FGEUROPE_DOMAINS = {"fgeurope.gr", "www.fgeurope.gr"}
 SKROUTZ_PRODUCT_PATH_PREFIX = "/s/"
 BESTPRICE_PRODUCT_PATH_PREFIX = "/item/"
 KOTSOVOLOS_PRODUCT_PATH_RE = re.compile(r"/\d{5,}-", re.IGNORECASE)
-ESTIA_PRODUCT_PATH_RE = re.compile(r"^/[A-Za-z0-9][A-Za-z0-9_-]*(?:/[A-Za-z0-9_-]+)?/?$")
+ESTIA_PRODUCT_PATH_RE = re.compile(
+    r"^/[A-Za-z0-9][A-Za-z0-9_-]*(?:/[A-Za-z0-9_-]+)?/?$"
+)
 MARKETQUEST_PRODUCT_PATH_RE = re.compile(r"^/product/\d+/.+\.html$", re.IGNORECASE)
 EURAGORA_PRODUCT_PATH_PREFIX = "/product/"
+GUARANTY_PRODUCT_PATH_RE = re.compile(r"^/product/\d+/.+\.html$", re.IGNORECASE)
+FGEUROPE_PRODUCT_PATH_PREFIX = "/product/"
+SUPPORTED_URL_MESSAGE = (
+    "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, "
+    "Kotsovolos, Estia, Apothema, MarketQuest, Euragora, Pampoukidis, "
+    "Guaranty, or FG Europe product URL"
+)
 
 
 def normalize_host(url: str) -> str:
@@ -47,9 +58,11 @@ def detect_source(url: str) -> str:
         return "euragora"
     if host in PAMPOUKIDIS_DOMAINS:
         return "pampoukidis"
-    raise ValueError(
-        "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, Kotsovolos, Estia, Apothema, MarketQuest, Euragora, or Pampoukidis product URL"
-    )
+    if host in GUARANTY_DOMAINS:
+        return "guaranty"
+    if host in FGEUROPE_DOMAINS:
+        return "fgeurope"
+    raise ValueError(SUPPORTED_URL_MESSAGE)
 
 
 def is_skroutz_product_url(url: str) -> bool:
@@ -69,9 +82,8 @@ def is_bestprice_product_url(url: str) -> bool:
 
 def is_kotsovolos_product_url(url: str) -> bool:
     parsed = urlparse(url)
-    return (
-        parsed.netloc.strip().lower() in KOTSOVOLOS_DOMAINS
-        and bool(KOTSOVOLOS_PRODUCT_PATH_RE.search(parsed.path))
+    return parsed.netloc.strip().lower() in KOTSOVOLOS_DOMAINS and bool(
+        KOTSOVOLOS_PRODUCT_PATH_RE.search(parsed.path)
     )
 
 
@@ -87,17 +99,15 @@ def is_estia_product_url(url: str) -> bool:
 
 def is_marketquest_product_url(url: str) -> bool:
     parsed = urlparse(url)
-    return (
-        parsed.netloc.strip().lower() in MARKETQUEST_DOMAINS
-        and bool(MARKETQUEST_PRODUCT_PATH_RE.match(parsed.path.strip()))
+    return parsed.netloc.strip().lower() in MARKETQUEST_DOMAINS and bool(
+        MARKETQUEST_PRODUCT_PATH_RE.match(parsed.path.strip())
     )
 
 
 def is_euragora_product_url(url: str) -> bool:
     parsed = urlparse(url)
-    return (
-        parsed.netloc.strip().lower() in EURAGORA_DOMAINS
-        and parsed.path.startswith(EURAGORA_PRODUCT_PATH_PREFIX)
+    return parsed.netloc.strip().lower() in EURAGORA_DOMAINS and parsed.path.startswith(
+        EURAGORA_PRODUCT_PATH_PREFIX
     )
 
 
@@ -105,6 +115,22 @@ def is_pampoukidis_product_url(url: str) -> bool:
     parsed = urlparse(url)
     path = parsed.path.strip("/")
     return parsed.netloc.strip().lower() in PAMPOUKIDIS_DOMAINS and bool(path)
+
+
+def is_guaranty_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.netloc.strip().lower() in GUARANTY_DOMAINS and bool(
+        GUARANTY_PRODUCT_PATH_RE.match(parsed.path.strip())
+    )
+
+
+def is_fgeurope_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return (
+        parsed.netloc.strip().lower() in FGEUROPE_DOMAINS
+        and parsed.path.startswith(FGEUROPE_PRODUCT_PATH_PREFIX)
+        and bool(parsed.path.strip("/").split("/", 1)[-1])
+    )
 
 
 def validate_url_scope(url: str) -> tuple[str, bool, str]:
@@ -146,4 +172,12 @@ def validate_url_scope(url: str) -> tuple[str, bool, str]:
         return source, True, "pampoukidis_product_path"
     if source == "pampoukidis":
         return source, False, "pampoukidis_non_product_path"
+    if is_guaranty_product_url(url):
+        return source, True, "guaranty_product_path"
+    if source == "guaranty":
+        return source, False, "guaranty_non_product_path"
+    if is_fgeurope_product_url(url):
+        return source, True, "fgeurope_product_path"
+    if source == "fgeurope":
+        return source, False, "fgeurope_non_product_path"
     return source, False, "unsupported_source"

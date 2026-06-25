@@ -7,6 +7,8 @@ from ..parser_product_dreamelectric import DreamelectricProductParser
 from ..parser_product_electronet import ElectronetProductParser
 from ..parser_product_euragora import EuragoraProductParser
 from ..parser_product_estia import EstiaProductParser
+from ..parser_product_guaranty import GuarantyProductParser
+from ..parser_product_fgeurope import FGEuropeProductParser
 from ..parser_product_kotsovolos import KotsovolosProductParser
 from ..parser_product_marketquest import MarketQuestProductParser
 from ..parser_product_manufacturer import ManufacturerProductParser
@@ -19,6 +21,8 @@ from .dreamelectric_provider import DreamelectricProvider
 from .electronet_provider import ElectronetProvider
 from .euragora_provider import EuragoraProvider
 from .estia_provider import EstiaProvider
+from .guaranty_provider import GuarantyProvider
+from .fgeurope_provider import FGEuropeProvider
 from .kotsovolos_provider import KotsovolosProvider
 from .marketquest_provider import MarketQuestProvider
 from .pampoukidis_provider import PampoukidisProvider
@@ -32,6 +36,8 @@ RUNTIME_SOURCE_PROVIDER_IDS = {
     "electronet": "electronet",
     "estia": "estia",
     "euragora": "euragora",
+    "guaranty": "guaranty",
+    "fgeurope": "fgeurope",
     "kotsovolos": "kotsovolos",
     "marketquest": "marketquest",
     "pampoukidis": "pampoukidis",
@@ -104,6 +110,8 @@ def bootstrap_runtime_provider_registry(
     dreamelectric_parser: DreamelectricProductParser | None = None,
     estia_parser: EstiaProductParser | None = None,
     euragora_parser: EuragoraProductParser | None = None,
+    guaranty_parser: GuarantyProductParser | None = None,
+    fgeurope_parser: FGEuropeProductParser | None = None,
     kotsovolos_parser: KotsovolosProductParser | None = None,
     marketquest_parser: MarketQuestProductParser | None = None,
     pampoukidis_parser: PampoukidisProductParser | None = None,
@@ -132,6 +140,16 @@ def bootstrap_runtime_provider_registry(
     registry.register(
         EuragoraProvider(
             fetcher=fetcher, parser=euragora_parser or EuragoraProductParser()
+        )
+    )
+    registry.register(
+        GuarantyProvider(
+            fetcher=fetcher, parser=guaranty_parser or GuarantyProductParser()
+        )
+    )
+    registry.register(
+        FGEuropeProvider(
+            fetcher=fetcher, parser=fgeurope_parser or FGEuropeProductParser()
         )
     )
     registry.register(
