@@ -4,6 +4,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 from product_factory.jobs import runner as job_runner
 from product_factory.jobs.models import JobRecord, JobStatus, JobType
@@ -544,6 +545,9 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(
             "boxnow": 1,
             "photos": 100,
             "sections": 20,
+            "gallery_url": "https://www.electronet.gr/example/gallery",
+            "characteristics_url": "https://www.electronet.gr/example/specs",
+            "second_opencart_image_index": 2,
             "gallery_mode": "all",
         },
     )
@@ -569,6 +573,7 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(
             ("seo", model, retry)
         )
         or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        get_filter_review_state_fn=lambda model: _passing_filter_review(model),
         render_product_fn=lambda request: calls.append(request)
         or _service_result(
             request.model,
@@ -594,6 +599,9 @@ def test_full_pipeline_runner_executes_all_stages_with_stubbed_services(
         skroutz_status=1,
         boxnow=1,
         price=0,
+        gallery_url="https://www.electronet.gr/example/gallery",
+        characteristics_url="https://www.electronet.gr/example/specs",
+        second_opencart_image_index=2,
         gallery_mode="all",
     )
     assert calls[1:4] == [
@@ -677,6 +685,7 @@ def test_full_pipeline_retry_from_artifacts_skips_prepare_and_reruns_remaining_s
             ("seo", model, retry)
         )
         or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        get_filter_review_state_fn=lambda model: _passing_filter_review(model),
         render_product_fn=lambda request: calls.append(request)
         or _service_result(
             request.model,
@@ -703,6 +712,56 @@ def test_full_pipeline_retry_from_artifacts_skips_prepare_and_reruns_remaining_s
         in logs
     )
     assert "Full pipeline stage prepare starting." not in logs
+
+
+def test_full_pipeline_filter_review_block_stops_before_render_and_retry_skips_prepare(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    model = "233541"
+    _write_required_prepared_artifacts(tmp_path, model)
+    monkeypatch.setattr(job_runner.repo_paths, "REPO_ROOT", tmp_path)
+    record = JobRecord(
+        job_id="job-1",
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatus.RUNNING,
+        model=model,
+        payload={
+            "model": model,
+            "source_url": "https://www.electronet.gr/example",
+            "skip_prepare": True,
+            "retry_mode": "from_prepared_artifacts",
+        },
+    )
+    calls: list[str] = []
+    logs: list[str] = []
+
+    result = run_full_pipeline_job(
+        record,
+        logs.append,
+        prepare_product_fn=lambda request: calls.append("prepare")
+        or _service_result(request.model, RunType.PREPARE),
+        run_intro_text_authoring_fn=lambda model, retry=False: calls.append("intro")
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        run_seo_meta_authoring_fn=lambda model, retry=False: calls.append("seo")
+        or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        get_filter_review_state_fn=lambda model: _blocking_filter_review(model),
+        render_product_fn=lambda request: calls.append("render")
+        or _service_result(request.model, RunType.RENDER),
+        publish_product_fn=lambda request: calls.append("publish")
+        or _service_result(request.model, RunType.PUBLISH),
+    )
+
+    assert result.status == JobStatus.FAILED
+    assert result.message == "Full pipeline failed during filter review."
+    assert result.error_code == "category_filter_review_required"
+    assert "missing required filters: Screen size" in (result.error or "")
+    assert calls == ["intro", "seo"]
+    assert (
+        "Retry from prepared artifacts active; skipping prepare/source scraping."
+        in logs
+    )
+    assert "Full pipeline stage render starting." not in logs
 
 
 def test_full_pipeline_retry_from_artifacts_fails_when_prepared_artifacts_are_missing(
@@ -734,6 +793,7 @@ def test_full_pipeline_retry_from_artifacts_fails_when_prepared_artifacts_are_mi
         or _authoring_status(Path("work") / model / "llm", model=model),
         run_seo_meta_authoring_fn=lambda model, retry=False: calls.append("seo")
         or _authoring_status(Path("work") / model / "llm", model=model),
+        get_filter_review_state_fn=lambda model: _passing_filter_review(model),
         render_product_fn=lambda request: calls.append("render")
         or _service_result(request.model, RunType.RENDER),
         publish_product_fn=lambda request: calls.append("publish")
@@ -784,6 +844,7 @@ def test_full_pipeline_fails_before_authoring_when_prepare_artifacts_are_missing
         or _authoring_status(tmp_path / "work" / model / "llm", model=model),
         run_seo_meta_authoring_fn=lambda model, retry=False: calls.append("seo")
         or _authoring_status(tmp_path / "work" / model / "llm", model=model),
+        get_filter_review_state_fn=lambda model: _passing_filter_review(model),
         render_product_fn=lambda request: calls.append("render")
         or _service_result(request.model, RunType.RENDER),
         publish_product_fn=lambda request: calls.append("publish")
@@ -843,6 +904,7 @@ def test_full_pipeline_batch_payload_uses_source_url_for_prepare(
         run_seo_meta_authoring_fn=lambda model, retry=False: _authoring_status(
             tmp_path / "work" / model / "llm", model=model
         ),
+        get_filter_review_state_fn=lambda model: _passing_filter_review(model),
         render_product_fn=lambda request: _service_result(
             request.model, RunType.RENDER
         ),
@@ -1317,6 +1379,7 @@ def _run_full_pipeline_with_failure(
         prepare_product_fn=prepare_fn,
         run_intro_text_authoring_fn=intro_fn,
         run_seo_meta_authoring_fn=seo_fn,
+        get_filter_review_state_fn=lambda model: _passing_filter_review(model),
         render_product_fn=render_fn,
         publish_product_fn=publish_fn,
     )
@@ -1349,3 +1412,41 @@ def _stage_service_result(
         else RunArtifacts()
     )
     return _service_result(model, run_type, artifacts=success_artifacts)
+
+
+def _passing_filter_review(model: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        model=model,
+        approved=False,
+        render_blocked=False,
+        render_block_reasons=[],
+        missing_required_groups=[],
+        groups=[],
+        warnings=[],
+        review_artifact_path=f"work/{model}/review/category_filters.override.json",
+    )
+
+
+def _blocking_filter_review(model: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        model=model,
+        approved=False,
+        render_blocked=False,
+        render_block_reasons=[],
+        missing_required_groups=[
+            SimpleNamespace(group_id="screen-size", group_name="Screen size")
+        ],
+        groups=[
+            SimpleNamespace(
+                group_id="screen-size",
+                group_name="Screen size",
+                missing_required=True,
+                outside_allowed=False,
+                deprecated_value=False,
+                inactive_group=False,
+                emitted_if_rendered=False,
+            )
+        ],
+        warnings=[],
+        review_artifact_path=f"work/{model}/review/category_filters.override.json",
+    )

@@ -4,6 +4,7 @@ import { apiClient, ApiError, getApiErrorMessage } from "../api/client";
 import {
   canRetryJob,
   compareJobsByUpdatedDesc,
+  formatDateTime,
   getAuthoringJobSubtype,
   getJobIdentifier,
   getJobStage,
@@ -18,6 +19,7 @@ import type {
   FilterReview,
   FilterReviewGroup,
   FilterReviewSaveRequest,
+  FullPipelineJobRequest,
   HealthResponse,
   Job,
   LogEntry,
@@ -38,7 +40,7 @@ import { usePersistentPageState } from "../hooks/usePersistentPageState";
 
 const POLL_INTERVAL_MS = 2500;
 const JOB_COMPLETION_TIMEOUT_MS = 30 * 60 * 1000;
-const WORKFLOW_STORAGE_KEY = "product-factory-ui:workflow-shell:v1";
+const WORKFLOW_STORAGE_KEY = "product-factory-ui:workflow-shell:v2";
 const INTRO_EMPHASIS_MISSING_CODE = "llm_intro_text_emphasis_missing";
 const HARD_INTRO_EMPHASIS_CODES = new Set([
   "llm_intro_text_emphasis_invalid",
@@ -94,6 +96,16 @@ interface JobAssetsState {
   error: string | null;
   isLoading: boolean;
 }
+
+interface WorkflowShellState {
+  prepareDraft: PrepareFormState;
+  selectedModel: string;
+}
+
+const initialWorkflowShellState: WorkflowShellState = {
+  prepareDraft: initialPrepareFormState,
+  selectedModel: "",
+};
 
 class WorkflowHalted extends Error {
   constructor(message: string) {
@@ -280,6 +292,30 @@ function getJobMessage(job: Job): string | null {
   return null;
 }
 
+function getJobModel(job: Job): string {
+  const directModel = job.model;
+  if (typeof directModel === "string" || typeof directModel === "number") {
+    return String(directModel).trim();
+  }
+
+  for (const payload of [job.payload, job.request, job.request_payload, job.input]) {
+    if (isRecord(payload)) {
+      const model = payload.model;
+      if (typeof model === "string" || typeof model === "number") {
+        return String(model).trim();
+      }
+    }
+  }
+
+  return "";
+}
+
+function isFullPipelineJob(job: Job): boolean {
+  return [job.job_type, job.type, job.kind, job.workflow]
+    .filter((value): value is string => typeof value === "string")
+    .some((value) => value.trim().toLowerCase() === "full_pipeline");
+}
+
 function normalizeText(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
@@ -380,6 +416,42 @@ function upsertJobById(jobs: Job[], job: Job): Job[] {
     job,
     ...jobs.filter((candidate) => getJobIdentifier(candidate) !== jobId),
   ].sort(compareJobsByUpdatedDesc);
+}
+
+function makeFullPipelineRequest(request: PrepareJobRequest): FullPipelineJobRequest {
+  const fullPipelineRequest: FullPipelineJobRequest = {
+    model: request.model,
+    source_url: request.url,
+    photos: request.photos,
+    sections: request.sections,
+    bestprice_status: request.bestprice_status,
+    skroutz_status: request.skroutz_status,
+    boxnow: request.boxnow,
+    price: request.price,
+    gallery_mode: request.gallery_mode ?? null,
+  };
+  if (request.gallery_url) {
+    fullPipelineRequest.gallery_url = request.gallery_url;
+  }
+  if (request.characteristics_url) {
+    fullPipelineRequest.characteristics_url = request.characteristics_url;
+  }
+  if (request.second_opencart_image_index !== undefined) {
+    fullPipelineRequest.second_opencart_image_index = request.second_opencart_image_index;
+  }
+  return fullPipelineRequest;
+}
+
+function clearQueuedPrepareDraft(current: PrepareFormState): PrepareFormState {
+  return {
+    ...current,
+    model: "",
+    url: "",
+    gallery_url: "",
+    characteristics_url: "",
+    second_opencart_image_index: "",
+    price: "0",
+  };
 }
 
 function getJobFailureMessage(job: Job, fallback: string): string {
@@ -1181,12 +1253,13 @@ function SettingsPanel({
 
 export function ProductFactoryWorkflowPage() {
   const { model: routeModel } = useParams<{ model?: string }>();
-  const { trackJob } = useGlobalJobs();
+  const { jobs: globalJobs, trackJob } = useGlobalJobs();
   const operatorStartedStagesRef = useRef<Set<WorkflowTab>>(new Set());
   const previousStageReadyRef = useRef<Partial<Record<WorkflowTab, boolean>>>({});
-  const [form, setForm, resetForm] = usePersistentPageState<PrepareFormState>(
+  const [workflowState, setWorkflowState, resetWorkflowState] = usePersistentPageState<WorkflowShellState>(
     WORKFLOW_STORAGE_KEY,
-    initialPrepareFormState,
+    initialWorkflowShellState,
+    { version: 2 },
   );
   const [activeTab, setActiveTab] = useState<WorkflowTab>("prepare");
   const [autoAdvanceMessage, setAutoAdvanceMessage] = useState<string | null>(null);
@@ -1206,7 +1279,25 @@ export function ProductFactoryWorkflowPage() {
     errors: {},
   });
 
-  const model = form.model.trim();
+  const prepareDraft = { ...initialPrepareFormState, ...workflowState.prepareDraft };
+  const selectedModel = workflowState.selectedModel ?? "";
+  const model = selectedModel.trim();
+  const setPrepareDraft = useCallback(
+    (update: PrepareFormState | ((current: PrepareFormState) => PrepareFormState)) => {
+      setWorkflowState((current) => {
+        const currentDraft = { ...initialPrepareFormState, ...current.prepareDraft };
+        const nextDraft = typeof update === "function" ? update(currentDraft) : update;
+        return { ...current, prepareDraft: nextDraft };
+      });
+    },
+    [setWorkflowState],
+  );
+  const setSelectedModel = useCallback(
+    (nextModel: string) => {
+      setWorkflowState((current) => ({ ...current, selectedModel: nextModel }));
+    },
+    [setWorkflowState],
+  );
   const isBackendAvailable = isApiHealthy(health, healthError);
   const latestPrepareJob = useMemo(() => getLatestJobForTab(modelJobs, "prepare", model), [modelJobs, model]);
   const latestAuthoringJob = useMemo(() => getLatestJobForTab(modelJobs, "authoring", model), [modelJobs, model]);
@@ -1215,6 +1306,22 @@ export function ProductFactoryWorkflowPage() {
   const latestFilterReviewJob = useMemo(() => getLatestJobForTab(modelJobs, "filter_review", model), [modelJobs, model]);
   const latestRenderJob = useMemo(() => getLatestJobForTab(modelJobs, "render", model), [modelJobs, model]);
   const latestPublishJob = useMemo(() => getLatestJobForTab(modelJobs, "publish", model), [modelJobs, model]);
+  const activeFullPipelineJobs = useMemo(
+    () =>
+      globalJobs
+        .filter((job) => isFullPipelineJob(job) && isActiveJob(job))
+        .sort((left, right) => {
+          const leftRunning = getJobStatus(left).toLowerCase() === "running";
+          const rightRunning = getJobStatus(right).toLowerCase() === "running";
+          if (leftRunning !== rightRunning) {
+            return leftRunning ? -1 : 1;
+          }
+          const leftTime = typeof left.created_at === "string" ? new Date(left.created_at).getTime() : Number.POSITIVE_INFINITY;
+          const rightTime = typeof right.created_at === "string" ? new Date(right.created_at).getTime() : Number.POSITIVE_INFINITY;
+          return (Number.isNaN(leftTime) ? Number.POSITIVE_INFINITY : leftTime) - (Number.isNaN(rightTime) ? Number.POSITIVE_INFINITY : rightTime);
+        }),
+    [globalJobs],
+  );
 
   const authoringBlockReasons = toStringList(authoringStatus?.render_block_reasons);
   const filterWarnings = getFilterReviewWarnings(filterReview);
@@ -1287,10 +1394,8 @@ export function ProductFactoryWorkflowPage() {
       return;
     }
 
-    setForm((current) =>
-      current.model.trim() === nextRouteModel ? current : { ...current, model: nextRouteModel },
-    );
-  }, [routeModel, setForm]);
+    setSelectedModel(nextRouteModel);
+  }, [routeModel, setSelectedModel]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1670,21 +1775,6 @@ export function ProductFactoryWorkflowPage() {
     setAutoAdvanceMessage("Publish succeeded.");
   }
 
-  async function runEndToEndWorkflow(request: PrepareJobRequest) {
-    const targetModel = request.model;
-    setAutoAdvanceMessage("Prepare queued. Waiting for completion.");
-    const prepareJob = await apiClient.createPrepareJob(request);
-    const completedPrepare = await waitForTerminalJob(prepareJob, "prepare", targetModel);
-    if (!isSuccessfulJob(completedPrepare)) {
-      throw new Error(getJobFailureMessage(completedPrepare, "Prepare failed."));
-    }
-    setActionMessage("prepare", "Prepare completed.");
-
-    await runAuthoringWorkflow(targetModel);
-    await runFilterReviewWorkflow(targetModel);
-    await runRenderPublishWorkflow(targetModel);
-  }
-
   const loadAuthoring = useCallback(
     async (actionKey: ActionKey = "authoring_load") => {
       markOperatorStageStarted("authoring");
@@ -1738,21 +1828,27 @@ export function ProductFactoryWorkflowPage() {
 
   async function handlePrepareSubmit(request: PrepareJobRequest) {
     markOperatorStageStarted("prepare");
-    setForm((current) => ({ ...current, model: request.model }));
+    setSelectedModel(request.model);
     setActiveTab("prepare");
     setActionState((current) => ({
       ...current,
       busy: { ...current.busy, prepare: true },
-      errors: {},
-      messages: {},
+      errors: { ...current.errors, prepare: undefined },
+      messages: { ...current.messages, prepare: undefined },
     }));
 
     try {
-      await runEndToEndWorkflow(request);
-    } catch (error) {
-      if (!(error instanceof WorkflowHalted)) {
-        setActionError("prepare", getErrorHint(error, "Could not run Product Factory workflow."));
+      const queuedJob = await apiClient.createFullPipelineJob(makeFullPipelineRequest(request));
+      recordJob(queuedJob);
+      setActionMessage("prepare", `Model ${request.model} queued.`);
+      setPrepareDraft((current) => clearQueuedPrepareDraft(current));
+      try {
+        setModelJobs((await apiClient.listJobsByModel(request.model)).sort(compareJobsByUpdatedDesc));
+      } catch {
+        setModelJobs((current) => upsertJobById(current, queuedJob));
       }
+    } catch (error) {
+      setActionError("prepare", getErrorHint(error, "Could not queue Product Factory workflow."));
     } finally {
       setActionBusy("prepare", false);
     }
@@ -1911,7 +2007,7 @@ export function ProductFactoryWorkflowPage() {
   }
 
   function handleResetForm() {
-    resetForm();
+    resetWorkflowState();
     setAuthoringStatus(null);
     setFilterReview(null);
     setRenderOverride(false);
@@ -2049,8 +2145,8 @@ export function ProductFactoryWorkflowPage() {
         <label className="inline-field wide">
           <span>Model</span>
           <input
-            value={form.model}
-            onChange={(event) => setForm((current) => ({ ...current, model: event.target.value }))}
+            value={selectedModel}
+            onChange={(event) => setSelectedModel(event.target.value)}
             placeholder="product-model"
           />
         </label>
@@ -2079,19 +2175,61 @@ export function ProductFactoryWorkflowPage() {
       <WorkflowStage
         title="Prepare"
         status={latestPrepareJob ? getJobStatus(latestPrepareJob) : "pending"}
-        description="Collect source input and queue the existing prepare job endpoint."
+        description="Collect source input and queue a backend-managed full workflow."
       >
         <PrepareJobForm
           key={resetSeq}
           actionLabel="Run Prepare"
-          busyLabel={writeDisabled ? "Backend unavailable" : "Running workflow..."}
+          busyLabel={writeDisabled ? "Backend unavailable" : "Queueing workflow..."}
           error={actionState.errors.prepare ?? null}
           isSubmitting={Boolean(actionState.busy.prepare) || writeDisabled}
-          initialForm={form}
-          onFormChange={setForm}
+          initialForm={prepareDraft}
+          onFormChange={setPrepareDraft}
           onSubmit={(request) => void handlePrepareSubmit(request)}
         />
         <MessageBlock message={actionState.messages.prepare} error={actionState.errors.prepare} />
+        <section className="workflow-queue-panel" aria-label="Active full workflow queue">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Queue</p>
+              <h4>Active full workflows</h4>
+            </div>
+            <Link className="button secondary compact-button" to="/jobs">
+              Open Jobs
+            </Link>
+          </div>
+          {activeFullPipelineJobs.length > 0 ? (
+            <div className="pipeline-stage-list">
+              {activeFullPipelineJobs.map((job) => {
+                const jobId = getJobIdentifier(job);
+                const jobModel = getJobModel(job);
+                return (
+                  <div className="pipeline-stage-item" key={jobId ?? `${jobModel}-${job.created_at ?? ""}`}>
+                    <button
+                      className="text-button pipeline-stage-main"
+                      type="button"
+                      onClick={() => {
+                        if (jobModel) {
+                          setSelectedModel(jobModel);
+                        }
+                      }}
+                    >
+                      <strong>{jobModel || "Unknown model"}</strong>
+                      {jobId ? <span>{jobId}</span> : null}
+                      <span className="muted">{formatDateTime(job.created_at)}</span>
+                    </button>
+                    <div className="button-row compact-button-row">
+                      <StatusBadge status={getJobStatus(job)} />
+                      {jobId ? <Link to={`/jobs/${encodeURIComponent(jobId)}`}>Details</Link> : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="muted">No full workflow jobs are queued or running.</p>
+          )}
+        </section>
         <StageJobPanel
           job={latestPrepareJob}
           label="prepare"

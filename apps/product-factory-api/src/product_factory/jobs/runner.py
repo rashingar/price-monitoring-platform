@@ -31,6 +31,7 @@ from ..services.authoring_service import (
     run_seo_meta_authoring,
 )
 from ..services.execution_models import PreparedProductContext
+from ..services.filter_review_service import get_filter_review_state
 from ..services.models import RunStatus
 from ..status_fields import (
     DEFAULT_BESTPRICE_STATUS,
@@ -204,9 +205,11 @@ def run_full_pipeline_job(
     prepare_product_fn: Callable[[PrepareRequest], ServiceResult] | None = None,
     run_intro_text_authoring_fn: Callable[..., AuthoringStatus] | None = None,
     run_seo_meta_authoring_fn: Callable[..., AuthoringStatus] | None = None,
+    get_filter_review_state_fn: Callable[[str], Any] | None = None,
     render_product_fn: Callable[[RenderRequest], ServiceResult] | None = None,
     publish_product_fn: Callable[[PublishRequest], ServiceResult] | None = None,
 ) -> JobRunResult:
+    get_filter_review_state_fn = get_filter_review_state_fn or get_filter_review_state
     model = str(record.payload["model"])
     source_url = str(record.payload["source_url"])
     retry_from_artifacts = is_full_pipeline_retry_from_artifacts(record.payload)
@@ -302,6 +305,23 @@ def run_full_pipeline_job(
     _merge_stage_artifacts(artifacts, "seo_meta_authoring", seo_result.artifacts)
     if seo_result.status == JobStatus.FAILED:
         return _full_pipeline_failed_result("SEO meta authoring", seo_result, artifacts)
+
+    filter_review_result = _run_full_pipeline_stage(
+        "filter review",
+        log,
+        lambda: _run_full_pipeline_filter_review(
+            model,
+            log,
+            get_filter_review_state_fn=get_filter_review_state_fn,
+        ),
+    )
+    _merge_stage_artifacts(
+        artifacts, "filter_review", filter_review_result.artifacts
+    )
+    if filter_review_result.status == JobStatus.FAILED:
+        return _full_pipeline_failed_result(
+            "filter review", filter_review_result, artifacts
+        )
 
     render_record = _stage_record(record, JobType.RENDER, {"model": model})
     render_result = _run_full_pipeline_stage(
@@ -431,7 +451,8 @@ def _stage_record(
 
 
 def _full_pipeline_prepare_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    return {
+    gallery_mode = payload["gallery_mode"] if "gallery_mode" in payload else "all"
+    prepare_payload = {
         "model": payload["model"],
         "url": payload["source_url"],
         "photos": payload.get("photos", 100),
@@ -455,8 +476,118 @@ def _full_pipeline_prepare_payload(payload: dict[str, Any]) -> dict[str, Any]:
             default=DEFAULT_BOXNOW_STATUS,
         ),
         "price": payload.get("price", 0),
-        "gallery_mode": payload.get("gallery_mode") or "all",
+        "gallery_mode": gallery_mode,
     }
+    for key in (
+        "gallery_url",
+        "characteristics_url",
+        "second_opencart_image_index",
+    ):
+        if key in payload:
+            prepare_payload[key] = payload.get(key)
+    return prepare_payload
+
+
+def _run_full_pipeline_filter_review(
+    model: str,
+    log: LogCallback,
+    *,
+    get_filter_review_state_fn: Callable[[str], Any],
+) -> JobRunResult:
+    review = get_filter_review_state_fn(model)
+    artifacts: dict[str, str] = {}
+    review_artifact_path = getattr(review, "review_artifact_path", None)
+    if review_artifact_path:
+        artifacts["category_filter_review_path"] = str(review_artifact_path)
+
+    warnings = _filter_review_warnings(review)
+    missing_required = _filter_review_missing_required_labels(review)
+    for warning in warnings:
+        log(f"Filter Review warning: {warning}")
+    for group in missing_required:
+        log(f"Filter Review missing required group: {group}")
+
+    if _filter_review_requires_manual_review(review):
+        if missing_required:
+            detail = (
+                "Filter Review requires manual review before render: "
+                f"missing required filters: {', '.join(missing_required)}."
+            )
+        elif warnings:
+            detail = (
+                "Filter Review requires manual review before render: "
+                f"{'; '.join(warnings)}."
+            )
+        else:
+            detail = "Filter Review requires manual review before render."
+        return JobRunResult(
+            status=JobStatus.FAILED,
+            message="Full pipeline blocked at Filter Review.",
+            error=detail,
+            error_code="category_filter_review_required",
+            artifacts=artifacts,
+        )
+
+    log("Filter Review has no render blockers.")
+    return JobRunResult(
+        status=JobStatus.SUCCEEDED,
+        message="Filter Review passed.",
+        artifacts=artifacts,
+    )
+
+
+def _filter_review_requires_manual_review(review: Any) -> bool:
+    if bool(getattr(review, "render_blocked", False)):
+        return True
+    if _filter_review_missing_required_labels(review):
+        return True
+    warnings = _filter_review_warnings(review)
+    return bool(getattr(review, "approved", False) is not True and warnings)
+
+
+def _filter_review_warnings(review: Any) -> list[str]:
+    values = [
+        *list(getattr(review, "warnings", []) or []),
+        *list(getattr(review, "render_block_reasons", []) or []),
+    ]
+    for group in list(getattr(review, "groups", []) or []):
+        group_name = str(getattr(group, "group_name", "") or "").strip()
+        for label, attr in (
+            ("Missing required", "missing_required"),
+            ("Outside allowed", "outside_allowed"),
+            ("Deprecated", "deprecated_value"),
+            ("Inactive group", "inactive_group"),
+            ("Not emitted", "emitted_if_rendered"),
+        ):
+            if attr == "emitted_if_rendered":
+                active = getattr(group, attr, None) is False
+            else:
+                active = bool(getattr(group, attr, False))
+            if active:
+                values.append(f"{group_name}: {label}" if group_name else label)
+    return [
+        item
+        for item in dict.fromkeys(str(value).strip() for value in values)
+        if item and item != "category_filter_review_not_approved"
+    ]
+
+
+def _filter_review_missing_required_labels(review: Any) -> list[str]:
+    if bool(getattr(review, "approved", False)) and not bool(
+        getattr(review, "render_blocked", False)
+    ):
+        return []
+    labels: list[str] = []
+    for group in list(getattr(review, "missing_required_groups", []) or []):
+        label = str(
+            getattr(group, "group_name", None)
+            or getattr(group, "group_id", None)
+            or group
+            or ""
+        ).strip()
+        if label:
+            labels.append(label)
+    return list(dict.fromkeys(labels))
 
 
 def _missing_prepared_artifacts(model: str) -> dict[str, Path]:

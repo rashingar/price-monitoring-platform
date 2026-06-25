@@ -114,9 +114,12 @@ class FullPipelineJobRequest(BaseModel):
     skroutz_status: int = DEFAULT_SKR_OUTZ_STATUS
     boxnow: int = DEFAULT_BOXNOW_STATUS
     price: str | float | int = 0
-    photos: int = Field(default=DEFAULT_FULL_PIPELINE_PHOTOS, ge=1)
+    photos: int = Field(default=DEFAULT_FULL_PIPELINE_PHOTOS, ge=0)
     sections: int = Field(default=DEFAULT_FULL_PIPELINE_SECTIONS, ge=0)
-    gallery_mode: Literal["all"] = DEFAULT_FULL_PIPELINE_GALLERY_MODE
+    gallery_url: str | None = None
+    characteristics_url: str | None = None
+    second_opencart_image_index: int | None = Field(default=None, ge=1)
+    gallery_mode: Literal["all"] | None = DEFAULT_FULL_PIPELINE_GALLERY_MODE
     skip_publish: bool = False
     trigger_source: str | None = None
     telegram_chat_id: str | None = None
@@ -147,6 +150,26 @@ class FullPipelineJobRequest(BaseModel):
     def _normalize_source_url(cls, value: object) -> object:
         if isinstance(value, str):
             return value.strip()
+        return value
+
+    @field_validator("gallery_url", "characteristics_url", mode="before")
+    @classmethod
+    def _normalize_optional_url(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            trimmed = value.strip()
+            return trimmed or None
+        return value
+
+    @field_validator("gallery_url", "characteristics_url")
+    @classmethod
+    def _optional_url_must_be_absolute(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        parts = urlsplit(value)
+        if parts.scheme not in {"http", "https"} or not parts.netloc:
+            raise ValueError("URL override must be an absolute HTTP(S) URL")
         return value
 
     @field_validator("source_url")

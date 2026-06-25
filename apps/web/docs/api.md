@@ -164,11 +164,14 @@ Generated from `packages/contracts/openapi.product-factory.json`.
 {
   bestprice_status?: number; // default: 1
   boxnow?: number; // default: 0
-  gallery_mode?: string; // default: "all"
+  characteristics_url?: string | null;
+  gallery_mode?: string | null; // default: "all"
+  gallery_url?: string | null;
   model: string;
   photos?: number; // default: 100
   price?: string | number; // default: 0
   product_name?: string | null;
+  second_opencart_image_index?: number | null;
   sections?: number; // default: 20
   skip_publish?: boolean; // default: false
   skroutz_status?: number; // default: 0

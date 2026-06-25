@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { ApiError, apiClient } from "../../api/client";
 import type {
   PrepareJobRequest,
+  FullPipelineJobRequest,
   ProductFactoryContractPrepareJobRequest,
+  ProductFactoryContractFullPipelineJobRequest,
   ProductFactoryContractPublishJobRequest,
   ProductFactoryContractRenderJobRequest,
   ProductFactoryContractStopJobRequest,
@@ -357,6 +359,35 @@ describe("Product Factory API client contract fixtures", () => {
     expect(mock.requests[2]?.body).toEqual(stopPayload);
     expect(mock.requests[3]?.pathname).toBe("/api/jobs/job-full-pipeline-succeeded-1/retry");
     expect(mock.requests[4]?.pathname).toBe("/api/jobs/job-full-pipeline-succeeded-1/start");
+  });
+
+  it("sends backend-valid full-pipeline payloads for Prepare form submissions", async () => {
+    const mock = installMockFetch([
+      {
+        method: "POST",
+        path: "/api/jobs/full-pipeline",
+        response: { job_id: "full-1", job_type: "full_pipeline", status: "queued", model: "005606" },
+      },
+    ]);
+    const payload = {
+      model: "005606",
+      source_url: "https://example.invalid/product",
+      photos: 1,
+      sections: 0,
+      bestprice_status: 1,
+      skroutz_status: 0,
+      boxnow: 0,
+      price: 0,
+      gallery_url: "https://example.invalid/gallery",
+      characteristics_url: "https://example.invalid/specs",
+      second_opencart_image_index: 4,
+      gallery_mode: null,
+    } satisfies FullPipelineJobRequest;
+    const generatedPayload: ProductFactoryContractFullPipelineJobRequest = payload;
+
+    await apiClient.createFullPipelineJob(generatedPayload);
+
+    expect(mock.requests[0]?.body).toEqual(payload);
   });
 
   it("exposes useful API error messages for 409 and 422 responses", async () => {

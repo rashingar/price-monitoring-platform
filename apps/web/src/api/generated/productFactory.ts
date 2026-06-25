@@ -608,12 +608,15 @@ export interface components {
        * @default 0
        */
       boxnow?: number;
+      /** Characteristics Url */
+      characteristics_url?: string | null;
       /**
        * Gallery Mode
        * @default all
-       * @constant
        */
-      gallery_mode?: "all";
+      gallery_mode?: "all" | null;
+      /** Gallery Url */
+      gallery_url?: string | null;
       /** Model */
       model: string;
       /**
@@ -628,6 +631,8 @@ export interface components {
       price?: string | number;
       /** Product Name */
       product_name?: string | null;
+      /** Second Opencart Image Index */
+      second_opencart_image_index?: number | null;
       /**
        * Sections
        * @default 20

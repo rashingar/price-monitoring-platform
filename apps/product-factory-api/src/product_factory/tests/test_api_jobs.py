@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 import pytest
@@ -271,6 +272,63 @@ def test_full_pipeline_route_enqueues_defaults_and_preserves_listing_flags(
     assert record.payload["sections"] == 20
     assert record.payload["gallery_mode"] == "all"
     assert record.payload["source_resolution"] == {"candidate_id": "abc"}
+
+
+def test_full_pipeline_route_maps_prepare_form_fields_and_rejects_duplicate_active_model(
+    tmp_path: Path,
+) -> None:
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from product_factory.api.app import create_app
+
+    store = JobStore(tmp_path / "jobs")
+    release = threading.Event()
+
+    def callback(record: JobRecord, log: LogCallback) -> None:
+        log(f"queued {record.job_type.value}")
+        release.wait(timeout=2.0)
+
+    runner = SequentialJobRunner(store, callback)
+    client = fastapi_testclient.TestClient(
+        create_app(job_store=store, job_runner=runner)
+    )
+    payload = {
+        "model": "000001",
+        "source_url": "https://www.electronet.gr/example",
+        "photos": 3,
+        "sections": 4,
+        "bestprice_status": 0,
+        "skroutz_status": 1,
+        "boxnow": 1,
+        "price": 12.5,
+        "gallery_url": "https://www.electronet.gr/example/gallery",
+        "characteristics_url": "https://www.electronet.gr/example/specs",
+        "second_opencart_image_index": 2,
+        "gallery_mode": None,
+    }
+
+    try:
+        first = client.post("/api/jobs/full-pipeline", json=payload)
+        duplicate = client.post("/api/jobs/full-pipeline", json=payload)
+        different = client.post(
+            "/api/jobs/full-pipeline",
+            json={
+                **payload,
+                "model": "000002",
+                "source_url": "https://www.electronet.gr/other",
+            },
+        )
+    finally:
+        release.set()
+        assert runner.wait_until_idle(timeout=2.0)
+        runner.stop()
+
+    assert first.status_code == 202
+    assert duplicate.status_code == 409
+    assert "already" in duplicate.json()["detail"]
+    assert different.status_code == 202
+    first_record = store.get_job(first.json()["job_id"])
+    for key, value in payload.items():
+        assert first_record.payload[key] == value
 
 
 def test_full_pipeline_route_preserves_explicit_disabled_bestprice_status(

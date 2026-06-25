@@ -1156,11 +1156,40 @@
             "title": "Boxnow",
             "type": "integer"
           },
+          "characteristics_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Characteristics Url"
+          },
           "gallery_mode": {
-            "const": "all",
+            "anyOf": [
+              {
+                "const": "all",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": "all",
-            "title": "Gallery Mode",
-            "type": "string"
+            "title": "Gallery Mode"
+          },
+          "gallery_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gallery Url"
           },
           "model": {
             "title": "Model",
@@ -1168,7 +1197,7 @@
           },
           "photos": {
             "default": 100,
-            "minimum": 1.0,
+            "minimum": 0.0,
             "title": "Photos",
             "type": "integer"
           },
@@ -1197,6 +1226,18 @@
               }
             ],
             "title": "Product Name"
+          },
+          "second_opencart_image_index": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Second Opencart Image Index"
           },
           "sections": {
             "default": 20,

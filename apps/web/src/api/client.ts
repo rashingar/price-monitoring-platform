@@ -11,6 +11,7 @@ import type {
   FilterReviewSaveRequest,
   FilterSyncReport,
   FilterSyncResponse,
+  FullPipelineJobRequest,
   HealthResponse,
   Job,
   LogEntry,
@@ -314,6 +315,12 @@ export const apiClient = {
     return withJobStage(
       normalizeJob(await request<unknown>("/api/jobs/prepare", { method: "POST", body })),
       "prepare",
+    );
+  },
+
+  async createFullPipelineJob(body: FullPipelineJobRequest): Promise<Job> {
+    return normalizeJob(
+      await request<unknown>("/api/jobs/full-pipeline", { method: "POST", body }),
     );
   },
 

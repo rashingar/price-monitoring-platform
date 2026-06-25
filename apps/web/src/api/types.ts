@@ -18,6 +18,8 @@ export type ProductFactoryContractFilterCategoryResponse =
   ProductFactorySchema<"FilterCategoryResponse">;
 export type ProductFactoryContractPrepareJobRequest =
   ProductFactorySchema<"PrepareJobRequest">;
+export type ProductFactoryContractFullPipelineJobRequest =
+  ProductFactorySchema<"FullPipelineJobRequest">;
 export type ProductFactoryContractRenderJobRequest = ProductFactorySchema<"RenderJobRequest">;
 export type ProductFactoryContractPublishJobRequest = ProductFactorySchema<"PublishJobRequest">;
 export type ProductFactoryContractStopJobRequest = ProductFactorySchema<"StopJobRequest">;
@@ -44,6 +46,7 @@ export type ProductFactoryStageName =
   | "publish";
 
 export type PrepareJobRequest = ProductFactoryContractPrepareJobRequest;
+export type FullPipelineJobRequest = ProductFactoryContractFullPipelineJobRequest;
 
 export type ModelJobRequest = Pick<ProductFactoryContractRenderJobRequest, "model">;
 

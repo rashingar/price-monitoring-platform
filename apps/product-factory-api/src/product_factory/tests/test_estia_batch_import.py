@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from xml.sax.saxutils import escape
 from zipfile import ZipFile
 
@@ -300,6 +301,16 @@ def test_full_pipeline_skip_publish_preserves_price_and_stops_after_render(
         prepare_product_fn=prepare_fn,
         run_intro_text_authoring_fn=lambda *_args, **_kwargs: _authoring_status(tmp_path, model),
         run_seo_meta_authoring_fn=lambda *_args, **_kwargs: _authoring_status(tmp_path, model),
+        get_filter_review_state_fn=lambda model: SimpleNamespace(
+            model=model,
+            approved=False,
+            render_blocked=False,
+            render_block_reasons=[],
+            missing_required_groups=[],
+            groups=[],
+            warnings=[],
+            review_artifact_path=f"work/{model}/review/category_filters.override.json",
+        ),
         render_product_fn=lambda request: (
             calls.append(request)
             or _service_result(
