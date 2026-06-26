@@ -1413,6 +1413,8 @@ def derive_name_differentiators(
     connectivity = normalize_connectivity(
         normalize_value(spec_lookup, ["Συνδεσιμότητα"])
     )
+    if not connectivity:
+        connectivity = _format_wifi_differentiator(spec_lookup)
     family = extract_commercial_family_from_title(source.name, brand, mpn)
     color = normalize_color_differentiator(
         spec_lookup
@@ -1420,11 +1422,34 @@ def derive_name_differentiators(
 
     for value in [cooling, capacity, energy_class, family, color, connectivity]:
         normalized = normalize_whitespace(value)
+        if _is_bare_support_differentiator(normalized):
+            continue
         if normalized and normalized not in ordered:
             ordered.append(normalized)
         if len(ordered) >= DEFAULT_MAX_NAME_DIFFERENTIATORS:
             break
     return ordered
+
+
+def _is_bare_support_differentiator(value: str) -> bool:
+    return normalize_for_match(value) in {
+        normalize_for_match("Ναι"),
+        normalize_for_match("Υποστηρίζεται"),
+    }
+
+
+def _format_wifi_differentiator(spec_lookup: dict[str, str]) -> str:
+    raw = normalize_value(spec_lookup, ["Wifi", "Wi-Fi", "WiFi"])
+    if not raw:
+        return ""
+    normalized = normalize_for_match(raw)
+    if normalized in {
+        normalize_for_match("Όχι"),
+        "no",
+        "false",
+    }:
+        return ""
+    return "Wi-Fi"
 
 
 def _prefer_manufacturer_evidence(source: SourceProductData) -> bool:
@@ -2509,6 +2534,10 @@ def _format_air_conditioner_energy_class(
     cooling = _extract_air_conditioner_energy_token(
         normalize_value(spec_lookup, ["Ψύξης", "Ενεργειακή Κλάση Ψύξης"])
     )
+    if not cooling:
+        cooling = _extract_air_conditioner_energy_token(
+            _first_air_conditioner_energy_value(spec_lookup, cooling=True)
+        )
     heating = _extract_air_conditioner_energy_token(
         normalize_value(
             spec_lookup,
@@ -2533,17 +2562,38 @@ def _format_air_conditioner_energy_class(
         if token:
             return token
 
+    if cooling:
+        return cooling
+    if heating:
+        return heating
+
     title_pair = _extract_air_conditioner_energy_pair(raw_title or "")
     if title_pair:
         return title_pair
     return ""
 
 
+def _first_air_conditioner_energy_value(
+    spec_lookup: dict[str, str], *, cooling: bool
+) -> str:
+    energy_key = normalize_for_match("Ενεργειακή Κλάση")
+    target_key = normalize_for_match("Ψύξη" if cooling else "Θέρμανση")
+    for label, value in spec_lookup.items():
+        if energy_key in label and target_key in label:
+            return normalize_whitespace(value)
+    return ""
+
+
 def _format_air_conditioner_ionizer(
     spec_lookup: dict[str, str], source: SourceProductData
 ) -> str:
+    exact_ionizer_value = ""
+    for label in ["Ιονιστής", "Λειτουργία Ιονιστή"]:
+        exact_ionizer_value = spec_lookup.get(normalize_for_match(label), "")
+        if exact_ionizer_value:
+            break
     ionizer_value = normalize_value(spec_lookup, ["Ιονιστής", "Λειτουργία Ιονιστή"])
-    if normalize_for_match(ionizer_value) in {
+    if normalize_for_match(exact_ionizer_value) in {
         "ναι",
         "yes",
         "supported",

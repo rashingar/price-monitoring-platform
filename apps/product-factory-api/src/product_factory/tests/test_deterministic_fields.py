@@ -176,6 +176,36 @@ def test_skroutz_air_conditioner_omits_ionizer_when_not_supported() -> None:
     assert fields["seo_keyword"] == "toyotomi-gtn-gtg-18cmw-klimatistiko-18000-btu-a-a"
 
 
+def test_gedsa_air_conditioner_uses_compact_btu_energy_name_schema() -> None:
+    source = SourceProductData(
+        source_name="gedsa",
+        brand="Dai-Ichi",
+        mpn="DHT26-12IVi/DHT26-12IVo",
+        name="Dai-Ichi DHT26-12IVi/DHT26-12IVo Κλιματιστικό Inverter 12000 BTU",
+        key_specs=[
+            SpecItem(label="Ονομαστική Απόδοση (Btu/h)", value="12000 BTU"),
+            SpecItem(label="Ενεργειακή Κλάση Ψύξης", value="A++"),
+            SpecItem(label="Wifi", value="Υποστηρίζεται"),
+            SpecItem(label="ΛΕΙΤΟΥΡΓΙΑ INVERTER", value="Υποστηρίζεται"),
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Τοίχου",
+    )
+
+    fields = build_deterministic_product_fields(
+        source, taxonomy, "416392", derive_seo_keyword
+    )
+
+    assert (
+        fields["name"]
+        == "Dai-Ichi DHT26-12IVi/DHT26-12IVo – Κλιματιστικό 12000 BTU A++"
+    )
+    assert "Υποστηρίζεται" not in fields["name"]
+
+
 def test_kotsovolos_air_conditioner_uses_source_rule_and_dotted_btu() -> None:
     source = SourceProductData(
         source_name="kotsovolos",

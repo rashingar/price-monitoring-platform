@@ -9,7 +9,11 @@ from urllib.robotparser import RobotFileParser
 
 import httpx
 
-from .image_pipeline import ImageConversionError, convert_image_bytes_to_jpg
+from .image_pipeline import (
+    ImageConversionError,
+    convert_image_bytes_to_jpg,
+    convert_pdf_first_image_to_jpg,
+)
 from .models import FetchResult, GalleryImage
 from .normalize import normalize_for_match, normalize_whitespace
 from .skroutz_sections import SKIPPED_SECTION_TITLES, resolve_skroutz_section_image_url
@@ -381,6 +385,7 @@ class ElectronetFetcher:
                 ".png",
                 ".webp",
                 ".gif",
+                ".pdf",
             }:
                 existing_file.unlink()
         selected = images
@@ -399,7 +404,21 @@ class ElectronetFetcher:
             payload, content_type = self.fetch_binary(image.url)
             ext = guess_extension(content_type, image.url)
             preserve_besco_gif = output_subdir == "bescos" and ext == ".gif"
-            if ext != ".jpg" and not preserve_besco_gif:
+            is_pdf = ext == ".pdf" or "application/pdf" in content_type.lower()
+            if is_pdf:
+                try:
+                    payload = convert_pdf_first_image_to_jpg(
+                        payload,
+                        resize_for_besco=output_subdir == "bescos",
+                    )
+                    ext = ".jpg"
+                    content_type = "image/jpeg"
+                except ImageConversionError as exc:
+                    warnings.append(f"{non_jpg_warning_prefix}:{asset_position}:{ext}")
+                    warnings.append(
+                        f"image_conversion_failed:{output_subdir}:{asset_position}:{ext}:{exc}"
+                    )
+            elif ext != ".jpg" and not preserve_besco_gif:
                 try:
                     payload = convert_image_bytes_to_jpg(
                         payload,

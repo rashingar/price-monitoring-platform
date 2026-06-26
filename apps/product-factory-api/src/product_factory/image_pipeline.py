@@ -67,3 +67,32 @@ def convert_image_bytes_to_jpg(
     output = BytesIO()
     prepared.save(output, format="JPEG", quality=JPEG_QUALITY)
     return output.getvalue()
+
+
+def convert_pdf_first_image_to_jpg(
+    payload: bytes, *, resize_for_besco: bool = False
+) -> bytes:
+    try:
+        from pypdf import PdfReader
+    except Exception as exc:  # pragma: no cover - depends on runtime extras
+        raise ImageConversionError(f"pdf_conversion_unavailable:{exc}") from exc
+
+    try:
+        reader = PdfReader(BytesIO(payload))
+    except Exception as exc:
+        raise ImageConversionError(f"unsupported_or_corrupt_pdf:{exc}") from exc
+
+    for page in reader.pages:
+        try:
+            images = list(page.images)
+        except Exception as exc:
+            raise ImageConversionError(f"pdf_image_extraction_failed:{exc}") from exc
+        for image in images:
+            image_payload = getattr(image, "data", b"")
+            if image_payload:
+                return convert_image_bytes_to_jpg(
+                    image_payload,
+                    resize_for_besco=resize_for_besco,
+                )
+
+    raise ImageConversionError("pdf_image_missing")

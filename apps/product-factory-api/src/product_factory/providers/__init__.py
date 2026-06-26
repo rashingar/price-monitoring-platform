@@ -5,6 +5,7 @@ from .dreamelectric_provider import DreamelectricProvider
 from .electronet_provider import ElectronetProvider
 from .euragora_provider import EuragoraProvider
 from .estia_provider import EstiaProvider
+from .gedsa_provider import GedsaProvider
 from .guaranty_provider import GuarantyProvider
 from .fgeurope_provider import FGEuropeProvider
 from .kotsovolos_provider import KotsovolosProvider
@@ -44,6 +45,7 @@ __all__ = [
     "EuragoraProvider",
     "GuarantyProvider",
     "FGEuropeProvider",
+    "GedsaProvider",
     "PampoukidisProvider",
     "ProductProvider",
     "ManufacturerTefalProvider",

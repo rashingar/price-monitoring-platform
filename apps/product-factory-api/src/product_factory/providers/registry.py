@@ -8,6 +8,7 @@ from ..parser_product_electronet import ElectronetProductParser
 from ..parser_product_ecomarkt import EcomarktProductParser
 from ..parser_product_euragora import EuragoraProductParser
 from ..parser_product_estia import EstiaProductParser
+from ..parser_product_gedsa import GedsaProductParser
 from ..parser_product_guaranty import GuarantyProductParser
 from ..parser_product_fgeurope import FGEuropeProductParser
 from ..parser_product_kotsovolos import KotsovolosProductParser
@@ -23,6 +24,7 @@ from .ecomarkt_provider import EcomarktProvider
 from .electronet_provider import ElectronetProvider
 from .euragora_provider import EuragoraProvider
 from .estia_provider import EstiaProvider
+from .gedsa_provider import GedsaProvider
 from .guaranty_provider import GuarantyProvider
 from .fgeurope_provider import FGEuropeProvider
 from .kotsovolos_provider import KotsovolosProvider
@@ -41,6 +43,7 @@ RUNTIME_SOURCE_PROVIDER_IDS = {
     "euragora": "euragora",
     "guaranty": "guaranty",
     "fgeurope": "fgeurope",
+    "gedsa": "gedsa",
     "kotsovolos": "kotsovolos",
     "marketquest": "marketquest",
     "pampoukidis": "pampoukidis",
@@ -114,6 +117,7 @@ def bootstrap_runtime_provider_registry(
     ecomarkt_parser: EcomarktProductParser | None = None,
     estia_parser: EstiaProductParser | None = None,
     euragora_parser: EuragoraProductParser | None = None,
+    gedsa_parser: GedsaProductParser | None = None,
     guaranty_parser: GuarantyProductParser | None = None,
     fgeurope_parser: FGEuropeProductParser | None = None,
     kotsovolos_parser: KotsovolosProductParser | None = None,
@@ -151,6 +155,9 @@ def bootstrap_runtime_provider_registry(
         EuragoraProvider(
             fetcher=fetcher, parser=euragora_parser or EuragoraProductParser()
         )
+    )
+    registry.register(
+        GedsaProvider(fetcher=fetcher, parser=gedsa_parser or GedsaProductParser())
     )
     registry.register(
         GuarantyProvider(

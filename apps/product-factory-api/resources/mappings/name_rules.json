@@ -144,7 +144,8 @@
     {
       "source_scope": [
         "skroutz",
-        "kotsovolos"
+        "kotsovolos",
+        "gedsa"
       ],
       "match": {
         "family": "air_conditioner"

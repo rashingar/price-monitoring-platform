@@ -619,10 +619,12 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         "apothema",
         "bestprice",
         "dreamelectric",
+        "ecomarkt",
         "electronet",
         "estia",
         "euragora",
         "fgeurope",
+        "gedsa",
         "guaranty",
         "kotsovolos",
         "marketquest",
@@ -633,10 +635,12 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         "apothema",
         "bestprice",
         "dreamelectric",
+        "ecomarkt",
         "electronet",
         "estia",
         "euragora",
         "fgeurope",
+        "gedsa",
         "guaranty",
         "kotsovolos",
         "marketquest",
@@ -649,10 +653,12 @@ def test_source_to_provider_id_maps_supported_sources() -> None:
     assert source_to_provider_id("apothema") == "apothema"
     assert source_to_provider_id("bestprice") == "bestprice"
     assert source_to_provider_id("dreamelectric") == "dreamelectric"
+    assert source_to_provider_id("ecomarkt") == "ecomarkt"
     assert source_to_provider_id("electronet") == "electronet"
     assert source_to_provider_id("estia") == "estia"
     assert source_to_provider_id("euragora") == "euragora"
     assert source_to_provider_id("fgeurope") == "fgeurope"
+    assert source_to_provider_id("gedsa") == "gedsa"
     assert source_to_provider_id("guaranty") == "guaranty"
     assert source_to_provider_id("kotsovolos") == "kotsovolos"
     assert source_to_provider_id("marketquest") == "marketquest"

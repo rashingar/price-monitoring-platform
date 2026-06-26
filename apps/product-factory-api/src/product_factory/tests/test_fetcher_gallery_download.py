@@ -28,6 +28,11 @@ class GifStubFetcher(ElectronetFetcher):
         return buffer.getvalue(), "image/gif"
 
 
+class PdfStubFetcher(ElectronetFetcher):
+    def fetch_binary(self, url: str) -> tuple[bytes, str]:
+        return b"%PDF-1.7\n", "application/pdf"
+
+
 def test_gallery_images_saved_in_model_folder_with_business_names(
     tmp_path: Path,
 ) -> None:
@@ -114,6 +119,41 @@ def test_gallery_non_jpg_images_are_converted_to_jpg(tmp_path: Path) -> None:
     assert downloaded[0].content_type == "image/jpeg"
     assert (tmp_path / "234385" / "gallery" / "234385-1.jpg").exists()
     assert files_written == [str(tmp_path / "234385" / "gallery" / "234385-1.jpg")]
+
+
+def test_gallery_pdf_images_are_converted_to_jpg(
+    tmp_path: Path, monkeypatch
+) -> None:
+    def fake_pdf_to_jpg(payload: bytes, *, resize_for_besco: bool = False) -> bytes:
+        assert payload == b"%PDF-1.7\n"
+        assert resize_for_besco is False
+        return b"jpg-bytes"
+
+    monkeypatch.setattr(
+        "product_factory.fetcher.convert_pdf_first_image_to_jpg",
+        fake_pdf_to_jpg,
+    )
+    fetcher = PdfStubFetcher()
+    images = [
+        GalleryImage(
+            url="https://www.gedsa.gr/wp-content/uploads/energy.pdf",
+            alt="energy label",
+            position=2,
+        )
+    ]
+
+    downloaded, warnings, files_written = fetcher.download_gallery_images(
+        images=images,
+        model="234385",
+        output_dir=tmp_path / "234385",
+        requested_photos=1,
+    )
+
+    assert warnings == []
+    assert [item.local_filename for item in downloaded] == ["234385-2.jpg"]
+    assert downloaded[0].content_type == "image/jpeg"
+    assert (tmp_path / "234385" / "gallery" / "234385-2.jpg").read_bytes() == b"jpg-bytes"
+    assert files_written == [str(tmp_path / "234385" / "gallery" / "234385-2.jpg")]
 
 
 def test_besco_non_jpg_images_are_converted_and_resized_to_jpg(tmp_path: Path) -> None:

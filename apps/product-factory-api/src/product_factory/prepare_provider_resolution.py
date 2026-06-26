@@ -12,6 +12,7 @@ from .parser_product_electronet import ElectronetProductParser
 from .parser_product_ecomarkt import EcomarktProductParser
 from .parser_product_euragora import EuragoraProductParser
 from .parser_product_estia import EstiaProductParser
+from .parser_product_gedsa import GedsaProductParser
 from .parser_product_guaranty import GuarantyProductParser
 from .parser_product_fgeurope import FGEuropeProductParser
 from .parser_product_kotsovolos import KotsovolosProductParser
@@ -175,6 +176,7 @@ def resolve_prepare_provider_resolution(
     euragora_parser_factory: Callable[
         [], EuragoraProductParser
     ] = EuragoraProductParser,
+    gedsa_parser_factory: Callable[[], GedsaProductParser] = GedsaProductParser,
     guaranty_parser_factory: Callable[
         [], GuarantyProductParser
     ] = GuarantyProductParser,
@@ -211,6 +213,7 @@ def resolve_prepare_provider_resolution(
     ecomarkt_parser = ecomarkt_parser_factory()
     estia_parser = estia_parser_factory()
     euragora_parser = euragora_parser_factory()
+    gedsa_parser = gedsa_parser_factory()
     guaranty_parser = guaranty_parser_factory()
     fgeurope_parser = fgeurope_parser_factory()
     kotsovolos_parser = kotsovolos_parser_factory()
@@ -230,6 +233,7 @@ def resolve_prepare_provider_resolution(
         ecomarkt_parser=ecomarkt_parser,
         estia_parser=estia_parser,
         euragora_parser=euragora_parser,
+        gedsa_parser=gedsa_parser,
         guaranty_parser=guaranty_parser,
         fgeurope_parser=fgeurope_parser,
         kotsovolos_parser=kotsovolos_parser,
