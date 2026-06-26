@@ -349,3 +349,26 @@ def test_taxonomy_resolution_maps_electronet_combined_air_conditioner_wall_bread
     )
     assert "sub_breadcrumb" in resolution.reason
     assert candidates[0]["sub_category"] == "Τοίχου"
+
+def test_taxonomy_resolution_prefers_wall_air_conditioner_over_accessories_for_unit_evidence() -> (
+    None
+):
+    resolver = TaxonomyResolver()
+    resolution, candidates = resolver.resolve(
+        breadcrumbs=[
+            "\u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03bc\u03cc\u03c2 & \u0397\u03bb\u03b9\u03b1\u03ba\u03ac",
+            "\u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03bc\u03cc\u03c2",
+            "\u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03ac",
+        ],
+        url="https://www.apothema.gr/hisense-kf50xt00g-klimatistiko-inverter-18000-btu-301290p",
+        name="Hisense KF50XT00G \u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03cc Inverter 18000 BTU",
+        key_specs=[
+            {"label": "\u0391\u03c0\u03cc\u03b4\u03bf\u03c3\u03b7 (BTU)", "value": "18000 BTU"}
+        ],
+        spec_sections=[],
+    )
+
+    assert resolution.leaf_category == "\u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03ac"
+    assert resolution.sub_category == "\u03a4\u03bf\u03af\u03c7\u03bf\u03c5"
+    assert "air_conditioner_unit_wall_evidence" in resolution.reason
+    assert candidates[0]["sub_category"] == "\u03a4\u03bf\u03af\u03c7\u03bf\u03c5"

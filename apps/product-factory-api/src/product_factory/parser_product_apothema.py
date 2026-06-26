@@ -27,6 +27,23 @@ from .normalize import (
 )
 from .utils import utcnow_iso
 
+_CHARACTERISTICS_HEADING = normalize_for_match("\u03a7\u03b1\u03c1\u03b1\u03ba\u03c4\u03b7\u03c1\u03b9\u03c3\u03c4\u03b9\u03ba\u03ac")
+_SPEC_SECTION_HEADINGS = {
+    normalize_for_match("\u0391\u03c0\u03cc\u03b4\u03bf\u03c3\u03b7"),
+    normalize_for_match("\u0394\u03c5\u03bd\u03b1\u03c4\u03cc\u03c4\u03b7\u03c4\u03b5\u03c2 & \u039b\u03b5\u03b9\u03c4\u03bf\u03c5\u03c1\u03b3\u03af\u03b5\u03c2"),
+    normalize_for_match("\u0395\u03bd\u03b5\u03c1\u03b3\u03b5\u03b9\u03b1\u03ba\u03ae \u039a\u03bb\u03ac\u03c3\u03b7"),
+    normalize_for_match("\u0399\u03c3\u03c7\u03cd\u03c2 \u0398\u03bf\u03c1\u03cd\u03b2\u03bf\u03c5"),
+    normalize_for_match("\u03a6\u03c5\u03c3\u03b9\u03ba\u03ad\u03c2 \u0394\u03b9\u03b1\u03c3\u03c4\u03ac\u03c3\u03b5\u03b9\u03c2"),
+}
+_BOOLEAN_FEATURE_LABELS = {
+    normalize_for_match("WiFi"): "WiFi",
+    normalize_for_match("\u03a6\u03af\u03bb\u03c4\u03c1\u03b1 \u0391\u03ad\u03c1\u03b1"): "\u03a6\u03af\u03bb\u03c4\u03c1\u03b1 \u0391\u03ad\u03c1\u03b1",
+    normalize_for_match("\u0399\u03bf\u03bd\u03b9\u03c3\u03c4\u03ae\u03c2"): "\u0399\u03bf\u03bd\u03b9\u03c3\u03c4\u03ae\u03c2",
+}
+_REFRIGERANT_LABEL = normalize_for_match(
+    "\u039f\u03b9\u03ba\u03bf\u03bb\u03bf\u03b3\u03b9\u03ba\u03cc \u03a8\u03c5\u03ba\u03c4\u03b9\u03ba\u03cc \u03a5\u03b3\u03c1\u03cc"
+)
+
 
 class ApothemaProductParser:
     def parse(self, html: str, url: str, fallback_used: bool = False) -> ParsedProduct:
@@ -205,16 +222,56 @@ class ApothemaProductParser:
 
     def _extract_spec_items(self, soup: BeautifulSoup) -> list[SpecItem]:
         items: list[SpecItem] = []
+        in_characteristics = False
         for node in soup.select(".detailDescription-row-div .product__desc li"):
             text = safe_text(node)
-            if ":" not in text:
+            text_key = normalize_for_match(text.rstrip(":"))
+            if not in_characteristics:
+                if _CHARACTERISTICS_HEADING in text_key:
+                    in_characteristics = True
+                    continue
+                if ":" not in text:
+                    continue
+                label_preview, value_preview = text.split(":", 1)
+                if not self._is_spec_label_candidate(label_preview, value_preview):
+                    continue
+                in_characteristics = True
+            if text_key in _SPEC_SECTION_HEADINGS:
                 continue
-            label, value = text.split(":", 1)
-            label = normalize_whitespace(label)
-            value = normalize_whitespace(value)
+            if ":" in text:
+                label, value = text.split(":", 1)
+                label = normalize_whitespace(label)
+                value = normalize_whitespace(value)
+                if not self._is_spec_label_candidate(label, value):
+                    continue
+            elif text_key in _BOOLEAN_FEATURE_LABELS:
+                label = _BOOLEAN_FEATURE_LABELS[text_key]
+                value = "\u039d\u03b1\u03b9"
+            elif _REFRIGERANT_LABEL in text_key:
+                label = "\u03a8\u03c5\u03ba\u03c4\u03b9\u03ba\u03cc \u03a5\u03b3\u03c1\u03cc"
+                match = re.search(r"\b(R\d+[A-Z]*)\b", text, flags=re.IGNORECASE)
+                value = match.group(1).upper() if match else text
+            else:
+                continue
             if label and value:
                 items.append(SpecItem(label=label, value=value))
         return self._dedupe_spec_items(items)
+
+    def _is_spec_label_candidate(self, label: str, value: str) -> bool:
+        label = normalize_whitespace(label.rstrip(":"))
+        value = normalize_whitespace(value)
+        label_key = normalize_for_match(label)
+        if not label or not value:
+            return False
+        if label_key in _SPEC_SECTION_HEADINGS:
+            return False
+        if len(label) > 80 or len(value) > 180:
+            return False
+        if re.search(r"[.!?;,]", label):
+            return False
+        if len(re.findall(r"\w+", label, flags=re.UNICODE)) > 8:
+            return False
+        return True
 
     def _extract_breadcrumbs(self, soup: BeautifulSoup) -> list[str]:
         values = [
@@ -251,11 +308,16 @@ class ApothemaProductParser:
             absolute = make_absolute_url(candidate, base_url)
             if "/productImages/" not in absolute:
                 continue
-            urls.append(absolute.replace("/resized/", "/").replace("_500x360", ""))
+            urls.append(self._normalize_gallery_image_url(absolute))
         return [
             GalleryImage(url=image_url, alt=title, position=index)
             for index, image_url in enumerate(dedupe_urls_preserve_order(urls), start=1)
         ]
+
+    def _normalize_gallery_image_url(self, url: str) -> str:
+        if "/productImages/s/resized/" in url:
+            return re.sub(r"_(?:110x100|150x120)(?=\.[A-Za-z0-9]+(?:[?#]|$))", "_500x360", url)
+        return url
 
     def _extract_price(
         self, soup: BeautifulSoup, product_json: dict[str, Any]

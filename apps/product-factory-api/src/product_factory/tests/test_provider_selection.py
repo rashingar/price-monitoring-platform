@@ -26,6 +26,7 @@ from product_factory.prepare_stage import execute_prepare_stage
 from product_factory.prepare_taxonomy_enrichment import PrepareTaxonomyEnrichmentResult
 from product_factory.source_capture_client import SourceCaptureSyncResult
 from product_factory.source_acquisition_stage import execute_source_acquisition_stage
+from product_factory.parser_product_apothema import ApothemaProductParser
 from product_factory.parser_product_bestprice import BestPriceProductParser
 from product_factory.parser_product_dreamelectric import DreamelectricProductParser
 from product_factory.parser_product_euragora import EuragoraProductParser
@@ -94,6 +95,119 @@ def _build_manufacturer_enrichment_stub() -> dict[str, object]:
         "presentation_block_count": 0,
         "fallback_reason": "test_stub",
     }
+
+
+def test_apothema_parser_limits_specs_to_characteristics_block() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.apothema.gr/hisense-kf50xt00g-klimatistiko-301290p">
+        <script type="application/ld+json">
+          {"@context":"https://schema.org","@type":"Product",
+           "name":"Hisense KF50XT00G \u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03cc Inverter 18000 BTU",
+           "brand":{"@type":"Brand","name":"Hisense"},
+           "image":["https://cdn.example/productImages/416382.jpg"]}
+        </script>
+      </head>
+      <body>
+        <nav class="breadcrumb">
+          <a>\u0391\u03c1\u03c7\u03b9\u03ba\u03ae</a>
+          <a>\u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03bc\u03cc\u03c2</a>
+          <a>\u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03ac</a>
+        </nav>
+        <h1 class="product__title">Hisense KF50XT00G \u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03cc Inverter 18000 BTU</h1>
+        <div class="detailDescription-row-div">
+          <ul class="product__desc">
+            <li>\u039f \u03b1\u03ad\u03c1\u03b1\u03c2 \u03c0\u03b5\u03c1\u03bd\u03ac \u03bc\u03ad\u03c3\u03b1 \u03b1\u03c0\u03cc \u03c6\u03af\u03bb\u03c4\u03c1\u03b1, \u03c4\u03bf \u03bf\u03c0\u03bf\u03af\u03bf \u03c0\u03b5\u03c1\u03b9\u03bb\u03b1\u03bc\u03b2\u03ac\u03bd\u03b5\u03b9: HEPA.</li>
+            <li>\u03a7\u03b1\u03c1\u03b1\u03ba\u03c4\u03b7\u03c1\u03b9\u03c3\u03c4\u03b9\u03ba\u03ac:</li>
+            <li>\u0391\u03c0\u03cc\u03b4\u03bf\u03c3\u03b7:</li>
+            <li>\u0391\u03c0\u03cc\u03b4\u03bf\u03c3\u03b7 (BTU): 18000 BTU</li>
+            <li>WiFi</li>
+            <li>\u0399\u03bf\u03bd\u03b9\u03c3\u03c4\u03ae\u03c2</li>
+            <li>\u039f\u03b9\u03ba\u03bf\u03bb\u03bf\u03b3\u03b9\u03ba\u03cc \u03a8\u03c5\u03ba\u03c4\u03b9\u03ba\u03cc \u03a5\u03b3\u03c1\u03cc (R32)</li>
+          </ul>
+        </div>
+      </body>
+    </html>
+    """
+
+    parsed = ApothemaProductParser().parse(
+        html, "https://www.apothema.gr/hisense-kf50xt00g-klimatistiko-301290p"
+    )
+    specs = {item.label: item.value for item in parsed.source.spec_sections[0].items}
+
+    assert "\u039f \u03b1\u03ad\u03c1\u03b1\u03c2 \u03c0\u03b5\u03c1\u03bd\u03ac \u03bc\u03ad\u03c3\u03b1 \u03b1\u03c0\u03cc \u03c6\u03af\u03bb\u03c4\u03c1\u03b1, \u03c4\u03bf \u03bf\u03c0\u03bf\u03af\u03bf \u03c0\u03b5\u03c1\u03b9\u03bb\u03b1\u03bc\u03b2\u03ac\u03bd\u03b5\u03b9" not in specs
+    assert specs["\u0391\u03c0\u03cc\u03b4\u03bf\u03c3\u03b7 (BTU)"] == "18000 BTU"
+    assert specs["WiFi"] == "\u039d\u03b1\u03b9"
+    assert specs["\u0399\u03bf\u03bd\u03b9\u03c3\u03c4\u03ae\u03c2"] == "\u039d\u03b1\u03b9"
+    assert specs["\u03a8\u03c5\u03ba\u03c4\u03b9\u03ba\u03cc \u03a5\u03b3\u03c1\u03cc"] == "R32"
+
+
+def test_apothema_parser_infers_specs_without_characteristics_heading() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.apothema.gr/hisense-kf50xt00g-klimatistiko-301290p">
+        <script type="application/ld+json">
+          {"@context":"https://schema.org","@type":"Product",
+           "name":"Hisense KF50XT00G \u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03cc Inverter 18000 BTU",
+           "brand":{"@type":"Brand","name":"Hisense"},
+           "image":["https://static1.apothema.gr/files/productImages/hisense-kf50xt00g.jpg"]}
+        </script>
+      </head>
+      <body>
+        <h1 class="product__title">Hisense KF50XT00G \u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03cc Inverter 18000 BTU</h1>
+        <div class="detailDescription-row-div">
+          <ul class="product__desc">
+            <li>\u039f \u03b1\u03ad\u03c1\u03b1\u03c2 \u03c0\u03b5\u03c1\u03bd\u03ac \u03bc\u03ad\u03c3\u03b1 \u03b1\u03c0\u03cc \u03c6\u03af\u03bb\u03c4\u03c1\u03b1, \u03c4\u03bf \u03bf\u03c0\u03bf\u03af\u03bf \u03c0\u03b5\u03c1\u03b9\u03bb\u03b1\u03bc\u03b2\u03ac\u03bd\u03b5\u03b9: HEPA.</li>
+            <li>\u0391\u03c0\u03cc\u03b4\u03bf\u03c3\u03b7 (BTU): 18000 BTU</li>
+            <li>WiFi</li>
+            <li>\u03a6\u03af\u03bb\u03c4\u03c1\u03b1 \u0391\u03ad\u03c1\u03b1</li>
+            <li>\u039f\u03b9\u03ba\u03bf\u03bb\u03bf\u03b3\u03b9\u03ba\u03cc \u03a8\u03c5\u03ba\u03c4\u03b9\u03ba\u03cc \u03a5\u03b3\u03c1\u03cc (R32)</li>
+          </ul>
+        </div>
+      </body>
+    </html>
+    """
+
+    parsed = ApothemaProductParser().parse(
+        html, "https://www.apothema.gr/hisense-kf50xt00g-klimatistiko-301290p"
+    )
+    specs = {item.label: item.value for item in parsed.source.spec_sections[0].items}
+
+    assert "\u039f \u03b1\u03ad\u03c1\u03b1\u03c2 \u03c0\u03b5\u03c1\u03bd\u03ac \u03bc\u03ad\u03c3\u03b1 \u03b1\u03c0\u03cc \u03c6\u03af\u03bb\u03c4\u03c1\u03b1, \u03c4\u03bf \u03bf\u03c0\u03bf\u03af\u03bf \u03c0\u03b5\u03c1\u03b9\u03bb\u03b1\u03bc\u03b2\u03ac\u03bd\u03b5\u03b9" not in specs
+    assert specs["\u0391\u03c0\u03cc\u03b4\u03bf\u03c3\u03b7 (BTU)"] == "18000 BTU"
+    assert specs["WiFi"] == "\u039d\u03b1\u03b9"
+    assert specs["\u03a6\u03af\u03bb\u03c4\u03c1\u03b1 \u0391\u03ad\u03c1\u03b1"] == "\u039d\u03b1\u03b9"
+    assert specs["\u03a8\u03c5\u03ba\u03c4\u03b9\u03ba\u03cc \u03a5\u03b3\u03c1\u03cc"] == "R32"
+
+
+def test_apothema_parser_normalizes_small_gallery_thumbnails() -> None:
+    html = """
+    <html>
+      <head>
+        <link rel="canonical" href="https://www.apothema.gr/product-301290p">
+        <script type="application/ld+json">
+          {"@context":"https://schema.org","@type":"Product",
+           "name":"Hisense KF50XT00G",
+           "brand":{"@type":"Brand","name":"Hisense"}}
+        </script>
+      </head>
+      <body>
+        <h1 class="product__title">Hisense KF50XT00G</h1>
+        <div class="product-photo-thumbs">
+          <img src="/files/productImages/s/resized/hisense-kf50xt00g_110x100.jpg">
+          <img src="/files/productImages/s/resized/hisense-kf50xt00g_500x360.jpg">
+        </div>
+      </body>
+    </html>
+    """
+
+    parsed = ApothemaProductParser().parse(html, "https://www.apothema.gr/product-301290p")
+
+    assert [image.url for image in parsed.source.gallery_images] == [
+        "https://www.apothema.gr/files/productImages/s/resized/hisense-kf50xt00g_500x360.jpg",
+    ]
 
 
 def _build_taxonomy_enrichment_result(

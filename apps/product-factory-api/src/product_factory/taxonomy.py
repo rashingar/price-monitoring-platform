@@ -41,6 +41,18 @@ FAN_SUBCATEGORY_URL_TOKENS = {
     "an": {"toixou", "wall"},
     "ydronefosis": {"ydronefosis", "mist", "misting"},
 }
+AIR_CONDITIONER_LEAF = normalize_for_match("\u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03ac")
+AIR_CONDITIONER_WALL_SUB = normalize_for_match("\u03a4\u03bf\u03af\u03c7\u03bf\u03c5")
+AIR_CONDITIONER_ACCESSORIES_SUB = normalize_for_match(
+    "\u0391\u03be\u03b5\u03c3\u03bf\u03c5\u03ac\u03c1 \u039a\u03bb\u03b9\u03bc\u03b1\u03c4\u03b9\u03c3\u03c4\u03b9\u03ba\u03ce\u03bd"
+)
+AIR_CONDITIONER_UNIT_TOKENS = {
+    "btu",
+    "inverter",
+    "split",
+    "wifi",
+    "r32",
+}
 TV_SIZE_BUCKETS = {
     "Έως 32''": (0, 32),
     "33''-50''": (33, 50),
@@ -91,6 +103,10 @@ def _tokens_soft_overlap(
         ):
             matches += 1
     return matches
+
+
+def _has_air_conditioner_unit_evidence(tokens: set[str]) -> bool:
+    return bool(tokens & AIR_CONDITIONER_UNIT_TOKENS)
 
 
 class TaxonomyResolver:
@@ -274,6 +290,16 @@ class TaxonomyResolver:
                         score += 3.0
                         reasons.append("fan_subcategory_url")
                         break
+
+            if leaf_norm == AIR_CONDITIONER_LEAF and _has_air_conditioner_unit_evidence(
+                source_evidence_tokens
+            ):
+                if sub_norm == AIR_CONDITIONER_WALL_SUB:
+                    score += 3.0
+                    reasons.append("air_conditioner_unit_wall_evidence")
+                elif sub_norm == AIR_CONDITIONER_ACCESSORIES_SUB:
+                    score -= 2.0
+                    reasons.append("air_conditioner_accessory_mismatch")
 
             filter_row = self.filter_by_path.get(candidate_path_norm)
             if filter_row:
