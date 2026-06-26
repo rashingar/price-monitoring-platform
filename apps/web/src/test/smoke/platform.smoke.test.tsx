@@ -414,7 +414,7 @@ describe("platform mocked page smoke tests", () => {
     renderWithRouter("/jobs/job-running-progress");
 
     await expect(screen.findByRole("heading", { name: "Download waiting" })).resolves.toBeInTheDocument();
-    expect(screen.getByText("Current step")).toBeInTheDocument();
+    expect(screen.getByText("Pipeline step")).toBeInTheDocument();
     expect(screen.getByText("Step elapsed")).toBeInTheDocument();
     expect(screen.getByText("15s")).toBeInTheDocument();
     expect(screen.getByText("Config loaded")).toBeInTheDocument();
@@ -440,8 +440,8 @@ describe("platform mocked page smoke tests", () => {
 
     renderWithRouter("/jobs/job-no-progress");
 
-    await expect(screen.findByRole("heading", { name: "job-no-progress" })).resolves.toBeInTheDocument();
-    expect(screen.queryByText("Current step")).not.toBeInTheDocument();
+    await expect(screen.findByRole("heading", { name: "Render job" })).resolves.toBeInTheDocument();
+    expect(screen.queryByText("Pipeline step")).not.toBeInTheDocument();
   });
 
   it("renders Catalog summary filters and product rows", async () => {

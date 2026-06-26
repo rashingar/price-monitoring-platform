@@ -12,6 +12,19 @@ export function JobProgressPanel({ progress, compact = false }: JobProgressPanel
   }
 
   const currentLabel = progress.current_step_label ?? progress.current_step ?? "In progress";
+  const completedCount = progress.steps_completed ?? progress.completed_steps?.length;
+  const latestMessage =
+    typeof progress.details?.message === "string"
+      ? progress.details.message
+      : typeof progress.details?.latest_message === "string"
+        ? progress.details.latest_message
+        : undefined;
+  const currentModel =
+    typeof progress.details?.model === "string"
+      ? progress.details.model
+      : typeof progress.details?.current_model === "string"
+        ? progress.details.current_model
+        : undefined;
 
   if (compact) {
     return (
@@ -39,40 +52,64 @@ export function JobProgressPanel({ progress, compact = false }: JobProgressPanel
   }
 
   return (
-    <section className="panel">
+    <section className="panel job-progress-panel" aria-labelledby="job-progress-heading">
       <div className="section-heading">
         <div>
           <p className="eyebrow">Progress</p>
-          <h3>{currentLabel}</h3>
+          <h3 id="job-progress-heading">{currentLabel}</h3>
         </div>
       </div>
 
+      {completedCount !== undefined ? (
+        <div className="job-progress-meter" aria-label={`${completedCount} steps completed`}>
+          <span style={{ width: `${Math.min(100, Math.max(8, completedCount * 12))}%` }} />
+        </div>
+      ) : null}
+
       <dl className="summary-grid job-progress-grid">
+        {currentModel ? (
+          <div>
+            <dt>Current model</dt>
+            <dd>{currentModel}</dd>
+          </div>
+        ) : null}
         <div>
-          <dt>Current step</dt>
+          <dt>Pipeline step</dt>
           <dd>{currentLabel}</dd>
         </div>
-        <div>
-          <dt>Last progress</dt>
-          <dd>{formatDateTime(progress.last_progress_at)}</dd>
-        </div>
-        <div>
-          <dt>Elapsed</dt>
-          <dd>{formatDurationSeconds(progress.elapsed_seconds)}</dd>
-        </div>
-        <div>
-          <dt>Step elapsed</dt>
-          <dd>{formatDurationSeconds(progress.current_step_elapsed_seconds)}</dd>
-        </div>
-        <div>
-          <dt>Step started</dt>
-          <dd>{formatDateTime(progress.step_started_at)}</dd>
-        </div>
-        <div>
-          <dt>Steps completed</dt>
-          <dd>{progress.steps_completed ?? progress.completed_steps?.length ?? "-"}</dd>
-        </div>
+        {completedCount !== undefined ? (
+          <div>
+            <dt>Steps completed</dt>
+            <dd>{completedCount}</dd>
+          </div>
+        ) : null}
+        {progress.elapsed_seconds !== undefined ? (
+          <div>
+            <dt>Elapsed</dt>
+            <dd>{formatDurationSeconds(progress.elapsed_seconds)}</dd>
+          </div>
+        ) : null}
+        {progress.current_step_elapsed_seconds !== undefined ? (
+          <div>
+            <dt>Step elapsed</dt>
+            <dd>{formatDurationSeconds(progress.current_step_elapsed_seconds)}</dd>
+          </div>
+        ) : null}
+        {progress.step_started_at ? (
+          <div>
+            <dt>Step started</dt>
+            <dd>{formatDateTime(progress.step_started_at)}</dd>
+          </div>
+        ) : null}
+        {progress.last_progress_at ? (
+          <div>
+            <dt>Last progress</dt>
+            <dd>{formatDateTime(progress.last_progress_at)}</dd>
+          </div>
+        ) : null}
       </dl>
+
+      {latestMessage ? <p className="job-progress-message">{latestMessage}</p> : null}
 
       {progress.completed_steps && progress.completed_steps.length > 0 ? (
         <div className="job-progress-steps">

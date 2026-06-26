@@ -6,7 +6,7 @@ interface LogsPanelProps {
   logs: LogEntry[];
 }
 
-function getLogMessage(log: LogEntry): string {
+export function getLogMessage(log: LogEntry): string {
   if (typeof log === "string") {
     return log;
   }
@@ -18,13 +18,30 @@ function getLogMessage(log: LogEntry): string {
   return JSON.stringify(log) ?? "Log entry";
 }
 
+export function formatLogsForCopy(logs: LogEntry[]): string {
+  return logs
+    .map((log) => {
+      if (typeof log === "string") {
+        return log;
+      }
+
+      const parts = [
+        typeof log.timestamp === "string" ? log.timestamp : null,
+        typeof log.level === "string" ? log.level.toUpperCase() : null,
+        getLogMessage(log),
+      ].filter((part): part is string => Boolean(part));
+      return parts.join(" ");
+    })
+    .join("\n");
+}
+
 export function LogsPanel({ logs }: LogsPanelProps) {
   if (logs.length === 0) {
-    return <EmptyState title="No logs yet" message="The backend returned an empty log list." />;
+    return <EmptyState title="No logs yet" message="No log entries have been stored for this job." />;
   }
 
   return (
-    <ol className="log-list">
+    <ol className="log-list" aria-label="Job logs">
       {logs.map((log, index) => (
         <li key={`${getLogMessage(log)}-${index}`}>
           {typeof log === "string" ? (

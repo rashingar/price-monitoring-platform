@@ -1,5 +1,6 @@
 interface JsonBlockProps {
   value: unknown;
+  className?: string;
 }
 
 function formatValue(value: unknown): string {
@@ -18,6 +19,6 @@ function formatValue(value: unknown): string {
   }
 }
 
-export function JsonBlock({ value }: JsonBlockProps) {
-  return <pre className="json-block">{formatValue(value)}</pre>;
+export function JsonBlock({ value, className }: JsonBlockProps) {
+  return <pre className={className ? `json-block ${className}` : "json-block"}>{formatValue(value)}</pre>;
 }
