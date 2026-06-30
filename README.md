@@ -1,280 +1,189 @@
-# Price Monitoring Platform
+# Price Monitoring & eCommerce Automation Platform
 
-Price Monitoring Platform is the local operator monorepo for:
+A local, operator-focused project that supports eCommerce product-data preparation, OpenCart catalogue workflows, product-source discovery, competitor-price review, and controlled export-file generation.
 
-- Product Factory product preparation and OpenCart export.
-- Ecommerce catalog, source URL, capture, price monitoring, alerts, review, and
-  export workflows.
-- The React web console used by operators.
+The repository contains two Python/FastAPI backend applications, a React/TypeScript operator console, PostgreSQL persistence, browser automation, and optional OpenAI-assisted product-content stages.
 
-Most day-to-day work starts from the repository root in PowerShell. The main
-exception is Alembic: Ecommerce migrations must be run from
-`apps/ecommerce-api` because its `alembic.ini` uses app-relative paths.
+> **Project status:** active development. Selected product-data preparation, validation, catalogue, and OpenCart-related workflows are used in a real operating environment. The complete platform is not deployed as a finished public product, and not every module is currently used in production.
 
-## Operator Quick Start
+## Why I Built It
 
-For a new machine, run setup once from the repository root:
+The project started from real eCommerce operational problems:
 
-```powershell
-.\scripts\setup\root-venv.ps1
-.\scripts\setup\python-deps.ps1
-.\scripts\setup\web.ps1
-.\scripts\setup\check-local.ps1
+- supplier files arrive in inconsistent CSV/XLSX formats
+- product attributes, categories, filters, images, and descriptions require repeated manual preparation
+- catalogue updates need validation before they reach OpenCart
+- competitor prices and source URLs need structured review rather than ad-hoc spreadsheets
+- longer browser and data-processing workflows benefit from logs and visible status
+
+The objective is to explore how these manual processes can become more repeatable and reviewable without removing operator control.
+
+## What the Platform Does
+
+### Product Factory
+
+- imports and validates product information from supported pages and supplier data
+- normalizes specifications, taxonomy, category filters, images, and metadata
+- uses controlled LLM stages for selected copy fields when enabled
+- renders product HTML from templates and structured data
+- produces OpenCart-ready CSV and image deliverables
+- keeps review and validation steps before publishing
+
+### Catalogue and Price Monitoring
+
+- imports an OpenCart catalogue into PostgreSQL
+- manages product source URLs and captured source data
+- prepares supervised price-monitoring runs
+- stores observations, alerts, execution history, and review decisions
+- exports reviewed price updates as CSV instead of changing the store directly
+- records long-running workflows as jobs with status information and selected retry or recovery handling
+
+### Operator Console
+
+- provides a React/TypeScript interface for both backend applications
+- exposes catalogue, source, price-monitoring, Product Factory, review, and job-status workflows
+- displays unavailable states when required backend services are not ready
+
+## Technology Stack
+
+| Area | Technologies |
+| --- | --- |
+| Backend | Python 3.11+, FastAPI, SQLAlchemy, Alembic, Pydantic |
+| Database | PostgreSQL |
+| Frontend | React, TypeScript, Vite |
+| Automation | Playwright, PowerShell, background job processing |
+| AI and discovery | OpenAI API, structured LLM stages, Brave Search integration |
+| Data | CSV/XLSX ingestion, validation, normalization, transformation, export |
+| APIs and contracts | REST, OpenAPI snapshots, generated TypeScript API types |
+| Testing | pytest, Vitest, fixtures, contract checks, and smoke checks |
+| Development | Git, GitHub, VS Code, and AI-assisted coding workflows |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    O[Operator] --> W[React / TypeScript Console]
+
+    W --> PF[Product Factory API<br/>FastAPI]
+    W --> EC[Ecommerce API<br/>FastAPI]
+
+    PF --> SRC[Product Sources / Supplier Files]
+    PF --> LLM[Optional OpenAI Stages]
+    PF --> ART[Validated CSV / Images / HTML]
+    ART --> OC[OpenCart Review / Import]
+
+    EC --> DB[(PostgreSQL)]
+    EC --> MKT[Supported Marketplaces]
+    EC --> BROWSER[Playwright Workflows]
+    BROWSER --> OC
+    EC --> EXP[Reviewed CSV Exports]
 ```
 
-For daily local work, start the three services in separate PowerShell windows:
+The repository is organized into three main applications:
 
-```powershell
-.\scripts\dev\product-factory-api.ps1
-.\scripts\dev\ecommerce-api.ps1
-.\scripts\dev\web.ps1
-```
+- `product-factory-api` handles product preparation, rendering, validation, and OpenCart-ready artifacts
+- `ecommerce-api` handles catalogue, source, monitoring, alert, review, export, job, and PostgreSQL state
+- `web` provides the operator interface and communicates with both APIs
 
-Open the operator console:
+## Selected Technical Capabilities
+
+- separate FastAPI applications for Product Factory and Ecommerce workflows
+- PostgreSQL schema changes managed through Alembic migrations
+- job status tracking, explicit retry paths, and startup recovery handling for selected workflows
+- data validation before catalogue or price-update files are produced
+- checks for duplicate codes, malformed values, missing data, and potentially unsafe bulk changes
+- Playwright-backed OpenCart and marketplace workflows
+- API health and database-readiness endpoints
+- OpenAPI snapshots and frontend API-type checks
+- automated tests using fixtures and mocked external integrations
+- execution logs and redacted diagnostics for selected workflows
+
+## My Contribution and AI-Assisted Development
+
+This is an applied learning project based on real eCommerce requirements. I used coding agents and LLM tools extensively to support implementation, refactoring, debugging, documentation, and test creation.
+
+My contribution includes:
+
+- identifying the business problems and describing the required workflows
+- providing catalogue, product-data, OpenCart, and operational requirements
+- defining expected results, validation rules, and safety conditions
+- reviewing generated changes and requesting corrections or improvements
+- running the applications and tests and investigating failures
+- validating imports, exports, product data, and operator steps against real eCommerce needs
+- adapting configuration and selected code paths
+- deciding where operator review is required before an action continues
+
+I do not present the repository as a system that I designed and wrote entirely without assistance. It demonstrates how I use programming fundamentals, eCommerce knowledge, testing, and AI-assisted development to build and validate practical technical workflows.
+
+## Production Use and Limitations
+
+Selected scripts and workflow stages are used in a real eCommerce operating environment, particularly for product-data preparation, validation, catalogue handling, and OpenCart-related operations.
+
+Current limitations:
+
+- the platform is designed for local operator use and is not a hosted public SaaS application
+- some external and browser-backed workflows require private credentials and cannot be demonstrated from a public clone
+- live OpenCart, marketplace, and OpenAI tests are manual or opt-in
+- not every module is currently active in production
+- the project remains under active development and some workflows are still being consolidated
+
+## Repository Layout
 
 ```text
-http://127.0.0.1:5173
+apps/
+  product-factory-api/   Product preparation and OpenCart export backend
+  ecommerce-api/        Catalogue, source, monitoring, alerts, jobs, and exports
+  web/                   React/TypeScript operator console
+packages/
+  contracts/             Mirrored OpenAPI snapshots and generated contract inputs
+scripts/
+  setup/                 Local environment setup
+  dev/                   Service startup and diagnostics
+  test/                  Targeted and aggregate test commands
+  contracts/             API contract and generated-type checks
+  check/                 Repository hygiene checks
+docs/
+  architecture/          Current architecture and design constraints
+  decisions/             Architecture decision records
+  runbooks/              Setup, testing, and operator procedures
 ```
 
-Useful health checks:
+## Local Quick Start
 
-- Product Factory API: `http://127.0.0.1:8000/api/health`
-- Ecommerce API: `http://127.0.0.1:8001/api/health`
-- Ecommerce DB readiness:
-  `http://127.0.0.1:8001/api/price-monitoring/db/status`
+The current setup targets Windows PowerShell and uses a local PostgreSQL instance.
 
-After setup, migrations, catalog import, and service startup, run the read-only
-operator smoke check:
+### Prerequisites
 
-```powershell
-.\scripts\check\operator-smoke.ps1
-```
-
-Use `-SkipWeb` when the web dev server is intentionally stopped, or `-Json` for
-machine-readable logs. The smoke check calls only read/status endpoints; it does
-not run OpenCart export, catalog import, Price Monitoring fetches, Find Source
-runs, or Vendor Source captures.
-
-Before committing, run the check that matches your change:
-
-```powershell
-.\scripts\check\hygiene.ps1
-.\scripts\test\codex-ecommerce.ps1
-.\scripts\test\codex-product-factory.ps1
-.\scripts\contracts\check-web-types.ps1
-```
-
-Use `.\scripts\test\fast.ps1` for a broader local smoke pass.
-
-## App Map
-
-- `apps/product-factory-api`: Product Factory backend for product preparation,
-  source capture, authoring, rendering, category/filter review, and
-  OpenCart-ready product exports. Python project/install name:
-  `product-factory`. Internal Python package: `product_factory`.
-- `apps/ecommerce-api`: Ecommerce API backend for catalog import, source URLs,
-  source capture, price monitoring, alerts, review, exports, and database
-  migrations. Internal Python package: `ecommerce`.
-- `apps/web`: React/Vite operator console. Browser routes `/api` and
-  `/commerce-api` are intentionally stable.
-- `packages/contracts`: mirrored Product Factory and Ecommerce OpenAPI
-  snapshots used for contract checks and generated web API type scaffolding.
-- `scripts`: root setup, dev, test, contract, and hygiene orchestration.
-
-The two Python APIs are separate runtimes. Do not merge Product Factory and
-Ecommerce API code, packages, routes, or databases as part of local setup.
-
-## Working Directory Rules
-
-Use the repository root for setup, dev server scripts, contract scripts, web
-commands, and most tests:
-
-```powershell
-.\scripts\dev\ecommerce-api.ps1
-.\scripts\contracts\check-web-types.ps1
-```
-
-Use `apps/ecommerce-api` for Alembic:
-
-```powershell
-Push-Location apps\ecommerce-api
-..\..\.venv\Scripts\python.exe -m alembic upgrade head
-Pop-Location
-```
-
-Running Alembic from the repository root with
-`-c apps\ecommerce-api\alembic.ini` is not equivalent. The ini file contains
-`script_location = migrations`, so from the root Alembic looks for a missing
-root-level `migrations` folder.
-
-## First Run
-
-From the repository root in PowerShell:
-
-```powershell
-.\scripts\setup\root-venv.ps1
-.\scripts\setup\python-deps.ps1
-.\scripts\setup\web.ps1
-.\scripts\setup\check-local.ps1
-```
-
-These scripts create the root `.venv` if needed, install both backend projects
-and root developer tools into that root `.venv`, run `npm ci` in `apps/web`,
-and verify local setup prerequisites. They do not create a unified Python
-lockfile, start servers, mutate PostgreSQL, or commit generated dependency
-folders.
-
-Manual equivalent:
-
-```powershell
-python --version
-python -m venv .venv
-.\.venv\Scripts\python.exe --version
-.\.venv\Scripts\python.exe -m pip install -r apps\product-factory-api\requirements.txt
-.\.venv\Scripts\python.exe -m pip install -e apps\product-factory-api --no-deps
-.\.venv\Scripts\python.exe -m pip install -r apps\ecommerce-api\requirements-lock.txt
-.\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-Push-Location apps\web
-npm ci
-Pop-Location
-```
-
-## Local Prerequisites
-
-- Windows PowerShell.
-- Python 3.11 or newer. The `python` command must resolve to Python 3.11+.
-- Native Windows PostgreSQL with `psql` on `PATH`.
-- Node.js/npm for the web app.
-- Playwright Chromium if you run browser-backed Product Factory workflows.
+- Python 3.11 or newer
+- PostgreSQL with `psql` available on `PATH`
+- Node.js and npm
+- Windows PowerShell
+- Playwright Chromium for browser-backed workflows
 
 Docker is not required for the current local setup.
 
-## Local Environment
+### Install
 
-Use one private env file per machine at the repository root:
+From the repository root:
+
+```powershell
+.\scripts\setup\root-venv.ps1
+.\scripts\setup\python-deps.ps1
+.\scripts\setup\web.ps1
+.\scripts\setup\check-local.ps1
+```
+
+Copy the environment template and add only the private values required for the workflows you intend to run:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Fill machine-specific paths and private credentials in the repo-root `.env`.
-Do not create app-local `.env` files for new setups, and do not commit `.env`.
-Ecommerce loads `.env` automatically for local commands, and the root dev
-scripts load repo-root `.env` before starting apps. OS environment value wins
-over `.env`; repo-root `.env` wins over deprecated app-local `.env` files.
-Deprecated app-local files are accepted for one transition period as fallback
-only, with key-name warnings and no secret values printed.
+Do not commit `.env`, credentials, generated product data, raw captures, databases, or runtime output.
 
-## Database Setup
+### Start the Services
 
-Ecommerce API owns PostgreSQL state for catalog and price monitoring workflows.
-Product Factory remains artifact/file-backed for local product runs.
-
-Fresh local PostgreSQL setup:
-
-```sql
-CREATE USER ecommerce WITH PASSWORD 'ecommerce';
-CREATE DATABASE ecommerce OWNER ecommerce;
-GRANT ALL PRIVILEGES ON DATABASE ecommerce TO ecommerce;
-```
-
-Set `ECOMMERCE_DATABASE_URL` in repo-root `.env` or the OS environment.
-
-Apply migrations and import the catalog:
-
-```powershell
-Push-Location apps\ecommerce-api
-..\..\.venv\Scripts\python.exe -m alembic upgrade head
-..\..\.venv\Scripts\python.exe -m ecommerce.jobs.ingest_catalog
-Pop-Location
-```
-
-Dashboard can also refresh the active catalog from OpenCart. Configure the
-private `OPENCART_*` values in repo-root `.env` or the OS environment before
-using `Update DB`.
-
-From the Dashboard, click `Update DB`. Ecommerce API creates a durable
-`catalog_update_from_opencart` job, logs into OpenCart with Playwright, exports
-the `sourceCata` CSV Product Export profile, runs `alembic upgrade head`, and
-imports the downloaded CSV into PostgreSQL. Downloads are stored under
-`output/catalog_updates/{job_id}/`; the preserved download filename remains in
-that folder and the imported copy is normalized to
-`output/catalog_updates/{job_id}/sourceCata.csv`.
-
-Inspect job state with:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8001/api/catalog/update-db/latest
-Invoke-RestMethod http://127.0.0.1:8001/api/jobs/{job_id}
-```
-
-Default tests mock OpenCart and Playwright. Live OpenCart export tests are
-manual/opt-in only.
-
-Verify database readiness:
-
-```powershell
-.\.venv\Scripts\python.exe -m ecommerce.jobs.check_db_setup
-```
-
-If that command cannot import `ecommerce`, rerun:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -e apps\ecommerce-api --no-deps
-```
-
-See [Ecommerce PostgreSQL Local Setup](docs/runbooks/ecommerce-postgresql-local.md)
-for backup, rename, and fresh-create procedures.
-
-## Common Operator Tasks
-
-Regenerate Ecommerce OpenAPI after an intentional API change:
-
-```powershell
-Push-Location apps\ecommerce-api
-..\..\.venv\Scripts\python.exe -m ecommerce.jobs.export_openapi_snapshot
-Pop-Location
-Copy-Item apps\ecommerce-api\docs\contracts\openapi.ecommerce.json packages\contracts\openapi.ecommerce.json
-.\scripts\contracts\generate-web-types.ps1
-.\scripts\contracts\check-web-types.ps1
-```
-
-Backfill normalized Price Monitoring listing rows from legacy offer
-observations:
-
-```powershell
-Push-Location apps\ecommerce-api
-..\..\.venv\Scripts\python.exe -m ecommerce.jobs.backfill_price_observation_listings
-Pop-Location
-```
-
-Backfill a single Price Monitoring run:
-
-```powershell
-Push-Location apps\ecommerce-api
-..\..\.venv\Scripts\python.exe -m ecommerce.jobs.backfill_price_observation_listings --run-id RUN_ID
-Pop-Location
-```
-
-Run focused Price Monitoring checks:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest -vv apps/ecommerce-api/tests/test_price_monitoring_review_export.py
-Push-Location apps\ecommerce-api
-..\..\.venv\Scripts\python.exe -m pytest -vv tests/test_price_monitoring_db.py tests/test_price_monitoring_db_policy.py
-Pop-Location
-```
-
-## Start Commands
-
-Run the local startup diagnostic:
-
-```powershell
-.\scripts\dev\check-local.ps1
-```
-
-Start each app in a separate PowerShell terminal:
+Run each command in a separate PowerShell window:
 
 ```powershell
 .\scripts\dev\product-factory-api.ps1
@@ -282,199 +191,59 @@ Start each app in a separate PowerShell terminal:
 .\scripts\dev\web.ps1
 ```
 
-Local URLs:
+Local endpoints:
 
-- Web app: `http://127.0.0.1:5173`
-- Product Factory API health: `http://127.0.0.1:8000/api/health`
-- Product Factory API docs: `http://127.0.0.1:8000/docs`
-- Ecommerce API health: `http://127.0.0.1:8001/api/health`
-- Ecommerce API docs: `http://127.0.0.1:8001/docs`
-- Ecommerce database status:
-  `http://127.0.0.1:8001/api/price-monitoring/db/status`
+- Web console: `http://127.0.0.1:5173`
+- Product Factory API: `http://127.0.0.1:8000/docs`
+- Ecommerce API: `http://127.0.0.1:8001/docs`
 
-The web dev proxy keeps browser routes stable:
+Ecommerce database migrations must be run from `apps/ecommerce-api` because its Alembic configuration uses app-relative paths:
 
-- `/api` proxies to Product Factory at `http://127.0.0.1:8000`.
-- `/commerce-api` proxies to Ecommerce API at `http://127.0.0.1:8001` and
-  rewrites to backend `/api` routes.
+```powershell
+Push-Location apps\ecommerce-api
+..\..\.venv\Scripts\python.exe -m alembic upgrade head
+Pop-Location
+```
 
-Ecommerce API health is separate from database readiness. If DB-backed
-workflows are not ready, check the database status URL for setup hints.
+For detailed setup, operation, database, testing, and troubleshooting instructions, see [Developer Setup and Operations](docs/runbooks/developer-setup-and-operations.md).
 
-## Test And Check Commands
+## Tests and Checks
 
-Run hygiene before committing:
+For the standard fast local verification:
 
 ```powershell
 .\scripts\check\hygiene.ps1
-```
-
-Hygiene includes Black formatting checks. Black is installed by
-`.\scripts\setup\python-deps.ps1` from the root developer requirements file.
-
-Check Python formatting:
-
-```powershell
-.\.venv\Scripts\python.exe -m black --check apps\ecommerce-api apps\product-factory-api scripts
-```
-
-Format Python files:
-
-```powershell
-.\.venv\Scripts\python.exe -m black apps\ecommerce-api apps\product-factory-api scripts
-```
-
-For staged-only path and whitespace checks:
-
-```powershell
-.\scripts\check\hygiene.ps1 -Staged
-```
-
-Codex-safe aggregate fast verification:
-
-```powershell
+.\scripts\contracts\check.ps1
+.\scripts\contracts\check-web-types.ps1
 .\scripts\test\fast.ps1
 ```
 
-`scripts\test\fast.ps1` first runs snapshot hygiene and fast marker hygiene,
-then delegates to Product Factory fast, Ecommerce fast, web fast, and contract
-mirror checks. It is Codex-safe because delegated app scripts exclude runtime,
-Ecommerce `db_integration`, `postgres_required`, external, e2e, legacy, and
-slow checks where applicable, and marker hygiene prevents those forbidden
-profiles from leaking into root fast. Codex prompts should still prefer
-targeted app checks relevant to changed files. Use
-`.\scripts\test\codex-product-factory.ps1` for Product Factory-only backend
-changes and `.\scripts\test\codex-ecommerce.ps1` for Ecommerce-only backend
-changes. Full suites are manual unless explicitly requested.
-
-App-specific and contract checks:
+Targeted backend checks:
 
 ```powershell
-.\scripts\test\product-factory-api.ps1
-.\scripts\test\ecommerce-api.ps1
-.\scripts\test\product-factory-runtime.ps1
-.\scripts\test\product-factory-golden.ps1
-.\scripts\test\ecommerce-runtime.ps1
-.\scripts\test\ecommerce-golden.ps1
-.\scripts\test\ecommerce-db-contract.ps1
-.\scripts\test\ecommerce-db-integration.ps1
-.\scripts\test\ecommerce-postgres.ps1
-.\scripts\test\check-snapshots.ps1
-.\scripts\test\check-fast-marker-hygiene.ps1
-.\scripts\test\web.ps1
-.\scripts\contracts\check.ps1
-.\scripts\contracts\check-web-types.ps1
-.\scripts\check\all.ps1
+.\scripts\test\codex-product-factory.ps1
+.\scripts\test\codex-ecommerce.ps1
 ```
 
-The test scripts use verbose output so you can see whether a check is hanging or
-simply taking longer. Default fast paths exclude live external, e2e, slow,
-legacy, runtime, Ecommerce `db_integration`, and PostgreSQL-required tests.
-Runtime tests are opt-in; golden tests are deterministic fixture regressions and
-reviewed contract artifacts, not auto-regenerated dumps. Snapshot expected files
-must not be updated unless the prompt explicitly says
-`Approve snapshot updates`.
-Ecommerce DB tests are split into `db_contract`, `db_integration`, and
-`postgres_required`; `db_contract` is allowed in fast/root-fast when local and
-deterministic, while `db_integration` and `postgres_required` are opt-in. Python
-backend pytest suites have a hard 60 second per-test timeout, and web Vitest
-suites have a hard 10 second per-test timeout; tests that legitimately need
-more time must explicitly override it and remain outside default fast where
-appropriate. See [Testing Strategy](docs/runbooks/testing-strategy.md).
+Default fast tests exclude live external services, full browser workflows, slow tests, and PostgreSQL-required integration profiles where appropriate.
 
-## Contracts And Generated Web Types
+## Documentation
 
-App-local OpenAPI snapshots are mirrored under `packages/contracts`. Check
-mirrors with:
-
-```powershell
-.\scripts\contracts\check.ps1
-```
-
-After API contract changes, regenerate app-local snapshots from the owning app,
-refresh the mirror if the app-local snapshot changed, then regenerate/check web
-types:
-
-```powershell
-.\scripts\contracts\generate-web-types.ps1
-.\scripts\contracts\check-web-types.ps1
-```
-
-Generated web API type files under `apps/web/src/api/generated` are committed
-contract artifacts. Do not edit them by hand. Existing manual web clients remain
-the runtime fetch implementation for now.
-
-## Troubleshooting
-
-`alembic upgrade head` says `Path doesn't exist: migrations`
-
-- You are probably running Alembic from the repository root.
-- Run it from `apps/ecommerce-api` with
-  `..\..\.venv\Scripts\python.exe -m alembic upgrade head`.
-
-Price Monitoring pages say the database is not ready
-
-- Open `http://127.0.0.1:8001/api/price-monitoring/db/status`.
-- Check `missing_tables`, `alembic_up_to_date`, and `blocking_reasons`.
-- Apply migrations from `apps/ecommerce-api`, then recheck status.
-
-OpenAPI contract checks fail
-
-- Regenerate the owning app snapshot first.
-- Copy the app-local snapshot into `packages/contracts`.
-- Run `.\scripts\contracts\generate-web-types.ps1`.
-- Run `.\scripts\contracts\check-web-types.ps1`.
-
-Frontend type errors after backend response changes
-
-- Update manual types in `apps/web/src/api/*Types.ts` when needed.
-- Regenerate generated OpenAPI types; do not hand-edit
-  `apps/web/src/api/generated/*.ts`.
-
-Pip warns about invalid `~...` distributions in `.venv\Lib\site-packages`
-
-- These are stale local package folders left by interrupted or replaced pip
-  installs. Do not commit `.venv` changes.
-- Inspect them first:
-
-```powershell
-Get-ChildItem .venv\Lib\site-packages -Force | Where-Object { $_.Name -like "~*" } | Select-Object FullName
-```
-
-- After visual confirmation, remove only those stale local folders:
-
-```powershell
-Get-ChildItem .venv\Lib\site-packages -Force | Where-Object { $_.Name -like "~*" } | Remove-Item -Recurse -Force
-```
-
-## Artifact Policy
-
-Generated runtime outputs stay out of Git:
-
-- `.venv/`
-- `node_modules/`
-- `work/`
-- `output/`
-- `runs/`
-- `logs/`
-- `products/`
-- `__pycache__/`
-- `.pytest_cache/`
-
-Do not commit `.env`, `.secrets`, credentials, tokens, local databases, DB
-dumps/backups, raw provider HTML captures, generated product outputs, or private
-keys. Use `.env.example` files only as safe templates.
-
-## Current Docs
-
+- [Developer Setup and Operations](docs/runbooks/developer-setup-and-operations.md)
 - [Current Architecture](docs/architecture/current-architecture.md)
 - [Operator Startup](docs/runbooks/operator-startup.md)
-- [Codex Workflow](docs/runbooks/codex-workflow.md)
 - [Testing Strategy](docs/runbooks/testing-strategy.md)
-- [Ecommerce PostgreSQL Local Setup](docs/runbooks/ecommerce-postgresql-local.md)
+- [Ecommerce PostgreSQL Setup](docs/runbooks/ecommerce-postgresql-local.md)
 - [Contracts-First Integration](docs/decisions/0005-contracts-first-integration.md)
+- [Product Factory API](apps/product-factory-api/README.md)
+- [Ecommerce API](apps/ecommerce-api/README.md)
+- [Web Console](apps/web/README.md)
 
-Historical records remain available at
-[Monorepo Migration](docs/runbooks/monorepo-migration.md) and
-[Target Architecture](docs/architecture/target-architecture.md), but current
-operations should use the current architecture and runbooks above.
+## Roadmap
+
+- document the currently production-used workflows more clearly
+- add sanitized screenshots or a recorded local demo
+- add a small sanitized sample dataset and guided demo
+- improve onboarding for non-Windows environments
+- increase end-to-end test coverage for selected cross-service workflows
+- continue reducing repetitive catalogue and source-review steps while preserving operator approval
