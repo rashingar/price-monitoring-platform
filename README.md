@@ -44,6 +44,52 @@ The objective is to explore how these manual processes can become more repeatabl
 - exposes catalogue, source, price-monitoring, Product Factory, review, and job-status workflows
 - displays unavailable states when required backend services are not ready
 
+## Screenshots
+
+The screenshots below use sanitized demonstration data. Private credentials, internal URLs, supplier information, production identifiers, and commercially sensitive data are not included.
+
+### Operator Dashboard
+
+![Operator dashboard showing the main Product Factory and Ecommerce workflows](docs/images/dashboard-overview.png)
+
+*Operator dashboard providing access to Product Factory, catalogue, price-monitoring, source-management, and job-status workflows.*
+
+### Product Preparation Workflow
+
+![Product Factory workflow with structured product fields and validation controls](docs/images/product-factory-workflow.png)
+
+*Product-data preparation workflow with structured fields, source information, validation, and operator-review steps.*
+
+### Product Output Preview
+
+![Preview of structured product content prepared for OpenCart export](docs/images/product-output-preview.png)
+
+*Preview of product content, specifications, images, and metadata prepared for review before producing an OpenCart-ready export.*
+
+### Catalogue Browser
+
+![PostgreSQL-backed catalogue browser with sanitized product records](docs/images/catalogue-browser.png)
+
+*Catalogue view displaying sanitized product, category, brand, source, and status information imported into PostgreSQL.*
+
+### Price-Monitoring Review
+
+![Price-monitoring review interface with sanitized competitor-price results](docs/images/price-monitoring-review.png)
+
+*Supervised review of competitor-price observations before producing a controlled CSV update file.*
+
+### Job Status and Execution History
+
+![Job history page showing queued, running, completed, and failed workflows](docs/images/job-history.png)
+
+*Execution history and status information for longer-running product, catalogue, source, and monitoring workflows.*
+
+### REST API Documentation
+
+![FastAPI interactive API documentation](docs/images/fastapi-docs.png)
+
+*Interactive FastAPI documentation for selected Product Factory and Ecommerce REST endpoints.*
+
 ## Technology Stack
 
 | Area | Technologies |
