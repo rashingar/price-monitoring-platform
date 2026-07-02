@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -56,17 +56,24 @@ def _select_skroutz_image_backed_sections(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     selected_blocks: list[dict[str, Any]] = []
     selected_rendered_sections: list[dict[str, Any]] = []
-    effective_limit = min(requested_sections, len(all_sections), len(rendered_sections))
-    for block, rendered_section in zip(all_sections, rendered_sections):
+    effective_limit = min(requested_sections, len(all_sections))
+    rendered_index = 0
+    for block in all_sections:
         block_title = normalize_for_match(str(block.get("title", "")))
-        rendered_title = normalize_for_match(str(rendered_section.get("title", "")))
-        if block_title != rendered_title:
-            raise RuntimeError(
-                "Skroutz section title order mismatch between rendered DOM and parsed description"
-            )
+        media_html = str(block.get("media_html", "")).strip()
+        rendered_section: dict[str, Any] = {}
+        for candidate_index in range(rendered_index, len(rendered_sections)):
+            candidate = rendered_sections[candidate_index]
+            rendered_title = normalize_for_match(str(candidate.get("title", "")))
+            if block_title == rendered_title:
+                rendered_section = candidate
+                rendered_index = candidate_index + 1
+                break
+        if not rendered_section and not media_html:
+            continue
 
         resolved_image_url = str(rendered_section.get("resolved_image_url", "")).strip()
-        if not resolved_image_url:
+        if not resolved_image_url and not media_html:
             continue
 
         selected_blocks.append(block)
@@ -188,6 +195,7 @@ def resolve_skroutz_section_assets(
             base_url=base_url,
         )
 
+    selected_besco_section_positions: list[int] = []
     if len(manufacturer_blocks) >= requested_sections:
         selected_presentation_blocks = manufacturer_blocks[:requested_sections]
         selected_besco_images = [
@@ -290,11 +298,15 @@ def resolve_skroutz_section_assets(
                 rendered_section.get("resolved_image_url", "")
             ).strip()
             block["image_url"] = resolved_image_url
-            selected_besco_images.append(
-                GalleryImage(
-                    url=resolved_image_url, alt=block["title"], position=section_index
+            if resolved_image_url:
+                selected_besco_section_positions.append(section_index)
+                selected_besco_images.append(
+                    GalleryImage(
+                        url=resolved_image_url,
+                        alt=block["title"],
+                        position=len(selected_besco_images) + 1,
+                    )
                 )
-            )
         section_image_urls_resolved = build_section_image_urls_resolved(
             selected_presentation_blocks
         )
@@ -314,18 +326,40 @@ def resolve_skroutz_section_assets(
         fetcher=fetcher,
         images=selected_besco_images,
         output_dir=output_dir,
-        requested_sections=len(selected_presentation_blocks),
+        requested_sections=len(selected_besco_images),
         strict=True,
-        strict_expected_count=len(selected_presentation_blocks),
+        strict_expected_count=len(selected_besco_images),
     )
+    besco_filenames_by_section = section_asset_download.besco_filenames_by_section
+    downloaded_besco = section_asset_download.downloaded_besco
+    if selected_besco_section_positions:
+        besco_filenames_by_section = {
+            section_position: filename
+            for asset_position, section_position in enumerate(
+                selected_besco_section_positions, start=1
+            )
+            if (
+                filename := section_asset_download.besco_filenames_by_section.get(
+                    asset_position
+                )
+            )
+        }
+        downloaded_besco = [
+            replace(image, position=section_position)
+            for image, section_position in zip(
+                section_asset_download.downloaded_besco,
+                selected_besco_section_positions,
+                strict=False,
+            )
+        ]
 
     return PrepareSectionAssetsResult(
         selected_presentation_blocks=selected_presentation_blocks,
         selected_besco_images=selected_besco_images,
-        downloaded_besco=section_asset_download.downloaded_besco,
+        downloaded_besco=downloaded_besco,
         besco_warnings=section_asset_download.besco_warnings,
         besco_files=section_asset_download.besco_files,
-        besco_filenames_by_section=section_asset_download.besco_filenames_by_section,
+        besco_filenames_by_section=besco_filenames_by_section,
         section_warnings=section_warnings,
         section_image_candidates=section_image_candidates,
         section_image_urls_resolved=section_image_urls_resolved,

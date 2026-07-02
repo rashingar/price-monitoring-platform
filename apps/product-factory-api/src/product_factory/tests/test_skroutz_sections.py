@@ -5,9 +5,11 @@ from pathlib import Path
 
 import product_factory.prepare_section_assets as section_assets_module
 from product_factory.fetcher import ElectronetFetcher
+from product_factory.html_builders import extract_presentation_blocks
 from product_factory.models import GalleryImage
 from product_factory.prepare_section_assets import resolve_skroutz_section_assets
 from product_factory.skroutz_sections import (
+    build_skroutz_presentation_source_html,
     extract_skroutz_section_window,
     is_placeholder_image_url,
     resolve_skroutz_section_image_url,
@@ -83,6 +85,87 @@ def test_placeholder_urls_are_rejected_for_resolved_section_images(
         is_placeholder_image_url(section["resolved_image_url"]) is False
         for section in rendered["sections"]
     )
+
+
+def test_skroutz_embedded_video_section_is_extracted_as_presentation_block() -> None:
+    html = """
+    <div class="sku-description">
+      <div class="rich-components">
+        <section class="two-column">
+          <div class="column">
+            <h2>Steam cleaning demo</h2>
+            <div class="body-text"><p>Watch the cleaner remove dirt from tiles.</p></div>
+          </div>
+          <div class="column">
+            <iframe src="/embedded/demo" title="Demo video" allowfullscreen></iframe>
+          </div>
+        </section>
+      </div>
+    </div>
+    """
+
+    extracted = extract_skroutz_section_window(html, "https://www.skroutz.gr/p/demo")
+
+    assert len(extracted["sections"]) == 1
+    assert extracted["sections"][0]["image_url"] == ""
+    assert extracted["sections"][0]["media_html"].startswith("<iframe")
+    assert (
+        'src="https://www.skroutz.gr/embedded/demo"'
+        in extracted["sections"][0]["media_html"]
+    )
+
+    rebuilt = build_skroutz_presentation_source_html(extracted["sections"])
+    blocks = extract_presentation_blocks(
+        rebuilt, "", base_url="https://www.skroutz.gr/p/demo"
+    )
+
+    assert blocks == [
+        {
+            "title": "Steam cleaning demo",
+            "paragraph": "Watch the cleaner remove dirt from tiles.",
+            "image_url": "",
+            "media_html": '<iframe allowfullscreen="" src="https://www.skroutz.gr/embedded/demo" title="Demo video"></iframe>',
+        }
+    ]
+
+
+def test_skroutz_lazy_embedded_video_section_without_body_is_valid() -> None:
+    html = """
+    <div class="sku-description">
+      <div class="rich-components">
+        <section class="one-column">
+          <h2>Video section</h2>
+          <div class="placeholder" data-lazy-media-src-value="//www.youtube.com/embed/example">
+            <iframe src="//www.skroutz.gr/assets/transparent.gif" title="Demo video" allowfullscreen></iframe>
+          </div>
+        </section>
+      </div>
+    </div>
+    """
+
+    extracted = extract_skroutz_section_window(html, "https://www.skroutz.gr/p/demo")
+
+    assert extracted["sections"] == [
+        {
+            "title": "Video section",
+            "paragraph": "",
+            "image_url": "",
+            "media_html": '<iframe allowfullscreen="" src="https://www.youtube.com/embed/example" title="Demo video"></iframe>',
+            "image_candidates": [],
+        }
+    ]
+
+    rebuilt = build_skroutz_presentation_source_html(extracted["sections"])
+    blocks = extract_presentation_blocks(rebuilt, "", base_url="https://www.skroutz.gr/p/demo")
+
+    assert blocks == [
+        {
+            "title": "Video section",
+            "paragraph": "",
+            "image_url": "",
+            "media_html": '<iframe allowfullscreen="" src="https://www.youtube.com/embed/example" title="Demo video"></iframe>',
+        }
+    ]
 
 
 def test_resolve_skroutz_section_assets_skips_text_only_interludes(

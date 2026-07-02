@@ -139,6 +139,10 @@ def build_skroutz_presentation_source_html(sections: list[dict[str, str]]) -> st
                 f'<img alt="{escape(section["title"], quote=True)}" src="{escape(section["image_url"], quote=True)}" />'
             )
             parts.append("</figure>")
+        elif section.get("media_html"):
+            parts.append('<div class="column">')
+            parts.append(str(section["media_html"]))
+            parts.append("</div>")
         parts.append("</section>")
     parts.append("</div>")
     parts.append("</div>")
@@ -225,11 +229,11 @@ def _extract_section_block(section: Tag, base_url: str) -> dict[str, Any] | None
     if normalize_for_match(title) in SKIPPED_SECTION_TITLES:
         return None
 
-    body = _extract_section_body(section)
-    if not body:
-        return None
-
     static_candidates = _extract_static_image_candidates(section, base_url)
+    media_html = _extract_static_media_html(section, base_url)
+    body = _extract_section_body(section)
+    if not body and not media_html:
+        return None
     return {
         "title": title,
         "paragraph": body,
@@ -241,6 +245,7 @@ def _extract_section_block(section: Tag, base_url: str) -> dict[str, Any] | None
             ),
             "",
         ),
+        "media_html": media_html,
         "image_candidates": static_candidates,
     }
 
@@ -300,6 +305,73 @@ def _extract_static_image_candidates(section: Tag, base_url: str) -> list[str]:
         seen.add(url)
         deduped.append(url)
     return deduped
+
+
+def _extract_static_media_html(section: Tag, base_url: str) -> str:
+    media_node = section.find(["iframe", "video"])
+    if not isinstance(media_node, Tag):
+        return ""
+
+    fragment = BeautifulSoup(str(media_node), "lxml")
+    media = fragment.find(["iframe", "video"])
+    if not isinstance(media, Tag):
+        return ""
+
+    lazy_media_src = _find_lazy_media_src(media_node)
+    if lazy_media_src:
+        media["src"] = make_absolute_url(lazy_media_src, base_url)
+
+    for tag in [media, *media.find_all("source")]:
+        src = tag.get("src")
+        if isinstance(src, str) and normalize_whitespace(src):
+            tag["src"] = make_absolute_url(src, base_url)
+    poster = media.get("poster")
+    if isinstance(poster, str) and normalize_whitespace(poster):
+        media["poster"] = make_absolute_url(poster, base_url)
+
+    for tag in fragment.find_all(True):
+        if tag.name not in {"iframe", "video", "source"}:
+            tag.unwrap()
+            continue
+        if tag.name == "iframe":
+            tag.attrs = {
+                key: tag.get(key)
+                for key in ["src", "title", "allow", "allowfullscreen"]
+                if tag.get(key) is not None
+            }
+        elif tag.name == "video":
+            tag.attrs = {
+                key: tag.get(key)
+                for key in [
+                    "src",
+                    "poster",
+                    "autoplay",
+                    "loop",
+                    "muted",
+                    "playsinline",
+                    "controls",
+                ]
+                if tag.get(key) is not None
+            }
+        elif tag.name == "source":
+            tag.attrs = {
+                key: tag.get(key) for key in ["src", "type"] if tag.get(key) is not None
+            }
+    return str(media).strip()
+
+
+def _find_lazy_media_src(media_node: Tag) -> str:
+    for candidate in [
+        media_node,
+        media_node.parent if isinstance(media_node.parent, Tag) else None,
+        media_node.find_parent(attrs={"data-lazy-media-src-value": True}),
+    ]:
+        if not isinstance(candidate, Tag):
+            continue
+        value = candidate.get("data-lazy-media-src-value")
+        if isinstance(value, str) and normalize_whitespace(value):
+            return value
+    return ""
 
 
 def _collect_tag_image_candidates(tag: Tag, base_url: str) -> list[str]:

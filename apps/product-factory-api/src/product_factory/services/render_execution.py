@@ -423,6 +423,7 @@ def _resolve_render_sections(
             "metrics": section.metrics.to_dict(),
             "source_index": section.source_index,
             "image_url": section.image_url,
+            "media_html": section.media_html,
         }
         for section in normalized_sections
         if section.quality == "usable"
@@ -436,6 +437,7 @@ def _resolve_render_sections(
             "metrics": section.metrics.to_dict(),
             "source_index": section.source_index,
             "image_url": section.image_url,
+            "media_html": section.media_html,
         }
         for section in normalized_sections
         if section.quality == "weak"

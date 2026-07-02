@@ -517,6 +517,126 @@ def test_resolve_skroutz_section_assets_falls_back_to_skroutz_sections_and_sets_
     assert result.presentation_source_html_override == "rebuilt::Alpha|Gamma"
 
 
+def test_resolve_skroutz_section_assets_keeps_media_backed_sections_without_image(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    extracted_window = {
+        "warnings": [],
+        "window": {
+            "candidate_count": 3,
+            "duplicate_signatures_skipped": 0,
+            "selected_container_index": 1,
+            "start_anchor": "Description",
+            "stop_anchor": "Manufacturer",
+            "title_signature": ["Video", "Image", "Text only"],
+        },
+        "sections": [
+            {
+                "title": "Video",
+                "paragraph": "Video body",
+                "image_candidates": [],
+                "media_html": '<iframe src="https://cdn.example/video"></iframe>',
+            },
+            {
+                "title": "Image",
+                "paragraph": "Image body",
+                "image_candidates": ["https://cdn.example/image-candidate.jpg"],
+            },
+            {
+                "title": "Text only",
+                "paragraph": "Text body",
+                "image_candidates": [],
+            },
+        ],
+    }
+    rendered_section_data = {
+        "window": {},
+        "sections": [
+            {"title": "Video", "resolved_image_url": ""},
+            {
+                "title": "Image",
+                "resolved_image_url": "https://cdn.example/image.jpg",
+            },
+            {"title": "Text only", "resolved_image_url": ""},
+        ],
+    }
+    downloaded_besco = [
+        GalleryImage(
+            url="https://cdn.example/image.jpg",
+            alt="Image",
+            position=1,
+            local_filename="besco1.jpg",
+            local_path=str(tmp_path / "bescos" / "besco1.jpg"),
+            downloaded=True,
+        )
+    ]
+    fetcher = RecordingFetcher(
+        download_result=(
+            downloaded_besco,
+            [],
+            [str(tmp_path / "bescos" / "besco1.jpg")],
+        ),
+        rendered_section_data=rendered_section_data,
+    )
+    monkeypatch.setattr(
+        section_assets_module,
+        "extract_skroutz_section_window",
+        lambda *_args, **_kwargs: extracted_window,
+    )
+
+    result = resolve_skroutz_section_assets(
+        requested_sections=2,
+        fetch_html="<html>skroutz page</html>",
+        final_url="https://www.skroutz.gr/s/344274/example.html",
+        canonical_url="https://www.skroutz.gr/s/344274/example.html",
+        url="https://www.skroutz.gr/s/344274/example.html",
+        presentation_source_html="",
+        presentation_source_text="",
+        manufacturer_enrichment=_build_manufacturer_enrichment(
+            presentation_applied=False
+        ),
+        fetcher=fetcher,
+        output_dir=tmp_path,
+    )
+
+    assert [block["title"] for block in result.selected_presentation_blocks] == [
+        "Video",
+        "Image",
+    ]
+    assert result.selected_presentation_blocks[0]["media_html"].startswith("<iframe")
+    assert result.selected_besco_images == [
+        GalleryImage(url="https://cdn.example/image.jpg", alt="Image", position=1)
+    ]
+    assert result.downloaded_besco == [
+        GalleryImage(
+            url="https://cdn.example/image.jpg",
+            alt="Image",
+            position=2,
+            local_filename="besco1.jpg",
+            local_path=str(tmp_path / "bescos" / "besco1.jpg"),
+            downloaded=True,
+        )
+    ]
+    assert fetcher.download_calls == [
+        {
+            "images": [
+                GalleryImage(
+                    url="https://cdn.example/image.jpg", alt="Image", position=1
+                )
+            ],
+            "output_dir": tmp_path,
+            "requested_sections": 1,
+        }
+    ]
+    assert result.besco_filenames_by_section == {2: "besco1.jpg"}
+    assert result.section_warnings == []
+    assert result.presentation_source_html_override
+    assert '<iframe src="https://cdn.example/video"></iframe>' in (
+        result.presentation_source_html_override
+    )
+
+
 def test_resolve_skroutz_section_assets_clamps_when_rendered_sections_are_insufficient(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -696,11 +816,20 @@ def test_resolve_skroutz_section_assets_allows_no_available_sections(
     assert fetcher.download_calls == []
 
 
-def test_resolve_skroutz_section_assets_fails_on_title_order_mismatch(
+def test_resolve_skroutz_section_assets_clamps_on_unmatched_rendered_title(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    downloaded = GalleryImage(
+        url="https://cdn.example/alpha.jpg",
+        alt="Alpha",
+        position=1,
+        local_filename="alpha.jpg",
+        local_path=str(tmp_path / "bescos" / "alpha.jpg"),
+        downloaded=True,
+    )
     fetcher = RecordingFetcher(
+        download_result=([downloaded], [], [str(tmp_path / "bescos" / "alpha.jpg")]),
         rendered_section_data={
             "window": {},
             "sections": [
@@ -737,27 +866,40 @@ def test_resolve_skroutz_section_assets_fails_on_title_order_mismatch(
         },
     )
 
-    with pytest.raises(RuntimeError) as excinfo:
-        resolve_skroutz_section_assets(
-            requested_sections=2,
-            fetch_html="<html></html>",
-            final_url="https://www.skroutz.gr/s/200002/example.html",
-            canonical_url="https://www.skroutz.gr/s/200002/example.html",
-            url="https://www.skroutz.gr/s/200002/example.html",
-            presentation_source_html="",
-            presentation_source_text="",
-            manufacturer_enrichment=_build_manufacturer_enrichment(
-                presentation_applied=False
-            ),
-            fetcher=fetcher,
-            output_dir=tmp_path,
-        )
-
-    assert (
-        str(excinfo.value)
-        == "Skroutz section title order mismatch between rendered DOM and parsed description"
+    result = resolve_skroutz_section_assets(
+        requested_sections=2,
+        fetch_html="<html></html>",
+        final_url="https://www.skroutz.gr/s/200002/example.html",
+        canonical_url="https://www.skroutz.gr/s/200002/example.html",
+        url="https://www.skroutz.gr/s/200002/example.html",
+        presentation_source_html="",
+        presentation_source_text="",
+        manufacturer_enrichment=_build_manufacturer_enrichment(
+            presentation_applied=False
+        ),
+        fetcher=fetcher,
+        output_dir=tmp_path,
     )
-    assert fetcher.download_calls == []
+
+    assert [block["title"] for block in result.selected_presentation_blocks] == [
+        "Alpha"
+    ]
+    assert result.downloaded_besco == [downloaded]
+    assert result.section_warnings == [
+        "skroutz_rendered_sections_clamped:1/2",
+        "skroutz_image_backed_sections_clamped:1/2",
+    ]
+    assert fetcher.download_calls == [
+        {
+            "images": [
+                GalleryImage(
+                    url="https://cdn.example/alpha.jpg", alt="Alpha", position=1
+                )
+            ],
+            "output_dir": tmp_path,
+            "requested_sections": 1,
+        }
+    ]
 
 
 def test_resolve_skroutz_section_assets_keeps_incomplete_besco_download_strict(

@@ -110,6 +110,11 @@ def test_common_skroutz_description_aliases_map_to_alias_families() -> None:
     assert label_alias_family_id("Χρώμα") == "color"
 
 
+def test_washing_machine_aliases_cover_source_specific_spin_labels() -> None:
+    assert label_alias_family_id("Ταχύτητα στυψίματος") == "spin_speed"
+    assert labels_equivalent("Μέγιστες Στροφές Στυψίματος", "Ταχύτητα στυψίματος")
+
+
 def test_fan_blade_count_alias_family_covers_skroutz_wording() -> None:
     assert label_alias_family_id("Αριθμός Πτερυγίων") == "fan_blade_count"
     assert label_alias_family_id("Αριθμός Φτερωτών") == "fan_blade_count"

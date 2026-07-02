@@ -38,6 +38,7 @@ REASON_WEAK_MISSING_TITLE = "weak_missing_title"
 REASON_WEAK_NOISY_BODY = "weak_noisy_body"
 REASON_WEAK_DUPLICATE = "weak_duplicate"
 REASON_USABLE_CLEAN = "usable_clean"
+REASON_USABLE_MEDIA = "usable_media"
 
 MISSING_MIN_WORDS = 6
 MISSING_MIN_ALPHA_CHARS = 30
@@ -94,16 +95,24 @@ def _normalize_section(
     image_url = normalize_whitespace(
         raw_section.get("image_url") or raw_section.get("resolved_image_url") or ""
     )
-    metrics = _build_metrics(title=title, body_text=body_text, image_url=image_url)
+    media_html = normalize_whitespace(raw_section.get("media_html") or "")
+    metrics = _build_metrics(
+        title=title, body_text=body_text, image_url=image_url, media_html=media_html
+    )
 
     quality, reason = _classify_section(
-        title=title, body_text=body_text, image_url=image_url, metrics=metrics
+        title=title,
+        body_text=body_text,
+        image_url=image_url,
+        media_html=media_html,
+        metrics=metrics,
     )
     return NormalizedPresentationSection(
         source_index=source_index,
         title=title,
         body_text=body_text,
         image_url=image_url,
+        media_html=media_html,
         quality=quality,
         reason=reason,
         metrics=metrics,
@@ -111,7 +120,7 @@ def _normalize_section(
 
 
 def _build_metrics(
-    *, title: str, body_text: str, image_url: str
+    *, title: str, body_text: str, image_url: str, media_html: str
 ) -> NormalizedPresentationSectionMetrics:
     word_tokens = [
         token
@@ -136,6 +145,7 @@ def _build_metrics(
         unique_word_ratio=round(unique_word_ratio, 4),
         has_title=bool(title),
         has_image=bool(image_url),
+        has_media=bool(media_html),
     )
 
 
@@ -144,9 +154,14 @@ def _classify_section(
     title: str,
     body_text: str,
     image_url: str,
+    media_html: str,
     metrics: NormalizedPresentationSectionMetrics,
 ) -> tuple[str, str]:
     if not body_text:
+        if media_html:
+            if title:
+                return USABLE_QUALITY, REASON_USABLE_MEDIA
+            return WEAK_QUALITY, REASON_WEAK_MISSING_TITLE
         return MISSING_QUALITY, (
             REASON_MISSING_IMAGE_ONLY if image_url else REASON_MISSING_EMPTY_AFTER_CLEAN
         )

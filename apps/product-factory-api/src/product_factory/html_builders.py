@@ -357,18 +357,22 @@ def build_description_html_from_intro_and_sections(
     for idx, block in enumerate(sections, start=1):
         title = normalize_whitespace(block.get("title", ""))
         body_text = normalize_whitespace(block.get("body_text", ""))
-        if not title or not body_text:
+        cls = "etr-sec rev" if idx % 2 == 0 else "etr-sec"
+        source_index = int(block.get("source_index") or idx)
+        source_block = source_block_map.get(source_index, {})
+        media_html = _render_section_media_html(
+            str(source_block.get("media_html") or block.get("media_html", "")),
+            align_right=idx % 2 == 0,
+        )
+        if not title or (not body_text and not media_html):
             warnings.append(f"deterministic_section_incomplete:{idx}")
             continue
-        cls = "etr-sec rev" if idx % 2 == 0 else "etr-sec"
         out.append(f"  <!-- SECTION {idx} -->")
         out.append(f'  <div class="{cls}">')
         out.append('    <div class="etr-text">')
         out.append(
             f'      <h2><span style="font-size:24px"><strong>{escape(title)}</strong></span></h2>'
         )
-        source_index = int(block.get("source_index") or idx)
-        source_block = source_block_map.get(source_index, {})
         out.append(
             _render_section_body_html(str(source_block.get("body_html", "")), body_text)
         )
@@ -376,9 +380,6 @@ def build_description_html_from_intro_and_sections(
         default_besco_filename = f"besco{source_index}.jpg"
         besco_filename = besco_filenames_by_section.get(
             source_index, "" if use_besco_asset_map else default_besco_filename
-        )
-        media_html = _render_section_media_html(
-            str(source_block.get("media_html", "")), align_right=idx % 2 == 0
         )
         if besco_filename:
             out.append('    <div class="etr-img">')
@@ -478,14 +479,16 @@ def _blocks_from_html(source_html: str, base_url: str = "") -> list[dict[str, st
         return container_blocks
     blocks: list[dict[str, str]] = []
     current: dict[str, str] | None = None
-    for node in soup.find_all(["h1", "h2", "h3", "h4", "p", "img"]):
+    for node in soup.find_all(["h1", "h2", "h3", "h4", "p", "img", "iframe", "video"]):
         if not isinstance(node, Tag):
             continue
         if node.name.startswith("h"):
             text = normalize_whitespace(node.get_text(" ", strip=True))
             if not text:
                 continue
-            if current and current.get("title") and current.get("paragraph"):
+            if current and current.get("title") and (
+                current.get("paragraph") or current.get("media_html")
+            ):
                 blocks.append(current)
             current = {"title": text, "paragraph": "", "image_url": ""}
         elif node.name == "p" and current is not None:
@@ -500,7 +503,18 @@ def _blocks_from_html(source_html: str, base_url: str = "") -> list[dict[str, st
             image_url = make_absolute_url(src, base_url) if src else ""
             if image_url:
                 current["image_url"] = image_url
-    if current and current.get("title") and current.get("paragraph"):
+        elif (
+            node.name in {"iframe", "video"}
+            and current is not None
+            and not current.get("image_url")
+            and not current.get("media_html")
+        ):
+            media_html = _extract_container_media_html(node, base_url)
+            if media_html:
+                current["media_html"] = media_html
+    if current and current.get("title") and (
+        current.get("paragraph") or current.get("media_html")
+    ):
         blocks.append(current)
     return blocks
 
@@ -639,7 +653,11 @@ def _render_standalone_media_container_html(container: Tag, base_url: str) -> st
 
 
 def _extract_container_media_html(container: Tag, base_url: str) -> str:
-    media_node = container.find(["iframe", "video"])
+    media_node = (
+        container
+        if container.name in {"iframe", "video"}
+        else container.find(["iframe", "video"])
+    )
     if not isinstance(media_node, Tag):
         return ""
     fragment = BeautifulSoup(str(media_node), "lxml")

@@ -958,6 +958,48 @@ def test_loading_type_value_alias_resolves_front_loading_to_allowed_value() -> N
     assert loading.outside_allowed is False
 
 
+def test_washer_source_specific_spin_and_loading_aliases_resolve_filters() -> None:
+    category = {
+        "category_id": "cat_washers",
+        "path": "ΟΙΚΙΑΚΕΣ ΣΥΣΚΕΥΕΣ > Πλυντήρια-Στεγνωτήρια > Πλυντήρια Ρούχων",
+        "filter_groups": [
+            {
+                "group_id": "fg_spin",
+                "name": "Μέγιστες Στροφές Στυψίματος",
+                "required": True,
+                "status": "active",
+                "values": [
+                    {"value_id": "fv_1200", "value": "1200 rpm", "status": "active"}
+                ],
+            },
+            {
+                "group_id": "fg_loading",
+                "name": "Τρόπος Φόρτωσης",
+                "required": True,
+                "status": "active",
+                "values": [
+                    {"value_id": "fv_front", "value": "Εμπρός", "status": "active"}
+                ],
+            },
+        ],
+    }
+
+    result = resolve_category_filter_values(
+        _source(
+            ("Ταχύτητα στυψίματος", "1200 στροφές/λεπτό"),
+            ("Τρόπος Φόρτωσης", "Εμπρόσθιας Φόρτωσης"),
+        ),
+        _taxonomy("cat_washers"),
+        category,
+    )
+
+    assert [group.resolved_value for group in result.groups] == [
+        "1200 rpm",
+        "Εμπρός",
+    ]
+    assert [group.outside_allowed for group in result.groups] == [False, False]
+
+
 def test_generic_capacity_label_only_feeds_dryer_kilos_for_dryer_taxonomy() -> None:
     category = {
         "category_id": "cat_dryer_or_washer",

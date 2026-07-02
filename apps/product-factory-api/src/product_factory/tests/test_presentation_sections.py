@@ -72,6 +72,25 @@ def test_normalize_presentation_sections_marks_missing_image_only() -> None:
     assert section.reason == "missing_image_only"
 
 
+def test_normalize_presentation_sections_marks_media_only_section_usable() -> None:
+    sections = normalize_presentation_sections(
+        [
+            {
+                "title": "Product video",
+                "media_html": '<iframe src="https://www.youtube.com/embed/demo"></iframe>',
+            }
+        ]
+    )
+
+    section = sections[0]
+    assert section.body_text == ""
+    assert section.media_html.startswith("<iframe")
+    assert section.quality == "usable"
+    assert section.reason == "usable_media"
+    assert section.metrics.has_media is True
+    assert section.to_dict()["media_html"].startswith("<iframe")
+
+
 def test_normalize_presentation_sections_marks_weak_missing_title() -> None:
     sections = normalize_presentation_sections(
         [

@@ -16,6 +16,7 @@ from .parser_product_gedsa import GedsaProductParser
 from .parser_product_guaranty import GuarantyProductParser
 from .parser_product_fgeurope import FGEuropeProductParser
 from .parser_product_kotsovolos import KotsovolosProductParser
+from .parser_product_kountisae import KountisAEProductParser
 from .parser_product_marketquest import MarketQuestProductParser
 from .parser_product_manufacturer import ManufacturerProductParser
 from .parser_product_pampoukidis import PampoukidisProductParser
@@ -186,6 +187,9 @@ def resolve_prepare_provider_resolution(
     kotsovolos_parser_factory: Callable[
         [], KotsovolosProductParser
     ] = KotsovolosProductParser,
+    kountisae_parser_factory: Callable[
+        [], KountisAEProductParser
+    ] = KountisAEProductParser,
     marketquest_parser_factory: Callable[
         [], MarketQuestProductParser
     ] = MarketQuestProductParser,
@@ -217,6 +221,7 @@ def resolve_prepare_provider_resolution(
     guaranty_parser = guaranty_parser_factory()
     fgeurope_parser = fgeurope_parser_factory()
     kotsovolos_parser = kotsovolos_parser_factory()
+    kountisae_parser = kountisae_parser_factory()
     marketquest_parser = marketquest_parser_factory()
     pampoukidis_parser = pampoukidis_parser_factory()
     electronet_parser = electronet_parser_factory(
@@ -237,6 +242,7 @@ def resolve_prepare_provider_resolution(
         guaranty_parser=guaranty_parser,
         fgeurope_parser=fgeurope_parser,
         kotsovolos_parser=kotsovolos_parser,
+        kountisae_parser=kountisae_parser,
         marketquest_parser=marketquest_parser,
         pampoukidis_parser=pampoukidis_parser,
         electronet_parser=electronet_parser,

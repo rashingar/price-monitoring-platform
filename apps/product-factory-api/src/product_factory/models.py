@@ -88,6 +88,7 @@ class NormalizedPresentationSectionMetrics:
     unique_word_ratio: float = 0.0
     has_title: bool = False
     has_image: bool = False
+    has_media: bool = False
     is_duplicate: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -100,6 +101,7 @@ class NormalizedPresentationSection:
     title: str = ""
     body_text: str = ""
     image_url: str = ""
+    media_html: str = ""
     quality: str = "missing"
     reason: str = "missing_extraction"
     metrics: NormalizedPresentationSectionMetrics = field(
@@ -112,6 +114,7 @@ class NormalizedPresentationSection:
             "title": self.title,
             "body_text": self.body_text,
             "image_url": self.image_url,
+            "media_html": self.media_html,
             "quality": self.quality,
             "reason": self.reason,
             "metrics": self.metrics.to_dict(),

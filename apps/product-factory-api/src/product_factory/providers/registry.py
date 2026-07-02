@@ -12,6 +12,7 @@ from ..parser_product_gedsa import GedsaProductParser
 from ..parser_product_guaranty import GuarantyProductParser
 from ..parser_product_fgeurope import FGEuropeProductParser
 from ..parser_product_kotsovolos import KotsovolosProductParser
+from ..parser_product_kountisae import KountisAEProductParser
 from ..parser_product_marketquest import MarketQuestProductParser
 from ..parser_product_manufacturer import ManufacturerProductParser
 from ..parser_product_pampoukidis import PampoukidisProductParser
@@ -28,6 +29,7 @@ from .gedsa_provider import GedsaProvider
 from .guaranty_provider import GuarantyProvider
 from .fgeurope_provider import FGEuropeProvider
 from .kotsovolos_provider import KotsovolosProvider
+from .kountisae_provider import KountisAEProvider
 from .marketquest_provider import MarketQuestProvider
 from .pampoukidis_provider import PampoukidisProvider
 from .models import ProviderDefinition, ProviderErrorCode, ProviderKind, ProviderStage
@@ -45,6 +47,7 @@ RUNTIME_SOURCE_PROVIDER_IDS = {
     "fgeurope": "fgeurope",
     "gedsa": "gedsa",
     "kotsovolos": "kotsovolos",
+    "kountisae": "kountisae",
     "marketquest": "marketquest",
     "pampoukidis": "pampoukidis",
     "skroutz": "skroutz",
@@ -121,6 +124,7 @@ def bootstrap_runtime_provider_registry(
     guaranty_parser: GuarantyProductParser | None = None,
     fgeurope_parser: FGEuropeProductParser | None = None,
     kotsovolos_parser: KotsovolosProductParser | None = None,
+    kountisae_parser: KountisAEProductParser | None = None,
     marketquest_parser: MarketQuestProductParser | None = None,
     pampoukidis_parser: PampoukidisProductParser | None = None,
 ) -> ProviderRegistry:
@@ -172,6 +176,11 @@ def bootstrap_runtime_provider_registry(
     registry.register(
         KotsovolosProvider(
             fetcher=fetcher, parser=kotsovolos_parser or KotsovolosProductParser()
+        )
+    )
+    registry.register(
+        KountisAEProvider(
+            fetcher=fetcher, parser=kountisae_parser or KountisAEProductParser()
         )
     )
     registry.register(

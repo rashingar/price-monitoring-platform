@@ -721,7 +721,9 @@ def _candidate_source_labels(group_name: str, *, taxonomy_path: str = "") -> lis
     ):
         aliases.extend(["Χωρητικότητα", "Χωρητικότητα Στεγνώματος"])
     if "στροφες στυψιματος" in normalized_group:
-        aliases.extend(["Στροφές", "Μέγιστη ταχύτητα στυψίματος"])
+        aliases.extend(
+            ["Στροφές", "Μέγιστη ταχύτητα στυψίματος", "Ταχύτητα στυψίματος"]
+        )
     if "τροπος φορτωσης" in normalized_group:
         aliases.extend(["Τύπος", "Τύπος φόρτωσης"])
     if "χωρητικοτητα" in normalized_group and (

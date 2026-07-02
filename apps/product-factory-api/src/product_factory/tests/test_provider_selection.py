@@ -627,6 +627,7 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         "gedsa",
         "guaranty",
         "kotsovolos",
+        "kountisae",
         "marketquest",
         "pampoukidis",
         "skroutz",
@@ -643,6 +644,7 @@ def test_bootstrap_runtime_provider_registry_registers_active_providers() -> Non
         "gedsa",
         "guaranty",
         "kotsovolos",
+        "kountisae",
         "marketquest",
         "pampoukidis",
         "skroutz",
@@ -661,6 +663,7 @@ def test_source_to_provider_id_maps_supported_sources() -> None:
     assert source_to_provider_id("gedsa") == "gedsa"
     assert source_to_provider_id("guaranty") == "guaranty"
     assert source_to_provider_id("kotsovolos") == "kotsovolos"
+    assert source_to_provider_id("kountisae") == "kountisae"
     assert source_to_provider_id("marketquest") == "marketquest"
     assert source_to_provider_id("pampoukidis") == "pampoukidis"
     assert source_to_provider_id("skroutz") == "skroutz"

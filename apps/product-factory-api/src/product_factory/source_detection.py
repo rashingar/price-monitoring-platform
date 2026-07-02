@@ -17,6 +17,7 @@ GUARANTY_DOMAINS = {"guaranty.gr", "www.guaranty.gr"}
 FGEUROPE_DOMAINS = {"fgeurope.gr", "www.fgeurope.gr"}
 ECOMARKT_DOMAINS = {"ecomarkt.gr", "www.ecomarkt.gr"}
 GEDSA_DOMAINS = {"gedsa.gr", "www.gedsa.gr"}
+KOUNTISAE_DOMAINS = {"kountisae.gr", "www.kountisae.gr"}
 SKROUTZ_PRODUCT_PATH_PREFIX = "/s/"
 BESTPRICE_PRODUCT_PATH_PREFIX = "/item/"
 KOTSOVOLOS_PRODUCT_PATH_RE = re.compile(r"/\d{5,}-", re.IGNORECASE)
@@ -30,7 +31,7 @@ FGEUROPE_PRODUCT_PATH_PREFIX = "/product/"
 SUPPORTED_URL_MESSAGE = (
     "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, "
     "Kotsovolos, Estia, Apothema, MarketQuest, Euragora, Pampoukidis, "
-    "Guaranty, FG Europe, Ecomarkt, or GEDSA product URL"
+    "Guaranty, FG Europe, Ecomarkt, GEDSA, or Kountis AE product URL"
 )
 
 
@@ -68,6 +69,8 @@ def detect_source(url: str) -> str:
         return "ecomarkt"
     if host in GEDSA_DOMAINS:
         return "gedsa"
+    if host in KOUNTISAE_DOMAINS:
+        return "kountisae"
     raise ValueError(SUPPORTED_URL_MESSAGE)
 
 
@@ -153,6 +156,15 @@ def is_gedsa_product_url(url: str) -> bool:
     )
 
 
+def is_kountisae_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return (
+        parsed.netloc.strip().lower() in KOUNTISAE_DOMAINS
+        and parsed.path.startswith("/product/")
+        and bool(parsed.path.strip("/").split("/", 1)[-1])
+    )
+
+
 def validate_url_scope(url: str) -> tuple[str, bool, str]:
     source = detect_source(url)
     if source == "electronet":
@@ -208,4 +220,8 @@ def validate_url_scope(url: str) -> tuple[str, bool, str]:
         return source, True, "gedsa_product_path"
     if source == "gedsa":
         return source, False, "gedsa_non_product_path"
+    if is_kountisae_product_url(url):
+        return source, True, "kountisae_product_path"
+    if source == "kountisae":
+        return source, False, "kountisae_non_product_path"
     return source, False, "unsupported_source"
