@@ -318,6 +318,8 @@ def _add_common_run_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--rate-limit-seconds", type=float, default=None)
     parser.add_argument("--headed", action="store_true")
     parser.add_argument("--no-browser-cache", action="store_true")
+    parser.add_argument("--llm-evaluate-candidates", action="store_true")
+    parser.add_argument("--llm-auto-apply-candidates", action="store_true")
     parser.add_argument("--json", action="store_true")
 
 
@@ -347,6 +349,8 @@ def _options(
         rate_limit_seconds=args.rate_limit_seconds,
         headed=bool(args.headed),
         no_browser_cache=bool(args.no_browser_cache),
+        llm_evaluate_candidates=bool(args.llm_evaluate_candidates),
+        llm_auto_apply_candidates=bool(args.llm_auto_apply_candidates),
     )
 
 

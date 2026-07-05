@@ -39,3 +39,5 @@ class SourceUrlAgentRunRequest(BaseModel):
     rate_limit_seconds: float | None = Field(default=None, ge=0)
     headed: bool = False
     no_browser_cache: bool = False
+    llm_evaluate_candidates: bool = False
+    llm_auto_apply_candidates: bool = False

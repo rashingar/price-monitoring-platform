@@ -37,6 +37,12 @@ def discovery_run_to_dict(
         "filters_json": json_safe_value(row.filters_json),
         "dry_run": bool(filters.get("dry_run", True)),
         "apply_high_confidence": bool(filters.get("apply_high_confidence", False)),
+        "llm_evaluate_candidates": bool(
+            filters.get("llm_evaluate_candidates", False)
+        ),
+        "llm_auto_apply_candidates": bool(
+            filters.get("llm_auto_apply_candidates", False)
+        ),
         "limit": filters.get("limit"),
         "rate_limit_seconds": filters.get("rate_limit_seconds"),
         "selected_count": row.selected_count,

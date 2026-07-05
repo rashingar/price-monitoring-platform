@@ -60,6 +60,8 @@ class SourceUrlAgentJobRequest:
     rate_limit_seconds: float | None = None
     headed: bool = False
     no_browser_cache: bool = False
+    llm_evaluate_candidates: bool = False
+    llm_auto_apply_candidates: bool = False
 
 
 def execute_source_url_agent_job(
@@ -133,6 +135,8 @@ def run_source_url_agent_job(
                 rate_limit_seconds=request.rate_limit_seconds,
                 headed=bool(request.headed),
                 no_browser_cache=bool(request.no_browser_cache),
+                llm_evaluate_candidates=bool(request.llm_evaluate_candidates),
+                llm_auto_apply_candidates=bool(request.llm_auto_apply_candidates),
                 progress_reporter=progress_reporter,
                 progress_callback=lambda event, product, source, candidates, error: record_discovery_task_progress(
                     run_id,
@@ -201,6 +205,12 @@ def source_url_agent_job_request_from_payload(
         rate_limit_seconds=_optional_float(data.get("rate_limit_seconds")),
         headed=_optional_bool(data.get("headed"), default=False),
         no_browser_cache=_optional_bool(data.get("no_browser_cache"), default=False),
+        llm_evaluate_candidates=_optional_bool(
+            data.get("llm_evaluate_candidates"), default=False
+        ),
+        llm_auto_apply_candidates=_optional_bool(
+            data.get("llm_auto_apply_candidates"), default=False
+        ),
     )
 
 
