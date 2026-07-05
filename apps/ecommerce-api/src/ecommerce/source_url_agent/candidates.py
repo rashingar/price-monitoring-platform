@@ -99,6 +99,12 @@ class SourceUrlAgentCandidate:
                 evidence, self.searched_queries
             ),
             "matched_identifier_variant": _matched_identifier_variant(evidence),
+            "llm_verdict": _llm_evaluation_field(evidence, "verdict"),
+            "llm_confidence": _llm_evaluation_field(evidence, "confidence"),
+            "llm_apply_recommendation": _llm_evaluation_field(
+                evidence, "apply_recommendation"
+            ),
+            "llm_reasons": _llm_reasons(evidence),
             "notes": self.notes,
             "checked_at": self.checked_at.isoformat(),
         }
@@ -147,6 +153,8 @@ class SourceUrlAgentCandidate:
 
 
 def keep_candidate(candidate: SourceUrlAgentCandidate) -> bool:
+    if isinstance(candidate.evidence_json.get("llm_evaluation"), dict):
+        return True
     if candidate.status == "error" or candidate.match_status == "error":
         return True
     if (
@@ -312,3 +320,20 @@ def _json_list_text(values: list[str]) -> str:
     if not values:
         return ""
     return json.dumps(values, ensure_ascii=False)
+
+
+def _llm_evaluation_field(evidence: dict[str, Any], field_name: str) -> str:
+    evaluation = evidence.get("llm_evaluation")
+    if not isinstance(evaluation, dict):
+        return ""
+    return str(evaluation.get(field_name) or "").strip()
+
+
+def _llm_reasons(evidence: dict[str, Any]) -> str:
+    evaluation = evidence.get("llm_evaluation")
+    if not isinstance(evaluation, dict):
+        return ""
+    reasons = evaluation.get("reasons")
+    if not isinstance(reasons, list):
+        return ""
+    return " | ".join(str(item).strip() for item in reasons if str(item or "").strip())

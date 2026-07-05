@@ -41,6 +41,10 @@ RESULT_COLUMNS = [
     "searched_identifier_variants_json",
     "executed_query_count",
     "matched_identifier_variant",
+    "llm_verdict",
+    "llm_confidence",
+    "llm_apply_recommendation",
+    "llm_reasons",
     "notes",
     "checked_at",
 ]
