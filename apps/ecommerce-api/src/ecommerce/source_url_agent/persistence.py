@@ -144,7 +144,7 @@ def write_candidate_source_url(
     if (
         manual is not None
         and manual.url_normalized != normalized
-        and trust_level == "high_confidence"
+        and trust_level != "manual"
     ):
         return SourceUrlWriteResult(
             candidate_index,
