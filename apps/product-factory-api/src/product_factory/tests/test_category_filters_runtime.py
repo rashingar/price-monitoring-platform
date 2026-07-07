@@ -267,6 +267,38 @@ def test_category_filter_category_lookup_by_category_id() -> None:
     ].endswith("Laptops")
 
 
+def test_category_filter_lookup_prefers_taxonomy_path_over_mismatched_id() -> None:
+    coffee = {
+        "category_id": "cat_coffee",
+        "path": "Home > Coffee > Espresso Machines",
+        "filter_groups": [{"group_id": "fg_system", "name": "Coffee System"}],
+    }
+    microwave = {
+        "category_id": "cat_microwave_grill",
+        "path": "Appliances > Microwaves > With Grill",
+        "filter_groups": [{"group_id": "fg_grill", "name": "With Grill"}],
+    }
+    payload = {
+        "subcategories": [coffee, microwave],
+        "by_category_id": {
+            coffee["category_id"]: coffee,
+            microwave["category_id"]: microwave,
+        },
+        "by_path": {
+            coffee["path"]: coffee,
+            microwave["path"]: microwave,
+        },
+    }
+
+    found = find_filter_category(
+        payload,
+        category_id="cat_microwave_grill",
+        taxonomy_path="Home > Coffee > Espresso Machines",
+    )
+
+    assert found == coffee
+
+
 def test_tv_subcategories_share_filter_groups() -> None:
     payload = load_filter_map()
     tv_categories = [

@@ -128,11 +128,12 @@ def validate_besco_files(besco_dir: Path) -> list[Path]:
     if not files:
         return []
 
-    expected = [f"besco{idx}.jpg" for idx in range(1, len(files) + 1)]
-    actual = [p.name for p in files]
-    if actual != expected:
+    invalid = [
+        p.name for p in files if not re.fullmatch(r"besco[1-9]\d*\.jpe?g", p.name, re.I)
+    ]
+    if invalid:
         raise UploadError(
-            f"Besco files must match repo convention exactly. Expected={expected} Actual={actual}"
+            f"Besco files must use section-numbered names like besco2.jpg. Invalid={invalid}"
         )
 
     return files

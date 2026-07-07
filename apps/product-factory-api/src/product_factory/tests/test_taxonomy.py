@@ -208,6 +208,29 @@ def test_taxonomy_resolution_accepts_bestprice_pan_url_evidence() -> None:
     assert candidates[0]["cta_url"].endswith("/thgania")
 
 
+def test_taxonomy_resolution_accepts_bestprice_espresso_capsule_evidence() -> None:
+    resolver = TaxonomyResolver()
+    resolution, candidates = resolver.resolve(
+        breadcrumbs=["home"],
+        url="https://www.bestprice.gr/item/2153980520/delonghi-inissia-en80-cw-kafetiera-espresso-gia-kapsoules-nespresso-19bar.html",
+        name="DeLonghi Inissia EN80.CW Kafetiera Espresso gia Kapsoules Nespresso 19bar",
+        key_specs=[
+            {"label": "manufacturer", "value": "DeLonghi"},
+            {"label": "capsule type", "value": "Nespresso"},
+            {"label": "pump pressure", "value": "19bar"},
+        ],
+        spec_sections=[],
+    )
+
+    assert (
+        resolution.cta_url
+        == "https://www.etranoulis.gr/oikiakos-eksoplismos/kafes-rofhmata-xhmoi/kafetieres-espresso"
+    )
+    assert resolution.taxonomy_path
+    assert "coffee_espresso_evidence" in resolution.reason
+    assert candidates[0]["sub_category"] == "Καφετιέρες Espresso"
+
+
 def test_taxonomy_resolution_prefers_microwave_without_grill_url_and_base_cta() -> None:
     resolver = TaxonomyResolver()
     resolution, candidates = resolver.resolve(

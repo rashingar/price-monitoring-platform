@@ -98,6 +98,23 @@ def find_filter_category(
     category_id: str = "",
     taxonomy_path: str = "",
 ) -> dict[str, Any] | None:
+    normalized_path = normalize_for_match(canonicalize_path(taxonomy_path))
+    if normalized_path:
+        by_path = filter_map.get("by_path", {})
+        if isinstance(by_path, dict):
+            for path, category in by_path.items():
+                if normalize_for_match(
+                    canonicalize_path(str(path))
+                ) == normalized_path and isinstance(category, dict):
+                    return category
+        for category in filter_map.get("subcategories", []):
+            if (
+                isinstance(category, dict)
+                and normalize_for_match(canonicalize_path(category.get("path", "")))
+                == normalized_path
+            ):
+                return category
+
     if category_id:
         by_id = filter_map.get("by_category_id", {})
         if isinstance(by_id, dict) and isinstance(by_id.get(category_id), dict):
@@ -109,23 +126,6 @@ def find_filter_category(
             ):
                 return category
 
-    normalized_path = normalize_for_match(canonicalize_path(taxonomy_path))
-    if not normalized_path:
-        return None
-    by_path = filter_map.get("by_path", {})
-    if isinstance(by_path, dict):
-        for path, category in by_path.items():
-            if normalize_for_match(
-                canonicalize_path(str(path))
-            ) == normalized_path and isinstance(category, dict):
-                return category
-    for category in filter_map.get("subcategories", []):
-        if (
-            isinstance(category, dict)
-            and normalize_for_match(canonicalize_path(category.get("path", "")))
-            == normalized_path
-        ):
-            return category
     return None
 
 

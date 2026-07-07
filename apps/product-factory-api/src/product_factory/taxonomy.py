@@ -53,6 +53,15 @@ AIR_CONDITIONER_UNIT_TOKENS = {
     "wifi",
     "r32",
 }
+COFFEE_ESPRESSO_EVIDENCE_TOKENS = {
+    "kafetiera",
+    "kafetieres",
+    "capsule",
+    "capsules",
+    "kapsoula",
+    "kapsoules",
+    "nespresso",
+}
 TV_SIZE_BUCKETS = {
     "Έως 32''": (0, 32),
     "33''-50''": (33, 50),
@@ -260,6 +269,14 @@ class TaxonomyResolver:
                 score += 3.5
                 reasons.append("cookware_pan_url")
 
+            if (
+                "espresso" in sub_norm
+                and "espresso" in source_evidence_tokens
+                and source_evidence_tokens & COFFEE_ESPRESSO_EVIDENCE_TOKENS
+            ):
+                score += 3.0
+                reasons.append("coffee_espresso_evidence")
+
             if leaf_norm == MICROWAVE_LEAF:
                 without_grill_url = any(
                     token in url_path_norm
@@ -364,7 +381,11 @@ class TaxonomyResolver:
             and delta >= 2.0
             and any(
                 reason in best["reasons"]
-                for reason in ["fan_subcategory_url", "cookware_pan_url"]
+                for reason in [
+                    "fan_subcategory_url",
+                    "cookware_pan_url",
+                    "coffee_espresso_evidence",
+                ]
             )
         ):
             resolved = True
