@@ -18,6 +18,7 @@ FGEUROPE_DOMAINS = {"fgeurope.gr", "www.fgeurope.gr"}
 ECOMARKT_DOMAINS = {"ecomarkt.gr", "www.ecomarkt.gr"}
 GEDSA_DOMAINS = {"gedsa.gr", "www.gedsa.gr"}
 KOUNTISAE_DOMAINS = {"kountisae.gr", "www.kountisae.gr"}
+PLUS4U_DOMAINS = {"plus4u.gr", "www.plus4u.gr"}
 SKROUTZ_PRODUCT_PATH_PREFIX = "/s/"
 BESTPRICE_PRODUCT_PATH_PREFIX = "/item/"
 KOTSOVOLOS_PRODUCT_PATH_RE = re.compile(r"/\d{5,}-", re.IGNORECASE)
@@ -31,7 +32,7 @@ FGEUROPE_PRODUCT_PATH_PREFIX = "/product/"
 SUPPORTED_URL_MESSAGE = (
     "Input URL must be an Electronet, Dream Electric, Skroutz, BestPrice, "
     "Kotsovolos, Estia, Apothema, MarketQuest, Euragora, Pampoukidis, "
-    "Guaranty, FG Europe, Ecomarkt, GEDSA, or Kountis AE product URL"
+    "Guaranty, FG Europe, Ecomarkt, GEDSA, Kountis AE, or Plus4U product URL"
 )
 
 
@@ -71,6 +72,8 @@ def detect_source(url: str) -> str:
         return "gedsa"
     if host in KOUNTISAE_DOMAINS:
         return "kountisae"
+    if host in PLUS4U_DOMAINS:
+        return "plus4u"
     raise ValueError(SUPPORTED_URL_MESSAGE)
 
 
@@ -165,6 +168,17 @@ def is_kountisae_product_url(url: str) -> bool:
     )
 
 
+def is_plus4u_product_url(url: str) -> bool:
+    parsed = urlparse(url)
+    host = parsed.netloc.strip().lower()
+    path = parsed.path.strip()
+    if host not in PLUS4U_DOMAINS:
+        return False
+    if path == "/showitem.php" and "ID=" in parsed.query:
+        return True
+    return bool(re.match(r"^/.+/\d+-\d+/p/?$", path, re.IGNORECASE))
+
+
 def validate_url_scope(url: str) -> tuple[str, bool, str]:
     source = detect_source(url)
     if source == "electronet":
@@ -224,4 +238,8 @@ def validate_url_scope(url: str) -> tuple[str, bool, str]:
         return source, True, "kountisae_product_path"
     if source == "kountisae":
         return source, False, "kountisae_non_product_path"
+    if is_plus4u_product_url(url):
+        return source, True, "plus4u_product_path"
+    if source == "plus4u":
+        return source, False, "plus4u_non_product_path"
     return source, False, "unsupported_source"

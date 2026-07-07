@@ -16,6 +16,7 @@ from ..parser_product_kountisae import KountisAEProductParser
 from ..parser_product_marketquest import MarketQuestProductParser
 from ..parser_product_manufacturer import ManufacturerProductParser
 from ..parser_product_pampoukidis import PampoukidisProductParser
+from ..parser_product_plus4u import Plus4UProductParser
 from ..parser_product_skroutz import SkroutzProductParser
 from .base import ProductProvider, ProviderError
 from .apothema_provider import ApothemaProvider
@@ -32,6 +33,7 @@ from .kotsovolos_provider import KotsovolosProvider
 from .kountisae_provider import KountisAEProvider
 from .marketquest_provider import MarketQuestProvider
 from .pampoukidis_provider import PampoukidisProvider
+from .plus4u_provider import Plus4UProvider
 from .models import ProviderDefinition, ProviderErrorCode, ProviderKind, ProviderStage
 from .skroutz_provider import SkroutzProvider
 
@@ -50,6 +52,7 @@ RUNTIME_SOURCE_PROVIDER_IDS = {
     "kountisae": "kountisae",
     "marketquest": "marketquest",
     "pampoukidis": "pampoukidis",
+    "plus4u": "plus4u",
     "skroutz": "skroutz",
 }
 
@@ -127,6 +130,7 @@ def bootstrap_runtime_provider_registry(
     kountisae_parser: KountisAEProductParser | None = None,
     marketquest_parser: MarketQuestProductParser | None = None,
     pampoukidis_parser: PampoukidisProductParser | None = None,
+    plus4u_parser: Plus4UProductParser | None = None,
 ) -> ProviderRegistry:
     registry = ProviderRegistry()
     registry.register(
@@ -194,6 +198,9 @@ def bootstrap_runtime_provider_registry(
             fetcher=fetcher,
             parser=pampoukidis_parser or PampoukidisProductParser(),
         )
+    )
+    registry.register(
+        Plus4UProvider(fetcher=fetcher, parser=plus4u_parser or Plus4UProductParser())
     )
     registry.register(SkroutzProvider(parser=skroutz_parser))
     return registry
