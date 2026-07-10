@@ -26,6 +26,7 @@ from .models import (
 from .normalize import (
     candidate_label_keys,
     labels_equivalent,
+    nullify_dash_values,
     normalize_for_match,
     normalize_whitespace,
 )
@@ -721,14 +722,21 @@ _AIR_CONDITIONER_FIELD_ALIAS_MAP = {
     normalize_for_match("Φορτίου Σχεδιασμού Θέρμανσης Θερμής Ζώνης ( kW/h )"): (
         "Θερμική Ισχύς (kW)",
     ),
-    normalize_for_match("Ονομαστική Απόδοση (Btu/h)"): ("Απόδοση BTU", "Απόδοση (BTU)"),
+    normalize_for_match("Ονομαστική Απόδοση (Btu/h)"): (
+        "Απόδοση BTU",
+        "Απόδοση (BTU)",
+        "Απόδοση Ψύξης",
+    ),
     normalize_for_match("Ψυκτική Απόδοση ( Btu/h )"): (
         "Ψυκτική Απόδοση",
-        "Ισχύς Ψύξης",
         "Ψυκτική (Btu/h)",
+        "Ψύξη (Btu/h)",
+        "Ισχύς Ψύξης",
+        "Απόδοση Ψύξης",
     ),
     normalize_for_match("Θερμική Απόδοση ( Btu/h )"): (
         "Θερμική Απόδοση",
+        "Απόδοση Θέρμανσης",
         "Ισχύς Θέρμανσης",
         "Θερμική Απόδοση (BΤU/h)",
     ),
@@ -772,12 +780,13 @@ _AIR_CONDITIONER_FIELD_ALIAS_MAP = {
     normalize_for_match("Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A) - Hi"): (
         "Θόρυβος Εσωτερικής Μονάδας",
         "Εσωτερικής Μονάδας",
+        "Επίπεδο Θορύβου",
     ),
     normalize_for_match("Ηχητική Ισχύς Εξωτερικής Μονάδας dB(A) - Hi"): (
         "Θόρυβος Εξωτερικής Μονάδας",
         "Εξωτερικής Μονάδας",
     ),
-    normalize_for_match("Αφύγρανση"): ("Αφύγρανση",),
+    normalize_for_match("Αφύγρανση"): ("Αφύγρανση", "Λειτουργία Αφύγρανσης"),
     normalize_for_match("Ιονιστής"): ("Ιονιστής",),
     normalize_for_match("Φίλτρα"): ("Φίλτρα Καθαρισμού Αέρα", "Τύπος Φίλτρου"),
     normalize_for_match("Πρόσθετες Λειτουργίες Κλιματιστικού"): (
@@ -786,6 +795,9 @@ _AIR_CONDITIONER_FIELD_ALIAS_MAP = {
         "Wi-Fi Ready",
         "Συνδεσιμότητα",
         "Συνδεσιμότητα (WiFi)",
+        "WiFi",
+        "Λειτουργία Follow Me",
+        "Χρονοδιακόπτης",
     ),
     normalize_for_match("Βάρος Εσωτερικής Μονάδας ( Kg )"): (
         "Βάρος Εσωτερικής Μονάδας",
@@ -797,16 +809,22 @@ _AIR_CONDITIONER_FIELD_ALIAS_MAP = {
         "Ύψος Εσωτερικής Μονάδας",
         "Ύψος Εσωτερικής Μονάδα",
         "Διαστάσεις Εσωτερικής Μονάδας (ΥxΠxΒ mm)",
+        "Διαστάσεις (Π x Β x Υ)",
+        "Διαστάσεις",
     ),
     normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"): (
         "Μήκος Εσωτερικής Μονάδας",
         "Μήκος Εσωτερικής Μονάδα",
         "Διαστάσεις Εσωτερικής Μονάδας (ΥxΠxΒ mm)",
+        "Διαστάσεις (Π x Β x Υ)",
+        "Διαστάσεις",
     ),
     normalize_for_match("Βάθος Εσωτερικής Μονάδας ( mm )"): (
         "Βάθος Εσωτερικής Μονάδας",
         "Βάθος Εσωτερικής Μονάδα",
         "Διαστάσεις Εσωτερικής Μονάδας (ΥxΠxΒ mm)",
+        "Διαστάσεις (Π x Β x Υ)",
+        "Διαστάσεις",
     ),
     normalize_for_match("Ύψος Εξωτερικής Μονάδας ( mm )"): (
         "Ύψος Εξωτερικής Μονάδας",
@@ -866,7 +884,8 @@ def _aliases_for_template_field(
     if normalize_for_match(taxonomy_leaf) == normalize_for_match("Κουζίνες"):
         aliases.extend(_GENERIC_TEMPLATE_FIELD_ALIAS_MAP.get(label_key, ()))
     if section_key in _AIR_CONDITIONER_SECTION_KEYS:
-        aliases.extend(_AIR_CONDITIONER_FIELD_ALIAS_MAP.get(label_key, ()))
+        field_aliases = list(_AIR_CONDITIONER_FIELD_ALIAS_MAP.get(label_key, ()))
+        aliases = [*field_aliases, *aliases]
     return dedupe_strings(alias for alias in aliases if alias)
 
 
@@ -952,6 +971,17 @@ def _resolve_template_field(
     resolver_name = str(field.get("resolver", "")).strip()
     resolver = _RESOLVERS.get(resolver_name)
     if resolver is None:
+        section_key = normalize_for_match(str(field.get("section_title", "")))
+        label_key = normalize_for_match(str(field.get("label", "")))
+        if (
+            section_key in _AIR_CONDITIONER_SECTION_KEYS
+            and label_key in _AIR_CONDITIONER_DIMENSION_FIELD_KEYS
+        ):
+            labeled = _format_air_conditioner_labeled_dimension_component_mm(
+                context, str(field.get("label", ""))
+            )
+            if labeled:
+                return labeled, "source_labeled_dimensions"
         aliases = _aliases_for_template_field(field, context.taxonomy.leaf_category)
         value, source = _first_value_from_aliases(
             context,
@@ -977,31 +1007,40 @@ def _first_value_from_aliases(
     for alias in aliases:
         for key in candidate_label_keys(alias):
             if key in context.spec_lookup:
-                return context.spec_lookup[key], f"spec_alias:{alias}"
+                value = nullify_dash_values(context.spec_lookup[key])
+                if value:
+                    return value, f"spec_alias:{alias}"
     for alias in aliases:
         for key in candidate_label_keys(alias):
             if key in context.description_lookup:
-                return context.description_lookup[key], f"description_alias:{alias}"
+                value = nullify_dash_values(context.description_lookup[key])
+                if value:
+                    return value, f"description_alias:{alias}"
     fuzzy_spec = resolve_spec_value(context.spec_lookup, aliases)
-    if fuzzy_spec.value:
+    fuzzy_spec_value = nullify_dash_values(fuzzy_spec.value)
+    if fuzzy_spec_value:
         return (
-            fuzzy_spec.value,
+            fuzzy_spec_value,
             f"{fuzzy_spec.source}:{fuzzy_spec.matched_label or 'alias'}",
         )
     for alias in aliases:
         for key in candidate_label_keys(alias):
             if key in context.raw_lookup:
-                return context.raw_lookup[key], f"raw_alias:{alias}"
+                value = nullify_dash_values(context.raw_lookup[key])
+                if value:
+                    return value, f"raw_alias:{alias}"
     fuzzy_raw = resolve_spec_value(context.raw_lookup, aliases)
-    if fuzzy_raw.value:
+    fuzzy_raw_value = nullify_dash_values(fuzzy_raw.value)
+    if fuzzy_raw_value:
         return (
-            fuzzy_raw.value,
+            fuzzy_raw_value,
             f"raw_{fuzzy_raw.source}:{fuzzy_raw.matched_label or 'alias'}",
         )
     fuzzy_description = resolve_spec_value(context.description_lookup, aliases)
-    if fuzzy_description.value:
+    fuzzy_description_value = nullify_dash_values(fuzzy_description.value)
+    if fuzzy_description_value:
         return (
-            fuzzy_description.value,
+            fuzzy_description_value,
             f"description_{fuzzy_description.source}:{fuzzy_description.matched_label or 'alias'}",
         )
     return "", ""
@@ -1015,14 +1054,16 @@ def _section_value(
     if section_key in context.section_lookup:
         for candidate_key in candidate_label_keys(label):
             if candidate_key in context.section_lookup[section_key]:
-                return (
-                    context.section_lookup[section_key][candidate_key],
-                    f"section:{section_name}/{label}",
+                value = nullify_dash_values(
+                    context.section_lookup[section_key][candidate_key]
                 )
+                if value:
+                    return value, f"section:{section_name}/{label}"
     if section_key in context.section_lookup:
         for candidate_label, candidate_value in context.section_lookup[
             section_key
         ].items():
+            candidate_value = nullify_dash_values(candidate_value)
             if _labels_related(candidate_label, label_key) and candidate_value:
                 return candidate_value, f"section_label_related:{section_name}/{label}"
     for candidate_section in _effective_spec_sections(context.source):
@@ -1031,7 +1072,7 @@ def _section_value(
             continue
         for item in candidate_section.items:
             item_key = normalize_for_match(item.label)
-            value = normalize_whitespace(item.value)
+            value = nullify_dash_values(normalize_whitespace(item.value)) or ""
             if (
                 item_key == label_key or _labels_related(item_key, label_key)
             ) and value:
@@ -3101,9 +3142,79 @@ def _format_air_conditioner_dimension_component_mm(
     return _format_decimal(selected)
 
 
+def _format_air_conditioner_labeled_dimension_component_mm(
+    context: _ResolutionContext, field_label: str
+) -> str:
+    component = _air_conditioner_dimension_component(field_label)
+    if not component:
+        return ""
+    field_key = normalize_for_match(field_label)
+    for section in _effective_spec_sections(context.source):
+        for item in section.items:
+            label_key = normalize_for_match(item.label)
+            if "διαστασεις" not in label_key:
+                continue
+            if "εξωτερικ" in field_key and "εξωτερικ" not in label_key:
+                continue
+            if "εσωτερικ" in field_key and "εξωτερικ" in label_key:
+                continue
+            order = _air_conditioner_dimension_order(label_key)
+            if component not in order:
+                continue
+            numbers = _dimension_numbers(item.value)
+            if len(numbers) < len(order):
+                continue
+            selected = numbers[order.index(component)]
+            value_key = normalize_for_match(item.value)
+            if "cm" in value_key or "εκατοστ" in value_key:
+                selected *= 10
+            elif "mm" not in value_key and "χιλιοστ" not in value_key and selected < 100:
+                selected *= 10
+            return _format_decimal(selected)
+    return ""
+
+
+def _air_conditioner_dimension_component(field_label: str) -> str:
+    label_key = normalize_for_match(field_label)
+    if "πλατο" in label_key:
+        return "width"
+    if "βαθο" in label_key:
+        return "depth"
+    if "υψο" in label_key:
+        return "height"
+    return ""
+
+
+def _air_conditioner_dimension_order(label_key: str) -> tuple[str, ...]:
+    if "π x β x υ" in label_key:
+        return ("width", "depth", "height")
+    if "υ x π x β" in label_key:
+        return ("height", "width", "depth")
+    if "πxβxυ" in label_key:
+        return ("width", "depth", "height")
+    if "υxπxβ" in label_key:
+        return ("height", "width", "depth")
+    return ("height", "width", "depth")
+
+
+def _dimension_numbers(value: str) -> list[float]:
+    numbers: list[float] = []
+    for match in re.findall(r"\d+(?:[.,]\d+)?", value or ""):
+        try:
+            numbers.append(float(match.replace(",", ".")))
+        except ValueError:
+            continue
+    return numbers
+
+
 def _resolve_air_conditioner_dimension_mm(
     context: _ResolutionContext, field: dict[str, Any]
 ) -> tuple[str, str]:
+    labeled = _format_air_conditioner_labeled_dimension_component_mm(
+        context, str(field.get("label", ""))
+    )
+    if labeled:
+        return labeled, "source_labeled_dimensions"
     value, source = _first_value_from_aliases(
         context, _aliases_for_template_field(field)
     )

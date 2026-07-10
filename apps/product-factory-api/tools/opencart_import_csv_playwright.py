@@ -177,7 +177,7 @@ def login(
     pwd.fill(password)
 
     page.locator('button[type="submit"], input[type="submit"]').first.click()
-    page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    wait_for_load_state_if_possible(page, "networkidle", timeout_ms)
 
     if "route=common/login" in page.url:
         raise ImportErrorRuntime(
@@ -202,14 +202,14 @@ def open_import_page(page, admin_index: str, profile: str, timeout_ms: int) -> N
         page.url,
     )
     page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
-    page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    wait_for_load_state_if_possible(page, "networkidle", timeout_ms)
 
     page.locator('select[name="profile_id"]').wait_for(
         state="visible", timeout=timeout_ms
     )
     page.locator('select[name="profile_id"]').select_option(label=profile)
     page.locator('input[value="Load"], button:has-text("Load")').first.click()
-    page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    wait_for_load_state_if_possible(page, "networkidle", timeout_ms)
 
     # allow success banner/profile change to settle
     try:
@@ -235,7 +235,7 @@ def step1_upload_and_next(page, csv_path: Path, timeout_ms: int) -> None:
     )
     next_button.first.click()
     page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
-    page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    wait_for_load_state_if_possible(page, "networkidle", timeout_ms)
 
     if "step2" not in page.url:
         raise ImportErrorRuntime(
@@ -265,7 +265,7 @@ def step2_next(page, timeout_ms: int) -> None:
     )
     next_button.first.click()
     page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
-    page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    wait_for_load_state_if_possible(page, "networkidle", timeout_ms)
 
     if "step3" not in page.url:
         raise ImportErrorRuntime(
@@ -355,6 +355,14 @@ def write_report(report_path: Path, payload: dict[str, Any]) -> None:
     report_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+
+
+def wait_for_load_state_if_possible(page, state: str, timeout_ms: int) -> bool:
+    try:
+        page.wait_for_load_state(state, timeout=timeout_ms)
+        return True
+    except PlaywrightTimeoutError:
+        return False
 
 
 def main() -> int:
@@ -466,6 +474,25 @@ def main() -> int:
             write_report(report_path, result)
             print(f"Import OK. Report written to: {report_path}")
             return 0
+        except PlaywrightTimeoutError as exc:
+            result["ok"] = False
+            result["error_type"] = "playwright_timeout"
+            result["error"] = str(exc)
+            result["url"] = page.url
+            write_report(report_path, result)
+            print(
+                f"ERROR: Playwright timeout. Report written to: {report_path}",
+                file=sys.stderr,
+            )
+            return 1
+        except Exception as exc:
+            result["ok"] = False
+            result["error_type"] = exc.__class__.__name__
+            result["error"] = str(exc)
+            result["url"] = page.url
+            write_report(report_path, result)
+            print(f"ERROR: {exc}. Report written to: {report_path}", file=sys.stderr)
+            return 1
         finally:
             context.close()
             browser.close()

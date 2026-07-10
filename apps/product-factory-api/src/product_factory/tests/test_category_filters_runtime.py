@@ -541,6 +541,25 @@ def test_energy_class_direct_spec_value_keeps_plain_a() -> None:
     assert result.groups[0].resolved_value == "A"
 
 
+def test_air_conditioner_generic_energy_class_uses_cooling_spec() -> None:
+    result = resolve_category_filter_values(
+        SourceProductData(
+            name="Midea portable air conditioner 12000 BTU",
+            key_specs=[
+                SpecItem(label="Cooling Energy Class", value="A"),
+                SpecItem(label="Heating Energy Class", value="A"),
+            ],
+        ),
+        _energy_class_taxonomy(),
+        _energy_class_category(),
+    )
+
+    energy = result.groups[0]
+    assert energy.resolved_value == "A"
+    assert energy.resolved_from == "source_cooling_energy"
+    assert result.warnings == []
+
+
 def test_watt_filter_group_resolves_from_power_source_label() -> None:
     category = {
         "category_id": "cat_soundbar",

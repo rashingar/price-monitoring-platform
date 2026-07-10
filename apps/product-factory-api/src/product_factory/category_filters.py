@@ -484,6 +484,8 @@ def _resolve_group_value(
             return value, "approved_review"
     derived_value, derived_from = _resolve_stable_id_group_value(
         group_id=group_id,
+        group_name=group_name,
+        taxonomy_path=taxonomy_path,
         exact_source=exact_source,
         exact_manufacturer=exact_manufacturer,
         normalized_lookup=normalized_lookup,
@@ -536,11 +538,15 @@ def _resolve_group_value(
 def _resolve_stable_id_group_value(
     *,
     group_id: str,
+    group_name: str,
+    taxonomy_path: str,
     exact_source: dict[str, str],
     exact_manufacturer: dict[str, str],
     normalized_lookup: dict[str, tuple[str, str]],
 ) -> tuple[str, str]:
-    if group_id == "fg_fc9322252117":
+    if group_id == "fg_fc9322252117" or _is_generic_air_condition_energy_group(
+        group_name, taxonomy_path
+    ):
         return _resolve_air_condition_energy_class(
             exact_source=exact_source,
             exact_manufacturer=exact_manufacturer,
@@ -551,8 +557,17 @@ def _resolve_stable_id_group_value(
             exact_source=exact_source,
             exact_manufacturer=exact_manufacturer,
             normalized_lookup=normalized_lookup,
-        )
+    )
     return "", ""
+
+
+def _is_generic_air_condition_energy_group(group_name: str, taxonomy_path: str) -> bool:
+    group_key = _ascii_label_key(group_name)
+    taxonomy_key = _ascii_label_key(taxonomy_path)
+    return (
+        group_key == "energeiaki klasi"
+        and "klimatistika" in taxonomy_key
+    )
 
 
 def _resolve_air_condition_energy_class(
@@ -563,8 +578,12 @@ def _resolve_air_condition_energy_class(
 ) -> tuple[str, str]:
     lookups = (("source", exact_source), ("manufacturer", exact_manufacturer))
     for source_name, lookup in lookups:
-        cooling = _first_energy_value_for_tokens(lookup, ("cool", "cooling", "seer"))
-        heating = _first_energy_value_for_tokens(lookup, ("heat", "heating", "scop"))
+        cooling = _first_energy_value_for_any_token_group(
+            lookup, (("energy", "cool"), ("seer",))
+        )
+        heating = _first_energy_value_for_any_token_group(
+            lookup, (("energy", "heat"), ("scop",))
+        )
         if cooling == "A" and heating == "A+++":
             return f"({cooling} / {heating})", f"{source_name}_cooling_heating_energy"
         if cooling:
@@ -600,6 +619,16 @@ def _first_energy_value_for_tokens(
         energy = _latin_energy_class(value)
         if energy:
             return energy
+    return ""
+
+
+def _first_energy_value_for_any_token_group(
+    lookup: dict[str, str], token_groups: tuple[tuple[str, ...], ...]
+) -> str:
+    for tokens in token_groups:
+        value = _first_energy_value_for_tokens(lookup, tokens)
+        if value:
+            return value
     return ""
 
 

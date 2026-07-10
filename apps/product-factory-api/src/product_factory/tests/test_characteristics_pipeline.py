@@ -44,6 +44,7 @@ ICE_CREAM_MAKER_SCHEMA_ID = _schema_id_for_source_file("pagotomixanes.json")
 WASHING_MACHINE_SCHEMA_ID = _schema_id_for_source_file("plyntiria_rouxwn.json")
 SOUND_BAR_SCHEMA_ID = _schema_id_for_source_file("sound_bars.json")
 AIR_CONDITIONER_SCHEMA_ID = _schema_id_for_source_file("toixoy.json")
+PORTABLE_AIR_CONDITIONER_SCHEMA_ID = _schema_id_for_source_file("forita.json")
 
 
 def test_normalize_characteristics_label_keeps_balanced_parentheses_unchanged() -> None:
@@ -567,6 +568,129 @@ def test_skroutz_wall_air_conditioner_characteristics_keep_electronet_shape() ->
             )
         ]
         == "10"
+    )
+
+
+def test_skroutz_portable_air_conditioner_compact_specs_fill_template() -> None:
+    source = SourceProductData(
+        source_name="skroutz",
+        name="Midea Φορητό Κλιματιστικό 12000 BTU Ψύξης/Θέρμανσης",
+        key_specs=[
+            SpecItem(label="Απόδοση Ψύξης", value="12000 BTU"),
+            SpecItem(label="Ενεργειακή Κλάση Ψύξης", value="A"),
+            SpecItem(label="Επίπεδο Θορύβου", value="64 dB"),
+            SpecItem(label="WiFi", value="Ναι"),
+        ],
+        spec_sections=[
+            SpecSection(
+                section="Ψύξη & Θέρμανση (BTU)",
+                items=[
+                    SpecItem(label="Απόδοση Ψύξης", value="12000 BTU"),
+                    SpecItem(label="Απόδοση Θέρμανσης", value="12000 BTU"),
+                    SpecItem(label="Ενεργειακή Κλάση Ψύξης", value="A"),
+                    SpecItem(label="Ενεργειακή Κλάση Θέρμανσης", value="A"),
+                ],
+            ),
+            SpecSection(
+                section="Λειτουργίες Άνεσης & Smart Features",
+                items=[
+                    SpecItem(label="WiFi", value="Ναι"),
+                    SpecItem(label="Λειτουργία Follow Me", value="Ναι"),
+                    SpecItem(label="Χρονοδιακόπτης", value="Ναι"),
+                    SpecItem(label="Λειτουργία Αφύγρανσης", value="Όχι"),
+                ],
+            ),
+            SpecSection(
+                section="Επιπλέον & Εξοπλισμός",
+                items=[
+                    SpecItem(label="Ιονιστής", value="Ναι"),
+                    SpecItem(label="Φίλτρα Καθαρισμού Αέρα", value="Όχι"),
+                    SpecItem(label="Διαστάσεις (Π x Β x Υ)", value="39.7x46.7x76.5 cm"),
+                ],
+            ),
+        ],
+    )
+    taxonomy = TaxonomyResolution(
+        parent_category="ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ",
+        leaf_category="Κλιματιστικά",
+        sub_category="Φορητά",
+    )
+
+    _html, diagnostics, warnings = build_characteristics_for_product(
+        source,
+        taxonomy,
+        schema_match=SchemaMatchResult(
+            matched_schema_id=PORTABLE_AIR_CONDITIONER_SCHEMA_ID, score=0.95
+        ),
+    )
+
+    values = {
+        (
+            normalize_for_match(field["section"]),
+            normalize_for_match(field["label"]),
+        ): field["value"]
+        for field in diagnostics["fields"]
+    }
+
+    assert diagnostics["preferred_schema_source_files"] == ["forita.json"]
+    assert diagnostics["unresolved_count"] < 27
+    assert (
+        f"characteristics_template_used:schema:{PORTABLE_AIR_CONDITIONER_SCHEMA_ID}"
+        in warnings
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+                normalize_for_match("Ονομαστική Απόδοση (Btu/h)"),
+            )
+        ]
+        == "12000 BTU"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Ψυκτική / Θερμική Απόδοση"),
+                normalize_for_match("Θερμική Απόδοση ( Btu/h )"),
+            )
+        ]
+        == "12000 BTU"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Επιπλέον Χαρακτηριστικά"),
+                normalize_for_match("Ηχητική Ισχύς Εσωτερικής Μονάδας dB(A) - Hi"),
+            )
+        ]
+        == "64 dB"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Ύψος Εσωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "765"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Πλάτος Εσωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "397"
+    )
+    assert (
+        values[
+            (
+                normalize_for_match("Διαστάσεις και Βάρος"),
+                normalize_for_match("Βάθος Εσωτερικής Μονάδας ( mm )"),
+            )
+        ]
+        == "467"
     )
 
 
