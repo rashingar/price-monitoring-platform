@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import fields
 from pathlib import Path
+import re
 from typing import Any, Callable, Mapping
 from urllib.parse import urlsplit
 
@@ -16,6 +17,7 @@ from .models import (
     SpecSection,
 )
 from .normalize import normalize_whitespace, repair_mojibake_text
+from .seo_phase2 import build_image_slug_candidate
 from .prepare_provider_resolution import (
     PrepareProviderResolutionResult,
     resolve_prepare_provider_resolution,
@@ -176,6 +178,8 @@ def execute_source_acquisition_stage(
                     model=model,
                     output_dir=resolved_model_dir,
                     requested_photos=requested_gallery_photos,
+                    image_slug=_source_image_slug(parsed.source),
+                    require_jpeg_validation=True,
                 )
             )
             if downloaded_gallery:
@@ -602,6 +606,27 @@ def _inject_energy_label_into_gallery(source: SourceProductData) -> list[Gallery
             )
         )
     return injected_images
+
+
+def _source_image_slug(source: SourceProductData) -> str:
+    """Best-effort pre-render identity so newly downloaded assets are stable.
+
+    Render recomputes the same candidate from the verified deterministic SEO
+    identity and reports any difference; it never changes published paths.
+    """
+    specs = {normalize_whitespace(item.label).casefold(): normalize_whitespace(item.value or "") for item in source.key_specs}
+    series = next((value for label, value in specs.items() if "σειρ" in label), "")
+    btu = next((value for label, value in specs.items() if "btu" in label or "ισχυ" in label and "ψυξ" in label), "")
+    btu = re.sub(r"(?<=\d)[.,](?=\d)", "", btu)
+    category = "Κλιματιστικό" if "κλιματισ" in normalize_whitespace(source.name).casefold() else ""
+    primary_model = normalize_whitespace(source.mpn).split("/", 1)[0]
+    return build_image_slug_candidate(
+        brand=source.brand,
+        commercial_series=series,
+        primary_model=primary_model,
+        category_phrase=category,
+        primary_spec=btu,
+    )
 
 
 def _inject_energy_label_after_second_opencart_image(

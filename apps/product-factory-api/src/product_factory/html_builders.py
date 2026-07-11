@@ -305,6 +305,7 @@ def build_description_html_from_intro_and_sections(
     presentation_source_html: str = "",
     presentation_source_text: str = "",
     base_url: str = "",
+    description_heading: str = "",
 ) -> tuple[str, list[str]]:
     warnings: list[str] = []
     if not product_name:
@@ -319,10 +320,11 @@ def build_description_html_from_intro_and_sections(
     use_besco_asset_map = besco_filenames_by_section is not None
     besco_filenames_by_section = besco_filenames_by_section or {}
     out = ['<div class="etr-desc">']
-    out.append(
-        f'<h2 style="text-align:center"><span style="font-size:36px"><strong>{escape(product_name)}</strong></span></h2>'
-    )
-    out.append("")
+    if normalize_whitespace(description_heading):
+        out.append(
+            f'<h2 style="text-align:center"><span style="font-size:36px"><strong>{escape(description_heading)}</strong></span></h2>'
+        )
+        out.append("")
     out.append(
         '<p style="margin-left:auto; margin-right:auto; text-align:left"><span style="font-size:24px">'
     )
@@ -389,7 +391,7 @@ def build_description_html_from_intro_and_sections(
                 else ""
             )
             out.append(
-                f'      <img alt="{escape(title, quote=True)}" src="https://www.etranoulis.gr/image/catalog/01_bescos/{escape(model, quote=True)}/{escape(besco_filename, quote=True)}"{img_style} />'
+                f'      <img alt="{escape(normalize_whitespace(str(block.get("image_alt") or title)), quote=True)}" src="https://www.etranoulis.gr/image/catalog/01_bescos/{escape(model, quote=True)}/{escape(besco_filename, quote=True)}"{img_style} />'
             )
             out.append("    </div>")
         elif media_html:

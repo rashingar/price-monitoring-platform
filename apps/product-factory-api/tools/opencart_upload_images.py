@@ -20,6 +20,7 @@ from tools.opencart_config import resolve_opencart_config
 
 TIMEOUT = 60
 ALLOWED_EXTS = {".jpg", ".jpeg"}
+GALLERY_FILENAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*-([1-9]\d*)\.jpg$", re.I)
 
 
 class UploadError(RuntimeError):
@@ -101,11 +102,21 @@ def validate_gallery_files(model: str, gallery_dir: Path) -> list[Path]:
     if not files:
         raise UploadError(f"No JPG/JPEG gallery images found in: {gallery_dir}")
 
-    expected = [f"{model}-{idx}.jpg" for idx in range(1, len(files) + 1)]
-    actual = [p.name for p in files]
-    if actual != expected:
+    positions: list[int] = []
+    invalid: list[str] = []
+    for path in files:
+        match = GALLERY_FILENAME_RE.fullmatch(path.name)
+        if match is None:
+            invalid.append(path.name)
+            continue
+        positions.append(int(match.group(1)))
+        if not _is_jpeg_file(path):
+            invalid.append(f"{path.name}:not_jpeg_bytes")
+    expected_positions = list(range(1, len(files) + 1))
+    if invalid or positions != expected_positions:
         raise UploadError(
-            f"Gallery files must match repo convention exactly. Expected={expected} Actual={actual}"
+            "Gallery files must use stable JPG names with contiguous positions. "
+            f"ExpectedPositions={expected_positions} Actual={[p.name for p in files]} Invalid={invalid}"
         )
 
     return files
@@ -139,6 +150,18 @@ def validate_besco_files(besco_dir: Path) -> list[Path]:
     return files
 
 
+def _is_jpeg_file(path: Path) -> bool:
+    try:
+        from PIL import Image
+        with Image.open(path) as image:
+            if image.format != "JPEG":
+                return False
+            image.verify()
+        return True
+    except Exception:
+        return False
+
+
 def build_plan(repo_root: Path, model: str, store_base: str) -> dict[str, Any]:
     if not is_valid_model(model):
         raise UploadError("Model must be exactly 6 digits.")
@@ -165,10 +188,10 @@ def build_plan(repo_root: Path, model: str, store_base: str) -> dict[str, Any]:
                 f"catalog/{main_remote_dir}/{p.name}" for p in gallery_files
             ],
             "count": len(gallery_files),
-            "main_image": f"catalog/01_main/{model}/{model}-1.jpg",
+            "main_image": f"catalog/01_main/{model}/{gallery_files[0].name}",
             "additional_image": ":::".join(
-                f"catalog/01_main/{model}/{model}-{idx}.jpg"
-                for idx in range(2, len(gallery_files) + 1)
+                f"catalog/01_main/{model}/{path.name}"
+                for path in gallery_files[1:]
             ),
         },
         "bescos": {

@@ -2,7 +2,9 @@ import pytest
 
 from tools.opencart_upload_images import (
     UploadError,
+    build_plan,
     chunked_file_paths,
+    validate_gallery_files,
     validate_besco_files,
 )
 
@@ -39,3 +41,21 @@ def test_validate_besco_files_rejects_non_section_numbered_names(tmp_path) -> No
 
     with pytest.raises(UploadError, match="section-numbered"):
         validate_besco_files(besco_dir)
+
+
+def test_gallery_accepts_phase2_names_and_rejects_renamed_non_jpeg(tmp_path) -> None:
+    from PIL import Image
+
+    gallery = tmp_path / "work" / "123456" / "scrape" / "gallery"
+    gallery.mkdir(parents=True)
+    for position in (1, 2):
+        Image.new("RGB", (1, 1), "white").save(
+            gallery / f"midea-solunar-ef-12rd1h-klimatistiko-12000-btu-{position}.jpg",
+            format="JPEG",
+        )
+    assert [path.name for path in validate_gallery_files("123456", gallery)][0].endswith("-1.jpg")
+    plan = build_plan(tmp_path, "123456", "https://www.etranoulis.gr")
+    assert plan["gallery"]["main_image"].endswith("midea-solunar-ef-12rd1h-klimatistiko-12000-btu-1.jpg")
+    (gallery / "midea-solunar-ef-12rd1h-klimatistiko-12000-btu-2.jpg").write_bytes(b"RIFFxxxxWEBP")
+    with pytest.raises(UploadError, match="not_jpeg_bytes"):
+        validate_gallery_files("123456", gallery)

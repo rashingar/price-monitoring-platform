@@ -30,6 +30,14 @@ from .models import (
 )
 from .normalize import normalize_for_match, normalize_whitespace, slugify_greek_for_seo
 from .seo_identity import lock_seo_keyword
+from .seo_phase2 import (
+    description_heading,
+    image_slug_from_identity,
+    plan_gallery_assets,
+    recommend_related_products,
+    section_image_alt,
+    validate_gallery_assets,
+)
 from .utils import as_decimal_string, build_additional_image_value
 
 
@@ -114,6 +122,9 @@ def build_row(
     filter_map: dict[str, Any] | None = None,
     category_filter_resolver: Callable[..., CategoryFilterResolution] | None = None,
     published_seo_keyword: str = "",
+    published_image: str = "",
+    published_additional_image: str = "",
+    catalog_rows: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
     warnings: list[str] = []
     source = parsed.source
@@ -149,6 +160,40 @@ def build_row(
     canonical_mpn = str(deterministic["mpn"])
     manufacturer = str(deterministic["manufacturer"])
     seo_keyword = str(deterministic["seo_keyword"])
+    identity = deterministic.get("seo_identity") if isinstance(deterministic.get("seo_identity"), dict) else {}
+    image_slug_candidate = image_slug_from_identity(
+        identity,
+        brand=str(deterministic["brand"]),
+        category_phrase=str(deterministic.get("category_phrase") or ""),
+    ) or seo_keyword_candidate
+    image_assets = plan_gallery_assets(
+        model=cli.model,
+        image_slug_candidate=image_slug_candidate,
+        images=[image.to_dict() for image in source.gallery_images],
+        product_identity=canonical_name,
+        published_image=published_image,
+        published_additional_image=published_additional_image,
+    )
+    warnings.extend(validate_gallery_assets(image_assets) if image_assets else [])
+    published_image_slug = Path(published_image).stem.rsplit("-", 1)[0] if published_image else ""
+    deterministic.update({
+        "image_slug_candidate": image_slug_candidate,
+        "image_slug_published": published_image_slug,
+        "image_slug_locked": bool(published_image),
+    })
+    if identity:
+        identity.update({
+            "image_slug_candidate": image_slug_candidate,
+            "image_slug_published": published_image_slug,
+            "image_slug_locked": bool(published_image),
+        })
+    heading = description_heading(brand=str(deterministic["brand"]), identity=identity)
+    section_metadata: list[dict[str, Any]] = []
+    for section in deterministic_presentation_sections or []:
+        materialized = dict(section)
+        alt, alt_source, confidence = section_image_alt(materialized, canonical_name)
+        materialized.update({"image_alt": alt, "image_alt_source": alt_source, "image_alt_confidence": confidence})
+        section_metadata.append(materialized)
 
     raw_meta_keywords = llm_product.get("meta_keywords") if llm_product else ""
     ac_profile = isinstance(deterministic.get("seo_identity"), dict) and (
@@ -183,11 +228,12 @@ def build_row(
                 cta_url=taxonomy.cta_url,
                 cta_text=cta_text,
                 intro_text=str(llm_intro_text or ""),
-                sections=list(deterministic_presentation_sections or []),
+                sections=section_metadata,
                 besco_filenames_by_section=besco_filenames_by_section,
                 presentation_source_html=source.presentation_source_html,
                 presentation_source_text=source.presentation_source_text,
                 base_url=source.canonical_url or source.url,
+                description_heading=heading,
             )
         )
     else:
@@ -243,10 +289,10 @@ def build_row(
         "description": description_html,
         "characteristics": characteristics_html,
         "category": category_value,
-        "image": f"catalog/01_main/{cli.model}/{cli.model}-1.jpg",
-        "additional_image": build_additional_image_value(
-            cli.model, image_count_for_csv
-        ),
+        "image": image_assets[0]["public_path"] if image_assets else f"catalog/01_main/{cli.model}/{cli.model}-1.jpg",
+        "additional_image": ":::".join(
+            asset["public_path"] for asset in image_assets[1:image_count_for_csv]
+        ) if image_assets else build_additional_image_value(cli.model, image_count_for_csv),
         "manufacturer": manufacturer,
         "price": as_decimal_string(final_price),
         "quantity": "0",
@@ -268,6 +314,10 @@ def build_row(
         "skroutz_status": str(cli.skroutz_status),
         "boxnow": str(cli.boxnow),
     }
+    related, related_provenance = recommend_related_products(
+        {**row, "seo_identity": identity}, catalog_rows or []
+    )
+    row["related_product"] = ",".join(related)
 
     category_filter_resolution = _resolve_category_filters_for_row(
         row=row,
@@ -290,6 +340,16 @@ def build_row(
         "taxonomy": taxonomy.to_dict(),
         "schema_match": schema_match.to_dict(),
         "deterministic_product": deterministic,
+        "image_assets": image_assets,
+        "description_heading": heading,
+        "presentation_section_image_metadata": section_metadata,
+        "internal_links": {
+            "canonical_category": taxonomy.cta_url,
+            "manufacturer": manufacturer,
+            "commercial_series": str(identity.get("commercial_series") or ""),
+            "related_products": related,
+        },
+        "related_products": {"identifiers": related, "provenance": related_provenance},
         "characteristics_diagnostics": characteristics_diagnostics,
         "downloaded_gallery_count": downloaded_image_count or 0,
         "downloaded_besco_count": len(besco_filenames_by_section or {}),
@@ -298,8 +358,7 @@ def build_row(
             "meta_keywords": normalized_meta_keywords,
         },
         "llm_intro_text": str(llm_intro_text or ""),
-        "deterministic_presentation_sections": deterministic_presentation_sections
-        or [],
+        "deterministic_presentation_sections": section_metadata,
         "llm_presentation": llm_presentation or {},
         "category_filters": category_filter_resolution.to_dict(),
         "csv_row": row,
