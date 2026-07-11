@@ -205,6 +205,10 @@ class SourceProductData:
     scraped_at: str = ""
     fallback_used: bool = False
     mpn: str = ""
+    # Optional Phase 3 evidence populated by a trusted source adapter or
+    # operator sidecar.  Existing parsers continue to use ``mpn`` unchanged.
+    mpn_candidates: list[dict[str, Any]] = field(default_factory=list)
+    mpn_override: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -249,6 +253,8 @@ class SourceProductData:
             "scraped_at": self.scraped_at,
             "fallback_used": self.fallback_used,
             "mpn": self.mpn,
+            "mpn_candidates": self.mpn_candidates,
+            "mpn_override": self.mpn_override,
         }
 
 

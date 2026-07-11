@@ -29,6 +29,14 @@ _ALLOWED_PATCH_PATHS = {
     ("authoring", "seo_meta", "default", "target_min_chars"),
     ("authoring", "seo_meta", "default", "target_max_chars"),
     ("authoring", "seo_meta", "default", "hard_max_chars"),
+    ("identity_phase3", "enabled"),
+    ("identity_phase3", "families"),
+    ("identity_phase3", "mpn_require_verified"),
+    ("identity_phase3", "mpn_allow_manual_override"),
+    ("identity_phase3", "structured_data_artifact_enabled"),
+    ("identity_phase3", "product_feed_artifact_enabled"),
+    ("identity_phase3", "product_feed_identifier_mode"),
+    ("identity_phase3", "mpn_overrides"),
 }
 
 
@@ -62,7 +70,12 @@ def patch_settings(request: SettingsPatchRequest) -> SettingsResponse:
 def _invalid_patch_paths(payload: dict[str, Any]) -> list[str]:
     leaf_paths: list[tuple[str, ...]] = []
     _collect_leaf_paths(payload, (), leaf_paths)
-    return [".".join(path) for path in leaf_paths if path not in _ALLOWED_PATCH_PATHS]
+    return [
+        ".".join(path)
+        for path in leaf_paths
+        if path not in _ALLOWED_PATCH_PATHS
+        and path[:2] != ("identity_phase3", "mpn_overrides")
+    ]
 
 
 def _collect_leaf_paths(

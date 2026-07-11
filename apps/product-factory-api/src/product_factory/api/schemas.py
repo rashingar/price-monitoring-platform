@@ -287,12 +287,14 @@ class SettingsResponse(BaseModel):
 
     schema_version: int
     authoring: dict[str, Any]
+    identity_phase3: dict[str, Any] = Field(default_factory=dict)
 
 
 class SettingsPatchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     authoring: dict[str, Any] = Field(default_factory=dict)
+    identity_phase3: dict[str, Any] = Field(default_factory=dict)
 
 
 class AuthoringTaskStatus(BaseModel):

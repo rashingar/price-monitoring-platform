@@ -25,6 +25,13 @@ from ..seo_health import (
 )
 from ..utils import ensure_directory, read_json, utcnow_iso, write_json, write_text
 from ..seo_phase2 import catalog_similarity
+from ..product_feed import build_product_feed, validate_product_feed
+from ..product_identity import validate_mpn_identity
+from ..structured_product import (
+    build_product_structured_data,
+    forbidden_identifier_keys,
+    validate_product_structured_data,
+)
 from ..validator import read_single_row_csv, validate_candidate_csv, write_validation_report
 from .execution_models import (
     PreparedProductContext,
@@ -74,6 +81,9 @@ def execute_render_workflow(
     normalized_candidate_path = candidate_dir / f"{model}.normalized.json"
     validation_report_path = candidate_dir / f"{model}.validation.json"
     seo_health_path = candidate_dir / f"{model}.seo_health.json"
+    product_identity_path = candidate_dir / f"{model}.product_identity.json"
+    product_structured_data_path = candidate_dir / f"{model}.product_structured_data.json"
+    product_feed_path = candidate_dir / f"{model}.product_feed.json"
     llm_artifact_paths = {
         "intro_text_output_path": llm_dir / "intro_text.output.txt",
         "intro_text_trace_path": llm_dir / "intro_text.retry_trace.json",
@@ -110,6 +120,8 @@ def execute_render_workflow(
             category_id=str(getattr(taxonomy, "category_id", "") or ""),
             taxonomy_path=str(getattr(taxonomy, "taxonomy_path", "") or ""),
         )
+        settings_payload = load_product_factory_settings().to_dict()
+        phase3_settings = settings_payload.get("identity_phase3", {})
 
         split_llm_result = execute_split_llm_stage(
             llm_dir=llm_dir,
@@ -164,6 +176,8 @@ def execute_render_workflow(
             published_image=existing_product_row.get("image", ""),
             published_additional_image=existing_product_row.get("additional_image", ""),
             catalog_rows=_read_catalog_rows(products_root),
+            existing_mpn=existing_product_row.get("mpn", ""),
+            phase3_settings=phase3_settings if isinstance(phase3_settings, Mapping) else {},
         )
         catalog_rows = _read_catalog_rows(products_root)
         candidate_normalized["catalog_similarity"] = {
@@ -182,9 +196,58 @@ def execute_render_workflow(
             key: str(value) for key, value in llm_artifact_paths.items()
         }
         candidate_normalized["presentation_sections"] = render_sections
-        write_json(normalized_candidate_path, candidate_normalized)
         write_text(description_path, row["description"])
         write_text(characteristics_path, row["characteristics"])
+
+        phase3_artifacts: dict[str, Any] = {"enabled": False}
+        phase3_errors: list[str] = []
+        if isinstance(phase3_settings, Mapping) and bool(phase3_settings.get("enabled", False)):
+            identity = candidate_normalized.get("deterministic_product", {}).get("product_identity", {})
+            identity = identity if isinstance(identity, Mapping) else {}
+            active_families = {str(value) for value in phase3_settings.get("families", [])}
+            active = str(identity.get("family_key") or "") in active_families
+            phase3_errors.extend(
+                validate_mpn_identity(
+                    identity,
+                    csv_mpn=str(row.get("mpn") or ""),
+                    active=active and bool(phase3_settings.get("mpn_require_verified", True)),
+                )
+            )
+            write_json(product_identity_path, dict(identity))
+            structured_data: dict[str, object] = {}
+            feed: dict[str, object] = {}
+            structured_errors: list[str] = []
+            feed_errors: list[str] = []
+            if bool(phase3_settings.get("structured_data_artifact_enabled", True)):
+                structured_data = build_product_structured_data(row=row, identity=identity)
+                structured_errors = validate_product_structured_data(structured_data, identity=identity)
+                write_json(product_structured_data_path, structured_data)
+            if bool(phase3_settings.get("product_feed_artifact_enabled", True)):
+                feed = build_product_feed(row=row, identity=identity)
+                feed_errors = validate_product_feed(feed, identity=identity)
+                write_json(product_feed_path, feed)
+            phase3_errors.extend(structured_errors)
+            phase3_errors.extend(feed_errors)
+            phase3_errors.extend(forbidden_identifier_keys(structured_data))
+            phase3_errors.extend(forbidden_identifier_keys(feed))
+            phase3_errors = sorted(set(phase3_errors))
+            phase3_artifacts = {
+                "enabled": True,
+                "active": active,
+                "structured_data_enabled": bool(phase3_settings.get("structured_data_artifact_enabled", True)),
+                "product_feed_enabled": bool(phase3_settings.get("product_feed_artifact_enabled", True)),
+                "identity": dict(identity),
+                "description_heading": str(candidate_normalized.get("description_heading") or ""),
+                "structured_data": structured_data,
+                "feed": feed,
+                "errors": phase3_errors,
+                "paths": {
+                    "product_identity": str(product_identity_path),
+                    "product_structured_data": str(product_structured_data_path),
+                    "product_feed": str(product_feed_path),
+                },
+            }
+            candidate_normalized["phase3"] = phase3_artifacts
 
         baseline_path = products_root / f"{model}.csv"
         validation_report = validate_candidate_csv(
@@ -198,7 +261,9 @@ def execute_render_workflow(
                 candidate_normalized.get("category_filters", {}).get("warnings", [])
             ),
         )
-        settings_payload = load_product_factory_settings().to_dict()
+        if phase3_errors:
+            validation_report["ok"] = False
+            validation_report["errors"].extend(f"phase3:{error}" for error in phase3_errors)
         seo_health = evaluate_seo_health(
             model=model,
             row=row,
@@ -206,10 +271,16 @@ def execute_render_workflow(
                 **candidate_normalized.get("deterministic_product", {}),
                 "llm_product": candidate_normalized.get("llm_product", {}),
             },
-            settings=settings_payload.get("seo_health", {}),
+            settings={
+                **(settings_payload.get("seo_health", {}) if isinstance(settings_payload.get("seo_health"), Mapping) else {}),
+                "phase3": phase3_settings,
+            },
+            phase3=phase3_artifacts,
         )
         write_json(seo_health_path, seo_health)
         validation_report["seo_health"] = seo_health
+        if phase3_artifacts.get("enabled"):
+            validation_report["phase3"] = phase3_artifacts
         seo_health_contract_errors = validate_seo_health_contract(seo_health)
         if seo_health_contract_errors:
             validation_report["ok"] = False
@@ -232,6 +303,7 @@ def execute_render_workflow(
             validation_report["warnings"].extend(non_category_mapping_warnings)
         if section_warnings:
             validation_report["warnings"].extend(section_warnings)
+        write_json(normalized_candidate_path, candidate_normalized)
         validation_ok = bool(validation_report.get("ok", False))
         if not validation_ok:
             validation_report["warnings"].append(
@@ -419,6 +491,8 @@ def _source_product_from_payload(payload: Mapping[str, Any]) -> SourceProductDat
         scraped_at=payload.get("scraped_at", ""),
         fallback_used=bool(payload.get("fallback_used", False)),
         mpn=payload.get("mpn", ""),
+        mpn_candidates=list(payload.get("mpn_candidates") or []),
+        mpn_override=dict(payload.get("mpn_override") or {}),
     )
 
 
