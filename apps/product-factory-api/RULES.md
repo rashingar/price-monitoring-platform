@@ -1,5 +1,16 @@
 # Product Factory Runtime Input Rules
 
+## Product identity contract
+
+The current eTranoulis OpenCart integration uses MPN exclusively. GTIN, EAN,
+UPC and barcode fields are outside the Product Factory output and publishing
+contract. Their absence must never block validation or publishing.
+
+For Phase 3, the six-digit OpenCart/ERP model is an internal key and is never
+treated as the manufacturer MPN. Air-conditioner complete sets retain their
+verified set MPN and their indoor/outdoor component models; a component cannot
+silently replace a complete-set MPN.
+
 This file defines active input validation and workflow rules for the template-triggered Product Factory runtime.
 
 ## Command Policy

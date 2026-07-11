@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://etranoulis.gr/contracts/product-factory/product_structured_data.schema.json",
+  "title": "Product Factory schema.org Product candidate",
+  "type": "object", "additionalProperties": false,
+  "required": ["@context", "@type", "name", "description", "sku", "brand", "image", "category", "url"],
+  "properties": {
+    "@context": {"const": "https://schema.org"}, "@type": {"const": "Product"}, "name": {"type": "string", "minLength": 1}, "description": {"type": "string", "minLength": 1}, "sku": {"type": "string", "pattern": "^[0-9]{6}$"}, "mpn": {"type": "string", "minLength": 1}, "brand": {"$ref": "#/$defs/brand"}, "image": {"type": "array", "minItems": 1, "items": {"type": "string", "format": "uri"}}, "category": {"type": "string", "minLength": 1}, "url": {"type": "string", "format": "uri"}, "offers": {"$ref": "#/$defs/offer"}
+  },
+  "$defs": {
+    "brand": {"type": "object", "additionalProperties": false, "required": ["@type", "name"], "properties": {"@type": {"const": "Brand"}, "name": {"type": "string", "minLength": 1}}},
+    "offer": {"type": "object", "additionalProperties": false, "required": ["@type", "priceCurrency", "price", "availability", "url"], "properties": {"@type": {"const": "Offer"}, "priceCurrency": {"const": "EUR"}, "price": {"type": "string"}, "availability": {"type": "string"}, "url": {"type": "string", "format": "uri"}}}
+  }
+}
