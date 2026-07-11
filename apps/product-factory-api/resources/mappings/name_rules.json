@@ -143,9 +143,7 @@
     },
     {
       "source_scope": [
-        "skroutz",
-        "kotsovolos",
-        "gedsa"
+        "any"
       ],
       "match": {
         "family": "air_conditioner"
@@ -154,18 +152,27 @@
       "strategy_id": "air_conditioner",
       "outputs": {
         "name": [
+          "brand",
+          "commercial_series",
+          "set_model",
+          "category_phrase",
+          "inverter",
           "btu",
-          "energy_class",
+          "energy_pair",
+          "wifi",
           "ionizer"
         ],
         "meta_title": [
+          "category_phrase",
           "btu",
-          "energy_class"
+          "energy_pair",
+          "wifi"
         ],
         "seo_keyword": [
-          "btu",
-          "energy_class",
-          "ionizer"
+          "commercial_series",
+          "primary_model",
+          "category_phrase",
+          "btu"
         ]
       }
     },

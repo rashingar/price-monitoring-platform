@@ -29,6 +29,7 @@ from .models import (
     TaxonomyResolution,
 )
 from .normalize import normalize_for_match, normalize_whitespace, slugify_greek_for_seo
+from .seo_identity import lock_seo_keyword
 from .utils import as_decimal_string, build_additional_image_value
 
 
@@ -112,6 +113,7 @@ def build_row(
     model_root: Path | None = None,
     filter_map: dict[str, Any] | None = None,
     category_filter_resolver: Callable[..., CategoryFilterResolution] | None = None,
+    published_seo_keyword: str = "",
 ) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
     warnings: list[str] = []
     source = parsed.source
@@ -124,16 +126,42 @@ def build_row(
         model=cli.model,
         seo_keyword_builder=derive_seo_keyword,
     )
+    seo_keyword_candidate = str(
+        deterministic.get("seo_keyword_candidate", deterministic.get("seo_keyword", ""))
+        or ""
+    )
+    seo_keyword, seo_keyword_locked = lock_seo_keyword(
+        seo_keyword_candidate, published_seo_keyword
+    )
+    deterministic["seo_keyword_candidate"] = seo_keyword_candidate
+    deterministic["published_seo_keyword"] = normalize_whitespace(published_seo_keyword)
+    deterministic["seo_keyword_locked"] = seo_keyword_locked
+    deterministic["seo_keyword"] = seo_keyword
+    if isinstance(deterministic.get("seo_identity"), dict):
+        deterministic["seo_identity"] = {
+            **deterministic["seo_identity"],
+            "seo_keyword_candidate": seo_keyword_candidate,
+            "published_seo_keyword": normalize_whitespace(published_seo_keyword),
+            "seo_keyword_locked": seo_keyword_locked,
+        }
     canonical_name = str(deterministic["name"])
     meta_title = str(deterministic["meta_title"])
     canonical_mpn = str(deterministic["mpn"])
     manufacturer = str(deterministic["manufacturer"])
     seo_keyword = str(deterministic["seo_keyword"])
 
-    normalized_meta_keywords = normalize_meta_keywords(
-        llm_product.get("meta_keywords") if llm_product else "",
-        brand=str(deterministic["brand"]),
-        mpn=canonical_mpn,
+    raw_meta_keywords = llm_product.get("meta_keywords") if llm_product else ""
+    ac_profile = isinstance(deterministic.get("seo_identity"), dict) and (
+        deterministic["seo_identity"].get("family") == "air_conditioner"
+    )
+    normalized_meta_keywords = (
+        []
+        if ac_profile and not raw_meta_keywords
+        else normalize_meta_keywords(
+            raw_meta_keywords,
+            brand=str(deterministic["brand"]),
+            mpn=canonical_mpn,
+        )
     )
 
     if llm_presentation:

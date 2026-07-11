@@ -12,6 +12,9 @@ from ..utils import ensure_directory, read_json, write_json
 from .llm_stage_execution import MAX_INTRO_ATTEMPTS
 
 DEFAULT_META_DESCRIPTION_MAX_CHARS = 255
+DEFAULT_META_DESCRIPTION_TARGET_MIN_CHARS = 130
+DEFAULT_META_DESCRIPTION_TARGET_MAX_CHARS = 170
+DEFAULT_META_DESCRIPTION_HARD_MAX_CHARS = 180
 DEFAULT_MAX_EMPHASIZED_WORDS_PERCENT = int(MAX_EMPHASIZED_WORD_RATIO * 100)
 
 
@@ -34,6 +37,9 @@ class IntroTextPolicy:
 @dataclass(frozen=True, slots=True)
 class SeoMetaPolicy:
     meta_description_max_chars: int = DEFAULT_META_DESCRIPTION_MAX_CHARS
+    target_min_chars: int = DEFAULT_META_DESCRIPTION_TARGET_MIN_CHARS
+    target_max_chars: int = DEFAULT_META_DESCRIPTION_TARGET_MAX_CHARS
+    hard_max_chars: int = DEFAULT_META_DESCRIPTION_HARD_MAX_CHARS
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +55,15 @@ class ProductFactorySettings:
 def default_product_factory_settings_payload() -> dict[str, Any]:
     return {
         "schema_version": 1,
+        "seo_health": {
+            "ruleset_version": "phase1.0",
+            "enforcement_mode": "blockers_only",
+            "thresholds": {
+                "minimum_score": 80,
+                "minimum_coverage": 100,
+                "blocking_failures_must_be_zero": True,
+            },
+        },
         "authoring": {
             "intro_text": {
                 "default": {
@@ -63,6 +78,9 @@ def default_product_factory_settings_payload() -> dict[str, Any]:
             "seo_meta": {
                 "default": {
                     "meta_description_max_chars": DEFAULT_META_DESCRIPTION_MAX_CHARS,
+                    "target_min_chars": DEFAULT_META_DESCRIPTION_TARGET_MIN_CHARS,
+                    "target_max_chars": DEFAULT_META_DESCRIPTION_TARGET_MAX_CHARS,
+                    "hard_max_chars": DEFAULT_META_DESCRIPTION_HARD_MAX_CHARS,
                 },
                 "by_source": {},
                 "by_category": {},
@@ -181,6 +199,9 @@ def _validate_settings(payload: Mapping[str, Any]) -> ProductFactorySettings:
         **dict(seo_meta),
         "default": {
             "meta_description_max_chars": seo_policy.meta_description_max_chars,
+            "target_min_chars": seo_policy.target_min_chars,
+            "target_max_chars": seo_policy.target_max_chars,
+            "hard_max_chars": seo_policy.hard_max_chars,
         },
     }
     normalized["authoring"] = normalized_authoring
@@ -249,7 +270,34 @@ def _validate_seo_policy(payload: Mapping[str, Any]) -> SeoMetaPolicy:
         raise ProductFactorySettingsError(
             "authoring.seo_meta.default.meta_description_max_chars must be between 80 and 500."
         )
-    return SeoMetaPolicy(meta_description_max_chars=max_chars)
+    target_min = _optional_int(
+        payload,
+        "target_min_chars",
+        DEFAULT_META_DESCRIPTION_TARGET_MIN_CHARS,
+        "authoring.seo_meta.default.target_min_chars",
+    )
+    target_max = _optional_int(
+        payload,
+        "target_max_chars",
+        DEFAULT_META_DESCRIPTION_TARGET_MAX_CHARS,
+        "authoring.seo_meta.default.target_max_chars",
+    )
+    hard_max = _optional_int(
+        payload,
+        "hard_max_chars",
+        DEFAULT_META_DESCRIPTION_HARD_MAX_CHARS,
+        "authoring.seo_meta.default.hard_max_chars",
+    )
+    if target_min < 1 or target_max < target_min or hard_max < target_max:
+        raise ProductFactorySettingsError(
+            "authoring.seo_meta.default target and hard character limits are invalid."
+        )
+    return SeoMetaPolicy(
+        meta_description_max_chars=max_chars,
+        target_min_chars=target_min,
+        target_max_chars=target_max,
+        hard_max_chars=hard_max,
+    )
 
 
 def _require_mapping(payload: Mapping[str, Any], key: str, path: str) -> None:

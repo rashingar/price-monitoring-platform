@@ -26,6 +26,9 @@ _ALLOWED_PATCH_PATHS = {
     ("authoring", "intro_text", "default", "max_attempts"),
     ("authoring", "intro_text", "default", "max_emphasized_words_percent"),
     ("authoring", "seo_meta", "default", "meta_description_max_chars"),
+    ("authoring", "seo_meta", "default", "target_min_chars"),
+    ("authoring", "seo_meta", "default", "target_max_chars"),
+    ("authoring", "seo_meta", "default", "hard_max_chars"),
 }
 
 

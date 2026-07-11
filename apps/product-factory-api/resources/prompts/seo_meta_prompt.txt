@@ -21,14 +21,16 @@ SCHEMA TO USE
 - Category: `product.category`
 - Brand: `product.brand`
 - Identifier: `product.preferred_identifier`
-- Evidence: `evidence.hero_summary`, `evidence.key_specs`, `evidence.deterministic_differentiators`
+- Evidence: `evidence.hero_summary`, `evidence.key_specs`, `evidence.deterministic_differentiators`, `evidence.meta_description_context`
 - Limits, required keywords, and validation rules: `writer_rules`
 
 WRITING
 - Write natural Greek SEO text using `product.prose_subject` as the identity.
 - Mention `product.category` only when natural and non-repetitive.
 - Base `meta_description` and `meta_keywords` only on verified context facts.
+- For an active Phase 1 profile, include the identity and required number of verified differentiators from `writer_rules`; do not invent numeric claims.
 - Include verified brand and preferred identifier keywords when available.
+- Follow `writer_rules.required_keywords`; an empty `meta_keywords` array is valid when no compatibility keywords are requested.
 
 LLM_CONTEXT_JSON
 {{LLM_CONTEXT_JSON}}

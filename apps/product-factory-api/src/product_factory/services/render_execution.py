@@ -17,8 +17,13 @@ from ..mapping import build_row
 from ..models import GalleryImage, SourceProductData, SpecItem, SpecSection
 from ..presentation_sections import normalize_presentation_sections
 from ..repo_paths import REPO_ROOT, category_filter_review_path
+from ..seo_health import (
+    evaluate_seo_health,
+    seo_health_allows_publish,
+    validate_seo_health_contract,
+)
 from ..utils import ensure_directory, read_json, utcnow_iso, write_json, write_text
-from ..validator import validate_candidate_csv, write_validation_report
+from ..validator import read_single_row_csv, validate_candidate_csv, write_validation_report
 from .execution_models import (
     PreparedProductContext,
     RenderExecutionResult,
@@ -33,7 +38,11 @@ from .llm_stage_execution import (
 )
 from .metadata import maybe_write_run_metadata
 from .models import RunArtifacts, RunStatus, RunType
-from .settings_service import get_intro_text_policy, get_seo_meta_policy
+from .settings_service import (
+    get_intro_text_policy,
+    get_seo_meta_policy,
+    load_product_factory_settings,
+)
 
 WORK_ROOT = REPO_ROOT / "work"
 PRODUCTS_ROOT = REPO_ROOT / "products"
@@ -62,6 +71,7 @@ def execute_render_workflow(
     characteristics_path = candidate_dir / "characteristics.html"
     normalized_candidate_path = candidate_dir / f"{model}.normalized.json"
     validation_report_path = candidate_dir / f"{model}.validation.json"
+    seo_health_path = candidate_dir / f"{model}.seo_health.json"
     llm_artifact_paths = {
         "intro_text_output_path": llm_dir / "intro_text.output.txt",
         "intro_text_trace_path": llm_dir / "intro_text.retry_trace.json",
@@ -130,6 +140,11 @@ def execute_render_workflow(
             for image in source.besco_images
             if image.local_filename
         }
+        existing_product_path = products_root / f"{model}.csv"
+        published_seo_keyword = ""
+        if existing_product_path.exists():
+            _, existing_product_row = read_single_row_csv(existing_product_path)
+            published_seo_keyword = existing_product_row.get("seo_keyword", "")
         row, candidate_normalized, mapping_warnings = build_row(
             cli=cli,
             parsed=parsed,
@@ -142,6 +157,7 @@ def execute_render_workflow(
             deterministic_presentation_sections=render_sections,
             model_root=model_root,
             characteristics_source=characteristics_source,
+            published_seo_keyword=published_seo_keyword,
         )
         headers, ordered_row = write_csv_row(row, candidate_csv_path)
         candidate_normalized["csv_headers"] = headers
@@ -168,6 +184,28 @@ def execute_render_workflow(
                 candidate_normalized.get("category_filters", {}).get("warnings", [])
             ),
         )
+        settings_payload = load_product_factory_settings().to_dict()
+        seo_health = evaluate_seo_health(
+            model=model,
+            row=row,
+            deterministic_product={
+                **candidate_normalized.get("deterministic_product", {}),
+                "llm_product": candidate_normalized.get("llm_product", {}),
+            },
+            settings=settings_payload.get("seo_health", {}),
+        )
+        write_json(seo_health_path, seo_health)
+        validation_report["seo_health"] = seo_health
+        seo_health_contract_errors = validate_seo_health_contract(seo_health)
+        if seo_health_contract_errors:
+            validation_report["ok"] = False
+            validation_report["errors"].extend(
+                f"seo_health_contract_invalid:{error}"
+                for error in seo_health_contract_errors
+            )
+        if not seo_health_allows_publish(seo_health):
+            validation_report["ok"] = False
+            validation_report["errors"].append("seo_health_publish_gate_failed")
         category_filter_warnings = set(
             candidate_normalized.get("category_filters", {}).get("warnings", [])
         )
