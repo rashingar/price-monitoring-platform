@@ -10,6 +10,7 @@ from typing import Any, Iterable, Mapping
 from .normalize import normalize_for_match, normalize_whitespace
 from .seo_identity import meta_title_length_status, valid_seo_keyword
 from .normalize import slugify_greek_for_seo
+from .product_identity import normalize_mpn_for_match
 
 
 RULESET_VERSION = "phase1.0"
@@ -102,6 +103,39 @@ PHASE2_CHECK_DESCRIPTIONS = {
     "internal_linking.related_products": "Deterministic related products are available when catalog context permits.",
 }
 
+PHASE3_CHECKS: tuple[tuple[str, str, float, str], ...] = (
+    ("identity.internal_model_present", "identity", 0, "The internal OpenCart model is present."),
+    ("identity.brand_present_phase3", "identity", 1, "The MPN identity has a manufacturer brand."),
+    ("identity.mpn_present", "identity", 2, "The identity includes an MPN."),
+    ("identity.mpn_verified", "identity", 2, "The selected MPN is verified evidence."),
+    ("identity.mpn_not_internal_code", "identity", 0, "The MPN is not substituted with the internal model."),
+    ("identity.mpn_scope_valid", "identity", 1, "The MPN has a supported product scope."),
+    ("identity.complete_set_preserved", "identity", 1, "A sellable A/C set remains a complete-set identity."),
+    ("identity.component_models_preserved", "identity", 0, "Verified indoor/outdoor component models are retained."),
+    ("identity.no_component_set_conflict", "identity", 1, "No component identifier conflicts with a complete-set MPN."),
+    ("identity.consistent_across_outputs", "identity", 1, "MPN identity agrees with the CSV and compact identity fields."),
+    ("identity.provenance_present", "identity", 1, "Selected MPN provenance is present."),
+    ("structured_data.product_json_valid", "structured_data", 1, "The Product structured-data candidate is valid."),
+    ("structured_data.schema_type_product", "structured_data", 1, "Structured data declares schema.org Product."),
+    ("structured_data.name_present", "structured_data", 0, "Structured data includes a product name."),
+    ("structured_data.brand_matches", "structured_data", 1, "Structured-data brand matches product identity."),
+    ("structured_data.sku_matches_internal_model", "structured_data", 1, "Structured-data SKU matches the internal model."),
+    ("structured_data.mpn_matches_verified_identity", "structured_data", 1, "Structured-data MPN matches verified identity."),
+    ("structured_data.url_matches_canonical", "structured_data", 0, "Structured-data URL matches the canonical product URL."),
+    ("structured_data.images_present", "structured_data", 0, "Structured data includes final public image URLs."),
+    ("structured_data.offer_consistent", "structured_data", 1, "Structured-data offer is consistent when present."),
+    ("structured_data.forbidden_identifier_fields_absent", "structured_data", 0, "Structured data has no unsupported identifier fields."),
+    ("feed.feed_json_valid", "feed", 1, "The product-feed candidate is valid."),
+    ("feed.id_matches_internal_model", "feed", 0, "Feed id matches the internal model."),
+    ("feed.brand_matches", "feed", 0, "Feed brand matches product identity."),
+    ("feed.mpn_matches_verified_identity", "feed", 1, "Feed MPN matches verified identity."),
+    ("feed.identifier_mode_mpn_only", "feed", 1, "Feed uses exactly the MPN-only identifier mode."),
+    ("feed.price_and_availability_consistent", "feed", 1, "Feed price and availability are internally consistent."),
+    ("feed.forbidden_identifier_fields_absent", "feed", 0, "Feed has no unsupported identifier fields."),
+)
+
+assert sum(weight for _, _, weight, _ in PHASE3_CHECKS) == 20
+
 
 def round_half_up(value: Decimal | float | int) -> int:
     return int(Decimal(str(value)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
@@ -109,16 +143,16 @@ def round_half_up(value: Decimal | float | int) -> int:
 
 def calculate_score(checks: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     materialized = list(checks)
-    active_weight = sum(int(check.get("weight", 0)) for check in materialized)
+    active_weight = sum(Decimal(str(check.get("weight", 0))) for check in materialized)
     evaluated_weight = sum(
-        int(check.get("weight", 0))
+        Decimal(str(check.get("weight", 0)))
         for check in materialized
         if check.get("status") != "not_run"
     )
     applicable = [
         check for check in materialized if check.get("status") in {"pass", "warn", "fail"}
     ]
-    applicable_weight = sum(int(check.get("weight", 0)) for check in applicable)
+    applicable_weight = sum(Decimal(str(check.get("weight", 0))) for check in applicable)
     earned_weight = sum(Decimal(str(check.get("earned_points", 0))) for check in applicable)
     score = round_half_up(Decimal("100") * earned_weight / applicable_weight) if applicable_weight else 0
     coverage = round_half_up(Decimal("100") * evaluated_weight / active_weight) if active_weight else 0
@@ -130,8 +164,8 @@ def calculate_score(checks: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     return {
         "score": score,
         "coverage": {
-            "active_weight": active_weight,
-            "evaluated_weight": evaluated_weight,
+            "active_weight": float(active_weight),
+            "evaluated_weight": float(evaluated_weight),
             "percentage": coverage,
         },
         "summary": {
@@ -141,7 +175,7 @@ def calculate_score(checks: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             "failed": counts["fail"],
             "not_applicable": counts["not_applicable"],
             "not_run": counts["not_run"],
-            "applicable_weight": applicable_weight,
+            "applicable_weight": float(applicable_weight),
             "earned_weight": float(earned_weight),
             "blocking_failures": sum(
                 1
@@ -173,6 +207,7 @@ def evaluate_seo_health(
     settings: Mapping[str, Any] | None = None,
     profile: str = "phase1",
     phase2: Mapping[str, Any] | None = None,
+    phase3: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     identity = deterministic_product.get("seo_identity", {})
     identity = identity if isinstance(identity, Mapping) else {}
@@ -186,6 +221,22 @@ def evaluate_seo_health(
     )
     if profile == "full":
         checks.extend(_evaluate_phase2_checks(row=row, deterministic_product=deterministic_product, phase2=phase2 or {}))
+    phase3_settings = (settings or {}).get("phase3", {})
+    phase3_settings = phase3_settings if isinstance(phase3_settings, Mapping) else {}
+    product_identity = deterministic_product.get("product_identity", {})
+    product_identity = product_identity if isinstance(product_identity, Mapping) else {}
+    active_families = {str(value) for value in phase3_settings.get("families", [])}
+    phase3_active = bool(phase3_settings.get("enabled", False)) and str(product_identity.get("family_key") or "") in active_families
+    if phase3_active:
+        checks = _rescale_checks(checks, factor=Decimal("0.8"))
+        checks.extend(
+            _evaluate_phase3_checks(
+                row=row,
+                product_identity=product_identity,
+                phase3=phase3 or {},
+                require_verified=bool(phase3_settings.get("mpn_require_verified", True)),
+            )
+        )
     totals = calculate_score(checks)
     gate = _publish_gate(totals, settings)
     return {
@@ -235,6 +286,16 @@ def validate_seo_health_contract(report: Mapping[str, Any]) -> list[str]:
         if check.get("status") not in {"pass", "warn", "fail", "not_applicable", "not_run"}: errors.append("check_status_invalid")
         if not isinstance(check.get("evidence"), list): errors.append("check_evidence_invalid")
     return errors
+
+
+def _rescale_checks(checks: Iterable[Mapping[str, Any]], *, factor: Decimal) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for check in checks:
+        copy = dict(check)
+        copy["weight"] = float(Decimal(str(copy.get("weight", 0))) * factor)
+        copy["earned_points"] = float(Decimal(str(copy.get("earned_points", 0))) * factor)
+        result.append(copy)
+    return result
 
 
 def _evaluate_checks(
@@ -350,6 +411,121 @@ def _evaluate_checks(
     identity_keys = {"brand", "mpn", "name", "meta_title", "seo_keyword"}
     llm_controls_identity = isinstance(llm_product, Mapping) and bool(identity_keys & set(llm_product))
     add("contract.llm_ownership_respected", "fail" if llm_controls_identity else "pass", llm_controls_identity, False, blocks=llm_controls_identity)
+    return checks
+
+
+def _evaluate_phase3_checks(
+    *,
+    row: Mapping[str, Any],
+    product_identity: Mapping[str, Any],
+    phase3: Mapping[str, Any],
+    require_verified: bool,
+) -> list[dict[str, Any]]:
+    """Evaluate active A/C MPN identity and candidate-artifact consistency."""
+    artifacts = phase3 if isinstance(phase3, Mapping) else {}
+    structured = artifacts.get("structured_data", {})
+    structured = structured if isinstance(structured, Mapping) else {}
+    feed = artifacts.get("feed", {})
+    feed = feed if isinstance(feed, Mapping) else {}
+    artifact_errors = [str(error) for error in artifacts.get("errors", [])]
+    structured_enabled = bool(artifacts.get("structured_data_enabled", True))
+    feed_enabled = bool(artifacts.get("product_feed_enabled", True))
+    mpn = _text(product_identity.get("mpn"))
+    internal_model = _text(product_identity.get("internal_model"))
+    brand = _text(product_identity.get("brand"))
+    status = str(product_identity.get("mpn_status") or "missing")
+    scope = str(product_identity.get("mpn_scope") or "unknown")
+    components = [_text(value) for value in product_identity.get("component_models", []) if _text(value)]
+    primary = _text(product_identity.get("primary_model"))
+    set_model = _text(product_identity.get("set_model"))
+    commercial_series = _text(product_identity.get("commercial_series"))
+    checks: list[dict[str, Any]] = []
+    lookup = {check_id: (category, weight, description) for check_id, category, weight, description in PHASE3_CHECKS}
+
+    def add(
+        check_id: str,
+        check_status: str,
+        observed: Any = None,
+        expected: Any = None,
+        *,
+        blocks: bool = False,
+        reason: str = "",
+    ) -> None:
+        category, weight, description = lookup[check_id]
+        earned = weight if check_status == "pass" else (weight * .5 if check_status == "warn" else 0)
+        checks.append({
+            "id": check_id,
+            "phase": 3,
+            "category": category,
+            "description": description,
+            "status": check_status,
+            "severity": "blocker" if blocks and check_status == "fail" else ("error" if check_status == "fail" else ("warning" if check_status == "warn" else "info")),
+            "blocks_publish": bool(blocks and check_status == "fail"),
+            "weight": weight,
+            "earned_points": earned,
+            "message": reason or check_status,
+            "observed": observed,
+            "expected": expected,
+            "applicable_reason": "Phase 3 air-conditioner enforcement is active.",
+            "evidence": [],
+            "remediation": "Correct MPN evidence or candidate artifact data, then render again.",
+        })
+
+    add("identity.internal_model_present", "pass" if internal_model else "fail", internal_model, "6-digit internal model", blocks=True)
+    add("identity.brand_present_phase3", "pass" if brand else "fail", brand, "non-empty", blocks=True)
+    add("identity.mpn_present", "pass" if mpn else "fail", mpn, "non-empty", blocks=require_verified)
+    verified_status = "pass" if status == "verified" else ("fail" if require_verified else "warn")
+    add("identity.mpn_verified", verified_status, status, "verified", blocks=require_verified)
+    internal_substitution = bool(mpn and normalize_mpn_for_match(mpn) == normalize_mpn_for_match(internal_model))
+    add("identity.mpn_not_internal_code", "fail" if internal_substitution else "pass", mpn, internal_model, blocks=internal_substitution)
+    add("identity.mpn_scope_valid", "pass" if scope in {"complete_product", "complete_set", "single_unit", "indoor_unit", "outdoor_unit", "component"} else "fail", scope, "supported scope", blocks=True)
+    complete_expected = scope == "complete_set" or bool(set_model and len(components) >= 2)
+    complete_ok = not complete_expected or (scope == "complete_set" and bool(mpn) and normalize_mpn_for_match(mpn) == normalize_mpn_for_match(set_model) and len(components) >= 2)
+    add("identity.complete_set_preserved", "pass" if complete_ok else "fail", {"mpn": mpn, "set_model": set_model}, "verified complete-set MPN", blocks=not complete_ok)
+    components_ok = not complete_expected or len(components) >= 2
+    add("identity.component_models_preserved", "pass" if components_ok else "fail", components, "indoor and outdoor models", blocks=not components_ok)
+    conflict = status == "conflicting" or "complete_set_and_component_identifier_conflict" in [str(value) for value in product_identity.get("warnings", [])]
+    add("identity.no_component_set_conflict", "fail" if conflict else "pass", status, "no conflict", blocks=conflict)
+    csv_ok = not mpn or normalize_mpn_for_match(mpn) == normalize_mpn_for_match(row.get("mpn", ""))
+    compact_ok = not primary or (_contains(_text(row.get("name")), primary) and _contains(_text(row.get("meta_title")), primary))
+    slug_ok = not primary or slugify_greek_for_seo(primary) in _text(row.get("seo_keyword"))
+    heading = _text(artifacts.get("description_heading"))
+    heading_ok = not heading or (_contains(heading, brand) and (_contains(heading, primary) or _contains(heading, commercial_series)))
+    outputs_ok = csv_ok and compact_ok and slug_ok and heading_ok
+    add("identity.consistent_across_outputs", "pass" if outputs_ok else "fail", {"csv_mpn": row.get("mpn", ""), "primary_model": primary, "description_heading": heading}, "identity-compatible CSV/name/title/slug/heading", blocks=not outputs_ok)
+    add("identity.provenance_present", "pass" if _text(product_identity.get("source")) else "fail", product_identity.get("source"), "source", blocks=True)
+
+    def artifact_status(enabled: bool, condition: bool) -> str:
+        return "not_applicable" if not enabled else ("pass" if condition else "fail")
+
+    structured_invalid = any(error.startswith("structured_") or error.startswith("forbidden_identifier") for error in artifact_errors)
+    add("structured_data.product_json_valid", artifact_status(structured_enabled, bool(structured) and not structured_invalid), artifact_errors, "valid Product JSON", blocks=structured_enabled)
+    add("structured_data.schema_type_product", artifact_status(structured_enabled, structured.get("@type") == "Product"), structured.get("@type"), "Product", blocks=structured_enabled)
+    add("structured_data.name_present", artifact_status(structured_enabled, bool(_text(structured.get("name")))), structured.get("name"), "non-empty")
+    structured_brand = structured.get("brand", {})
+    structured_brand_name = _text(structured_brand.get("name")) if isinstance(structured_brand, Mapping) else ""
+    add("structured_data.brand_matches", artifact_status(structured_enabled, normalize_for_match(structured_brand_name) == normalize_for_match(brand)), structured_brand_name, brand, blocks=structured_enabled)
+    add("structured_data.sku_matches_internal_model", artifact_status(structured_enabled, _text(structured.get("sku")) == internal_model), structured.get("sku"), internal_model, blocks=structured_enabled)
+    structured_mpn_ok = (status != "verified" and "mpn" not in structured) or (status == "verified" and normalize_mpn_for_match(structured.get("mpn", "")) == normalize_mpn_for_match(mpn))
+    add("structured_data.mpn_matches_verified_identity", artifact_status(structured_enabled, structured_mpn_ok), structured.get("mpn", ""), mpn, blocks=structured_enabled)
+    add("structured_data.url_matches_canonical", artifact_status(structured_enabled, _text(structured.get("url")) == _text(row.get("product_url"))), structured.get("url"), row.get("product_url"))
+    add("structured_data.images_present", artifact_status(structured_enabled, bool(structured.get("image"))), structured.get("image"), "public image URLs")
+    offer_ok = "offers" not in structured or isinstance(structured.get("offers"), Mapping)
+    add("structured_data.offer_consistent", artifact_status(structured_enabled, offer_ok), structured.get("offers"), "omitted or valid offer", blocks=structured_enabled)
+    add("structured_data.forbidden_identifier_fields_absent", artifact_status(structured_enabled, not any(error.startswith("forbidden_identifier") for error in artifact_errors)), artifact_errors, "no unsupported identifier fields", blocks=structured_enabled)
+
+    feed_invalid = any(error.startswith("feed_") or error.startswith("forbidden_identifier") for error in artifact_errors)
+    add("feed.feed_json_valid", artifact_status(feed_enabled, bool(feed) and not feed_invalid), artifact_errors, "valid feed JSON", blocks=feed_enabled)
+    add("feed.id_matches_internal_model", artifact_status(feed_enabled, _text(feed.get("id")) == internal_model), feed.get("id"), internal_model)
+    add("feed.brand_matches", artifact_status(feed_enabled, normalize_for_match(_text(feed.get("brand"))) == normalize_for_match(brand)), feed.get("brand"), brand)
+    feed_mpn_ok = (status != "verified" and "mpn" not in feed) or (status == "verified" and normalize_mpn_for_match(feed.get("mpn", "")) == normalize_mpn_for_match(mpn))
+    add("feed.mpn_matches_verified_identity", artifact_status(feed_enabled, feed_mpn_ok), feed.get("mpn", ""), mpn, blocks=feed_enabled)
+    add("feed.identifier_mode_mpn_only", artifact_status(feed_enabled, feed.get("identifier_mode") == "mpn_only"), feed.get("identifier_mode"), "mpn_only", blocks=feed_enabled)
+    price = feed.get("price")
+    price_ok = price is None or (isinstance(price, Mapping) and _text(price.get("value")) and price.get("currency") == "EUR")
+    availability_ok = "availability" not in feed or feed.get("availability") in {"in_stock", "out_of_stock"}
+    add("feed.price_and_availability_consistent", artifact_status(feed_enabled, price_ok and availability_ok), {"price": price, "availability": feed.get("availability")}, "valid optional price and availability", blocks=feed_enabled)
+    add("feed.forbidden_identifier_fields_absent", artifact_status(feed_enabled, not any(error.startswith("forbidden_identifier") for error in artifact_errors)), artifact_errors, "no unsupported identifier fields", blocks=feed_enabled)
     return checks
 
 

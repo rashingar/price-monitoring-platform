@@ -16,6 +16,16 @@ DEFAULT_META_DESCRIPTION_TARGET_MIN_CHARS = 130
 DEFAULT_META_DESCRIPTION_TARGET_MAX_CHARS = 170
 DEFAULT_META_DESCRIPTION_HARD_MAX_CHARS = 180
 DEFAULT_MAX_EMPHASIZED_WORDS_PERCENT = int(MAX_EMPHASIZED_WORD_RATIO * 100)
+DEFAULT_IDENTITY_PHASE3_SETTINGS: dict[str, Any] = {
+    "enabled": False,
+    "families": ["air_conditioner"],
+    "mpn_require_verified": True,
+    "mpn_allow_manual_override": True,
+    "structured_data_artifact_enabled": True,
+    "product_feed_artifact_enabled": True,
+    "product_feed_identifier_mode": "mpn_only",
+    "mpn_overrides": {},
+}
 
 
 class ProductFactorySettingsError(ValueError):
@@ -64,6 +74,7 @@ def default_product_factory_settings_payload() -> dict[str, Any]:
                 "blocking_failures_must_be_zero": True,
             },
         },
+        "identity_phase3": deepcopy(DEFAULT_IDENTITY_PHASE3_SETTINGS),
         "authoring": {
             "intro_text": {
                 "default": {
@@ -155,6 +166,9 @@ def _validate_settings(payload: Mapping[str, Any]) -> ProductFactorySettings:
         )
     normalized = deepcopy(dict(payload))
     normalized.setdefault("schema_version", 1)
+    normalized["identity_phase3"] = _validate_identity_phase3_settings(
+        normalized.get("identity_phase3", {})
+    )
     authoring = normalized.get("authoring")
     if not isinstance(authoring, Mapping):
         raise ProductFactorySettingsError(
@@ -210,6 +224,35 @@ def _validate_settings(payload: Mapping[str, Any]) -> ProductFactorySettings:
         intro_text_default=intro_policy,
         seo_meta_default=seo_policy,
     )
+
+
+def _validate_identity_phase3_settings(payload: object) -> dict[str, Any]:
+    if not isinstance(payload, Mapping):
+        raise ProductFactorySettingsError("identity_phase3 must be an object.")
+    normalized = {**deepcopy(DEFAULT_IDENTITY_PHASE3_SETTINGS), **deepcopy(dict(payload))}
+    for key in (
+        "enabled",
+        "mpn_require_verified",
+        "mpn_allow_manual_override",
+        "structured_data_artifact_enabled",
+        "product_feed_artifact_enabled",
+    ):
+        if not isinstance(normalized.get(key), bool):
+            raise ProductFactorySettingsError(f"identity_phase3.{key} must be a boolean.")
+    families = normalized.get("families")
+    if not isinstance(families, list) or not all(isinstance(item, str) and item.strip() for item in families):
+        raise ProductFactorySettingsError("identity_phase3.families must be a list of non-empty strings.")
+    normalized["families"] = [item.strip() for item in families]
+    if normalized.get("product_feed_identifier_mode") != "mpn_only":
+        raise ProductFactorySettingsError("identity_phase3.product_feed_identifier_mode must be mpn_only.")
+    overrides = normalized.get("mpn_overrides")
+    if not isinstance(overrides, Mapping):
+        raise ProductFactorySettingsError("identity_phase3.mpn_overrides must be an object.")
+    for model, override in overrides.items():
+        if not isinstance(model, str) or not model.isdigit() or len(model) != 6 or not isinstance(override, Mapping):
+            raise ProductFactorySettingsError("identity_phase3.mpn_overrides entries must use a 6-digit model and an object value.")
+    normalized["mpn_overrides"] = deepcopy(dict(overrides))
+    return normalized
 
 
 def _validate_intro_policy(payload: Mapping[str, Any]) -> IntroTextPolicy:

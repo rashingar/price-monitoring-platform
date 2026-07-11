@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://etranoulis.gr/contracts/product-factory/product_feed.schema.json",
+  "title": "Product Factory internal MPN-only product-feed candidate",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "title", "description", "link", "image_link", "additional_image_links", "brand", "identifier_mode", "condition", "product_type", "source_provenance"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[0-9]{6}$"}, "title": {"type": "string", "minLength": 1}, "description": {"type": "string", "minLength": 1}, "link": {"type": "string", "format": "uri"}, "image_link": {"type": "string", "format": "uri"}, "additional_image_links": {"type": "array", "items": {"type": "string", "format": "uri"}}, "brand": {"type": "string", "minLength": 1}, "mpn": {"type": "string", "minLength": 1}, "identifier_mode": {"const": "mpn_only"}, "condition": {"const": "new"}, "availability": {"enum": ["in_stock", "out_of_stock"]}, "price": {"type": "object", "additionalProperties": false, "required": ["value", "currency"], "properties": {"value": {"type": "string"}, "currency": {"const": "EUR"}}}, "product_type": {"type": "string", "minLength": 1}, "source_provenance": {"type": "object", "additionalProperties": false, "required": ["mpn", "price", "availability"], "properties": {"mpn": {"type": "string"}, "price": {"type": "string"}, "availability": {"type": "string"}}}
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://etranoulis.gr/contracts/product-factory/product_identity.schema.json",
+  "title": "Product Factory MPN-first product identity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "internal_model", "brand", "mpn", "mpn_status", "mpn_scope", "primary_model", "set_model", "component_models", "commercial_series", "family_key", "source", "source_url", "confidence", "warnings", "candidates", "conflict_reason"],
+  "properties": {
+    "schema_version": {"const": "1.0"}, "internal_model": {"type": "string", "pattern": "^[0-9]{6}$"}, "brand": {"type": "string"}, "mpn": {"type": "string"},
+    "mpn_status": {"enum": ["verified", "inferred", "conflicting", "missing", "not_applicable"]}, "mpn_scope": {"enum": ["complete_product", "complete_set", "single_unit", "indoor_unit", "outdoor_unit", "component", "unknown"]},
+    "primary_model": {"type": "string"}, "set_model": {"type": "string"}, "component_models": {"type": "array", "items": {"type": "string"}}, "commercial_series": {"type": "string"}, "family_key": {"type": "string"}, "source": {"type": "string"}, "source_url": {"type": "string"}, "confidence": {"type": "number", "minimum": 0, "maximum": 1}, "warnings": {"type": "array", "items": {"type": "string"}}, "candidates": {"type": "array", "items": {"$ref": "#/$defs/candidate"}}, "conflict_reason": {"type": "string"}
+  },
+  "$defs": {
+    "candidate": {"type": "object", "additionalProperties": false, "required": ["value", "scope", "source", "source_url", "confidence", "status"], "properties": {"value": {"type": "string"}, "scope": {"type": "string"}, "source": {"type": "string"}, "source_url": {"type": "string"}, "confidence": {"type": "number", "minimum": 0, "maximum": 1}, "status": {"type": "string"}}}
+  }
+}

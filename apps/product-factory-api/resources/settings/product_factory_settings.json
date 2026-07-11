@@ -9,6 +9,18 @@
       "blocking_failures_must_be_zero": true
     }
   },
+  "identity_phase3": {
+    "enabled": false,
+    "families": [
+      "air_conditioner"
+    ],
+    "mpn_require_verified": true,
+    "mpn_allow_manual_override": true,
+    "structured_data_artifact_enabled": true,
+    "product_feed_artifact_enabled": true,
+    "product_feed_identifier_mode": "mpn_only",
+    "mpn_overrides": {}
+  },
   "authoring": {
     "intro_text": {
       "default": {

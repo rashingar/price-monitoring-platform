@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from .category_filters import (
     CategoryFilterResolution,
@@ -30,6 +30,7 @@ from .models import (
 )
 from .normalize import normalize_for_match, normalize_whitespace, slugify_greek_for_seo
 from .seo_identity import lock_seo_keyword
+from .product_identity import resolve_product_identity
 from .seo_phase2 import (
     description_heading,
     image_slug_from_identity,
@@ -125,6 +126,8 @@ def build_row(
     published_image: str = "",
     published_additional_image: str = "",
     catalog_rows: list[dict[str, Any]] | None = None,
+    existing_mpn: str = "",
+    phase3_settings: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
     warnings: list[str] = []
     source = parsed.source
@@ -137,6 +140,41 @@ def build_row(
         model=cli.model,
         seo_keyword_builder=derive_seo_keyword,
     )
+    phase3 = dict(phase3_settings or {})
+    seo_identity = (
+        deterministic.get("seo_identity")
+        if isinstance(deterministic.get("seo_identity"), Mapping)
+        else {}
+    )
+    family_key = str(seo_identity.get("family") or "")
+    if bool(phase3.get("enabled", False)):
+        configured_override = (
+            phase3.get("mpn_overrides", {}).get(cli.model, {})
+            if isinstance(phase3.get("mpn_overrides"), Mapping)
+            else {}
+        )
+        manual_override = (
+            source.mpn_override or configured_override
+            if bool(phase3.get("mpn_allow_manual_override", True))
+            else {}
+        )
+        product_identity = resolve_product_identity(
+            internal_model=cli.model,
+            brand=str(deterministic.get("brand") or source.brand),
+            source_mpn=source.mpn,
+            source_name=source.source_name,
+            source_url=source.canonical_url or source.url,
+            source_title=source.name,
+            family_key=family_key,
+            seo_identity=seo_identity,
+            explicit_candidates=source.mpn_candidates,
+            existing_mpn=existing_mpn,
+            manual_override=manual_override,
+        )
+        deterministic["product_identity"] = product_identity.to_dict()
+        active_families = {str(value) for value in phase3.get("families", [])}
+        if family_key in active_families and product_identity.mpn_status == "verified":
+            deterministic["mpn"] = product_identity.mpn
     seo_keyword_candidate = str(
         deterministic.get("seo_keyword_candidate", deterministic.get("seo_keyword", ""))
         or ""
