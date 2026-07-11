@@ -1,5 +1,14 @@
 {
   "schema_version": 1,
+  "seo_health": {
+    "ruleset_version": "phase1.0",
+    "enforcement_mode": "blockers_only",
+    "thresholds": {
+      "minimum_score": 80,
+      "minimum_coverage": 100,
+      "blocking_failures_must_be_zero": true
+    }
+  },
   "authoring": {
     "intro_text": {
       "default": {
@@ -13,7 +22,10 @@
     },
     "seo_meta": {
       "default": {
-        "meta_description_max_chars": 255
+        "meta_description_max_chars": 255,
+        "target_min_chars": 130,
+        "target_max_chars": 170,
+        "hard_max_chars": 180
       },
       "by_source": {},
       "by_category": {}

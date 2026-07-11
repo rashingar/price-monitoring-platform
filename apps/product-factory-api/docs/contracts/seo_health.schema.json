@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://etranoulis.gr/contracts/product-factory/seo_health.schema.json",
+  "title": "Product Factory SEO health",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "ruleset_version", "profile", "generated_at", "model", "seo_keyword", "product_url", "score", "grade", "coverage", "summary", "publish_gate", "checks"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "ruleset_version": {"type": "string", "minLength": 1},
+    "profile": {"enum": ["phase1", "full"]},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "model": {"type": "string", "pattern": "^[0-9]{6}$"},
+    "seo_keyword": {"type": "string"},
+    "product_url": {"type": "string"},
+    "score": {"type": "integer", "minimum": 0, "maximum": 100},
+    "grade": {"enum": ["A", "B", "C", "D", "F"]},
+    "coverage": {"$ref": "#/$defs/coverage"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "publish_gate": {"$ref": "#/$defs/publish_gate"},
+    "checks": {"type": "array", "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "coverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["active_weight", "evaluated_weight", "percentage"],
+      "properties": {
+        "active_weight": {"type": "number", "minimum": 0},
+        "evaluated_weight": {"type": "number", "minimum": 0},
+        "percentage": {"type": "integer", "minimum": 0, "maximum": 100}
+      }
+    },
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["total_checks", "passed", "warnings", "failed", "not_applicable", "not_run", "applicable_weight", "earned_weight", "blocking_failures"],
+      "properties": {
+        "total_checks": {"type": "integer", "minimum": 0}, "passed": {"type": "integer", "minimum": 0}, "warnings": {"type": "integer", "minimum": 0}, "failed": {"type": "integer", "minimum": 0}, "not_applicable": {"type": "integer", "minimum": 0}, "not_run": {"type": "integer", "minimum": 0}, "applicable_weight": {"type": "number", "minimum": 0}, "earned_weight": {"type": "number", "minimum": 0}, "blocking_failures": {"type": "integer", "minimum": 0}
+      }
+    },
+    "thresholds": {
+      "type": "object", "additionalProperties": false,
+      "required": ["minimum_score", "minimum_coverage", "blocking_failures_must_be_zero"],
+      "properties": {"minimum_score": {"type": "integer"}, "minimum_coverage": {"type": "integer"}, "blocking_failures_must_be_zero": {"type": "boolean"}}
+    },
+    "publish_gate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["recommended_status", "recommended_allowed", "enforcement_mode", "enforced_allowed", "thresholds", "reasons"],
+      "properties": {
+        "recommended_status": {"enum": ["pass", "warn", "fail"]}, "recommended_allowed": {"type": "boolean"}, "enforcement_mode": {"enum": ["report_only", "blockers_only", "strict"]}, "enforced_allowed": {"type": "boolean"}, "thresholds": {"$ref": "#/$defs/thresholds"}, "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "field", "value"],
+      "properties": {"source": {"enum": ["source", "manufacturer", "deterministic", "llm", "catalog", "runtime", "settings"]}, "field": {"type": "string"}, "value": {}, "path": {"type": "string"}}
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "phase", "category", "description", "status", "severity", "blocks_publish", "weight", "earned_points", "message", "observed", "expected", "applicable_reason", "evidence", "remediation"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)+$"}, "phase": {"const": 1}, "category": {"enum": ["identity", "meta_title", "meta_description", "seo_keyword", "technical", "contract", "content", "images", "internal_linking", "identifiers", "structured_data", "rollout"]}, "description": {"type": "string"}, "status": {"enum": ["pass", "warn", "fail", "not_applicable", "not_run"]}, "severity": {"enum": ["info", "warning", "error", "blocker"]}, "blocks_publish": {"type": "boolean"}, "weight": {"type": "number", "minimum": 0}, "earned_points": {"type": "number", "minimum": 0}, "message": {"type": "string"}, "observed": {}, "expected": {}, "applicable_reason": {"type": "string"}, "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}}, "remediation": {"type": "string"}
+      }
+    }
+  }
+}

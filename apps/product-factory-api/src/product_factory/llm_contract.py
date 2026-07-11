@@ -113,11 +113,47 @@ def build_seo_meta_context(
     product_identity = _build_product_identity(source, deterministic_product, taxonomy)
     brand = product_identity["brand"]
     preferred_identifier = product_identity["preferred_identifier"]
+    seo_identity = deterministic_product.get("seo_identity", {})
+    if not isinstance(seo_identity, dict):
+        seo_identity = {}
+    air_conditioner_profile = seo_identity.get("family") == "air_conditioner"
     meta_description_max_chars = _policy_int(
         seo_policy,
         "meta_description_max_chars",
         SEO_META_DESCRIPTION_MAX_CHARS,
     )
+    target_min_chars = _policy_int(seo_policy, "target_min_chars", 130)
+    target_max_chars = _policy_int(seo_policy, "target_max_chars", 170)
+    hard_max_chars = _policy_int(seo_policy, "hard_max_chars", 180)
+    if air_conditioner_profile:
+        meta_description_max_chars = hard_max_chars
+    differentiators = [
+        value
+        for value in [
+            seo_identity.get("btu", ""),
+            seo_identity.get("cooling_energy_class", ""),
+            seo_identity.get("heating_energy_class", ""),
+            "Wi-Fi" if seo_identity.get("wifi") is True else "",
+            "Inverter" if seo_identity.get("inverter") is True else "",
+            *seo_identity.get("verified_features", []),
+        ]
+        if normalize_whitespace(str(value or ""))
+    ]
+    meta_description_context = {
+        "brand": brand,
+        "commercial_series": str(seo_identity.get("commercial_series", "") or ""),
+        "primary_model": str(seo_identity.get("primary_model", "") or ""),
+        "set_model": str(seo_identity.get("set_model", "") or ""),
+        "category": str(deterministic_product.get("category_phrase", "") or taxonomy.leaf_category or ""),
+        "btu": str(seo_identity.get("btu", "") or ""),
+        "cooling_energy_class": str(seo_identity.get("cooling_energy_class", "") or ""),
+        "heating_energy_class": str(seo_identity.get("heating_energy_class", "") or ""),
+        "inverter": seo_identity.get("inverter"),
+        "wifi": seo_identity.get("wifi"),
+        "ionizer": seo_identity.get("ionizer"),
+        "verified_features": list(seo_identity.get("verified_features", [])),
+        "verified_differentiators": differentiators,
+    }
     return {
         "task": SEO_META_TASK,
         "input": {
@@ -133,6 +169,7 @@ def build_seo_meta_context(
             "seo_keyword": str(
                 deterministic_product.get("seo_keyword", "") or ""
             ).strip(),
+            "seo_identity": seo_identity,
         },
         "evidence": {
             "meta_description_draft": _apply_preferred_identifier(
@@ -144,6 +181,7 @@ def build_seo_meta_context(
             "deterministic_differentiators": _compact_values(
                 deterministic_product.get("name_differentiators", [])
             ),
+            "meta_description_context": meta_description_context,
         },
         "writer_rules": {
             "language": "Greek",
@@ -154,6 +192,7 @@ def build_seo_meta_context(
                 "evidence.hero_summary",
                 "evidence.key_specs",
                 "evidence.deterministic_differentiators",
+                "evidence.meta_description_context",
             ],
             "meta_description_rule": (
                 "Write natural Greek using product.prose_subject as the identity and verified evidence only. "
@@ -161,6 +200,24 @@ def build_seo_meta_context(
                 f"Keep meta_description complete and at or below `{meta_description_max_chars}` characters."
             ),
             "meta_description_max_chars": meta_description_max_chars,
+            "meta_description_length_policy": {
+                "target_min_chars": target_min_chars,
+                "target_max_chars": target_max_chars,
+                "hard_max_chars": hard_max_chars,
+                "active": air_conditioner_profile,
+            },
+            "meta_description_required_identity": [
+                value
+                for value in [
+                    brand,
+                    meta_description_context["commercial_series"]
+                    or meta_description_context["primary_model"],
+                ]
+                if value
+            ],
+            "meta_description_required_differentiator_count": (
+                2 if len(differentiators) >= 2 else len(differentiators)
+            ),
             "complete_sentence_required": True,
             "output_schema": {
                 "product": {
@@ -168,10 +225,16 @@ def build_seo_meta_context(
                     "meta_keywords": "string[]",
                 }
             },
-            "meta_keywords_rule": "Return a structured JSON array of verified keywords only. Include brand and preferred_identifier when available.",
-            "required_keywords": [
-                value for value in [brand, preferred_identifier] if value
-            ],
+            "meta_keywords_rule": (
+                "Return a structured JSON array of verified keywords only; an empty array is allowed."
+                if air_conditioner_profile
+                else "Return a structured JSON array of verified keywords only. Include brand and preferred_identifier when available."
+            ),
+            "required_keywords": (
+                []
+                if air_conditioner_profile
+                else [value for value in [brand, preferred_identifier] if value]
+            ),
             "deterministic_validation": [
                 "json_shape",
                 "required_json_keys",

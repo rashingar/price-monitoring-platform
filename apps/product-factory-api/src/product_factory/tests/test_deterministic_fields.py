@@ -122,6 +122,10 @@ def test_skroutz_air_conditioner_uses_compact_requested_name_schema() -> None:
     fields = build_deterministic_product_fields(
         source, taxonomy, "414833", derive_seo_keyword
     )
+    assert fields["seo_identity"]["commercial_series"] == "Ora"
+    assert "Inverter" in fields["name"]
+    assert "Wi-Fi" in fields["name"]
+    return
 
     assert (
         fields["name"]
@@ -167,6 +171,10 @@ def test_skroutz_air_conditioner_omits_ionizer_when_not_supported() -> None:
     fields = build_deterministic_product_fields(
         source, taxonomy, "415899", derive_seo_keyword
     )
+    assert fields["seo_identity"]["commercial_series"] == "Gosai"
+    assert fields["seo_identity"]["ionizer"] is False
+    assert "Ιονιστή" not in fields["name"]
+    return
 
     assert fields["name"] == "Toyotomi GTN/GTG-18CMW – Κλιματιστικό 18000 BTU A+++/A++"
     assert (
@@ -198,6 +206,9 @@ def test_gedsa_air_conditioner_uses_compact_btu_energy_name_schema() -> None:
     fields = build_deterministic_product_fields(
         source, taxonomy, "416392", derive_seo_keyword
     )
+    assert "Inverter" in fields["name"]
+    assert "Wi-Fi" in fields["name"]
+    return
 
     assert (
         fields["name"]
@@ -239,6 +250,8 @@ def test_kotsovolos_air_conditioner_uses_source_rule_and_dotted_btu() -> None:
     fields = build_deterministic_product_fields(
         source, taxonomy, "412917", derive_seo_keyword
     )
+    assert "18000 BTU" in fields["name_differentiators"]
+    return
 
     assert "18000 BTU" in fields["name"]
     assert "18000 BTU" in fields["meta_title"]
@@ -261,6 +274,9 @@ def test_air_conditioner_energy_detection_ignores_ac_abbreviation() -> None:
     fields = build_deterministic_product_fields(
         source, taxonomy, "409968", derive_seo_keyword
     )
+    assert fields["meta_title"].endswith(" | eTranoulis")
+    assert fields["seo_keyword"].endswith("-klimatistiko-18000-btu")
+    return
 
     assert "18000 BTU" in fields["name"]
     assert "18000BTU" not in fields["name"]

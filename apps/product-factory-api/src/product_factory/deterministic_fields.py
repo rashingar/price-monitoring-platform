@@ -15,6 +15,12 @@ from .deterministic_rule_config import (
 )
 from .models import SourceProductData, SpecItem, SpecSection, TaxonomyResolution
 from .normalize import candidate_label_keys, normalize_for_match, normalize_whitespace
+from .seo_identity import (
+    MetaTitleComponent,
+    SeoIdentity,
+    build_seo_keyword_candidate,
+    compose_meta_title as compose_budgeted_meta_title,
+)
 
 PURE_NUMERIC_TOKEN_RE = re.compile(r"^\d+(?:[.,]\d+)?$")
 NUMERIC_RE = re.compile(r"\d+(?:[.,]\d+)?")
@@ -1214,47 +1220,363 @@ def _build_air_conditioner_deterministic_fields(
     mpn: str,
     spec_lookup: dict[str, str],
 ) -> dict[str, object]:
-    category_phrase = rule.category_phrase
-    components = {
-        "btu": _format_air_conditioner_btu(spec_lookup, raw_title),
-        "energy_class": _format_air_conditioner_energy_class(spec_lookup, raw_title),
-        "ionizer": _format_air_conditioner_ionizer(spec_lookup, source),
-    }
-    differentiators = _source_rule_output_parts(rule, "name", components)
-    name = compose_name(brand, mpn, category_phrase, differentiators)
-    meta_title = compose_meta_title(
-        name=name,
+    del model, seo_keyword_builder
+    identity = _resolve_air_conditioner_seo_identity(
+        source=source,
+        taxonomy=taxonomy,
         brand=brand,
         mpn=mpn,
-        category_phrase=category_phrase,
-        differentiators=_source_rule_output_parts(rule, "meta_title", components),
-        preserve_title=False,
+        raw_title=raw_title,
+        spec_lookup=spec_lookup,
+        category_phrase=rule.category_phrase,
     )
-    seo_keyword = seo_keyword_builder(
-        normalize_whitespace(
-            " ".join(
-                part
-                for part in [
-                    brand,
-                    mpn,
-                    category_phrase,
-                    *_source_rule_output_parts(rule, "seo_keyword", components),
-                ]
-                if part
-            )
+    components = {
+        "brand": brand,
+        "commercial_series": identity.commercial_series,
+        "set_model": identity.set_model,
+        "primary_model": identity.primary_model,
+        "category_phrase": identity.category_phrase,
+        "inverter": "Inverter" if identity.inverter is True else "",
+        "btu": identity.btu,
+        "energy_pair": _air_conditioner_energy_pair(identity),
+        "wifi": "με Wi-Fi" if identity.wifi is True else "",
+        "ionizer": "με Ιονιστή" if identity.ionizer is True else "",
+    }
+    name_keys = rule.outputs.get("name", ())
+    category_index = next(
+        (index for index, key in enumerate(name_keys) if key == "category_phrase"),
+        len(name_keys),
+    )
+    differentiators = [
+        components[key]
+        for key in name_keys[category_index + 1 :]
+        if components.get(key)
+    ]
+    name = _compose_air_conditioner_name(
+        rule=rule,
+        components=components,
+    )
+    meta_components = [
+        MetaTitleComponent(brand, required=True, key="brand"),
+        MetaTitleComponent(
+            identity.commercial_series,
+            required=bool(identity.commercial_series),
+            key="commercial_series",
         ),
-        model,
+        MetaTitleComponent(identity.primary_model, required=True, key="primary_model"),
+    ]
+    meta_components.extend(
+        MetaTitleComponent(components[key], priority=index + 1, key=key)
+        for index, key in enumerate(rule.outputs.get("meta_title", ()))
+        if key in components
     )
-    return _skroutz_result(
+    meta_title = compose_budgeted_meta_title(meta_components)
+    seo_parts = [brand] + [
+        components[key]
+        for key in rule.outputs.get("seo_keyword", ())
+        if key in components
+    ]
+    seo_keyword_candidate = build_seo_keyword_candidate(seo_parts)
+    identity = SeoIdentity(
+        **{
+            **identity.to_dict(),
+            "seo_keyword_candidate": seo_keyword_candidate,
+        }
+    )
+    name_draft_tail = normalize_whitespace(" ".join(differentiators))
+    meta_description_draft = build_meta_description_draft(
         brand,
-        mpn,
-        category_phrase,
-        differentiators,
-        name,
-        meta_title,
-        seo_keyword,
-        taxonomy,
+        identity.primary_model or mpn,
+        identity.category_phrase,
+        taxonomy.gender,
+        [
+            item
+            for item in [
+                identity.btu,
+                _air_conditioner_energy_pair(identity),
+                "Inverter" if identity.inverter else "",
+                "Wi-Fi" if identity.wifi else "",
+                "με Ιονιστή" if identity.ionizer else "",
+            ]
+            if item
+        ],
     )
+    return {
+        "brand": brand,
+        "mpn": mpn,
+        "manufacturer": brand,
+        "category_phrase": identity.category_phrase,
+        "name_differentiators": differentiators,
+        "preserve_parsed_title": False,
+        "name": name,
+        "name_draft_tail": name_draft_tail,
+        "meta_title": meta_title,
+        "meta_description_draft": meta_description_draft,
+        "seo_keyword": seo_keyword_candidate,
+        "seo_keyword_candidate": seo_keyword_candidate,
+        "seo_keyword_locked": False,
+        "published_seo_keyword": "",
+        "seo_identity": identity.to_dict(),
+    }
+
+
+def _compose_air_conditioner_name(
+    *, rule: SourceScopedRule, components: dict[str, str]
+) -> str:
+    """Compose from configured semantic components, keeping set model intact."""
+
+    configured_keys = rule.outputs.get("name", ())
+    category_index = next(
+        (
+            index
+            for index, key in enumerate(configured_keys)
+            if key == "category_phrase"
+        ),
+        len(configured_keys),
+    )
+    head = [components.get(key, "") for key in configured_keys[:category_index]]
+    tail = [components.get(key, "") for key in configured_keys[category_index:]]
+    head_value = normalize_whitespace(" ".join(value for value in head if value))
+    tail_value = normalize_whitespace(" ".join(value for value in tail if value))
+    if head_value and tail_value:
+        return f"{head_value} – {tail_value}"
+    return head_value or tail_value
+
+
+def _resolve_air_conditioner_seo_identity(
+    *,
+    source: SourceProductData,
+    taxonomy: TaxonomyResolution,
+    brand: str,
+    mpn: str,
+    raw_title: str,
+    spec_lookup: dict[str, str],
+    category_phrase: str,
+) -> SeoIdentity:
+    set_model, primary_model, indoor_model, outdoor_model, model_provenance = (
+        _resolve_air_conditioner_models(source, mpn, raw_title)
+    )
+    commercial_series, series_provenance = _resolve_air_conditioner_series(
+        source, brand, set_model, primary_model
+    )
+    inverter, inverter_provenance = _resolve_air_conditioner_capability(
+        source, "inverter"
+    )
+    wifi, wifi_provenance = _resolve_air_conditioner_capability(source, "wifi")
+    ionizer, ionizer_provenance = _resolve_air_conditioner_capability(source, "ionizer")
+    btu = _format_air_conditioner_btu(spec_lookup, raw_title)
+    energy_pair = _format_air_conditioner_energy_class(spec_lookup, raw_title)
+    cooling, heating = _split_air_conditioner_energy_pair(energy_pair)
+    return SeoIdentity(
+        family="air_conditioner",
+        commercial_series=commercial_series,
+        primary_model=primary_model,
+        set_model=set_model,
+        indoor_model=indoor_model,
+        outdoor_model=outdoor_model,
+        inverter=inverter,
+        wifi=wifi,
+        ionizer=ionizer,
+        category_phrase=category_phrase,
+        btu=btu,
+        cooling_energy_class=cooling,
+        heating_energy_class=heating,
+        verified_features=tuple(_extract_verified_air_conditioner_features(source)),
+        provenance={
+            "commercial_series": series_provenance,
+            "set_model": model_provenance,
+            "primary_model": model_provenance,
+            "indoor_model": model_provenance if indoor_model else "",
+            "outdoor_model": model_provenance if outdoor_model else "",
+            "inverter": inverter_provenance,
+            "wifi": wifi_provenance,
+            "ionizer": ionizer_provenance,
+            "btu": "specifications_or_source_title" if btu else "",
+            "energy_pair": "specifications_or_source_title" if energy_pair else "",
+        },
+    )
+
+
+def _resolve_air_conditioner_models(
+    source: SourceProductData, mpn: str, raw_title: str
+) -> tuple[str, str, str, str, str]:
+    full_model = normalize_whitespace(mpn)
+    if not full_model:
+        return "", "", "", "", ""
+    if "/" not in full_model:
+        return full_model, full_model, "", "", "source_mpn"
+    left, right = (normalize_whitespace(part) for part in full_model.split("/", 1))
+    title_key = normalize_for_match(raw_title)
+    has_set_evidence = any(
+        token in title_key
+        for token in ("κλιματισ", "air conditioner", "split", "εσωτερ", "εξωτερ")
+    )
+    if _looks_like_air_conditioner_model(left) and _looks_like_air_conditioner_model(
+        right
+    ) and has_set_evidence:
+        return full_model, left, left, right, "source_mpn_verified_set"
+    return full_model, full_model, "", "", "source_mpn_unsplit"
+
+
+def _looks_like_air_conditioner_model(value: str) -> bool:
+    normalized = normalize_whitespace(value)
+    return bool(
+        re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", normalized)
+        and any(char.isalpha() for char in normalized)
+        and any(char.isdigit() for char in normalized)
+    )
+
+
+def _resolve_air_conditioner_series(
+    source: SourceProductData, brand: str, set_model: str, primary_model: str
+) -> tuple[str, str]:
+    labels = {
+        normalize_for_match(label)
+        for label in ("Σειρά", "Οικογένεια", "Series", "Family", "Product Series", "Model Series")
+    }
+    for origin, items in _air_conditioner_spec_sources(source):
+        for item in items:
+            if normalize_for_match(item.label) not in labels:
+                continue
+            value = _normalize_air_conditioner_series(item.value or "")
+            if value:
+                return value, origin
+    title_value = extract_commercial_family_from_title(
+        source.name, brand, set_model
+    ) or extract_commercial_family_from_title(source.name, brand, primary_model)
+    if not title_value:
+        title_value = _extract_air_conditioner_series_before_category(source.name, brand)
+    title_value = _normalize_air_conditioner_series(title_value)
+    return (title_value, "source_title_conservative") if title_value else ("", "")
+
+
+def _extract_air_conditioner_series_before_category(title: str, brand: str) -> str:
+    tokens = title_tokens(title)
+    brand_key = normalize_for_match(brand)
+    brand_index = next(
+        (index for index, token in enumerate(tokens) if normalize_for_match(token) == brand_key),
+        -1,
+    )
+    if brand_index < 0:
+        return ""
+    series_tokens: list[str] = []
+    stop_tokens = ("κλιματισ", "inverter", "wifi", "wi-fi", "wi fi", "btu", "split")
+    for token in tokens[brand_index + 1 :]:
+        key = normalize_for_match(token)
+        if any(stop in key for stop in stop_tokens) or re.search(r"\d", token):
+            break
+        series_tokens.append(token)
+    return normalize_whitespace(" ".join(series_tokens))
+
+
+def _air_conditioner_spec_sources(
+    source: SourceProductData,
+) -> list[tuple[str, list[SpecItem]]]:
+    source_specs = [*source.key_specs]
+    source_specs.extend(item for section in source.spec_sections for item in section.items)
+    manufacturer_specs = [
+        item for section in source.manufacturer_spec_sections for item in section.items
+    ]
+    return [("source_specification", source_specs), ("manufacturer_specification", manufacturer_specs)]
+
+
+def _normalize_air_conditioner_series(value: str) -> str:
+    normalized = normalize_whitespace(value)
+    key = normalize_for_match(normalized)
+    if not normalized or len(normalized.split()) > 4 or re.search(r"[0-9/]", normalized):
+        return ""
+    rejected = (
+        "inverter",
+        "wifi",
+        "wi fi",
+        "κλιματισ",
+        "τοιχ",
+        "btu",
+        "a++",
+        "a+",
+        "white",
+        "black",
+        "silver",
+        "λευκ",
+        "μαυρ",
+        "ασημ",
+    )
+    if any(token in key for token in rejected):
+        return ""
+    return normalized
+
+
+def _resolve_air_conditioner_capability(
+    source: SourceProductData, capability: str
+) -> tuple[bool | None, str]:
+    label_tokens = {
+        "inverter": ("inverter",),
+        "wifi": ("wifi", "wi fi", "wi-fi"),
+        "ionizer": ("ιονιστ", "ionizer"),
+    }[capability]
+    for origin, items in _air_conditioner_spec_sources(source):
+        for item in items:
+            label = normalize_for_match(item.label)
+            if not any(token in label for token in label_tokens):
+                continue
+            resolved = _parse_three_state_capability(item.value or "", capability)
+            if resolved is not None:
+                return resolved, origin
+    title_value = _parse_three_state_capability(source.name, capability, title_fallback=True)
+    return (title_value, "source_title_positive") if title_value is True else (None, "")
+
+
+def _parse_three_state_capability(
+    value: str, capability: str, *, title_fallback: bool = False
+) -> bool | None:
+    key = normalize_for_match(value)
+    if not key:
+        return None
+    if capability == "wifi" and any(
+        term in key for term in ("ready", "kit", "optional", "προαιρετ", "accessory", "αξεσουαρ")
+    ):
+        return None
+    negative = tuple(
+        normalize_for_match(term)
+        for term in ("όχι", "οχι", "no", "not supported", "δεν διαθέτει", "δεν υποστηρίζ", "χωρίς", "without")
+    )
+    positive = tuple(
+        normalize_for_match(term)
+        for term in ("ναι", "yes", "supported", "υποστηρίζ", "διαθέτει", "ενσωματωμ")
+    )
+    if any(term in key for term in negative):
+        return False
+    if any(term in key for term in positive):
+        return True
+    if title_fallback:
+        tokens = {
+            "inverter": ("inverter",),
+            "wifi": ("wifi", "wi fi", "wi-fi"),
+            "ionizer": ("ιονιστ", "ionizer"),
+        }[capability]
+        return True if any(token in key for token in tokens) else None
+    return None
+
+
+def _split_air_conditioner_energy_pair(value: str) -> tuple[str, str]:
+    normalized = normalize_whitespace(value)
+    if "/" not in normalized:
+        return normalized, ""
+    cooling, heating = (normalize_whitespace(part) for part in normalized.split("/", 1))
+    return cooling, heating
+
+
+def _air_conditioner_energy_pair(identity: SeoIdentity) -> str:
+    if identity.cooling_energy_class and identity.heating_energy_class:
+        return f"{identity.cooling_energy_class}/{identity.heating_energy_class}"
+    return identity.cooling_energy_class or identity.heating_energy_class
+
+
+def _extract_verified_air_conditioner_features(source: SourceProductData) -> list[str]:
+    text = " ".join(
+        [source.hero_summary, source.presentation_source_text, source.manufacturer_source_text]
+    )
+    return [feature for feature in ("AI EcoMaster",) if feature.casefold() in text.casefold()]
 
 
 def _build_ironing_board_deterministic_fields(
@@ -1348,6 +1670,11 @@ def resolve_skroutz_family(taxonomy: TaxonomyResolution) -> str | None:
         "Audio Systems"
     ):
         return "soundbar"
+    if leaf in {
+        normalize_for_match("Air Conditioners"),
+        normalize_for_match("Air Conditioner"),
+    } or normalize_for_match(taxonomy.category_id) == "air_conditioner":
+        return "air_conditioner"
     if leaf == normalize_for_match("Κλιματιστικά"):
         return "air_conditioner"
     if sub == normalize_for_match("Ψυγειοκαταψύκτες"):

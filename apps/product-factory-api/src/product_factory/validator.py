@@ -19,7 +19,6 @@ REQUIRED_NON_EMPTY_FIELDS = {
     "image",
     "manufacturer",
     "price",
-    "meta_keyword",
     "meta_title",
     "meta_description",
     "seo_keyword",
