@@ -16,6 +16,7 @@ from .image_pipeline import (
 )
 from .models import FetchResult, GalleryImage
 from .normalize import normalize_for_match, normalize_whitespace
+from .seo_phase2 import image_content_hash, is_jpeg_bytes
 from .skroutz_sections import SKIPPED_SECTION_TITLES, resolve_skroutz_section_image_url
 from .utils import ensure_directory, guess_extension, write_bytes
 
@@ -340,6 +341,8 @@ class ElectronetFetcher:
         model: str,
         output_dir: str | Path,
         requested_photos: int | None = None,
+        image_slug: str = "",
+        require_jpeg_validation: bool = False,
     ) -> tuple[list[GalleryImage], list[str], list[str]]:
         return self._download_images(
             images=images,
@@ -348,7 +351,10 @@ class ElectronetFetcher:
             requested_count=requested_photos,
             shortage_warning="gallery_images_less_than_requested_photos",
             non_jpg_warning_prefix="gallery_image_non_jpg_saved",
-            filename_builder=lambda position, ext: f"{model}-{position}{ext}",
+            filename_builder=lambda position, ext: (
+                f"{image_slug}-{position}.jpg" if image_slug else f"{model}-{position}{ext}"
+            ),
+            require_jpeg_validation=require_jpeg_validation,
         )
 
     def download_besco_images(
@@ -376,6 +382,7 @@ class ElectronetFetcher:
         shortage_warning: str,
         non_jpg_warning_prefix: str,
         filename_builder: Callable[[int, str], str],
+        require_jpeg_validation: bool = False,
     ) -> tuple[list[GalleryImage], list[str], list[str]]:
         target_dir = ensure_directory(Path(output_dir) / output_subdir)
         for existing_file in target_dir.iterdir():
@@ -418,7 +425,7 @@ class ElectronetFetcher:
                     warnings.append(
                         f"image_conversion_failed:{output_subdir}:{asset_position}:{ext}:{exc}"
                     )
-            elif ext != ".jpg" and not preserve_besco_gif:
+            elif (ext != ".jpg" or (require_jpeg_validation and not is_jpeg_bytes(payload))) and not preserve_besco_gif:
                 try:
                     payload = convert_image_bytes_to_jpg(
                         payload,
@@ -431,6 +438,9 @@ class ElectronetFetcher:
                     warnings.append(
                         f"image_conversion_failed:{output_subdir}:{asset_position}:{ext}:{exc}"
                     )
+            if output_subdir == "gallery" and require_jpeg_validation and not is_jpeg_bytes(payload):
+                warnings.append(f"image_jpeg_validation_failed:{output_subdir}:{asset_position}")
+                continue
             filename_position = asset_position
             filename = filename_builder(filename_position, ext)
             local_path = target_dir / filename
@@ -443,10 +453,32 @@ class ElectronetFetcher:
                 local_path=str(local_path),
                 content_type=content_type,
                 downloaded=True,
+                source_url=image.url,
+                source_alt=image.alt,
+                role="main" if asset_position == 1 else "gallery",
+                filename_candidate=filename if output_subdir == "gallery" else "",
+                public_path=(
+                    f"catalog/01_main/{Path(output_dir).name}/{filename}"
+                    if output_subdir == "gallery" else ""
+                ),
+                jpeg_valid=is_jpeg_bytes(payload),
+                content_hash=image_content_hash(payload),
+                width=_image_size(payload)[0],
+                height=_image_size(payload)[1],
             )
             downloaded.append(downloaded_image)
             written_files.append(str(local_path))
         return downloaded, warnings, written_files
+
+
+def _image_size(payload: bytes) -> tuple[int, int]:
+    try:
+        from PIL import Image
+        from io import BytesIO
+        with Image.open(BytesIO(payload)) as image:
+            return image.size
+    except Exception:
+        return 0, 0
 
     def _select_best_skroutz_section_container(
         self, containers: list[dict[str, object]]

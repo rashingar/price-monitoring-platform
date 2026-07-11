@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import csv
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -23,6 +24,7 @@ from ..seo_health import (
     validate_seo_health_contract,
 )
 from ..utils import ensure_directory, read_json, utcnow_iso, write_json, write_text
+from ..seo_phase2 import catalog_similarity
 from ..validator import read_single_row_csv, validate_candidate_csv, write_validation_report
 from .execution_models import (
     PreparedProductContext,
@@ -142,6 +144,7 @@ def execute_render_workflow(
         }
         existing_product_path = products_root / f"{model}.csv"
         published_seo_keyword = ""
+        existing_product_row: dict[str, str] = {}
         if existing_product_path.exists():
             _, existing_product_row = read_single_row_csv(existing_product_path)
             published_seo_keyword = existing_product_row.get("seo_keyword", "")
@@ -158,7 +161,18 @@ def execute_render_workflow(
             model_root=model_root,
             characteristics_source=characteristics_source,
             published_seo_keyword=published_seo_keyword,
+            published_image=existing_product_row.get("image", ""),
+            published_additional_image=existing_product_row.get("additional_image", ""),
+            catalog_rows=_read_catalog_rows(products_root),
         )
+        catalog_rows = _read_catalog_rows(products_root)
+        candidate_normalized["catalog_similarity"] = {
+            "intro": catalog_similarity(str(candidate_normalized.get("llm_intro_text", "")), catalog_rows, field="description", current_model=model),
+            "meta_description": catalog_similarity(str(row.get("meta_description", "")), catalog_rows, field="meta_description", current_model=model),
+            "description_heading": catalog_similarity(str(candidate_normalized.get("description_heading", "")), catalog_rows, field="description_heading", current_model=model),
+            "section_titles": catalog_similarity(" ".join(str(section.get("title", "")) for section in candidate_normalized.get("presentation_section_image_metadata", [])), catalog_rows, field="description", current_model=model),
+            "sibling_description": catalog_similarity(str(row.get("description", "")), catalog_rows, field="description", current_model=model),
+        }
         headers, ordered_row = write_csv_row(row, candidate_csv_path)
         candidate_normalized["csv_headers"] = headers
         candidate_normalized["csv_ordered_row"] = ordered_row
@@ -502,3 +516,19 @@ def _resolve_render_sections(
     if len(selected_sections) < sections_requested:
         warnings.append(f"requested_sections_reduced:{len(selected_sections)}")
     return selected_sections[:sections_requested], warnings
+
+
+def _read_catalog_rows(products_root: Path) -> list[dict[str, str]]:
+    """Read the local Product Factory catalog deterministically and offline."""
+    rows: list[dict[str, str]] = []
+    if not products_root.exists():
+        return rows
+    for path in sorted(products_root.glob("*.csv")):
+        try:
+            with path.open("r", encoding="utf-8-sig", newline="") as handle:
+                row = next(csv.DictReader(handle), None)
+                if row:
+                    rows.append({str(key): str(value or "") for key, value in row.items()})
+        except (OSError, UnicodeError, csv.Error):
+            continue
+    return rows

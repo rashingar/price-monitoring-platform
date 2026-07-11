@@ -53,6 +53,18 @@ class GalleryImage:
     local_path: str = ""
     content_type: str = ""
     downloaded: bool = False
+    # Phase 2 image metadata.  Defaults preserve all source/parser contracts.
+    source_url: str = ""
+    source_alt: str = ""
+    role: str = ""
+    filename_candidate: str = ""
+    filename_published: str = ""
+    filename_locked: bool = False
+    public_path: str = ""
+    jpeg_valid: bool = False
+    content_hash: str = ""
+    width: int = 0
+    height: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

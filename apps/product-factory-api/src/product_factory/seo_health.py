@@ -86,6 +86,22 @@ CHECK_DESCRIPTIONS = {
     "contract.llm_ownership_respected": "LLM output did not control deterministic identity fields.",
 }
 
+PHASE2_CHECK_DESCRIPTIONS = {
+    "images.main_present": "A main product image is present.",
+    "images.main_jpeg_valid": "The main product image bytes are JPEG.",
+    "images.gallery_filename_policy": "New gallery filenames follow the stable JPG policy.",
+    "images.gallery_sequence": "Gallery positions are contiguous and start at one.",
+    "images.gallery_unique_paths": "Gallery public paths are unique.",
+    "images.gallery_alt_quality": "Gallery images have meaningful distinct alt text.",
+    "images.description_alt_quality": "Description image alts describe supported section features.",
+    "content.single_h1_contract": "Description HTML does not create an additional H1.",
+    "content.description_heading_distinct": "The supporting description heading differs from the product name.",
+    "content.intro_catalog_uniqueness": "Introductory prose is sufficiently unique in catalog context.",
+    "content.meta_description_catalog_uniqueness": "Meta description is sufficiently unique in catalog context.",
+    "internal_linking.category_link": "A canonical category CTA link is available.",
+    "internal_linking.related_products": "Deterministic related products are available when catalog context permits.",
+}
+
 
 def round_half_up(value: Decimal | float | int) -> int:
     return int(Decimal(str(value)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
@@ -156,6 +172,7 @@ def evaluate_seo_health(
     catalog_seo_keywords: Iterable[str] = (),
     settings: Mapping[str, Any] | None = None,
     profile: str = "phase1",
+    phase2: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     identity = deterministic_product.get("seo_identity", {})
     identity = identity if isinstance(identity, Mapping) else {}
@@ -167,6 +184,8 @@ def evaluate_seo_health(
         air_conditioner=air_conditioner,
         catalog_seo_keywords=catalog_seo_keywords,
     )
+    if profile == "full":
+        checks.extend(_evaluate_phase2_checks(row=row, deterministic_product=deterministic_product, phase2=phase2 or {}))
     totals = calculate_score(checks)
     gate = _publish_gate(totals, settings)
     return {
@@ -332,6 +351,64 @@ def _evaluate_checks(
     llm_controls_identity = isinstance(llm_product, Mapping) and bool(identity_keys & set(llm_product))
     add("contract.llm_ownership_respected", "fail" if llm_controls_identity else "pass", llm_controls_identity, False, blocks=llm_controls_identity)
     return checks
+
+
+def _evaluate_phase2_checks(*, row: Mapping[str, Any], deterministic_product: Mapping[str, Any], phase2: Mapping[str, Any]) -> list[dict[str, Any]]:
+    assets = phase2.get("image_assets", deterministic_product.get("image_assets", []))
+    assets = list(assets) if isinstance(assets, list) else []
+    sections = phase2.get("sections", deterministic_product.get("presentation_section_image_metadata", []))
+    sections = list(sections) if isinstance(sections, list) else []
+    links = phase2.get("internal_links", deterministic_product.get("internal_links", {}))
+    links = links if isinstance(links, Mapping) else {}
+    similarities = phase2.get("catalog_similarity", {})
+    similarities = similarities if isinstance(similarities, Mapping) else {}
+    heading = _text(phase2.get("description_heading", deterministic_product.get("description_heading", "")))
+    name = _text(row.get("name"))
+    description = _text(row.get("description"))
+    ids = list(PHASE2_CHECK_DESCRIPTIONS)
+
+    def status(condition: bool, *, missing: bool = False) -> str:
+        return "not_run" if missing else ("pass" if condition else "warn")
+
+    sequence = [int(asset.get("position") or 0) for asset in assets]
+    filenames_ok = all(valid_seo_filename(str(asset.get("filename_candidate") or "")) for asset in assets)
+    paths = [str(asset.get("public_path") or "") for asset in assets]
+    alts = [str(asset.get("alt") or "") for asset in assets]
+    intro_similarity = similarities.get("intro", similarities.get("description", {}))
+    meta_similarity = similarities.get("meta_description", {})
+    result_conditions = {
+        "images.main_present": bool(assets and assets[0].get("role") == "main"),
+        "images.main_jpeg_valid": bool(assets and assets[0].get("jpeg_valid")),
+        "images.gallery_filename_policy": filenames_ok,
+        "images.gallery_sequence": sequence == list(range(1, len(sequence) + 1)),
+        "images.gallery_unique_paths": len(paths) == len(set(paths)),
+        "images.gallery_alt_quality": bool(alts and all(alts) and len(set(alts)) == len(alts)),
+        "images.description_alt_quality": all(str(section.get("image_alt_confidence") or "") != "low" for section in sections),
+        "content.single_h1_contract": "<h1" not in description.casefold(),
+        "content.description_heading_distinct": bool(not heading or normalize_for_match(heading) != normalize_for_match(name)),
+        "content.intro_catalog_uniqueness": float(intro_similarity.get("score", 0) or 0) < .90,
+        "content.meta_description_catalog_uniqueness": float(meta_similarity.get("score", 0) or 0) < .90,
+        "internal_linking.category_link": bool(links.get("canonical_category")),
+        "internal_linking.related_products": bool(links.get("related_products", [])) or not bool(phase2.get("catalog_available", False)),
+    }
+    checks: list[dict[str, Any]] = []
+    for check_id in ids:
+        missing = check_id.startswith("images.") and not assets
+        checks.append({
+            "id": check_id, "phase": 2, "category": check_id.split(".", 1)[0],
+            "description": PHASE2_CHECK_DESCRIPTIONS[check_id],
+            "status": status(result_conditions[check_id], missing=missing),
+            "severity": "warning" if not result_conditions[check_id] else "info",
+            "blocks_publish": False, "weight": 0, "earned_points": 0,
+            "message": "phase2_full_profile_report_only", "observed": result_conditions[check_id],
+            "expected": True, "applicable_reason": "Phase 2 full profile is report-only.",
+            "evidence": [], "remediation": "Review the Phase 2 candidate metadata and render again.",
+        })
+    return checks
+
+
+def valid_seo_filename(value: str) -> bool:
+    return bool(re.fullmatch(r"^[a-z0-9]+(?:-[a-z0-9]+)*-[1-9][0-9]*\.jpg$", value))
 
 
 def _publish_gate(totals: Mapping[str, Any], settings: Mapping[str, Any] | None) -> dict[str, Any]:
