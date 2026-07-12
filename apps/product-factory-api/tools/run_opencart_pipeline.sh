@@ -8,7 +8,6 @@ REPO_ROOT="${REPO_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 
 MODEL="${1:-${MODEL:-}}"
 PRODUCT_FILE="${CURRENT_JOB_PRODUCT_FILE:-${REPO_ROOT}/products/${MODEL}.csv}"
-MAIN_IMAGE="${REPO_ROOT}/work/${MODEL}/scrape/gallery/${MODEL}-1.jpg"
 UPLOAD_REPORT="${REPO_ROOT}/work/${MODEL}/upload.opencart.json"
 IMPORT_REPORT="${REPO_ROOT}/work/${MODEL}/import.opencart.json"
 
@@ -36,10 +35,6 @@ fi
 
 if [[ ! -f "${PRODUCT_FILE}" ]]; then
   fail "preflight" 11 "missing product CSV: ${PRODUCT_FILE}"
-fi
-
-if [[ ! -f "${MAIN_IMAGE}" ]]; then
-  fail "preflight" 11 "missing gallery image: ${MAIN_IMAGE}"
 fi
 
 log "stage=preflight status=ok model=${MODEL} product_file=${PRODUCT_FILE}"

@@ -7,6 +7,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ..publish_gallery_assets import (
+    PublishGalleryResolutionError,
+    resolve_publish_gallery_assets,
+)
 from ..repo_paths import REPO_ROOT
 from ..utils import utcnow_iso
 from .metadata import maybe_write_run_metadata
@@ -83,18 +87,12 @@ def _preflight_publish_environment(
             f"OpenCart publish failed during preflight: shell entrypoint not found at {script_path}",
             None,
         )
-    if not published_csv_path.exists():
+    try:
+        resolve_publish_gallery_assets(model, published_csv_path, work_root)
+    except PublishGalleryResolutionError as exc:
         return (
             "preflight",
-            f"OpenCart publish failed during preflight: missing published CSV: {published_csv_path}",
-            None,
-        )
-
-    main_image_path = work_root / model / "scrape" / "gallery" / f"{model}-1.jpg"
-    if not main_image_path.exists():
-        return (
-            "preflight",
-            f"OpenCart publish failed during preflight: missing gallery image: {main_image_path}",
+            f"OpenCart publish failed during preflight: {exc}",
             None,
         )
 
