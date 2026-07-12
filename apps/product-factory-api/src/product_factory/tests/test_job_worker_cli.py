@@ -113,6 +113,39 @@ def test_worker_cli_failure_writes_failed_metadata_and_exits_nonzero(
     assert "stub service failed" in store.read_logs(record.job_id)
 
 
+def test_worker_cli_records_a_failed_full_pipeline_publish(tmp_path: Path, monkeypatch) -> None:
+    store = JobStore(tmp_path / "jobs")
+    record = store.enqueue(
+        JobType.FULL_PIPELINE,
+        {"model": "233541", "source_url": "https://www.electronet.gr/example"},
+        job_id="job-publish-failure",
+    )
+
+    def stub_runner(_record, log):
+        log("publish preflight failed")
+        return JobRunResult(
+            status=JobStatus.FAILED,
+            message="Full pipeline failed during publish.",
+            error="OpenCart publish failed during preflight: missing main gallery image referenced by CSV: catalog/01_main/233541/descriptive-1.jpg",
+            error_code="publish_failure",
+            artifacts={"published_csv_path": "products/233541.csv"},
+        )
+
+    monkeypatch.setattr(run_product_factory_job, "run_full_pipeline_job", stub_runner)
+
+    exit_code = run_product_factory_job.main(
+        ["--job-id", record.job_id, "--job-root", str(store.jobs_dir)]
+    )
+
+    loaded = store.get_job(record.job_id)
+    assert exit_code == 1
+    assert loaded.status == JobStatus.FAILED
+    assert loaded.message == "Full pipeline failed during publish."
+    assert loaded.error_code == "publish_failure"
+    assert "descriptive-1.jpg" in (loaded.error or "")
+    assert loaded.artifacts["published_csv_path"] == "products/233541.csv"
+
+
 def test_worker_cli_does_not_overwrite_cancelled_job(
     tmp_path: Path, monkeypatch
 ) -> None:
