@@ -15,6 +15,19 @@ from product_factory.skroutz_sections import (
     resolve_skroutz_section_image_url,
 )
 
+
+def test_electronet_fetcher_exposes_skroutz_section_selection_helpers() -> None:
+    fetcher = ElectronetFetcher()
+
+    assert all(
+        callable(getattr(fetcher, name, None))
+        for name in (
+            "_select_best_skroutz_section_container",
+            "_count_duplicate_signatures",
+            "_skroutz_container_sort_key",
+        )
+    )
+
 SAMPLE = {
     "model": "143481",
     "url": "https://www.skroutz.gr/s/61800471/tcl-q65h-soundbar-5-1-bluetooth-hdmi-kai-wi-fi-me-asyrmato-subwoofer-mayro.html",
