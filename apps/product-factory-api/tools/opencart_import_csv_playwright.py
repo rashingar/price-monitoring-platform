@@ -14,6 +14,10 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
+from product_factory.publish_gallery_assets import (
+    PublishGalleryResolutionError,
+    resolve_publish_gallery_assets,
+)
 from tools.opencart_config import resolve_opencart_config
 
 DEFAULT_HEADLESS = True
@@ -86,7 +90,11 @@ def build_admin_index(store_base: str, admin_path: str) -> str:
 
 
 def csv_contract_check(
-    csv_path: Path, model: str, *, allow_partial_csv: bool = False
+    csv_path: Path,
+    model: str,
+    *,
+    repo_root: Path,
+    allow_partial_csv: bool = False,
 ) -> dict[str, Any]:
     with csv_path.open("r", encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
@@ -103,25 +111,21 @@ def csv_contract_check(
     if missing:
         raise ImportErrorRuntime(f"CSV missing required columns: {missing}")
 
-    first = rows[0]
-    if str(first.get("model", "")).strip() != model:
-        raise ImportErrorRuntime(
-            f"CSV model mismatch. Expected {model}, got {first.get('model')!r} in {csv_path.name}"
-        )
-
-    image = str(first.get("image", "")).strip()
-    if not allow_partial_csv and image != f"catalog/01_main/{model}/{model}-1.jpg":
-        raise ImportErrorRuntime(
-            "CSV image path does not match expected contract: "
-            f"{image!r} != 'catalog/01_main/{model}/{model}-1.jpg'"
-        )
+    assets = []
+    if not allow_partial_csv:
+        try:
+            assets = resolve_publish_gallery_assets(model, csv_path, repo_root / "work")
+        except PublishGalleryResolutionError as exc:
+            raise ImportErrorRuntime(str(exc)) from exc
 
     return {
         "headers": headers,
         "row_count": len(rows),
-        "first_row_model": first.get("model"),
-        "first_row_image": image,
-        "first_row_additional_image": first.get("additional_image", ""),
+        "first_row_model": model,
+        "first_row_image": assets[0].csv_public_path if assets else "",
+        "first_row_additional_image": ":::".join(
+            asset.csv_public_path for asset in assets[1:]
+        ),
     }
 
 
@@ -382,7 +386,10 @@ def main() -> int:
         )
     csv_path = resolve_csv_path(repo_root, args.model, args.csv_file)
     contract = csv_contract_check(
-        csv_path, args.model, allow_partial_csv=args.allow_partial_csv
+        csv_path,
+        args.model,
+        repo_root=repo_root,
+        allow_partial_csv=args.allow_partial_csv,
     )
     admin_index = build_admin_index(
         resolved_config["store_base"], resolved_config["admin_path"]

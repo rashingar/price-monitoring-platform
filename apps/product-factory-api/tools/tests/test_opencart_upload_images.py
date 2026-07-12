@@ -1,10 +1,12 @@
+import csv
+from pathlib import Path
+
 import pytest
 
 from tools.opencart_upload_images import (
     UploadError,
     build_plan,
     chunked_file_paths,
-    validate_gallery_files,
     validate_besco_files,
 )
 
@@ -43,19 +45,54 @@ def test_validate_besco_files_rejects_non_section_numbered_names(tmp_path) -> No
         validate_besco_files(besco_dir)
 
 
-def test_gallery_accepts_phase2_names_and_rejects_renamed_non_jpeg(tmp_path) -> None:
+def test_upload_plan_uses_only_csv_referenced_phase2_gallery_assets(tmp_path) -> None:
     from PIL import Image
 
+    model = "123456"
     gallery = tmp_path / "work" / "123456" / "scrape" / "gallery"
     gallery.mkdir(parents=True)
-    for position in (1, 2):
+    filenames = [
+        "midea-solunar-ef-12rd1h-klimatistiko-12000-btu-1.jpg",
+        "midea-solunar-ef-12rd1h-klimatistiko-12000-btu-2.jpg",
+        "unrelated-gallery-image.jpg",
+    ]
+    for filename in filenames:
         Image.new("RGB", (1, 1), "white").save(
-            gallery / f"midea-solunar-ef-12rd1h-klimatistiko-12000-btu-{position}.jpg",
+            gallery / filename,
             format="JPEG",
         )
-    assert [path.name for path in validate_gallery_files("123456", gallery)][0].endswith("-1.jpg")
-    plan = build_plan(tmp_path, "123456", "https://www.etranoulis.gr")
-    assert plan["gallery"]["main_image"].endswith("midea-solunar-ef-12rd1h-klimatistiko-12000-btu-1.jpg")
-    (gallery / "midea-solunar-ef-12rd1h-klimatistiko-12000-btu-2.jpg").write_bytes(b"RIFFxxxxWEBP")
-    with pytest.raises(UploadError, match="not_jpeg_bytes"):
-        validate_gallery_files("123456", gallery)
+    product_file = tmp_path / "products" / f"{model}.csv"
+    product_file.parent.mkdir()
+    with product_file.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle, fieldnames=["model", "image", "additional_image"]
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "model": model,
+                "image": f"catalog/01_main/{model}/{filenames[0]}",
+                "additional_image": f"catalog/01_main/{model}/{filenames[1]}",
+            }
+        )
+
+    plan = build_plan(
+        tmp_path,
+        model,
+        "https://www.etranoulis.gr",
+        current_job_product_file=product_file,
+    )
+
+    assert [Path(path).name for path in plan["gallery"]["local_files"]] == filenames[:2]
+    assert plan["gallery"]["main_image"] == f"catalog/01_main/{model}/{filenames[0]}"
+    assert plan["gallery"]["additional_image"] == f"catalog/01_main/{model}/{filenames[1]}"
+    assert filenames[2] not in plan["gallery"]["local_files"]
+
+    (gallery / filenames[1]).write_bytes(b"RIFFxxxxWEBP")
+    with pytest.raises(UploadError, match="invalid JPEG bytes"):
+        build_plan(
+            tmp_path,
+            model,
+            "https://www.etranoulis.gr",
+            current_job_product_file=product_file,
+        )

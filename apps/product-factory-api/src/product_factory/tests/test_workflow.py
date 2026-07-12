@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from product_factory.models import (
     CLIInput,
@@ -65,6 +66,21 @@ def write_split_llm_outputs(
             ensure_ascii=False,
             indent=2,
         ),
+        encoding="utf-8",
+    )
+
+
+def write_publish_csv_and_jpeg(
+    repo_root: Path, model: str, product_file: Path, *, filename: str | None = None
+) -> None:
+    filename = filename or f"{model}-1.jpg"
+    gallery = repo_root / "work" / model / "scrape" / "gallery"
+    gallery.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (1, 1), "white").save(gallery / filename, format="JPEG")
+    product_file.parent.mkdir(parents=True, exist_ok=True)
+    product_file.write_text(
+        "model,image,additional_image\n"
+        f"{model},catalog/01_main/{model}/{filename},\n",
         encoding="utf-8",
     )
 
@@ -1195,7 +1211,7 @@ def test_execute_render_workflow_rerun_with_existing_valid_seo_keeps_downstream_
     assert (llm_dir / "seo_meta.output.json").read_text(encoding="utf-8") == seo_text
 
 
-def test_workflow_main_render_reports_publish_failure_without_failing_render(
+def test_workflow_main_render_returns_publish_failure_exit_code(
     monkeypatch, capsys, tmp_path: Path
 ) -> None:
     from product_factory import workflow
@@ -1235,6 +1251,7 @@ def test_workflow_main_render_reports_publish_failure_without_failing_render(
                 run_type=RunType.PUBLISH,
                 status=RunStatus.FAILED,
                 warnings=["OpenCart publish failed during image_upload: exit=12"],
+                error_code=ServiceErrorCode.PUBLISH_FAILURE.value,
             ),
             artifacts=RunArtifacts(
                 metadata_path=tmp_path / "work" / "233541" / "publish.run.json"
@@ -1262,7 +1279,7 @@ def test_workflow_main_render_reports_publish_failure_without_failing_render(
     exit_code = workflow.main(["render"])
     captured = capsys.readouterr()
 
-    assert exit_code == 0
+    assert exit_code == 7
     assert "Render status: success" in captured.out
     assert "Publish status: failed" in captured.out
     assert "Publish stage: image_upload" in captured.out
@@ -1407,8 +1424,7 @@ def test_execute_publish_workflow_passes_model_and_current_job_product_file(
     current_job_product_file.parent.mkdir(parents=True)
     main_image_path.parent.mkdir(parents=True)
     script_path.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-    current_job_product_file.write_text("header\nvalue\n", encoding="utf-8")
-    main_image_path.write_text("image", encoding="utf-8")
+    write_publish_csv_and_jpeg(repo_root, model, current_job_product_file)
     captured: dict[str, object] = {}
     calls: list[list[str]] = []
 
@@ -1532,8 +1548,7 @@ def test_execute_publish_workflow_fails_preflight_when_bash_is_missing(
     current_job_product_file.parent.mkdir(parents=True)
     main_image_path.parent.mkdir(parents=True)
     script_path.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-    current_job_product_file.write_text("header\nvalue\n", encoding="utf-8")
-    main_image_path.write_text("image", encoding="utf-8")
+    write_publish_csv_and_jpeg(repo_root, model, current_job_product_file)
 
     monkeypatch.setattr(publish_execution.shutil, "which", lambda _name: None)
 
@@ -1569,8 +1584,7 @@ def test_execute_publish_workflow_classifies_wsl_launcher_probe_failures(
     current_job_product_file.parent.mkdir(parents=True)
     main_image_path.parent.mkdir(parents=True)
     script_path.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-    current_job_product_file.write_text("header\nvalue\n", encoding="utf-8")
-    main_image_path.write_text("image", encoding="utf-8")
+    write_publish_csv_and_jpeg(repo_root, model, current_job_product_file)
 
     class DummyCompleted:
         returncode = 1
@@ -1613,9 +1627,13 @@ def test_execute_publish_workflow_fails_preflight_when_main_image_is_missing(
     current_job_product_file.parent.mkdir(parents=True)
     (repo_root / "work" / model / "scrape").mkdir(parents=True)
     script_path.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-    current_job_product_file.write_text("header\nvalue\n", encoding="utf-8")
+    current_job_product_file.write_text(
+        "model,image,additional_image\n"
+        f"{model},catalog/01_main/{model}/{model}-1.jpg,\n",
+        encoding="utf-8",
+    )
 
-    # Missing gallery/<model>-1.jpg should be reported before shell invocation.
+    # The CSV-referenced image is missing and must be reported before shell invocation.
     monkeypatch.setattr(
         publish_execution.shutil,
         "which",
@@ -1632,7 +1650,7 @@ def test_execute_publish_workflow_fails_preflight_when_main_image_is_missing(
 
     assert result["publish_status"] == "failed"
     assert result["publish_stage"] == "preflight"
-    assert "missing gallery image" in str(result["publish_message"])
+    assert "missing main gallery image" in str(result["publish_message"])
 
 
 def test_render_workflow_warns_and_continues_when_source_sections_are_missing_entirely(

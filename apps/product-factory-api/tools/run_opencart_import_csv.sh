@@ -34,6 +34,7 @@ CMD=(
   "${PYTHON_BIN}" "${PYTHON_SCRIPT}"
   --model "${MODEL}"
   --repo-root "${REPO_ROOT}"
+  --csv-file "${CURRENT_JOB_PRODUCT_FILE:-${REPO_ROOT}/products/${MODEL}.csv}"
   --store-base "${STORE_BASE}"
   --admin-path "${ADMIN_PATH}"
   --username "${ADMIN_USER}"
@@ -55,6 +56,6 @@ echo "[opencart-csv-import] repo_root=${REPO_ROOT} model=${MODEL} profile=${PROF
 # `/ipadmin/index.php` into local Windows filesystem paths.
 export MSYS2_ARG_CONV_EXCL="${ADMIN_PATH}"
 PY_PATHSEP="$("${PYTHON_BIN}" -c 'import os; print(os.pathsep)')"
-export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+${PY_PATHSEP}${PYTHONPATH}}"
+export PYTHONPATH="${REPO_ROOT}/src${PY_PATHSEP}${REPO_ROOT}${PYTHONPATH:+${PY_PATHSEP}${PYTHONPATH}}"
 
 exec "${CMD[@]}"

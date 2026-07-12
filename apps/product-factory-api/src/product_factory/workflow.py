@@ -140,11 +140,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         publish_details = build_publish_phase_details(model, publish_result)
         _print_render_cli_summary(render_result, publish_details)
-        return (
-            0
-            if bool(render_result.details.get("validation_ok", False))
-            else exit_code_for_service_error(render_result.run.error_code)
-        )
+        if not bool(render_result.details.get("validation_ok", False)):
+            return exit_code_for_service_error(render_result.run.error_code)
+        if publish_result is not None and publish_result.run.status.value == "failed":
+            return exit_code_for_service_error(publish_result.run.error_code)
+        return 0
     except ValueError as exc:
         message = str(exc)
         print(message)

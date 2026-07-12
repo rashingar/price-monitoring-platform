@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, urlparse
 
+from product_factory.publish_gallery_assets import (
+    PublishGalleryResolutionError,
+    resolve_publish_gallery_assets,
+)
+
 try:
     import requests
 except (
@@ -162,16 +167,30 @@ def _is_jpeg_file(path: Path) -> bool:
         return False
 
 
-def build_plan(repo_root: Path, model: str, store_base: str) -> dict[str, Any]:
+def build_plan(
+    repo_root: Path,
+    model: str,
+    store_base: str,
+    *,
+    current_job_product_file: Path | None = None,
+) -> dict[str, Any]:
     if not is_valid_model(model):
         raise UploadError("Model must be exactly 6 digits.")
 
     work_dir = repo_root / "work" / model
     scrape_dir = work_dir / "scrape"
-    gallery_dir = scrape_dir / "gallery"
     besco_dir = scrape_dir / "bescos"
+    product_file = _resolve_current_job_product_file(
+        repo_root, model, current_job_product_file
+    )
 
-    gallery_files = validate_gallery_files(model, gallery_dir)
+    try:
+        gallery_assets = resolve_publish_gallery_assets(
+            model, product_file, repo_root / "work"
+        )
+    except PublishGalleryResolutionError as exc:
+        raise UploadError(str(exc)) from exc
+    gallery_files = [asset.local_path for asset in gallery_assets]
     besco_files = validate_besco_files(besco_dir)
 
     main_remote_dir = f"01_main/{model}"
@@ -181,6 +200,7 @@ def build_plan(repo_root: Path, model: str, store_base: str) -> dict[str, Any]:
         "repo_root": str(repo_root),
         "model": model,
         "work_dir": str(work_dir),
+        "current_job_product_file": str(product_file),
         "gallery": {
             "local_files": [str(p) for p in gallery_files],
             "remote_dir": main_remote_dir,
@@ -188,10 +208,9 @@ def build_plan(repo_root: Path, model: str, store_base: str) -> dict[str, Any]:
                 f"catalog/{main_remote_dir}/{p.name}" for p in gallery_files
             ],
             "count": len(gallery_files),
-            "main_image": f"catalog/01_main/{model}/{gallery_files[0].name}",
+            "main_image": gallery_assets[0].csv_public_path,
             "additional_image": ":::".join(
-                f"catalog/01_main/{model}/{path.name}"
-                for path in gallery_files[1:]
+                asset.csv_public_path for asset in gallery_assets[1:]
             ),
         },
         "bescos": {
@@ -204,6 +223,19 @@ def build_plan(repo_root: Path, model: str, store_base: str) -> dict[str, Any]:
             "html_base": f"{store_base.rstrip('/')}/image/catalog/01_bescos/{model}/",
         },
     }
+
+
+def _resolve_current_job_product_file(
+    repo_root: Path, model: str, explicit_path: Path | None
+) -> Path:
+    candidate = explicit_path or Path(
+        os.environ.get("CURRENT_JOB_PRODUCT_FILE")
+        or repo_root / "products" / f"{model}.csv"
+    )
+    if not candidate.is_absolute():
+        from_cwd = Path.cwd() / candidate
+        candidate = from_cwd if from_cwd.exists() else repo_root / candidate
+    return candidate.expanduser().resolve()
 
 
 def _extract_user_token_from_url(url: str) -> str | None:
@@ -456,6 +488,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--username", default=None)
     parser.add_argument("--password", default=None)
     parser.add_argument(
+        "--current-job-product-file",
+        default=None,
+        help="CSV whose image and additional_image fields define this upload.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Validate and auth-check only, do not upload",
@@ -485,7 +522,14 @@ def main() -> int:
             "Missing admin credentials. Pass --username/--password or set OPENCART_ADMIN_USER and OPENCART_ADMIN_PASS."
         )
 
-    plan = build_plan(repo_root, args.model, resolved_config["store_base"])
+    plan = build_plan(
+        repo_root,
+        args.model,
+        resolved_config["store_base"],
+        current_job_product_file=(
+            Path(args.current_job_product_file) if args.current_job_product_file else None
+        ),
+    )
     admin_index = build_admin_index(
         resolved_config["store_base"], resolved_config["admin_path"]
     )

@@ -470,16 +470,6 @@ class ElectronetFetcher:
             written_files.append(str(local_path))
         return downloaded, warnings, written_files
 
-
-def _image_size(payload: bytes) -> tuple[int, int]:
-    try:
-        from PIL import Image
-        from io import BytesIO
-        with Image.open(BytesIO(payload)) as image:
-            return image.size
-    except Exception:
-        return 0, 0
-
     def _select_best_skroutz_section_container(
         self, containers: list[dict[str, object]]
     ) -> dict[str, object] | None:
@@ -527,3 +517,15 @@ def _image_size(payload: bytes) -> tuple[int, int]:
         title_count = int(container.get("title_count", 0) or 0)
         dom_index = int(container.get("dom_index", 0) or 0)
         return (visible_area, title_count, dom_index)
+
+
+def _image_size(payload: bytes) -> tuple[int, int]:
+    try:
+        from io import BytesIO
+
+        from PIL import Image
+
+        with Image.open(BytesIO(payload)) as image:
+            return image.size
+    except Exception:
+        return 0, 0
