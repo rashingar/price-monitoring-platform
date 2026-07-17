@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://etranoulis.gr/contracts/product-factory/seo_migration_redirect.schema.json",
+  "title": "Externally confirmed Product Factory SEO redirects",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "environment",
+    "target_identity",
+    "migration_run_id",
+    "snapshot_id",
+    "plan_hash",
+    "responsible_system",
+    "confirmed_by",
+    "confirmed_at",
+    "redirects",
+    "removed_redirects",
+    "seo_url_namespace"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "environment": {"const": "production"},
+    "target_identity": {"type": "string", "minLength": 1},
+    "migration_run_id": {"type": "string", "minLength": 1},
+    "snapshot_id": {"type": "string", "minLength": 1},
+    "plan_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "responsible_system": {"type": "string", "minLength": 1},
+    "confirmed_by": {"type": "string", "minLength": 1},
+    "confirmed_at": {"type": "string", "format": "date-time"},
+    "redirects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "old_path",
+          "new_path",
+          "status_code",
+          "model",
+          "approved",
+          "applied",
+          "verified"
+        ],
+        "properties": {
+          "old_path": {"type": "string", "pattern": "^/"},
+          "new_path": {"type": "string", "pattern": "^/"},
+          "status_code": {"const": 301},
+          "model": {"type": "string", "pattern": "^[0-9]{6}$"},
+          "approved": {"const": true},
+          "applied": {"const": true},
+          "verified": {"const": true}
+        }
+      }
+    },
+    "removed_redirects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["old_path", "new_path", "status_code", "model", "removed", "verified"],
+        "properties": {
+          "old_path": {"type": "string", "pattern": "^/"},
+          "new_path": {"type": "string", "pattern": "^/"},
+          "status_code": {"const": 301},
+          "model": {"type": "string", "pattern": "^[0-9]{6}$"},
+          "removed": {"const": true},
+          "verified": {"const": true}
+        }
+      }
+    },
+    "seo_url_namespace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "source_identity", "target_identity", "migration_run_id", "snapshot_id", "plan_hash", "captured_at", "complete", "row_count", "content_hash", "paths"],
+      "properties": {
+        "schema_version": {"const": "1.0"},
+        "source_identity": {"type": "string", "minLength": 1},
+        "target_identity": {"type": "string", "minLength": 1},
+        "migration_run_id": {"type": "string", "minLength": 1},
+        "snapshot_id": {"type": "string", "minLength": 1},
+        "plan_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "captured_at": {"type": "string", "format": "date-time"},
+        "complete": {"const": true},
+        "row_count": {"type": "integer", "minimum": 0},
+        "content_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^/[^?#]*$"}
+        }
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ from .product_identity import normalize_mpn_for_match
 
 
 RULESET_VERSION = "phase1.0"
+FULL_RULESET_VERSION = "full.1.0"
 DEFAULT_ENFORCEMENT_MODE = "blockers_only"
 DEFAULT_THRESHOLDS = {
     "minimum_score": 80,
@@ -137,6 +138,186 @@ PHASE3_CHECKS: tuple[tuple[str, str, float, str], ...] = (
 assert sum(weight for _, _, weight, _ in PHASE3_CHECKS) == 20
 
 
+# The Phase 1 profile above is an established compatibility contract and keeps
+# its original 29 checks/100 points.  The full profile is a separate rollout
+# view: it aggregates those deterministic subchecks (plus Phase 2/3/4
+# subchecks) into the exact cross-phase groups approved for production rollout.
+FULL_PROFILE_CHECK_WEIGHTS: tuple[tuple[str, int, int], ...] = (
+    ("identity.completeness", 1, 8),
+    ("identity.series_and_models", 1, 6),
+    ("identity.capabilities_consistent", 1, 4),
+    ("meta_title.quality", 1, 8),
+    ("meta_description.quality", 1, 8),
+    ("seo_keyword.valid_and_stable", 1, 8),
+    ("contract.deterministic_ownership", 1, 3),
+    ("images.gallery_filename_policy", 2, 5),
+    ("images.path_sequence_and_format", 2, 4),
+    ("images.alt_quality", 2, 4),
+    ("content.heading_structure", 2, 2),
+    ("internal_linking.related_and_category", 2, 3),
+    ("content.catalog_uniqueness", 2, 2),
+    ("identifiers.validity_and_provenance", 3, 5),
+    ("structured_data.product_completeness", 3, 5),
+    ("structured_data.offer_consistency", 3, 5),
+    ("merchant.validation", 3, 5),
+    ("rollout.migration_safety", 4, 5),
+    ("rollout.redirect_and_canonical_coverage", 4, 4),
+    ("rollout.production_validation", 4, 3),
+    ("rollout.monitoring_and_rollback", 4, 3),
+)
+
+assert len(FULL_PROFILE_CHECK_WEIGHTS) == 21
+assert sum(weight for _, _, weight in FULL_PROFILE_CHECK_WEIGHTS) == 100
+assert {
+    phase: sum(weight for _, check_phase, weight in FULL_PROFILE_CHECK_WEIGHTS if check_phase == phase)
+    for phase in (1, 2, 3, 4)
+} == {1: 45, 2: 20, 3: 20, 4: 15}
+
+
+FULL_PROFILE_GROUP_METADATA: dict[str, dict[str, Any]] = {
+    "identity.completeness": {
+        "category": "identity",
+        "description": "Required product identity and primary specification evidence are complete.",
+        "subchecks": (
+            "identity.brand_present",
+            "identity.primary_identifier_present",
+            "identity.category_phrase_present",
+            "technical.btu_normalized",
+        ),
+    },
+    "identity.series_and_models": {
+        "category": "identity",
+        "description": "Verified commercial series and model relationships are preserved.",
+        "subchecks": (
+            "identity.commercial_series_preserved",
+            "identity.model_pair_preserved",
+        ),
+    },
+    "identity.capabilities_consistent": {
+        "category": "identity",
+        "description": "Displayed capabilities and energy claims agree with deterministic evidence.",
+        "subchecks": (
+            "identity.air_conditioner_capabilities_consistent",
+            "technical.energy_pair_consistent",
+            "technical.capability_evidence",
+        ),
+    },
+    "meta_title.quality": {
+        "category": "meta_title",
+        "description": "Meta title identity, intent, suffix, length, and repetition checks pass.",
+        "subchecks": tuple(check_id for check_id, _, _ in CHECK_WEIGHTS if check_id.startswith("meta_title.")),
+    },
+    "meta_description.quality": {
+        "category": "meta_description",
+        "description": "Meta description identity, length, claims, and sentence-quality checks pass.",
+        "subchecks": tuple(check_id for check_id, _, _ in CHECK_WEIGHTS if check_id.startswith("meta_description.")),
+    },
+    "seo_keyword.valid_and_stable": {
+        "category": "seo_keyword",
+        "description": "SEO keyword syntax, identity, uniqueness, and published lock are stable.",
+        "subchecks": tuple(check_id for check_id, _, _ in CHECK_WEIGHTS if check_id.startswith("seo_keyword.")),
+    },
+    "contract.deterministic_ownership": {
+        "category": "contract",
+        "description": "Deterministic fields remain code-owned and compatibility metadata stays optional.",
+        "subchecks": tuple(check_id for check_id, _, _ in CHECK_WEIGHTS if check_id.startswith("contract.")),
+    },
+    "images.gallery_filename_policy": {
+        "category": "images",
+        "description": "Gallery assets are present, valid JPEGs, and follow the candidate filename policy.",
+        "subchecks": (
+            "images.main_present",
+            "images.main_jpeg_valid",
+            "images.gallery_filename_policy",
+        ),
+    },
+    "images.path_sequence_and_format": {
+        "category": "images",
+        "description": "Gallery paths are unique and positions form a valid ordered sequence.",
+        "subchecks": (
+            "images.gallery_sequence",
+            "images.gallery_unique_paths",
+        ),
+    },
+    "images.alt_quality": {
+        "category": "images",
+        "description": "Gallery and description-image alternative text is meaningful and evidence-based.",
+        "subchecks": (
+            "images.gallery_alt_quality",
+            "images.description_alt_quality",
+        ),
+    },
+    "content.heading_structure": {
+        "category": "content",
+        "description": "Description headings respect the storefront H1 contract and remain distinct.",
+        "subchecks": (
+            "content.single_h1_contract",
+            "content.description_heading_distinct",
+        ),
+    },
+    "internal_linking.related_and_category": {
+        "category": "internal_linking",
+        "description": "Canonical category and deterministic related-product links are available.",
+        "subchecks": (
+            "internal_linking.category_link",
+            "internal_linking.related_products",
+        ),
+    },
+    "content.catalog_uniqueness": {
+        "category": "content",
+        "description": "Introductory and meta-description content remain unique in catalog context.",
+        "subchecks": (
+            "content.intro_catalog_uniqueness",
+            "content.meta_description_catalog_uniqueness",
+        ),
+    },
+    "identifiers.validity_and_provenance": {
+        "category": "identifiers",
+        "description": "Internal model and supported MPN identity are valid, consistent, and sourced.",
+        "subchecks": tuple(check_id for check_id, _, _, _ in PHASE3_CHECKS if check_id.startswith("identity.")),
+    },
+    "structured_data.product_completeness": {
+        "category": "structured_data",
+        "description": "Product structured data is complete and consistent with canonical product identity.",
+        "subchecks": tuple(
+            check_id
+            for check_id, _, _, _ in PHASE3_CHECKS
+            if check_id.startswith("structured_data.") and check_id != "structured_data.offer_consistent"
+        ),
+    },
+    "structured_data.offer_consistency": {
+        "category": "structured_data",
+        "description": "Structured-data Offer values are internally consistent when available.",
+        "subchecks": ("structured_data.offer_consistent",),
+    },
+    "merchant.validation": {
+        "category": "feed",
+        "description": "Merchant/feed candidate identity, price, availability, and field policy validate.",
+        "subchecks": tuple(check_id for check_id, _, _, _ in PHASE3_CHECKS if check_id.startswith("feed.")),
+    },
+    "rollout.migration_safety": {
+        "category": "rollout",
+        "description": "Snapshot, approval, field scope, and rollback preconditions make migration reversible.",
+        "subchecks": (),
+    },
+    "rollout.redirect_and_canonical_coverage": {
+        "category": "rollout",
+        "description": "Slug changes, redirects, and canonical updates are approved and fully accounted for.",
+        "subchecks": (),
+    },
+    "rollout.production_validation": {
+        "category": "rollout",
+        "description": "Configured production validation checks completed successfully.",
+        "subchecks": (),
+    },
+    "rollout.monitoring_and_rollback": {
+        "category": "rollout",
+        "description": "Post-rollout monitoring and verified rollback coverage are available.",
+        "subchecks": (),
+    },
+}
+
+
 def round_half_up(value: Decimal | float | int) -> int:
     return int(Decimal(str(value)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
@@ -208,40 +389,58 @@ def evaluate_seo_health(
     profile: str = "phase1",
     phase2: Mapping[str, Any] | None = None,
     phase3: Mapping[str, Any] | None = None,
+    phase4: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     identity = deterministic_product.get("seo_identity", {})
     identity = identity if isinstance(identity, Mapping) else {}
     air_conditioner = identity.get("family") == "air_conditioner"
-    checks = _evaluate_checks(
+    phase1_checks = _evaluate_checks(
         row=row,
         deterministic_product=deterministic_product,
         identity=identity,
         air_conditioner=air_conditioner,
         catalog_seo_keywords=catalog_seo_keywords,
     )
-    if profile == "full":
-        checks.extend(_evaluate_phase2_checks(row=row, deterministic_product=deterministic_product, phase2=phase2 or {}))
     phase3_settings = (settings or {}).get("phase3", {})
     phase3_settings = phase3_settings if isinstance(phase3_settings, Mapping) else {}
     product_identity = deterministic_product.get("product_identity", {})
     product_identity = product_identity if isinstance(product_identity, Mapping) else {}
-    active_families = {str(value) for value in phase3_settings.get("families", [])}
-    phase3_active = bool(phase3_settings.get("enabled", False)) and str(product_identity.get("family_key") or "") in active_families
-    if phase3_active:
-        checks = _rescale_checks(checks, factor=Decimal("0.8"))
-        checks.extend(
-            _evaluate_phase3_checks(
-                row=row,
-                product_identity=product_identity,
-                phase3=phase3 or {},
-                require_verified=bool(phase3_settings.get("mpn_require_verified", True)),
-            )
+    if profile == "full":
+        checks = _evaluate_full_profile_checks(
+            row=row,
+            deterministic_product=deterministic_product,
+            phase1_checks=phase1_checks,
+            product_identity=product_identity,
+            phase2=phase2,
+            phase3=phase3,
+            phase3_settings=phase3_settings,
+            phase4=phase4,
         )
+    else:
+        # Compatibility path: keep the established Phase 1 profile, including
+        # its opt-in Phase 3 rescaling behavior, exactly as it was before the
+        # full rollout profile existed.
+        checks = phase1_checks
+        active_families = {str(value) for value in phase3_settings.get("families", [])}
+        phase3_active = bool(phase3_settings.get("enabled", False)) and str(product_identity.get("family_key") or "") in active_families
+        if phase3_active:
+            checks = _rescale_checks(checks, factor=Decimal("0.8"))
+            checks.extend(
+                _evaluate_phase3_checks(
+                    row=row,
+                    product_identity=product_identity,
+                    phase3=phase3 or {},
+                    require_verified=bool(phase3_settings.get("mpn_require_verified", True)),
+                )
+            )
     totals = calculate_score(checks)
     gate = _publish_gate(totals, settings)
     return {
         "schema_version": "1.0",
-        "ruleset_version": str((settings or {}).get("ruleset_version") or RULESET_VERSION),
+        "ruleset_version": str(
+            (settings or {}).get("ruleset_version")
+            or (FULL_RULESET_VERSION if profile == "full" else RULESET_VERSION)
+        ),
         "profile": profile,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "model": str(model),
@@ -581,6 +780,411 @@ def _evaluate_phase2_checks(*, row: Mapping[str, Any], deterministic_product: Ma
             "evidence": [], "remediation": "Review the Phase 2 candidate metadata and render again.",
         })
     return checks
+
+
+_CHECK_STATUSES = {"pass", "warn", "fail", "not_applicable", "not_run"}
+_ATTENTION_STATUSES = {"fail", "warn", "not_run"}
+_EVIDENCE_SOURCES = {
+    "source", "manufacturer", "deterministic", "llm", "catalog", "runtime", "settings"
+}
+
+
+def _evaluate_full_profile_checks(
+    *,
+    row: Mapping[str, Any],
+    deterministic_product: Mapping[str, Any],
+    phase1_checks: Iterable[Mapping[str, Any]],
+    product_identity: Mapping[str, Any],
+    phase2: Mapping[str, Any] | None,
+    phase3: Mapping[str, Any] | None,
+    phase3_settings: Mapping[str, Any],
+    phase4: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Build the exact 100-point grouped rollout profile.
+
+    Missing Phase 2/3/4 execution evidence is represented as ``not_run``.  It
+    therefore remains outside the score denominator while lowering coverage;
+    it is never silently converted into a pass or a strict-mode transition.
+    """
+
+    phase1_lookup = {str(check.get("id")): dict(check) for check in phase1_checks}
+
+    phase2_payload = dict(phase2) if isinstance(phase2, Mapping) else {}
+    phase2_checks = _evaluate_phase2_checks(
+        row=row,
+        deterministic_product=deterministic_product,
+        phase2=phase2_payload,
+    )
+    phase2_context_available = any(
+        bool(phase2_payload.get(key))
+        for key in (
+            "image_assets",
+            "sections",
+            "internal_links",
+            "catalog_similarity",
+            "description_heading",
+        )
+    ) or any(
+        bool(deterministic_product.get(key))
+        for key in (
+            "image_assets",
+            "presentation_section_image_metadata",
+            "internal_links",
+            "catalog_similarity",
+            "description_heading",
+        )
+    )
+    if not phase2_context_available:
+        phase2_checks = [
+            _check_not_run(check, "Phase 2 candidate evidence was not supplied.")
+            for check in phase2_checks
+        ]
+    else:
+        similarity_payload = phase2_payload.get(
+            "catalog_similarity", deterministic_product.get("catalog_similarity")
+        )
+        similarity_mapping = (
+            similarity_payload if isinstance(similarity_payload, Mapping) else {}
+        )
+        intro_similarity = similarity_mapping.get(
+            "intro", similarity_mapping.get("description")
+        )
+        meta_similarity = similarity_mapping.get("meta_description")
+        catalog_context_by_check = {
+            "content.intro_catalog_uniqueness": bool(
+                isinstance(intro_similarity, Mapping)
+                and "score" in intro_similarity
+            ),
+            "content.meta_description_catalog_uniqueness": bool(
+                isinstance(meta_similarity, Mapping) and "score" in meta_similarity
+            ),
+        }
+        links_payload = phase2_payload.get(
+            "internal_links", deterministic_product.get("internal_links")
+        )
+        links_context_available = bool(
+            isinstance(links_payload, Mapping) and links_payload
+        )
+        sections_payload = phase2_payload.get(
+            "sections",
+            deterministic_product.get("presentation_section_image_metadata"),
+        )
+        sections_context_available = bool(
+            isinstance(sections_payload, list) and sections_payload
+        )
+        heading_context_available = bool(
+            _text(
+                phase2_payload.get(
+                    "description_heading",
+                    deterministic_product.get("description_heading", ""),
+                )
+            )
+        )
+        phase2_checks = [
+            _check_not_run(check, "Catalog similarity evidence was not supplied.")
+            if str(check.get("id")) in {
+                "content.intro_catalog_uniqueness",
+                "content.meta_description_catalog_uniqueness",
+            }
+            and not catalog_context_by_check[str(check.get("id"))]
+            else _check_not_run(check, "Internal-link evidence was not supplied.")
+            if str(check.get("id")).startswith("internal_linking.")
+            and not links_context_available
+            else _check_not_run(check, "Presentation-section alt evidence was not supplied.")
+            if str(check.get("id")) == "images.description_alt_quality"
+            and not sections_context_available
+            else _check_not_run(check, "Description-heading evidence was not supplied.")
+            if str(check.get("id")) == "content.description_heading_distinct"
+            and not heading_context_available
+            else dict(check)
+            for check in phase2_checks
+        ]
+    phase2_lookup = {str(check.get("id")): check for check in phase2_checks}
+
+    phase3_payload = dict(phase3) if isinstance(phase3, Mapping) else {}
+    if "structured_data" not in phase3_payload and isinstance(
+        phase3_payload.get("structured_data_manifest"), Mapping
+    ):
+        phase3_payload["structured_data"] = phase3_payload["structured_data_manifest"]
+    if "feed" not in phase3_payload and isinstance(
+        phase3_payload.get("product_feed"), Mapping
+    ):
+        phase3_payload["feed"] = phase3_payload["product_feed"]
+    resolved_product_identity = dict(product_identity)
+    if not resolved_product_identity and isinstance(phase3_payload.get("identity"), Mapping):
+        resolved_product_identity = dict(phase3_payload["identity"])
+    phase3_checks = _evaluate_phase3_checks(
+        row=row,
+        product_identity=resolved_product_identity,
+        phase3=phase3_payload,
+        require_verified=bool(phase3_settings.get("mpn_require_verified", True)),
+    )
+    identity_available = bool(resolved_product_identity)
+    structured_enabled = bool(phase3_payload.get("structured_data_enabled", True))
+    feed_enabled = bool(phase3_payload.get("product_feed_enabled", True))
+    structured_available = "structured_data" in phase3_payload or not structured_enabled
+    feed_available = "feed" in phase3_payload or not feed_enabled
+    phase3_checks = [
+        _check_not_run(check, "Product-identity evidence was not supplied.")
+        if str(check.get("id")).startswith("identity.") and not identity_available
+        else _check_not_run(check, "Structured-data validation was not run.")
+        if str(check.get("id")).startswith("structured_data.") and not structured_available
+        else _check_not_run(check, "Merchant/feed validation was not run.")
+        if str(check.get("id")).startswith("feed.") and not feed_available
+        else dict(check)
+        for check in phase3_checks
+    ]
+    phase3_lookup = {str(check.get("id")): check for check in phase3_checks}
+
+    phase4_payload = phase4 if isinstance(phase4, Mapping) else {}
+    lookups = {1: phase1_lookup, 2: phase2_lookup, 3: phase3_lookup}
+    default_sources = {1: "deterministic", 2: "runtime", 3: "runtime"}
+    grouped: list[dict[str, Any]] = []
+    for group_id, group_phase, weight in FULL_PROFILE_CHECK_WEIGHTS:
+        metadata = FULL_PROFILE_GROUP_METADATA[group_id]
+        if group_phase == 4:
+            grouped.append(
+                _evaluate_phase4_group(
+                    group_id=group_id,
+                    weight=weight,
+                    metadata=metadata,
+                    payload=phase4_payload.get(group_id),
+                )
+            )
+            continue
+        lookup = lookups[group_phase]
+        subchecks = [
+            lookup.get(
+                subcheck_id,
+                _missing_internal_subcheck(subcheck_id, group_phase),
+            )
+            for subcheck_id in metadata["subchecks"]
+        ]
+        grouped.append(
+            _build_grouped_check(
+                group_id=group_id,
+                phase=group_phase,
+                weight=weight,
+                metadata=metadata,
+                subchecks=subchecks,
+                default_evidence_source=default_sources[group_phase],
+            )
+        )
+    return grouped
+
+
+def _evaluate_phase4_group(
+    *,
+    group_id: str,
+    weight: int,
+    metadata: Mapping[str, Any],
+    payload: object,
+) -> dict[str, Any]:
+    raw = dict(payload) if isinstance(payload, Mapping) else {}
+    explicit_status = str(raw.get("status") or "")
+    if explicit_status not in _CHECK_STATUSES:
+        explicit_status = "not_run"
+    raw_subchecks = raw.get("subchecks")
+    subchecks: list[dict[str, Any]] = []
+    if isinstance(raw_subchecks, list):
+        for index, item in enumerate(raw_subchecks, start=1):
+            if not isinstance(item, Mapping):
+                continue
+            subcheck = dict(item)
+            subcheck_id = normalize_whitespace(
+                str(subcheck.get("id") or f"{group_id}.subcheck_{index}")
+            )
+            status = str(subcheck.get("status") or "not_run")
+            if status not in _CHECK_STATUSES:
+                status = "not_run"
+            subchecks.append({
+                **subcheck,
+                "id": subcheck_id,
+                "status": status,
+                "blocks_publish": bool(subcheck.get("blocks_publish", False)),
+                "message": str(subcheck.get("message") or status),
+            })
+
+    attention_present = any(
+        str(subcheck.get("status")) in _ATTENTION_STATUSES for subcheck in subchecks
+    )
+    if not subchecks or (explicit_status in _ATTENTION_STATUSES and not attention_present):
+        subchecks.append({
+            "id": f"{group_id}.group_status",
+            "status": explicit_status,
+            "blocks_publish": bool(raw.get("blocks_publish", False)),
+            "message": str(
+                raw.get("message")
+                or ("Phase 4 rollout evidence was not supplied." if not payload else explicit_status)
+            ),
+            "observed": raw.get("observed"),
+            "expected": raw.get("expected"),
+            "evidence": raw.get("evidence", []),
+        })
+
+    return _build_grouped_check(
+        group_id=group_id,
+        phase=4,
+        weight=weight,
+        metadata=metadata,
+        subchecks=subchecks,
+        default_evidence_source="runtime",
+        explicit_status=explicit_status,
+        overrides=raw,
+    )
+
+
+def _build_grouped_check(
+    *,
+    group_id: str,
+    phase: int,
+    weight: int,
+    metadata: Mapping[str, Any],
+    subchecks: Iterable[Mapping[str, Any]],
+    default_evidence_source: str,
+    explicit_status: str = "",
+    overrides: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    materialized = [dict(check) for check in subchecks]
+    statuses = [str(check.get("status") or "not_run") for check in materialized]
+    if explicit_status in _CHECK_STATUSES:
+        statuses.append(explicit_status)
+    status = _aggregate_group_status(statuses)
+    raw_overrides = overrides if isinstance(overrides, Mapping) else {}
+    blocks_requested = bool(raw_overrides.get("blocks_publish", False)) or any(
+        bool(check.get("blocks_publish", False))
+        and str(check.get("status")) == "fail"
+        for check in materialized
+    )
+    blocks_publish = bool(status == "fail" and blocks_requested)
+    earned = weight if status == "pass" else (weight * .5 if status == "warn" else 0)
+    evidence = [
+        _attention_evidence(check, default_source=default_evidence_source)
+        for check in materialized
+        if str(check.get("status")) in _ATTENTION_STATUSES
+    ]
+    observed = (
+        raw_overrides.get("observed")
+        if "observed" in raw_overrides
+        else {str(check.get("id")): str(check.get("status")) for check in materialized}
+    )
+    expected = (
+        raw_overrides.get("expected")
+        if "expected" in raw_overrides
+        else "all applicable subchecks pass"
+    )
+    message = str(raw_overrides.get("message") or _group_message(status, evidence))
+    return {
+        "id": group_id,
+        "phase": phase,
+        "category": str(metadata["category"]),
+        "description": str(metadata["description"]),
+        "status": status,
+        "severity": (
+            "blocker"
+            if blocks_publish
+            else "error"
+            if status == "fail"
+            else "warning"
+            if status in {"warn", "not_run"}
+            else "info"
+        ),
+        "blocks_publish": blocks_publish,
+        "weight": weight,
+        "earned_points": earned,
+        "message": message,
+        "observed": observed,
+        "expected": expected,
+        "applicable_reason": f"Full SEO-health profile Phase {phase} group.",
+        "evidence": evidence,
+        "remediation": (
+            "Complete and verify rollout evidence before applying or expanding the migration."
+            if phase == 4
+            else "Review each listed subcheck, correct its deterministic evidence, and evaluate again."
+        ),
+    }
+
+
+def _aggregate_group_status(statuses: Iterable[str]) -> str:
+    materialized = [status if status in _CHECK_STATUSES else "not_run" for status in statuses]
+    if "fail" in materialized:
+        return "fail"
+    if "not_run" in materialized:
+        return "not_run"
+    if "warn" in materialized:
+        return "warn"
+    if "pass" in materialized:
+        return "pass"
+    return "not_applicable"
+
+
+def _attention_evidence(check: Mapping[str, Any], *, default_source: str) -> dict[str, Any]:
+    source = str(check.get("source") or "")
+    nested_evidence = check.get("evidence")
+    if source not in _EVIDENCE_SOURCES and isinstance(nested_evidence, list):
+        source = next(
+            (
+                str(item.get("source"))
+                for item in nested_evidence
+                if isinstance(item, Mapping) and str(item.get("source")) in _EVIDENCE_SOURCES
+            ),
+            "",
+        )
+    if source not in _EVIDENCE_SOURCES:
+        source = default_source
+    value = {
+        "status": str(check.get("status") or "not_run"),
+        "message": str(check.get("message") or check.get("status") or "not_run"),
+        "observed": check.get("observed"),
+        "expected": check.get("expected"),
+    }
+    if nested_evidence:
+        value["evidence"] = nested_evidence
+    evidence: dict[str, Any] = {
+        "source": source,
+        "field": str(check.get("id") or "unknown.subcheck"),
+        "value": value,
+    }
+    if normalize_whitespace(str(check.get("path") or "")):
+        evidence["path"] = normalize_whitespace(str(check.get("path")))
+    return evidence
+
+
+def _check_not_run(check: Mapping[str, Any], reason: str) -> dict[str, Any]:
+    return {
+        **dict(check),
+        "status": "not_run",
+        "severity": "warning",
+        "blocks_publish": False,
+        "earned_points": 0,
+        "message": reason,
+        "observed": None,
+        "applicable_reason": reason,
+        "evidence": [],
+    }
+
+
+def _missing_internal_subcheck(check_id: str, phase: int) -> dict[str, Any]:
+    return {
+        "id": check_id,
+        "phase": phase,
+        "status": "not_run",
+        "blocks_publish": False,
+        "message": "The deterministic subcheck was unavailable.",
+        "observed": None,
+        "expected": "subcheck result",
+        "evidence": [],
+    }
+
+
+def _group_message(status: str, evidence: list[Mapping[str, Any]]) -> str:
+    if status == "pass":
+        return "all_applicable_subchecks_passed"
+    if status == "not_applicable":
+        return "all_subchecks_not_applicable"
+    if status == "not_run":
+        return f"subchecks_not_run:{len(evidence)}"
+    return f"subchecks_{status}:{len(evidence)}"
 
 
 def valid_seo_filename(value: str) -> bool:

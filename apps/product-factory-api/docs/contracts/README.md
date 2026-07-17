@@ -2,6 +2,11 @@
 
 The backend OpenAPI snapshot is the canonical Product Factory API contract. See `docs/api.md` for endpoint groups, request/response summaries, runtime state, and local API startup.
 
+Phase 4 SEO rollout uses standalone, machine-readable operator contracts:
+
+- `seo_migration_approval.schema.json` is the exact per-product approval manifest.
+- `seo_migration_redirect.schema.json` records redirects already applied and verified by the external system that owns redirects. This repository does not apply 301 redirects itself.
+
 Snapshot path:
 
 ```text

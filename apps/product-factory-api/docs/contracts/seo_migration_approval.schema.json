@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://etranoulis.gr/contracts/product-factory/seo_migration_approval.schema.json",
+  "title": "Product Factory SEO migration approval",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "snapshot_id",
+    "migration_run_id",
+    "approved_by",
+    "approved_at",
+    "products"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "snapshot_id": {"type": "string", "minLength": 1},
+    "migration_run_id": {"type": "string", "minLength": 1},
+    "approved_by": {"type": "string", "minLength": 1},
+    "approved_at": {"type": "string", "format": "date-time"},
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "model",
+          "approved_fields",
+          "approved_slug_change",
+          "approved_image_path_change",
+          "notes"
+        ],
+        "properties": {
+          "model": {"type": "string", "pattern": "^[0-9]{6}$"},
+          "approved_fields": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+          },
+          "approved_slug_change": {"type": "boolean"},
+          "approved_image_path_change": {"type": "boolean"},
+          "notes": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -92,5 +92,8 @@ def test_catalog_similarity_thresholds_and_phase1_compatibility() -> None:
     phase1 = evaluate_seo_health(model="123456", row=row, deterministic_product=fields)
     assert len(phase1["checks"]) == 29 and validate_seo_health_contract(phase1) == []
     full = evaluate_seo_health(model="123456", row=row, deterministic_product=fields, profile="full", phase2={"image_assets": _assets(), "internal_links": {"canonical_category": "/ac", "related_products": ["100001"]}})
-    assert {check["id"] for check in full["checks"]} >= {"images.main_present", "internal_linking.related_products"}
+    assert {check["id"] for check in full["checks"]} >= {
+        "images.gallery_filename_policy",
+        "internal_linking.related_and_category",
+    }
     assert validate_seo_health_contract(full) == []

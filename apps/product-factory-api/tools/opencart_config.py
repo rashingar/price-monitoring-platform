@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import shlex
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 def discover_repo_root(explicit_repo_root: str | None) -> Path:
@@ -139,6 +142,51 @@ def resolve_opencart_config(
             "",
         ),
     }
+
+
+def compute_opencart_target_identity(
+    *, store_base: str, admin_path: str, profile: str
+) -> str:
+    """Return a non-secret fingerprint for one OpenCart Karapuz target."""
+
+    parsed = urlsplit(str(store_base or "").strip())
+    normalized_admin = str(admin_path or "").strip().replace("\\", "/")
+    normalized_profile = str(profile or "").strip()
+    if (
+        parsed.scheme.casefold() not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+        or not normalized_admin
+        or not normalized_profile
+        or "?" in normalized_admin
+        or "#" in normalized_admin
+        or any(ord(character) < 32 for character in normalized_admin)
+        or any(ord(character) < 32 for character in normalized_profile)
+    ):
+        raise ValueError(
+            "OpenCart target configuration requires a plain HTTP(S) store base, "
+            "admin path, and exact import profile."
+        )
+    default_port = 443 if parsed.scheme.casefold() == "https" else 80
+    material = {
+        "adapter": "opencart_karapuz_partial_csv",
+        "scheme": parsed.scheme.casefold(),
+        "host": parsed.hostname.casefold(),
+        "port": parsed.port or default_port,
+        "store_path": (
+            "/" + parsed.path.strip("/") if parsed.path.strip("/") else "/"
+        ),
+        "admin_path": "/" + normalized_admin.strip("/"),
+        "import_profile": normalized_profile,
+        "partial_csv": True,
+    }
+    canonical = json.dumps(
+        material, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return f"opencart-target:sha256:{hashlib.sha256(canonical).hexdigest()}"
 
 
 def _export_shell(args: argparse.Namespace) -> int:

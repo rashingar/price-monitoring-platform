@@ -9,5 +9,6 @@ env/
 .env.local
 /products/*
 products/*
+/migration/
 resources/mappings/laptop-test_no_empty_filters.csv
 resources/mappings/full_catalog_with_filters.csv
