@@ -179,6 +179,7 @@ def execute_render_workflow(
             existing_mpn=existing_product_row.get("mpn", ""),
             phase3_settings=phase3_settings if isinstance(phase3_settings, Mapping) else {},
         )
+        _align_gallery_asset_filenames(candidate_normalized.get("image_assets", []))
         catalog_rows = _read_catalog_rows(products_root)
         candidate_normalized["catalog_similarity"] = {
             "intro": catalog_similarity(str(candidate_normalized.get("llm_intro_text", "")), catalog_rows, field="description", current_model=model),
@@ -522,6 +523,31 @@ def _build_llm_validation_backstop_errors(
     )
     del intro_text
     return [*intro_errors, *seo_errors]
+
+
+def _align_gallery_asset_filenames(image_assets: object) -> None:
+    """Make prepared gallery filenames match the CSV's deterministic public paths."""
+
+    if not isinstance(image_assets, list):
+        return
+    for asset in image_assets:
+        if not isinstance(asset, Mapping):
+            continue
+        local_value = str(asset.get("local_path") or "").strip()
+        public_value = str(asset.get("public_path") or "").strip()
+        if not local_value or not public_value:
+            continue
+        source = Path(local_value)
+        target = source.with_name(Path(public_value).name)
+        if source == target or not source.is_file():
+            continue
+        if target.exists():
+            if target.read_bytes() != source.read_bytes():
+                raise RuntimeError(f"gallery filename collision: {target.name}")
+            source.unlink()
+        else:
+            source.rename(target)
+        asset["local_path"] = str(target)
 
 
 def _resolve_render_sections(

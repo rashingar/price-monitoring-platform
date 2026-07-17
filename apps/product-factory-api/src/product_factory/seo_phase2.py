@@ -27,6 +27,12 @@ def is_jpeg_bytes(payload: bytes) -> bool:
     try:
         from io import BytesIO
         from PIL import Image
+    except ModuleNotFoundError:
+        # The OpenCart upload wrapper runs with WSL's system Python, which may
+        # not have Pillow installed. Retain a format-level guard there rather
+        # than rejecting every valid JPEG before upload.
+        return payload[-2:] == b"\xff\xd9"
+    try:
         with Image.open(BytesIO(payload)) as image:
             if image.format != "JPEG":
                 return False
