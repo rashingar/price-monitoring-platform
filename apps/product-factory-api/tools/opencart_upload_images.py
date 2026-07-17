@@ -10,6 +10,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, urlparse
 
+# This script is launched through Git Bash as a file, so its imports must not
+# depend on a Bash-formatted PYTHONPATH.  Make both the application root
+# (tools) and the src-layout package root available to the active interpreter.
+APP_ROOT = Path(__file__).resolve().parents[1]
+for import_root in (APP_ROOT, APP_ROOT / "src"):
+    import_root_str = str(import_root)
+    if import_root_str not in sys.path:
+        sys.path.insert(0, import_root_str)
+
 from product_factory.publish_gallery_assets import (
     PublishGalleryResolutionError,
     resolve_publish_gallery_assets,

@@ -1471,6 +1471,7 @@ def test_execute_publish_workflow_passes_model_and_current_job_product_file(
     assert captured["text"] is True
     assert captured["check"] is False
     assert captured["env"]["CURRENT_JOB_PRODUCT_FILE"] == "products/233541.csv"
+    assert captured["env"]["PYTHON_BIN"] == publish_execution.sys.executable
     assert "REPO_ROOT" not in captured["env"]
     assert result["publish_attempted"] is True
     assert result["publish_status"] == "warning"

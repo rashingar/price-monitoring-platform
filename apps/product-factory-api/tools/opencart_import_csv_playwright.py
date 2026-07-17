@@ -14,6 +14,14 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
+# See opencart_upload_images.py: this entry point is executed from Git Bash,
+# so bootstrap native Python import paths instead of relying on PYTHONPATH.
+APP_ROOT = Path(__file__).resolve().parents[1]
+for import_root in (APP_ROOT, APP_ROOT / "src"):
+    import_root_str = str(import_root)
+    if import_root_str not in sys.path:
+        sys.path.insert(0, import_root_str)
+
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 from product_factory.publish_gallery_assets import (

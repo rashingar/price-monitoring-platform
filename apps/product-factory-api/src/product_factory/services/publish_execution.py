@@ -187,6 +187,11 @@ def execute_publish_workflow(
         else:
             env = os.environ.copy()
             env.pop("PYTHONPATH", None)
+            # The Bash publish wrappers run Python helpers.  Pin them to the
+            # interpreter that is already executing this worker instead of
+            # falling back to a PATH-provided `python3` (often the Windows App
+            # Execution Alias, which does not have product_factory installed).
+            env["PYTHON_BIN"] = sys.executable
             env["CURRENT_JOB_PRODUCT_FILE"] = _shell_path_from_repo(
                 published_csv_path,
                 repo_root=repo_root,
