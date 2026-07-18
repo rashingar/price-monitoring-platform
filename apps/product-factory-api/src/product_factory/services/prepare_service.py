@@ -150,6 +150,7 @@ def prepare_product(request: PrepareRequest) -> ServiceResult:
         skroutz_status=request.skroutz_status,
         boxnow=request.boxnow,
         price=request.price,
+        manual_mpn=request.manual_mpn,
         gallery_url=request.gallery_url,
         characteristics_url=request.characteristics_url,
         second_opencart_image_index=request.second_opencart_image_index,

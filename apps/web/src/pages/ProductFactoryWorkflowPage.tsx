@@ -436,6 +436,9 @@ function makeFullPipelineRequest(request: PrepareJobRequest): FullPipelineJobReq
   if (request.characteristics_url) {
     fullPipelineRequest.characteristics_url = request.characteristics_url;
   }
+  if (request.manual_mpn) {
+    fullPipelineRequest.manual_mpn = request.manual_mpn;
+  }
   if (request.second_opencart_image_index !== undefined) {
     fullPipelineRequest.second_opencart_image_index = request.second_opencart_image_index;
   }
@@ -447,6 +450,7 @@ function clearQueuedPrepareDraft(current: PrepareFormState): PrepareFormState {
     ...current,
     model: "",
     url: "",
+    manual_mpn: "",
     gallery_url: "",
     characteristics_url: "",
     second_opencart_image_index: "",

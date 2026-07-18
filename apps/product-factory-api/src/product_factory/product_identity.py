@@ -113,6 +113,21 @@ def normalize_mpn_for_match(value: object) -> str:
     return re.sub(r"\s+", " ", text)
 
 
+def normalize_manual_mpn(value: object, *, internal_model: object = "") -> str:
+    """Normalize an operator-supplied MPN and protect the internal-key contract."""
+    raw = normalize_whitespace(str(value or ""))
+    normalized = normalize_mpn_display(raw)
+    if raw and not normalized:
+        raise ValueError("manual_mpn must be a valid manufacturer part number")
+    if len(normalized) > 80:
+        raise ValueError("manual_mpn must be 80 characters or fewer")
+    if normalized and normalize_mpn_for_match(normalized) == normalize_mpn_for_match(
+        internal_model
+    ):
+        raise ValueError("manual_mpn must not match the internal 6-digit model")
+    return normalized
+
+
 def extract_mpn_candidates(
     values: Iterable[object], *, source: str, source_url: str = "", confidence: float = 0.60,
     status: str = "inferred",

@@ -80,6 +80,7 @@ def add_input_fields(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--boxnow", type=int, default=None)
     parser.add_argument("--price", default=None)
+    parser.add_argument("--manual-mpn", default=None, dest="manual_mpn")
     parser.add_argument("--gallery-url", default=None, dest="gallery_url")
     parser.add_argument(
         "--characteristics-url", default=None, dest="characteristics_url"
@@ -110,6 +111,7 @@ def main(argv: list[str] | None = None) -> int:
                     skroutz_status=cli.skroutz_status,
                     boxnow=cli.boxnow,
                     price=cli.price,
+                    manual_mpn=cli.manual_mpn,
                     gallery_url=cli.gallery_url,
                     characteristics_url=cli.characteristics_url,
                     second_opencart_image_index=cli.second_opencart_image_index,
@@ -169,6 +171,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         ),
         "boxnow": template_values.get("boxnow", str(DEFAULT_BOXNOW_STATUS)),
         "price": template_values.get("price", "0"),
+        "manual_mpn": template_values.get("manual_mpn", ""),
         "gallery_url": template_values.get("gallery_url", ""),
         "characteristics_url": template_values.get("characteristics_url", ""),
         "second_opencart_image_index": template_values.get(
@@ -185,6 +188,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         "skroutz_status",
         "boxnow",
         "price",
+        "manual_mpn",
         "gallery_url",
         "characteristics_url",
         "second_opencart_image_index",
@@ -202,6 +206,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         skroutz_status=merged["skroutz_status"],
         boxnow=merged["boxnow"],
         price=merged["price"],
+        manual_mpn=merged["manual_mpn"],
         gallery_url=merged["gallery_url"],
         characteristics_url=merged["characteristics_url"],
         second_opencart_image_index=merged["second_opencart_image_index"],
@@ -218,6 +223,7 @@ def build_cli_input_from_args(args: argparse.Namespace) -> CLIInput:
         skroutz_status=cli.skroutz_status,
         boxnow=cli.boxnow,
         price=cli.price,
+        manual_mpn=cli.manual_mpn,
         gallery_url=cli.gallery_url,
         characteristics_url=cli.characteristics_url,
         second_opencart_image_index=cli.second_opencart_image_index,
@@ -253,6 +259,7 @@ def parse_template_text(text: str) -> dict[str, str]:
             "skroutz_status",
             "boxnow",
             "price",
+            "manual_mpn",
             "gallery_url",
             "characteristics_url",
             "second_opencart_image_index",

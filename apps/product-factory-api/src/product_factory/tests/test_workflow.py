@@ -88,7 +88,7 @@ def write_publish_csv_and_jpeg(
 def test_build_cli_input_from_template_file(tmp_path: Path, monkeypatch) -> None:
     template = tmp_path / "input.txt"
     template.write_text(
-        "model: 233541\nurl: https://www.electronet.gr/oikiakes-syskeyes/example\nphotos: 6\nsections: 5\nskroutz_status: 1\nboxnow: 0\nprice: 2099\n",
+        "model: 233541\nurl: https://www.electronet.gr/oikiakes-syskeyes/example\nphotos: 6\nsections: 5\nskroutz_status: 1\nboxnow: 0\nprice: 2099\nmanual_mpn: ABC-123\n",
         encoding="utf-8",
     )
     args = argparse.Namespace(
@@ -108,6 +108,7 @@ def test_build_cli_input_from_template_file(tmp_path: Path, monkeypatch) -> None
     assert cli.photos == 6
     assert cli.sections == 5
     assert str(cli.price) == "2099"
+    assert cli.manual_mpn == "ABC-123"
 
 
 def test_build_parser_pins_supported_workflow_cli_surface() -> None:

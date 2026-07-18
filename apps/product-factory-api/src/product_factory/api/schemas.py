@@ -3,7 +3,14 @@ from __future__ import annotations
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    field_validator,
+    model_validator,
+)
 
 from product_factory.jobs.models import JobRecord, JobStatus, JobType
 from product_factory.status_fields import (
@@ -14,6 +21,7 @@ from product_factory.status_fields import (
 )
 
 from ..source_detection import validate_url_scope
+from ..product_identity import normalize_manual_mpn
 from .artifact_resolver import ResolvedArtifact
 
 DEFAULT_FULL_PIPELINE_PHOTOS = 100
@@ -34,6 +42,7 @@ class PrepareJobRequest(BaseModel):
     skroutz_status: int = DEFAULT_SKR_OUTZ_STATUS
     boxnow: int = DEFAULT_BOXNOW_STATUS
     price: str | float | int = 0
+    manual_mpn: str | None = Field(default=None, max_length=80)
     gallery_url: str | None = None
     characteristics_url: str | None = None
     second_opencart_image_index: int | None = Field(default=None, ge=1)
@@ -50,15 +59,22 @@ class PrepareJobRequest(BaseModel):
         }[field_name]
         return status_or_default(value, default=default, field_name=field_name)
 
-    @field_validator("gallery_url", "characteristics_url", mode="before")
+    @field_validator("manual_mpn", "gallery_url", "characteristics_url", mode="before")
     @classmethod
-    def _normalize_optional_url(cls, value: object) -> object:
+    def _normalize_optional_text(cls, value: object) -> object:
         if value is None:
             return None
         if isinstance(value, str):
             trimmed = value.strip()
             return trimmed or None
         return value
+
+    @model_validator(mode="after")
+    def _validate_manual_mpn(self) -> "PrepareJobRequest":
+        self.manual_mpn = normalize_manual_mpn(
+            self.manual_mpn, internal_model=self.model
+        ) or None
+        return self
 
     @field_validator("gallery_url", "characteristics_url")
     @classmethod
@@ -114,6 +130,7 @@ class FullPipelineJobRequest(BaseModel):
     skroutz_status: int = DEFAULT_SKR_OUTZ_STATUS
     boxnow: int = DEFAULT_BOXNOW_STATUS
     price: str | float | int = 0
+    manual_mpn: str | None = Field(default=None, max_length=80)
     photos: int = Field(default=DEFAULT_FULL_PIPELINE_PHOTOS, ge=0)
     sections: int = Field(default=DEFAULT_FULL_PIPELINE_SECTIONS, ge=0)
     gallery_url: str | None = None
@@ -134,7 +151,7 @@ class FullPipelineJobRequest(BaseModel):
         return value
 
     @field_validator(
-        "product_name", "trigger_source", "telegram_chat_id", mode="before"
+        "product_name", "manual_mpn", "trigger_source", "telegram_chat_id", mode="before"
     )
     @classmethod
     def _normalize_optional_text(cls, value: object) -> object:
@@ -189,6 +206,13 @@ class FullPipelineJobRequest(BaseModel):
                 "source_url must be a supported Product Factory source URL"
             )
         return value
+
+    @model_validator(mode="after")
+    def _validate_manual_mpn(self) -> "FullPipelineJobRequest":
+        self.manual_mpn = normalize_manual_mpn(
+            self.manual_mpn, internal_model=self.model
+        ) or None
+        return self
 
     @field_validator("bestprice_status", "skroutz_status", "boxnow", mode="before")
     @classmethod

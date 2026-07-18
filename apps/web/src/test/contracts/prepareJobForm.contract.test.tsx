@@ -27,6 +27,7 @@ describe("PrepareJobForm contract", () => {
     expect(screen.getByLabelText("Price")).toHaveValue("0");
     expect(screen.getByLabelText("BestPrice status")).toBeChecked();
     expect(screen.queryByLabelText("Gallery URL")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Manual MPN")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Characteristics URL")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Second OpenCart image index")).not.toBeInTheDocument();
   });
@@ -199,11 +200,13 @@ describe("PrepareJobForm contract", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Extra settings" }));
     expect(screen.getByLabelText("Gallery URL")).toBeInTheDocument();
+    expect(screen.getByLabelText("Manual MPN")).toBeInTheDocument();
     expect(screen.getByLabelText("Characteristics URL")).toBeInTheDocument();
     expect(screen.getByLabelText("Second OpenCart image index")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Model"), { target: { value: "005606" } });
     fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.invalid/product" } });
+    fireEvent.change(screen.getByLabelText("Manual MPN"), { target: { value: "  ABC-123  " } });
     fireEvent.change(screen.getByLabelText("Gallery URL"), { target: { value: "https://example.invalid/gallery" } });
     fireEvent.change(screen.getByLabelText("Characteristics URL"), { target: { value: "https://example.invalid/specs" } });
     fireEvent.change(screen.getByLabelText("Second OpenCart image index"), { target: { value: "4" } });
@@ -212,6 +215,7 @@ describe("PrepareJobForm contract", () => {
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         gallery_url: "https://example.invalid/gallery",
+        manual_mpn: "ABC-123",
         characteristics_url: "https://example.invalid/specs",
         second_opencart_image_index: 4,
       }),

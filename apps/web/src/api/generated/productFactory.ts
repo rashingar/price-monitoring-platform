@@ -617,6 +617,8 @@ export interface components {
       gallery_mode?: "all" | null;
       /** Gallery Url */
       gallery_url?: string | null;
+      /** Manual Mpn */
+      manual_mpn?: string | null;
       /** Model */
       model: string;
       /**
@@ -755,6 +757,8 @@ export interface components {
       gallery_mode?: "all" | null;
       /** Gallery Url */
       gallery_url?: string | null;
+      /** Manual Mpn */
+      manual_mpn?: string | null;
       /** Model */
       model: string;
       /**
@@ -805,11 +809,19 @@ export interface components {
       authoring?: {
         [key: string]: unknown;
       };
+      /** Identity Phase3 */
+      identity_phase3?: {
+        [key: string]: unknown;
+      };
     };
     /** SettingsResponse */
     SettingsResponse: {
       /** Authoring */
       authoring: {
+        [key: string]: unknown;
+      };
+      /** Identity Phase3 */
+      identity_phase3?: {
         [key: string]: unknown;
       };
       /** Schema Version */

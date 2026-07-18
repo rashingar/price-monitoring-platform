@@ -211,6 +211,7 @@ def test_prepare_product_maps_execution_result(tmp_path: Path, monkeypatch) -> N
         assert cli.skroutz_status == 1
         assert cli.boxnow == 0
         assert str(cli.price) == "2099"
+        assert cli.manual_mpn == "ABC-123"
         assert cli.gallery_url == "https://www.electronet.gr/gallery"
         assert cli.characteristics_url == "https://www.electronet.gr/specs"
         assert cli.second_opencart_image_index == 4
@@ -231,6 +232,7 @@ def test_prepare_product_maps_execution_result(tmp_path: Path, monkeypatch) -> N
             skroutz_status=1,
             boxnow=0,
             price="2099",
+            manual_mpn="ABC-123",
             gallery_url="https://www.electronet.gr/gallery",
             characteristics_url="https://www.electronet.gr/specs",
             second_opencart_image_index=4,

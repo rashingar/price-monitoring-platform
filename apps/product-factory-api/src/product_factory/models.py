@@ -20,6 +20,7 @@ class CLIInput:
     skroutz_status: int = DEFAULT_SKR_OUTZ_STATUS
     boxnow: int = DEFAULT_BOXNOW_STATUS
     price: str | float | int = 0
+    manual_mpn: str | None = None
     gallery_url: str | None = None
     characteristics_url: str | None = None
     second_opencart_image_index: int | None = None

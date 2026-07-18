@@ -4,6 +4,7 @@ import argparse
 from urllib.parse import urlparse
 
 from .models import CLIInput
+from .product_identity import normalize_manual_mpn
 from .source_detection import SUPPORTED_URL_MESSAGE, validate_url_scope
 from .status_fields import (
     DEFAULT_BESTPRICE_STATUS,
@@ -25,6 +26,8 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
     source, scope_ok, _scope_reason = validate_url_scope(args.url)
     if not scope_ok:
         raise ValueError(SUPPORTED_URL_MESSAGE)
+    raw_manual_mpn = str(getattr(args, "manual_mpn", "") or "").strip()
+    manual_mpn = normalize_manual_mpn(raw_manual_mpn, internal_model=model) or None
     gallery_url = str(getattr(args, "gallery_url", "") or "").strip() or None
     if gallery_url is not None:
         parsed_gallery_url = urlparse(gallery_url)
@@ -80,6 +83,7 @@ def validate_input(args: argparse.Namespace) -> CLIInput:
             field_name="boxnow",
         ),
         price=args.price,
+        manual_mpn=manual_mpn,
         gallery_url=gallery_url,
         characteristics_url=characteristics_url,
         second_opencart_image_index=second_opencart_image_index,

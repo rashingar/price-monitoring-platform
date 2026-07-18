@@ -115,6 +115,7 @@ def run_prepare_job(
             default=DEFAULT_BOXNOW_STATUS,
         ),
         price=record.payload.get("price", 0),
+        manual_mpn=record.payload.get("manual_mpn") or None,
         gallery_url=record.payload.get("gallery_url") or None,
         characteristics_url=record.payload.get("characteristics_url") or None,
         second_opencart_image_index=record.payload.get("second_opencart_image_index"),
@@ -139,6 +140,8 @@ def run_prepare_job(
         log(
             f"Requested second OpenCart image index: {request.second_opencart_image_index}"
         )
+    if request.manual_mpn:
+        log("Manual MPN override provided.")
     if request.gallery_mode == "all":
         log("Prepare whole-gallery mode active.")
     log("Calling prepare service.")
@@ -475,6 +478,7 @@ def _full_pipeline_prepare_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "gallery_mode": gallery_mode,
     }
     for key in (
+        "manual_mpn",
         "gallery_url",
         "characteristics_url",
         "second_opencart_image_index",

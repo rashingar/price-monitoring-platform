@@ -12,6 +12,7 @@ from .models import (
     SchemaMatchResult,
     TaxonomyResolution,
 )
+from .product_identity import normalize_manual_mpn
 from .prepare_provider_resolution import (
     PrepareProviderResolutionResult,
     resolve_prepare_provider_resolution,
@@ -292,6 +293,15 @@ def execute_prepare_from_acquisition(
 
     parsed.source.raw_html_path = str(scrape_persistence_input.raw_html_path)
     parsed.source.fallback_used = fetch.fallback_used
+    if cli.manual_mpn:
+        parsed.source.mpn = normalize_manual_mpn(
+            cli.manual_mpn, internal_model=cli.model
+        )
+        parsed.source.mpn_override = {
+            "value": parsed.source.mpn,
+            "scope": "complete_set" if "/" in parsed.source.mpn else "single_unit",
+            "reason": "operator_input",
+        }
 
     taxonomy_enrichment = resolve_prepare_taxonomy_enrichment_fn(
         source=source,

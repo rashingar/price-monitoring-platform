@@ -124,6 +124,8 @@ def classify_skroutz_taxonomy(
         )
     if family_key == "smartphone":
         return _classify_smartphone(context)
+    if family_key == "tablet":
+        return _classify_tablet(context)
     if family_key == "dishwasher":
         return _classify_dishwasher(context)
     if family_key == "cooker":
@@ -189,6 +191,8 @@ def classify_skroutz_taxonomy(
         "iphone",
     ):
         return _classify_smartphone(context)
+    if _has_any(context, "tablet", "tablets"):
+        return _classify_tablet(context)
     if _has_any(context, "aporrofit"):
         return _build_hint(
             context=context,
@@ -241,6 +245,22 @@ def _classify_smartphone(context: dict[str, str]) -> SkroutzTaxonomyHint:
         context=context,
         parent="ΤΗΛΕΦΩΝΙΑ",
         leaf="Smartphones",
+        sub=sub,
+        matched_rule_id=rule_id,
+    )
+
+
+def _classify_tablet(context: dict[str, str]) -> SkroutzTaxonomyHint:
+    if _has_any(context, "ipad", "ios") or "apple" in context["brand_norm"]:
+        sub = "iOS"
+        rule_id = "tablet:ios"
+    else:
+        sub = "Android"
+        rule_id = "tablet:android"
+    return _build_hint(
+        context=context,
+        parent="ΤΗΛΕΦΩΝΙΑ",
+        leaf="Tablets",
         sub=sub,
         matched_rule_id=rule_id,
     )

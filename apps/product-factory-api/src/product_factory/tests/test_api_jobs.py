@@ -60,6 +60,7 @@ def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(
                 "skroutz_status": 1,
                 "boxnow": 0,
                 "price": "2099",
+                "manual_mpn": "ABC-123",
                 "gallery_url": "https://www.electronet.gr/gallery",
                 "characteristics_url": "https://www.electronet.gr/specs",
                 "second_opencart_image_index": 4,
@@ -69,6 +70,7 @@ def test_prepare_route_enqueues_job_and_exposes_logs_and_artifacts(
         job_id = response.json()["job_id"]
         queued_payload = store.get_job(job_id).payload
         assert queued_payload["bestprice_status"] == 1
+        assert queued_payload["manual_mpn"] == "ABC-123"
         assert queued_payload["gallery_url"] == "https://www.electronet.gr/gallery"
         assert (
             queued_payload["characteristics_url"] == "https://www.electronet.gr/specs"
@@ -132,6 +134,14 @@ def test_prepare_route_accepts_legacy_payload_and_rejects_invalid_second_image_i
                 "second_opencart_image_index": 0,
             },
         )
+        invalid_manual_mpn_response = client.post(
+            "/api/jobs/prepare",
+            json={
+                "model": "999003",
+                "url": "https://www.electronet.gr/example",
+                "manual_mpn": "999003",
+            },
+        )
     finally:
         runner.stop()
 
@@ -154,6 +164,7 @@ def test_prepare_route_accepts_legacy_payload_and_rejects_invalid_second_image_i
         is None
     )
     assert invalid_response.status_code == 422
+    assert invalid_manual_mpn_response.status_code == 422
 
 
 def test_authoring_routes_enqueue_job_responses_and_preserve_model(

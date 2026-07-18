@@ -244,6 +244,7 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(
             "skroutz_status": 1,
             "boxnow": 0,
             "price": "2099",
+            "manual_mpn": "ABC-123",
             "gallery_url": "https://www.electronet.gr/gallery",
             "characteristics_url": "https://www.electronet.gr/specs",
             "second_opencart_image_index": 4,
@@ -269,6 +270,7 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(
             skroutz_status=1,
             boxnow=0,
             price="2099",
+            manual_mpn="ABC-123",
             gallery_url="https://www.electronet.gr/gallery",
             characteristics_url="https://www.electronet.gr/specs",
             second_opencart_image_index=4,
@@ -301,6 +303,7 @@ def test_default_runner_calls_prepare_service_and_captures_artifacts(
         in logs
     )
     assert "Requested second OpenCart image index: 4" in logs
+    assert "Manual MPN override provided." in logs
     assert "Prepare service returned status: completed" in logs
     assert "Prepare warning: prepare warning" in logs
     assert "Prepare whole-gallery mode confirmed by artifacts." in logs

@@ -20,6 +20,7 @@ export interface PrepareFormState {
   boxnow: boolean;
   bestprice_status: boolean;
   price: string;
+  manual_mpn: string;
   gallery_url: string;
   characteristics_url: string;
   second_opencart_image_index: string;
@@ -34,6 +35,7 @@ export const initialPrepareFormState: PrepareFormState = {
   boxnow: false,
   bestprice_status: true,
   price: "0",
+  manual_mpn: "",
   gallery_url: "",
   characteristics_url: "",
   second_opencart_image_index: "",
@@ -124,6 +126,7 @@ export function PrepareJobForm({
 
     const galleryUrl = form.gallery_url.trim();
     const characteristicsUrl = form.characteristics_url.trim();
+    const manualMpn = form.manual_mpn.trim();
     const secondImageIndexInput = form.second_opencart_image_index.trim();
     let secondOpenCartImageIndex: number | null = null;
     if (secondImageIndexInput.length > 0) {
@@ -150,6 +153,9 @@ export function PrepareJobForm({
     }
     if (characteristicsUrl.length > 0) {
       request.characteristics_url = characteristicsUrl;
+    }
+    if (manualMpn.length > 0) {
+      request.manual_mpn = manualMpn;
     }
     if (secondOpenCartImageIndex !== null) {
       request.second_opencart_image_index = secondOpenCartImageIndex;
@@ -264,6 +270,16 @@ export function PrepareJobForm({
 
         {extraSettingsOpen ? (
           <div id="prepare-extra-settings" className="form-extra-settings-fields">
+            <label>
+              <span>Manual MPN</span>
+              <input
+                value={form.manual_mpn}
+                onChange={(event) => updateField("manual_mpn", event.target.value)}
+                placeholder="Manufacturer part number"
+              />
+            </label>
+            <small>Optional. When provided, this replaces the MPN extracted from the source for this job.</small>
+
             <label>
               <span>Gallery URL</span>
               <input

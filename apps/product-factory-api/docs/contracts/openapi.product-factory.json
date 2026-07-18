@@ -1191,6 +1191,18 @@
             ],
             "title": "Gallery Url"
           },
+          "manual_mpn": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Mpn"
+          },
           "model": {
             "title": "Model",
             "type": "string"
@@ -1602,6 +1614,18 @@
             ],
             "title": "Gallery Url"
           },
+          "manual_mpn": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Mpn"
+          },
           "model": {
             "title": "Model",
             "type": "string"
@@ -1722,6 +1746,11 @@
             "additionalProperties": true,
             "title": "Authoring",
             "type": "object"
+          },
+          "identity_phase3": {
+            "additionalProperties": true,
+            "title": "Identity Phase3",
+            "type": "object"
           }
         },
         "title": "SettingsPatchRequest",
@@ -1733,6 +1762,11 @@
           "authoring": {
             "additionalProperties": true,
             "title": "Authoring",
+            "type": "object"
+          },
+          "identity_phase3": {
+            "additionalProperties": true,
+            "title": "Identity Phase3",
             "type": "object"
           },
           "schema_version": {
