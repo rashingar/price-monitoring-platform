@@ -1009,6 +1009,60 @@ def test_loading_type_value_alias_resolves_front_loading_to_allowed_value() -> N
     assert loading.outside_allowed is False
 
 
+def test_loading_type_resolves_washer_specific_source_label() -> None:
+    category = {
+        "category_id": "cat_washers",
+        "filter_groups": [
+            {
+                "group_id": "fg_loading",
+                "name": "\u03a4\u03c1\u03cc\u03c0\u03bf\u03c2 \u03a6\u03cc\u03c1\u03c4\u03c9\u03c3\u03b7\u03c2",
+                "required": True,
+                "status": "active",
+                "values": [
+                    {"value_id": "fv_front", "value": "\u0395\u03bc\u03c0\u03c1\u03cc\u03c2", "status": "active"}
+                ],
+            }
+        ],
+    }
+
+    result = resolve_category_filter_values(
+        _source(("\u03a4\u03c1\u03cc\u03c0\u03bf\u03c2 \u03a6\u03cc\u03c1\u03c4\u03c9\u03c3\u03b7\u03c2 \u03a0\u03bb\u03c5\u03bd\u03c4\u03b7\u03c1\u03af\u03bf\u03c5", "\u0395\u03bc\u03c0\u03c1\u03cc\u03c3\u03b8\u03b9\u03b1\u03c2 \u03c6\u03cc\u03c1\u03c4\u03c9\u03c3\u03b7\u03c2")),
+        _taxonomy("cat_washers"),
+        category,
+    )
+
+    loading = result.groups[0]
+    assert loading.resolved_value == "\u0395\u03bc\u03c0\u03c1\u03cc\u03c2"
+    assert loading.resolved_from == "source_spec_alias"
+
+
+def test_height_filter_resolves_named_appliance_height_label() -> None:
+    category = {
+        "category_id": "cat_wine-coolers",
+        "filter_groups": [
+            {
+                "group_id": "fg_height",
+                "name": "\u038e\u03c8\u03bf\u03c2 cm",
+                "required": True,
+                "status": "active",
+                "values": [
+                    {"value_id": "fv_82", "value": "82 cm", "status": "active"}
+                ],
+            }
+        ],
+    }
+
+    result = resolve_category_filter_values(
+        _source(("\u038e\u03c8\u03bf\u03c2 \u03a3\u03c5\u03c3\u03ba\u03b5\u03c5\u03ae\u03c2 \u03c3\u03b5 \u0395\u03ba\u03b1\u03c4\u03bf\u03c3\u03c4\u03ac", "82")),
+        _taxonomy("cat_wine-coolers"),
+        category,
+    )
+
+    height = result.groups[0]
+    assert height.resolved_value == "82 cm"
+    assert height.resolved_from == "source_height_label"
+
+
 def test_washer_source_specific_spin_and_loading_aliases_resolve_filters() -> None:
     category = {
         "category_id": "cat_washers",

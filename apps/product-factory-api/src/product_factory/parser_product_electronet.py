@@ -46,7 +46,7 @@ PRICE_RE = re.compile(r"\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})?\s*€")
 INSTALLMENTS_RE = re.compile(r"\d+\s+άτοκες\s+δόσεις", re.IGNORECASE)
 CODE_RE = re.compile(r"ΚΩΔΙΚΟΣ\s+ΠΡΟΪΟΝΤΟΣ\s*:?\s*([0-9]{6})", re.IGNORECASE)
 PURE_NUMERIC_TOKEN_RE = re.compile(r"^\d+(?:[.,]\d+)?$")
-STRIP_PUNCT_RE = re.compile(r"^[^\w]+|[^\w+./-]+$")
+STRIP_PUNCT_RE = re.compile(r"^[^\w]+|[^\w+./()\-]+$")
 EPREL_HOST = "https://eprel.ec.europa.eu"
 
 
@@ -1301,7 +1301,7 @@ class ElectronetProductParser:
 
     def _is_model_sequence_fragment(self, token: str) -> bool:
         normalized = normalize_whitespace(token)
-        if not normalized or not all(ch.isalnum() or ch in "._/-" for ch in normalized):
+        if not normalized or not all(ch.isalnum() or ch in "._/-()" for ch in normalized):
             return False
         if PURE_NUMERIC_TOKEN_RE.fullmatch(normalized):
             return 2 <= len(normalized) <= 6
@@ -1315,7 +1315,7 @@ class ElectronetProductParser:
             return 0
         if len(upper) < 3:
             return 0
-        if not all(ch.isalnum() or ch in "._/-" for ch in upper):
+        if not all(ch.isalnum() or ch in "._/-()" for ch in upper):
             return 0
         if not any(ch.isalpha() for ch in upper) or not any(
             ch.isdigit() for ch in upper

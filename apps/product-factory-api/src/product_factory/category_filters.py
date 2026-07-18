@@ -742,6 +742,8 @@ def _candidate_source_labels(group_name: str, *, taxonomy_path: str = "") -> lis
     aliases.extend(label_aliases_for(group_name))
     normalized_group = normalize_label_key(group_name)
     normalized_taxonomy = normalize_label_key(taxonomy_path)
+    if "fortos" in _ascii_label_key(group_name):
+        aliases.append("\u03a4\u03c1\u03cc\u03c0\u03bf\u03c2 \u03a6\u03cc\u03c1\u03c4\u03c9\u03c3\u03b7\u03c2 \u03a0\u03bb\u03c5\u03bd\u03c4\u03b7\u03c1\u03af\u03bf\u03c5")
     if "κιλα πλυσης" in normalized_group:
         aliases.extend(["Χωρητικότητα", "Χωρητικότητα Πλύσης"])
     if (
@@ -1064,6 +1066,21 @@ def _resolve_derived_group_value(
     exact_source: dict[str, str],
     exact_manufacturer: dict[str, str],
 ) -> tuple[str, str]:
+    if _is_height_cm_group(group_name):
+        for source_name, lookup in (
+            ("source", exact_source),
+            ("manufacturer", exact_manufacturer),
+        ):
+            height = _height_from_named_height_labels(lookup)
+            if height:
+                return height, f"{source_name}_height_label"
+        for source_name, lookup in (
+            ("source", exact_source),
+            ("manufacturer", exact_manufacturer),
+        ):
+            height = _height_from_dimension_triplets(lookup)
+            if height:
+                return height, f"{source_name}_dimension_triplet"
     if _is_width_cm_group(group_name):
         for source_name, lookup in (
             ("source", exact_source),
@@ -1147,6 +1164,31 @@ def _format_hob_zone_count(count: str, technology: str) -> str:
 def _is_width_cm_group(group_name: str) -> bool:
     key = normalize_label_key(group_name)
     return "πλατος" in key and "cm" in key
+
+
+def _is_height_cm_group(group_name: str) -> bool:
+    key = _ascii_label_key(group_name)
+    return "ypsos" in key and "cm" in key
+
+
+def _height_from_named_height_labels(lookup: dict[str, str]) -> str:
+    for label, value in lookup.items():
+        if "ypsos" not in _ascii_label_key(label):
+            continue
+        token = _first_numeric_token(value)
+        if token:
+            return _safe_format_width_cm(token, value)
+    return ""
+
+
+def _height_from_dimension_triplets(lookup: dict[str, str]) -> str:
+    for label, value in lookup.items():
+        if not _looks_like_height_width_depth_label(label):
+            continue
+        tokens = _dimension_number_tokens(value)
+        if len(tokens) >= 3:
+            return _safe_format_width_cm(tokens[0], value)
+    return ""
 
 
 def _width_from_named_width_labels(

@@ -130,6 +130,20 @@ def test_product_parser_extracts_spaced_model_sequence_as_mpn() -> None:
     assert parsed.field_diagnostics["mpn"].selected_strategy == "title_after_brand"
 
 
+def test_product_parser_extracts_model_token_with_variant_suffix_as_mpn() -> None:
+    html = """
+    <html><body><article class="product-page">
+      <div id="product-brand-logo"><a>Midea</a></div>
+      <h1 class="product-title">Κουζίνα Κεραμική Midea MFO24D-ME4R10F(SS)</h1>
+    </article></body></html>
+    """
+
+    parsed = ElectronetProductParser().parse(html, "https://www.electronet.gr/example")
+
+    assert parsed.source.mpn == "MFO24D-ME4R10F(SS)"
+    assert parsed.field_diagnostics["mpn"].selected_strategy == "title_after_brand"
+
+
 def test_product_parser_preserves_video_block_in_presentation_source_html() -> None:
     matcher = SchemaMatcher()
     parser = ElectronetProductParser(known_section_titles=matcher.known_section_titles)

@@ -610,10 +610,13 @@ class SkroutzProductParser:
                 f"skroutz_taxonomy_helper_used:{taxonomy_hint.matched_rule_id}"
             )
 
+        # Skroutz uses one product-detail route across a much wider set of
+        # categories than the curated family taxonomy.  A taxonomy miss (or an
+        # ambiguous helper result) must not turn an otherwise complete detail
+        # page into an unsupported page type.  Preserve the category tag for
+        # downstream taxonomy resolution instead.
         generic_product_candidate = bool(
-            not family
-            and not taxonomy_hint
-            and is_skroutz_product_url(canonical_url)
+            is_skroutz_product_url(canonical_url)
             and title
             and product_code
             and (mpn or raw_sections or raw_pairs or summary_pairs)
@@ -1318,6 +1321,8 @@ class SkroutzProductParser:
         )
         family_config = SKROUTZ_FAMILIES[family]
         if family_config.get("spec_mode") == "raw":
+            if family == "speaker":
+                return self._speaker_sections(raw_sections, hero_summary)
             return self._build_generic_sections(raw_sections, summary_pairs)
         if family == "soundbar":
             return self._soundbar_sections(raw_pairs, merchant_titles)
@@ -1340,6 +1345,58 @@ class SkroutzProductParser:
             ]
             out.append(SpecSection(section=section_title, items=items))
         return out
+
+    def _speaker_sections(
+        self, raw_sections: list[SpecSection], hero_summary: str
+    ) -> list[SpecSection]:
+        """Augment Skroutz speaker specs embedded as bullet-like rich text."""
+        source_items = [
+            SpecItem(label=item.label, value=item.value)
+            for section in raw_sections
+            for item in section.items
+        ]
+        text = normalize_whitespace(hero_summary)
+        extracted: list[tuple[str, str]] = []
+
+        def capture(label: str, pattern: str, *, value_template: str = "{value}") -> None:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                value = normalize_whitespace(value_template.format(value=match.group(1)))
+                if value:
+                    extracted.append((label, value))
+
+        if re.search(r"\bTWS\b", text, re.IGNORECASE):
+            extracted.append(("TWS Stereo Pairing", "Ναι"))
+        capture("Bluetooth", r"\bBluetooth\s*([0-9]+(?:[.,][0-9]+)?)")
+        capture("Ισχύς RMS", r"\b([0-9]+\s*W)\b")
+        capture(
+            "Οδηγοί Ηχείων",
+            r"(Tweeter\s*[^•]+?\s*&\s*[^•]+?Woofer\s*[^•]+)",
+        )
+        capture("Απόκριση Συχνοτήτων", r"(\d+\s*Hz\s*[-–]\s*\d+\s*kHz)")
+        capture("Αυτονομία Μπαταρίας", r"(\d+\s*ωρ(?:ών|ες)?)")
+        capture("Χρόνος Φόρτισης", r"(\d+\s*έως\s*\d+\s*ώρες)")
+        if re.search(r"LED\s+φωτισ", text, re.IGNORECASE):
+            extracted.append(("Φωτισμός", "LED party flame light"))
+        if re.search(r"LCD\s+οθόν", text, re.IGNORECASE):
+            extracted.append(("Οθόνη", "LCD"))
+        if re.search(r"FM\s+radio", text, re.IGNORECASE):
+            extracted.append(("Ραδιόφωνο", "FM"))
+        capture("Είσοδοι", r"(USB\s*,\s*SD card\s*,\s*Mic\s*,\s*Guitar\s*,\s*AUX in)")
+        capture("Χειρισμός Ήχου", r"(Έλεγχος έντασης[^•]+)")
+        if re.search(r"Περιλαμβάνει ασύρματο μικρόφωνο", text, re.IGNORECASE):
+            extracted.append(("Ασύρματο Μικρόφωνο", "Περιλαμβάνεται"))
+        if re.search(r"ενσύρματου μικροφώνου", text, re.IGNORECASE):
+            extracted.append(("Ενσύρματο Μικρόφωνο", "Υποστηρίζεται (δεν περιλαμβάνεται)"))
+        capture("Διαστάσεις", r"(\d+(?:[.,]\d+)?\s*x\s*\d+(?:[.,]\d+)?\s*x\s*\d+(?:[.,]\d+)?\s*cm)")
+        capture("Βάρος", r"(\d+(?:[.,]\d+)?\s*kg)")
+
+        existing = {normalize_for_match(item.label) for item in source_items}
+        for label, value in extracted:
+            if normalize_for_match(label) not in existing:
+                source_items.append(SpecItem(label=label, value=value))
+                existing.add(normalize_for_match(label))
+        return [SpecSection(section="Χαρακτηριστικά Ηχείου", items=source_items)]
 
     def _build_generic_sections(
         self, raw_sections: list[SpecSection], summary_pairs: list[tuple[str, str, str]]

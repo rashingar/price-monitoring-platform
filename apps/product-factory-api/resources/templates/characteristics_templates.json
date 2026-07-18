@@ -2,6 +2,16 @@
   "version": "2026-03-21",
   "templates": [
     {
+      "template_id": "skroutz_wireless_speaker_v1",
+      "match": {
+        "source_name": "skroutz",
+        "taxonomy_leaf": "Audio Systems",
+        "taxonomy_sub": "Ηχεία"
+      },
+      "render_mode": "raw_spec_sections",
+      "sections": []
+    },
+    {
       "template_id": "skroutz_washing_machine_v1",
       "match": {
         "source_name": "skroutz",

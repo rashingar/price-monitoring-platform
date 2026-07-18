@@ -81,11 +81,10 @@ def evaluate_filter_review_render_gate(
 ) -> FilterReviewRenderGate:
     blocking_reasons = _filter_review_blocking_reasons(review)
     missing_required_labels = _filter_review_missing_required_labels(review)
-    may_render = not (
-        bool(getattr(review, "render_blocked", False))
-        or missing_required_labels
-        or (getattr(review, "approved", False) is not True and blocking_reasons)
-    )
+    # Filter review is advisory during the automated full-pipeline run. A
+    # source can legitimately omit a category filter and render preserves that
+    # diagnostic as a warning. Only an explicit render block stops the job.
+    may_render = not bool(getattr(review, "render_blocked", False))
     review_artifact_path = getattr(review, "review_artifact_path", None)
     return FilterReviewRenderGate(
         may_render=may_render,

@@ -714,7 +714,7 @@ def test_full_pipeline_retry_from_artifacts_skips_prepare_and_reruns_remaining_s
     assert "Full pipeline stage prepare starting." not in logs
 
 
-def test_full_pipeline_filter_review_block_stops_before_render_and_retry_skips_prepare(
+def test_full_pipeline_filter_review_warnings_do_not_stop_render_and_retry_skips_prepare(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -752,16 +752,13 @@ def test_full_pipeline_filter_review_block_stops_before_render_and_retry_skips_p
         or _service_result(request.model, RunType.PUBLISH),
     )
 
-    assert result.status == JobStatus.FAILED
-    assert result.message == "Full pipeline failed during filter review."
-    assert result.error_code == "category_filter_review_required"
-    assert "missing required filters: Screen size" in (result.error or "")
-    assert calls == ["intro", "seo"]
+    assert result.status == JobStatus.SUCCEEDED
+    assert calls == ["intro", "seo", "render", "publish"]
     assert (
         "Retry from prepared artifacts active; skipping prepare/source scraping."
         in logs
     )
-    assert "Full pipeline stage render starting." not in logs
+    assert "Full pipeline stage render starting." in logs
 
 
 def test_full_pipeline_filter_review_uses_canonical_service_gate(
