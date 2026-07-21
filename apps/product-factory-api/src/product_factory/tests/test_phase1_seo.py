@@ -181,6 +181,23 @@ def test_meta_description_length_bands_and_unsupported_numeric_claims() -> None:
     assert "99999" in numeric_check["observed"]
 
 
+def test_meta_description_accepts_numeric_claim_in_verified_hero_summary() -> None:
+    source = _ac_source()
+    source.hero_summary = "Self Clean 56°C με προεγκατεστημένο Wi-Fi."
+    fields = _fields(source)
+    row = {
+        "name": fields["name"],
+        "meta_title": fields["meta_title"],
+        "seo_keyword": fields["seo_keyword"],
+        "product_url": "https://example.test/ac",
+        "meta_description": "Το Midea Solunar είναι κλιματιστικό 12000 BTU με A++ στην ψύξη, Inverter, Wi-Fi και λειτουργία Self Clean 56°C για άνεση κάθε ημέρα.",
+    }
+    report = evaluate_seo_health(model="123456", row=row, deterministic_product=fields)
+    numeric_check = next(check for check in report["checks"] if check["id"] == "meta_description.no_unsupported_numeric_claims")
+    assert "56" in fields["seo_identity"]["numeric_evidence"]
+    assert numeric_check["status"] == "pass"
+
+
 def test_all_seo_health_statuses_scoring_and_rounding() -> None:
     checks = [
         {"weight": 1, "status": "pass", "earned_points": 1},

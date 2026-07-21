@@ -42,11 +42,13 @@ class SeoIdentity:
     cooling_energy_class: str = ""
     heating_energy_class: str = ""
     verified_features: tuple[str, ...] = ()
+    numeric_evidence: tuple[str, ...] = ()
     provenance: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
         payload["verified_features"] = list(self.verified_features)
+        payload["numeric_evidence"] = list(self.numeric_evidence)
         return payload
 
 

@@ -1382,6 +1382,7 @@ def _resolve_air_conditioner_seo_identity(
         cooling_energy_class=cooling,
         heating_energy_class=heating,
         verified_features=tuple(_extract_verified_air_conditioner_features(source)),
+        numeric_evidence=tuple(_extract_verified_numeric_evidence(source)),
         provenance={
             "commercial_series": series_provenance,
             "set_model": model_provenance,
@@ -1394,6 +1395,34 @@ def _resolve_air_conditioner_seo_identity(
             "btu": "specifications_or_source_title" if btu else "",
             "energy_pair": "specifications_or_source_title" if energy_pair else "",
         },
+    )
+
+
+def _extract_verified_numeric_evidence(source: SourceProductData) -> list[str]:
+    """Return numeric tokens explicitly present in the parsed source evidence.
+
+    Meta-description validation receives only the compact SEO identity.  Carry
+    source-backed numeric tokens into that identity so values such as Electronet
+    product-summary temperatures remain verifiable after rendering.
+    """
+    evidence_parts = [
+        source.name,
+        source.hero_summary,
+        source.presentation_source_text,
+        source.manufacturer_source_text,
+        *(f"{item.label} {item.value or ''}" for item in source.key_specs),
+        *(
+            f"{item.label} {item.value or ''}"
+            for section in source.spec_sections
+            for item in section.items
+        ),
+    ]
+    return list(
+        dict.fromkeys(
+            number.replace(",", ".")
+            for value in evidence_parts
+            for number in NUMERIC_RE.findall(value or "")
+        )
     )
 
 
