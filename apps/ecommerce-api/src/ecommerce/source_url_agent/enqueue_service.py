@@ -43,6 +43,8 @@ class SourceUrlAgentEnqueueCommand:
     rate_limit_seconds: float | None = None
     headed: bool = False
     no_browser_cache: bool = False
+    llm_evaluate_candidates: bool = False
+    llm_auto_apply_candidates: bool = False
     request_payload: dict[str, Any] = field(default_factory=dict)
     run_id: str | None = None
 
@@ -143,6 +145,8 @@ def create_queued_discovery_run(
             "rate_limit_seconds": command.rate_limit_seconds,
             "headed": command.headed,
             "no_browser_cache": command.no_browser_cache,
+            "llm_evaluate_candidates": command.llm_evaluate_candidates,
+            "llm_auto_apply_candidates": command.llm_auto_apply_candidates,
             "task_count": task_count,
         },
         selected_count=selected_count,

@@ -33,6 +33,10 @@
       "searched_identifier_variants_json": "",
       "executed_query_count": 1,
       "matched_identifier_variant": "",
+      "llm_verdict": "",
+      "llm_confidence": "",
+      "llm_apply_recommendation": "",
+      "llm_reasons": "",
       "source_domain": "www.skroutz.gr",
       "source_name": "skroutz",
       "source_type": "marketplace"
@@ -134,6 +138,10 @@
       "searched_identifier_variants_json": "",
       "executed_query_count": 1,
       "matched_identifier_variant": "",
+      "llm_verdict": "",
+      "llm_confidence": "",
+      "llm_apply_recommendation": "",
+      "llm_reasons": "",
       "source_domain": "www.skroutz.gr",
       "source_name": "skroutz",
       "source_type": "marketplace"
@@ -249,6 +257,10 @@
       "searched_identifier_variants_json": "",
       "executed_query_count": 1,
       "matched_identifier_variant": "",
+      "llm_verdict": "",
+      "llm_confidence": "",
+      "llm_apply_recommendation": "",
+      "llm_reasons": "",
       "source_domain": "www.electronet.gr",
       "source_name": "electronet",
       "source_type": "direct_vendor"

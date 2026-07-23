@@ -38,6 +38,12 @@ def source_url_agent_result_payload(result: SourceUrlAgentResult) -> dict[str, A
         "source": summary.get("source"),
         "dry_run": bool(summary.get("dry_run", True)),
         "apply_high_confidence": bool(summary.get("apply_high_confidence", False)),
+        "llm_evaluate_candidates": bool(
+            summary.get("llm_evaluate_candidates", False)
+        ),
+        "llm_auto_apply_candidates": bool(
+            summary.get("llm_auto_apply_candidates", False)
+        ),
         "summary": summary,
         "warnings": list(result.warnings),
         "artifacts": artifact_refs_from_paths(result.artifacts.to_dict()),

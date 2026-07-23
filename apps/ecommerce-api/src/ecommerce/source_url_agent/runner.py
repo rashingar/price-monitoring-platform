@@ -19,6 +19,8 @@ from ecommerce.source_url_agent.candidates import (
     MIN_CANDIDATE_CONFIDENCE_TO_KEEP,
     SourceUrlAgentCandidate,
 )
+from ecommerce.source_url_agent.llm_config import load_source_url_llm_config
+from ecommerce.source_url_agent.llm_evaluation import evaluate_bestprice_candidates
 from ecommerce.source_url_agent.options import (
     Resolver,
     SourceUrlAgentOptions,
@@ -189,6 +191,38 @@ def run_source_url_agent(
         if progress is not None:
             progress.add_warning(warning, {"run_id": run_id})
 
+    llm_write_results = []
+    llm_result = None
+    if options.llm_evaluate_candidates:
+        llm_config = load_source_url_llm_config()
+        if not llm_config.enabled:
+            warning = "llm_evaluate_candidates requested but ECOMMERCE_SOURCE_URL_LLM_ENABLED is false; no LLM evaluations were run."
+            warnings.append(warning)
+            if progress is not None:
+                progress.add_warning(warning, {"run_id": run_id})
+        else:
+            llm_result = evaluate_bestprice_candidates(
+                session,
+                candidates,
+                config=llm_config,
+                auto_apply=bool(
+                    options.llm_auto_apply_candidates
+                    and not options.dry_run
+                    and session is not None
+                ),
+            )
+            candidates = llm_result.candidates
+            llm_write_results = llm_result.write_results
+            warnings.extend(llm_result.warnings)
+            if progress is not None:
+                for warning in llm_result.warnings:
+                    progress.add_warning(warning, {"run_id": run_id})
+    elif options.llm_auto_apply_candidates:
+        warning = "llm_auto_apply_candidates requested without llm_evaluate_candidates; no LLM evaluations were run."
+        warnings.append(warning)
+        if progress is not None:
+            progress.add_warning(warning, {"run_id": run_id})
+
     completed_at = _now()
     candidates_to_persist = candidates_for_candidate_storage(
         candidates,
@@ -207,6 +241,26 @@ def run_source_url_agent(
         warnings=warnings,
     )
     summary["source_url_write_results"] = [item.__dict__ for item in write_results]
+    summary["llm_source_url_write_results"] = [
+        item.__dict__ for item in llm_write_results
+    ]
+    summary["llm_evaluate_candidates"] = bool(options.llm_evaluate_candidates)
+    summary["llm_auto_apply_candidates"] = bool(options.llm_auto_apply_candidates)
+    summary["llm_evaluated_candidate_count"] = (
+        llm_result.evaluated_count if llm_result is not None else 0
+    )
+    summary["llm_auto_applied_candidate_count"] = (
+        llm_result.auto_applied_count if llm_result is not None else 0
+    )
+    summary["llm_needs_review_candidate_count"] = (
+        llm_result.needs_review_count if llm_result is not None else 0
+    )
+    summary["llm_rejected_candidate_count"] = (
+        llm_result.rejected_count if llm_result is not None else 0
+    )
+    summary["llm_malformed_response_count"] = (
+        llm_result.malformed_count if llm_result is not None else 0
+    )
     summary["persisted_candidate_count"] = (
         len(candidates_to_persist) if session is not None else 0
     )
@@ -404,6 +458,8 @@ def _filters_json(options: SourceUrlAgentOptions) -> dict:
         "rate_limit_seconds": options.rate_limit_seconds,
         "headed": options.headed,
         "no_browser_cache": options.no_browser_cache,
+        "llm_evaluate_candidates": options.llm_evaluate_candidates,
+        "llm_auto_apply_candidates": options.llm_auto_apply_candidates,
     }
 
 

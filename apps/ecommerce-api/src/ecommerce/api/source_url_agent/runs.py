@@ -98,6 +98,8 @@ def launch_source_url_agent_run(request: SourceUrlAgentRunRequest) -> dict[str, 
         rate_limit_seconds=request.rate_limit_seconds,
         headed=bool(request.headed),
         no_browser_cache=bool(request.no_browser_cache),
+        llm_evaluate_candidates=bool(request.llm_evaluate_candidates),
+        llm_auto_apply_candidates=bool(request.llm_auto_apply_candidates),
     )
 
     try:
@@ -176,6 +178,8 @@ def enqueue_source_url_agent_run(
                     rate_limit_seconds=request.rate_limit_seconds,
                     headed=bool(request.headed),
                     no_browser_cache=bool(request.no_browser_cache),
+                    llm_evaluate_candidates=bool(request.llm_evaluate_candidates),
+                    llm_auto_apply_candidates=bool(request.llm_auto_apply_candidates),
                     request_payload=_request_payload(request),
                 ),
             )

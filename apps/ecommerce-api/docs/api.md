@@ -351,6 +351,12 @@ This is the canonical Source URL Agent namespace. Candidate review layout
 preferences are frontend-local UI state and are not stored in the Ecommerce API
 database.
 
+Run requests accept optional `llm_evaluate_candidates` and
+`llm_auto_apply_candidates` booleans. They default to `false`; LLM auto-apply is
+ignored unless evaluation is also enabled. The server also requires
+`ECOMMERCE_SOURCE_URL_LLM_ENABLED=true` and `OPENAI_API_KEY` before making any
+LLM call. v1 evaluation is scoped to BestPrice candidates only.
+
 ### Product Ignore
 
 ```text

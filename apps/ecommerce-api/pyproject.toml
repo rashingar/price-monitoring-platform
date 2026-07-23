@@ -12,6 +12,7 @@ dependencies = [
     "alembic>=1.13,<2",
     "fastapi>=0.110,<1",
     "httpx>=0.27,<1",
+    "openai>=1,<2",
     "playwright>=1.52,<2",
     "psycopg[binary]>=3,<4",
     "sqlalchemy>=2,<3",

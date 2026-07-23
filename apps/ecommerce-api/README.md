@@ -516,6 +516,19 @@ the match method is `exact_mpn_and_brand` and confidence is greater than `0.90`.
 All other discovered candidates are exported for review. Existing manual source
 URLs are not overwritten by automatic discovery.
 
+Optional LLM-assisted evaluation is disabled by default and is BestPrice-only in
+v1. Enable it with `ECOMMERCE_SOURCE_URL_LLM_ENABLED=true` plus
+`OPENAI_API_KEY`; the scoped model settings are
+`ECOMMERCE_SOURCE_URL_LLM_MODEL`, `ECOMMERCE_SOURCE_URL_LLM_ESCALATION_MODEL`,
+`ECOMMERCE_SOURCE_URL_LLM_REASONING_EFFORT`,
+`ECOMMERCE_SOURCE_URL_LLM_MAX_CANDIDATES`,
+`ECOMMERCE_SOURCE_URL_LLM_MAX_CALLS_PER_RUN`,
+`ECOMMERCE_SOURCE_URL_LLM_AUTO_APPLY_MIN_CONFIDENCE`, and
+`ECOMMERCE_SOURCE_URL_LLM_REVIEW_MIN_CONFIDENCE`. LLM auto-apply requires both
+the run option `llm_evaluate_candidates=true` and
+`llm_auto_apply_candidates=true`; evaluation without auto-apply stores the LLM
+verdict for review only.
+
 Analyze a completed run:
 
 ```powershell

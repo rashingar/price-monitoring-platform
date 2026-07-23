@@ -41,6 +41,8 @@ class SourceUrlAgentOptions:
     rate_limit_seconds: float | None = None
     headed: bool = False
     no_browser_cache: bool = False
+    llm_evaluate_candidates: bool = False
+    llm_auto_apply_candidates: bool = False
     progress_callback: ProgressCallback | None = None
     progress_reporter: SourceUrlAgentProgressReporter | None = None
 
