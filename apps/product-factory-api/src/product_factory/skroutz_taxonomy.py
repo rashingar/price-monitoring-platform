@@ -535,9 +535,16 @@ def _has_any(context: dict[str, str], *needles: str) -> bool:
         normalize_for_match(needle) for needle in needles if normalize_for_match(needle)
     ]
     for needle in normalized_needles:
-        if any(needle in haystack for haystack in haystacks):
+        if any(_contains_taxonomy_term(haystack, needle) for haystack in haystacks):
             return True
     return False
+
+
+def _contains_taxonomy_term(haystack: str, needle: str) -> bool:
+    """Keep short taxonomy abbreviations from matching model-code prefixes."""
+    if len(needle) <= 2 and " " not in needle:
+        return needle in set(haystack.split())
+    return needle in haystack
 
 
 def _parse_tv_inches(title: str, url: str) -> int | None:

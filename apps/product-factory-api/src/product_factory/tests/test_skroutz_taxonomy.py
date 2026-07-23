@@ -121,6 +121,46 @@ def test_taxonomy_classifies_inventor_vi32_model_urls_as_wall_air_conditioners()
     assert hint.matched_rule_id == "air_conditioner:wall"
 
 
+def test_tve_fan_model_is_not_misclassified_as_a_television() -> None:
+    parser = SkroutzProductParser()
+    resolver = TaxonomyResolver()
+    row = {
+        "name": "Trotec TVE 25 S Ανεμιστήρας Ορθοστάτης 40W",
+        "category_tag_text": "Ανεμιστήρες",
+        "category_tag_href": "https://www.skroutz.gr/c/427/anemisthres.html",
+        "manufacturer": "Trotec",
+        "skroutz_product_url": "https://www.skroutz.gr/s/19355213/Trotec-TVE-25-S-Anemistiras-Orthostatis-40W.html",
+        "model": "TVE 25 S",
+    }
+
+    parsed = parser.parse(build_minimal_taxonomy_html(row), row["skroutz_product_url"])
+    taxonomy, _ = resolver.resolve(
+        parsed.source.breadcrumbs,
+        parsed.source.canonical_url,
+        parsed.source.name,
+        parsed.source.key_specs,
+        parsed.source.spec_sections,
+    )
+
+    assert parsed.source.skroutz_family == "stand_fan"
+    assert parsed.source.taxonomy_rule_id != "television:size_bucket"
+    assert taxonomy.parent_category == "ΚΛΙΜΑΤΙΣΜΟΣ ΘΕΡΜΑΝΣΗ"
+    assert taxonomy.leaf_category == "Ανεμιστήρες"
+    assert taxonomy.sub_category == "Ορθοστάτης"
+
+
+def test_generic_taxonomy_helper_does_not_treat_tve_as_tv() -> None:
+    hint = classify_skroutz_taxonomy(
+        category_tag_text="Ανεμιστήρες",
+        category_tag_href="https://www.skroutz.gr/c/427/anemisthres.html",
+        title="Trotec TVE 25 S Ανεμιστήρας",
+        url="https://www.skroutz.gr/s/19355213/Trotec-TVE-25-S-Anemistiras.html",
+        brand="Trotec",
+    )
+
+    assert hint is None
+
+
 def test_representative_taxonomy_html_fixtures_cover_supported_skroutz_combos(
     skroutz_fixtures_root: Path,
 ) -> None:

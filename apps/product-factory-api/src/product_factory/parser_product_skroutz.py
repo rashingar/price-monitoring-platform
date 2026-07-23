@@ -913,7 +913,12 @@ class SkroutzProductParser:
                 for token in config.get("title_tokens", set())
             }
             if title_tokens and any(
-                token and token in title_norm for token in title_tokens
+                (
+                    token in set(title_norm.split())
+                    if len(token) <= 2 and " " not in token
+                    else token in title_norm
+                )
+                for token in title_tokens
             ):
                 return family
             if family == "soundbar" and "soundbar" in title_norm:
